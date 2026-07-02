@@ -92,27 +92,45 @@
 
   /* Columna vista previa */
   .acuerdos-preview-col {
-    overflow-y: auto;
+    overflow: auto;
     height: 100%;
-    background: #e8e8e6;
+    background: #d8d8d6;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding: 24px 20px;
   }
 
-  .contrato-doc {
+  /* ── Vista paginada: hojas tamaño Carta apiladas ── */
+  .page-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+  }
+  .page {
     background: #fff;
-    width: 100%;
-    max-width: 740px;
-    min-height: 960px;
-    padding: 18px 48px 36px 48px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    width: 816px;         /* 8.5in a 96dpi */
+    height: 1056px;        /* 11in a 96dpi */
+    padding: 30px 76px 57px 76px; /* imita márgenes @page usados al imprimir */
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     border-radius: 2px;
     font-family: Arial, sans-serif;
     font-size: 10pt;
     line-height: 1.5;
     color: #000;
+    box-sizing: border-box;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .page-number {
+    position: absolute;
+    bottom: 14px;
+    right: 24px;
+    font-size: 8pt;
+    color: #aaa;
+    font-family: Arial, sans-serif;
   }
 
   .doc-header { margin-bottom: 10px; }
@@ -210,8 +228,11 @@
 
   <!-- Columna vista previa -->
   <div class="acuerdos-preview-col">
-    <div class="contrato-doc" id="contrato-preview"></div>
+    <div class="page-stack" id="contrato-preview"></div>
   </div>
+
+  <!-- Contenedor oculto con el documento completo (sin paginar), usado para PDF/Word -->
+  <div id="contrato-raw" style="display:none;"></div>
 
 </div>
 
@@ -297,6 +318,56 @@ function campo(val, placeholder) {
 }
 
 // ── Renderizar vista previa ──
+// ── Paginación: divide el contenido crudo en hojas tamaño Carta ──
+// Los bloques (párrafos, secciones, listas, bloque de firmas, etc.) se tratan
+// como unidades atómicas: si uno no cabe en el espacio restante de la hoja,
+// se mueve completo a la siguiente (así no se corta un párrafo o firma a la mitad).
+const PAGE_CONTENT_HEIGHT = 969; // alto útil aprox. de una hoja Carta con los márgenes de impresión
+
+function renderPaginated() {
+  const raw = document.getElementById('contrato-raw');
+  const stack = document.getElementById('contrato-preview');
+  if (!raw || !stack) return;
+
+  // Medidor oculto con el mismo ancho de contenido que una hoja real
+  const measurer = document.createElement('div');
+  measurer.style.cssText = 'position:fixed;left:-99999px;top:0;width:664px;font-family:Arial,sans-serif;font-size:10pt;line-height:1.5;';
+  document.body.appendChild(measurer);
+
+  const nodes = Array.from(raw.children);
+  const pagesHTML = [];
+  let currentHTML = '';
+  let currentHeight = 0;
+
+  nodes.forEach(node => {
+    const nodeHTML = node.outerHTML;
+    measurer.innerHTML = currentHTML + nodeHTML;
+    const newHeight = measurer.scrollHeight;
+
+    if (newHeight > PAGE_CONTENT_HEIGHT && currentHTML !== '') {
+      // No cabe: cerramos la página actual y empezamos una nueva con este bloque
+      pagesHTML.push(currentHTML);
+      currentHTML = nodeHTML;
+      measurer.innerHTML = currentHTML;
+      currentHeight = measurer.scrollHeight;
+    } else {
+      currentHTML += nodeHTML;
+      currentHeight = newHeight;
+    }
+  });
+  if (currentHTML) pagesHTML.push(currentHTML);
+  if (pagesHTML.length === 0) pagesHTML.push('');
+
+  document.body.removeChild(measurer);
+
+  stack.innerHTML = pagesHTML.map((html, i) => `
+    <div class="page">
+      ${html}
+      <div class="page-number">Página ${i + 1} de ${pagesHTML.length}</div>
+    </div>
+  `).join('');
+}
+
 function updatePreview() {
   // Aviso campos vacíos
   const aviso = document.getElementById('excl-aviso');
@@ -331,10 +402,10 @@ function updatePreview() {
   const montoLetra = montoNum > 0 ? numeroALetra(montoNum) : '';
   const montoFmt   = montoNum > 0 ? '$' + montoNum.toLocaleString('es-MX') : '';
 
-  const preview = document.getElementById('contrato-preview');
-  if (!preview) return;
+  const raw = document.getElementById('contrato-raw');
+  if (!raw) return;
 
-  preview.innerHTML = `
+  raw.innerHTML = `
     <!-- Header con logo -->
     <div class="doc-header">
       <img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" />
@@ -431,11 +502,11 @@ function updatePreview() {
       </div>
     </div>
   `;
-}
 
-// ── Descarga como PDF ──
+  renderPaginated();
+}
 function downloadPDF() {
-  const doc = document.getElementById('contrato-preview').cloneNode(true);
+  const doc = document.getElementById('contrato-raw').cloneNode(true);
 
   // Campos vacíos → línea en blanco
   doc.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
@@ -499,10 +570,10 @@ async function downloadWord(blank = false) {
   const esExclusiva = tipo === 'exclusiva';
   const asesor    = blank ? '' : document.getElementById('f-asesor')?.value.trim() || '';
 
-  // Clonar el preview actual y limpiar campos vacíos
-  const preview = document.getElementById('contrato-preview');
-  if (!preview) return;
-  const clone = preview.cloneNode(true);
+  // Clonar el documento crudo y limpiar campos vacíos
+  const raw = document.getElementById('contrato-raw');
+  if (!raw) return;
+  const clone = raw.cloneNode(true);
   clone.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
     el.style.color='#000'; el.style.borderBottom='1px solid #000'; el.textContent='_________________________';
   });
