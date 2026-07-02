@@ -14,24 +14,27 @@
     --border: rgba(0,0,0,0.07);
   }
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
+    height: 100%;
     font-family: 'DM Sans', sans-serif;
     background: #e8e8e6;
     color: var(--text);
+    overflow: hidden; /* el scroll vive dentro de cada columna, no en la página */
   }
 
   .acuerdos-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0;
-    min-height: 100vh;
+    height: 100vh;
   }
 
   /* Columna formulario */
   .acuerdos-form-col {
     border-right: 1px solid var(--border);
     overflow-y: auto;
+    height: 100%;
     padding: 24px;
     background: var(--bg);
   }
@@ -90,6 +93,7 @@
   /* Columna vista previa */
   .acuerdos-preview-col {
     overflow-y: auto;
+    height: 100%;
     background: #e8e8e6;
     display: flex;
     align-items: flex-start;
@@ -141,7 +145,9 @@
   .doc-firma-bold { font-weight: 700; font-size: 9pt; }
 
   @media (max-width: 900px) {
-    .acuerdos-body { grid-template-columns: 1fr; }
+    html, body { height: auto; overflow: auto; }
+    .acuerdos-body { grid-template-columns: 1fr; height: auto; }
+    .acuerdos-form-col { height: auto; overflow-y: visible; }
     .acuerdos-preview-col { display: none; }
   }
 </style>
