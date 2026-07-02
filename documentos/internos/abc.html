@@ -205,8 +205,8 @@
     const fecha    = fmtFecha(g('f-fecha'));
 
     const fechaStr = fecha
-      ? `el día <strong>${fecha.dia}</strong> del mes de <strong>${fecha.mes}</strong> del año <strong>${fecha.anio}</strong>`
-      : 'el día ______ del mes de ____________ del año ______';
+      ? `el día <strong>${fecha.dia}</strong> de <strong>${fecha.mes}</strong> del año <strong>${fecha.anio}</strong>`
+      : 'el día ______ de ____________ del año ______';
 
     const nombreVal = asesor
       ? `<span class="c-nombre-val c-campo filled">${asesor}</span>`
@@ -222,7 +222,7 @@
       </div>
       <p class="c-body">En reconocimiento a su dedicación, compromiso y excelencia profesional al haber culminado con éxito el Programa Tecnológico "ABC de la Tecnología" de KW Premier, ${fechaStr}.</p>
       <p class="c-body">Durante este proceso, el participante ha acreditado de manera sobresaliente el temario integral del programa y ha cumplido con sus sesiones de acompañamiento y seguimiento semanal.</p>
-      <p class="c-body">A partir de este momento, el asesor emprende una nueva etapa en su trayectoria profesional con mayor autonomía e independencia, respaldado por las competencias adquiridas y con la certeza de que el equipo de encargado del área de Tecnología, estará siempre disponible para brindarle soporte en sus futuros desafíos.</p>
+      <p class="c-body">A partir de este momento, el asesor emprende una nueva etapa en su trayectoria profesional con mayor autonomía e independencia, respaldado por las competencias adquiridas y con la certeza de que el equipo encargado del área de Tecnología, estará siempre disponible para brindarle soporte en sus futuros desafíos.</p>
       <div class="c-logro">¡Lo lograste!</div>
       <div class="c-checklist">
         <div class="c-checklist-title">Temario ABC</div>
@@ -254,9 +254,12 @@
     });
     // (ya no hay línea junto a "CONCEDIDO A:")
 
+    const asesorNombre = g('f-asesor').trim();
+    const nombreArchivo = 'Certificado ABC' + (asesorNombre ? ' - ' + asesorNombre : '');
+
     const win = window.open('', '_blank', 'width=800,height=1050');
     win.document.write(`<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><title>Constancia ABC de la Tecnología</title>
+<html lang="es"><head><meta charset="UTF-8"><title>${nombreArchivo}</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
   @page { size: Letter portrait; margin: 2.5cm 3cm; }
@@ -286,7 +289,7 @@
   .c-campo { color:#000; }
 </style></head>
 <body><div class="constancia-page">${clone.innerHTML}</div></body></html>`);
-    win.document.close(); win.focus(); setTimeout(() => { win.print(); }, 500);
+    win.document.close(); win.document.title = nombreArchivo; win.focus(); setTimeout(() => { win.document.title = nombreArchivo; win.print(); }, 500);
   }
 
   updatePreview();
