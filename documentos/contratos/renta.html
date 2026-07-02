@@ -156,7 +156,7 @@
   .doc-campo { font-weight: 700; border-bottom: 1px solid #CC0000; color: #CC0000; }
   .doc-campo.filled { color: #000; border-bottom: none; font-weight: 700; }
 
-  .doc-firmas-wrap { margin-top: 14pt; }
+  .doc-firmas-wrap { margin-top: 48pt; }
   .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
   .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
   .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -219,7 +219,7 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         PDF
       </button>
-      <button class="btn-download" style="margin-top:0;flex:1;background:linear-gradient(180deg,#2b5be8 0%,#1a3fbf 100%);box-shadow:0 4px 18px rgba(27,63,191,0.3);" onclick="downloadWord(false)">
+      <button class="btn-download" style="margin-top:0;flex:1;background:linear-gradient(180deg,#2b5be8 0%,#1a3fbf 100%);box-shadow:0 4px 18px rgba(27,63,191,0.3);" onclick="downloadWord()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Word
       </button>
@@ -324,12 +324,12 @@ function campo(val, placeholder) {
 // se mueve completo a la siguiente (así no se corta un párrafo o firma a la mitad).
 const PAGE_CONTENT_HEIGHT = 969; // alto útil aprox. de una hoja Carta con los márgenes de impresión
 
-function renderPaginated() {
+// Devuelve un array de strings HTML, uno por hoja — usado tanto por la vista
+// previa en pantalla como por la descarga en PDF, para que ambas coincidan siempre.
+function computePages() {
   const raw = document.getElementById('contrato-raw');
-  const stack = document.getElementById('contrato-preview');
-  if (!raw || !stack) return;
+  if (!raw) return [''];
 
-  // Medidor oculto con el mismo ancho de contenido que una hoja real
   const measurer = document.createElement('div');
   measurer.style.cssText = 'position:fixed;left:-99999px;top:0;width:664px;font-family:Arial,sans-serif;font-size:10pt;line-height:1.5;';
   document.body.appendChild(measurer);
@@ -337,7 +337,6 @@ function renderPaginated() {
   const nodes = Array.from(raw.children);
   const pagesHTML = [];
   let currentHTML = '';
-  let currentHeight = 0;
 
   nodes.forEach(node => {
     const nodeHTML = node.outerHTML;
@@ -345,20 +344,24 @@ function renderPaginated() {
     const newHeight = measurer.scrollHeight;
 
     if (newHeight > PAGE_CONTENT_HEIGHT && currentHTML !== '') {
-      // No cabe: cerramos la página actual y empezamos una nueva con este bloque
       pagesHTML.push(currentHTML);
       currentHTML = nodeHTML;
-      measurer.innerHTML = currentHTML;
-      currentHeight = measurer.scrollHeight;
     } else {
       currentHTML += nodeHTML;
-      currentHeight = newHeight;
     }
   });
   if (currentHTML) pagesHTML.push(currentHTML);
   if (pagesHTML.length === 0) pagesHTML.push('');
 
   document.body.removeChild(measurer);
+  return pagesHTML;
+}
+
+function renderPaginated() {
+  const stack = document.getElementById('contrato-preview');
+  if (!stack) return;
+
+  const pagesHTML = computePages();
 
   stack.innerHTML = pagesHTML.map((html, i) => `
     <div class="page">
@@ -505,22 +508,44 @@ function updatePreview() {
 
   renderPaginated();
 }
-function downloadPDF() {
-  const doc = document.getElementById('contrato-raw').cloneNode(true);
+// ── Nombre de archivo sugerido para las descargas ──
+function nombreArchivoContrato() {
+  const tipo        = document.getElementById('f-tipo')?.value || 'exclusiva';
+  const esExclusiva = tipo === 'exclusiva';
+  const inmueble    = document.getElementById('f-inmueble')?.value.trim() || '';
+  let nombre = 'Acuerdo Renta ' + (esExclusiva ? 'Exclusiva' : 'En Opcion');
+  if (inmueble) nombre += ' - ' + inmueble;
+  return nombre;
+}
 
-  // Campos vacíos → línea en blanco
-  doc.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
-    el.style.color = '#000';
-    el.style.borderBottom = '1px solid #000';
-    el.textContent = '_______________________________';
-  });
+function downloadPDF() {
+  // Usamos las mismas hojas ya paginadas de la vista previa (con numeración),
+  // así el PDF sale idéntico a lo que se ve en pantalla.
+  const pages = computePages();
+  const nombreArchivo = nombreArchivoContrato();
+
+  const pagesHTML = pages.map((html, i) => {
+    // Limpiar campos vacíos → línea en blanco, por cada hoja
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    wrapper.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
+      el.style.color = '#000';
+      el.style.borderBottom = '1px solid #000';
+      el.textContent = '_______________________________';
+    });
+    const isLast = i === pages.length - 1;
+    return `<div class="print-page"${isLast ? '' : ' style="page-break-after:always;"'}>
+      ${wrapper.innerHTML}
+      <div class="print-page-number">Página ${i + 1} de ${pages.length}</div>
+    </div>`;
+  }).join('');
 
   const printWin = window.open('', '_blank', 'width=850,height=1100');
   printWin.document.write(`<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title> </title>
+  <title>${nombreArchivo}</title>
   <style>
     @page {
       size: Letter;
@@ -533,6 +558,11 @@ function downloadPDF() {
       line-height: 1.5;
       color: #000;
       padding: 0;
+    }
+    .print-page { position: relative; min-height: calc(100vh - 2.3cm); }
+    .print-page-number {
+      position: absolute; bottom: -0.9cm; right: 0;
+      font-size: 8pt; color: #888;
     }
     .doc-header { margin-bottom: 16pt; }
     .doc-header img { height: 30pt; width: auto; margin-bottom: 6pt; }
@@ -548,7 +578,7 @@ function downloadPDF() {
     .doc-lista li { margin-bottom: 2pt; text-align: justify; font-size: 10pt; }
     .doc-campo { font-weight: 700; color: #000; border-bottom: 1px solid #000; }
     .doc-campo.filled { border-bottom: none; }
-    .doc-firmas-wrap { margin-top: 14pt; }
+    .doc-firmas-wrap { margin-top: 48pt; }
     .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
     .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
     .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -556,20 +586,17 @@ function downloadPDF() {
   </style>
 </head>
 <body>
-${doc.innerHTML}
+${pagesHTML}
 </body>
 </html>`);
   printWin.document.close();
+  printWin.document.title = nombreArchivo;
   printWin.focus();
-  setTimeout(() => { printWin.print(); }, 500);
+  setTimeout(() => { printWin.document.title = nombreArchivo; printWin.print(); }, 500);
 }
 
 // ── Descarga como Word (.docx) ──
-async function downloadWord(blank = false) {
-  const tipo      = blank ? 'exclusiva' : (document.getElementById('f-tipo')?.value || 'exclusiva');
-  const esExclusiva = tipo === 'exclusiva';
-  const asesor    = blank ? '' : document.getElementById('f-asesor')?.value.trim() || '';
-
+async function downloadWord() {
   // Clonar el documento crudo y limpiar campos vacíos
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
@@ -594,7 +621,7 @@ async function downloadWord(blank = false) {
   .doc-clausula-titulo{font-weight:700;}
   .doc-campo{font-weight:700;border-bottom:1px solid #000;}
   .doc-campo.filled{border-bottom:none;}
-  .doc-firmas-wrap{margin-top:20pt;}
+  .doc-firmas-wrap{margin-top:44pt;}
   .doc-firmas-row{display:flex;margin-bottom:14pt;}
   .doc-firma-col{flex:1;text-align:center;font-size:8.5pt;padding:0 8pt;}
   .doc-firma-linea-top{border-top:1px solid #000;padding-top:5pt;margin-top:22pt;}
@@ -607,7 +634,7 @@ async function downloadWord(blank = false) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (esExclusiva ? 'Acuerdo_Renta_Exclusiva' : 'Acuerdo_Renta_En_Opcion') + (asesor ? '_'+asesor.replace(/\s+/g,'_') : '') + '.doc';
+  a.download = nombreArchivoContrato() + '.doc';
   a.click();
   URL.revokeObjectURL(url);
 }
