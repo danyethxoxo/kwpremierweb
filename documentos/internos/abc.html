@@ -132,7 +132,6 @@
     html, body { height: auto; overflow: auto; }
     .layout { grid-template-columns: 1fr; height: auto; }
     .form-col { height: auto; overflow-y: visible; }
-    /* visibilidad controlada por JS con .mobile-hidden */
   }
 
   .mobile-tabs {
@@ -159,10 +158,18 @@
     color: var(--text);
   }
   .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
-  .form-col.mobile-hidden, .preview-col.mobile-hidden { display: none !important; }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
     .preview-col { height: auto; overflow: visible; padding: 16px; }
+  }
+
+  .page-scale-wrap {
+    overflow: hidden;
+    margin: 0 auto 16px;
+  }
+  .page-scale-wrap .page,
+  .page-scale-wrap.single .page {
+    transform-origin: top left;
   }
 </style>
 </head>
@@ -286,6 +293,7 @@
         </div>
       </div>
 `;
+  fitPreviewMobile();
   }
 
   function downloadConstancia() {
@@ -337,19 +345,60 @@
 
   updatePreview();
 
+function fitPreviewMobile() {
+  if (window.innerWidth > 900) return;
+  const previewCol = document.querySelector('.preview-col');
+  if (!previewCol || previewCol.style.display === 'none') return;
+  const pages = previewCol.querySelectorAll('.page');
+  if (!pages.length) return;
+  const availWidth = previewCol.clientWidth - 24;
+  const scale = Math.min(1, availWidth / 816);
+  pages.forEach(page => {
+    let wrap = page.parentElement;
+    if (!wrap.classList.contains('page-scale-wrap')) {
+      wrap = document.createElement('div');
+      wrap.className = 'page-scale-wrap';
+      page.parentNode.insertBefore(wrap, page);
+      wrap.appendChild(page);
+    }
+    page.style.transform = `scale(${scale})`;
+    wrap.style.width = (816 * scale) + 'px';
+    wrap.style.height = (1056 * scale) + 'px';
+  });
+}
+
 function showMobileTab(tab) {
   const formCol = document.querySelector('.form-col');
   const previewCol = document.querySelector('.preview-col');
   document.querySelectorAll('.mobile-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (!formCol || !previewCol) return;
+  if (window.innerWidth > 900) {
+    formCol.style.display = '';
+    previewCol.style.display = '';
+    return;
+  }
   if (tab === 'form') {
-    formCol.classList.remove('mobile-hidden');
-    previewCol.classList.add('mobile-hidden');
+    formCol.style.display = '';
+    previewCol.style.display = 'none';
   } else {
-    formCol.classList.add('mobile-hidden');
-    previewCol.classList.remove('mobile-hidden');
+    formCol.style.display = 'none';
+    previewCol.style.display = '';
+    requestAnimationFrame(fitPreviewMobile);
   }
 }
+
+window.addEventListener('resize', () => {
+  const formCol = document.querySelector('.form-col');
+  const previewCol = document.querySelector('.preview-col');
+  if (window.innerWidth > 900) {
+    if (formCol) formCol.style.display = '';
+    if (previewCol) previewCol.style.display = '';
+  } else {
+    fitPreviewMobile();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 </body>
 </html>
