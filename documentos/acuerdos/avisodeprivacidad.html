@@ -168,11 +168,45 @@
     html, body { height: auto; overflow: auto; }
     .acuerdos-body { grid-template-columns: 1fr; height: auto; }
     .acuerdos-form-col { height: auto; overflow-y: visible; }
-    .acuerdos-preview-col { display: none; }
+    /* visibilidad controlada por JS con .mobile-hidden */
+  }
+
+  .mobile-tabs {
+    display: none;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .mobile-tab {
+    flex: 1;
+    padding: 9px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    color: var(--text);
+  }
+  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .acuerdos-form-col.mobile-hidden, .acuerdos-preview-col.mobile-hidden { display: none !important; }
+  @media (max-width: 900px) {
+    .mobile-tabs { display: flex; }
+    .acuerdos-preview-col { height: auto; overflow: visible; padding: 16px; }
   }
 </style>
 </head>
 <body>
+<div class="mobile-tabs">
+  <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">📝 Formulario</div>
+  <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">👁️ Vista previa</div>
+</div>
 
 <div class="acuerdos-body">
 
@@ -470,9 +504,10 @@ function downloadPDF() {
       color: #000;
       padding: 0;
     }
-    .print-page { position: relative; min-height: calc(100vh - 1.7cm); }
+    .print-page { position: relative; }
     .print-page-number {
-      position: absolute; bottom: -0.9cm; right: 0;
+      margin-top: 10pt;
+      text-align: right;
       font-size: 8pt; color: #888;
     }
     .doc-header { margin-bottom: 16pt; }
@@ -565,6 +600,20 @@ document.addEventListener('DOMContentLoaded', () => {
   renderClientesFields();
   updatePreview();
 });
+
+function showMobileTab(tab) {
+  const formCol = document.querySelector('.acuerdos-form-col');
+  const previewCol = document.querySelector('.acuerdos-preview-col');
+  document.querySelectorAll('.mobile-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (!formCol || !previewCol) return;
+  if (tab === 'form') {
+    formCol.classList.remove('mobile-hidden');
+    previewCol.classList.add('mobile-hidden');
+  } else {
+    formCol.classList.add('mobile-hidden');
+    previewCol.classList.remove('mobile-hidden');
+  }
+}
 </script>
 
 </body>
