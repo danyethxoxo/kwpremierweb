@@ -233,9 +233,12 @@
       <input type="text" id="f-asesor" placeholder="Ej. Juan García López" oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
-      <label>Nombre del arrendador (cliente)</label>
-      <input type="text" id="f-arrendador" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
+      <label>Número de clientes (arrendadores)</label>
+      <select id="f-num-clientes" onchange="renderClientesFields(); updatePreview();">
+        <!-- opciones generadas por JS -->
+      </select>
     </div>
+    <div id="clientes-fields"></div>
     <div class="acuerdo-field">
       <label>Dirección del inmueble</label>
       <input type="text" id="f-inmueble" placeholder="Calle, número, colonia, alcaldía, CP" oninput="updatePreview()" />
@@ -358,6 +361,24 @@ function campo(val, placeholder) {
   return `<span class="doc-campo">${placeholder}</span>`;
 }
 
+// ── Generar dinámicamente los campos de "Nombre del cliente" según el select ──
+function renderClientesFields() {
+  const n = parseInt(document.getElementById('f-num-clientes')?.value || '1') || 1;
+  const cont = document.getElementById('clientes-fields');
+  if (!cont) return;
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const prev = document.getElementById('f-cliente' + i);
+    const prevVal = prev ? prev.value : '';
+    html += `
+    <div class="acuerdo-field">
+      <label>Nombre del arrendador (cliente${n > 1 ? ' ' + (i + 1) : ''})</label>
+      <input type="text" id="f-cliente${i}" value="${prevVal.replace(/"/g,'&quot;')}" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
+    </div>`;
+  }
+  cont.innerHTML = html;
+}
+
 // ── Renderizar vista previa ──
 // ── Paginación: divide el contenido crudo en hojas tamaño Carta ──
 // Los bloques (párrafos, secciones, listas, bloque de firmas, etc.) se tratan
@@ -414,12 +435,16 @@ function renderPaginated() {
 }
 
 function updatePreview() {
+  const numClientes = parseInt(document.getElementById('f-num-clientes')?.value || '1') || 1;
+  const clientes = Array.from({ length: numClientes }, (_, i) =>
+    (document.getElementById('f-cliente' + i) || {}).value || ''
+  );
+
   // Aviso campos vacíos
   const aviso = document.getElementById('excl-aviso');
   if (aviso) {
     const campos = [
       { id:'f-asesor', label:'Nombre del asesor' },
-      { id:'f-arrendador', label:'Nombre del arrendador' },
       { id:'f-inmueble', label:'Dirección del inmueble' },
       { id:'f-monto', label:'Monto mensual de renta' },
       { id:'f-domicilio', label:'Domicilio del cliente' },
@@ -429,6 +454,9 @@ function updatePreview() {
       const el = document.getElementById(c.id);
       return !el || !el.value.trim();
     }).map(c => c.label);
+    clientes.forEach((val, i) => {
+      if (!val.trim()) vacios.push('Nombre del arrendador' + (numClientes > 1 ? ' ' + (i + 1) : ''));
+    });
     if (vacios.length > 0) {
       aviso.style.display = 'block';
       aviso.innerHTML = '⚠️ <strong>Faltan campos:</strong> ' + vacios.join(', ') + '<br><span style="font-size:11px;opacity:0.8;">Puedes descargar de todas formas.</span>';
@@ -439,7 +467,10 @@ function updatePreview() {
   const tipo       = document.getElementById('f-tipo')?.value || 'exclusiva';
   const esExclusiva = tipo === 'exclusiva';
   const asesor     = document.getElementById('f-asesor')?.value || '';
-  const arrendador = document.getElementById('f-arrendador')?.value || '';
+  const nombresClientes = clientes.map(v => v.trim()).filter(Boolean);
+  const arrendador = nombresClientes.length
+    ? nombresClientes.join(', ').replace(/,([^,]*)$/, nombresClientes.length > 1 ? ' y$1' : '$1')
+    : '';
   const inmueble   = document.getElementById('f-inmueble')?.value || '';
   const montoNum   = parseFloat(document.getElementById('f-monto')?.value) || 0;
   const domicilio  = document.getElementById('f-domicilio')?.value || '';
@@ -449,6 +480,34 @@ function updatePreview() {
 
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
+
+  // ── Construcción de firmas: orden fijo + clientes dinámicos, 2 por fila ──
+  function firmaCell(nombreHTML, rolHTML) {
+    return `<div class="doc-firma-col"><div class="doc-firma-linea-top">${nombreHTML}<br>${rolHTML}</div></div>`;
+  }
+  const cellGustavo = firmaCell(
+    '<span class="doc-firma-bold">GUSTAVO SOLARES CAMPOS</span>',
+    'APODERADO LEGAL<br>INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.'
+  );
+  const cellFernanda = firmaCell(
+    '<span class="doc-firma-bold">MARIA FERNANDA PACHECO BAÑOS</span>',
+    'MCA KW PREMIER'
+  );
+  const cellProfesional = firmaCell(
+    campo(asesor, '"EL PROFESIONAL"'),
+    'Profesional Inmobiliario<br><span class="doc-firma-bold">"EL PROFESIONAL"</span>'
+  );
+  const clienteCells = nombresClientes.length
+    ? nombresClientes.map(nom => firmaCell(`<span class="doc-firma-bold">${nom}</span>`, '<span class="doc-firma-bold">"EL CLIENTE"</span>'))
+    : [firmaCell('(Nombre y firma)', '<span class="doc-firma-bold">"EL CLIENTE"</span>')];
+
+  const filas = [];
+  filas.push([cellGustavo, cellFernanda]);
+  filas.push([cellProfesional, clienteCells[0]]);
+  for (let i = 1; i < clienteCells.length; i += 2) {
+    filas.push([clienteCells[i], clienteCells[i + 1] || '<div class="doc-firma-col"></div>']);
+  }
+  const firmasHTML = filas.map(par => `<div class="doc-firmas-row">${par[0]}${par[1]}</div>`).join('');
 
   raw.innerHTML = `
     <!-- Header con logo -->
@@ -513,38 +572,9 @@ function updatePreview() {
 
     <div class="doc-p" style="margin-top:16px;">Leído que fue el presente Acuerdo y enteradas las partes de su contenido y alcance legal, lo firman en tres tantos en la Ciudad de México, el día <strong>${formatFechaLarga(fecha)}</strong>.</div>
 
-    <!-- Firmas: dos filas, dos columnas cada una -->
+    <!-- Firmas: dos columnas por fila, orden fijo + clientes dinámicos -->
     <div class="doc-firmas-wrap">
-      <div class="doc-firmas-row">
-        <div class="doc-firma-col">
-          <div class="doc-firma-linea-top">
-            (Nombre y firma)<br>
-            <span class="doc-firma-bold">"EL CLIENTE"</span>
-          </div>
-        </div>
-        <div class="doc-firma-col">
-          <div class="doc-firma-linea-top">
-            <span class="doc-firma-bold">GUSTAVO SOLARES CAMPOS</span><br>
-            APODERADO LEGAL<br>
-            INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.
-          </div>
-        </div>
-      </div>
-      <div class="doc-firmas-row">
-        <div class="doc-firma-col">
-          <div class="doc-firma-linea-top">
-            ${campo(asesor,'"EL PROFESIONAL"')}<br>
-            Profesional Inmobiliario<br>
-            <span class="doc-firma-bold">"EL PROFESIONAL"</span>
-          </div>
-        </div>
-        <div class="doc-firma-col">
-          <div class="doc-firma-linea-top">
-            <span class="doc-firma-bold">MARIA FERNANDA PACHECO BAÑOS</span><br>
-            MCA KW PREMIER
-          </div>
-        </div>
-      </div>
+      ${firmasHTML}
     </div>
   `;
 
@@ -684,6 +714,13 @@ async function downloadWord() {
 
 // Inicializar preview al cargar
 document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('f-num-clientes');
+  if (sel) {
+    let opts = '';
+    for (let i = 1; i <= 6; i++) opts += `<option value="${i}">${i}</option>`;
+    sel.innerHTML = opts;
+  }
+  renderClientesFields();
   updatePreview();
 });
 
