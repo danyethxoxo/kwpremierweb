@@ -4,6 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aviso de Privacidad — KW Premier</title>
+<style>
+  @view-transition { navigation: auto; }
+  @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+  ::view-transition-group(root) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  ::view-transition-old(root) { animation-name: kw-exit-forward; }
+  ::view-transition-new(root) { animation-name: kw-enter-forward; }
+  :active-view-transition-type(back)::view-transition-old(root) { animation-name: kw-exit-back; }
+  :active-view-transition-type(back)::view-transition-new(root) { animation-name: kw-enter-back; }
+
+  @keyframes kw-enter-forward { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-forward  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes kw-enter-back    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-back     { from { transform: translateX(0); } to { transform: translateX(100%); } }
+</style>
+<script>
+  // Transición tipo app entre páginas: avanzar desliza de derecha a izquierda,
+  // retroceder desliza de izquierda a derecha. Sin efecto en navegadores que no
+  // soportan cross-document view transitions (Safari/Firefox) — navegación normal.
+  (function () {
+    function markDirection(event) {
+      if (!event.viewTransition || !event.activation) return;
+      var a = event.activation;
+      var isBack = a.navigationType === 'traverse' && a.from && a.entry && a.from.index > a.entry.index;
+      event.viewTransition.types.add(isBack ? 'back' : 'forward');
+    }
+    window.addEventListener('pageswap', markDirection);
+    window.addEventListener('pagereveal', markDirection);
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
