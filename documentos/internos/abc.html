@@ -26,13 +26,29 @@
   // Transición tipo app entre páginas: avanzar desliza de derecha a izquierda,
   // retroceder desliza de izquierda a derecha. Sin efecto en navegadores que no
   // soportan cross-document view transitions (Safari/Firefox) — navegación normal.
+  //
+  // La dirección se marca según QUÉ link se clickeó (el botón "Regresar", el logo
+  // y el breadcrumb cuentan como "retroceso"; cualquier otro link cuenta como
+  // "avance"), no según el historial del navegador — un link de "Regresar" es,
+  // para el navegador, una navegación hacia adelante como cualquier otra.
   (function () {
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href]');
+      if (!a || a.target === '_blank') return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      var isBack = !!a.closest('.back-btn, .breadcrumb, .logo');
+      sessionStorage.setItem('kwPendingDirection', isBack ? 'back' : 'forward');
+    }, true);
+
     function markDirection(event) {
-      if (!event.viewTransition || !event.activation) return;
-      var a = event.activation;
-      var isBack = a.navigationType === 'traverse' && a.from && a.entry && a.from.index > a.entry.index;
-      event.viewTransition.types.add(isBack ? 'back' : 'forward');
+      if (!event.viewTransition) return;
+      var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
+      sessionStorage.removeItem('kwPendingDirection');
+      event.viewTransition.types.add(direction);
     }
+
     window.addEventListener('pageswap', markDirection);
     window.addEventListener('pagereveal', markDirection);
   })();
@@ -42,7 +58,7 @@
     --red: #CC0000; --text: #1A1A1A; --muted: #888;
     --bg: #F5F5F5; --card: #ffffff; --border: rgba(0,0,0,0.07);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0;
     height: 100%;
@@ -91,6 +107,7 @@
     box-shadow: 0 4px 14px rgba(204,0,0,0.3); transition: filter 0.15s; margin-top: 20px;
   }
   .btn-dl:hover { filter: brightness(1.08); }
+  .btn-dl:active { transform: scale(0.96); }
 
   /* Columna vista previa */
   .preview-col {
@@ -191,9 +208,10 @@
     color: var(--text);
   }
   .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .mobile-tab:active { transform: scale(0.95); }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
-    .preview-col { height: auto; overflow: visible; padding: 16px; }
+    .preview-col { height: auto; overflow: visible; padding: 16px; min-width: 0; }
   }
 
   .page-scale-wrap {
