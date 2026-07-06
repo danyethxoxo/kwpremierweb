@@ -449,10 +449,8 @@
       return p.year === currentMonth.year && p.month === currentMonth.month;
     });
 
-    if (inMonth.length === 0) {
-      container.innerHTML = `<div class="state-box">No hay eventos programados este mes.</div>`;
-      return;
-    }
+    const today = getTodayInMexico();
+    const isCurrentMonthView = currentMonth.year === today.year && currentMonth.month === today.month;
 
     const byDay = new Map();
     inMonth.forEach(ev => {
@@ -462,7 +460,19 @@
       byDay.get(key).events.push(ev);
     });
 
-    const today = getTodayInMexico();
+    // Si estamos viendo el mes actual, siempre debe existir un día "hoy" (aunque
+    // no tenga eventos), para que el botón "Hoy" y el salto automático al cargar
+    // siempre tengan un punto de referencia al cual saltar.
+    const todayKey = `${today.year}-${today.month}-${today.day}`;
+    if (isCurrentMonthView && !byDay.has(todayKey)) {
+      byDay.set(todayKey, { parts: today, events: [] });
+    }
+
+    if (byDay.size === 0) {
+      container.innerHTML = `<div class="state-box">No hay eventos programados este mes.</div>`;
+      return;
+    }
+
     const sortedDays = Array.from(byDay.values()).sort((a, b) => sortKey(a.parts) - sortKey(b.parts));
 
     container.innerHTML = sortedDays.map(day => {
@@ -498,13 +508,15 @@
           </div>`;
       }).join('');
 
+      const bodyHTML = eventsHTML || `<div class="state-box" style="padding:20px;">No hay eventos programados${isToday ? ' hoy' : ' este día'}.</div>`;
+
       return `
         <div class="day-group" id="${isToday ? 'day-today' : ''}">
           <div class="day-heading${isToday ? ' is-today' : ''}">
             <span class="day-num">${day.parts.day}</span>
             <span>${weekday} ${isToday ? '<span class="today-pill">Hoy</span>' : ''}</span>
           </div>
-          ${eventsHTML}
+          ${bodyHTML}
         </div>`;
     }).join('');
 
