@@ -266,24 +266,40 @@
       <input type="date" id="t-fecha" placeholder="" oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
+      <label>TIPO DE OPERACIÓN</label>
+      <select id="t-tipo-op" onchange="updatePreview()">
+        <option value="">Selecciona...</option>
+        <option value="venta">Venta</option>
+        <option value="renta">Renta</option>
+      </select>
+    </div>
+    <div class="acuerdo-field">
       <label>DIRECCIÓN DEL INMUEBLE</label>
       <input type="text" id="t-direccion" placeholder="Calle, número, colonia" oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
-      <label>PORCENTAJE PENA CONVENCIONAL (%)</label>
+      <label>DESISTIMIENTO A PARTIR DE</label>
+      <input type="date" id="t-fecha-partir" placeholder="" oninput="updatePreview()" />
+    </div>
+    <div class="acuerdo-field">
+      <label>PORCENTAJE DE COMISIÓN (%)</label>
       <input type="number" id="t-porcentaje" placeholder="Ej. 10" oninput="updatePreview()" />
+    </div>
+    <div class="acuerdo-field">
+      <label>DÍAS DE VIGENCIA DE LA COMISIÓN</label>
+      <input type="number" id="t-dias" placeholder="Ej. 90" oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
       <label>MOTIVO DE CANCELACIÓN</label>
       <textarea id="t-motivo" placeholder="Describe el motivo..." oninput="updatePreview()"></textarea>
     </div>
     <div class="acuerdo-field">
-      <label>PROSPECTOS PRESENTADOS</label>
-      <textarea id="t-prospectos" placeholder="Lista de prospectos..." oninput="updatePreview()"></textarea>
+      <label>CLIENTES MENCIONADOS</label>
+      <textarea id="t-prospectos" placeholder="Lista de clientes..." oninput="updatePreview()"></textarea>
     </div>
     <div class="acuerdo-field">
       <label>NOMBRE DEL CLIENTE</label>
-      <input type="text" id="t-cliente" placeholder="Nombre completo" oninput="updatePreview()" />
+      <input type="text" id="t-cliente" placeholder="Nombre completo (solo para el nombre del archivo)" oninput="updatePreview()" />
     </div>
 
     <div style="display:flex;gap:10px;margin-top:14px;">
@@ -380,7 +396,8 @@ function renderPaginated() {
 function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
-  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div><div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por medio de la presente, hago de su conocimiento mi voluntad de dar por terminado de forma anticipada el Contrato de Adhesión de Prestación de Servicios de Intermediación con número de registro PROFECO 6540-2025, respecto al inmueble ubicado en: ${campoDoc(g('t-direccion'),'Dirección del inmueble')}.</div><div class="doc-seccion">I. CONDICIONES DE TERMINACIÓN</div><div class="doc-p"><strong>1. Protección de Prospectos:</strong> Me comprometo a cubrir la contraprestación pactada en caso de que la operación se cierre dentro de los próximos 90 días con prospectos presentados por el Intermediario.</div><div class="doc-p"><strong>2. Pena Convencional:</strong> Queda sujeto el pago equivalente al ${campoDoc(g('t-porcentaje'),'%')}% de los honorarios pactados.</div><div class="doc-seccion">II. MOTIVO DE LA CANCELACIÓN</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">III. RELACIÓN DE PROSPECTOS</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de prospectos')}</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row"><div class="doc-firma-col"><div class="doc-firma-linea-top">${campoDoc(g('t-cliente'),'"EL CLIENTE"')}<br>Nombre y Firma</div></div><div class="doc-firma-col" style="max-width:72px;"></div><div class="doc-firma-col"><div class="doc-firma-linea-top"><span class="doc-firma-bold">GUSTAVO SOLARES CAMPOS</span><br>INMUEBLES VALLE PREMIUM</div></div></div></div>`;
+  const tipoOp = g('t-tipo-op') === 'renta' ? 'renta' : (g('t-tipo-op') === 'venta' ? 'venta' : '');
+  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div><div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por este medio notifico a Inmuebles Valle Premium, S.A.P.I. de C.V., que es mi deseo desistir de la promoción de ${campoDoc(tipoOp,'venta/renta')} del inmueble ubicado en ${campoDoc(g('t-direccion'),'Dirección del inmueble')}, a partir de <strong>${fmtFecha(g('t-fecha-partir'))}</strong>, y que respeto la comisión del ${campoDoc(g('t-porcentaje'),'__')}% durante ${campoDoc(g('t-dias'),'__')} días posterior a la fecha del presente, por cualquier contacto o cliente que me hayan traído a mostrar mi propiedad.</div><div class="doc-seccion">Motivo de cancelación:</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">Se mencionan algunos clientes:</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de clientes')}</div><div class="doc-p" style="text-align:center;margin-top:16pt;">A t e n t a m e n t e</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row" style="justify-content:center;"><div class="doc-firma-col" style="flex:none;width:320px;"><div class="doc-firma-linea-top">(firma &ldquo;El Cliente&rdquo;)</div></div></div></div>`;
 
   renderPaginated();
 }
@@ -505,9 +522,11 @@ async function downloadWord() {
     const filas = Array.from(firmasWrap.querySelectorAll('.doc-firmas-row'));
     let tabla = '<table style="width:100%;border-collapse:collapse;margin-top:10pt;">';
     filas.forEach(fila => {
+      const cols = Array.from(fila.children);
+      const anchoCol = (100 / cols.length).toFixed(2);
       tabla += '<tr>';
-      Array.from(fila.children).forEach(col => {
-        tabla += `<td style="width:50%;text-align:center;vertical-align:top;padding:0 8pt 20pt;">${col.innerHTML}</td>`;
+      cols.forEach(col => {
+        tabla += `<td style="width:${anchoCol}%;text-align:center;vertical-align:top;padding:0 8pt 20pt;">${col.innerHTML}</td>`;
       });
       tabla += '</tr>';
     });
