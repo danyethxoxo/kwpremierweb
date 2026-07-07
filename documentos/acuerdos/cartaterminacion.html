@@ -562,13 +562,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function fitPreviewMobile() {
-  if (window.innerWidth > 900) return;
   const previewCol = document.querySelector('.acuerdos-preview-col');
   if (!previewCol || previewCol.style.display === 'none') return;
   const pages = previewCol.querySelectorAll('.page');
   if (!pages.length) return;
+
+  const isMobileLayout = window.innerWidth <= 900;
   const availWidth = previewCol.clientWidth - 24;
-  const scale = Math.min(1, availWidth / 816);
+  let scale = Math.min(1, availWidth / 816);
+
+  // En escritorio, si es un solo documento de una página, también lo
+  // encogemos para que quepa de alto y siempre se vea completo sin
+  // necesidad de scroll. Con varias páginas se prioriza el ancho y se
+  // deja scroll vertical para pasar entre páginas.
+  if (!isMobileLayout && pages.length === 1) {
+    const availHeight = previewCol.clientHeight - 64; // padding vertical + margen del wrap
+    scale = Math.min(scale, availHeight / 1056);
+  }
+
+  // No encoger más allá de un mínimo legible: si ya no cabe, mostramos
+  // barras de desplazamiento en vez de seguir achicando el documento
+  // (el zoom nativo del navegador sigue funcionando igual).
+  const MIN_SCALE = 0.35;
+  scale = Math.max(MIN_SCALE, scale);
+
   pages.forEach(page => {
     let wrap = page.parentElement;
     if (!wrap.classList.contains('page-scale-wrap')) {
@@ -609,9 +626,8 @@ window.addEventListener('resize', () => {
   if (window.innerWidth > 900) {
     if (formCol) formCol.style.display = '';
     if (previewCol) previewCol.style.display = '';
-  } else {
-    fitPreviewMobile();
   }
+  fitPreviewMobile();
 });
 
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
