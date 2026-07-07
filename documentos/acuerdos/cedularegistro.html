@@ -155,7 +155,7 @@
     background: #fff;
     width: 816px;
     height: 1056px;
-    padding: 30px 72px 19px 72px; /* ref: Cédula de Registro formato */
+    padding: 30px 72px 10px 72px; /* ref: Cédula de Registro formato */
     box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     border-radius: 2px;
     font-family: Arial, sans-serif;
@@ -169,7 +169,7 @@
   }
   .page-number {
     position: absolute;
-    bottom: 14px;
+    bottom: 4px;
     right: 24px;
     font-size: 8pt;
     color: #aaa;
@@ -184,7 +184,7 @@
     font-weight: 700;
     font-size: 11pt;
     letter-spacing: 0.25em;
-    margin: 0 0 26pt;
+    margin: 0 0 40pt;
     text-decoration: underline;
   }
 
@@ -197,7 +197,7 @@
   .doc-campo { font-weight: 700; border-bottom: 1px solid #CC0000; color: #CC0000; }
   .doc-campo.filled { color: #000; border-bottom: none; font-weight: 700; }
 
-  .doc-firmas-wrap { position: absolute; left: 0; right: 0; bottom: 40px; }
+  .doc-firmas-wrap { position: absolute; left: 0; right: 0; bottom: 97px; }
   .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
   .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
   .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -426,7 +426,7 @@ function downloadPDF() {
   <style>
     @page {
       size: Letter;
-      margin: 2.6cm 1.9cm 0.5cm 1.9cm;
+      margin: 0.8cm 1.9cm 0.27cm 1.9cm;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -436,17 +436,17 @@ function downloadPDF() {
       color: #000;
       padding: 0;
     }
-    .print-page { position: relative; }
+    .print-page { position: relative; height: 900px; overflow: hidden; }
     .print-page-number {
-      margin-top: 10pt;
+      position: absolute; left: 0; right: 0; bottom: 4px;
       text-align: right;
       font-size: 8pt; color: #888;
     }
-    .doc-header { margin-bottom: 16pt; }
+    .doc-header { margin-bottom: 23pt; }
     .doc-header img { height: 30pt; width: auto; margin-bottom: 6pt; }
     .doc-titulo {
       text-align: center; font-weight: 700; font-size: 11pt;
-      letter-spacing: 0.25em; margin: 0 0 10pt;
+      letter-spacing: 0.25em; margin: 0 0 40pt;
       text-decoration: underline;
     }
     .doc-intro, .doc-p { text-align: justify; margin-bottom: 4pt; font-size: 9.5pt; }
@@ -458,7 +458,7 @@ function downloadPDF() {
     .doc-campo.filled { border-bottom: none; }
     table { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
     td { border: 1px solid #999; padding: 4pt; }
-    .doc-firmas-wrap { margin-top: 20pt; }
+    .doc-firmas-wrap { position: absolute; left: 0; right: 0; bottom: 97px; }
     .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
     .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
     .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -566,13 +566,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function fitPreviewMobile() {
-  if (window.innerWidth > 900) return;
   const previewCol = document.querySelector('.acuerdos-preview-col');
   if (!previewCol || previewCol.style.display === 'none') return;
   const pages = previewCol.querySelectorAll('.page');
   if (!pages.length) return;
+
+  const isMobileLayout = window.innerWidth <= 900;
   const availWidth = previewCol.clientWidth - 24;
-  const scale = Math.min(1, availWidth / 816);
+  let scale = Math.min(1, availWidth / 816);
+
+  // En escritorio, si es un solo documento de una página, también lo
+  // encogemos para que quepa de alto y siempre se vea completo sin
+  // necesidad de scroll. Con varias páginas se prioriza el ancho y se
+  // deja scroll vertical para pasar entre páginas.
+  if (!isMobileLayout && pages.length === 1) {
+    const availHeight = previewCol.clientHeight - 64; // padding vertical + margen del wrap
+    scale = Math.min(scale, availHeight / 1056);
+  }
+
+  // No encoger más allá de un mínimo legible: si ya no cabe, mostramos
+  // barras de desplazamiento en vez de seguir achicando el documento
+  // (el zoom nativo del navegador sigue funcionando igual).
+  const MIN_SCALE = 0.35;
+  scale = Math.max(MIN_SCALE, scale);
+
   pages.forEach(page => {
     let wrap = page.parentElement;
     if (!wrap.classList.contains('page-scale-wrap')) {
@@ -613,9 +630,8 @@ window.addEventListener('resize', () => {
   if (window.innerWidth > 900) {
     if (formCol) formCol.style.display = '';
     if (previewCol) previewCol.style.display = '';
-  } else {
-    fitPreviewMobile();
   }
+  fitPreviewMobile();
 });
 
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
