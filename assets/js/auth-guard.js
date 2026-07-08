@@ -4,12 +4,15 @@
 // en las políticas de RLS de Supabase, no en este script: esto solo
 // evita que alguien sin sesión vea el HTML del sitio por casualidad.
 (function () {
+  // El sitio se publica en /kwpremierweb/ (GitHub Pages de proyecto,
+  // no dominio propio) — si eso cambia algún día, ajustar solo aquí.
+  var BASE_PATH = '/kwpremierweb';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
 
   function redirectToLogin() {
     var here = location.pathname + location.search;
-    location.replace('/login.html?redirect=' + encodeURIComponent(here));
+    location.replace(BASE_PATH + '/login.html?redirect=' + encodeURIComponent(here));
   }
 
   if (!window.supabase || !window.supabase.createClient) {
@@ -32,7 +35,7 @@
 
   window.kwLogout = function () {
     window.kwSupabase.auth.signOut().then(function () {
-      location.replace('/login.html');
+      location.replace(BASE_PATH + '/login.html');
     });
   };
 })();
