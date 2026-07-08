@@ -30,6 +30,7 @@
       redirectToLogin();
     } else {
       document.documentElement.classList.add('kw-auth-ok');
+      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
     }
   }).catch(redirectToLogin);
 
