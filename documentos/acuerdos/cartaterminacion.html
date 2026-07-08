@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carta de Terminación Anticipada — KW Premier</title>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
+      document.documentElement.classList.add('kw-auth-ok');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -312,6 +323,17 @@
         Word
       </button>
     </div>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button class="btn-download" style="margin-top:0;flex:1;background:linear-gradient(180deg,#2b8a3e 0%,#1f6d2e 100%);box-shadow:0 4px 18px rgba(31,109,46,0.3);" onclick="guardarDocumento()" id="btn-guardar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
+      <button class="btn-download" style="margin-top:0;flex:1;background:#fff;color:var(--red);border:1.5px solid var(--red);box-shadow:none;" onclick="cargarDocumentoGuardado()" id="btn-cargar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><polyline points="7 9 12 14 17 9"/><line x1="12" y1="14" x2="12" y2="2"/></svg>
+        Cargar guardado
+      </button>
+    </div>
+    <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
 
   <!-- Columna vista previa -->
@@ -409,6 +431,78 @@ function nombreArchivoContrato() {
   if (cliente) nombre += ' - ' + cliente;
   return nombre;
 
+}
+
+// ── Guardar / cargar este documento en la cuenta del usuario ──
+const CAMPOS_GUARDABLES = ['t-fecha','t-tipo-op','t-direccion','t-fecha-partir','t-porcentaje','t-dias','t-motivo','t-prospectos','t-cliente'];
+const TIPO_DOCUMENTO = 'carta_terminacion';
+
+function setGuardarMsg(text, kind) {
+  const el = document.getElementById('guardar-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+}
+
+async function guardarDocumento() {
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const datos = {};
+    CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
+
+    const { error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .upsert({
+        user_id: userData.user.id,
+        tipo_documento: TIPO_DOCUMENTO,
+        nombre_archivo: nombreArchivoContrato(),
+        datos: datos
+      }, { onConflict: 'user_id,tipo_documento' });
+
+    if (error) throw error;
+    setGuardarMsg('Documento guardado correctamente.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function cargarDocumentoGuardado() {
+  const btn = document.getElementById('btn-cargar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('datos')
+      .eq('user_id', userData.user.id)
+      .eq('tipo_documento', TIPO_DOCUMENTO)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) { setGuardarMsg('No tienes un documento guardado de este tipo todavía.', 'error'); return; }
+
+    const datos = data.datos || {};
+    CAMPOS_GUARDABLES.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
+    });
+    updatePreview();
+    setGuardarMsg('Documento guardado cargado en el formulario.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al cargar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function downloadPDF() {
