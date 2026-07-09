@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carta de Terminación Anticipada — KW Premier</title>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
+      document.documentElement.classList.add('kw-auth-ok');
+      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -246,9 +258,105 @@
   .page-scale-wrap.single .page {
     transform-origin: top left;
   }
+
+  /* ── Vista de lista de documentos guardados ── */
+  .vista-lista {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+  .vista-lista-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .vista-lista-title { font-size: 20px; font-weight: 700; }
+  .vista-lista-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .btn-nuevo-documento {
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; border: none; border-radius: 40px;
+    padding: 11px 18px; font-size: 13.5px; font-weight: 700;
+    font-family: 'DM Sans', Arial, sans-serif; cursor: pointer;
+    box-shadow: 0 4px 18px rgba(204,0,0,0.3);
+    transition: filter 0.18s, transform 0.12s;
+    white-space: nowrap;
+  }
+  .btn-nuevo-documento:hover { filter: brightness(1.08); }
+  .btn-nuevo-documento:active { transform: scale(0.96); }
+
+  .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
+  .lista-loading, .lista-vacio {
+    color: var(--muted); font-size: 13.5px; padding: 20px 4px;
+  }
+  .lista-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .lista-item:hover { border-color: var(--red); box-shadow: 0 2px 12px rgba(204,0,0,0.08); }
+  .lista-item-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+  .lista-item-fecha { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .lista-item-flecha { font-size: 20px; color: var(--muted); }
+
+  .volver-lista {
+    display: inline-block;
+    font-size: 12.5px; font-weight: 700; color: var(--red);
+    text-decoration: none; cursor: pointer; margin-bottom: 12px;
+  }
+  .volver-lista:hover { text-decoration: underline; }
+
+  /* ── Modal: nombre del documento ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
+  .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  #modal-nombre-input {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: Arial, sans-serif;
+    color: var(--text); outline: none;
+  }
+  #modal-nombre-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-modal-cancelar, .btn-modal-confirmar {
+    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
+    font-family: Arial, sans-serif; cursor: pointer; border: none;
+  }
+  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
+  .btn-modal-confirmar { background: var(--red); color: #fff; }
 </style>
 </head>
 <body>
+
+<!-- Vista de lista: documentos guardados de este tipo -->
+<div id="vista-lista" class="vista-lista">
+  <div class="vista-lista-header">
+    <div>
+      <div class="vista-lista-title">Carta de Terminación Anticipada</div>
+      <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
+    </div>
+    <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
+  </div>
+  <div id="lista-documentos" class="lista-documentos">
+    <div class="lista-loading">Cargando...</div>
+  </div>
+</div>
+
+<!-- Vista de formulario -->
+<div id="vista-formulario" class="vista-formulario" style="display:none;">
 <div class="mobile-tabs">
   <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">📝 Formulario</div>
   <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">👁️ Vista previa</div>
@@ -258,6 +366,7 @@
 
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
+    <a class="volver-lista" onclick="volverALista()">&larr; Mis documentos guardados</a>
     <div class="acuerdos-form-title">Carta de Terminación Anticipada</div>
     <div class="acuerdos-form-sub">Completa los campos — la vista previa se actualiza en tiempo real.</div>
 
@@ -302,7 +411,7 @@
       <input type="text" id="t-cliente" placeholder="Nombre completo (solo para el nombre del archivo)" oninput="updatePreview()" />
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:14px;">
+    <div id="wrap-descargas" style="display:none;gap:10px;margin-top:14px;">
       <button class="btn-download" style="margin-top:0;flex:1;" onclick="downloadPDF()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         PDF
@@ -312,6 +421,13 @@
         Word
       </button>
     </div>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button class="btn-download" style="margin-top:0;flex:1;background:linear-gradient(180deg,#2b8a3e 0%,#1f6d2e 100%);box-shadow:0 4px 18px rgba(31,109,46,0.3);" onclick="guardarDocumento()" id="btn-guardar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
+    </div>
+    <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
 
   <!-- Columna vista previa -->
@@ -322,6 +438,20 @@
   <!-- Contenedor oculto con el documento completo (sin paginar), usado para PDF/Word -->
   <div id="contrato-raw" style="display:none;"></div>
 
+</div>
+</div>
+
+<!-- Modal: nombre del documento al guardar por primera vez -->
+<div id="modal-nombre" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>Nombre del documento</h3>
+    <p class="modal-sub">Así lo verás en tu lista de documentos guardados.</p>
+    <input type="text" id="modal-nombre-input" />
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalNombre()">Cancelar</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarGuardarNuevo()">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -409,6 +539,193 @@ function nombreArchivoContrato() {
   if (cliente) nombre += ' - ' + cliente;
   return nombre;
 
+}
+
+// ── Guardar / listar los documentos de este tipo en la cuenta del usuario ──
+const CAMPOS_GUARDABLES = ['t-fecha','t-tipo-op','t-direccion','t-fecha-partir','t-porcentaje','t-dias','t-motivo','t-prospectos','t-cliente'];
+const TIPO_DOCUMENTO = 'carta_terminacion';
+let documentoActualId = null;
+
+function setGuardarMsg(text, kind) {
+  const el = document.getElementById('guardar-msg');
+  if (!text) { el.style.display = 'none'; return; }
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+}
+
+function mostrarVista(vista) {
+  document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
+  document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
+  if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
+}
+
+function actualizarVisibilidadBotones() {
+  document.getElementById('wrap-descargas').style.display = documentoActualId ? 'flex' : 'none';
+}
+
+function limpiarFormulario() {
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  updatePreview();
+}
+
+function crearNuevoDocumento() {
+  documentoActualId = null;
+  limpiarFormulario();
+  actualizarVisibilidadBotones();
+  setGuardarMsg('');
+  mostrarVista('formulario');
+}
+
+function abrirDocumentoGuardado(row) {
+  documentoActualId = row.id;
+  const datos = row.datos || {};
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
+  });
+  updatePreview();
+  actualizarVisibilidadBotones();
+  setGuardarMsg('');
+  mostrarVista('formulario');
+}
+
+function volverALista() {
+  mostrarVista('lista');
+  cargarListaDocumentos();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+
+function fmtFechaCorta(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) { return ''; }
+}
+
+async function cargarListaDocumentos() {
+  const cont = document.getElementById('lista-documentos');
+  cont.innerHTML = '<div class="lista-loading">Cargando...</div>';
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('id, nombre_archivo, updated_at, datos')
+      .eq('user_id', userData.user.id)
+      .eq('tipo_documento', TIPO_DOCUMENTO)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      cont.innerHTML = '<div class="lista-vacio">Aún no tienes documentos guardados de este tipo. Dale clic a "Crear nuevo documento" para empezar.</div>';
+      return;
+    }
+
+    cont.innerHTML = data.map((row, i) => `
+      <div class="lista-item" data-idx="${i}">
+        <div class="lista-item-info">
+          <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
+          <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
+        </div>
+        <div class="lista-item-flecha">&rsaquo;</div>
+      </div>
+    `).join('');
+
+    Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
+      el.addEventListener('click', () => abrirDocumentoGuardado(data[i]));
+    });
+  } catch (err) {
+    cont.innerHTML = `<div class="lista-vacio" style="color:#a30000;">${escapeHtml(err.message || 'Ocurrió un error al cargar tus documentos.')}</div>`;
+  }
+}
+
+function abrirModalNombre() {
+  document.getElementById('modal-nombre-input').value = nombreArchivoContrato();
+  document.getElementById('modal-nombre').style.display = 'flex';
+  const input = document.getElementById('modal-nombre-input');
+  input.focus();
+  input.select();
+}
+
+function cerrarModalNombre() {
+  document.getElementById('modal-nombre').style.display = 'none';
+}
+
+async function confirmarGuardarNuevo() {
+  const nombre = document.getElementById('modal-nombre-input').value.trim() || nombreArchivoContrato();
+  cerrarModalNombre();
+  await guardarComoNuevo(nombre);
+}
+
+async function guardarComoNuevo(nombre) {
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const datos = {};
+    CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
+
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .insert({
+        user_id: userData.user.id,
+        tipo_documento: TIPO_DOCUMENTO,
+        nombre_archivo: nombre,
+        datos: datos
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    documentoActualId = data.id;
+    actualizarVisibilidadBotones();
+    setGuardarMsg('Documento guardado.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function guardarDocumento() {
+  if (!documentoActualId) {
+    abrirModalNombre();
+    return;
+  }
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const datos = {};
+    CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
+
+    const { error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .update({ datos: datos })
+      .eq('id', documentoActualId);
+
+    if (error) throw error;
+    setGuardarMsg('Cambios guardados.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function downloadPDF() {
@@ -578,6 +895,12 @@ async function downloadWord() {
 document.addEventListener('DOMContentLoaded', () => {
 
   updatePreview();
+  mostrarVista('lista');
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    cargarListaDocumentos();
+  } else {
+    window.addEventListener('kw-auth-ready', cargarListaDocumentos, { once: true });
+  }
 });
 
 function fitPreviewMobile() {
