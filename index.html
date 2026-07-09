@@ -277,6 +277,20 @@
         <div class="card-arrow">Abrir ›</div>
       </a>
 
+      <a href="hub/admin.html" class="card" id="card-admin" style="display:none;">
+        <div class="card-icon" style="background:#f5f0ff;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="card-name">Admin</div>
+          <div class="card-desc">Invita usuarios y administra roles</div>
+        </div>
+        <div class="card-arrow">Abrir ›</div>
+      </a>
+
     </div>
   </main>
 
@@ -284,5 +298,31 @@
     Inmuebles Valle Premium, S.A.P.I. de C.V. · KW Premier
   </footer>
 
+<script>
+  // Muestra la tarjeta de Admin solo si el rol del usuario es
+  // 'admin' o 'master'.
+  async function mostrarTarjetaAdminSiAplica() {
+    try {
+      const { data: userData } = await window.kwSupabase.auth.getUser();
+      if (!userData || !userData.user) return;
+      const { data: perfil } = await window.kwSupabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userData.user.id)
+        .single();
+      if (perfil && (perfil.role === 'admin' || perfil.role === 'master')) {
+        document.getElementById('card-admin').style.display = '';
+      }
+    } catch (e) {
+      // Si algo falla, simplemente no se muestra la tarjeta de Admin.
+    }
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    mostrarTarjetaAdminSiAplica();
+  } else {
+    window.addEventListener('kw-auth-ready', mostrarTarjetaAdminSiAplica, { once: true });
+  }
+</script>
 </body>
 </html>
