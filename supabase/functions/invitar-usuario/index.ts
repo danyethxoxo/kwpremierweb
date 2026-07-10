@@ -31,6 +31,10 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
   try {
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      return respond({ error: 'Configuración del servidor incompleta (faltan variables de entorno).' }, 500)
+    }
+
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.replace('Bearer ', '')
     if (!token) return respond({ error: 'No autenticado' }, 401)
@@ -69,9 +73,13 @@ Deno.serve(async (req) => {
     const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: REDIRECT_TO,
     })
-    if (inviteError) return respond({ error: inviteError.message }, 400)
+    if (inviteError) {
+      const mensaje = inviteError.message || 'No se pudo invitar al usuario (' + (inviteError.status || 'sin detalle') + ').'
+      return respond({ error: mensaje }, 400)
+    }
 
-    const newUserId = inviteData.user.id
+    const newUserId = inviteData?.user?.id
+    if (!newUserId) return respond({ error: 'La invitación no devolvió un usuario válido.' }, 500)
 
     const { error: updateError } = await admin
       .from('profiles')
@@ -79,7 +87,7 @@ Deno.serve(async (req) => {
       .eq('id', newUserId)
 
     if (updateError) {
-      return respond({ error: 'Usuario invitado, pero no se pudo asignar el rol: ' + updateError.message }, 500)
+      return respond({ error: 'Usuario invitado, pero no se pudo asignar el rol: ' + (updateError.message || 'error desconocido') }, 500)
     }
 
     return respond({ ok: true, user_id: newUserId })

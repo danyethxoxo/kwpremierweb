@@ -143,10 +143,10 @@
 
     <div id="contenido-admin" style="display:none;">
       <h1 class="page-title">Panel de Administración</h1>
-      <p class="page-desc">Invita usuarios y consulta los roles del equipo.</p>
+      <p class="page-desc">Agrega usuarios y consulta los roles del equipo.</p>
 
       <div class="card">
-        <h2>Invitar nuevo usuario</h2>
+        <h2>Agregar nuevo usuario</h2>
         <form id="invite-form" class="invite-row">
           <div class="field">
             <label>Correo</label>
@@ -160,7 +160,7 @@
               <option value="asociado" selected>Asociado</option>
             </select>
           </div>
-          <button type="submit" class="btn-invite" id="invite-btn">Invitar</button>
+          <button type="submit" class="btn-invite" id="invite-btn">Agregar</button>
         </form>
         <div class="msg" id="invite-msg"></div>
       </div>
@@ -246,14 +246,20 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, rol })
       });
-      const body = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(body.error || 'No se pudo enviar la invitación.');
+      const raw = await resp.text();
+      let body = {};
+      try { body = raw ? JSON.parse(raw) : {}; } catch (e) { body = {}; }
 
-      setInviteMsg('Invitación enviada a ' + email + '.', 'ok');
+      if (!resp.ok) {
+        const detalle = (body && typeof body.error === 'string' && body.error) || raw || ('Error ' + resp.status);
+        throw new Error(detalle);
+      }
+
+      setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
       document.getElementById('invite-email').value = '';
       cargarUsuarios();
     } catch (err) {
-      setInviteMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
+      setInviteMsg((err && err.message) || 'Ocurrió un error, intenta de nuevo.', 'error');
     } finally {
       btn.disabled = false;
     }
