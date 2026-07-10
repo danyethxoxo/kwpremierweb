@@ -248,14 +248,18 @@
       });
       const rawText = await resp.text();
       let body = {};
-      try { body = rawText ? JSON.parse(rawText) : {}; } catch (e) { /* respuesta no era JSON */ }
+      let esJsonValido = false;
+      try { body = rawText ? JSON.parse(rawText) : {}; esJsonValido = true; } catch (e) { /* respuesta no era JSON */ }
 
       if (!resp.ok) {
-        const mensaje = (typeof body.error === 'string' && body.error.trim())
-          ? body.error
-          : (rawText && rawText.trim())
-            ? rawText.trim()
-            : ('Error ' + resp.status + ' al agregar el usuario.');
+        let mensaje;
+        if (typeof body.error === 'string' && body.error.trim()) {
+          mensaje = body.error;
+        } else if (!esJsonValido && rawText && rawText.trim()) {
+          mensaje = rawText.trim();
+        } else {
+          mensaje = 'Error ' + resp.status + ' al agregar el usuario. El servidor no envió un mensaje de error.';
+        }
         throw new Error(mensaje);
       }
 
