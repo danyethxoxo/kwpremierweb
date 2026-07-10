@@ -111,6 +111,17 @@
   .social-btn:hover { background: #ffe0e0; color: var(--red); transform: translateY(-1px); }
   .social-btn svg { width: 15px; height: 15px; fill: currentColor; }
 
+  .admin-btn {
+    display: flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 13px; border-radius: 17px;
+    background: #f5f0ff; color: #6741d9;
+    font-size: 12.5px; font-weight: 700; text-decoration: none;
+    border: none; cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .admin-btn:hover { background: #ebe0ff; transform: translateY(-1px); }
+  .admin-btn svg { width: 14px; height: 14px; stroke: currentColor; }
+
   /* ── CONTENIDO ── */
   main {
     max-width: 920px;
@@ -200,6 +211,10 @@
       <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="social-btn" aria-label="TikTok">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
       </a>
+      <a href="hub/admin.html" class="admin-btn" id="btn-admin" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Admin</span>
+      </a>
       <button type="button" class="social-btn" aria-label="Cerrar sesión" onclick="kwLogout()" style="border:none;cursor:pointer;">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
@@ -277,20 +292,6 @@
         <div class="card-arrow">Abrir ›</div>
       </a>
 
-      <a href="hub/admin.html" class="card" id="card-admin" style="display:none;">
-        <div class="card-icon" style="background:#f5f0ff;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-        </div>
-        <div>
-          <div class="card-name">Admin</div>
-          <div class="card-desc">Invita usuarios y administra roles</div>
-        </div>
-        <div class="card-arrow">Abrir ›</div>
-      </a>
-
     </div>
   </main>
 
@@ -299,9 +300,9 @@
   </footer>
 
 <script>
-  // Muestra la tarjeta de Admin solo si el rol del usuario es
+  // Muestra el botón de Admin en el header solo si el rol del usuario es
   // 'admin' o 'master'.
-  async function mostrarTarjetaAdminSiAplica() {
+  async function mostrarBotonAdminSiAplica() {
     try {
       const { data: userData } = await window.kwSupabase.auth.getUser();
       if (!userData || !userData.user) return;
@@ -311,17 +312,17 @@
         .eq('id', userData.user.id)
         .single();
       if (perfil && (perfil.role === 'admin' || perfil.role === 'master')) {
-        document.getElementById('card-admin').style.display = '';
+        document.getElementById('btn-admin').style.display = '';
       }
     } catch (e) {
-      // Si algo falla, simplemente no se muestra la tarjeta de Admin.
+      // Si algo falla, simplemente no se muestra el botón de Admin.
     }
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
-    mostrarTarjetaAdminSiAplica();
+    mostrarBotonAdminSiAplica();
   } else {
-    window.addEventListener('kw-auth-ready', mostrarTarjetaAdminSiAplica, { once: true });
+    window.addEventListener('kw-auth-ready', mostrarBotonAdminSiAplica, { once: true });
   }
 </script>
 </body>
