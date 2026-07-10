@@ -243,24 +243,20 @@
 
       const resp = await fetch(FUNCTION_URL, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+          'apikey': 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq'
+        },
         body: JSON.stringify({ email, rol })
       });
-      const rawText = await resp.text();
+      const raw = await resp.text();
       let body = {};
-      let esJsonValido = false;
-      try { body = rawText ? JSON.parse(rawText) : {}; esJsonValido = true; } catch (e) { /* respuesta no era JSON */ }
+      try { body = raw ? JSON.parse(raw) : {}; } catch (e) { body = {}; }
 
       if (!resp.ok) {
-        let mensaje;
-        if (typeof body.error === 'string' && body.error.trim()) {
-          mensaje = body.error;
-        } else if (!esJsonValido && rawText && rawText.trim()) {
-          mensaje = rawText.trim();
-        } else {
-          mensaje = 'Error ' + resp.status + ' al agregar el usuario. El servidor no envió un mensaje de error.';
-        }
-        throw new Error(mensaje);
+        const detalle = (body && typeof body.error === 'string' && body.error) || raw || ('Error ' + resp.status);
+        throw new Error(detalle);
       }
 
       setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
