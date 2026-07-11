@@ -4,12 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aceptación de Oferta de Arrendamiento — KW Premier</title>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
+      document.documentElement.classList.add('kw-auth-ok');
+      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<style>
+  @view-transition { navigation: auto; }
+  @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+  ::view-transition-group(root) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  ::view-transition-old(root) { animation-name: kw-exit-forward; }
+  ::view-transition-new(root) { animation-name: kw-enter-forward; }
+  :active-view-transition-type(back)::view-transition-old(root) { animation-name: kw-exit-back; }
+  :active-view-transition-type(back)::view-transition-new(root) { animation-name: kw-enter-back; }
+
+  @keyframes kw-enter-forward { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-forward  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes kw-enter-back    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-back     { from { transform: translateX(0); } to { transform: translateX(100%); } }
+</style>
+<script>
+  // Transición tipo app entre páginas: avanzar desliza de derecha a izquierda,
+  // retroceder desliza de izquierda a derecha. Sin efecto en navegadores que no
+  // soportan cross-document view transitions (Safari/Firefox) — navegación normal.
+  //
+  // La dirección se marca según QUÉ link se clickeó (el botón "Regresar", el logo
+  // y el breadcrumb cuentan como "retroceso"; cualquier otro link cuenta como
+  // "avance"), no según el historial del navegador — un link de "Regresar" es,
+  // para el navegador, una navegación hacia adelante como cualquier otra.
+  (function () {
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href]');
+      if (!a || a.target === '_blank') return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      var isBack = !!a.closest('.back-btn, .breadcrumb, .logo');
+      sessionStorage.setItem('kwPendingDirection', isBack ? 'back' : 'forward');
+    }, true);
+
+    function markDirection(event) {
+      if (!event.viewTransition) return;
+      var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
+      sessionStorage.removeItem('kwPendingDirection');
+      event.viewTransition.types.add(direction);
+    }
+
+    window.addEventListener('pageswap', markDirection);
+    window.addEventListener('pagereveal', markDirection);
+  })();
+</script>
 <style>
   :root {
     --red: #CC0000; --text: #1A1A1A; --muted: #888;
     --bg: #EFEFEF; --card: #ffffff; --border: rgba(0,0,0,0.07);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0;
     height: 100%;
@@ -57,6 +118,7 @@
     box-shadow: 0 4px 18px rgba(204,0,0,0.3); transition: filter 0.18s; margin-top: 22px;
   }
   .btn-dl:hover { filter: brightness(1.08); }
+  .btn-dl:active { transform: scale(0.96); }
 
   .preview-col {
     overflow: auto;
@@ -132,6 +194,7 @@
     color: var(--text);
   }
   .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .mobile-tab:active { transform: scale(0.95); }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
     .preview-col { height: auto; overflow: visible; padding: 16px; min-width: 0; }
