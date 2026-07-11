@@ -8,11 +8,11 @@
 <script>
   // Salvaguarda: si por lo que sea el script de sesión no carga o no
   // responde (ruta incorrecta, CDN caído, etc.), no dejamos la página
-  // en blanco para siempre — la mostramos igual pasados unos segundos.
+  // en blanco para siempre — mandamos al login por seguridad.
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
-      document.documentElement.classList.add('kw-auth-ok');
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
 </script>
