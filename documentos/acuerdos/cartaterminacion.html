@@ -329,6 +329,7 @@
     margin: 0 auto;
     padding: 32px 24px 60px;
   }
+  .lista-sticky-bar { background: var(--bg); }
   .vista-lista-header {
     display: flex;
     align-items: flex-start;
@@ -352,9 +353,6 @@
   .btn-nuevo-documento:active { transform: scale(0.96); }
 
   .lista-tabs-mobile { display: none; gap: 6px; }
-  @media (max-width: 900px) {
-    .lista-tabs-mobile { display: flex; width: 100%; }
-  }
   .lista-tab-mobile {
     flex: 1; padding: 9px; border-radius: 10px;
     border: 1.5px solid var(--border); background: #fff;
@@ -363,6 +361,20 @@
     transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
   .lista-tab-mobile.active { background: #6741d9; border-color: #6741d9; color: #fff; }
+
+  @media (max-width: 900px) {
+    .vista-lista { padding-top: 14px; }
+    .lista-sticky-bar {
+      position: sticky; top: 0; z-index: 5;
+      padding-top: 10px; margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+      box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
+    }
+    .vista-lista-header { margin-bottom: 12px; }
+    .vista-lista-header > div:first-of-type { flex: 1 0 100%; }
+    .btn-nuevo-documento { flex: 1; padding: 9px 12px; font-size: 12px; }
+    .lista-tabs-mobile { display: flex; flex: 1; width: auto; max-width: 190px; }
+    .lista-tab-mobile { padding: 8px 6px; font-size: 11px; }
+  }
 
   .lista-buscador {
     position: relative; margin-bottom: 20px;
@@ -468,21 +480,23 @@
 
 <!-- Vista de lista: documentos guardados de este tipo -->
 <div id="vista-lista" class="vista-lista">
-  <div class="vista-lista-header">
-    <div>
-      <div class="vista-lista-title">Carta de Terminación Anticipada</div>
-      <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
+  <div class="lista-sticky-bar">
+    <div class="vista-lista-header">
+      <div>
+        <div class="vista-lista-title">Carta de Terminación Anticipada</div>
+        <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
+      </div>
+      <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
+      <div class="lista-tabs-mobile" id="lista-tabs-mobile">
+        <button type="button" class="lista-tab-mobile active" data-tab="borradores" onclick="cambiarTabListaMobile('borradores')">Borradores</button>
+        <button type="button" class="lista-tab-mobile" data-tab="finalizados" onclick="cambiarTabListaMobile('finalizados')">Finalizados</button>
+      </div>
     </div>
-    <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
-    <div class="lista-tabs-mobile" id="lista-tabs-mobile">
-      <button type="button" class="lista-tab-mobile active" data-tab="borradores" onclick="cambiarTabListaMobile('borradores')">Borradores</button>
-      <button type="button" class="lista-tab-mobile" data-tab="finalizados" onclick="cambiarTabListaMobile('finalizados')">Finalizados</button>
-    </div>
-  </div>
 
-  <div class="lista-buscador">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="buscador-input" placeholder="Buscar por nombre, fecha o folio..." oninput="filtrarListaDocumentos()" />
+    <div class="lista-buscador">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="buscador-input" placeholder="Buscar por nombre, fecha o folio..." oninput="filtrarListaDocumentos()" />
+    </div>
   </div>
 
   <div class="lista-columnas">
