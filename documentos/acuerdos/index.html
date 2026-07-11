@@ -4,6 +4,67 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Acuerdos — KW Premier</title>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
+      document.documentElement.classList.add('kw-auth-ok');
+      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<style>
+  @view-transition { navigation: auto; }
+  @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+  ::view-transition-group(root) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  ::view-transition-old(root) { animation-name: kw-exit-forward; }
+  ::view-transition-new(root) { animation-name: kw-enter-forward; }
+  :active-view-transition-type(back)::view-transition-old(root) { animation-name: kw-exit-back; }
+  :active-view-transition-type(back)::view-transition-new(root) { animation-name: kw-enter-back; }
+
+  @keyframes kw-enter-forward { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-forward  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes kw-enter-back    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes kw-exit-back     { from { transform: translateX(0); } to { transform: translateX(100%); } }
+</style>
+<script>
+  // Transición tipo app entre páginas: avanzar desliza de derecha a izquierda,
+  // retroceder desliza de izquierda a derecha. Sin efecto en navegadores que no
+  // soportan cross-document view transitions (Safari/Firefox) — navegación normal.
+  //
+  // La dirección se marca según QUÉ link se clickeó (el botón "Regresar", el logo
+  // y el breadcrumb cuentan como "retroceso"; cualquier otro link cuenta como
+  // "avance"), no según el historial del navegador — un link de "Regresar" es,
+  // para el navegador, una navegación hacia adelante como cualquier otra.
+  (function () {
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href]');
+      if (!a || a.target === '_blank') return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      var isBack = !!a.closest('.back-btn, .breadcrumb, .logo');
+      sessionStorage.setItem('kwPendingDirection', isBack ? 'back' : 'forward');
+    }, true);
+
+    function markDirection(event) {
+      if (!event.viewTransition) return;
+      var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
+      sessionStorage.removeItem('kwPendingDirection');
+      event.viewTransition.types.add(direction);
+    }
+
+    window.addEventListener('pageswap', markDirection);
+    window.addEventListener('pagereveal', markDirection);
+  })();
+</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
@@ -18,7 +79,7 @@
       --header-h: 68px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     html, body {
       min-height: 100%;
@@ -149,7 +210,7 @@
       transform: translateY(-2px);
       border-color: rgba(204,0,0,0.18);
     }
-    .card:active { transform: translateY(0); }
+    .card:active { transform: translateY(0) scale(0.97); }
 
     .card-icon {
       width: 40px;
