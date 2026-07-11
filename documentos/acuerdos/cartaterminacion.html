@@ -141,7 +141,7 @@
     padding: 10px 8px; font-size: 12px; font-weight: 700;
     font-family: 'DM Sans', sans-serif; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;
-    box-shadow: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     transition: background 0.15s, border-color 0.15s, transform 0.12s;
     margin-top: 0;
   }
@@ -150,6 +150,33 @@
   .btn-outline-red { border-color: var(--red); color: var(--red); }
   .btn-outline-blue { border-color: #1a3fbf; color: #1a3fbf; }
   .btn-outline-green { border-color: #1f6d2e; color: #1f6d2e; }
+  .btn-outline-purple { border-color: #6741d9; color: #6741d9; }
+
+  .btn-volver {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f7f7f6; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; font-size: 12px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; color: #555; cursor: pointer;
+    margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn-volver:hover { background: #ececec; }
+  .btn-volver:active { transform: scale(0.96); }
+
+  .doc-folio {
+    text-align: right; font-size: 9pt; font-weight: 700;
+    color: #666; margin: 2pt 0 10pt;
+  }
+  .lista-item-folio {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    color: #6741d9; background: #f5f0ff; border-radius: 20px;
+    padding: 2px 9px; margin-top: 4px;
+  }
+  .lista-item-borrador {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    color: #888; background: #f1f1f1; border-radius: 20px;
+    padding: 2px 9px; margin-top: 4px;
+  }
 
   .acuerdos-preview-col {
     overflow: auto;
@@ -306,13 +333,6 @@
   .lista-item-fecha { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .lista-item-flecha { font-size: 20px; color: var(--muted); }
 
-  .volver-lista {
-    display: inline-block;
-    font-size: 12.5px; font-weight: 700; color: var(--red);
-    text-decoration: none; cursor: pointer; margin-bottom: 12px;
-  }
-  .volver-lista:hover { text-decoration: underline; }
-
   /* ── Modal: nombre del documento ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 100;
@@ -370,7 +390,10 @@
 
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
-    <a class="volver-lista" onclick="volverALista()">&larr; Mis documentos guardados</a>
+    <button type="button" class="btn-volver" onclick="volverALista()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Mis guardados
+    </button>
     <div class="acuerdos-form-title">Carta de Terminación Anticipada</div>
     <div class="acuerdos-form-sub">Completa los campos — la vista previa se actualiza en tiempo real.</div>
 
@@ -427,6 +450,10 @@
       <button class="btn-download btn-outline-green" onclick="guardarDocumento()" id="btn-guardar">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Guardar
+      </button>
+      <button class="btn-download btn-outline-purple" id="btn-finalizar" style="display:none;" onclick="finalizarDocumento()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Finalizar Documento
       </button>
     </div>
     <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
@@ -529,7 +556,7 @@ function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
   const tipoOp = g('t-tipo-op') === 'renta' ? 'renta' : (g('t-tipo-op') === 'venta' ? 'venta' : '');
-  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div><div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por este medio notifico a Inmuebles Valle Premium, S.A.P.I. de C.V., que es mi deseo desistir de la promoción de ${campoDoc(tipoOp,'venta/renta')} del inmueble ubicado en ${campoDoc(g('t-direccion'),'Dirección del inmueble')}, a partir de <strong>${fmtFecha(g('t-fecha-partir'))}</strong>, y que respeto la comisión del ${campoDoc(g('t-porcentaje'),'__')}% durante ${campoDoc(g('t-dias'),'__')} días posterior a la fecha del presente, por cualquier contacto o cliente que me hayan traído a mostrar mi propiedad.</div><div class="doc-seccion">Motivo de cancelación:</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">Se mencionan algunos clientes:</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de clientes')}</div><div class="doc-p" style="text-align:center;margin-top:16pt;">A t e n t a m e n t e</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row" style="justify-content:center;"><div class="doc-firma-col" style="flex:none;width:320px;"><div class="doc-firma-linea-top">(firma &ldquo;El Cliente&rdquo;)</div></div></div></div>`;
+  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div>${folioActual ? `<div class="doc-folio">Folio: ${folioActual}</div>` : ''}<div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por este medio notifico a Inmuebles Valle Premium, S.A.P.I. de C.V., que es mi deseo desistir de la promoción de ${campoDoc(tipoOp,'venta/renta')} del inmueble ubicado en ${campoDoc(g('t-direccion'),'Dirección del inmueble')}, a partir de <strong>${fmtFecha(g('t-fecha-partir'))}</strong>, y que respeto la comisión del ${campoDoc(g('t-porcentaje'),'__')}% durante ${campoDoc(g('t-dias'),'__')} días posterior a la fecha del presente, por cualquier contacto o cliente que me hayan traído a mostrar mi propiedad.</div><div class="doc-seccion">Motivo de cancelación:</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">Se mencionan algunos clientes:</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de clientes')}</div><div class="doc-p" style="text-align:center;margin-top:16pt;">A t e n t a m e n t e</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row" style="justify-content:center;"><div class="doc-firma-col" style="flex:none;width:320px;"><div class="doc-firma-linea-top">(firma &ldquo;El Cliente&rdquo;)</div></div></div></div>`;
 
   renderPaginated();
 }
@@ -547,6 +574,8 @@ function nombreArchivoContrato() {
 const CAMPOS_GUARDABLES = ['t-fecha','t-tipo-op','t-direccion','t-fecha-partir','t-porcentaje','t-dias','t-motivo','t-prospectos','t-cliente'];
 const TIPO_DOCUMENTO = 'carta_terminacion';
 let documentoActualId = null;
+let folioActual = null;
+let estadoActual = 'borrador';
 
 function setGuardarMsg(text, kind) {
   const el = document.getElementById('guardar-msg');
@@ -563,9 +592,18 @@ function mostrarVista(vista) {
 }
 
 function actualizarVisibilidadBotones() {
-  const display = documentoActualId ? 'flex' : 'none';
-  document.getElementById('btn-pdf').style.display = display;
-  document.getElementById('btn-word').style.display = display;
+  const finalizado = estadoActual === 'finalizado';
+  document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
+  document.getElementById('btn-word').style.display = finalizado ? 'flex' : 'none';
+  document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
+  document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
+}
+
+function bloquearFormulario(bloquear) {
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = bloquear;
+  });
 }
 
 function limpiarFormulario() {
@@ -578,7 +616,10 @@ function limpiarFormulario() {
 
 function crearNuevoDocumento() {
   documentoActualId = null;
+  folioActual = null;
+  estadoActual = 'borrador';
   limpiarFormulario();
+  bloquearFormulario(false);
   actualizarVisibilidadBotones();
   setGuardarMsg('');
   mostrarVista('formulario');
@@ -586,12 +627,15 @@ function crearNuevoDocumento() {
 
 function abrirDocumentoGuardado(row) {
   documentoActualId = row.id;
+  folioActual = row.folio || null;
+  estadoActual = row.estado || 'borrador';
   const datos = row.datos || {};
   CAMPOS_GUARDABLES.forEach(id => {
     const el = document.getElementById(id);
     if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
   });
   updatePreview();
+  bloquearFormulario(estadoActual === 'finalizado');
   actualizarVisibilidadBotones();
   setGuardarMsg('');
   mostrarVista('formulario');
@@ -625,7 +669,7 @@ async function cargarListaDocumentos() {
 
     const { data, error } = await window.kwSupabase
       .from('documentos_guardados')
-      .select('id, nombre_archivo, updated_at, datos')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado')
       .eq('user_id', userData.user.id)
       .eq('tipo_documento', TIPO_DOCUMENTO)
       .order('updated_at', { ascending: false });
@@ -642,6 +686,9 @@ async function cargarListaDocumentos() {
         <div class="lista-item-info">
           <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
           <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
+          ${row.estado === 'finalizado'
+            ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
+            : `<span class="lista-item-borrador">Borrador</span>`}
         </div>
         <div class="lista-item-flecha">&rsaquo;</div>
       </div>
@@ -727,6 +774,32 @@ async function guardarDocumento() {
     setGuardarMsg('Cambios guardados.', 'ok');
   } catch (err) {
     setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function finalizarDocumento() {
+  if (!documentoActualId) return;
+  const confirmado = confirm('Al finalizar, este documento ya no se podrá editar ni borrar, y se le asignará un folio. ¿Deseas continuar?');
+  if (!confirmado) return;
+
+  const btn = document.getElementById('btn-finalizar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data, error } = await window.kwSupabase.rpc('finalizar_documento', { p_id: documentoActualId });
+    if (error) throw error;
+
+    folioActual = data;
+    estadoActual = 'finalizado';
+    updatePreview();
+    bloquearFormulario(true);
+    actualizarVisibilidadBotones();
+    setGuardarMsg('Documento finalizado. Folio: ' + folioActual, 'ok');
+    cargarListaDocumentos();
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al finalizar.', 'error');
   } finally {
     btn.disabled = false;
   }
