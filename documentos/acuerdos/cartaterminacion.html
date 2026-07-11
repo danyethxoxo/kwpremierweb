@@ -153,10 +153,10 @@
   .slide-confirm { margin-top: 4px; user-select: none; }
   .slide-track {
     position: relative;
-    height: 54px;
+    height: 40px;
     background: linear-gradient(180deg, #f5f1fd, #ece3fb);
-    border: 1px solid #ddd0f7;
-    border-radius: 27px;
+    border: 1.5px solid #ddd0f7;
+    border-radius: 10px;
     overflow: hidden;
     box-shadow: inset 0 1px 4px rgba(103,65,217,0.14);
   }
@@ -167,22 +167,22 @@
   .slide-label {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: #6741d9;
+    font-size: 12px; font-weight: 700; color: #6741d9;
     pointer-events: none; letter-spacing: 0.01em;
     transition: opacity 0.1s linear;
   }
   .slide-thumb {
-    position: absolute; top: 4px; left: 4px;
-    width: 46px; height: 46px; border-radius: 50%;
+    position: absolute; top: 3px; left: 3px;
+    width: 32px; height: 32px; border-radius: 7px;
     background: #fff;
-    box-shadow: 0 3px 10px rgba(103,65,217,0.35), 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 6px rgba(103,65,217,0.3), 0 1px 3px rgba(0,0,0,0.12);
     display: flex; align-items: center; justify-content: center;
     color: #6741d9; cursor: grab; touch-action: none;
     transition: box-shadow 0.15s;
   }
-  .slide-thumb:active { cursor: grabbing; box-shadow: 0 1px 6px rgba(103,65,217,0.4); }
+  .slide-thumb:active { cursor: grabbing; box-shadow: 0 1px 4px rgba(103,65,217,0.35); }
   .slide-thumb.confirmado { background: #6741d9; color: #fff; }
-  @keyframes slide-hint { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(7px); } }
+  @keyframes slide-hint { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
   .slide-thumb.hint { animation: slide-hint 1.8s ease-in-out infinite; }
 
   .btn-volver {
@@ -325,7 +325,7 @@
 
   /* ── Vista de lista de documentos guardados ── */
   .vista-lista {
-    max-width: 720px;
+    max-width: 980px;
     margin: 0 auto;
     padding: 32px 24px 60px;
   }
@@ -350,6 +350,34 @@
   }
   .btn-nuevo-documento:hover { filter: brightness(1.08); }
   .btn-nuevo-documento:active { transform: scale(0.96); }
+
+  .lista-buscador {
+    position: relative; margin-bottom: 20px;
+  }
+  .lista-buscador svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); pointer-events: none;
+  }
+  .lista-buscador input {
+    width: 100%; padding: 11px 14px 11px 38px;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    font-size: 13.5px; font-family: Arial, sans-serif;
+    color: var(--text); outline: none; background: #fff;
+  }
+  .lista-buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+
+  .lista-columnas {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    align-items: start;
+  }
+  .lista-columna-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #888; margin-bottom: 10px;
+  }
+  .lista-columna-title-finalizados { color: #6741d9; }
+  @media (max-width: 900px) {
+    .lista-columnas { grid-template-columns: 1fr; }
+  }
 
   .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
   .lista-loading, .lista-vacio {
@@ -394,9 +422,34 @@
   }
   .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
   .btn-modal-confirmar { background: var(--red); color: #fff; }
+
+  /* ── Impresión directa (Ctrl+P) de la pestaña principal: solo
+     debe verse el documento, y si aún no está finalizado, se marca
+     como borrador para que no sirva como versión oficial ── */
+  @media print {
+    #vista-lista, .mobile-tabs, .acuerdos-form-col, .modal-overlay {
+      display: none !important;
+    }
+    .acuerdos-body { display: block !important; height: auto !important; }
+    .acuerdos-preview-col { overflow: visible !important; padding: 0 !important; }
+    .page { box-shadow: none !important; margin: 0 auto 0; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    body.doc-borrador .page::before {
+      content: 'BORRADOR — DOCUMENTO NO FINALIZADO';
+      position: absolute;
+      top: 45%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 42pt;
+      font-weight: 900;
+      color: rgba(204,0,0,0.24);
+      z-index: 999;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  }
 </style>
 </head>
-<body>
+<body class="doc-borrador">
 
 <!-- Vista de lista: documentos guardados de este tipo -->
 <div id="vista-lista" class="vista-lista">
@@ -407,8 +460,25 @@
     </div>
     <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
   </div>
-  <div id="lista-documentos" class="lista-documentos">
-    <div class="lista-loading">Cargando...</div>
+
+  <div class="lista-buscador">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="buscador-input" placeholder="Buscar por nombre, fecha o folio..." oninput="filtrarListaDocumentos()" />
+  </div>
+
+  <div class="lista-columnas">
+    <div class="lista-columna">
+      <div class="lista-columna-title">Borradores</div>
+      <div id="lista-borradores" class="lista-documentos">
+        <div class="lista-loading">Cargando...</div>
+      </div>
+    </div>
+    <div class="lista-columna">
+      <div class="lista-columna-title lista-columna-title-finalizados">Finalizados</div>
+      <div id="lista-finalizados" class="lista-documentos">
+        <div class="lista-loading">Cargando...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -643,6 +713,7 @@ function actualizarVisibilidadBotones() {
   document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
   document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
   document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
+  document.body.classList.toggle('doc-borrador', !finalizado);
 }
 
 function bloquearFormulario(bloquear) {
@@ -705,9 +776,13 @@ function fmtFechaCorta(iso) {
   } catch (e) { return ''; }
 }
 
+let documentosCache = [];
+
 async function cargarListaDocumentos() {
-  const cont = document.getElementById('lista-documentos');
-  cont.innerHTML = '<div class="lista-loading">Cargando...</div>';
+  const contB = document.getElementById('lista-borradores');
+  const contF = document.getElementById('lista-finalizados');
+  contB.innerHTML = '<div class="lista-loading">Cargando...</div>';
+  contF.innerHTML = '<div class="lista-loading">Cargando...</div>';
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
@@ -722,30 +797,59 @@ async function cargarListaDocumentos() {
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      cont.innerHTML = '<div class="lista-vacio">Aún no tienes documentos guardados de este tipo. Dale clic a "Crear nuevo documento" para empezar.</div>';
-      return;
-    }
-
-    cont.innerHTML = data.map((row, i) => `
-      <div class="lista-item" data-idx="${i}">
-        <div class="lista-item-info">
-          <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
-          <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
-          ${row.estado === 'finalizado'
-            ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
-            : `<span class="lista-item-borrador">Borrador</span>`}
-        </div>
-        <div class="lista-item-flecha">&rsaquo;</div>
-      </div>
-    `).join('');
-
-    Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
-      el.addEventListener('click', () => abrirDocumentoGuardado(data[i]));
-    });
+    documentosCache = data || [];
+    renderListaDocumentos();
   } catch (err) {
-    cont.innerHTML = `<div class="lista-vacio" style="color:#a30000;">${escapeHtml(err.message || 'Ocurrió un error al cargar tus documentos.')}</div>`;
+    const msg = `<div class="lista-vacio" style="color:#a30000;">${escapeHtml(err.message || 'Ocurrió un error al cargar tus documentos.')}</div>`;
+    contB.innerHTML = msg;
+    contF.innerHTML = msg;
   }
+}
+
+function filtrarListaDocumentos() {
+  renderListaDocumentos();
+}
+
+function renderListaDocumentos() {
+  const q = (document.getElementById('buscador-input').value || '').trim().toLowerCase();
+
+  const coincide = (row) => {
+    if (!q) return true;
+    const nombre = (row.nombre_archivo || '').toLowerCase();
+    const folio = (row.folio || '').toLowerCase();
+    const fecha = fmtFechaCorta(row.updated_at).toLowerCase();
+    return nombre.includes(q) || folio.includes(q) || fecha.includes(q);
+  };
+
+  const filtrados = documentosCache.filter(coincide);
+  const borradores = filtrados.filter(r => r.estado !== 'finalizado');
+  const finalizados = filtrados.filter(r => r.estado === 'finalizado');
+
+  pintarColumnaLista(document.getElementById('lista-borradores'), borradores, 'Aún no tienes borradores de este tipo.');
+  pintarColumnaLista(document.getElementById('lista-finalizados'), finalizados, 'Aún no tienes documentos finalizados de este tipo.');
+}
+
+function pintarColumnaLista(cont, rows, vacioTexto) {
+  if (!rows.length) {
+    cont.innerHTML = `<div class="lista-vacio">${escapeHtml(vacioTexto)}</div>`;
+    return;
+  }
+  cont.innerHTML = rows.map((row, i) => `
+    <div class="lista-item" data-idx="${i}">
+      <div class="lista-item-info">
+        <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
+        <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
+        ${row.estado === 'finalizado'
+          ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
+          : `<span class="lista-item-borrador">Borrador</span>`}
+      </div>
+      <div class="lista-item-flecha">&rsaquo;</div>
+    </div>
+  `).join('');
+
+  Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
+    el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));
+  });
 }
 
 function abrirModalNombre() {
@@ -864,7 +968,7 @@ let slideConfirmado = false;
 function slideMaxLeft() {
   const track = document.getElementById('slide-track');
   const thumb = document.getElementById('slide-thumb');
-  return track.clientWidth - thumb.clientWidth - 8;
+  return track.clientWidth - thumb.clientWidth - 6;
 }
 
 function slideSetPos(px) {
@@ -873,8 +977,8 @@ function slideSetPos(px) {
   const label = document.getElementById('slide-label');
   const max = slideMaxLeft();
   const clamped = Math.max(0, Math.min(max, px));
-  thumb.style.left = (clamped + 4) + 'px';
-  fill.style.width = (clamped + thumb.offsetWidth + 4) + 'px';
+  thumb.style.left = (clamped + 3) + 'px';
+  fill.style.width = (clamped + thumb.offsetWidth + 3) + 'px';
   label.style.opacity = String(Math.max(0, 1 - (clamped / max) * 1.6));
   return clamped;
 }
@@ -901,7 +1005,7 @@ function initSlideFinalizar() {
     slideDragging = true;
     thumb.classList.remove('hint');
     slideStartX = e.clientX;
-    slideThumbStartLeft = parseFloat(thumb.style.left || '4') - 4;
+    slideThumbStartLeft = parseFloat(thumb.style.left || '3') - 3;
     thumb.setPointerCapture(e.pointerId);
   });
 
@@ -914,7 +1018,7 @@ function initSlideFinalizar() {
   function finishDrag() {
     if (!slideDragging) return;
     slideDragging = false;
-    const pos = parseFloat(thumb.style.left || '4') - 4;
+    const pos = parseFloat(thumb.style.left || '3') - 3;
     if (pos >= slideMaxLeft() - 4) {
       slideConfirmado = true;
       slideSetPos(slideMaxLeft());
