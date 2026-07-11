@@ -351,6 +351,19 @@
   .btn-nuevo-documento:hover { filter: brightness(1.08); }
   .btn-nuevo-documento:active { transform: scale(0.96); }
 
+  .lista-tabs-mobile { display: none; gap: 6px; }
+  @media (max-width: 900px) {
+    .lista-tabs-mobile { display: flex; width: 100%; }
+  }
+  .lista-tab-mobile {
+    flex: 1; padding: 9px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    cursor: pointer; font-family: Arial, sans-serif;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .lista-tab-mobile.active { background: #6741d9; border-color: #6741d9; color: #fff; }
+
   .lista-buscador {
     position: relative; margin-bottom: 20px;
   }
@@ -377,6 +390,8 @@
   .lista-columna-title-finalizados { color: #6741d9; }
   @media (max-width: 900px) {
     .lista-columnas { grid-template-columns: 1fr; }
+    .lista-columna { display: none; }
+    .lista-columna.activa-mobile { display: block; }
   }
 
   .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
@@ -459,6 +474,10 @@
       <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
     </div>
     <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
+    <div class="lista-tabs-mobile" id="lista-tabs-mobile">
+      <button type="button" class="lista-tab-mobile active" data-tab="borradores" onclick="cambiarTabListaMobile('borradores')">Borradores</button>
+      <button type="button" class="lista-tab-mobile" data-tab="finalizados" onclick="cambiarTabListaMobile('finalizados')">Finalizados</button>
+    </div>
   </div>
 
   <div class="lista-buscador">
@@ -467,13 +486,13 @@
   </div>
 
   <div class="lista-columnas">
-    <div class="lista-columna">
+    <div class="lista-columna activa-mobile" id="columna-borradores">
       <div class="lista-columna-title">Borradores</div>
       <div id="lista-borradores" class="lista-documentos">
         <div class="lista-loading">Cargando...</div>
       </div>
     </div>
-    <div class="lista-columna">
+    <div class="lista-columna" id="columna-finalizados">
       <div class="lista-columna-title lista-columna-title-finalizados">Finalizados</div>
       <div id="lista-finalizados" class="lista-documentos">
         <div class="lista-loading">Cargando...</div>
@@ -808,6 +827,14 @@ async function cargarListaDocumentos() {
 
 function filtrarListaDocumentos() {
   renderListaDocumentos();
+}
+
+function cambiarTabListaMobile(tab) {
+  document.querySelectorAll('.lista-tab-mobile').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.getElementById('columna-borradores').classList.toggle('activa-mobile', tab === 'borradores');
+  document.getElementById('columna-finalizados').classList.toggle('activa-mobile', tab === 'finalizados');
 }
 
 function renderListaDocumentos() {
