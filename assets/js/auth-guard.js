@@ -13,7 +13,7 @@
   var BASE_PATH = '/kwpremierweb';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
-  var INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24 horas sin uso -> se cierra sola
+  var INACTIVITY_MS = 4 * 60 * 60 * 1000; // 4 horas sin uso -> se cierra sola
   var ACTIVITY_KEY = 'kw_last_activity';
 
   function redirectToLogin() {
