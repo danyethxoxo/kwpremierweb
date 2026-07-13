@@ -244,9 +244,9 @@
     display: flex; align-items: center; gap: 10px;
     margin-bottom: 14px; padding-left: 2px;
   }
-  .day-heading .day-full { font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
-  .day-heading .day-full em { font-style: italic; }
-  .day-heading.is-today .day-full { color: #C2255C; }
+  .day-heading .day-full { font-size: 19px; letter-spacing: -0.2px; }
+  .day-heading .day-weekday-word { font-weight: 700; color: #000; }
+  .day-heading .day-date-rest { font-weight: 400; color: var(--red); }
   .day-heading .today-pill {
     font-size: 10.5px; font-weight: 700; color: #C2255C; background: #fff0f5;
     padding: 3px 10px; border-radius: 20px; text-transform: uppercase; margin-left: 2px;
@@ -559,14 +559,12 @@
           ? `<div class="event-location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escapeHTML(ev.location)}</div>`
           : '';
         const descHTML = ev.description ? `<div class="event-desc">${normalizeMeetingLinks(ev.description)}</div>` : '';
-        const hasDetails = !!(ev.location || ev.description);
+        const detailsFallbackHTML = (ev.location || ev.description) ? '' : `<div class="event-desc">Sin detalles adicionales.</div>`;
         const detailsId = `ev-details-${dayIdx}-${evIdx}`;
-        const toggleHTML = hasDetails
-          ? `<button type="button" class="event-toggle" onclick="toggleEventDetails('${detailsId}', this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              Ver todos los detalles
-            </button>`
-          : '';
+        const toggleHTML = `<button type="button" class="event-toggle" onclick="toggleEventDetails('${detailsId}', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            Ver todos los detalles
+          </button>`;
         const joinLink = ev.hangoutLink || findMeetingLink(ev.description);
         const joinBtnHTML = joinLink
           ? `<a class="event-btn event-btn-join" href="${joinLink}" target="_blank" rel="noopener">
@@ -589,6 +587,7 @@
               <div class="event-details" id="${detailsId}">
                 ${locationHTML}
                 ${descHTML}
+                ${detailsFallbackHTML}
               </div>
               <div class="event-actions">${joinBtnHTML}${detailsBtnHTML}</div>
             </div>
@@ -600,7 +599,7 @@
       return `
         <div class="day-group${isToday ? ' is-today' : ''}" id="${isToday ? 'day-today' : ''}">
           <div class="day-heading${isToday ? ' is-today' : ''}">
-            <span class="day-full">${cap(weekday)} ${day.parts.day} de <em>${cap(month)}</em></span>
+            <span class="day-full"><span class="day-weekday-word">${cap(weekday)}</span> <span class="day-date-rest">${day.parts.day} de ${cap(month)}</span></span>
             ${isToday ? '<span class="today-pill">Hoy</span>' : ''}
           </div>
           ${bodyHTML}
