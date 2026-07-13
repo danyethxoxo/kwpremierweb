@@ -283,6 +283,87 @@
     .card.c-pink   .card-big, .card.c-pink   .card-cta { color: #C2255C; }
     .card.c-pink:hover   { border-color: rgba(194,37,92,0.25); }
 
+    .card.c-amber  .card-big, .card.c-amber  .card-cta { color: #B45309; }
+    .card.c-amber:hover  { border-color: rgba(180,83,9,0.25); }
+
+    button.card { cursor: pointer; font-family: inherit; width: 100%; -webkit-appearance: none; appearance: none; }
+
+    .section-title {
+      font-size: 15px; font-weight: 700; margin: 40px 0 14px;
+    }
+
+    .incidencias-cont {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 8px 20px;
+    }
+    .incidencia-item {
+      padding: 16px 0; border-bottom: 1px solid var(--border);
+    }
+    .incidencia-item:last-child { border-bottom: none; }
+    .incidencia-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .incidencia-titulo { font-size: 14px; font-weight: 700; }
+    .incidencia-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .estatus-badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    }
+    .estatus-abierto { background: #fdeaea; color: #a30000; }
+    .estatus-en_revision { background: #fff6e0; color: #a3690a; }
+    .estatus-resuelto { background: #eaf7ea; color: #1a7a1a; }
+    .incidencia-desc { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; }
+    .incidencia-imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .incidencia-imgs img {
+      width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .estado-vacio { padding: 20px 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+    /* ── Modal: reportar incidencia ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #fff; border-radius: 14px; padding: 24px;
+      width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      text-align: left;
+    }
+    .modal-box h3 { font-size: 17px; margin-bottom: 16px; }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 11.5px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--red); margin-bottom: 5px;
+    }
+    .field input, .field textarea {
+      width: 100%; padding: 9px 12px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 13.5px; font-family: 'DM Sans', sans-serif;
+      color: var(--text); background: #fff; outline: none; resize: vertical;
+    }
+    .field input:focus, .field textarea:focus {
+      border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+    }
+    .field-hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-modal-cancelar, .btn-modal-confirmar {
+      flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
+      font-family: 'DM Sans', sans-serif; cursor: pointer; border: none;
+    }
+    .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
+    .btn-modal-confirmar { background: var(--red); color: #fff; }
+    .btn-modal-confirmar:disabled { opacity: 0.6; cursor: default; }
+    .msg {
+      font-size: 13px; padding: 10px 12px; border-radius: 10px;
+      margin-top: 12px; display: none;
+    }
+    .msg.error { display: block; background: #fdeaea; color: #a30000; }
+    .msg.ok { display: block; background: #eaf7ea; color: #1a7a1a; }
+
     .footer {
       margin-top: 48px;
       padding-top: 20px;
@@ -365,7 +446,17 @@
         <div class="card-cta">Abrir <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
       </a>
 
+      <button type="button" id="card-ticket" class="card c-amber" onclick="abrirModalIncidencia()">
+        <div class="card-eyebrow">Soporte</div>
+        <div class="card-big">INCIDENCIA</div>
+        <div class="card-sub">Levanta un ticket</div>
+        <div class="card-cta">Reportar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+      </button>
+
     </div>
+
+    <h2 class="section-title">Mis incidencias reportadas</h2>
+    <div class="incidencias-cont" id="incidencias-cont">Cargando...</div>
 
     <div class="footer">
       <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
@@ -380,6 +471,161 @@
     </div>
 
   </main>
+
+  <!-- Modal: reportar incidencia -->
+  <div id="modal-incidencia" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Reportar una incidencia</h3>
+      <div class="field">
+        <label>Título</label>
+        <input type="text" id="inc-titulo" placeholder="Ej. No puedo generar un documento" />
+      </div>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="inc-descripcion" rows="4" placeholder="Cuéntanos qué pasó..."></textarea>
+      </div>
+      <div class="field">
+        <label>Adjuntar imágenes (opcional)</label>
+        <input type="file" id="inc-imagenes" accept="image/*" multiple />
+        <div class="field-hint">Puedes seleccionar una o varias capturas de pantalla.</div>
+      </div>
+      <div class="msg" id="inc-msg"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalIncidencia()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="inc-btn-enviar" onclick="enviarIncidencia()">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const ESTATUS_LABELS = { abierto: 'Abierto', en_revision: 'En revisión', resuelto: 'Resuelto' };
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function fmtFechaCorta(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch (e) { return ''; }
+  }
+
+  function abrirModalIncidencia() {
+    document.getElementById('inc-titulo').value = '';
+    document.getElementById('inc-descripcion').value = '';
+    document.getElementById('inc-imagenes').value = '';
+    setIncMsg('', '');
+    document.getElementById('modal-incidencia').style.display = 'flex';
+  }
+
+  function cerrarModalIncidencia() {
+    document.getElementById('modal-incidencia').style.display = 'none';
+  }
+
+  function setIncMsg(text, kind) {
+    const el = document.getElementById('inc-msg');
+    if (!text) { el.style.display = 'none'; return; }
+    el.textContent = text;
+    el.className = 'msg ' + kind;
+  }
+
+  async function enviarIncidencia() {
+    const titulo = document.getElementById('inc-titulo').value.trim();
+    const descripcion = document.getElementById('inc-descripcion').value.trim();
+    const archivos = Array.from(document.getElementById('inc-imagenes').files || []);
+    if (!titulo || !descripcion) {
+      setIncMsg('Escribe un título y una descripción.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('inc-btn-enviar');
+    btn.disabled = true;
+    setIncMsg('', '');
+    try {
+      const { data: userData } = await window.kwSupabase.auth.getUser();
+      const uid = userData && userData.user && userData.user.id;
+      if (!uid) throw new Error('No hay sesión activa.');
+
+      const imagenes = [];
+      for (const archivo of archivos) {
+        const ruta = `${uid}/${crypto.randomUUID()}-${archivo.name}`;
+        const { error: subeError } = await window.kwSupabase.storage.from('incidencias').upload(ruta, archivo);
+        if (subeError) throw subeError;
+        const { data: urlData } = window.kwSupabase.storage.from('incidencias').getPublicUrl(ruta);
+        imagenes.push(urlData.publicUrl);
+      }
+
+      const { error: insertError } = await window.kwSupabase.from('incidencias').insert({
+        user_id: uid, titulo, descripcion, imagenes
+      });
+      if (insertError) throw insertError;
+
+      setIncMsg('Incidencia enviada. Gracias por avisarnos.', 'ok');
+      cargarMisIncidencias();
+      setTimeout(cerrarModalIncidencia, 900);
+    } catch (err) {
+      setIncMsg((err && err.message) || 'Ocurrió un error al enviar la incidencia.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderIncidencia(inc) {
+    const imgsHTML = (inc.imagenes || []).map(url =>
+      `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Captura adjunta"></a>`
+    ).join('');
+    return `
+      <div class="incidencia-item">
+        <div class="incidencia-head">
+          <div>
+            <div class="incidencia-titulo">${escapeHtml(inc.titulo)}</div>
+            <div class="incidencia-meta">${fmtFechaCorta(inc.created_at)}</div>
+          </div>
+          <span class="estatus-badge estatus-${inc.estatus}">${ESTATUS_LABELS[inc.estatus] || inc.estatus}</span>
+        </div>
+        <div class="incidencia-desc">${escapeHtml(inc.descripcion)}</div>
+        ${imgsHTML ? `<div class="incidencia-imgs">${imgsHTML}</div>` : ''}
+      </div>`;
+  }
+
+  async function cargarMisIncidencias() {
+    const cont = document.getElementById('incidencias-cont');
+    try {
+      const { data: userData } = await window.kwSupabase.auth.getUser();
+      const uid = userData && userData.user && userData.user.id;
+      if (!uid) throw new Error('sin sesión');
+
+      const { data, error } = await window.kwSupabase
+        .from('incidencias')
+        .select('id, titulo, descripcion, imagenes, estatus, created_at')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        cont.innerHTML = '<div class="estado-vacio">No has reportado ninguna incidencia todavía.</div>';
+        return;
+      }
+      cont.innerHTML = data.map(renderIncidencia).join('');
+    } catch (err) {
+      cont.innerHTML = `<div class="estado-vacio">${escapeHtml(err.message || 'Ocurrió un error al cargar tus incidencias.')}</div>`;
+    }
+  }
+
+  function initAccesos() {
+    cargarMisIncidencias();
+    const params = new URLSearchParams(location.search);
+    if (params.get('ticket') === '1') abrirModalIncidencia();
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    initAccesos();
+  } else {
+    window.addEventListener('kw-auth-ready', initAccesos, { once: true });
+  }
+</script>
 
 </body>
 </html>
