@@ -142,20 +142,6 @@
 
   .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
 
-  .incidencia-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
-  .incidencia-item:last-child { border-bottom: none; }
-  .incidencia-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .incidencia-titulo { font-size: 14px; font-weight: 700; }
-  .incidencia-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .incidencia-desc { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; }
-  .incidencia-imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .incidencia-imgs img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
-  .estatus-select {
-    padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 20px;
-    font-size: 11.5px; font-weight: 700; font-family: Arial, sans-serif; cursor: pointer;
-    background: #fff; color: var(--text);
-  }
-
   /* ── Modal: editar usuario ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 100;
@@ -206,7 +192,6 @@
       <div class="tabs" id="panel-tabs">
         <button type="button" class="tab-btn active" data-tab="usuarios" onclick="cambiarTabPanel('usuarios')">Usuarios</button>
         <button type="button" class="tab-btn" data-tab="documentos" onclick="cambiarTabPanel('documentos')">Documentos</button>
-        <button type="button" class="tab-btn" data-tab="incidencias" onclick="cambiarTabPanel('incidencias')">Incidencias</button>
       </div>
 
       <div id="tab-usuarios">
@@ -254,13 +239,6 @@
           <div id="documentos-cont">Cargando...</div>
         </div>
       </div>
-
-      <div id="tab-incidencias" style="display:none;">
-        <div class="card">
-          <h2>Incidencias reportadas</h2>
-          <div id="incidencias-panel-cont">Cargando...</div>
-        </div>
-      </div>
     </div>
 
     <div id="denegado" class="denegado" style="display:none;">
@@ -295,7 +273,6 @@
   const APIKEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Staff', asociado: 'Asociado' };
   const TIPO_LABELS = { carta_terminacion: 'Carta de Terminación Anticipada' };
-  const ESTATUS_LABELS = { abierto: 'Abierto', en_revision: 'En revisión', resuelto: 'Resuelto' };
 
   let miRol = null;
   let miUserId = null;
@@ -319,7 +296,6 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('tab-usuarios').style.display = tab === 'usuarios' ? '' : 'none';
     document.getElementById('tab-documentos').style.display = tab === 'documentos' ? '' : 'none';
-    document.getElementById('tab-incidencias').style.display = tab === 'incidencias' ? '' : 'none';
   }
 
   async function llamarFuncion(url, payload) {
@@ -562,57 +538,6 @@
     cont.innerHTML = html;
   }
 
-  // ── Incidencias ──
-  function renderIncidencia(inc) {
-    const nombreReportante = [inc.reportante_nombre, inc.reportante_apellido].filter(Boolean).join(' ') || inc.reportante_email || 'Sin nombre';
-    const imgsHTML = (inc.imagenes || []).map(url =>
-      `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Captura adjunta"></a>`
-    ).join('');
-    const opciones = ['abierto', 'en_revision', 'resuelto']
-      .map(v => `<option value="${v}" ${v === inc.estatus ? 'selected' : ''}>${ESTATUS_LABELS[v]}</option>`).join('');
-    return `
-      <div class="incidencia-item">
-        <div class="incidencia-head">
-          <div>
-            <div class="incidencia-titulo">${escapeHtml(inc.titulo)}</div>
-            <div class="incidencia-meta">${escapeHtml(nombreReportante)} · ${fmtFechaCorta(inc.created_at)}</div>
-          </div>
-          <select class="estatus-select" data-id="${inc.id}" onchange="actualizarEstatusIncidencia('${inc.id}', this.value)">${opciones}</select>
-        </div>
-        <div class="incidencia-desc">${escapeHtml(inc.descripcion)}</div>
-        ${imgsHTML ? `<div class="incidencia-imgs">${imgsHTML}</div>` : ''}
-      </div>`;
-  }
-
-  async function cargarIncidenciasPanel() {
-    const cont = document.getElementById('incidencias-panel-cont');
-    try {
-      const { data, error } = await window.kwSupabase
-        .from('incidencias_con_reportante')
-        .select('id, titulo, descripcion, imagenes, estatus, created_at, reportante_nombre, reportante_apellido, reportante_email')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No hay incidencias reportadas.</p>';
-        return;
-      }
-      cont.innerHTML = data.map(renderIncidencia).join('');
-    } catch (err) {
-      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar las incidencias.')}</p>`;
-    }
-  }
-
-  async function actualizarEstatusIncidencia(id, estatus) {
-    try {
-      const { error } = await window.kwSupabase.from('incidencias').update({ estatus }).eq('id', id);
-      if (error) throw error;
-    } catch (err) {
-      alert(err.message || 'Ocurrió un error al actualizar el estatus.');
-      cargarIncidenciasPanel();
-    }
-  }
-
   // ── Inicio ──
   async function initAdmin() {
     try {
@@ -648,7 +573,6 @@
         }
         document.getElementById('invite-form').addEventListener('submit', enviarInvitacion);
         cargarUsuarios();
-        cargarIncidenciasPanel();
       }
 
       document.getElementById('contenido-panel').style.display = '';
