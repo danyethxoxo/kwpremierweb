@@ -137,8 +137,19 @@
       </form>
 
       <div class="toggle-mode">
+        <a href="#" id="link-olvide" onclick="return mostrarFormOlvide()">¿Olvidaste tu contraseña?</a>
+      </div>
+      <div class="toggle-mode">
         <span>¿No tienes cuenta? Pídele a un administrador que te invite.</span>
       </div>
+
+      <form id="olvide-form" style="display:none;margin-top:16px;">
+        <div class="field">
+          <label>Correo</label>
+          <input type="email" id="olvide-email" autocomplete="email" required />
+        </div>
+        <button type="submit" class="btn-submit" id="olvide-btn">Enviar link para restablecer</button>
+      </form>
     </div>
   </main>
 
@@ -187,6 +198,34 @@
   // Si ya hay sesión activa, no tiene caso mostrar el login.
   sb.auth.getSession().then(({ data }) => {
     if (data && data.session) location.replace(getRedirectTarget());
+  });
+
+  function mostrarFormOlvide() {
+    document.getElementById('auth-form').style.display = 'none';
+    document.getElementById('link-olvide').parentElement.style.display = 'none';
+    document.getElementById('olvide-form').style.display = 'block';
+    clearMsg();
+    return false;
+  }
+
+  document.getElementById('olvide-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearMsg();
+    const email = document.getElementById('olvide-email').value.trim();
+    const btn = document.getElementById('olvide-btn');
+    btn.disabled = true;
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://danyethxoxo.github.io/kwpremierweb/restablecer-password.html'
+      });
+      if (error) throw error;
+      showMsg('Si ese correo tiene una cuenta, te llegará un link para restablecer tu contraseña.', 'ok');
+      document.getElementById('olvide-form').style.display = 'none';
+    } catch (err) {
+      showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
   });
 </script>
 </body>
