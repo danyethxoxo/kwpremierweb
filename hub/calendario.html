@@ -231,12 +231,12 @@
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   }
   .day-group.is-today {
-    border: 2px solid #C2255C;
-    background: #fffafb;
+    border: 2px solid var(--red);
+    background: #fffafa;
   }
   @keyframes day-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(194,37,92,0); }
-    30% { box-shadow: 0 0 0 6px rgba(194,37,92,0.18); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(204,0,0,0); }
+    30% { box-shadow: 0 0 0 6px rgba(204,0,0,0.18); }
   }
   .day-group.pulse { animation: day-pulse 0.7s ease-out 2; }
 
@@ -248,7 +248,7 @@
   .day-heading .day-weekday-word { font-weight: 700; color: #000; }
   .day-heading .day-date-rest { font-weight: 400; color: var(--red); }
   .day-heading .today-pill {
-    font-size: 10.5px; font-weight: 700; color: #C2255C; background: #fff0f5;
+    font-size: 10.5px; font-weight: 700; color: var(--red); background: #ffe5e5;
     padding: 3px 10px; border-radius: 20px; text-transform: uppercase; margin-left: 2px;
   }
 
@@ -256,26 +256,23 @@
     display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border);
   }
   .event-card:first-child { border-top: none; padding-top: 4px; }
-  .event-time-col { flex-shrink: 0; width: 64px; display: flex; flex-direction: column; gap: 6px; }
-  .event-time {
-    font-size: 12.5px; font-weight: 700; color: #C2255C;
-    padding-top: 1px; line-height: 1.4;
-  }
-  .event-time .end-time { display: block; font-weight: 500; color: var(--muted); font-size: 11.5px; }
-  .event-time.all-day { color: var(--muted); font-weight: 600; }
+  .event-time { flex-shrink: 0; width: 68px; font-size: 16px; font-weight: 800; color: var(--red); padding-top: 1px; line-height: 1.3; }
+  .event-time .end-time { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+  .event-time.all-day { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .event-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .event-toggle {
-    display: inline-flex; align-items: center; gap: 3px;
-    border: none; background: none; padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+    border: none; background: none; padding: 0; cursor: pointer; margin-top: 2px;
     font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 700; color: var(--muted);
-    text-align: left; line-height: 1.3;
+    text-align: right; line-height: 1.3;
   }
   .event-toggle:hover { color: var(--text); }
   .event-toggle svg { flex-shrink: 0; width: 10px; height: 10px; transition: transform 0.2s; }
   .event-toggle.open svg { transform: rotate(180deg); }
   .event-body { flex: 1; min-width: 0; }
-  .event-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; line-height: 1.35; }
+  .event-title { font-size: 14px; font-weight: 700; line-height: 1.35; flex: 1; min-width: 0; }
   .event-details { display: none; }
-  .event-details.open { display: block; }
+  .event-details.open { display: block; margin-top: 3px; }
   .event-location {
     font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-top: 6px;
   }
@@ -320,7 +317,7 @@
     .calendar-scroll { padding: 14px 16px 50px; }
     .page-title { font-size: 21px; }
     .month-label { font-size: 14px; }
-    .event-time { width: 52px; font-size: 11.5px; }
+    .event-time { width: 56px; font-size: 14px; }
   }
 </style>
 </head>
@@ -578,12 +575,12 @@
           </a>`;
         return `
           <div class="event-card">
-            <div class="event-time-col">
-              ${timeHTML}
-              ${toggleHTML}
-            </div>
+            ${timeHTML}
             <div class="event-body">
-              <div class="event-title">${escapeHTML(ev.title)}</div>
+              <div class="event-title-row">
+                <div class="event-title">${escapeHTML(ev.title)}</div>
+                ${toggleHTML}
+              </div>
               <div class="event-details" id="${detailsId}">
                 ${locationHTML}
                 ${descHTML}
