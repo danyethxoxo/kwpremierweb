@@ -55,6 +55,14 @@
     margin-bottom: 22px;
   }
   .field { margin-bottom: 14px; }
+  .password-wrap { position: relative; }
+  .password-wrap input { padding-right: 40px; }
+  .password-toggle {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    padding: 4px; display: flex; align-items: center; justify-content: center;
+  }
+  .password-toggle:hover { color: var(--text); }
   .field label {
     display: block;
     font-size: 12px; font-weight: 700;
@@ -131,16 +139,18 @@
         </div>
         <div class="field">
           <label>Contraseña</label>
-          <input type="password" id="password" autocomplete="current-password" required minlength="6" />
+          <div class="password-wrap">
+            <input type="password" id="password" autocomplete="current-password" required minlength="6" />
+            <button type="button" class="password-toggle" id="toggle-password" aria-label="Mostrar contraseña" onclick="togglePasswordVisibility()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn-submit" id="submit-btn">Entrar</button>
       </form>
 
       <div class="toggle-mode">
         <a href="#" id="link-olvide" onclick="return mostrarFormOlvide()">¿Olvidaste tu contraseña?</a>
-      </div>
-      <div class="toggle-mode">
-        <span>¿No tienes cuenta? Pídele a un administrador que te invite.</span>
       </div>
 
       <form id="olvide-form" style="display:none;margin-top:16px;">
@@ -199,6 +209,14 @@
   sb.auth.getSession().then(({ data }) => {
     if (data && data.session) location.replace(getRedirectTarget());
   });
+
+  function togglePasswordVisibility() {
+    const input = document.getElementById('password');
+    const btn = document.getElementById('toggle-password');
+    const mostrando = input.type === 'text';
+    input.type = mostrando ? 'password' : 'text';
+    btn.setAttribute('aria-label', mostrando ? 'Mostrar contraseña' : 'Ocultar contraseña');
+  }
 
   function mostrarFormOlvide() {
     document.getElementById('auth-form').style.display = 'none';
