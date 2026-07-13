@@ -5,6 +5,9 @@
 
 alter table public.incidencias add column if not exists respuesta text;
 
+-- "respuesta" va al final del select: Postgres no permite insertar una
+-- columna nueva a la mitad de una vista existente con CREATE OR REPLACE,
+-- solo agregarla al final (si no, da error "cannot change name of view column").
 create or replace view public.incidencias_con_reportante as
 select
   i.id,
@@ -13,12 +16,12 @@ select
   i.descripcion,
   i.imagenes,
   i.estatus,
-  i.respuesta,
   i.created_at,
   i.updated_at,
   p.nombre as reportante_nombre,
   p.apellido as reportante_apellido,
-  p.email as reportante_email
+  p.email as reportante_email,
+  i.respuesta
 from public.incidencias i
 join public.profiles p on p.id = i.user_id
 where auth.uid() = i.user_id or public.is_admin_or_master();
