@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Admin — KW Premier</title>
+<title>Panel — KW Premier</title>
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
-      document.documentElement.classList.add('kw-auth-ok');
-      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
 </script>
@@ -51,17 +50,19 @@
   }
   .back-btn:hover { background: #f0f0f0; color: var(--text); }
 
-  .page { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
-  .breadcrumb {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--muted); margin-bottom: 20px;
-  }
-  .breadcrumb a { color: var(--muted); text-decoration: none; }
-  .breadcrumb a:hover { color: var(--text); }
-  .breadcrumb span { color: var(--text); font-weight: 500; }
+  .page { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
 
   .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 28px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 24px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 22px; }
+  .tab-btn {
+    padding: 9px 18px; border-radius: 30px; border: 1.5px solid var(--border);
+    background: #fff; font-size: 13px; font-weight: 700; color: var(--muted);
+    cursor: pointer; font-family: Arial, sans-serif;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
 
   .card {
     background: var(--card);
@@ -73,7 +74,7 @@
   .card h2 { font-size: 15px; margin-bottom: 14px; }
 
   .invite-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-  .field { flex: 1; min-width: 180px; }
+  .field { flex: 1; min-width: 180px; margin-bottom: 12px; }
   .field label {
     display: block; font-size: 11.5px; font-weight: 700;
     letter-spacing: 0.04em; text-transform: uppercase;
@@ -88,6 +89,7 @@
   .field input:focus, .field select:focus {
     border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
   }
+  .field input:disabled { background: #f4f4f4; color: var(--muted); }
   .btn-invite {
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none; border-radius: 10px;
@@ -107,7 +109,7 @@
 
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 6px; border-bottom: 1px solid var(--border); }
-  td { padding: 10px 6px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   .rol-badge {
     display: inline-block; padding: 2px 9px; border-radius: 20px;
     font-size: 11px; font-weight: 700; text-transform: capitalize;
@@ -117,7 +119,55 @@
   .rol-staff { background: #e7f5ff; color: #1971c2; }
   .rol-asociado { background: #f1f3f5; color: #495057; }
 
+  .btn-editar-usuario {
+    padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+    background: #fff; font-size: 11.5px; font-weight: 700; color: var(--text);
+    cursor: pointer; font-family: Arial, sans-serif;
+  }
+  .btn-editar-usuario:hover { border-color: var(--red); color: var(--red); }
+
+  .doc-filtros {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+  }
+  .doc-filtros input, .doc-filtros select {
+    padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 13px; font-family: Arial, sans-serif; color: var(--text);
+    background: #fff; outline: none;
+  }
+  .doc-filtros input:focus, .doc-filtros select:focus {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+  }
+  #doc-buscador { flex: 2; min-width: 200px; }
+  .doc-filtros select, .doc-filtros input[type="date"] { flex: 1; min-width: 130px; }
+
   .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
+
+  /* ── Modal: editar usuario ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { font-size: 17px; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .btn-modal-cancelar, .btn-modal-confirmar {
+    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
+    font-family: Arial, sans-serif; cursor: pointer; border: none;
+  }
+  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
+  .btn-modal-confirmar { background: var(--red); color: #fff; }
+  .btn-eliminar-usuario {
+    width: 100%; margin-top: 14px; padding: 10px; border-radius: 30px;
+    font-size: 12.5px; font-weight: 700; font-family: Arial, sans-serif;
+    background: none; border: 1.5px solid #a30000; color: #a30000; cursor: pointer;
+  }
+  .btn-eliminar-usuario:hover { background: #fdeaea; }
 </style>
 </head>
 <body>
@@ -135,39 +185,59 @@
   </header>
 
   <main class="page">
-    <div class="breadcrumb">
-      <a href="../index.html">Hub</a>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      <span>Admin</span>
-    </div>
+    <div id="contenido-panel" style="display:none;">
+      <h1 class="page-title" id="panel-title">Panel</h1>
+      <p class="page-desc" id="panel-desc"></p>
 
-    <div id="contenido-admin" style="display:none;">
-      <h1 class="page-title">Panel de Administración</h1>
-      <p class="page-desc">Agrega usuarios y consulta los roles del equipo.</p>
-
-      <div class="card">
-        <h2>Agregar nuevo usuario</h2>
-        <form id="invite-form" class="invite-row">
-          <div class="field">
-            <label>Correo</label>
-            <input type="email" id="invite-email" required />
-          </div>
-          <div class="field" style="max-width:160px;">
-            <label>Rol</label>
-            <select id="invite-rol">
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-              <option value="asociado" selected>Asociado</option>
-            </select>
-          </div>
-          <button type="submit" class="btn-invite" id="invite-btn">Agregar</button>
-        </form>
-        <div class="msg" id="invite-msg"></div>
+      <div class="tabs" id="panel-tabs">
+        <button type="button" class="tab-btn active" data-tab="usuarios" onclick="cambiarTabPanel('usuarios')">Usuarios</button>
+        <button type="button" class="tab-btn" data-tab="documentos" onclick="cambiarTabPanel('documentos')">Documentos</button>
       </div>
 
-      <div class="card">
-        <h2>Usuarios</h2>
-        <div id="usuarios-cont">Cargando...</div>
+      <div id="tab-usuarios">
+        <div class="card">
+          <h2>Agregar nuevo usuario</h2>
+          <form id="invite-form" class="invite-row">
+            <div class="field">
+              <label>Correo</label>
+              <input type="email" id="invite-email" required />
+            </div>
+            <div class="field" style="max-width:160px;">
+              <label>Rol</label>
+              <select id="invite-rol">
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+                <option value="asociado" selected>Asociado</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-invite" id="invite-btn">Agregar</button>
+          </form>
+          <div class="msg" id="invite-msg"></div>
+        </div>
+
+        <div class="card">
+          <h2>Usuarios</h2>
+          <div id="usuarios-cont">Cargando...</div>
+        </div>
+      </div>
+
+      <div id="tab-documentos" style="display:none;">
+        <div class="card">
+          <h2>Documentos de todo el equipo</h2>
+          <div class="doc-filtros">
+            <input type="text" id="doc-buscador" placeholder="Buscar por nombre o folio..." oninput="filtrarDocumentosPanel()" />
+            <select id="doc-filtro-asesor" onchange="filtrarDocumentosPanel()"><option value="">Todos los asesores</option></select>
+            <select id="doc-filtro-tipo" onchange="filtrarDocumentosPanel()"><option value="">Todos los tipos</option></select>
+            <select id="doc-filtro-estatus" onchange="filtrarDocumentosPanel()">
+              <option value="">Todos los estatus</option>
+              <option value="borrador">Borrador</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+            <input type="date" id="doc-filtro-desde" onchange="filtrarDocumentosPanel()" title="Desde" />
+            <input type="date" id="doc-filtro-hasta" onchange="filtrarDocumentosPanel()" title="Hasta" />
+          </div>
+          <div id="documentos-cont">Cargando...</div>
+        </div>
       </div>
     </div>
 
@@ -176,9 +246,39 @@
     </div>
   </main>
 
+  <!-- Modal: editar usuario -->
+  <div id="modal-editar-usuario" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Editar usuario</h3>
+      <div class="field"><label>Nombre</label><input type="text" id="edit-nombre" /></div>
+      <div class="field"><label>Apellido</label><input type="text" id="edit-apellido" /></div>
+      <div class="field"><label>Correo</label><input type="email" id="edit-email" /></div>
+      <div class="field">
+        <label>Rol</label>
+        <select id="edit-rol"></select>
+      </div>
+      <div class="field"><label>Nueva contraseña (opcional)</label><input type="password" id="edit-password" placeholder="Dejar en blanco para no cambiarla" /></div>
+      <div class="msg" id="edit-msg"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" onclick="guardarEdicionUsuario()">Guardar</button>
+      </div>
+      <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" onclick="confirmarEliminarUsuario()">Eliminar usuario</button>
+    </div>
+  </div>
+
 <script>
-  const FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/invitar-usuario';
+  const GESTIONAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/gestionar-usuario';
+  const INVITAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/invitar-usuario';
+  const APIKEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Staff', asociado: 'Asociado' };
+  const TIPO_LABELS = { carta_terminacion: 'Carta de Terminación Anticipada' };
+
+  let miRol = null;
+  let miUserId = null;
+  let usuariosCache = [];
+  let documentosCache = [];
+  let usuarioEnEdicion = null;
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -192,6 +292,38 @@
     catch (e) { return ''; }
   }
 
+  function cambiarTabPanel(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('tab-usuarios').style.display = tab === 'usuarios' ? '' : 'none';
+    document.getElementById('tab-documentos').style.display = tab === 'documentos' ? '' : 'none';
+  }
+
+  async function llamarFuncion(url, payload) {
+    const { data: sessionData } = await window.kwSupabase.auth.getSession();
+    const token = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!token) throw new Error('No hay sesión activa.');
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'apikey': APIKEY },
+      body: JSON.stringify(payload)
+    });
+    const raw = await resp.text();
+    let body = {};
+    let esJsonValido = false;
+    try { body = raw ? JSON.parse(raw) : {}; esJsonValido = true; } catch (e) { /* no era JSON */ }
+
+    if (!resp.ok) {
+      let mensaje;
+      if (typeof body.error === 'string' && body.error.trim()) mensaje = body.error;
+      else if (!esJsonValido && raw && raw.trim()) mensaje = raw.trim();
+      else mensaje = 'Error ' + resp.status + '. El servidor no envió un mensaje de error.';
+      throw new Error(mensaje);
+    }
+    return body;
+  }
+
+  // ── Usuarios ──
   async function cargarUsuarios() {
     const cont = document.getElementById('usuarios-cont');
     try {
@@ -200,24 +332,31 @@
         .select('id, nombre, apellido, email, role, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
+      usuariosCache = data || [];
 
-      if (!data || data.length === 0) {
+      if (usuariosCache.length === 0) {
         cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No hay usuarios todavía.</p>';
         return;
       }
 
-      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th></tr></thead><tbody>';
-      data.forEach(u => {
+      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th></th></tr></thead><tbody>';
+      usuariosCache.forEach((u, i) => {
         const nombreCompleto = [u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)';
+        const puedoEditar = miRol === 'master' || (miRol === 'admin' && (u.role === 'staff' || u.role === 'asociado'));
         html += `<tr>
           <td>${escapeHtml(nombreCompleto)}</td>
           <td>${escapeHtml(u.email)}</td>
           <td><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></td>
           <td>${fmtFechaCorta(u.created_at)}</td>
+          <td>${puedoEditar ? `<button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}</td>
         </tr>`;
       });
       html += '</tbody></table>';
       cont.innerHTML = html;
+
+      Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
+        btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
+      });
     } catch (err) {
       cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los usuarios.')}</p>`;
     }
@@ -225,6 +364,7 @@
 
   function setInviteMsg(text, kind) {
     const el = document.getElementById('invite-msg');
+    if (!text) { el.style.display = 'none'; return; }
     el.textContent = text;
     el.className = 'msg ' + kind;
   }
@@ -237,28 +377,7 @@
     btn.disabled = true;
     setInviteMsg('', '');
     try {
-      const { data: sessionData } = await window.kwSupabase.auth.getSession();
-      const token = sessionData && sessionData.session && sessionData.session.access_token;
-      if (!token) throw new Error('No hay sesión activa.');
-
-      const resp = await fetch(FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json',
-          'apikey': 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq'
-        },
-        body: JSON.stringify({ email, rol })
-      });
-      const raw = await resp.text();
-      let body = {};
-      try { body = raw ? JSON.parse(raw) : {}; } catch (e) { body = {}; }
-
-      if (!resp.ok) {
-        const detalle = (body && typeof body.error === 'string' && body.error) || raw || ('Error ' + resp.status);
-        throw new Error(detalle);
-      }
-
+      await llamarFuncion(INVITAR_URL, { email, rol });
       setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
       document.getElementById('invite-email').value = '';
       cargarUsuarios();
@@ -269,31 +388,195 @@
     }
   }
 
+  function setEditMsg(text, kind) {
+    const el = document.getElementById('edit-msg');
+    if (!text) { el.style.display = 'none'; return; }
+    el.textContent = text;
+    el.className = 'msg ' + kind;
+  }
+
+  function abrirModalEditar(u) {
+    usuarioEnEdicion = u;
+    document.getElementById('edit-nombre').value = u.nombre || '';
+    document.getElementById('edit-apellido').value = u.apellido || '';
+    document.getElementById('edit-email').value = u.email || '';
+    document.getElementById('edit-password').value = '';
+
+    const rolSelect = document.getElementById('edit-rol');
+    const opciones = miRol === 'master'
+      ? [['master', 'Master'], ['admin', 'Admin'], ['staff', 'Staff'], ['asociado', 'Asociado']]
+      : [['staff', 'Staff'], ['asociado', 'Asociado']];
+    rolSelect.innerHTML = opciones.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    rolSelect.value = u.role;
+    rolSelect.disabled = (u.id === miUserId);
+
+    document.getElementById('btn-eliminar-usuario').style.display = (u.id === miUserId) ? 'none' : '';
+    setEditMsg('', '');
+    document.getElementById('modal-editar-usuario').style.display = 'flex';
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById('modal-editar-usuario').style.display = 'none';
+    usuarioEnEdicion = null;
+  }
+
+  async function guardarEdicionUsuario() {
+    if (!usuarioEnEdicion) return;
+    setEditMsg('', '');
+    try {
+      const payload = {
+        accion: 'actualizar',
+        user_id: usuarioEnEdicion.id,
+        nombre: document.getElementById('edit-nombre').value.trim(),
+        apellido: document.getElementById('edit-apellido').value.trim(),
+        email: document.getElementById('edit-email').value.trim(),
+        role: document.getElementById('edit-rol').value
+      };
+      const nuevaPassword = document.getElementById('edit-password').value;
+      if (nuevaPassword) payload.password = nuevaPassword;
+
+      await llamarFuncion(GESTIONAR_URL, payload);
+      setEditMsg('Usuario actualizado.', 'ok');
+      cargarUsuarios();
+      setTimeout(cerrarModalEditar, 900);
+    } catch (err) {
+      setEditMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+    }
+  }
+
+  async function confirmarEliminarUsuario() {
+    if (!usuarioEnEdicion) return;
+    const ok = confirm('¿Seguro que quieres eliminar a este usuario? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    setEditMsg('', '');
+    try {
+      await llamarFuncion(GESTIONAR_URL, { accion: 'eliminar', user_id: usuarioEnEdicion.id });
+      cerrarModalEditar();
+      cargarUsuarios();
+    } catch (err) {
+      setEditMsg(err.message || 'Ocurrió un error al eliminar.', 'error');
+    }
+  }
+
+  // ── Documentos de todo el equipo ──
+  async function cargarDocumentosPanel() {
+    const cont = document.getElementById('documentos-cont');
+    cont.innerHTML = 'Cargando...';
+    try {
+      const { data, error } = await window.kwSupabase
+        .from('documentos_con_asesor')
+        .select('id, nombre_archivo, tipo_documento, folio, estado, created_at, updated_at, asesor_nombre, asesor_apellido, asesor_email, user_id')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      documentosCache = data || [];
+
+      const asesoresMap = new Map();
+      documentosCache.forEach(d => {
+        const nombre = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+        asesoresMap.set(d.user_id, nombre);
+      });
+      const selectAsesor = document.getElementById('doc-filtro-asesor');
+      selectAsesor.innerHTML = '<option value="">Todos los asesores</option>' +
+        Array.from(asesoresMap.entries()).map(([id, nombre]) => `<option value="${id}">${escapeHtml(nombre)}</option>`).join('');
+
+      const tiposPresentes = Array.from(new Set(documentosCache.map(d => d.tipo_documento)));
+      const selectTipo = document.getElementById('doc-filtro-tipo');
+      selectTipo.innerHTML = '<option value="">Todos los tipos</option>' +
+        tiposPresentes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(TIPO_LABELS[t] || t)}</option>`).join('');
+
+      renderDocumentosPanel();
+    } catch (err) {
+      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los documentos.')}</p>`;
+    }
+  }
+
+  function filtrarDocumentosPanel() {
+    renderDocumentosPanel();
+  }
+
+  function renderDocumentosPanel() {
+    const cont = document.getElementById('documentos-cont');
+    const q = (document.getElementById('doc-buscador').value || '').trim().toLowerCase();
+    const fAsesor = document.getElementById('doc-filtro-asesor').value;
+    const fTipo = document.getElementById('doc-filtro-tipo').value;
+    const fEstatus = document.getElementById('doc-filtro-estatus').value;
+    const fDesde = document.getElementById('doc-filtro-desde').value;
+    const fHasta = document.getElementById('doc-filtro-hasta').value;
+
+    const filtrados = documentosCache.filter(d => {
+      if (fAsesor && d.user_id !== fAsesor) return false;
+      if (fTipo && d.tipo_documento !== fTipo) return false;
+      if (fEstatus && d.estado !== fEstatus) return false;
+      if (fDesde && new Date(d.created_at) < new Date(fDesde)) return false;
+      if (fHasta && new Date(d.created_at) > new Date(fHasta + 'T23:59:59')) return false;
+      if (q) {
+        const nombre = (d.nombre_archivo || '').toLowerCase();
+        const folio = (d.folio || '').toLowerCase();
+        if (!nombre.includes(q) && !folio.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (!filtrados.length) {
+      cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No se encontraron documentos con esos filtros.</p>';
+      return;
+    }
+
+    let html = '<table><thead><tr><th>Documento</th><th>Asesor</th><th>Tipo</th><th>Folio</th><th>Estatus</th><th>Actualizado</th></tr></thead><tbody>';
+    filtrados.forEach(d => {
+      const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+      html += `<tr>
+        <td>${escapeHtml(d.nombre_archivo || 'Sin nombre')}</td>
+        <td>${escapeHtml(nombreAsesor)}</td>
+        <td>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</td>
+        <td>${escapeHtml(d.folio || '—')}</td>
+        <td><span class="rol-badge ${d.estado === 'finalizado' ? 'rol-admin' : 'rol-asociado'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
+        <td>${fmtFechaCorta(d.updated_at)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+  }
+
+  // ── Inicio ──
   async function initAdmin() {
     try {
       const { data: userData } = await window.kwSupabase.auth.getUser();
       if (!userData || !userData.user) throw new Error('sin sesión');
+      miUserId = userData.user.id;
 
       const { data: perfil, error } = await window.kwSupabase
         .from('profiles')
         .select('role')
-        .eq('id', userData.user.id)
+        .eq('id', miUserId)
         .single();
       if (error || !perfil) throw new Error('sin perfil');
 
-      if (perfil.role !== 'admin' && perfil.role !== 'master') {
+      miRol = perfil.role;
+      if (!['master', 'admin', 'staff'].includes(miRol)) {
         document.getElementById('denegado').style.display = '';
         return;
       }
 
-      // Solo Master puede asignar el rol Admin.
-      if (perfil.role !== 'master') {
-        document.querySelector('#invite-rol option[value="admin"]').remove();
+      const NOMBRE_PANEL = { master: 'Máster', admin: 'Admin', staff: 'Staff' };
+      document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
+
+      if (miRol === 'staff') {
+        document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
+        document.getElementById('panel-tabs').style.display = 'none';
+        document.getElementById('tab-usuarios').style.display = 'none';
+        document.getElementById('tab-documentos').style.display = '';
+      } else {
+        document.getElementById('panel-desc').textContent = 'Agrega usuarios, consulta roles y revisa los documentos del equipo.';
+        if (miRol !== 'master') {
+          document.querySelector('#invite-rol option[value="admin"]').remove();
+        }
+        document.getElementById('invite-form').addEventListener('submit', enviarInvitacion);
+        cargarUsuarios();
       }
 
-      document.getElementById('contenido-admin').style.display = '';
-      document.getElementById('invite-form').addEventListener('submit', enviarInvitacion);
-      cargarUsuarios();
+      document.getElementById('contenido-panel').style.display = '';
+      cargarDocumentosPanel();
     } catch (err) {
       document.getElementById('denegado').style.display = '';
     }
