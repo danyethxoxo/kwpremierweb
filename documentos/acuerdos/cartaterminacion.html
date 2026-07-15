@@ -150,6 +150,7 @@
   .btn-outline-red { border-color: var(--red); color: var(--red); }
   .btn-outline-green { border-color: #1f6d2e; color: #1f6d2e; }
   .btn-outline-purple { border-color: #6741d9; color: #6741d9; }
+  .btn-outline-blue { border-color: #1971c2; color: #1971c2; }
 
   .slide-confirm { margin-top: 4px; user-select: none; }
   .slide-track {
@@ -588,6 +589,10 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Finalizar
       </button>
+      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="hacerCopiaBorrador()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Hacer copia (borrador)
+      </button>
     </div>
     <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
@@ -747,6 +752,7 @@ function actualizarVisibilidadBotones() {
   document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
   document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
   document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
+  document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
 }
 
@@ -1001,6 +1007,46 @@ async function finalizarDocumento() {
   }
 }
 
+async function hacerCopiaBorrador() {
+  if (!documentoActualId) return;
+  const btn = document.getElementById('btn-copia');
+  btn.disabled = true;
+  setGuardarMsg('', '');
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: documentoActualId });
+    if (error) throw error;
+
+    documentoActualId = nuevoId;
+    folioActual = null;
+    estadoActual = 'borrador';
+    bloquearFormulario(false);
+    actualizarVisibilidadBotones();
+    setGuardarMsg('Se creó una copia en borrador — ya puedes modificarla y volver a guardarla.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al hacer la copia.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function abrirDocumentoPorId(id) {
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado')
+      .eq('id', id)
+      .single();
+    if (error || !data) throw new Error('No se encontró el documento, o no tienes permiso para verlo.');
+    abrirDocumentoGuardado(data);
+  } catch (err) {
+    alert(err.message || 'No se pudo abrir el documento.');
+    mostrarVista('lista');
+    cargarListaDocumentos();
+  }
+}
+
 // ── Control deslizable "Desliza para confirmar" (dentro del modal) ──
 let slideDragging = false;
 let slideStartX = 0;
@@ -1162,10 +1208,19 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePreview();
   mostrarVista('lista');
   initSlideFinalizar();
+
+  // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
+  // se salta la lista y abre ese documento directo.
+  const docIdDesdeURL = new URLSearchParams(location.search).get('doc');
+  function iniciarCarga() {
+    if (docIdDesdeURL) abrirDocumentoPorId(docIdDesdeURL);
+    else cargarListaDocumentos();
+  }
+
   if (document.documentElement.classList.contains('kw-auth-ok')) {
-    cargarListaDocumentos();
+    iniciarCarga();
   } else {
-    window.addEventListener('kw-auth-ready', cargarListaDocumentos, { once: true });
+    window.addEventListener('kw-auth-ready', iniciarCarga, { once: true });
   }
 });
 
