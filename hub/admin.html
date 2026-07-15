@@ -272,7 +272,7 @@
 
   <!-- Modal: confirmación para copiar un documento -->
   <div id="modal-copia-doc" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
+    <div class="modal-box" id="modal-copia-doc-box">
       <h3>¿Hacer una copia de este documento?</h3>
       <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
       <div class="modal-actions">
@@ -545,7 +545,7 @@
       const acciones = (d.estado === 'finalizado' && urlBase)
         ? `<div class="doc-acciones">
             <a class="btn-editar-usuario" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
-            <button type="button" class="btn-editar-usuario" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}')">Copiar</button>
+            <button type="button" class="btn-editar-usuario" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
           </div>`
         : '';
       html += `<tr>
@@ -562,10 +562,21 @@
     cont.innerHTML = html;
   }
 
-  let docPendienteCopia = null;
+  const MODAL_COPIA_CONFIRM_HTML = `
+    <h3>¿Hacer una copia de este documento?</h3>
+    <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">No</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">Sí, copiar</button>
+    </div>`;
 
-  function copiarDocumentoPanel(id, nombreAsesor) {
+  let docPendienteCopia = null;
+  let docPendienteTipo = null;
+
+  function copiarDocumentoPanel(id, nombreAsesor, tipo) {
     docPendienteCopia = id;
+    docPendienteTipo = tipo;
+    document.getElementById('modal-copia-doc-box').innerHTML = MODAL_COPIA_CONFIRM_HTML;
     document.getElementById('copia-doc-sub').textContent =
       `Se creará un borrador nuevo para ${nombreAsesor}, con la misma información, para que la corrija.`;
     document.getElementById('modal-copia-doc').style.display = 'flex';
@@ -574,19 +585,35 @@
   function cerrarModalCopiaDoc() {
     document.getElementById('modal-copia-doc').style.display = 'none';
     docPendienteCopia = null;
+    docPendienteTipo = null;
   }
 
   async function confirmarCopiaDoc() {
     const id = docPendienteCopia;
-    cerrarModalCopiaDoc();
+    const tipo = docPendienteTipo;
     if (!id) return;
     try {
-      const { error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
+      const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
       if (error) throw error;
-      alert('Se creó la copia en borrador correctamente.');
+      mostrarExitoCopiaDoc(nuevoId, tipo);
     } catch (err) {
+      cerrarModalCopiaDoc();
       alert((err && err.message) || 'Ocurrió un error al hacer la copia.');
     }
+  }
+
+  function mostrarExitoCopiaDoc(nuevoId, tipo) {
+    const url = TIPO_URLS[tipo];
+    const irAlDocumentoHTML = url
+      ? `<a class="btn-modal-confirmar" style="text-decoration:none;display:flex;align-items:center;justify-content:center;" href="${url}?doc=${nuevoId}" target="_blank" rel="noopener" onclick="cerrarModalCopiaDoc()">Ir al documento</a>`
+      : '';
+    document.getElementById('modal-copia-doc-box').innerHTML = `
+      <h3>Copia creada</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Se creó el borrador nuevo correctamente.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">Cerrar</button>
+        ${irAlDocumentoHTML}
+      </div>`;
   }
 
   // ── Inicio ──
