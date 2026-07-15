@@ -422,6 +422,14 @@
   .lista-item-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
   .lista-item-fecha { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .lista-item-flecha { font-size: 20px; color: var(--muted); }
+  .lista-item-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .lista-item-copiar {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .lista-item-copiar:hover { border-color: #1971c2; color: #1971c2; }
 
   /* ── Modal: nombre del documento ── */
   .modal-overlay {
@@ -589,9 +597,9 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Finalizar
       </button>
-      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="hacerCopiaBorrador()">
+      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="abrirModalCopia()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Hacer copia (borrador)
+        Hacer una copia
       </button>
     </div>
     <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
@@ -636,6 +644,18 @@
       </div>
     </div>
     <button type="button" class="btn-modal-cancelar" style="width:100%;margin-top:14px;" onclick="cerrarModalFinalizar()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal: confirmación para hacer una copia -->
+<div id="modal-copia" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>¿Hacer una copia de este documento?</h3>
+    <p class="modal-sub">Se creará un borrador nuevo con la misma información, que podrás modificar y volver a guardar.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopia()">No</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarHacerCopia()">Sí, hacer copia</button>
+    </div>
   </div>
 </div>
 
@@ -891,12 +911,23 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
           ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
           : `<span class="lista-item-borrador">Borrador</span>`}
       </div>
-      <div class="lista-item-flecha">&rsaquo;</div>
+      <div class="lista-item-acciones">
+        <button type="button" class="lista-item-copiar" data-idx="${i}" title="Hacer una copia">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <div class="lista-item-flecha">&rsaquo;</div>
+      </div>
     </div>
   `).join('');
 
   Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
     el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));
+  });
+  Array.from(cont.querySelectorAll('.lista-item-copiar')).forEach((btn, i) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirModalCopia(rows[i].id);
+    });
   });
 }
 
@@ -1007,26 +1038,42 @@ async function finalizarDocumento() {
   }
 }
 
-async function hacerCopiaBorrador() {
-  if (!documentoActualId) return;
-  const btn = document.getElementById('btn-copia');
-  btn.disabled = true;
-  setGuardarMsg('', '');
+let idPendienteCopia = null;
+
+function abrirModalCopia(id) {
+  idPendienteCopia = id || documentoActualId;
+  if (!idPendienteCopia) return;
+  document.getElementById('modal-copia').style.display = 'flex';
+}
+
+function cerrarModalCopia() {
+  document.getElementById('modal-copia').style.display = 'none';
+  idPendienteCopia = null;
+}
+
+async function confirmarHacerCopia() {
+  const id = idPendienteCopia;
+  const eraElDocumentoAbierto = (id === documentoActualId);
+  cerrarModalCopia();
+  if (!id) return;
+
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
-    const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: documentoActualId });
+    const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
     if (error) throw error;
 
-    documentoActualId = nuevoId;
-    folioActual = null;
-    estadoActual = 'borrador';
-    bloquearFormulario(false);
-    actualizarVisibilidadBotones();
-    setGuardarMsg('Se creó una copia en borrador — ya puedes modificarla y volver a guardarla.', 'ok');
+    if (eraElDocumentoAbierto) {
+      documentoActualId = nuevoId;
+      folioActual = null;
+      estadoActual = 'borrador';
+      bloquearFormulario(false);
+      actualizarVisibilidadBotones();
+      setGuardarMsg('Se creó una copia en borrador — ya puedes modificarla y volver a guardarla.', 'ok');
+    } else {
+      cargarListaDocumentos();
+    }
   } catch (err) {
-    setGuardarMsg(err.message || 'Ocurrió un error al hacer la copia.', 'error');
-  } finally {
-    btn.disabled = false;
+    alert(err.message || 'Ocurrió un error al hacer la copia.');
   }
 }
 
