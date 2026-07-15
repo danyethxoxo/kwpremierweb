@@ -270,6 +270,18 @@
     </div>
   </div>
 
+  <!-- Modal: confirmación para copiar un documento -->
+  <div id="modal-copia-doc" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>¿Hacer una copia de este documento?</h3>
+      <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">No</button>
+        <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">Sí, copiar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const GESTIONAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/gestionar-usuario';
   const INVITAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/invitar-usuario';
@@ -550,9 +562,24 @@
     cont.innerHTML = html;
   }
 
-  async function copiarDocumentoPanel(id, nombreAsesor) {
-    const ok = confirm(`¿Crear una copia en borrador de este documento para ${nombreAsesor}? Le va a aparecer en sus propios borradores para que la corrija.`);
-    if (!ok) return;
+  let docPendienteCopia = null;
+
+  function copiarDocumentoPanel(id, nombreAsesor) {
+    docPendienteCopia = id;
+    document.getElementById('copia-doc-sub').textContent =
+      `Se creará un borrador nuevo para ${nombreAsesor}, con la misma información, para que la corrija.`;
+    document.getElementById('modal-copia-doc').style.display = 'flex';
+  }
+
+  function cerrarModalCopiaDoc() {
+    document.getElementById('modal-copia-doc').style.display = 'none';
+    docPendienteCopia = null;
+  }
+
+  async function confirmarCopiaDoc() {
+    const id = docPendienteCopia;
+    cerrarModalCopiaDoc();
+    if (!id) return;
     try {
       const { error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
       if (error) throw error;
