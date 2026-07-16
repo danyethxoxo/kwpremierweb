@@ -197,11 +197,6 @@
   }
   .btn-volver:hover { background: #ececec; }
   .btn-volver:active { transform: scale(0.96); }
-
-  .doc-folio {
-    text-align: right; font-size: 9pt; font-weight: 700;
-    color: #666; margin: 2pt 0 10pt;
-  }
   .lista-item-folio {
     display: inline-block; font-size: 10.5px; font-weight: 700;
     color: #6741d9; background: #f5f0ff; border-radius: 20px;
@@ -245,10 +240,14 @@
     flex-shrink: 0;
     position: relative;
   }
-  .page-number {
+  .page-footer {
     position: absolute;
     bottom: 30px;
+    left: 24px;
     right: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 8pt;
     color: #aaa;
     font-family: Arial, sans-serif;
@@ -430,6 +429,13 @@
     transition: border-color 0.15s, color 0.15s;
   }
   .lista-item-copiar:hover { border-color: #1971c2; color: #1971c2; }
+  .lista-item-eliminar {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .lista-item-eliminar:hover { border-color: #a30000; color: #a30000; }
 
   /* ── Modal: nombre del documento ── */
   .modal-overlay {
@@ -659,6 +665,18 @@
   </div>
 </div>
 
+<!-- Modal: confirmación para eliminar un borrador -->
+<div id="modal-eliminar-doc" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>¿Eliminar este borrador?</h3>
+    <p class="modal-sub">Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEliminarDoc()">No</button>
+      <button type="button" class="btn-modal-confirmar" style="background:#a30000;" onclick="confirmarEliminarDoc()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════
 // Carta de Terminación Anticipada — KW Premier
@@ -722,7 +740,10 @@ function renderPaginated() {
   stack.innerHTML = pagesHTML.map((html, i) => `
     <div class="page">
       ${html}
-      <div class="page-number">Página ${i + 1} de ${pagesHTML.length}</div>
+      <div class="page-footer">
+        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>Página ${i + 1} de ${pagesHTML.length}</span>
+      </div>
     </div>
   `).join('');
   fitPreviewMobile();
@@ -732,7 +753,7 @@ function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
   const tipoOp = g('t-tipo-op') === 'renta' ? 'renta' : (g('t-tipo-op') === 'venta' ? 'venta' : '');
-  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div>${folioActual ? `<div class="doc-folio">Folio: ${folioActual}</div>` : ''}<div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por este medio notifico a Inmuebles Valle Premium, S.A.P.I. de C.V., que es mi deseo desistir de la promoción de ${campoDoc(tipoOp,'venta/renta')} del inmueble ubicado en ${campoDoc(g('t-direccion'),'Dirección del inmueble')}, a partir de <strong>${fmtFecha(g('t-fecha-partir'))}</strong>, y que respeto la comisión del ${campoDoc(g('t-porcentaje'),'__')}% durante ${campoDoc(g('t-dias'),'__')} días posterior a la fecha del presente, por cualquier contacto o cliente que me hayan traído a mostrar mi propiedad.</div><div class="doc-seccion">Motivo de cancelación:</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">Se mencionan algunos clientes:</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de clientes')}</div><div class="doc-p" style="text-align:center;margin-top:16pt;">A t e n t a m e n t e</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row" style="justify-content:center;"><div class="doc-firma-col" style="flex:none;width:320px;"><div class="doc-firma-linea-top">(firma &ldquo;El Cliente&rdquo;)</div></div></div></div>`;
+  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CARTA DE TERMINACIÓN ANTICIPADA<br>DE SERVICIOS INMOBILIARIOS</div><div class="doc-p" style="margin-top:10pt;">Ciudad de México a: <strong>${fmtFecha(g('t-fecha'))}</strong></div><div class="doc-p">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V. &nbsp;P r e s e n t e.</div><div class="doc-p">Por este medio notifico a Inmuebles Valle Premium, S.A.P.I. de C.V., que es mi deseo desistir de la promoción de ${campoDoc(tipoOp,'venta/renta')} del inmueble ubicado en ${campoDoc(g('t-direccion'),'Dirección del inmueble')}, a partir de <strong>${fmtFecha(g('t-fecha-partir'))}</strong>, y que respeto la comisión del ${campoDoc(g('t-porcentaje'),'__')}% durante ${campoDoc(g('t-dias'),'__')} días posterior a la fecha del presente, por cualquier contacto o cliente que me hayan traído a mostrar mi propiedad.</div><div class="doc-seccion">Motivo de cancelación:</div><div class="doc-p">${campoDoc(g('t-motivo'),'Describe el motivo')}</div><div class="doc-seccion">Se mencionan algunos clientes:</div><div class="doc-p">${campoDoc(g('t-prospectos'),'Lista de clientes')}</div><div class="doc-p" style="text-align:center;margin-top:16pt;">A t e n t a m e n t e</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row" style="justify-content:center;"><div class="doc-firma-col" style="flex:none;width:320px;"><div class="doc-firma-linea-top">(firma &ldquo;El Cliente&rdquo;)</div></div></div></div>`;
 
   renderPaginated();
 }
@@ -915,6 +936,9 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
         <button type="button" class="lista-item-copiar" data-idx="${i}" title="Hacer una copia">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
+        ${row.estado !== 'finalizado' ? `<button type="button" class="lista-item-eliminar" data-idx="${i}" title="Eliminar borrador">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>` : ''}
         <div class="lista-item-flecha">&rsaquo;</div>
       </div>
     </div>
@@ -923,10 +947,16 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
   Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
     el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));
   });
-  Array.from(cont.querySelectorAll('.lista-item-copiar')).forEach((btn, i) => {
+  Array.from(cont.querySelectorAll('.lista-item-copiar')).forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      abrirModalCopia(rows[i].id);
+      abrirModalCopia(rows[Number(btn.dataset.idx)].id);
+    });
+  });
+  Array.from(cont.querySelectorAll('.lista-item-eliminar')).forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirModalEliminarDoc(rows[Number(btn.dataset.idx)].id);
     });
   });
 }
@@ -1094,6 +1124,36 @@ async function abrirDocumentoPorId(id) {
   }
 }
 
+let idPendienteEliminar = null;
+
+function abrirModalEliminarDoc(id) {
+  idPendienteEliminar = id;
+  document.getElementById('modal-eliminar-doc').style.display = 'flex';
+}
+
+function cerrarModalEliminarDoc() {
+  document.getElementById('modal-eliminar-doc').style.display = 'none';
+  idPendienteEliminar = null;
+}
+
+async function confirmarEliminarDoc() {
+  const id = idPendienteEliminar;
+  const eraElDocumentoAbierto = (id === documentoActualId);
+  cerrarModalEliminarDoc();
+  if (!id) return;
+
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { error } = await window.kwSupabase.from('documentos_guardados').delete().eq('id', id);
+    if (error) throw error;
+
+    if (eraElDocumentoAbierto) mostrarVista('lista');
+    cargarListaDocumentos();
+  } catch (err) {
+    alert(err.message || 'Ocurrió un error al eliminar.');
+  }
+}
+
 // ── Control deslizable "Desliza para confirmar" (dentro del modal) ──
 let slideDragging = false;
 let slideStartX = 0;
@@ -1187,7 +1247,10 @@ function downloadPDF() {
     const isLast = i === pages.length - 1;
     return `<div class="print-page"${isLast ? '' : ' style="page-break-after:always;"'}>
       ${wrapper.innerHTML}
-      <div class="print-page-number">Página ${i + 1} de ${pages.length}</div>
+      <div class="print-page-footer">
+        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>Página ${i + 1} de ${pages.length}</span>
+      </div>
     </div>`;
   }).join('');
 
@@ -1211,9 +1274,9 @@ function downloadPDF() {
       padding: 0;
     }
     .print-page { position: relative; height: 1016px; overflow: hidden; }
-    .print-page-number {
+    .print-page-footer {
       position: absolute; left: 0; right: 0; bottom: 30px;
-      text-align: right;
+      display: flex; justify-content: space-between; align-items: center;
       font-size: 8pt; color: #888;
     }
     .doc-header { margin-bottom: 23pt; }
