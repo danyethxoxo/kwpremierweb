@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contrapropuesta de Arrendamiento — KW Premier</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; mostrando la página sin verificar sesión.');
-      document.documentElement.classList.add('kw-auth-ok');
-      window.dispatchEvent(new CustomEvent('kw-auth-ready'));
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
 </script>
@@ -134,18 +134,79 @@
   .acuerdos-empty-note { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
 
   .btn-download {
-    width: 100%;
-    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; border: none; border-radius: 40px;
-    padding: 12px 20px; font-size: 13.5px; font-weight: 700;
+    flex: 0 0 130px;
+    background: #f7f7f6;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px; font-size: 12px; font-weight: 700;
     font-family: 'DM Sans', sans-serif; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 18px rgba(204,0,0,0.3);
-    transition: filter 0.18s, transform 0.12s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, border-color 0.15s, transform 0.12s;
     margin-top: 0;
   }
-  .btn-download:hover { filter: brightness(1.08); }
+  .btn-download:hover { background: #ececec; }
   .btn-download:active { transform: scale(0.96); }
+  .btn-outline-red { border-color: var(--red); color: var(--red); }
+  .btn-outline-green { border-color: #1f6d2e; color: #1f6d2e; }
+  .btn-outline-purple { border-color: #6741d9; color: #6741d9; }
+  .btn-outline-blue { border-color: #1971c2; color: #1971c2; }
+
+  .slide-confirm { margin-top: 4px; user-select: none; }
+  .slide-track {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(180deg, #f5f1fd, #ece3fb);
+    border: 1.5px solid #ddd0f7;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 4px rgba(103,65,217,0.14);
+  }
+  .slide-fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+    background: linear-gradient(90deg, #8a63e8, #6741d9);
+  }
+  .slide-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #6741d9;
+    pointer-events: none; letter-spacing: 0.01em;
+    transition: opacity 0.1s linear;
+  }
+  .slide-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 32px; height: 32px; border-radius: 7px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(103,65,217,0.3), 0 1px 3px rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    color: #6741d9; cursor: grab; touch-action: none;
+    transition: box-shadow 0.15s;
+  }
+  .slide-thumb:active { cursor: grabbing; box-shadow: 0 1px 4px rgba(103,65,217,0.35); }
+  .slide-thumb.confirmado { background: #6741d9; color: #fff; }
+  @keyframes slide-hint { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+  .slide-thumb.hint { animation: slide-hint 1.8s ease-in-out infinite; }
+
+  .btn-volver {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f7f7f6; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; font-size: 12px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; color: #555; cursor: pointer;
+    margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn-volver:hover { background: #ececec; }
+  .btn-volver:active { transform: scale(0.96); }
+  .lista-item-folio {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    color: #6741d9; background: #f5f0ff; border-radius: 20px;
+    padding: 2px 9px; margin-top: 4px;
+  }
+  .lista-item-borrador {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    color: #888; background: #f1f1f1; border-radius: 20px;
+    padding: 2px 9px; margin-top: 4px;
+  }
 
   .acuerdos-preview-col {
     overflow: auto;
@@ -179,16 +240,20 @@
     flex-shrink: 0;
     position: relative;
   }
-  .page-number {
+  .page-footer {
     position: absolute;
     bottom: 30px;
+    left: 24px;
     right: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 8pt;
     color: #aaa;
     font-family: Arial, sans-serif;
   }
 
-  .doc-header { margin-bottom: 23pt; }
+  .doc-header { margin-bottom: 16pt; }
   .doc-header img { height: 30pt; width: auto; margin-bottom: 6pt; }
 
   .doc-titulo {
@@ -196,7 +261,7 @@
     font-weight: 700;
     font-size: 11pt;
     letter-spacing: 0.25em;
-    margin: 0 0 40pt;
+    margin: 0 0 10pt;
     text-decoration: underline;
   }
 
@@ -209,7 +274,7 @@
   .doc-campo { font-weight: 700; border-bottom: 1px solid #CC0000; color: #CC0000; }
   .doc-campo.filled { color: #000; border-bottom: none; font-weight: 700; }
 
-  .doc-firmas-wrap { position: absolute; left: 0; right: 0; bottom: 97px; }
+  .doc-firmas-wrap { margin-top: 20pt; }
   .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
   .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
   .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -258,9 +323,216 @@
   .page-scale-wrap.single .page {
     transform-origin: top left;
   }
+
+  /* ── Vista de lista de documentos guardados ── */
+  .vista-lista {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+  .lista-sticky-bar { background: var(--bg); }
+  .vista-lista-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .vista-lista-title { font-size: 20px; font-weight: 700; }
+  .vista-lista-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .btn-nuevo-documento {
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; border: none; border-radius: 40px;
+    padding: 11px 18px; font-size: 13.5px; font-weight: 700;
+    font-family: 'DM Sans', Arial, sans-serif; cursor: pointer;
+    box-shadow: 0 4px 18px rgba(204,0,0,0.3);
+    transition: filter 0.18s, transform 0.12s;
+    white-space: nowrap;
+  }
+  .btn-nuevo-documento:hover { filter: brightness(1.08); }
+  .btn-nuevo-documento:active { transform: scale(0.96); }
+
+  .lista-tabs-mobile { display: none; gap: 6px; }
+  .lista-tab-mobile {
+    flex: 1; padding: 9px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    cursor: pointer; font-family: Arial, sans-serif;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .lista-tab-mobile.active { background: #6741d9; border-color: #6741d9; color: #fff; }
+
+  @media (max-width: 900px) {
+    .vista-lista { padding-top: 14px; }
+    .lista-sticky-bar {
+      position: sticky; top: 0; z-index: 5;
+      padding-top: 10px; margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+      box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
+    }
+    .vista-lista-header { margin-bottom: 12px; }
+    .vista-lista-header > div:first-of-type { flex: 1 0 100%; }
+    .btn-nuevo-documento { flex: 1; padding: 9px 12px; font-size: 12px; }
+    .lista-tabs-mobile { display: flex; flex: 1; width: auto; max-width: 190px; }
+    .lista-tab-mobile { padding: 8px 6px; font-size: 11px; }
+  }
+
+  .lista-buscador {
+    position: relative; margin-bottom: 20px;
+  }
+  .lista-buscador svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); pointer-events: none;
+  }
+  .lista-buscador input {
+    width: 100%; padding: 11px 14px 11px 38px;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    font-size: 13.5px; font-family: Arial, sans-serif;
+    color: var(--text); outline: none; background: #fff;
+  }
+  .lista-buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+
+  .lista-columnas {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    align-items: start;
+  }
+  .lista-columna-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #888; margin-bottom: 10px;
+  }
+  .lista-columna-title-finalizados { color: #6741d9; }
+  @media (max-width: 900px) {
+    .lista-columnas { grid-template-columns: 1fr; }
+    .lista-columna { display: none; }
+    .lista-columna.activa-mobile { display: block; }
+  }
+
+  .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
+  .lista-loading, .lista-vacio {
+    color: var(--muted); font-size: 13.5px; padding: 20px 4px;
+  }
+  .lista-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .lista-item:hover { border-color: var(--red); box-shadow: 0 2px 12px rgba(204,0,0,0.08); }
+  .lista-item-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+  .lista-item-fecha { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .lista-item-flecha { font-size: 20px; color: var(--muted); }
+  .lista-item-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .lista-item-copiar {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .lista-item-copiar:hover { border-color: #1971c2; color: #1971c2; }
+  .lista-item-eliminar {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .lista-item-eliminar:hover { border-color: #a30000; color: #a30000; }
+
+  /* ── Modal: nombre del documento ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
+  .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  #modal-nombre-input {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: Arial, sans-serif;
+    color: var(--text); outline: none;
+  }
+  #modal-nombre-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-modal-cancelar, .btn-modal-confirmar {
+    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
+    font-family: Arial, sans-serif; cursor: pointer; border: none;
+  }
+  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
+  .btn-modal-confirmar { background: var(--red); color: #fff; }
+
+  /* ── Impresión directa (Ctrl+P) de la pestaña principal: solo
+     debe verse el documento, y si aún no está finalizado, se marca
+     como borrador para que no sirva como versión oficial ── */
+  @media print {
+    #vista-lista, .mobile-tabs, .acuerdos-form-col, .modal-overlay {
+      display: none !important;
+    }
+    .acuerdos-body { display: block !important; height: auto !important; }
+    .acuerdos-preview-col { overflow: visible !important; padding: 0 !important; }
+    .page { box-shadow: none !important; margin: 0 auto 0; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    body.doc-borrador .page::before {
+      content: 'BORRADOR — DOCUMENTO NO FINALIZADO';
+      position: absolute;
+      top: 45%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 42pt;
+      font-weight: 900;
+      color: rgba(204,0,0,0.24);
+      z-index: 999;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  }
 </style>
 </head>
-<body>
+<body class="doc-borrador">
+
+<!-- Vista de lista: documentos guardados de este tipo -->
+<div id="vista-lista" class="vista-lista">
+  <div class="lista-sticky-bar">
+    <div class="vista-lista-header">
+      <div>
+        <div class="vista-lista-title">Contrapropuesta de Arrendamiento</div>
+        <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
+      </div>
+      <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
+      <div class="lista-tabs-mobile" id="lista-tabs-mobile">
+        <button type="button" class="lista-tab-mobile active" data-tab="borradores" onclick="cambiarTabListaMobile('borradores')">Borradores</button>
+        <button type="button" class="lista-tab-mobile" data-tab="finalizados" onclick="cambiarTabListaMobile('finalizados')">Finalizados</button>
+      </div>
+    </div>
+
+    <div class="lista-buscador">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="buscador-input" placeholder="Buscar por nombre, fecha o folio..." oninput="filtrarListaDocumentos()" />
+    </div>
+  </div>
+
+  <div class="lista-columnas">
+    <div class="lista-columna activa-mobile" id="columna-borradores">
+      <div class="lista-columna-title">Borradores</div>
+      <div id="lista-borradores" class="lista-documentos">
+        <div class="lista-loading">Cargando...</div>
+      </div>
+    </div>
+    <div class="lista-columna" id="columna-finalizados">
+      <div class="lista-columna-title lista-columna-title-finalizados">Finalizados</div>
+      <div id="lista-finalizados" class="lista-documentos">
+        <div class="lista-loading">Cargando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de formulario -->
+<div id="vista-formulario" class="vista-formulario" style="display:none;">
 <div class="mobile-tabs">
   <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">📝 Formulario</div>
   <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">👁️ Vista previa</div>
@@ -270,6 +542,10 @@
 
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
+    <button type="button" class="btn-volver" onclick="volverALista()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Mis guardados
+    </button>
     <div class="acuerdos-form-title">Contrapropuesta de Arrendamiento</div>
     <div class="acuerdos-form-sub">Completa los campos — la vista previa se actualiza en tiempo real.</div>
 
@@ -322,16 +598,25 @@
       <textarea id="cp-obs" placeholder="Observaciones..." oninput="updatePreview()"></textarea>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      <button class="btn-download" style="margin-top:0;flex:1;" onclick="downloadPDF()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn-download btn-outline-red" id="btn-pdf" style="display:none;" onclick="downloadPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         PDF
       </button>
-      <button class="btn-download" style="margin-top:0;flex:1;background:linear-gradient(180deg,#2b5be8 0%,#1a3fbf 100%);box-shadow:0 4px 18px rgba(27,63,191,0.3);" onclick="downloadWord()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Word
+      <button class="btn-download btn-outline-green" onclick="guardarDocumento()" id="btn-guardar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
+      <button class="btn-download btn-outline-purple" id="btn-finalizar" style="display:none;" onclick="abrirModalFinalizar()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Finalizar
+      </button>
+      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="abrirModalCopia()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Hacer una copia
       </button>
     </div>
+    <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
 
   <!-- Columna vista previa -->
@@ -342,6 +627,62 @@
   <!-- Contenedor oculto con el documento completo (sin paginar), usado para PDF/Word -->
   <div id="contrato-raw" style="display:none;"></div>
 
+</div>
+</div>
+
+<!-- Modal: nombre del documento al guardar por primera vez -->
+<div id="modal-nombre" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>Nombre del documento</h3>
+    <p class="modal-sub">Así lo verás en tu lista de documentos guardados.</p>
+    <input type="text" id="modal-nombre-input" />
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalNombre()">Cancelar</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarGuardarNuevo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmación para finalizar el documento -->
+<div id="modal-finalizar" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>¿Estás seguro que deseas finalizarlo?</h3>
+    <p class="modal-sub">Una vez hecho, podrás descargarlo en PDF, pero ya no lo podrás editar ni borrar. Se le asignará un folio permanente.</p>
+    <div class="slide-confirm">
+      <div class="slide-track" id="slide-track">
+        <div class="slide-fill" id="slide-fill"></div>
+        <div class="slide-label" id="slide-label">Desliza para confirmar</div>
+        <div class="slide-thumb hint" id="slide-thumb">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn-modal-cancelar" style="width:100%;margin-top:14px;" onclick="cerrarModalFinalizar()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal: confirmación para hacer una copia -->
+<div id="modal-copia" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>¿Hacer una copia de este documento?</h3>
+    <p class="modal-sub">Se creará un borrador nuevo con la misma información, que podrás modificar y volver a guardar.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopia()">No</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarHacerCopia()">Sí, hacer copia</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmación para eliminar un borrador -->
+<div id="modal-eliminar-doc" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3>¿Eliminar este borrador?</h3>
+    <p class="modal-sub">Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEliminarDoc()">No</button>
+      <button type="button" class="btn-modal-confirmar" style="background:#a30000;" onclick="confirmarEliminarDoc()">Sí, eliminar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -407,7 +748,10 @@ function renderPaginated() {
   stack.innerHTML = pagesHTML.map((html, i) => `
     <div class="page">
       ${html}
-      <div class="page-number">Página ${i + 1} de ${pagesHTML.length}</div>
+      <div class="page-footer">
+        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>Página ${i + 1} de ${pagesHTML.length}</span>
+      </div>
     </div>
   `).join('');
   fitPreviewMobile();
@@ -416,23 +760,487 @@ function renderPaginated() {
 function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
-  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CONTRAPROPUESTA DE ARRENDAMIENTO</div><div class="doc-p" style="margin-top:10pt;">Fecha: <strong>${fmtFecha(g('cp-fecha'))}</strong> &nbsp;|&nbsp; Propuesta recibida: <strong>${fmtFecha(g('cp-fecha-prop'))}</strong></div><div class="doc-p">Inmueble: ${campoDoc(g('cp-direccion'),'Dirección')}</div><div class="doc-seccion">AJUSTES A LAS CONDICIONES</div><div class="doc-p"><strong>1. Renta:</strong> ${campoDoc(g('cp-renta')?'$'+Number(g('cp-renta')).toLocaleString('es-MX'):'','$Monto')} M.N.</div><div class="doc-p"><strong>2. Depósito:</strong> ${campoDoc(g('cp-dep-nuevo'),'__')} meses (en lugar de ${campoDoc(g('cp-dep-prop'),'__')} propuesto).</div><div class="doc-p"><strong>3. Vigencia:</strong> ${campoDoc(g('cp-duracion'),'__')} meses. Inicio: ${campoDoc(g('cp-inicio')?fmtFecha(g('cp-inicio')):'','fecha')}.</div><div class="doc-p"><strong>4. Mascotas:</strong> Depósito adicional de ${campoDoc(g('cp-mascotas')?'$'+Number(g('cp-mascotas')).toLocaleString('es-MX'):'','$monto')}.</div><div class="doc-p"><strong>5. Póliza:</strong> ${campoDoc(g('cp-poliza'),'empresa')}. Obligado solidario: ${campoDoc(g('cp-solidario'),'dirección')}.</div><div class="doc-p"><strong>6. Observaciones:</strong> ${campoDoc(g('cp-obs'),'observaciones')}</div><div class="doc-firmas-wrap" style="margin-top:20pt;"><div class="doc-firmas-row"><div class="doc-firma-col"><div class="doc-firma-linea-top"><span class="doc-firma-bold">KW PREMIER</span><br>Representante</div></div><div class="doc-firma-col" style="max-width:72px;"></div><div class="doc-firma-col"><div class="doc-firma-linea-top">Prospecto Inquilino<br>Nombre y Firma</div></div></div></div>`;
+  raw.innerHTML = `<div class="doc-header"><img src="data:image/png;base64,${LOGO_B64}" alt="KW Premier" style="height:38px;width:auto;"/></div><div class="doc-titulo">CONTRAPROPUESTA DE ARRENDAMIENTO</div><div class="doc-p" style="margin-top:10pt;">Fecha: <strong>${fmtFecha(g('cp-fecha'))}</strong> &nbsp;|&nbsp; Propuesta recibida: <strong>${fmtFecha(g('cp-fecha-prop'))}</strong></div><div class="doc-p">Inmueble: ${campoDoc(g('cp-direccion'),'Dirección')}</div><div class="doc-seccion">AJUSTES A LAS CONDICIONES</div><div class="doc-p"><strong>1. Renta:</strong> ${campoDoc(g('cp-renta')?'$'+Number(g('cp-renta')).toLocaleString('es-MX'):'','$Monto')} M.N.</div><div class="doc-p"><strong>2. Depósito:</strong> ${campoDoc(g('cp-dep-nuevo'),'__')} meses (en lugar de ${campoDoc(g('cp-dep-prop'),'__')} propuesto).</div><div class="doc-p"><strong>3. Vigencia:</strong> ${campoDoc(g('cp-duracion'),'__')} meses. Inicio: ${campoDoc(g('cp-inicio')?fmtFecha(g('cp-inicio')):'','fecha')}.</div><div class="doc-p"><strong>4. Mascotas:</strong> Depósito adicional de ${campoDoc(g('cp-mascotas')?'$'+Number(g('cp-mascotas')).toLocaleString('es-MX'):'','$monto')}.</div><div class="doc-p"><strong>5. Póliza:</strong> ${campoDoc(g('cp-poliza'),'empresa')}. Obligado solidario: ${campoDoc(g('cp-solidario'),'dirección')}.</div><div class="doc-p"><strong>6. Observaciones:</strong> ${campoDoc(g('cp-obs'),'observaciones')}</div><div class="doc-firmas-wrap"><div class="doc-firmas-row"><div class="doc-firma-col"><div class="doc-firma-linea-top"><span class="doc-firma-bold">KW PREMIER</span><br>Representante</div></div><div class="doc-firma-col" style="max-width:72px;"></div><div class="doc-firma-col"><div class="doc-firma-linea-top">Prospecto Inquilino<br>Nombre y Firma</div></div></div></div>`;
 
   renderPaginated();
 }
 
 // ── Nombre de archivo sugerido para las descargas ──
-function nombreArchivoContrato() {
+function nombreArchivoDoc() {
   const dir = g('cp-direccion').trim();
   let nombre = 'Contrapropuesta de Arrendamiento';
   if (dir) nombre += ' - ' + dir;
   return nombre;
+}
 
+// ── Guardar / listar los documentos de este tipo en la cuenta del usuario ──
+const CAMPOS_GUARDABLES = ['cp-fecha','cp-fecha-prop','cp-direccion','cp-renta','cp-dep-nuevo','cp-dep-prop','cp-duracion','cp-inicio','cp-mascotas','cp-poliza','cp-solidario','cp-obs'];
+const TIPO_DOCUMENTO = 'contrapropuesta';
+let documentoActualId = null;
+let folioActual = null;
+let estadoActual = 'borrador';
+
+function setGuardarMsg(text, kind) {
+  const el = document.getElementById('guardar-msg');
+  if (!text) { el.style.display = 'none'; return; }
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+}
+
+function mostrarVista(vista) {
+  document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
+  document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
+  if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
+}
+
+function actualizarVisibilidadBotones() {
+  const finalizado = estadoActual === 'finalizado';
+  document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
+  document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
+  document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
+  document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
+  document.body.classList.toggle('doc-borrador', !finalizado);
+}
+
+function bloquearFormulario(bloquear) {
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = bloquear;
+  });
+}
+
+function limpiarFormulario() {
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  updatePreview();
+}
+
+function crearNuevoDocumento() {
+  documentoActualId = null;
+  folioActual = null;
+  estadoActual = 'borrador';
+  limpiarFormulario();
+  bloquearFormulario(false);
+  actualizarVisibilidadBotones();
+  setGuardarMsg('');
+  mostrarVista('formulario');
+}
+
+function abrirDocumentoGuardado(row) {
+  documentoActualId = row.id;
+  folioActual = row.folio || null;
+  estadoActual = row.estado || 'borrador';
+  const datos = row.datos || {};
+  CAMPOS_GUARDABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
+  });
+  updatePreview();
+  bloquearFormulario(estadoActual === 'finalizado');
+  actualizarVisibilidadBotones();
+  setGuardarMsg('');
+  mostrarVista('formulario');
+}
+
+function volverALista() {
+  mostrarVista('lista');
+  cargarListaDocumentos();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+
+function fmtFechaCorta(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) { return ''; }
+}
+
+let documentosCache = [];
+
+async function cargarListaDocumentos() {
+  const contB = document.getElementById('lista-borradores');
+  const contF = document.getElementById('lista-finalizados');
+  contB.innerHTML = '<div class="lista-loading">Cargando...</div>';
+  contF.innerHTML = '<div class="lista-loading">Cargando...</div>';
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado')
+      .eq('user_id', userData.user.id)
+      .eq('tipo_documento', TIPO_DOCUMENTO)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    documentosCache = data || [];
+    renderListaDocumentos();
+  } catch (err) {
+    const msg = `<div class="lista-vacio" style="color:#a30000;">${escapeHtml(err.message || 'Ocurrió un error al cargar tus documentos.')}</div>`;
+    contB.innerHTML = msg;
+    contF.innerHTML = msg;
+  }
+}
+
+function filtrarListaDocumentos() {
+  renderListaDocumentos();
+}
+
+function cambiarTabListaMobile(tab) {
+  document.querySelectorAll('.lista-tab-mobile').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.getElementById('columna-borradores').classList.toggle('activa-mobile', tab === 'borradores');
+  document.getElementById('columna-finalizados').classList.toggle('activa-mobile', tab === 'finalizados');
+}
+
+function renderListaDocumentos() {
+  const q = (document.getElementById('buscador-input').value || '').trim().toLowerCase();
+
+  const coincide = (row) => {
+    if (!q) return true;
+    const nombre = (row.nombre_archivo || '').toLowerCase();
+    const folio = (row.folio || '').toLowerCase();
+    const fecha = fmtFechaCorta(row.updated_at).toLowerCase();
+    return nombre.includes(q) || folio.includes(q) || fecha.includes(q);
+  };
+
+  const filtrados = documentosCache.filter(coincide);
+  const borradores = filtrados.filter(r => r.estado !== 'finalizado');
+  const finalizados = filtrados.filter(r => r.estado === 'finalizado');
+
+  pintarColumnaLista(document.getElementById('lista-borradores'), borradores, 'Aún no tienes borradores de este tipo.');
+  pintarColumnaLista(document.getElementById('lista-finalizados'), finalizados, 'Aún no tienes documentos finalizados de este tipo.');
+}
+
+function pintarColumnaLista(cont, rows, vacioTexto) {
+  if (!rows.length) {
+    cont.innerHTML = `<div class="lista-vacio">${escapeHtml(vacioTexto)}</div>`;
+    return;
+  }
+  cont.innerHTML = rows.map((row, i) => `
+    <div class="lista-item" data-idx="${i}">
+      <div class="lista-item-info">
+        <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
+        <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
+        ${row.estado === 'finalizado'
+          ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
+          : `<span class="lista-item-borrador">Borrador</span>`}
+      </div>
+      <div class="lista-item-acciones">
+        <button type="button" class="lista-item-copiar" data-idx="${i}" title="Hacer una copia">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        ${row.estado !== 'finalizado' ? `<button type="button" class="lista-item-eliminar" data-idx="${i}" title="Eliminar borrador">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>` : ''}
+        <div class="lista-item-flecha">&rsaquo;</div>
+      </div>
+    </div>
+  `).join('');
+
+  Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
+    el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));
+  });
+  Array.from(cont.querySelectorAll('.lista-item-copiar')).forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirModalCopia(rows[Number(btn.dataset.idx)].id);
+    });
+  });
+  Array.from(cont.querySelectorAll('.lista-item-eliminar')).forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirModalEliminarDoc(rows[Number(btn.dataset.idx)].id);
+    });
+  });
+}
+
+function abrirModalNombre() {
+  document.getElementById('modal-nombre-input').value = nombreArchivoDoc();
+  document.getElementById('modal-nombre').style.display = 'flex';
+  const input = document.getElementById('modal-nombre-input');
+  input.focus();
+  input.select();
+}
+
+function cerrarModalNombre() {
+  document.getElementById('modal-nombre').style.display = 'none';
+}
+
+async function confirmarGuardarNuevo() {
+  const nombre = document.getElementById('modal-nombre-input').value.trim() || nombreArchivoDoc();
+  cerrarModalNombre();
+  await guardarComoNuevo(nombre);
+}
+
+async function guardarComoNuevo(nombre) {
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
+    if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
+
+    const datos = {};
+    CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
+
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .insert({
+        user_id: userData.user.id,
+        tipo_documento: TIPO_DOCUMENTO,
+        nombre_archivo: nombre,
+        datos: datos
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    documentoActualId = data.id;
+    actualizarVisibilidadBotones();
+    setGuardarMsg('Documento guardado.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function guardarDocumento() {
+  if (!documentoActualId) {
+    abrirModalNombre();
+    return;
+  }
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const datos = {};
+    CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
+
+    const { error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .update({ datos: datos })
+      .eq('id', documentoActualId);
+
+    if (error) throw error;
+    setGuardarMsg('Cambios guardados.', 'ok');
+  } catch (err) {
+    setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function abrirModalFinalizar() {
+  document.getElementById('modal-finalizar').style.display = 'flex';
+  resetSlideFinalizar();
+}
+
+function cerrarModalFinalizar() {
+  document.getElementById('modal-finalizar').style.display = 'none';
+}
+
+async function finalizarDocumento() {
+  if (!documentoActualId) return;
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data, error } = await window.kwSupabase.rpc('finalizar_documento', { p_id: documentoActualId });
+    if (error) throw error;
+
+    folioActual = data;
+    estadoActual = 'finalizado';
+    updatePreview();
+    bloquearFormulario(true);
+    actualizarVisibilidadBotones();
+    cerrarModalFinalizar();
+    setGuardarMsg('Documento finalizado. Folio: ' + folioActual, 'ok');
+    cargarListaDocumentos();
+  } catch (err) {
+    cerrarModalFinalizar();
+    setGuardarMsg(err.message || 'Ocurrió un error al finalizar.', 'error');
+  }
+}
+
+let idPendienteCopia = null;
+
+function abrirModalCopia(id) {
+  idPendienteCopia = id || documentoActualId;
+  if (!idPendienteCopia) return;
+  document.getElementById('modal-copia').style.display = 'flex';
+}
+
+function cerrarModalCopia() {
+  document.getElementById('modal-copia').style.display = 'none';
+  idPendienteCopia = null;
+}
+
+async function confirmarHacerCopia() {
+  const id = idPendienteCopia;
+  const eraElDocumentoAbierto = (id === documentoActualId);
+  cerrarModalCopia();
+  if (!id) return;
+
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
+    if (error) throw error;
+
+    if (eraElDocumentoAbierto) {
+      documentoActualId = nuevoId;
+      folioActual = null;
+      estadoActual = 'borrador';
+      bloquearFormulario(false);
+      actualizarVisibilidadBotones();
+      setGuardarMsg('Se creó una copia en borrador — ya puedes modificarla y volver a guardarla.', 'ok');
+    } else {
+      cargarListaDocumentos();
+    }
+  } catch (err) {
+    alert(err.message || 'Ocurrió un error al hacer la copia.');
+  }
+}
+
+async function abrirDocumentoPorId(id) {
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { data, error } = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado')
+      .eq('id', id)
+      .single();
+    if (error || !data) throw new Error('No se encontró el documento, o no tienes permiso para verlo.');
+    abrirDocumentoGuardado(data);
+  } catch (err) {
+    alert(err.message || 'No se pudo abrir el documento.');
+    mostrarVista('lista');
+    cargarListaDocumentos();
+  }
+}
+
+let idPendienteEliminar = null;
+
+function abrirModalEliminarDoc(id) {
+  idPendienteEliminar = id;
+  document.getElementById('modal-eliminar-doc').style.display = 'flex';
+}
+
+function cerrarModalEliminarDoc() {
+  document.getElementById('modal-eliminar-doc').style.display = 'none';
+  idPendienteEliminar = null;
+}
+
+async function confirmarEliminarDoc() {
+  const id = idPendienteEliminar;
+  const eraElDocumentoAbierto = (id === documentoActualId);
+  cerrarModalEliminarDoc();
+  if (!id) return;
+
+  try {
+    if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    const { error } = await window.kwSupabase.from('documentos_guardados').delete().eq('id', id);
+    if (error) throw error;
+
+    if (eraElDocumentoAbierto) mostrarVista('lista');
+    cargarListaDocumentos();
+  } catch (err) {
+    alert(err.message || 'Ocurrió un error al eliminar.');
+  }
+}
+
+// ── Control deslizable "Desliza para confirmar" (dentro del modal) ──
+let slideDragging = false;
+let slideStartX = 0;
+let slideThumbStartLeft = 0;
+let slideConfirmado = false;
+
+function slideMaxLeft() {
+  const track = document.getElementById('slide-track');
+  const thumb = document.getElementById('slide-thumb');
+  return track.clientWidth - thumb.clientWidth - 6;
+}
+
+function slideSetPos(px) {
+  const thumb = document.getElementById('slide-thumb');
+  const fill = document.getElementById('slide-fill');
+  const label = document.getElementById('slide-label');
+  const max = slideMaxLeft();
+  const clamped = Math.max(0, Math.min(max, px));
+  thumb.style.left = (clamped + 3) + 'px';
+  fill.style.width = (clamped + thumb.offsetWidth + 3) + 'px';
+  label.style.opacity = String(Math.max(0, 1 - (clamped / max) * 1.6));
+  return clamped;
+}
+
+function resetSlideFinalizar() {
+  slideConfirmado = false;
+  const thumb = document.getElementById('slide-thumb');
+  const label = document.getElementById('slide-label');
+  if (!thumb) return;
+  thumb.classList.remove('confirmado');
+  thumb.classList.add('hint');
+  label.textContent = 'Desliza para confirmar';
+  label.style.opacity = '1';
+  slideSetPos(0);
+}
+
+function initSlideFinalizar() {
+  const thumb = document.getElementById('slide-thumb');
+  if (!thumb || thumb.dataset.init) return;
+  thumb.dataset.init = '1';
+
+  thumb.addEventListener('pointerdown', (e) => {
+    if (slideConfirmado) return;
+    slideDragging = true;
+    thumb.classList.remove('hint');
+    slideStartX = e.clientX;
+    slideThumbStartLeft = parseFloat(thumb.style.left || '3') - 3;
+    thumb.setPointerCapture(e.pointerId);
+  });
+
+  thumb.addEventListener('pointermove', (e) => {
+    if (!slideDragging) return;
+    const delta = e.clientX - slideStartX;
+    slideSetPos(slideThumbStartLeft + delta);
+  });
+
+  function finishDrag() {
+    if (!slideDragging) return;
+    slideDragging = false;
+    const pos = parseFloat(thumb.style.left || '3') - 3;
+    if (pos >= slideMaxLeft() - 4) {
+      slideConfirmado = true;
+      slideSetPos(slideMaxLeft());
+      thumb.classList.add('confirmado');
+      const label = document.getElementById('slide-label');
+      label.textContent = 'Finalizando...';
+      label.style.opacity = '1';
+      finalizarDocumento();
+    } else {
+      slideSetPos(0);
+      thumb.classList.add('hint');
+    }
+  }
+
+  thumb.addEventListener('pointerup', finishDrag);
+  thumb.addEventListener('pointercancel', finishDrag);
 }
 
 function downloadPDF() {
   const pages = computePages();
-  const nombreArchivo = nombreArchivoContrato();
+  const nombreArchivo = nombreArchivoDoc();
 
   const pagesHTML = pages.map((html, i) => {
     const wrapper = document.createElement('div');
@@ -445,7 +1253,10 @@ function downloadPDF() {
     const isLast = i === pages.length - 1;
     return `<div class="print-page"${isLast ? '' : ' style="page-break-after:always;"'}>
       ${wrapper.innerHTML}
-      <div class="print-page-number">Página ${i + 1} de ${pages.length}</div>
+      <div class="print-page-footer">
+        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>Página ${i + 1} de ${pages.length}</span>
+      </div>
     </div>`;
   }).join('');
 
@@ -469,16 +1280,16 @@ function downloadPDF() {
       padding: 0;
     }
     .print-page { position: relative; height: 1016px; overflow: hidden; }
-    .print-page-number {
+    .print-page-footer {
       position: absolute; left: 0; right: 0; bottom: 30px;
-      text-align: right;
+      display: flex; justify-content: space-between; align-items: center;
       font-size: 8pt; color: #888;
     }
-    .doc-header { margin-bottom: 23pt; }
+    .doc-header { margin-bottom: 16pt; }
     .doc-header img { height: 30pt; width: auto; margin-bottom: 6pt; }
     .doc-titulo {
       text-align: center; font-weight: 700; font-size: 11pt;
-      letter-spacing: 0.25em; margin: 0 0 40pt;
+      letter-spacing: 0.25em; margin: 0 0 10pt;
       text-decoration: underline;
     }
     .doc-intro, .doc-p { text-align: justify; margin-bottom: 4pt; font-size: 9.5pt; }
@@ -490,7 +1301,7 @@ function downloadPDF() {
     .doc-campo.filled { border-bottom: none; }
     table { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
     td { border: 1px solid #999; padding: 4pt; }
-    .doc-firmas-wrap { position: absolute; left: 0; right: 0; bottom: 97px; }
+    .doc-firmas-wrap { margin-top: 20pt; }
     .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
     .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
     .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
@@ -507,94 +1318,26 @@ ${pagesHTML}
   setTimeout(() => { printWin.document.title = nombreArchivo; printWin.print(); }, 500);
 }
 
-// ── Descarga como Word (.docx) ──
-function ensureHtmlDocxLoaded() {
-  return new Promise((resolve, reject) => {
-    if (window.htmlDocx) return resolve();
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('No se pudo cargar el generador de Word. Revisa tu conexión a internet.'));
-    document.head.appendChild(script);
-  });
-}
-
-async function downloadWord() {
-  const raw = document.getElementById('contrato-raw');
-  if (!raw) return;
-  const clone = raw.cloneNode(true);
-  clone.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
-    el.style.color='#000'; el.style.borderBottom='1px solid #000'; el.textContent='_________________________';
-  });
-
-  const headerImg = clone.querySelector('.doc-header img');
-  if (headerImg) {
-    headerImg.setAttribute('src', 'data:image/png;base64,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');
-    headerImg.setAttribute('width', '100');
-    headerImg.setAttribute('height', '39');
-    headerImg.removeAttribute('style');
-  }
-
-  // Word no entiende flexbox: convertimos las filas de firmas a una tabla real
-  const firmasWrap = clone.querySelector('.doc-firmas-wrap');
-  if (firmasWrap) {
-    const filas = Array.from(firmasWrap.querySelectorAll('.doc-firmas-row'));
-    let tabla = '<table style="width:100%;border-collapse:collapse;margin-top:10pt;">';
-    filas.forEach(fila => {
-      tabla += '<tr>';
-      Array.from(fila.children).forEach(col => {
-        tabla += `<td style="width:50%;text-align:center;vertical-align:top;padding:0 8pt 20pt;">${col.innerHTML}</td>`;
-      });
-      tabla += '</tr>';
-    });
-    tabla += '</table>';
-    firmasWrap.innerHTML = tabla;
-  }
-
-  const wordHTML = `<!DOCTYPE html>
-<html xmlns:o='urn:schemas-microsoft-com:office:office'
-      xmlns:w='urn:schemas-microsoft-com:office:word'
-      xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset='UTF-8'>
-<title> </title>
-<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
-<style>
-  body{font-family:Arial,sans-serif;font-size:10pt;line-height:1.5;color:#000;}
-  .doc-header img{height:30pt;width:auto;}
-  .doc-titulo{text-align:center;font-weight:700;font-size:12pt;letter-spacing:0.15em;margin:0 0 8pt;text-decoration:underline;}
-  .doc-intro,.doc-p{text-align:justify;margin-bottom:5pt;font-size:10pt;}
-  .doc-seccion{font-weight:700;margin:8pt 0 3pt;text-decoration:underline;}
-  .doc-clausula-titulo{font-weight:700;}
-  .doc-campo{font-weight:700;border-bottom:1px solid #000;}
-  .doc-campo.filled{border-bottom:none;}
-  table{border-collapse:collapse;width:100%;font-size:10pt;}
-  td{border:1px solid #999;padding:4pt;}
-  .doc-firmas-wrap{margin-top:44pt;}
-  .doc-firma-linea-top{border-top:1px solid #000;padding-top:5pt;margin-top:22pt;}
-  .doc-firma-bold{font-weight:700;}
-</style></head>
-<body>${clone.innerHTML}</body></html>`;
-
-  try {
-    await ensureHtmlDocxLoaded();
-    const blob = window.htmlDocx.asBlob(wordHTML, {
-      margins: { top: 454, right: 1134, bottom: 850, left: 1134 }
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nombreArchivoContrato() + '.docx';
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert('No se pudo generar el Word: ' + err.message);
-  }
-}
-
 // Inicializar preview al cargar
 document.addEventListener('DOMContentLoaded', () => {
 
   updatePreview();
+  mostrarVista('lista');
+  initSlideFinalizar();
+
+  // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
+  // se salta la lista y abre ese documento directo.
+  const docIdDesdeURL = new URLSearchParams(location.search).get('doc');
+  function iniciarCarga() {
+    if (docIdDesdeURL) abrirDocumentoPorId(docIdDesdeURL);
+    else cargarListaDocumentos();
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    iniciarCarga();
+  } else {
+    window.addEventListener('kw-auth-ready', iniciarCarga, { once: true });
+  }
 });
 
 function fitPreviewMobile() {
