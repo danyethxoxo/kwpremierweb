@@ -365,7 +365,7 @@
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
-        .select('id, nombre, apellido, email, role, created_at')
+        .select('id, nombre, apellido, email, role, created_at, oculto')
         .order('created_at', { ascending: false });
       if (error) throw error;
       usuariosCache = data || [];
@@ -375,26 +375,45 @@
         return;
       }
 
-      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th></th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th>Visible en Asesores/Staff</th><th></th></tr></thead><tbody>';
       usuariosCache.forEach((u, i) => {
         const nombreCompleto = [u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)';
         const puedoEditar = miRol === 'master' || (miRol === 'admin' && (u.role === 'staff' || u.role === 'asociado'));
+        const oculto = !!u.oculto;
         html += `<tr>
           <td>${escapeHtml(nombreCompleto)}</td>
           <td>${escapeHtml(u.email)}</td>
           <td><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></td>
           <td>${fmtFechaCorta(u.created_at)}</td>
-          <td>${puedoEditar ? `<button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}</td>
+          <td>${oculto ? '<span style="color:#a30000;font-weight:700;">Oculto</span>' : '<span style="color:#1a7a1a;font-weight:700;">Visible</span>'}</td>
+          <td style="display:flex;gap:6px;">
+            ${puedoEditar ? `<button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}
+            ${puedoEditar ? `<button type="button" class="btn-editar-usuario btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>` : ''}
+          </td>
         </tr>`;
       });
       html += '</tbody></table>';
       cont.innerHTML = html;
 
-      Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
+      Array.from(cont.querySelectorAll('.btn-editar-usuario:not(.btn-toggle-oculto)')).forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
+      });
+      Array.from(cont.querySelectorAll('.btn-toggle-oculto')).forEach(btn => {
+        btn.addEventListener('click', () => toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)]));
       });
     } catch (err) {
       cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los usuarios.')}</p>`;
+    }
+  }
+
+  async function toggleOcultoUsuario(u) {
+    const nuevoValor = !u.oculto;
+    try {
+      await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: u.id, oculto: nuevoValor });
+      u.oculto = nuevoValor;
+      cargarUsuarios();
+    } catch (err) {
+      alert((err && err.message) || 'Ocurrió un error al cambiar la visibilidad.');
     }
   }
 

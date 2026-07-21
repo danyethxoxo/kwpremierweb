@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
       const email = body.email ? String(body.email).trim().toLowerCase() : undefined
       const password = body.password ? String(body.password) : undefined
       const nuevoRol = body.role ? String(body.role) : undefined
+      const nuevoOculto = typeof body.oculto === 'boolean' ? body.oculto : undefined
 
       if (nuevoRol && !ROLES_VALIDOS.includes(nuevoRol)) {
         return respond({ error: 'Rol inválido' }, 400)
@@ -110,11 +111,12 @@ Deno.serve(async (req) => {
         if (authError) return respond({ error: authError.message || 'No se pudo actualizar el correo o la contraseña' }, 500)
       }
 
-      const cambiosPerfil: Record<string, string> = {}
+      const cambiosPerfil: Record<string, string | boolean> = {}
       if (nombre !== undefined) cambiosPerfil.nombre = nombre
       if (apellido !== undefined) cambiosPerfil.apellido = apellido
       if (email) cambiosPerfil.email = email
       if (nuevoRol) cambiosPerfil.role = nuevoRol
+      if (nuevoOculto !== undefined) cambiosPerfil.oculto = nuevoOculto
 
       if (Object.keys(cambiosPerfil).length > 0) {
         const { error: updError } = await admin.from('profiles').update(cambiosPerfil).eq('id', targetId)
