@@ -78,7 +78,9 @@
     color: var(--red);
     display: flex; align-items: center; justify-content: center;
     font-size: 20px; font-weight: 700;
+    overflow: hidden;
   }
+  .persona-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .persona-nombre { font-size: 14.5px; font-weight: 700; }
   .persona-rol { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
@@ -154,7 +156,7 @@
     try {
       var res = await kwSupabasePublico
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role')
+        .select('id, nombre, apellido, role, foto_url')
         .in('role', ROLES_FILTRO)
         .order('nombre', { ascending: true });
 
@@ -168,8 +170,11 @@
 
       cont.innerHTML = personas.map(function (p) {
         var nombreCompleto = ((p.nombre || '') + ' ' + (p.apellido || '')).trim() || 'Sin nombre';
+        var avatar = p.foto_url
+          ? '<img src="' + escapeHtml(p.foto_url) + '" alt="' + escapeHtml(nombreCompleto) + '" />'
+          : escapeHtml(iniciales(p.nombre, p.apellido));
         return '<div class="persona-card">' +
-          '<div class="persona-avatar">' + escapeHtml(iniciales(p.nombre, p.apellido)) + '</div>' +
+          '<div class="persona-avatar">' + avatar + '</div>' +
           '<div class="persona-nombre">' + escapeHtml(nombreCompleto) + '</div>' +
           '<div class="persona-rol">' + escapeHtml(ROL_LABELS[p.role] || p.role) + '</div>' +
         '</div>';
