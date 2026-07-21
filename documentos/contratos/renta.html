@@ -590,8 +590,6 @@
       <input type="date" id="f-fecha" oninput="updatePreview()" />
     </div>
 
-    <div id="excl-aviso" style="display:none;margin-top:14px;padding:10px 12px;background:#fff8e1;border:1.5px solid #ffc107;border-radius:10px;font-size:12px;color:#7B5800;line-height:1.5;"></div>
-
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn-download btn-outline-red" id="btn-pdf" style="display:none;" onclick="downloadPDF()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -838,31 +836,6 @@ function updatePreview() {
   const clientes = Array.from({ length: numClientes }, (_, i) =>
     (document.getElementById('f-cliente' + i) || {}).value || ''
   );
-
-  // Aviso campos vacíos
-  const aviso = document.getElementById('excl-aviso');
-  if (aviso) {
-    const campos = [
-      { id:'f-asesor', label:'Nombre del asesor' },
-      { id:'f-inmueble', label:'Dirección del inmueble' },
-      { id:'f-monto', label:'Monto mensual de renta' },
-      { id:'f-domicilio', label:'Domicilio del cliente' },
-      { id:'f-fecha', label:'Fecha del acuerdo' },
-    ];
-    const vacios = campos.filter(c => {
-      const el = document.getElementById(c.id);
-      return !el || !el.value.trim();
-    }).map(c => c.label);
-    clientes.forEach((val, i) => {
-      if (!val.trim()) vacios.push('Nombre del arrendador' + (numClientes > 1 ? ' ' + (i + 1) : ''));
-    });
-    if (vacios.length > 0) {
-      aviso.style.display = 'block';
-      aviso.innerHTML = '⚠️ <strong>Faltan campos:</strong> ' + vacios.join(', ') + '<br><span style="font-size:11px;opacity:0.8;">Puedes descargar de todas formas.</span>';
-    } else {
-      aviso.style.display = 'none';
-    }
-  }
   const tipo       = document.getElementById('f-tipo')?.value || 'exclusiva';
   const esExclusiva = tipo === 'exclusiva';
   const asesor     = document.getElementById('f-asesor')?.value || '';
