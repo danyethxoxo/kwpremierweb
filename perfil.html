@@ -216,6 +216,43 @@
     }
   }
 
+  // Redimensiona a un máximo de 800px por lado y va bajando la calidad
+  // JPEG hasta que el resultado pese 1 MB o menos (o hasta un piso de
+  // calidad razonable, para no dejar una foto irreconocible).
+  function comprimirImagen(file, maxDim, maxBytes) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let width = img.naturalWidth;
+        let height = img.naturalHeight;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+        function intentar(calidad) {
+          canvas.toBlob((blob) => {
+            if (!blob) { reject(new Error('No se pudo procesar la imagen.')); return; }
+            if (blob.size <= maxBytes || calidad <= 0.4) {
+              resolve(blob);
+            } else {
+              intentar(calidad - 0.15);
+            }
+          }, 'image/jpeg', calidad);
+        }
+        intentar(0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen.')); };
+      img.src = url;
+    });
+  }
+
   async function subirFotoPerfil(event) {
     const file = event.target.files[0];
     event.target.value = '';
@@ -226,18 +263,19 @@
       setMsg('foto-msg', 'El archivo debe ser una imagen.', 'error');
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setMsg('foto-msg', 'La imagen no debe pesar más de 3 MB.', 'error');
+    if (file.size > 25 * 1024 * 1024) {
+      setMsg('foto-msg', 'La imagen es demasiado pesada para procesarla, intenta con otra.', 'error');
       return;
     }
 
     try {
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const ruta = miUserId + '/foto.' + ext;
+      setMsg('foto-msg', 'Procesando imagen...', 'ok');
+      const blob = await comprimirImagen(file, 800, 1024 * 1024);
 
+      const ruta = miUserId + '/foto.jpg';
       const { error: uploadError } = await window.kwSupabase.storage
         .from('perfiles')
-        .upload(ruta, file, { upsert: true, cacheControl: '3600' });
+        .upload(ruta, blob, { upsert: true, cacheControl: '3600', contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = window.kwSupabase.storage.from('perfiles').getPublicUrl(ruta);
