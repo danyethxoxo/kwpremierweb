@@ -16,6 +16,8 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <style>
   :root {
     --red: #CC0000;
@@ -125,6 +127,30 @@
     cursor: pointer; font-family: Arial, sans-serif;
   }
   .btn-foto:hover { background: #ececec; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
+  .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .crop-container { width: 100%; height: 320px; background: #333; border-radius: 10px; overflow: hidden; }
+  .crop-container img { display: block; max-width: 100%; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-modal-cancelar, .btn-modal-confirmar {
+    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
+    font-family: Arial, sans-serif; cursor: pointer; border: none;
+  }
+  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
+  .btn-modal-confirmar { background: var(--red); color: #fff; }
+  .btn-modal-confirmar:disabled { opacity: 0.6; cursor: default; }
 </style>
 </head>
 <body>
@@ -149,7 +175,7 @@
       <h2>Mis datos</h2>
       <div class="foto-wrap">
         <div class="foto-preview" id="foto-preview">?</div>
-        <input type="file" id="foto-input" accept="image/*" style="display:none;" onchange="subirFotoPerfil(event)" />
+        <input type="file" id="foto-input" accept="image/*" style="display:none;" onchange="iniciarCropFoto(event)" />
         <button type="button" class="btn-foto" onclick="document.getElementById('foto-input').click()">Cambiar foto</button>
         <div class="msg" id="foto-msg"></div>
       </div>
@@ -172,6 +198,21 @@
       <div class="msg" id="password-msg"></div>
     </div>
   </main>
+
+  <!-- Modal: recortar la foto antes de subirla -->
+  <div id="modal-crop-foto" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Ajusta tu foto</h3>
+      <p class="modal-sub">Arrastra y haz zoom para que quede bien centrada.</p>
+      <div class="crop-container">
+        <img id="crop-image" alt="" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cancelarCropFoto()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="btn-confirmar-crop" onclick="confirmarCropFoto()">Usar esta foto</button>
+      </div>
+    </div>
+  </div>
 
 <script>
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Staff', asociado: 'Asociado' };
@@ -216,44 +257,29 @@
     }
   }
 
-  // Redimensiona a un máximo de 800px por lado y va bajando la calidad
-  // JPEG hasta que el resultado pese 1 MB o menos (o hasta un piso de
-  // calidad razonable, para no dejar una foto irreconocible).
-  function comprimirImagen(file, maxDim, maxBytes) {
+  // Va bajando la calidad JPEG hasta que el resultado pese maxBytes o
+  // menos (o hasta un piso de calidad razonable, para no dejar una
+  // foto irreconocible).
+  function comprimirCanvas(canvas, maxBytes) {
     return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let width = img.naturalWidth;
-        let height = img.naturalHeight;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-          else { width = Math.round(width * maxDim / height); height = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-
-        function intentar(calidad) {
-          canvas.toBlob((blob) => {
-            if (!blob) { reject(new Error('No se pudo procesar la imagen.')); return; }
-            if (blob.size <= maxBytes || calidad <= 0.4) {
-              resolve(blob);
-            } else {
-              intentar(calidad - 0.15);
-            }
-          }, 'image/jpeg', calidad);
-        }
-        intentar(0.85);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen.')); };
-      img.src = url;
+      function intentar(calidad) {
+        canvas.toBlob((blob) => {
+          if (!blob) { reject(new Error('No se pudo procesar la imagen.')); return; }
+          if (blob.size <= maxBytes || calidad <= 0.4) {
+            resolve(blob);
+          } else {
+            intentar(calidad - 0.15);
+          }
+        }, 'image/jpeg', calidad);
+      }
+      intentar(0.85);
     });
   }
 
-  async function subirFotoPerfil(event) {
+  let cropperActual = null;
+  let cropObjectUrl = null;
+
+  function iniciarCropFoto(event) {
     const file = event.target.files[0];
     event.target.value = '';
     if (!file) return;
@@ -268,10 +294,53 @@
       return;
     }
 
-    try {
-      setMsg('foto-msg', 'Procesando imagen...', 'ok');
-      const blob = await comprimirImagen(file, 800, 1024 * 1024);
+    cropObjectUrl = URL.createObjectURL(file);
+    const img = document.getElementById('crop-image');
+    img.src = cropObjectUrl;
+    document.getElementById('modal-crop-foto').style.display = 'flex';
 
+    img.onload = () => {
+      if (cropperActual) cropperActual.destroy();
+      cropperActual = new Cropper(img, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: 'move',
+        background: false,
+        autoCropArea: 1,
+      });
+    };
+  }
+
+  function cerrarModalCrop() {
+    document.getElementById('modal-crop-foto').style.display = 'none';
+    if (cropperActual) { cropperActual.destroy(); cropperActual = null; }
+    if (cropObjectUrl) { URL.revokeObjectURL(cropObjectUrl); cropObjectUrl = null; }
+  }
+
+  function cancelarCropFoto() {
+    cerrarModalCrop();
+  }
+
+  async function confirmarCropFoto() {
+    if (!cropperActual) return;
+    const btn = document.getElementById('btn-confirmar-crop');
+    btn.disabled = true;
+    try {
+      const canvas = cropperActual.getCroppedCanvas({ width: 800, height: 800 });
+      const blob = await comprimirCanvas(canvas, 1024 * 1024);
+      cerrarModalCrop();
+      await subirBlobFotoPerfil(blob);
+    } catch (err) {
+      setMsg('foto-msg', err.message || 'Ocurrió un error al procesar la imagen.', 'error');
+      cerrarModalCrop();
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function subirBlobFotoPerfil(blob) {
+    setMsg('foto-msg', 'Subiendo foto...', 'ok');
+    try {
       const ruta = miUserId + '/foto.jpg';
       const { error: uploadError } = await window.kwSupabase.storage
         .from('perfiles')
