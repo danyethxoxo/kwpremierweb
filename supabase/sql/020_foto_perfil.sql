@@ -16,9 +16,15 @@ select id, nombre, apellido, role, foto_url
 from public.profiles
 where oculto = false;
 
-insert into storage.buckets (id, name, public)
-values ('perfiles', 'perfiles', true)
-on conflict (id) do nothing;
+-- El límite real de 1 MB se aplica comprimiendo la imagen en el propio
+-- navegador (perfil.html) antes de subirla; este límite de 2 MB en el
+-- bucket es solo un respaldo por si alguien subiera un archivo saltándose
+-- esa compresión (por ejemplo llamando a la API directamente).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('perfiles', 'perfiles', true, 2097152, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "perfiles_storage_insert_own" on storage.objects;
 create policy "perfiles_storage_insert_own" on storage.objects
