@@ -124,7 +124,7 @@
 </head>
 <body>
 
-  <a href="/kwpremierweb/login.html" class="login-link">Iniciar sesión</a>
+  <a href="/kwpremierweb/login.html" class="login-link" id="login-link">Iniciar sesión</a>
 
   <main>
     <div class="logo-wrap">
@@ -171,5 +171,28 @@
     </a>
   </footer>
 
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  (function () {
+    var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    sb.auth.getSession().then(function (result) {
+      var session = result && result.data && result.data.session;
+      if (!session) return;
+
+      sb.from('profiles').select('nombre, apellido').eq('id', session.user.id).single()
+        .then(function (res) {
+          var link = document.getElementById('login-link');
+          if (!link) return;
+          var nombre = (res.data && (res.data.nombre + ' ' + (res.data.apellido || '')).trim()) || 'Mi perfil';
+          link.textContent = nombre;
+          link.href = '/kwpremierweb/perfil.html';
+        });
+    });
+  })();
+</script>
 </body>
 </html>
