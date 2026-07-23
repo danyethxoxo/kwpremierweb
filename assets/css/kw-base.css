@@ -214,3 +214,74 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .rol-admin { background: #f5f0ff; color: #6741d9; }
 .rol-staff { background: #e7f5ff; color: #1971c2; }
 .rol-asociado { background: #f1f3f5; color: #495057; }
+
+/* ── Menú lateral (hamburguesa) ──
+   Inyectado por /assets/js/drawer.js — ver ese archivo para el uso. */
+.hamburger-btn {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f4f4f3; border: 1px solid rgba(0,0,0,0.04); border-radius: 10px;
+  cursor: pointer; color: var(--text); margin-right: 12px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 3px 8px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+/* Páginas sin <header> (por ejemplo index.html): botón flotante fijo. */
+.hamburger-btn.fijo { position: fixed; top: 18px; left: 18px; z-index: 150; margin-right: 0; }
+.hamburger-btn:hover { background: #ececec; }
+.hamburger-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
+}
+.hamburger-btn svg { width: 18px; height: 18px; }
+
+/* Con el botón insertado como primer hijo del header, el último hijo
+   (back-btn, grupo de la derecha, etc.) se recorre al extremo derecho. */
+header > *:last-child { margin-left: auto; }
+
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+.drawer {
+  position: fixed; top: 0; left: 0; height: 100%; width: 280px; max-width: 82vw;
+  background: rgba(255,255,255,0.82); z-index: 201;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+}
+.drawer.open { transform: translateX(0); }
+.drawer-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.drawer-header img { height: 32px; width: auto; display: block; }
+.drawer-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: #f4f4f3;
+  color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.drawer-close:hover { background: #ececec; color: var(--text); }
+.drawer-nav {
+  flex: 1; overflow-y: auto; padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.drawer-section-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); padding: 14px 12px 6px;
+}
+.drawer-section-label:first-child { padding-top: 4px; }
+.drawer-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 10px;
+  color: var(--text); text-decoration: none; font-weight: 600; font-size: 13.5px;
+  transition: background 0.15s;
+}
+.drawer-link:hover { background: #f5f5f5; }
+.drawer-link.activo { background: #fff3f3; color: var(--red); }
+.drawer-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+.drawer-footer { padding: 14px 20px 18px; border-top: 1px solid var(--border); }
+.drawer-footer .drawer-link { color: #a30000; }
