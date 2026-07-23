@@ -16,6 +16,8 @@
    o el layout propio de una vista de lista/directorio).
    ═══════════════════════════════════════════════════════════════ */
 
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
 :root {
   --red: #CC0000;
   --text: #1a1a1a;
@@ -32,6 +34,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  font-family: 'Poppins', Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+h1, h2, h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 /* ── Header / logo ── */
 .logo { display: flex; align-items: center; text-decoration: none; }
 .logo img { height: 40px; width: auto; display: block; }
@@ -41,20 +52,25 @@
   font-size: 13px; font-weight: 500; color: var(--muted);
   text-decoration: none; padding: 8px 14px; border-radius: 8px;
   border: 1px solid var(--border); background: transparent;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.12s;
 }
 .back-btn:hover { background: #f0f0f0; color: var(--text); }
+.back-btn:active { transform: scale(0.96); }
 
 .btn-volver {
   display: inline-flex; align-items: center; gap: 6px;
-  background: #f7f7f6; border: 1.5px solid var(--border); border-radius: 10px;
+  background: #f4f4f3; border: 1px solid rgba(0,0,0,0.04); border-radius: 10px;
   padding: 8px 14px; font-size: 12px; font-weight: 700;
-  font-family: Arial, sans-serif; color: #555; cursor: pointer;
-  margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  transition: background 0.15s, transform 0.12s;
+  color: #555; cursor: pointer;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 3px 8px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  transition: background 0.15s, box-shadow 0.12s, transform 0.12s;
 }
 .btn-volver:hover { background: #ececec; }
-.btn-volver:active { transform: scale(0.96); }
+.btn-volver:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset, 0 1px 2px rgba(0,0,0,0.04);
+}
 
 /* ── Footer con redes sociales ── */
 footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; }
@@ -70,20 +86,25 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .footer-social:hover { background: #ffe0e0; color: var(--red); transform: translateY(-2px); }
 .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
 
-/* ── Botones ── */
+/* ── Botones ──
+   Estilo "con profundidad": relieve suave hacia afuera en reposo, y
+   se hunden (sombra hacia adentro + se achican un poco) al presionarlos. */
 .btn-download {
   flex: 0 0 130px;
-  background: #f7f7f6;
-  border: 1.5px solid var(--border);
+  background: #f4f4f3;
+  border: 1px solid rgba(0,0,0,0.04);
   border-radius: 10px;
   padding: 10px 8px; font-size: 12px; font-weight: 700;
-  font-family: Arial, sans-serif; cursor: pointer;
+  cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 3px 8px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.12s, transform 0.12s;
 }
 .btn-download:hover { background: #ececec; }
-.btn-download:active { transform: scale(0.96); }
+.btn-download:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset, 0 1px 2px rgba(0,0,0,0.04);
+}
 .btn-outline-red { border-color: var(--red); color: var(--red); }
 .btn-outline-green { border-color: #1f6d2e; color: #1f6d2e; }
 .btn-outline-purple { border-color: #6741d9; color: #6741d9; }
@@ -94,22 +115,30 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   color: #fff; border: none; border-radius: 10px;
   padding: 10px 18px; font-size: 13.5px; font-weight: 700;
   cursor: pointer; white-space: nowrap;
-  box-shadow: 0 4px 18px rgba(204,0,0,0.3);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.35), 0 2px 4px rgba(204,0,0,0.2);
+  transition: filter 0.15s, box-shadow 0.12s, transform 0.12s;
 }
 .btn-guardar:hover { filter: brightness(1.08); }
+.btn-guardar:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset, 0 1px 2px rgba(204,0,0,0.15);
+}
 .btn-guardar:disabled { opacity: 0.6; cursor: default; }
 
 .btn-nuevo-documento {
   background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
   color: #fff; border: none; border-radius: 40px;
   padding: 11px 18px; font-size: 13.5px; font-weight: 700;
-  font-family: Arial, sans-serif; cursor: pointer;
-  box-shadow: 0 4px 18px rgba(204,0,0,0.3);
-  transition: filter 0.18s, transform 0.12s;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.35), 0 2px 4px rgba(204,0,0,0.2);
+  transition: filter 0.18s, box-shadow 0.12s, transform 0.12s;
   white-space: nowrap;
 }
 .btn-nuevo-documento:hover { filter: brightness(1.08); }
-.btn-nuevo-documento:active { transform: scale(0.96); }
+.btn-nuevo-documento:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset, 0 1px 2px rgba(204,0,0,0.15);
+}
 
 /* ── Modales de confirmación (nombre, finalizar, copia, eliminar, etc.) ── */
 .modal-overlay {
@@ -128,10 +157,26 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
 .btn-modal-cancelar, .btn-modal-confirmar {
   flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
-  font-family: Arial, sans-serif; cursor: pointer; border: none;
+  cursor: pointer; border: none;
+  transition: box-shadow 0.12s, transform 0.12s, filter 0.15s;
 }
-.btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
-.btn-modal-confirmar { background: var(--red); color: #fff; }
+.btn-modal-cancelar {
+  background: #f2f2f2; color: var(--text);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 6px rgba(0,0,0,0.08);
+}
+.btn-modal-cancelar:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
+}
+.btn-modal-confirmar {
+  background: var(--red); color: #fff;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.3);
+}
+.btn-modal-confirmar:hover { filter: brightness(1.08); }
+.btn-modal-confirmar:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset;
+}
 .btn-modal-confirmar:disabled { opacity: 0.6; cursor: default; }
 
 /* ── Campos de formulario (perfil, listas, etc.) ── */
@@ -144,7 +189,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .field input, .field select {
   width: 100%; padding: 9px 12px;
   border: 1.5px solid var(--border); border-radius: 10px;
-  font-size: 13.5px; font-family: Arial, sans-serif;
+  font-size: 13.5px;
   color: var(--text); background: #fff; outline: none;
 }
 .field input:focus, .field select:focus {
