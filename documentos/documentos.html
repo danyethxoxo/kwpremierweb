@@ -176,47 +176,10 @@
       .page-title { font-size: 26px; }
     }
 
-    /* ═══════════ TARJETA ═══════════ */
-    .card {
-      position: relative;
-      overflow: hidden;
-      background: var(--card);
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      padding: 28px 24px 24px;
-      text-decoration: none;
-      color: inherit;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      transition: background 0.25s, box-shadow 0.18s, transform 0.18s, border-color 0.25s;
-      cursor: pointer;
-    }
-    .card:hover {
-      box-shadow: 0 10px 28px rgba(0,0,0,0.14);
-      transform: translateY(-2px);
-    }
-    .card:active {
-      transform: translateY(0) scale(0.97);
-    }
-
-    .card-acuerdos:hover { background: var(--red); border-color: var(--red); }
-    .card-internos:hover { background: #4F46E5; border-color: #4F46E5; }
-    .card-contratos:hover { background: #D97706; border-color: #D97706; }
-
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 11px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 18px;
-      flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .card-icon svg { width: 22px; height: 22px; transition: color 0.2s; }
-
+    /* ═══════════ TARJETA ═══════════
+       El efecto de hover (relleno de color + flecha) vive en
+       assets/css/kw-base.css como .hover-card — aquí solo quedan los
+       colores de fondo de cada ícono en reposo, propios de esta página. */
     .icon-acuerdos { background: #FFF0F0; }
     .icon-acuerdos svg { color: var(--red); }
 
@@ -225,49 +188,6 @@
 
     .icon-contratos { background: #FFF7E6; }
     .icon-contratos svg { color: #D97706; }
-
-    .card:hover .card-icon { background: rgba(255,255,255,0.2); }
-    .card:hover .card-icon svg { color: #fff; }
-
-    .card-title {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 8px;
-      letter-spacing: -0.2px;
-      transition: color 0.2s;
-    }
-    .card:hover .card-title { color: #fff; }
-
-    .card-desc {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.6;
-      flex: 1;
-      transition: color 0.2s;
-    }
-    .card:hover .card-desc { color: rgba(255,255,255,0.85); }
-
-    /* Flecha que aparece en la esquina al pasar el cursor, en vez del
-       texto fijo "Abrir". */
-    .card-cta {
-      position: absolute;
-      right: 20px;
-      bottom: 20px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.22);
-      color: #fff;
-      opacity: 0;
-      transform: translate(-6px, 6px);
-      transition: opacity 0.2s, transform 0.2s;
-    }
-    .card:hover .card-cta { opacity: 1; transform: translate(0, 0); }
-    .card-cta svg { width: 16px; height: 16px; }
 
     /* ═══════════ FOOTER ═══════════ */
     .footer {
@@ -312,8 +232,8 @@
     <div class="grid">
 
       <!-- Acuerdos -->
-      <a href="acuerdos/index.html" class="card card-acuerdos">
-        <div class="card-icon icon-acuerdos">
+      <a href="acuerdos/index.html" class="hover-card" style="--card-color: var(--red);">
+        <div class="hover-card-icon icon-acuerdos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -322,9 +242,9 @@
             <polyline points="10 9 9 9 8 9"/>
           </svg>
         </div>
-        <div class="card-title">Acuerdos</div>
-        <div class="card-desc">Toda la documentación que necesitas como asesor.</div>
-        <div class="card-cta">
+        <div class="hover-card-title">Acuerdos</div>
+        <div class="hover-card-desc">Toda la documentación que necesitas como asesor.</div>
+        <div class="hover-card-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
@@ -333,8 +253,8 @@
       </a>
 
       <!-- Internos -->
-      <a href="internos/index.html" class="card card-internos" id="card-internos">
-        <div class="card-icon icon-internos">
+      <a href="internos/index.html" class="hover-card" id="card-internos" style="--card-color: #4F46E5;">
+        <div class="hover-card-icon icon-internos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
@@ -342,9 +262,9 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </div>
-        <div class="card-title">Internos (Staff)</div>
-        <div class="card-desc">Documentación exclusiva para Liderazgo.</div>
-        <div class="card-cta">
+        <div class="hover-card-title">Internos (Staff)</div>
+        <div class="hover-card-desc">Documentación exclusiva para Liderazgo.</div>
+        <div class="hover-card-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
@@ -353,16 +273,16 @@
       </a>
 
       <!-- Contratos -->
-      <a href="contratos/index.html" class="card card-contratos">
-        <div class="card-icon icon-contratos">
+      <a href="contratos/index.html" class="hover-card" style="--card-color: #D97706;">
+        <div class="hover-card-icon icon-contratos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
         </div>
-        <div class="card-title">Contratos</div>
-        <div class="card-desc">Compra-Venta: Residencial, comercial, Rentas, en exclusiva y opción.</div>
-        <div class="card-cta">
+        <div class="hover-card-title">Contratos</div>
+        <div class="hover-card-desc">Compra-Venta: Residencial, comercial, Rentas, en exclusiva y opción.</div>
+        <div class="hover-card-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>

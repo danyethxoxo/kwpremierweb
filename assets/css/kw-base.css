@@ -215,6 +215,70 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .rol-staff { background: #e7f5ff; color: #1971c2; }
 .rol-asociado { background: #f1f3f5; color: #495057; }
 
+/* ── Tarjetas con relleno de color al pasar el cursor ──
+   Uso: <a class="hover-card" style="--card-color: #1971c2;">
+          <div class="hover-card-icon" style="background:#E7F5FF;"><svg style="color:#1971c2;">...</svg></div>
+          <div class="hover-card-title">Título</div>
+          <div class="hover-card-desc">Descripción breve.</div>
+          <div class="hover-card-arrow"><svg>flecha</svg></div>
+        </a>
+   --card-color define de qué color se llena la tarjeta al hacer hover;
+   cada tarjeta puede tener el suyo. */
+.hover-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 28px 24px 24px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.18s, transform 0.18s;
+}
+.hover-card:hover {
+  background: var(--card-color, var(--red));
+  border-color: var(--card-color, var(--red));
+  box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+  transform: translateY(-2px);
+}
+.hover-card:active { transform: translateY(0) scale(0.97); }
+
+.hover-card-icon {
+  width: 44px; height: 44px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.hover-card-icon svg { width: 22px; height: 22px; transition: color 0.2s; }
+.hover-card:hover .hover-card-icon { background: rgba(255,255,255,0.2); }
+.hover-card:hover .hover-card-icon svg { color: #fff; }
+
+.hover-card-title {
+  font-size: 17px; font-weight: 700; color: var(--text);
+  margin-bottom: 8px; letter-spacing: -0.2px; transition: color 0.2s;
+}
+.hover-card:hover .hover-card-title { color: #fff; }
+
+.hover-card-desc {
+  font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1;
+  transition: color 0.2s;
+}
+.hover-card:hover .hover-card-desc { color: rgba(255,255,255,0.85); }
+
+.hover-card-arrow {
+  position: absolute; right: 20px; bottom: 20px;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.22); color: #fff;
+  opacity: 0; transform: translate(-6px, 6px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.hover-card-arrow svg { width: 16px; height: 16px; }
+.hover-card:hover .hover-card-arrow { opacity: 1; transform: translate(0, 0); }
+
 /* ── Menú lateral (hamburguesa) ──
    Inyectado por /assets/js/drawer.js — ver ese archivo para el uso. */
 .hamburger-btn {
