@@ -260,6 +260,20 @@
         <label>Rol</label>
         <select id="edit-rol"></select>
       </div>
+      <div class="field">
+        <label>Puesto (aparece en Staff)</label>
+        <select id="edit-puesto">
+          <option value="">— Sin puesto —</option>
+          <option value="Principal Operator">Principal Operator</option>
+          <option value="Director of First Impressions">Director of First Impressions</option>
+          <option value="Technology Director">Technology Director</option>
+          <option value="Productivity Coach">Productivity Coach</option>
+          <option value="Transaction Manager">Transaction Manager</option>
+          <option value="Market Center Administrator Assistant">Market Center Administrator Assistant</option>
+          <option value="Market Center Administrator">Market Center Administrator</option>
+          <option value="Team Leader">Team Leader</option>
+        </select>
+      </div>
       <div class="field"><label>Nueva contraseña (opcional)</label><input type="password" id="edit-password" placeholder="Dejar en blanco para no cambiarla" /></div>
       <div class="msg" id="edit-msg"></div>
       <div class="modal-actions">
@@ -365,7 +379,7 @@
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
-        .select('id, nombre, apellido, email, role, created_at, oculto')
+        .select('id, nombre, apellido, email, role, created_at, oculto, puesto')
         .order('created_at', { ascending: false });
       if (error) throw error;
       usuariosCache = data || [];
@@ -375,7 +389,7 @@
         return;
       }
 
-      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th>Visible en Asesores/Staff</th><th></th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Puesto</th><th>Alta</th><th>Visible en Asesores/Staff</th><th></th></tr></thead><tbody>';
       usuariosCache.forEach((u, i) => {
         const nombreCompleto = [u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)';
         const puedoEditar = miRol === 'master' || (miRol === 'admin' && (u.role === 'staff' || u.role === 'asociado'));
@@ -384,6 +398,7 @@
           <td>${escapeHtml(nombreCompleto)}</td>
           <td>${escapeHtml(u.email)}</td>
           <td><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></td>
+          <td>${escapeHtml(u.puesto || '—')}</td>
           <td>${fmtFechaCorta(u.created_at)}</td>
           <td>${oculto ? '<span style="color:#a30000;font-weight:700;">Oculto</span>' : '<span style="color:#1a7a1a;font-weight:700;">Visible</span>'}</td>
           <td style="display:flex;gap:6px;">
@@ -465,6 +480,8 @@
     rolSelect.value = u.role;
     rolSelect.disabled = (u.id === miUserId);
 
+    document.getElementById('edit-puesto').value = u.puesto || '';
+
     document.getElementById('btn-eliminar-usuario').style.display = (u.id === miUserId) ? 'none' : '';
     setEditMsg('', '');
     document.getElementById('modal-editar-usuario').style.display = 'flex';
@@ -485,7 +502,8 @@
         nombre: document.getElementById('edit-nombre').value.trim(),
         apellido: document.getElementById('edit-apellido').value.trim(),
         email: document.getElementById('edit-email').value.trim(),
-        role: document.getElementById('edit-rol').value
+        role: document.getElementById('edit-rol').value,
+        puesto: document.getElementById('edit-puesto').value
       };
       const nuevaPassword = document.getElementById('edit-password').value;
       if (nuevaPassword) payload.password = nuevaPassword;

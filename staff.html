@@ -156,7 +156,7 @@
     try {
       var res = await kwSupabasePublico
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role, foto_url')
+        .select('id, nombre, apellido, role, foto_url, puesto')
         .in('role', ROLES_FILTRO)
         .order('nombre', { ascending: true });
 
@@ -176,7 +176,7 @@
         return '<div class="persona-card">' +
           '<div class="persona-avatar">' + avatar + '</div>' +
           '<div class="persona-nombre">' + escapeHtml(nombreCompleto) + '</div>' +
-          '<div class="persona-rol">' + escapeHtml(ROL_LABELS[p.role] || p.role) + '</div>' +
+          '<div class="persona-rol">' + escapeHtml(p.puesto || ROL_LABELS[p.role] || p.role) + '</div>' +
         '</div>';
       }).join('');
     } catch (err) {

@@ -18,6 +18,17 @@ const CORS_HEADERS = {
 
 const ROLES_VALIDOS = ['master', 'admin', 'staff', 'asociado']
 
+const PUESTOS_VALIDOS = [
+  'Principal Operator',
+  'Director of First Impressions',
+  'Technology Director',
+  'Productivity Coach',
+  'Transaction Manager',
+  'Market Center Administrator Assistant',
+  'Market Center Administrator',
+  'Team Leader',
+]
+
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -89,9 +100,13 @@ Deno.serve(async (req) => {
       const password = body.password ? String(body.password) : undefined
       const nuevoRol = body.role ? String(body.role) : undefined
       const nuevoOculto = typeof body.oculto === 'boolean' ? body.oculto : undefined
+      const nuevoPuesto = body.puesto !== undefined ? (String(body.puesto).trim() || null) : undefined
 
       if (nuevoRol && !ROLES_VALIDOS.includes(nuevoRol)) {
         return respond({ error: 'Rol inválido' }, 400)
+      }
+      if (nuevoPuesto && !PUESTOS_VALIDOS.includes(nuevoPuesto)) {
+        return respond({ error: 'Puesto inválido' }, 400)
       }
       if (nuevoRol && esAdminLimitado && nuevoRol !== 'staff' && nuevoRol !== 'asociado') {
         return respond({ error: 'Solo el usuario master puede asignar ese rol' }, 403)
@@ -111,12 +126,13 @@ Deno.serve(async (req) => {
         if (authError) return respond({ error: authError.message || 'No se pudo actualizar el correo o la contraseña' }, 500)
       }
 
-      const cambiosPerfil: Record<string, string | boolean> = {}
+      const cambiosPerfil: Record<string, string | boolean | null> = {}
       if (nombre !== undefined) cambiosPerfil.nombre = nombre
       if (apellido !== undefined) cambiosPerfil.apellido = apellido
       if (email) cambiosPerfil.email = email
       if (nuevoRol) cambiosPerfil.role = nuevoRol
       if (nuevoOculto !== undefined) cambiosPerfil.oculto = nuevoOculto
+      if (nuevoPuesto !== undefined) cambiosPerfil.puesto = nuevoPuesto
 
       if (Object.keys(cambiosPerfil).length > 0) {
         const { error: updError } = await admin.from('profiles').update(cambiosPerfil).eq('id', targetId)
