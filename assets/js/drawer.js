@@ -134,4 +134,23 @@
       else location.href = `${BASE}/login.html`;
     });
   }
+
+  // La barra del header se esconde al bajar y reaparece al subir; los
+  // botones (menú y Atrás) se quedan siempre visibles. Se escucha en
+  // fase de captura para cubrir también los contenedores con scroll
+  // interno (por ejemplo la agenda del calendario), no solo la ventana.
+  const kwHeader = document.querySelector('header.kw-header');
+  if (kwHeader) {
+    let lastY = 0;
+    document.addEventListener('scroll', (e) => {
+      const t = e.target;
+      const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
+      const y = esVentana
+        ? (window.scrollY || document.documentElement.scrollTop || 0)
+        : (t.scrollTop || 0);
+      if (y > lastY + 4 && y > 40) kwHeader.classList.add('kw-header-oculto');
+      else if (y < lastY - 4) kwHeader.classList.remove('kw-header-oculto');
+      lastY = y;
+    }, { capture: true, passive: true });
+  }
 })();
