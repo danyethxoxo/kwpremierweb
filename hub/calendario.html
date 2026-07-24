@@ -435,4 +435,163 @@
 
   // Detecta links de Zoom/Meet dentro de la descripción y los muestra con
   // un texto claro y consistente, en vez del texto/URL crudo que trae Google.
-  function normalizeMeetingLinks(
+  function normalizeMeetingLinks(html) {
+    if (!html) return html;
+    let out = html.replace(/<a\s+[^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>/gi, (match, href) => {
+      if (/zoom\.us/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">🎥 Únete a la sesión por Zoom</a>`;
+      if (/meet\.google\.com/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">🎥 Únete a la sesión por Meet</a>`;
+      return match;
+    });
+    out = out.replace(/(?<!href=")(https?:\/\/[^\s<"]*(?:zoom\.us|meet\.google\.com)[^\s<"]*)/gi, (url) => {
+      const label = /zoom\.us/i.test(url) ? '🎥 Únete a la sesión por Zoom' : '🎥 Únete a la sesión por Meet';
+      return `<a class="meeting-link" href="${url}" target="_blank" rel="noopener">${label}</a>`;
+    });
+    return out;
+  }
+
+  async function loadEvents() {
+    const container = document.getElementById('agenda-container');
+    document.getElementById('month-label').textContent = fmtWeekLabel(currentWeekStart);
+    container.innerHTML = `<div class="state-box"><div class="spinner"></div>Cargando eventos…</div>`;
+
+    const nextMonday = addDays(currentWeekStart, 7);
+    const timeMin = dateBoundaryISO(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day);
+    const timeMax = dateBoundaryISO(nextMonday.year, nextMonday.month, nextMonday.day);
+
+    const url = new URL(FUNCTION_URL);
+    url.searchParams.set('timeMin', timeMin);
+    url.searchParams.set('timeMax', timeMax);
+
+    try {
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`El servidor respondió ${res.status}`);
+      const data = await res.json();
+      renderAgenda(data.events || []);
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-box error">
+          No se pudieron cargar los eventos.<br>
+          <span style="font-size:12px;opacity:0.8;">${(err && err.message) ? err.message : 'Error de conexión'}</span><br>
+          <button class="retry-btn" onclick="loadEvents()">Reintentar</button>
+        </div>`;
+    }
+  }
+
+  function cap(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : str; }
+
+  function renderAgenda(events) {
+    const container = document.getElementById('agenda-container');
+    const today = getTodayInMexico();
+
+    // Siempre se muestran los 7 días de la semana (lunes a domingo), tengan
+    // o no eventos, para que cada día quede separado visualmente del resto.
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      weekDays.push({ parts: addDays(currentWeekStart, i), events: [] });
+    }
+    events.forEach(ev => {
+      const p = parseEventParts(ev.start);
+      const k = dayKey(p);
+      const match = weekDays.find(d => dayKey(d.parts) === k);
+      if (match) match.events.push(ev);
+    });
+
+    container.innerHTML = weekDays.map((day, dayIdx) => {
+      const isToday = dayKey(day.parts) === dayKey(today);
+      const weekday = DIAS_SEMANA[weekdayOf(day.parts)];
+      const month = MESES[day.parts.month - 1];
+
+      const dayEvents = day.events.slice().sort((a, b) => sortKey(parseEventParts(a.start)) - sortKey(parseEventParts(b.start)));
+
+      const eventsHTML = dayEvents.map((ev, evIdx) => {
+        const startP = parseEventParts(ev.start);
+        const endP = parseEventParts(ev.end);
+        const timeHTML = ev.allDay
+          ? `<div class="event-time all-day">Todo<br>el día</div>`
+          : `<div class="event-time">${fmtTime(startP)}<span class="end-time">${fmtTime(endP)}</span></div>`;
+        const locationHTML = ev.location
+          ? `<div class="event-location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escapeHTML(ev.location)}</div>`
+          : '';
+        const joinLink = ev.hangoutLink || findMeetingLink(ev.description);
+        const joinBtnHTML = joinLink
+          ? `<a class="event-btn event-btn-join" href="${joinLink}" target="_blank" rel="noopener" title="Únete en línea" aria-label="Únete en línea">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </a>`
+          : '';
+        const detailsBtnHTML = `<a class="event-btn event-btn-details" href="${ev.htmlLink}" target="_blank" rel="noopener" title="Abrir en el calendario" aria-label="Abrir en el calendario">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </a>`;
+        return `
+          <div class="event-card">
+            ${timeHTML}
+            <div class="event-body">
+              <div class="event-title">${escapeHTML(ev.title)}</div>
+              ${locationHTML}
+              <div class="event-actions">${joinBtnHTML}${detailsBtnHTML}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      const bodyHTML = eventsHTML || `<div style="padding:16px 0;color:var(--muted);font-size:13px;">No hay eventos programados${isToday ? ' hoy' : ' este día'}.</div>`;
+
+      return `
+        <div class="day-group${isToday ? ' is-today' : ''}" id="${isToday ? 'day-today' : ''}">
+          <div class="day-heading${isToday ? ' is-today' : ''}">
+            <span class="day-full"><span class="day-weekday-word">${cap(weekday)}</span> <span class="day-date-rest">${day.parts.day} de ${cap(month)}</span></span>
+            ${isToday ? '<span class="today-pill">Hoy</span>' : ''}
+          </div>
+          ${bodyHTML}
+        </div>`;
+    }).join('');
+
+    const todayEl = document.getElementById('day-today');
+    if (pendingScrollToToday) {
+      pendingScrollToToday = false;
+      if (todayEl) {
+        todayEl.scrollIntoView({ block: 'start' });
+        // El salto automático a "hoy" cuenta como scroll hacia abajo y
+        // esconde la barra del header; la re-mostramos — solo el scroll
+        // manual del usuario debe esconderla.
+        setTimeout(() => {
+          const h = document.querySelector('header.kw-header');
+          if (h) h.classList.remove('kw-header-oculto');
+        }, 100);
+      }
+    }
+    if (pendingPulseToday) {
+      pendingPulseToday = false;
+      if (todayEl) {
+        todayEl.classList.add('pulse');
+        setTimeout(() => todayEl.classList.remove('pulse'), 1500);
+      }
+    }
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+
+  function changeWeek(delta) {
+    currentWeekStart = addDays(currentWeekStart, delta * 7);
+    document.getElementById('calendar-scroll').scrollTop = 0;
+    loadEvents();
+  }
+
+  function goToday(scrollToToday) {
+    currentWeekStart = getMondayOfWeek(getTodayInMexico());
+    if (scrollToToday) {
+      pendingScrollToToday = true;
+      pendingPulseToday = true;
+    }
+    loadEvents();
+  }
+
+  document.addEventListener('DOMContentLoaded', loadEvents);
+</script>
+
+<script src="/kwpremierweb/assets/js/drawer.js" data-menu="hub"></script>
+</body>
+</html>
