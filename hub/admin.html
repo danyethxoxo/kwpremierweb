@@ -408,4 +408,327 @@
           <td>${fmtFechaCorta(u.created_at)}</td>
           <td>${oculto ? '<span style="color:#a30000;font-weight:700;">Oculto</span>' : '<span style="color:#1a7a1a;font-weight:700;">Visible</span>'}</td>
           <td style="display:flex;gap:6px;">
-            ${puedoEditar ? `
+            ${puedoEditar ? `<button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}
+            ${puedoEditar ? `<button type="button" class="btn-editar-usuario btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>` : ''}
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+
+      Array.from(cont.querySelectorAll('.btn-editar-usuario:not(.btn-toggle-oculto)')).forEach(btn => {
+        btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
+      });
+      Array.from(cont.querySelectorAll('.btn-toggle-oculto')).forEach(btn => {
+        btn.addEventListener('click', () => toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)]));
+      });
+    } catch (err) {
+      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los usuarios.')}</p>`;
+    }
+  }
+
+  async function toggleOcultoUsuario(u) {
+    const nuevoValor = !u.oculto;
+    try {
+      await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: u.id, oculto: nuevoValor });
+      u.oculto = nuevoValor;
+      cargarUsuarios();
+    } catch (err) {
+      alert((err && err.message) || 'Ocurrió un error al cambiar la visibilidad.');
+    }
+  }
+
+  function setInviteMsg(text, kind) {
+    const el = document.getElementById('invite-msg');
+    if (!text) { el.style.display = 'none'; return; }
+    el.textContent = text;
+    el.className = 'msg ' + kind;
+  }
+
+  async function enviarInvitacion(e) {
+    e.preventDefault();
+    const btn = document.getElementById('invite-btn');
+    const email = document.getElementById('invite-email').value.trim();
+    const rol = document.getElementById('invite-rol').value;
+    btn.disabled = true;
+    setInviteMsg('', '');
+    try {
+      await llamarFuncion(INVITAR_URL, { email, rol });
+      setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
+      document.getElementById('invite-email').value = '';
+      cargarUsuarios();
+    } catch (err) {
+      setInviteMsg((err && err.message) || 'Ocurrió un error, intenta de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function setEditMsg(text, kind) {
+    const el = document.getElementById('edit-msg');
+    if (!text) { el.style.display = 'none'; return; }
+    el.textContent = text;
+    el.className = 'msg ' + kind;
+  }
+
+  function abrirModalEditar(u) {
+    usuarioEnEdicion = u;
+    document.getElementById('edit-nombre').value = u.nombre || '';
+    document.getElementById('edit-apellido').value = u.apellido || '';
+    document.getElementById('edit-email').value = u.email || '';
+    document.getElementById('edit-password').value = '';
+
+    const rolSelect = document.getElementById('edit-rol');
+    const opciones = miRol === 'master'
+      ? [['master', 'Master'], ['admin', 'Admin'], ['staff', 'Staff'], ['asociado', 'Asociado']]
+      : [['staff', 'Staff'], ['asociado', 'Asociado']];
+    rolSelect.innerHTML = opciones.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    rolSelect.value = u.role;
+    rolSelect.disabled = (u.id === miUserId);
+
+    document.getElementById('edit-puesto').value = u.puesto || '';
+
+    document.getElementById('btn-eliminar-usuario').style.display = (u.id === miUserId) ? 'none' : '';
+    setEditMsg('', '');
+    document.getElementById('modal-editar-usuario').style.display = 'flex';
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById('modal-editar-usuario').style.display = 'none';
+    usuarioEnEdicion = null;
+  }
+
+  async function guardarEdicionUsuario() {
+    if (!usuarioEnEdicion) return;
+    setEditMsg('', '');
+    try {
+      const payload = {
+        accion: 'actualizar',
+        user_id: usuarioEnEdicion.id,
+        nombre: document.getElementById('edit-nombre').value.trim(),
+        apellido: document.getElementById('edit-apellido').value.trim(),
+        email: document.getElementById('edit-email').value.trim(),
+        role: document.getElementById('edit-rol').value,
+        puesto: document.getElementById('edit-puesto').value
+      };
+      const nuevaPassword = document.getElementById('edit-password').value;
+      if (nuevaPassword) payload.password = nuevaPassword;
+
+      await llamarFuncion(GESTIONAR_URL, payload);
+      setEditMsg('Usuario actualizado.', 'ok');
+      cargarUsuarios();
+      setTimeout(cerrarModalEditar, 900);
+    } catch (err) {
+      setEditMsg(err.message || 'Ocurrió un error al guardar.', 'error');
+    }
+  }
+
+  async function confirmarEliminarUsuario() {
+    if (!usuarioEnEdicion) return;
+    const ok = confirm('¿Seguro que quieres eliminar a este usuario? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    setEditMsg('', '');
+    try {
+      await llamarFuncion(GESTIONAR_URL, { accion: 'eliminar', user_id: usuarioEnEdicion.id });
+      cerrarModalEditar();
+      cargarUsuarios();
+    } catch (err) {
+      setEditMsg(err.message || 'Ocurrió un error al eliminar.', 'error');
+    }
+  }
+
+  // ── Documentos de todo el equipo ──
+  async function cargarDocumentosPanel() {
+    const cont = document.getElementById('documentos-cont');
+    cont.innerHTML = 'Cargando...';
+    try {
+      const { data, error } = await window.kwSupabase
+        .from('documentos_con_asesor')
+        .select('id, nombre_archivo, tipo_documento, folio, estado, created_at, updated_at, asesor_nombre, asesor_apellido, asesor_email, user_id')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      documentosCache = data || [];
+
+      const asesoresMap = new Map();
+      documentosCache.forEach(d => {
+        const nombre = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+        asesoresMap.set(d.user_id, nombre);
+      });
+      const selectAsesor = document.getElementById('doc-filtro-asesor');
+      selectAsesor.innerHTML = '<option value="">Todos los asesores</option>' +
+        Array.from(asesoresMap.entries()).map(([id, nombre]) => `<option value="${id}">${escapeHtml(nombre)}</option>`).join('');
+
+      const tiposPresentes = Array.from(new Set(documentosCache.map(d => d.tipo_documento)));
+      const selectTipo = document.getElementById('doc-filtro-tipo');
+      selectTipo.innerHTML = '<option value="">Todos los tipos</option>' +
+        tiposPresentes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(TIPO_LABELS[t] || t)}</option>`).join('');
+
+      renderDocumentosPanel();
+    } catch (err) {
+      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los documentos.')}</p>`;
+    }
+  }
+
+  function filtrarDocumentosPanel() {
+    renderDocumentosPanel();
+  }
+
+  function renderDocumentosPanel() {
+    const cont = document.getElementById('documentos-cont');
+    const q = (document.getElementById('doc-buscador').value || '').trim().toLowerCase();
+    const fAsesor = document.getElementById('doc-filtro-asesor').value;
+    const fTipo = document.getElementById('doc-filtro-tipo').value;
+    const fEstatus = document.getElementById('doc-filtro-estatus').value;
+    const fDesde = document.getElementById('doc-filtro-desde').value;
+    const fHasta = document.getElementById('doc-filtro-hasta').value;
+
+    const filtrados = documentosCache.filter(d => {
+      if (fAsesor && d.user_id !== fAsesor) return false;
+      if (fTipo && d.tipo_documento !== fTipo) return false;
+      if (fEstatus && d.estado !== fEstatus) return false;
+      if (fDesde && new Date(d.created_at) < new Date(fDesde)) return false;
+      if (fHasta && new Date(d.created_at) > new Date(fHasta + 'T23:59:59')) return false;
+      if (q) {
+        const nombre = (d.nombre_archivo || '').toLowerCase();
+        const folio = (d.folio || '').toLowerCase();
+        if (!nombre.includes(q) && !folio.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (!filtrados.length) {
+      cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No se encontraron documentos con esos filtros.</p>';
+      return;
+    }
+
+    let html = '<table><thead><tr><th>Documento</th><th>Asesor</th><th>Tipo</th><th>Folio</th><th>Estatus</th><th>Actualizado</th><th></th></tr></thead><tbody>';
+    filtrados.forEach(d => {
+      const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+      const urlBase = TIPO_URLS[d.tipo_documento];
+      const acciones = (d.estado === 'finalizado' && urlBase)
+        ? `<div class="doc-acciones">
+            <a class="btn-editar-usuario" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
+            <button type="button" class="btn-editar-usuario" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
+          </div>`
+        : '';
+      html += `<tr>
+        <td>${escapeHtml(d.nombre_archivo || 'Sin nombre')}</td>
+        <td>${escapeHtml(nombreAsesor)}</td>
+        <td>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</td>
+        <td>${escapeHtml(d.folio || '—')}</td>
+        <td><span class="rol-badge ${d.estado === 'finalizado' ? 'rol-admin' : 'rol-asociado'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
+        <td>${fmtFechaCorta(d.updated_at)}</td>
+        <td>${acciones}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+  }
+
+  const MODAL_COPIA_CONFIRM_HTML = `
+    <h3>¿Hacer una copia de este documento?</h3>
+    <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">No</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">Sí, copiar</button>
+    </div>`;
+
+  let docPendienteCopia = null;
+  let docPendienteTipo = null;
+
+  function copiarDocumentoPanel(id, nombreAsesor, tipo) {
+    docPendienteCopia = id;
+    docPendienteTipo = tipo;
+    document.getElementById('modal-copia-doc-box').innerHTML = MODAL_COPIA_CONFIRM_HTML;
+    document.getElementById('copia-doc-sub').textContent =
+      `Se creará un borrador nuevo para ${nombreAsesor}, con la misma información, para que la corrija.`;
+    document.getElementById('modal-copia-doc').style.display = 'flex';
+  }
+
+  function cerrarModalCopiaDoc() {
+    document.getElementById('modal-copia-doc').style.display = 'none';
+    docPendienteCopia = null;
+    docPendienteTipo = null;
+  }
+
+  async function confirmarCopiaDoc() {
+    const id = docPendienteCopia;
+    const tipo = docPendienteTipo;
+    if (!id) return;
+    try {
+      const { data: nuevoId, error } = await window.kwSupabase.rpc('duplicar_documento_como_borrador', { p_id: id });
+      if (error) throw error;
+      mostrarExitoCopiaDoc(nuevoId, tipo);
+    } catch (err) {
+      cerrarModalCopiaDoc();
+      alert((err && err.message) || 'Ocurrió un error al hacer la copia.');
+    }
+  }
+
+  function mostrarExitoCopiaDoc(nuevoId, tipo) {
+    const url = TIPO_URLS[tipo];
+    const irAlDocumentoHTML = url
+      ? `<a class="btn-modal-confirmar" style="text-decoration:none;display:flex;align-items:center;justify-content:center;" href="${url}?doc=${nuevoId}" target="_blank" rel="noopener" onclick="cerrarModalCopiaDoc()">Ir al documento</a>`
+      : '';
+    document.getElementById('modal-copia-doc-box').innerHTML = `
+      <h3>Copia creada</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Se creó el borrador nuevo correctamente.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">Cerrar</button>
+        ${irAlDocumentoHTML}
+      </div>`;
+  }
+
+  // ── Inicio ──
+  async function initAdmin() {
+    try {
+      const { data: userData } = await window.kwSupabase.auth.getUser();
+      if (!userData || !userData.user) throw new Error('sin sesión');
+      miUserId = userData.user.id;
+
+      const { data: perfil, error } = await window.kwSupabase
+        .from('profiles')
+        .select('role')
+        .eq('id', miUserId)
+        .single();
+      if (error || !perfil) throw new Error('sin perfil');
+
+      miRol = perfil.role;
+      if (!['master', 'admin', 'staff'].includes(miRol)) {
+        document.getElementById('denegado').style.display = '';
+        return;
+      }
+
+      const NOMBRE_PANEL = { master: 'Máster', admin: 'Admin', staff: 'Staff' };
+      document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
+
+      if (miRol === 'staff') {
+        document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
+        document.getElementById('panel-tabs').style.display = 'none';
+        document.getElementById('tab-usuarios').style.display = 'none';
+        document.getElementById('tab-documentos').style.display = '';
+      } else {
+        document.getElementById('panel-desc').textContent = 'Agrega usuarios, consulta roles y revisa los documentos del equipo.';
+        if (miRol !== 'master') {
+          document.querySelector('#invite-rol option[value="admin"]').remove();
+        }
+        document.getElementById('invite-form').addEventListener('submit', enviarInvitacion);
+        cargarUsuarios();
+      }
+
+      document.getElementById('contenido-panel').style.display = '';
+      cargarDocumentosPanel();
+    } catch (err) {
+      document.getElementById('denegado').style.display = '';
+    }
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    initAdmin();
+  } else {
+    window.addEventListener('kw-auth-ready', initAdmin, { once: true });
+  }
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js" data-menu="hub"></script>
+</body>
+</html>
