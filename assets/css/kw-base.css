@@ -47,15 +47,47 @@ h1, h2, h3, h4 {
 .logo { display: flex; align-items: center; text-decoration: none; }
 .logo img { height: 40px; width: auto; display: block; }
 
+/* Botón de regresar: sin borde ni fondo — solo texto e ícono, que
+   cambian de color al presionarse. */
 .back-btn {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 500; color: var(--muted);
-  text-decoration: none; padding: 8px 14px; border-radius: 8px;
-  border: 1px solid var(--border); background: transparent;
-  transition: background 0.15s, color 0.15s, transform 0.12s;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13.5px; font-weight: 600; color: var(--muted);
+  text-decoration: none; padding: 8px 10px;
+  border: none; background: none; cursor: pointer;
+  transition: color 0.15s, transform 0.12s;
 }
-.back-btn:hover { background: #f0f0f0; color: var(--text); }
-.back-btn:active { transform: scale(0.96); }
+.back-btn:hover { color: var(--text); }
+.back-btn:active { color: var(--red); transform: scale(0.94); }
+.back-btn svg { flex-shrink: 0; }
+
+/* ── Header compartido (páginas migradas: <header class="kw-header">) ──
+   Barra fija translúcida con blur; en lugar de un borde duro, un
+   degradado la funde con el contenido. Al hacer scroll hacia abajo,
+   drawer.js le pone .kw-header-oculto: la barra desaparece pero los
+   botones de menú y Atrás se quedan flotando; al subir, reaparece.
+   El contenido de cada página debe dejar ~54px libres arriba. */
+header.kw-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 90;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; min-height: 54px;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: background 0.25s;
+}
+header.kw-header::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0));
+  pointer-events: none; transition: opacity 0.25s;
+}
+header.kw-header > * { transition: opacity 0.2s; }
+header.kw-header.kw-header-oculto {
+  background: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+header.kw-header.kw-header-oculto::after { opacity: 0; }
+header.kw-header.kw-header-oculto > *:not(.hamburger-btn):not(.back-btn) {
+  opacity: 0; pointer-events: none;
+}
 
 .btn-volver {
   display: inline-flex; align-items: center; gap: 6px;
@@ -281,23 +313,20 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 
 /* ── Menú lateral (hamburguesa) ──
    Inyectado por /assets/js/drawer.js — ver ese archivo para el uso. */
+/* Ícono de hamburguesa: sin fondo ni borde — solo las tres rayas, que
+   cambian de color al presionarse. */
 .hamburger-btn {
   flex-shrink: 0;
-  width: 38px; height: 38px;
+  width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
-  background: #f4f4f3; border: 1px solid rgba(0,0,0,0.04); border-radius: 10px;
-  cursor: pointer; color: var(--text); margin-right: 12px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 3px 8px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-  transition: box-shadow 0.12s, transform 0.12s;
+  background: none; border: none; box-shadow: none;
+  cursor: pointer; color: var(--text);
+  transition: color 0.15s, transform 0.12s;
 }
-/* Páginas sin <header> (por ejemplo index.html): botón flotante fijo. */
-.hamburger-btn.fijo { position: fixed; top: 18px; left: 18px; z-index: 150; margin-right: 0; }
-.hamburger-btn:hover { background: #ececec; }
-.hamburger-btn:active {
-  transform: translateY(1px) scale(0.97);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
-}
-.hamburger-btn svg { width: 18px; height: 18px; }
+/* Páginas sin <header> (por ejemplo index.html): flotante fijo. */
+.hamburger-btn.fijo { position: fixed; top: 14px; left: 12px; z-index: 150; }
+.hamburger-btn:active { color: var(--red); transform: scale(0.88); }
+.hamburger-btn svg { width: 22px; height: 22px; }
 
 /* Con el botón insertado como primer hijo del header, el último hijo
    (back-btn, grupo de la derecha, etc.) se recorre al extremo derecho. */
