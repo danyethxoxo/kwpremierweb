@@ -286,6 +286,12 @@
 
   <main class="page">
 
+    <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:var(--muted);">
+      No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
+    </div>
+
+    <div id="contenido-interno">
+
     <h1 class="page-title">Documentos Internos</h1>
     <p class="page-desc">Guías y formatos de uso interno para el equipo KW Premier</p>
 
@@ -318,7 +324,30 @@
       </a>
     </div>
 
+    </div>
+
   </main>
 
+<script>
+  async function verificarAccesoInternos() {
+    const { data: userData } = await window.kwSupabase.auth.getUser();
+    if (!userData || !userData.user) return;
+    const { data: perfil, error } = await window.kwSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userData.user.id)
+      .single();
+    if (error || !perfil) return;
+    if (perfil.role === 'asociado') {
+      document.getElementById('contenido-interno').style.display = 'none';
+      document.getElementById('denegado').style.display = '';
+    }
+  }
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    verificarAccesoInternos();
+  } else {
+    window.addEventListener('kw-auth-ready', verificarAccesoInternos, { once: true });
+  }
+</script>
 </body>
 </html>

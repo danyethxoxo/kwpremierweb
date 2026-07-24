@@ -237,6 +237,11 @@
 </style>
 </head>
 <body>
+<div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:#888;">
+  No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
+</div>
+
+<div id="contenido-abc">
 <div class="mobile-tabs">
   <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">📝 Formulario</div>
   <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">👁️ Vista previa</div>
@@ -462,6 +467,28 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
+</script>
+</div>
+<script>
+  async function verificarAccesoAbc() {
+    const { data: userData } = await window.kwSupabase.auth.getUser();
+    if (!userData || !userData.user) return;
+    const { data: perfil, error } = await window.kwSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userData.user.id)
+      .single();
+    if (error || !perfil) return;
+    if (perfil.role === 'asociado') {
+      document.getElementById('contenido-abc').style.display = 'none';
+      document.getElementById('denegado').style.display = '';
+    }
+  }
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    verificarAccesoAbc();
+  } else {
+    window.addEventListener('kw-auth-ready', verificarAccesoAbc, { once: true });
+  }
 </script>
 </body>
 </html>
