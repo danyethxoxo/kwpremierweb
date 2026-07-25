@@ -83,10 +83,11 @@
 
   <main class="page">
     <h1 class="page-title">Mi Perfil</h1>
-    <p class="page-desc">Consulta tus datos y actualiza tu contraseña.</p>
+    <p class="page-desc">Tu perfil, tus enlaces y tu configuración.</p>
 
+    <!-- Módulo 1: Perfil (foto, nombre y acerca de mí) -->
     <div class="card">
-      <h2>Mis datos</h2>
+      <h2>Perfil</h2>
       <div class="foto-wrap">
         <div class="foto-preview" id="foto-preview">?</div>
         <input type="file" id="foto-input" accept="image/*" style="display:none;" onchange="iniciarCropFoto(event)" />
@@ -95,17 +96,63 @@
       </div>
       <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" /></div>
       <div class="field"><label>Apellido</label><input type="text" id="perfil-apellido" /></div>
+      <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea></div>
+      <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar perfil</button>
+      <div class="msg" id="datos-msg"></div>
+    </div>
+
+    <!-- Módulo 2: Enlaces (sitio web y redes, con su ícono en cada campo) -->
+    <div class="card">
+      <h2>Enlaces</h2>
+      <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 16px;">Aparecen en tu tarjeta y en tu perfil público. Todo es opcional — lo que dejes vacío no se muestra.</p>
+      <div class="field"><label>Sitio web</label>
+        <div class="campo-icono">
+          <svg class="sin-relleno" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input type="url" id="perfil-sitio" placeholder="https://tusitio.com" />
+        </div>
+      </div>
+      <div class="field"><label>WhatsApp</label>
+        <div class="campo-icono">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          <input type="tel" id="perfil-whatsapp" placeholder="55 1234 5678" />
+        </div>
+      </div>
+      <div class="field"><label>Instagram</label>
+        <div class="campo-icono">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          <input type="text" id="perfil-instagram" placeholder="https://instagram.com/tuusuario" />
+        </div>
+      </div>
+      <div class="field"><label>Facebook</label>
+        <div class="campo-icono">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+          <input type="text" id="perfil-facebook" placeholder="https://facebook.com/tupagina" />
+        </div>
+      </div>
+      <div class="field"><label>TikTok</label>
+        <div class="campo-icono">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
+          <input type="text" id="perfil-tiktok" placeholder="https://tiktok.com/@tuusuario" />
+        </div>
+      </div>
+      <div class="field"><label>LinkedIn</label>
+        <div class="campo-icono">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg>
+          <input type="text" id="perfil-linkedin" placeholder="https://linkedin.com/in/tuusuario" />
+        </div>
+      </div>
+      <button type="button" class="btn-guardar" id="btn-guardar-publico" onclick="guardarPerfilPublico()">Guardar enlaces</button>
+      <div class="msg" id="publico-msg"></div>
+    </div>
+
+    <!-- Módulo 3: Información adicional (correo, rol y contraseña) -->
+    <div class="card">
+      <h2>Información adicional</h2>
       <div class="field"><label>Correo</label><input type="email" id="perfil-email" disabled /></div>
       <div class="field">
         <label>Rol</label>
         <div><span class="rol-badge" id="perfil-rol-badge"></span></div>
       </div>
-      <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar cambios</button>
-      <div class="msg" id="datos-msg"></div>
-    </div>
-
-    <div class="card">
-      <h2>Cambiar contraseña</h2>
       <div class="field"><label>Nueva contraseña</label><input type="password" id="nueva-password" autocomplete="new-password" /></div>
       <div class="field"><label>Confirmar contraseña</label><input type="password" id="nueva-password2" autocomplete="new-password" /></div>
       <button type="button" class="btn-guardar" id="btn-cambiar-password" onclick="cambiarPasswordPerfil()">Actualizar contraseña</button>
@@ -159,7 +206,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url')
+      .select('nombre, apellido, email, role, foto_url, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -167,6 +214,13 @@
     document.getElementById('perfil-nombre').value = perfil.nombre || '';
     document.getElementById('perfil-apellido').value = perfil.apellido || '';
     document.getElementById('perfil-email').value = perfil.email || '';
+    document.getElementById('perfil-acerca').value = perfil.acerca_de || '';
+    document.getElementById('perfil-sitio').value = perfil.sitio_web || '';
+    document.getElementById('perfil-whatsapp').value = perfil.whatsapp || '';
+    document.getElementById('perfil-instagram').value = perfil.instagram || '';
+    document.getElementById('perfil-facebook').value = perfil.facebook || '';
+    document.getElementById('perfil-tiktok').value = perfil.tiktok || '';
+    document.getElementById('perfil-linkedin').value = perfil.linkedin || '';
     const badge = document.getElementById('perfil-rol-badge');
     badge.textContent = ROLE_LABELS[perfil.role] || perfil.role;
     badge.classList.add('rol-' + perfil.role);
@@ -297,14 +351,41 @@
     try {
       const nombre = document.getElementById('perfil-nombre').value.trim();
       const apellido = document.getElementById('perfil-apellido').value.trim();
+      const acerca = document.getElementById('perfil-acerca').value.trim() || null;
       const { error } = await window.kwSupabase
         .from('profiles')
-        .update({ nombre, apellido })
+        .update({ nombre, apellido, acerca_de: acerca })
         .eq('id', miUserId);
       if (error) throw error;
       setMsg('datos-msg', 'Datos actualizados.', 'ok');
     } catch (err) {
       setMsg('datos-msg', err.message || 'Ocurrió un error al guardar.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function guardarPerfilPublico() {
+    const btn = document.getElementById('btn-guardar-publico');
+    setMsg('publico-msg', '', '');
+    btn.disabled = true;
+    try {
+      const valor = (id) => document.getElementById(id).value.trim() || null;
+      const { error } = await window.kwSupabase
+        .from('profiles')
+        .update({
+          sitio_web: valor('perfil-sitio'),
+          whatsapp: valor('perfil-whatsapp'),
+          instagram: valor('perfil-instagram'),
+          facebook: valor('perfil-facebook'),
+          tiktok: valor('perfil-tiktok'),
+          linkedin: valor('perfil-linkedin')
+        })
+        .eq('id', miUserId);
+      if (error) throw error;
+      setMsg('publico-msg', 'Enlaces actualizados.', 'ok');
+    } catch (err) {
+      setMsg('publico-msg', err.message || 'Ocurrió un error al guardar.', 'error');
     } finally {
       btn.disabled = false;
     }
