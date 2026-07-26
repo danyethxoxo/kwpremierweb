@@ -203,7 +203,7 @@
   }
   .day-group.is-today {
     border: 2px solid var(--red);
-    background: #fffafa;
+    background: var(--red);
   }
   @keyframes day-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(204,0,0,0); }
@@ -222,6 +222,9 @@
     font-size: 10.5px; font-weight: 700; color: var(--red); background: #ffe5e5;
     padding: 3px 10px; border-radius: 20px; text-transform: uppercase; margin-left: 2px;
   }
+  .day-group.is-today .day-heading .day-weekday-word { color: #fff; }
+  .day-group.is-today .day-heading .day-date-rest { color: rgba(255,255,255,0.85); }
+  .day-group.is-today .day-heading .today-pill { background: rgba(255,255,255,0.22); color: #fff; }
 
   .event-card {
     display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border);
@@ -246,6 +249,15 @@
     font-weight: 600; color: #3B5BDB !important; text-decoration: none;
   }
   .meeting-link:hover { text-decoration: underline; }
+  .day-group.is-today .event-card { border-top-color: rgba(255,255,255,0.25); }
+  .day-group.is-today .event-time { color: #fff; }
+  .day-group.is-today .event-time .end-time { color: rgba(255,255,255,0.75); }
+  .day-group.is-today .event-time.all-day { color: rgba(255,255,255,0.85); }
+  .day-group.is-today .event-title { color: #fff; }
+  .day-group.is-today .event-location { color: rgba(255,255,255,0.8); }
+  .day-group.is-today .event-desc { color: rgba(255,255,255,0.8); }
+  .day-group.is-today .event-desc a { color: #fff; text-decoration: underline; }
+  .day-group.is-today .meeting-link { color: #fff !important; }
 
   .event-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .event-btn {
@@ -260,6 +272,13 @@
   .event-btn svg { width: 15px; height: 15px; }
   .event-btn-join { border-color: #3B5BDB; color: #3B5BDB; }
   .event-btn-details { color: var(--text); }
+  .day-group.is-today .event-btn { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.45); color: #fff; }
+  .day-group.is-today .event-btn:hover { background: rgba(255,255,255,0.32); }
+  .day-group.is-today .event-btn-join { border-color: rgba(255,255,255,0.45); color: #fff; }
+  .day-group.is-today .event-btn-details { color: #fff; }
+
+  .day-sin-eventos { padding: 16px 0; color: var(--muted); font-size: 13px; }
+  .day-group.is-today .day-sin-eventos { color: rgba(255,255,255,0.85); }
 
 
   @media (max-width: 900px) {
@@ -530,7 +549,7 @@
           </div>`;
       }).join('');
 
-      const bodyHTML = eventsHTML || `<div style="padding:16px 0;color:var(--muted);font-size:13px;">No hay eventos programados${isToday ? ' hoy' : ' este día'}.</div>`;
+      const bodyHTML = eventsHTML || `<div class="day-sin-eventos">No hay eventos programados${isToday ? ' hoy' : ' este día'}.</div>`;
 
       return `
         <div class="day-group${isToday ? ' is-today' : ''}" id="${isToday ? 'day-today' : ''}">
