@@ -164,10 +164,10 @@
     z-index: 50;
     display: flex;
     flex-direction: column-reverse;
-    align-items: center;
+    align-items: flex-end;
     gap: 14px;
   }
-  .fab-principal, .fab-secundario {
+  .fab-principal {
     border: none;
     border-radius: 50%;
     display: flex;
@@ -184,20 +184,47 @@
   }
   .fab-principal:hover { filter: brightness(1.06); }
   .fab-principal:active { transform: scale(0.92); }
-  .fab-secundario {
-    width: 46px; height: 46px;
+  .fab-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     opacity: 0;
-    transform: translateY(16px) scale(0.6);
+    transform: translateY(16px) scale(0.9);
     pointer-events: none;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  .fab-label {
+    background: rgba(26,26,26,0.85);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: 'DM Sans', Arial, sans-serif;
+    padding: 6px 13px;
+    border-radius: 20px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .fab-secundario {
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    flex-shrink: 0;
+    width: 46px; height: 46px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
+    transition: transform 0.15s, filter 0.15s;
   }
   .fab-finalizar { background: linear-gradient(180deg, #7c53e8, #6741d9); }
   .fab-descargar { background: linear-gradient(180deg, #e81010, var(--red)); }
-  .fab-wrap.abierto .fab-secundario {
+  .fab-wrap.abierto .fab-item {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
   }
-  .fab-wrap.abierto .fab-secundario.fab-inactivo {
+  .fab-wrap.abierto .fab-item.fab-inactivo {
     opacity: 0.35;
     pointer-events: none;
     filter: grayscale(0.4);
@@ -690,12 +717,18 @@
 
   <!-- Boton flotante de guardado -->
   <div class="fab-wrap" id="fab-wrap">
-    <button type="button" class="fab-secundario fab-descargar fab-inactivo" id="fab-descargar" onclick="downloadPDF()" title="Descargar PDF">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    </button>
-    <button type="button" class="fab-secundario fab-finalizar fab-inactivo" id="fab-finalizar" onclick="abrirModalFinalizar()" title="Finalizar">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    </button>
+    <div class="fab-item fab-inactivo" id="fab-item-descargar">
+      <span class="fab-label">Descargar</span>
+      <button type="button" class="fab-secundario fab-descargar" id="fab-descargar" onclick="downloadPDF()" title="Descargar PDF">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+    <div class="fab-item fab-inactivo" id="fab-item-finalizar">
+      <span class="fab-label">Finalizar</span>
+      <button type="button" class="fab-secundario fab-finalizar" id="fab-finalizar" onclick="abrirModalFinalizar()" title="Finalizar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </button>
+    </div>
     <button type="button" class="fab-principal" id="fab-guardar" onclick="onFabGuardarClick()" title="Guardar">
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
     </button>
@@ -1076,12 +1109,12 @@ function actualizarVisibilidadBotones() {
 function actualizarFAB() {
   const finalizado = estadoActual === 'finalizado';
   const guardado = !!documentoActualId;
-  const fabFinalizar = document.getElementById('fab-finalizar');
-  const fabDescargar = document.getElementById('fab-descargar');
-  if (!fabFinalizar || !fabDescargar) return;
-  fabFinalizar.style.display = finalizado ? 'none' : 'flex';
-  fabFinalizar.classList.toggle('fab-inactivo', !guardado);
-  fabDescargar.classList.toggle('fab-inactivo', !finalizado);
+  const itemFinalizar = document.getElementById('fab-item-finalizar');
+  const itemDescargar = document.getElementById('fab-item-descargar');
+  if (!itemFinalizar || !itemDescargar) return;
+  itemFinalizar.style.display = finalizado ? 'none' : 'flex';
+  itemFinalizar.classList.toggle('fab-inactivo', !guardado);
+  itemDescargar.classList.toggle('fab-inactivo', !finalizado);
 }
 
 function onFabGuardarClick() {
@@ -1094,6 +1127,20 @@ function onFabGuardarClick() {
     wrap.classList.remove('abierto');
   }
 }
+
+(function () {
+  function cerrarFAB() {
+    const wrap = document.getElementById('fab-wrap');
+    if (wrap) wrap.classList.remove('abierto');
+  }
+  document.addEventListener('click', function (e) {
+    const wrap = document.getElementById('fab-wrap');
+    if (!wrap || !wrap.classList.contains('abierto')) return;
+    if (!wrap.contains(e.target)) cerrarFAB();
+  }, true);
+  document.addEventListener('scroll', cerrarFAB, true);
+  document.addEventListener('touchmove', cerrarFAB, true);
+})();
 
 function bloquearFormulario(bloquear) {
   CAMPOS_GUARDABLES.forEach(id => {
