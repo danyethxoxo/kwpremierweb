@@ -333,6 +333,33 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   100% { transform: rotate(-360deg); }
 }
 
+/* ── Skeleton screens (placeholders que laten mientras carga contenido
+   real, para listas de tarjetas — documentos guardados, incidencias, etc.)
+   Uso: un contenedor con .kw-skel-line / .kw-skel-circle dentro de la
+   misma estructura de la tarjeta real (ej. .lista-item), con clases de
+   ancho .kw-skel-w40/50/60/70/80/100 y .kw-skel-sm para líneas delgadas. ── */
+.kw-skel {
+  background: linear-gradient(90deg, #ececec 25%, #f6f6f6 37%, #ececec 63%);
+  background-size: 400px 100%;
+  animation: kw-skel-pulso 1.4s ease-in-out infinite;
+  border-radius: 7px;
+  pointer-events: none;
+}
+@keyframes kw-skel-pulso {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.kw-skel-line { height: 13px; }
+.kw-skel-line.kw-skel-sm { height: 9px; }
+.kw-skel-circle { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+.kw-skel-w30 { width: 30%; }
+.kw-skel-w40 { width: 40%; }
+.kw-skel-w50 { width: 50%; }
+.kw-skel-w60 { width: 60%; }
+.kw-skel-w70 { width: 70%; }
+.kw-skel-w80 { width: 80%; }
+.kw-skel-w100 { width: 100%; }
+
 /* ── Mensajes de estado (éxito / error) ── */
 .msg {
   font-size: 13px; padding: 10px 12px; border-radius: 10px;
