@@ -460,6 +460,9 @@
 
   const ROLES_GESTION = ['admin', 'master', 'staff'];
 
+  const APIKEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
+  const NOTIFICAR_INCIDENCIA_EMAIL_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/notificar-incidencia-email';
+
   let miRol = null;
   let miUserId = null;
   let todasIncidenciasCache = [];
@@ -604,6 +607,8 @@
       });
       if (insertError) throw insertError;
 
+      notificarIncidenciaPorCorreo(titulo, descripcion);
+
       setMsg('rep-msg', 'Incidencia enviada. Gracias por avisarnos.', 'ok');
       if (ROLES_GESTION.includes(miRol)) cargarTodasIncidencias();
       else cargarMisIncidencias();
@@ -612,6 +617,24 @@
       setMsg('rep-msg', (err && err.message) || 'Ocurrió un error al enviar la incidencia.', 'error');
     } finally {
       btn.disabled = false;
+    }
+  }
+
+  // Avisa por correo al Director de Tecnología. Es un aviso extra sobre
+  // la notificación dentro de la plataforma (que ya llega vía la
+  // campanita); si falla, no debe afectar el reporte de la incidencia.
+  async function notificarIncidenciaPorCorreo(titulo, descripcion) {
+    try {
+      const { data: sessionData } = await window.kwSupabase.auth.getSession();
+      const token = sessionData && sessionData.session && sessionData.session.access_token;
+      if (!token) return;
+      await fetch(NOTIFICAR_INCIDENCIA_EMAIL_URL, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'apikey': APIKEY },
+        body: JSON.stringify({ titulo, descripcion })
+      });
+    } catch (err) {
+      console.error('No se pudo avisar por correo al Director de Tecnología:', err);
     }
   }
 
