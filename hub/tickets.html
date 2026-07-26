@@ -79,6 +79,7 @@
     background: var(--bg);
     color: var(--text);
   }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
 
   .header-right { display: flex; align-items: center; gap: 10px; }
 
@@ -124,7 +125,7 @@
   .notif-item-fecha { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .notif-vacio { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
 
-  .page { max-width: 900px; margin: 0 auto; padding: 100px 24px 60px; }
+  .page { flex: 1; max-width: 900px; margin: 0 auto; padding: 100px 24px 60px; }
   .page-title { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px; }
   .page-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
 
@@ -143,22 +144,34 @@
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; }
   .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 8px 20px; }
 
-  .incidencia-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
-  .incidencia-item:last-child { border-bottom: none; }
+  .incidencias-lista { display: flex; flex-direction: column; gap: 12px; }
+  .incidencia-item {
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .incidencia-item:hover { border-color: #ddd; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
   .incidencia-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .incidencia-titulo { font-size: 14px; font-weight: 700; }
+  .incidencia-titulo { font-size: 14.5px; font-weight: 700; }
   .incidencia-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .estatus-badge {
+    display: inline-flex; align-items: center; gap: 6px;
     flex-shrink: 0; font-size: 11px; font-weight: 700; text-transform: uppercase;
-    padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    padding: 4px 11px 4px 9px; border-radius: 20px; white-space: nowrap;
   }
+  .estatus-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
   .estatus-abierto { background: #fdeaea; color: #a30000; }
   .estatus-en_revision { background: #fff6e0; color: #a3690a; }
   .estatus-resuelto { background: #eaf7ea; color: #1a7a1a; }
   .incidencia-desc { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; }
   .incidencia-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-  .incidencia-imgs img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.15s; }
-  .incidencia-imgs img:hover { transform: scale(1.03); }
+  .incidencia-img-wrap { position: relative; width: 92px; height: 92px; cursor: pointer; }
+  .incidencia-img-wrap img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); transition: transform 0.15s; display: block; }
+  .incidencia-img-wrap:hover img { transform: scale(1.03); }
+  .incidencia-img-mas {
+    position: absolute; inset: 0; border-radius: 10px;
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
   .incidencia-respuesta {
     margin-top: 10px; padding: 10px 12px; background: #f7f7f6; border-radius: 10px; font-size: 12.5px; line-height: 1.5;
   }
@@ -170,7 +183,7 @@
 
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 10px 8px; border-bottom: 1px solid var(--border); }
-  td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  td { padding: 13px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr.fila-incidencia { cursor: pointer; transition: background 0.12s; }
   tr.fila-incidencia:hover td { background: #fafafa; }
 
@@ -221,8 +234,7 @@
 
   .detalle-desc { font-size: 13.5px; line-height: 1.6; color: var(--text); margin-top: 14px; white-space: pre-wrap; }
   .detalle-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .detalle-imgs img { width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.15s; }
-  .detalle-imgs img:hover { transform: scale(1.03); }
+  .detalle-imgs .incidencia-img-wrap { width: 96px; height: 96px; }
 
   .file-dropzone {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -249,8 +261,29 @@
   }
   .btn-eliminar-ticket:hover { background: #fdeaea; }
 
-  #modal-lightbox { background: rgba(0,0,0,0.8); cursor: zoom-out; }
-  #modal-lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); cursor: default; }
+  #modal-lightbox { background: rgba(0,0,0,0.85); cursor: zoom-out; }
+  #modal-lightbox img { max-width: 88vw; max-height: 84vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); cursor: default; }
+  .lightbox-cerrar, .lightbox-nav {
+    position: absolute; border: none; border-radius: 50%;
+    background: rgba(255,255,255,0.14); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .lightbox-cerrar:hover, .lightbox-nav:hover { background: rgba(255,255,255,0.28); }
+  .lightbox-cerrar { top: 18px; right: 18px; width: 38px; height: 38px; font-size: 20px; }
+  .lightbox-nav { top: 50%; transform: translateY(-50%); width: 46px; height: 46px; font-size: 24px; }
+  .lightbox-prev { left: 14px; }
+  .lightbox-next { right: 14px; }
+  .lightbox-contador {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 12px; font-weight: 700; background: rgba(0,0,0,0.45);
+    padding: 5px 13px; border-radius: 20px;
+  }
+  @media (max-width: 640px) {
+    .lightbox-nav { width: 40px; height: 40px; font-size: 20px; }
+    .lightbox-prev { left: 6px; }
+    .lightbox-next { right: 6px; }
+  }
 
   .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
 
@@ -289,7 +322,7 @@
         </button>
       </div>
       <h2 class="section-title">Mis incidencias</h2>
-      <div class="card-box" id="mis-incidencias-cont">
+      <div class="incidencias-lista" id="mis-incidencias-cont">
         <div class="incidencia-item">
           <div class="incidencia-head">
             <div style="flex:1;">
@@ -324,26 +357,14 @@
       </div>
       <div class="card-box" style="overflow-x:auto;">
         <div id="todas-incidencias-cont">
-          <div class="incidencia-item">
-            <div class="incidencia-head">
-              <div style="flex:1;">
-                <div class="kw-skel kw-skel-line kw-skel-w60"></div>
-                <div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:6px;"></div>
-              </div>
-            </div>
-            <div class="kw-skel kw-skel-line kw-skel-w100" style="margin-top:10px;"></div>
-            <div class="kw-skel kw-skel-line kw-skel-w70" style="margin-top:6px;"></div>
-          </div>
-          <div class="incidencia-item">
-            <div class="incidencia-head">
-              <div style="flex:1;">
-                <div class="kw-skel kw-skel-line kw-skel-w50"></div>
-                <div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:6px;"></div>
-              </div>
-            </div>
-            <div class="kw-skel kw-skel-line kw-skel-w100" style="margin-top:10px;"></div>
-            <div class="kw-skel kw-skel-line kw-skel-w60" style="margin-top:6px;"></div>
-          </div>
+          <table>
+            <thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead>
+            <tbody>
+              <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
+              <tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>
+              <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -387,7 +408,7 @@
           <span id="file-dropzone-label">Seleccionar imágenes</span>
         </button>
         <div class="rep-preview-imgs" id="rep-preview-imgs"></div>
-        <div class="field-hint">Puedes seleccionar una o varias capturas de pantalla.</div>
+        <div class="field-hint">Puedes seleccionar varias capturas, y volver a abrir el selector las veces que quieras para agregar más.</div>
       </div>
       <div class="msg" id="rep-msg"></div>
       <div class="modal-actions">
@@ -426,8 +447,12 @@
   </div>
 
   <!-- Lightbox: ampliar imagen adjunta -->
-  <div id="modal-lightbox" class="modal-overlay" style="display:none;" onclick="cerrarLightbox()">
+  <div id="modal-lightbox" class="modal-overlay" style="display:none;" onclick="if (event.target === this) cerrarLightbox()">
+    <button type="button" class="lightbox-cerrar" onclick="cerrarLightbox()" aria-label="Cerrar">&times;</button>
+    <button type="button" class="lightbox-nav lightbox-prev" onclick="lightboxAnterior(event)" aria-label="Anterior">&lsaquo;</button>
     <img id="lightbox-img" src="" alt="Imagen ampliada" />
+    <button type="button" class="lightbox-nav lightbox-next" onclick="lightboxSiguiente(event)" aria-label="Siguiente">&rsaquo;</button>
+    <div id="lightbox-contador" class="lightbox-contador"></div>
   </div>
 
 <script>
@@ -477,7 +502,9 @@
 
   function previsualizarImagenes() {
     const input = document.getElementById('rep-imagenes');
-    repArchivosSeleccionados = Array.from(input.files || []);
+    const nuevos = Array.from(input.files || []);
+    repArchivosSeleccionados = repArchivosSeleccionados.concat(nuevos);
+    input.value = '';
     renderPreviewImagenes();
   }
 
@@ -503,16 +530,52 @@
       : 'Seleccionar imágenes';
   }
 
-  // ── Lightbox ──
-  function abrirLightbox(url) {
-    document.getElementById('lightbox-img').src = url;
+  // ── Lightbox (integrado, sin abrir ventana nueva; navega entre varias imágenes) ──
+  let lightboxImagenes = [];
+  let lightboxIndex = 0;
+
+  function abrirLightbox(imagenes, index) {
+    lightboxImagenes = imagenes || [];
+    lightboxIndex = index || 0;
+    if (!lightboxImagenes.length) return;
+    actualizarLightbox();
     document.getElementById('modal-lightbox').style.display = 'flex';
+  }
+
+  function actualizarLightbox() {
+    const total = lightboxImagenes.length;
+    document.getElementById('lightbox-img').src = lightboxImagenes[lightboxIndex] || '';
+    const contador = document.getElementById('lightbox-contador');
+    contador.textContent = total > 1 ? `${lightboxIndex + 1} / ${total}` : '';
+    contador.style.display = total > 1 ? 'block' : 'none';
+    document.querySelector('.lightbox-prev').style.display = total > 1 ? 'flex' : 'none';
+    document.querySelector('.lightbox-next').style.display = total > 1 ? 'flex' : 'none';
+  }
+
+  function lightboxAnterior(e) {
+    if (e) e.stopPropagation();
+    lightboxIndex = (lightboxIndex - 1 + lightboxImagenes.length) % lightboxImagenes.length;
+    actualizarLightbox();
+  }
+
+  function lightboxSiguiente(e) {
+    if (e) e.stopPropagation();
+    lightboxIndex = (lightboxIndex + 1) % lightboxImagenes.length;
+    actualizarLightbox();
   }
 
   function cerrarLightbox() {
     document.getElementById('modal-lightbox').style.display = 'none';
     document.getElementById('lightbox-img').src = '';
   }
+
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('modal-lightbox');
+    if (!modal || modal.style.display === 'none') return;
+    if (e.key === 'Escape') cerrarLightbox();
+    else if (e.key === 'ArrowLeft') lightboxAnterior();
+    else if (e.key === 'ArrowRight') lightboxSiguiente();
+  });
 
   async function enviarIncidencia() {
     const titulo = document.getElementById('rep-titulo').value.trim();
@@ -553,15 +616,36 @@
   }
 
   // ── Vista reportero: mis incidencias ──
-  function renderIncidenciaItem(inc) {
-    const imgsHTML = (inc.imagenes || []).map(url =>
-      `<img src="${url}" alt="Captura adjunta" onclick="abrirLightbox('${url}')">`
-    ).join('');
+  function renderImagenesGrid(imagenes, idx) {
+    if (!imagenes || !imagenes.length) return '';
+    const visibles = imagenes.slice(0, 4);
+    const restantes = imagenes.length - visibles.length;
+    const imgsHTML = visibles.map((url, i) => {
+      const esUltimaConMas = (i === visibles.length - 1 && restantes > 0);
+      return `<div class="incidencia-img-wrap" data-idx="${idx}" data-imgidx="${i}">
+        <img src="${url}" alt="Captura adjunta">
+        ${esUltimaConMas ? `<div class="incidencia-img-mas">+${restantes}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="incidencia-imgs">${imgsHTML}</div>`;
+  }
+
+  function vincularImagenesGrid(cont, cache) {
+    Array.from(cont.querySelectorAll('.incidencia-img-wrap')).forEach(wrap => {
+      wrap.addEventListener('click', () => {
+        const idx = Number(wrap.dataset.idx);
+        const imgIdx = Number(wrap.dataset.imgidx);
+        abrirLightbox(cache[idx].imagenes || [], imgIdx);
+      });
+    });
+  }
+
+  function renderIncidenciaItem(inc, idx) {
     const respuestaHTML = inc.respuesta
       ? `<div class="incidencia-respuesta"><strong>Respuesta del equipo</strong>${escapeHtml(inc.respuesta)}</div>`
       : '';
     return `
-      <div class="incidencia-item">
+      <div class="incidencia-item kw-aparece" style="animation-delay:${Math.min(idx, 8) * 40}ms;">
         <div class="incidencia-head">
           <div>
             <div class="incidencia-titulo">${escapeHtml(inc.titulo)}</div>
@@ -570,10 +654,12 @@
           <span class="estatus-badge estatus-${inc.estatus}">${ESTATUS_LABELS[inc.estatus] || inc.estatus}</span>
         </div>
         <div class="incidencia-desc">${escapeHtml(inc.descripcion)}</div>
-        ${imgsHTML ? `<div class="incidencia-imgs">${imgsHTML}</div>` : ''}
+        ${renderImagenesGrid(inc.imagenes, idx)}
         ${respuestaHTML}
       </div>`;
   }
+
+  let misIncidenciasCache = [];
 
   async function cargarMisIncidencias() {
     const cont = document.getElementById('mis-incidencias-cont');
@@ -589,7 +675,9 @@
         cont.innerHTML = '<div class="estado-vacio">No has reportado ninguna incidencia todavía.</div>';
         return;
       }
-      cont.innerHTML = data.map(renderIncidenciaItem).join('');
+      misIncidenciasCache = data;
+      cont.innerHTML = data.map((inc, i) => renderIncidenciaItem(inc, i)).join('');
+      vincularImagenesGrid(cont, misIncidenciasCache);
     } catch (err) {
       cont.innerHTML = `<div class="estado-vacio">${escapeHtml(err.message || 'Ocurrió un error al cargar tus incidencias.')}</div>`;
     }
@@ -598,7 +686,11 @@
   // ── Vista gestión (Master/Admin): todas las incidencias ──
   async function cargarTodasIncidencias() {
     const cont = document.getElementById('todas-incidencias-cont');
-    cont.innerHTML = '<div class="incidencia-item"><div class="incidencia-head"><div style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:6px;"></div></div></div><div class="kw-skel kw-skel-line kw-skel-w100" style="margin-top:10px;"></div><div class="kw-skel kw-skel-line kw-skel-w70" style="margin-top:6px;"></div></div><div class="incidencia-item"><div class="incidencia-head"><div style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:6px;"></div></div></div><div class="kw-skel kw-skel-line kw-skel-w100" style="margin-top:10px;"></div><div class="kw-skel kw-skel-line kw-skel-w60" style="margin-top:6px;"></div></div>';
+    cont.innerHTML = '<table><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>'
+      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
+      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>'
+      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
+      + '</tbody></table>';
     try {
       const { data, error } = await window.kwSupabase
         .from('incidencias_con_reportante')
@@ -615,7 +707,7 @@
       let html = '<table><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>';
       todasIncidenciasCache.forEach((inc, i) => {
         const nombreAsesor = [inc.reportante_nombre, inc.reportante_apellido].filter(Boolean).join(' ') || inc.reportante_email || 'Sin nombre';
-        html += `<tr class="fila-incidencia" data-idx="${i}">
+        html += `<tr class="fila-incidencia kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
           <td>${fmtFechaCorta(inc.created_at)}</td>
           <td>${escapeHtml(nombreAsesor)}</td>
           <td>${escapeHtml(inc.titulo)}</td>
@@ -642,9 +734,9 @@
     document.getElementById('det-titulo').textContent = inc.titulo;
     document.getElementById('det-meta').textContent = `${nombreAsesor} · ${fmtFechaCorta(inc.created_at)}`;
     document.getElementById('det-descripcion').textContent = inc.descripcion;
-    document.getElementById('det-imgs').innerHTML = (inc.imagenes || []).map(url =>
-      `<img src="${url}" alt="Captura adjunta" onclick="abrirLightbox('${url}')">`
-    ).join('');
+    const detImgs = document.getElementById('det-imgs');
+    detImgs.innerHTML = renderImagenesGrid(inc.imagenes, 0);
+    vincularImagenesGrid(detImgs, [inc]);
     document.getElementById('det-estatus').value = inc.estatus;
     document.getElementById('det-respuesta').value = inc.respuesta || '';
     document.getElementById('det-btn-eliminar').style.display = (miRol === 'master') ? '' : 'none';

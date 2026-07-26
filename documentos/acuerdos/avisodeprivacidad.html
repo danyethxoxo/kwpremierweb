@@ -275,6 +275,12 @@
   .kw-skel-w60 { width: 60%; }
   .kw-skel-w70 { width: 70%; }
 
+  @keyframes kw-aparece {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .kw-aparece { animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
   .slide-confirm { margin-top: 4px; user-select: none; }
   .slide-track {
     position: relative;
@@ -1234,7 +1240,7 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
     return;
   }
   cont.innerHTML = rows.map((row, i) => `
-    <div class="lista-item" data-idx="${i}">
+    <div class="lista-item kw-aparece" data-idx="${i}" style="animation-delay:${Math.min(i,8)*40}ms;">
       <div class="lista-item-info">
         <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
         <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
