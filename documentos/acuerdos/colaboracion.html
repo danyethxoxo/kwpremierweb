@@ -201,6 +201,12 @@
   @media (max-width: 900px) {
     .fab-wrap { right: 18px; bottom: 18px; }
   }
+  @media (max-width: 900px) {
+    .desktop-btn-row { display: none !important; }
+  }
+  @media (min-width: 901px) {
+    .fab-wrap { display: none !important; }
+  }
 
   .slide-confirm { margin-top: 4px; user-select: none; }
   .slide-track {
@@ -663,6 +669,24 @@
       <input type="number" id="col-vigencia" placeholder="Ej. 6" oninput="updatePreview()" />
     </div>
 
+    <div class="desktop-btn-row" style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn-download btn-outline-red" id="btn-pdf" style="display:none;" onclick="downloadPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      </button>
+      <button class="btn-download btn-outline-green" onclick="guardarDocumento()" id="btn-guardar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar
+      </button>
+      <button class="btn-download btn-outline-purple" id="btn-finalizar" style="display:none;" onclick="abrirModalFinalizar()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Finalizar
+      </button>
+      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="abrirModalCopia()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Hacer una copia
+      </button>
+    </div>
     <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
 
@@ -859,6 +883,10 @@ function mostrarVista(vista) {
 
 function actualizarVisibilidadBotones() {
   const finalizado = estadoActual === 'finalizado';
+  document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
+  document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
+  document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
+  document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
   actualizarFAB();
 }
@@ -1068,8 +1096,10 @@ async function confirmarGuardarNuevo() {
 }
 
 async function guardarComoNuevo(nombre) {
-  const btn = document.getElementById('fab-guardar');
+  const btn = document.getElementById('btn-guardar');
+  const fabBtn = document.getElementById('fab-guardar');
   btn.disabled = true;
+  fabBtn.disabled = true;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
@@ -1097,6 +1127,7 @@ async function guardarComoNuevo(nombre) {
     setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
   } finally {
     btn.disabled = false;
+    fabBtn.disabled = false;
   }
 }
 
@@ -1105,8 +1136,10 @@ async function guardarDocumento() {
     abrirModalNombre();
     return;
   }
-  const btn = document.getElementById('fab-guardar');
+  const btn = document.getElementById('btn-guardar');
+  const fabBtn = document.getElementById('fab-guardar');
   btn.disabled = true;
+  fabBtn.disabled = true;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const datos = {};
@@ -1123,6 +1156,7 @@ async function guardarDocumento() {
     setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
   } finally {
     btn.disabled = false;
+    fabBtn.disabled = false;
   }
 }
 
