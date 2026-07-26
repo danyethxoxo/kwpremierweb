@@ -371,6 +371,22 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 @keyframes kw-aparece-fade { from { opacity: 0; } to { opacity: 1; } }
 .kw-aparece-fila { animation: kw-aparece-fade 0.4s ease both; }
 
+/* ── Aparición escalonada al entrar a una página ──
+   Puramente CSS (sin JS) para que no haya parpadeo: al ser parte de la
+   hoja de estilos, el estado inicial ya aplica desde el primer pintado.
+   Los bloques principales del contenido (título, tarjetas, secciones)
+   entran uno tras otro; si el bloque es una cuadrícula de tarjetas
+   (.cards-grid o .grid), cada tarjeta se anima por separado. */
+main > :not(.cards-grid):not(.grid), .page > :not(.cards-grid):not(.grid), .cards-grid > *, .grid > * {
+  animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+main > :not(.cards-grid):not(.grid):nth-child(2), .page > :not(.cards-grid):not(.grid):nth-child(2), .cards-grid > *:nth-child(2), .grid > *:nth-child(2) { animation-delay: 55ms; }
+main > :not(.cards-grid):not(.grid):nth-child(3), .page > :not(.cards-grid):not(.grid):nth-child(3), .cards-grid > *:nth-child(3), .grid > *:nth-child(3) { animation-delay: 110ms; }
+main > :not(.cards-grid):not(.grid):nth-child(4), .page > :not(.cards-grid):not(.grid):nth-child(4), .cards-grid > *:nth-child(4), .grid > *:nth-child(4) { animation-delay: 165ms; }
+main > :not(.cards-grid):not(.grid):nth-child(5), .page > :not(.cards-grid):not(.grid):nth-child(5), .cards-grid > *:nth-child(5), .grid > *:nth-child(5) { animation-delay: 220ms; }
+main > :not(.cards-grid):not(.grid):nth-child(6), .page > :not(.cards-grid):not(.grid):nth-child(6), .cards-grid > *:nth-child(6), .grid > *:nth-child(6) { animation-delay: 275ms; }
+main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):not(.grid):nth-child(n+7), .cards-grid > *:nth-child(n+7), .grid > *:nth-child(n+7) { animation-delay: 330ms; }
+
 /* ── Mensajes de estado (éxito / error) ── */
 .msg {
   font-size: 13px; padding: 10px 12px; border-radius: 10px;
