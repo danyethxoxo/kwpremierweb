@@ -5,7 +5,7 @@
 //   <script src="/kwpremierweb/assets/js/drawer.js" data-menu="hub"></script>
 //
 // "publico" dibuja el menu de las paginas sin sesion (Inicio, Asesores,
-// Staff, Nuestros Market Center + Accede al Portal). "hub" dibuja el
+// Liderazgo, Nuestros Market Center + Accede al Portal). "hub" dibuja el
 // menu de las paginas con sesion (Hub + Cuenta, con Cerrar sesion).
 // El boton y el panel se insertan solos; no requieren nada mas en el
 // HTML de la pagina que los usa. Estilos en kw-base.css.
@@ -33,7 +33,7 @@
   const NAV_PUBLICO = [
     { href: `${BASE}/index.html`, label: 'Inicio', icon: 'home' },
     { href: `${BASE}/asesores.html`, label: 'Asesores', icon: 'users' },
-    { href: `${BASE}/staff.html`, label: 'Staff', icon: 'user' },
+    { href: `${BASE}/staff.html`, label: 'Liderazgo', icon: 'user' },
     { href: `${BASE}/market-center.html`, label: 'Nuestros Market Center', icon: 'building' },
   ];
 
@@ -44,6 +44,11 @@
     { href: `${BASE}/hub/calendario.html`, label: 'Calendario', icon: 'calendar' },
     { href: `${BASE}/documentos/documentos.html`, label: 'Documentos', icon: 'doc' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
+    { section: 'Sitio público' },
+    { href: `${BASE}/index.html`, label: 'Inicio', icon: 'home' },
+    { href: `${BASE}/asesores.html`, label: 'Asesores', icon: 'users' },
+    { href: `${BASE}/staff.html`, label: 'Liderazgo', icon: 'user' },
+    { href: `${BASE}/market-center.html`, label: 'Nuestros Market Center', icon: 'building' },
     { section: 'Cuenta' },
     { href: `${BASE}/hub/admin.html`, label: 'Panel de Admin', icon: 'settings' },
     { href: `${BASE}/perfil.html`, label: 'Mi Perfil', icon: 'user' },
