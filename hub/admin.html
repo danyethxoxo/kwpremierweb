@@ -170,10 +170,12 @@
     .page { padding: 82px 14px 40px; }
     .card { padding: 16px 14px; }
     #documentos-cont table { min-width: 760px; }
-    .page-title { font-size: 21px; }
     .tabs { flex-wrap: wrap; }
     .doc-filtros { flex-direction: column; }
     .doc-filtros input, .doc-filtros select { width: 100%; }
+  }
+  @media (max-width: 640px) {
+    .page-title, .page-desc { display: none; }
   }
 
   /* ── Modal: editar usuario ── */
@@ -207,6 +209,7 @@
 <body>
 
   <header class="kw-header">
+    <span class="kw-header-title" id="panel-title-header"></span>
     <a href="../portal.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -759,6 +762,7 @@
 
       const NOMBRE_PANEL = { master: 'Máster', admin: 'Admin', staff: 'Liderazgo' };
       document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
+      document.getElementById('panel-title-header').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
 
       if (miRol === 'staff') {
         document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
