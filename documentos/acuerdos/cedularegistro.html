@@ -152,6 +152,56 @@
   .btn-outline-purple { border-color: #6741d9; color: #6741d9; }
   .btn-outline-blue { border-color: #1971c2; color: #1971c2; }
 
+  .fab-wrap {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 14px;
+  }
+  .fab-principal, .fab-secundario {
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
+    transition: transform 0.15s, opacity 0.2s, box-shadow 0.15s, filter 0.15s;
+  }
+  .fab-principal {
+    width: 58px; height: 58px;
+    background: linear-gradient(180deg, #2f9e44, #1f6d2e);
+  }
+  .fab-principal:hover { filter: brightness(1.06); }
+  .fab-principal:active { transform: scale(0.92); }
+  .fab-secundario {
+    width: 46px; height: 46px;
+    opacity: 0;
+    transform: translateY(16px) scale(0.6);
+    pointer-events: none;
+  }
+  .fab-finalizar { background: linear-gradient(180deg, #7c53e8, #6741d9); }
+  .fab-descargar { background: linear-gradient(180deg, #e81010, var(--red)); }
+  .fab-wrap.abierto .fab-secundario {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .fab-wrap.abierto .fab-secundario.fab-inactivo {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: grayscale(0.4);
+  }
+  .fab-secundario:active { transform: scale(0.88); }
+  @media (max-width: 900px) {
+    .fab-wrap { right: 18px; bottom: 18px; }
+  }
+
   .slide-confirm { margin-top: 4px; user-select: none; }
   .slide-track {
     position: relative;
@@ -308,8 +358,14 @@
     cursor: pointer;
     font-family: Arial, sans-serif;
     color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s, color 0.15s;
   }
-  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); box-shadow: 0 3px 10px rgba(204,0,0,0.28); }
   .mobile-tab:active { transform: scale(0.95); }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
@@ -534,8 +590,14 @@
 <!-- Vista de formulario -->
 <div id="vista-formulario" class="vista-formulario" style="display:none;">
 <div class="mobile-tabs">
-  <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">📝 Formulario</div>
-  <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">👁️ Vista previa</div>
+  <div class="mobile-tab active" data-tab="form" onclick="showMobileTab('form')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    Formulario
+  </div>
+  <div class="mobile-tab" data-tab="preview" onclick="showMobileTab('preview')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+    Vista previa
+  </div>
 </div>
 
 <div class="acuerdos-body">
@@ -547,7 +609,6 @@
       Mis guardados
     </button>
     <div class="acuerdos-form-title">Cédula de Registro de Cliente</div>
-    <div class="acuerdos-form-sub">Completa los campos — la vista previa se actualiza en tiempo real.</div>
 
     <div class="acuerdo-field">
       <label>INMOBILIARIA RECEPTORA</label>
@@ -578,24 +639,6 @@
       <input type="text" id="c-comision-l" placeholder="Ej. Tres" oninput="updatePreview()" />
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn-download btn-outline-red" id="btn-pdf" style="display:none;" onclick="downloadPDF()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        PDF
-      </button>
-      <button class="btn-download btn-outline-green" onclick="guardarDocumento()" id="btn-guardar">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Guardar
-      </button>
-      <button class="btn-download btn-outline-purple" id="btn-finalizar" style="display:none;" onclick="abrirModalFinalizar()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        Finalizar
-      </button>
-      <button class="btn-download btn-outline-blue" id="btn-copia" style="display:none;" onclick="abrirModalCopia()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Hacer una copia
-      </button>
-    </div>
     <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
 
@@ -608,6 +651,20 @@
   <div id="contrato-raw" style="display:none;"></div>
 
 </div>
+
+  <!-- Boton flotante de guardado -->
+  <div class="fab-wrap" id="fab-wrap">
+    <button type="button" class="fab-secundario fab-descargar fab-inactivo" id="fab-descargar" onclick="downloadPDF()" title="Descargar PDF">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
+    <button type="button" class="fab-secundario fab-finalizar fab-inactivo" id="fab-finalizar" onclick="abrirModalFinalizar()" title="Finalizar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </button>
+    <button type="button" class="fab-principal" id="fab-guardar" onclick="onFabGuardarClick()" title="Guardar">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    </button>
+  </div>
+
 </div>
 
 <!-- Modal: nombre del documento al guardar por primera vez -->
@@ -776,11 +833,30 @@ function mostrarVista(vista) {
 
 function actualizarVisibilidadBotones() {
   const finalizado = estadoActual === 'finalizado';
-  document.getElementById('btn-pdf').style.display = finalizado ? 'flex' : 'none';
-  document.getElementById('btn-guardar').style.display = finalizado ? 'none' : 'flex';
-  document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
-  document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
+  actualizarFAB();
+}
+
+function actualizarFAB() {
+  const finalizado = estadoActual === 'finalizado';
+  const guardado = !!documentoActualId;
+  const fabFinalizar = document.getElementById('fab-finalizar');
+  const fabDescargar = document.getElementById('fab-descargar');
+  if (!fabFinalizar || !fabDescargar) return;
+  fabFinalizar.style.display = finalizado ? 'none' : 'flex';
+  fabFinalizar.classList.toggle('fab-inactivo', !guardado);
+  fabDescargar.classList.toggle('fab-inactivo', !finalizado);
+}
+
+function onFabGuardarClick() {
+  const wrap = document.getElementById('fab-wrap');
+  if (!wrap) return;
+  if (!wrap.classList.contains('abierto')) {
+    wrap.classList.add('abierto');
+  } else {
+    guardarDocumento();
+    wrap.classList.remove('abierto');
+  }
 }
 
 function bloquearFormulario(bloquear) {
@@ -966,7 +1042,7 @@ async function confirmarGuardarNuevo() {
 }
 
 async function guardarComoNuevo(nombre) {
-  const btn = document.getElementById('btn-guardar');
+  const btn = document.getElementById('fab-guardar');
   btn.disabled = true;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
@@ -1003,7 +1079,7 @@ async function guardarDocumento() {
     abrirModalNombre();
     return;
   }
-  const btn = document.getElementById('btn-guardar');
+  const btn = document.getElementById('fab-guardar');
   btn.disabled = true;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
