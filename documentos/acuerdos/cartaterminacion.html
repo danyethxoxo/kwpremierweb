@@ -385,7 +385,9 @@
   .doc-firma-bold { font-weight: 700; font-size: 8.5pt; }
 
   @media (max-width: 900px) {
-    html, body { height: auto; overflow: auto; }
+    html, body { height: auto; }
+    html { overflow: auto; }
+    body { overflow: visible; }
     .acuerdos-body { grid-template-columns: 1fr; height: auto; }
     .acuerdos-form-col { height: auto; overflow-y: visible; }
   }
@@ -399,7 +401,9 @@
     position: sticky;
     top: 0;
     z-index: 30;
+    transition: transform 0.25s;
   }
+  .mobile-tabs.mobile-tabs-oculto { transform: translateY(-100%); }
   .mobile-tab {
     flex: 1;
     padding: 9px;
@@ -1015,6 +1019,25 @@ function onFabGuardarClick() {
   }, true);
   document.addEventListener('scroll', cerrarFAB, true);
   document.addEventListener('touchmove', cerrarFAB, true);
+})();
+
+// La barra de pestañas móviles (Formulario / Vista previa) se esconde al
+// bajar y reaparece con solo subir un poco, para no obligar a regresar
+// hasta arriba en documentos de varias hojas.
+(function () {
+  const tabs = document.querySelector('.mobile-tabs');
+  if (!tabs) return;
+  let lastY = 0;
+  document.addEventListener('scroll', function (e) {
+    const t = e.target;
+    const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
+    const y = esVentana
+      ? (window.scrollY || document.documentElement.scrollTop || 0)
+      : (t.scrollTop || 0);
+    if (y > lastY + 4 && y > 40) tabs.classList.add('mobile-tabs-oculto');
+    else if (y < lastY - 4) tabs.classList.remove('mobile-tabs-oculto');
+    lastY = y;
+  }, { capture: true, passive: true });
 })();
 
 function bloquearFormulario(bloquear) {
