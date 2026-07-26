@@ -5,7 +5,7 @@
 //   <script src="/kwpremierweb/assets/js/drawer.js" data-menu="hub"></script>
 //
 // "publico" dibuja el menu de las paginas sin sesion (Inicio, Asesores,
-// Liderazgo, Nuestros Market Center + Accede al Portal). "hub" dibuja el
+// Liderazgo, Nuestro Market Center + Accede al Portal). "hub" dibuja el
 // menu de las paginas con sesion (Hub + Cuenta, con Cerrar sesion).
 // El boton y el panel se insertan solos; no requieren nada mas en el
 // HTML de la pagina que los usa. Estilos en kw-base.css.
@@ -34,7 +34,7 @@
     { href: `${BASE}/index.html`, label: 'Inicio', icon: 'home' },
     { href: `${BASE}/asesores.html`, label: 'Asesores', icon: 'users' },
     { href: `${BASE}/staff.html`, label: 'Liderazgo', icon: 'user' },
-    { href: `${BASE}/market-center.html`, label: 'Nuestros Market Center', icon: 'building' },
+    { href: `${BASE}/market-center.html`, label: 'Nuestro Market Center', icon: 'building' },
   ];
 
   const NAV_HUB = [
@@ -48,7 +48,7 @@
     { href: `${BASE}/index.html`, label: 'Inicio', icon: 'home' },
     { href: `${BASE}/asesores.html`, label: 'Asesores', icon: 'users' },
     { href: `${BASE}/staff.html`, label: 'Liderazgo', icon: 'user' },
-    { href: `${BASE}/market-center.html`, label: 'Nuestros Market Center', icon: 'building' },
+    { href: `${BASE}/market-center.html`, label: 'Nuestro Market Center', icon: 'building' },
     { section: 'Cuenta' },
     { href: `${BASE}/hub/admin.html`, label: 'Panel de Admin', icon: 'settings' },
     { href: `${BASE}/perfil.html`, label: 'Mi Perfil', icon: 'user' },
@@ -144,7 +144,9 @@
   // botones (menú y Atrás) se quedan siempre visibles. Se escucha en
   // fase de captura para cubrir también los contenedores con scroll
   // interno (por ejemplo la agenda del calendario), no solo la ventana.
-  const kwHeader = document.querySelector('header.kw-header');
+  // Cualquier <header> participa (los kw-header se difuminan; los
+  // demás simplemente se deslizan hacia arriba — CSS de cada uno).
+  const kwHeader = document.querySelector('header');
   if (kwHeader) {
     let lastY = 0;
     document.addEventListener('scroll', (e) => {
