@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "KW Premier — API de Propiedades",
+    "description": "API para conectar el inventario de Command con el sitio de KW Premier.\n\nDocumentación completa: https://danyethxoxo.github.io/kwpremierweb/api.html\n\nAntes de empezar: en la pestaña Variables, pon tu llave en `api_key`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "x-api-key", "type": "string" },
+      { "key": "value", "value": "{{api_key}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://iloetojomzqtadkithtv.supabase.co/functions/v1/api-propiedades",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "kwp_live_TU_LLAVE_AQUI",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Verificar la llave",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/me", "host": ["{{base_url}}"], "path": ["me"] },
+            "description": "Comprueba que la llave sea válida. Si responde 200 con el nombre de tu integración, ya puedes continuar."
+          }
+        },
+        {
+          "name": "GET /property_types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/property_types", "host": ["{{base_url}}"], "path": ["property_types"] },
+            "description": "Valores aceptados en tipo, operacion y estatus."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Mandar propiedades",
+      "item": [
+        {
+          "name": "POST /properties — ejemplo completo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propiedades\": [\n    {\n      \"id\": \"KW-1001\",\n      \"titulo\": \"Casa en Polanco\",\n      \"descripcion\": \"Amplia casa con jardín y doble altura.\",\n      \"operacion\": \"venta\",\n      \"estatus\": \"publicada\",\n      \"tipo\": \"Casa\",\n      \"precio\": 9500000,\n      \"moneda\": \"MXN\",\n      \"recamaras\": 3,\n      \"banos\": 2.5,\n      \"estacionamientos\": 2,\n      \"m2_construccion\": 240,\n      \"m2_terreno\": 300,\n      \"direccion\": {\n        \"calle\": \"Av. Presidente Masaryk 123\",\n        \"colonia\": \"Polanco\",\n        \"municipio\": \"Miguel Hidalgo\",\n        \"estado\": \"CDMX\",\n        \"cp\": \"11560\",\n        \"lat\": 19.4326,\n        \"lng\": -99.1932\n      },\n      \"imagenes\": [\n        \"https://cdn.ejemplo.com/1.jpg\",\n        \"https://cdn.ejemplo.com/2.jpg\"\n      ],\n      \"caracteristicas\": [\"Alberca\", \"Seguridad 24h\"],\n      \"market_center\": \"KW Premier\",\n      \"asesor_nombre\": \"Ana López\",\n      \"asesor_email\": \"ana@kwpremier.mx\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/properties", "host": ["{{base_url}}"], "path": ["properties"] },
+            "description": "Crea o actualiza propiedades. Reenviar el mismo `id` actualiza, no duplica. Máximo 500 por llamada."
+          }
+        },
+        {
+          "name": "POST /properties — mínimo indispensable",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propiedades\": [\n    { \"id\": \"KW-2001\", \"titulo\": \"Departamento en Condesa\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/properties", "host": ["{{base_url}}"], "path": ["properties"] },
+            "description": "Solo `id` y `titulo` son obligatorios. Todo lo demás es opcional."
+          }
+        },
+        {
+          "name": "POST /properties — nombres en inglés",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": [\n    {\n      \"id\": \"MLS-77\",\n      \"title\": \"Modern Loft\",\n      \"operacion\": \"venta\",\n      \"price\": 1250000,\n      \"currency\": \"USD\",\n      \"bedrooms\": 2,\n      \"bathrooms\": 1,\n      \"property_type\": \"Departamento\",\n      \"address\": { \"city\": \"Ciudad de México\", \"neighborhood\": \"Roma Norte\" },\n      \"images\": [{ \"url\": \"https://cdn.ejemplo.com/x.jpg\" }],\n      \"agent_email\": \"ana@kwpremier.mx\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/properties", "host": ["{{base_url}}"], "path": ["properties"] },
+            "description": "Si tu sistema ya exporta con nombres en inglés, no hace falta traducir nada."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Verificar lo guardado",
+      "item": [
+        {
+          "name": "GET /properties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/properties?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["properties"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "estatus", "value": "publicada", "disabled": true },
+                { "key": "operacion", "value": "venta", "disabled": true },
+                { "key": "updated_after", "value": "2026-01-01T00:00:00Z", "disabled": true }
+              ]
+            },
+            "description": "Lista lo que tenemos guardado. Útil para confirmar que el envío llegó completo."
+          }
+        },
+        {
+          "name": "GET /properties/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/properties/KW-1001",
+              "host": ["{{base_url}}"],
+              "path": ["properties", "KW-1001"]
+            },
+            "description": "Detalle de una propiedad, usando el mismo id con el que la mandaste."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Dar de baja",
+      "item": [
+        {
+          "name": "DELETE /properties/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/properties/KW-1001",
+              "host": ["{{base_url}}"],
+              "path": ["properties", "KW-1001"]
+            },
+            "description": "Deja de mostrarla en el sitio. No se borra: queda como suspendida para no romper enlaces ya compartidos."
+          }
+        }
+      ]
+    }
+  ]
+}

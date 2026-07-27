@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>API de Propiedades · KW Premier</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --red: #CC0000;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --bg: #ffffff;
+    --panel: #f7f7f6;
+    --border: rgba(0,0,0,0.10);
+    --verde: #1f6d2e;
+    --azul: #1971c2;
+    --morado: #6741d9;
+    --naranja: #D97706;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6;
+  }
+  code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  .wrap { display: grid; grid-template-columns: 250px 1fr; max-width: 1240px; margin: 0 auto; }
+
+  /* ── Índice lateral ── */
+  aside {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    border-right: 1px solid var(--border); padding: 32px 20px 40px;
+  }
+  .marca { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .marca span { color: var(--red); }
+  .marca-sub { font-size: 12px; color: var(--muted); margin-bottom: 26px; }
+  aside nav a {
+    display: block; padding: 6px 10px; margin-bottom: 2px;
+    font-size: 13.5px; color: var(--muted); text-decoration: none;
+    border-radius: 7px; transition: background 0.15s, color 0.15s;
+  }
+  aside nav a:hover { background: var(--panel); color: var(--text); }
+  .nav-grupo {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #aaa; margin: 20px 0 8px 10px;
+  }
+
+  main { padding: 40px 44px 90px; min-width: 0; }
+
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; margin-bottom: 10px; }
+  h2 {
+    font-size: 21px; font-weight: 700; letter-spacing: -0.3px;
+    margin: 46px 0 12px; padding-top: 10px;
+  }
+  h3 { font-size: 15px; font-weight: 700; margin: 26px 0 8px; }
+  p { margin-bottom: 12px; font-size: 14.5px; }
+  .lead { font-size: 16px; color: var(--muted); margin-bottom: 26px; }
+  a { color: var(--red); }
+
+  .intro-nota {
+    background: #fff8f8; border: 1px solid rgba(204,0,0,0.18);
+    border-left: 3px solid var(--red);
+    border-radius: 10px; padding: 14px 16px; margin: 22px 0; font-size: 14px;
+  }
+  .nota {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 15px; margin: 16px 0; font-size: 13.5px;
+  }
+  .nota strong { display: block; margin-bottom: 3px; }
+
+  /* ── Endpoints ── */
+  .endpoint {
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin: 16px 0; background: #fff;
+  }
+  .endpoint-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .metodo {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    padding: 3px 9px; border-radius: 6px; color: #fff; flex-shrink: 0;
+  }
+  .m-get { background: var(--verde); }
+  .m-post { background: var(--azul); }
+  .m-delete { background: var(--red); }
+  .ruta { font-size: 14px; font-weight: 600; }
+  .endpoint-desc { font-size: 13.5px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    padding: 8px 10px; border-bottom: 1.5px solid var(--border);
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td code { font-size: 12.5px; }
+  .req { color: var(--red); font-weight: 700; font-size: 11px; }
+  .opt { color: var(--muted); font-size: 11px; }
+
+  pre {
+    background: #1a1a1a; color: #e8e8e8;
+    border-radius: 10px; padding: 15px 17px; overflow-x: auto;
+    font-size: 12.5px; line-height: 1.65; margin: 12px 0;
+  }
+  pre .c { color: #7ec699; }
+  pre .k { color: #f0a0a0; }
+  pre .s { color: #b9d98a; }
+  pre .n { color: #d3a0f0; }
+  :not(pre) > code {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 1.5px 6px; border-radius: 5px; font-size: 12.5px;
+  }
+
+  .pill {
+    display: inline-block; font-size: 11.5px; font-weight: 600;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 2px 9px; border-radius: 20px; margin: 0 4px 5px 0;
+  }
+
+  .pasos { counter-reset: paso; margin: 18px 0; }
+  .paso {
+    position: relative; padding-left: 42px; margin-bottom: 20px;
+  }
+  .paso::before {
+    counter-increment: paso; content: counter(paso);
+    position: absolute; left: 0; top: -1px;
+    width: 27px; height: 27px; border-radius: 50%;
+    background: var(--red); color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .paso h3 { margin-top: 0; }
+
+  footer {
+    margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--muted);
+  }
+
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 24px 20px; }
+    aside nav { display: flex; flex-wrap: wrap; gap: 2px; }
+    aside nav a { padding: 5px 9px; font-size: 12.5px; }
+    .nav-grupo { width: 100%; margin: 12px 0 4px 0; }
+    main { padding: 28px 20px 60px; }
+    h1 { font-size: 25px; }
+    /* Las tablas no encogen por debajo de su contenido: se les deja
+       scroll propio para que no empujen el ancho de toda la página. */
+    table { display: block; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <aside>
+    <div class="marca">KW<span>·</span>PREMIER</div>
+    <div class="marca-sub">API de Propiedades · v1</div>
+    <nav>
+      <a href="#que-es">Qué es esto</a>
+      <a href="#pasos">Pasos para conectar</a>
+      <a href="#auth">Autenticación</a>
+      <div class="nav-grupo">Endpoints</div>
+      <a href="#me">GET /me</a>
+      <a href="#tipos">GET /property_types</a>
+      <a href="#post-props">POST /properties</a>
+      <a href="#get-props">GET /properties</a>
+      <a href="#get-prop">GET /properties/:id</a>
+      <a href="#del-prop">DELETE /properties/:id</a>
+      <div class="nav-grupo">Referencia</div>
+      <a href="#campos">Campos</a>
+      <a href="#valores">Valores aceptados</a>
+      <a href="#errores">Errores</a>
+      <a href="#dudas">Dudas frecuentes</a>
+    </nav>
+  </aside>
+
+  <main>
+    <h1>API de Propiedades de KW Premier</h1>
+    <p class="lead">
+      Para conectar el inventario de Command con el sitio de KW&nbsp;Premier.
+    </p>
+
+    <div class="intro-nota">
+      <strong>En corto:</strong> nos mandas las propiedades con un
+      <code>POST</code> a <code>/properties</code>, en JSON, con tu llave en el
+      header <code>x-api-key</code>. Nosotros nos encargamos del resto.
+      Si ya integraste otros portales, esto funciona igual.
+    </div>
+
+    <h2 id="que-es">Qué es esto</h2>
+    <p>
+      Esta API recibe el inventario de propiedades para publicarlo en el sitio
+      de KW Premier. Está pensada para que la consuma quien administra Command
+      en KW México, del mismo modo en que ya se envía inventario a otros
+      portales inmobiliarios.
+    </p>
+    <p>
+      No hace falta darse de alta en ningún programa de desarrolladores ni
+      pasar por aprobaciones: basta con una llave de API que nosotros te
+      entregamos.
+    </p>
+
+    <h3>URL base</h3>
+    <pre><span class="s">https://iloetojomzqtadkithtv.supabase.co/functions/v1/api-propiedades</span></pre>
+
+    <h2 id="pasos">Pasos para conectar</h2>
+    <div class="pasos">
+      <div class="paso">
+        <h3>Pídenos tu llave de API</h3>
+        <p>
+          Te entregamos una llave con el formato
+          <code>kwp_live_…</code> por un canal seguro. Se muestra una sola vez;
+          guárdala donde guardes el resto de tus credenciales.
+        </p>
+      </div>
+      <div class="paso">
+        <h3>Verifica que funciona</h3>
+        <p>Una llamada a <a href="#me"><code>GET /me</code></a> debe responder con el nombre de tu integración.</p>
+      </div>
+      <div class="paso">
+        <h3>Manda tu primer lote de prueba</h3>
+        <p>
+          Un <a href="#post-props"><code>POST /properties</code></a> con 2 o 3
+          propiedades. La respuesta te dice exactamente cuáles se guardaron y,
+          si alguna fue rechazada, por qué.
+        </p>
+      </div>
+      <div class="paso">
+        <h3>Programa el envío completo</h3>
+        <p>
+          Manda el inventario cada vez que cambie, o de forma periódica (cada
+          hora o cada día, lo que te acomode). Reenviar una propiedad que ya
+          existe la actualiza, no la duplica, así que puedes reenviar todo sin
+          problema.
+        </p>
+      </div>
+    </div>
+
+    <h2 id="auth">Autenticación</h2>
+    <p>Todas las llamadas llevan tu llave en el header <code>x-api-key</code>:</p>
+    <pre><span class="c"># Ejemplo</span>
+curl <span class="s">'https://iloetojomzqtadkithtv.supabase.co/functions/v1/api-propiedades/me'</span> \
+  -H <span class="s">'x-api-key: kwp_live_TU_LLAVE_AQUI'</span></pre>
+
+    <div class="nota">
+      <strong>Sobre la llave</strong>
+      No la publiques en código de cliente ni en repositorios. Si se filtra,
+      avísanos: la revocamos y te generamos otra al momento, sin afectar lo ya
+      publicado.
+    </div>
+
+    <h2>Endpoints</h2>
+
+    <div class="endpoint" id="me">
+      <div class="endpoint-head">
+        <span class="metodo m-get">GET</span>
+        <span class="ruta">/me</span>
+      </div>
+      <div class="endpoint-desc">Verifica que la llave sea válida y devuelve a quién pertenece.</div>
+      <pre><span class="k">{</span>
+  <span class="n">"nombre"</span>: <span class="s">"KW México — Integración Command"</span>,
+  <span class="n">"permisos"</span>: [<span class="s">"propiedades:escribir"</span>, <span class="s">"propiedades:leer"</span>],
+  <span class="n">"activa"</span>: <span class="k">true</span>
+<span class="k">}</span></pre>
+    </div>
+
+    <div class="endpoint" id="tipos">
+      <div class="endpoint-head">
+        <span class="metodo m-get">GET</span>
+        <span class="ruta">/property_types</span>
+      </div>
+      <div class="endpoint-desc">Devuelve los valores aceptados en <code>tipo</code>, <code>operacion</code> y <code>estatus</code>.</div>
+    </div>
+
+    <div class="endpoint" id="post-props">
+      <div class="endpoint-head">
+        <span class="metodo m-post">POST</span>
+        <span class="ruta">/properties</span>
+      </div>
+      <div class="endpoint-desc">
+        Manda propiedades. Crea las nuevas y actualiza las que ya existen,
+        usando tu <code>id</code> como referencia. Hasta 500 por llamada.
+      </div>
+
+      <h3>Petición</h3>
+      <pre>curl -X POST <span class="s">'https://iloetojomzqtadkithtv.supabase.co/functions/v1/api-propiedades/properties'</span> \
+  -H <span class="s">'x-api-key: kwp_live_TU_LLAVE_AQUI'</span> \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{
+    "propiedades": [
+      {
+        "id": "KW-1001",
+        "titulo": "Casa en Polanco",
+        "descripcion": "Amplia casa con jardín y doble altura.",
+        "operacion": "venta",
+        "estatus": "publicada",
+        "tipo": "Casa",
+        "precio": 9500000,
+        "moneda": "MXN",
+        "recamaras": 3,
+        "banos": 2.5,
+        "estacionamientos": 2,
+        "m2_construccion": 240,
+        "m2_terreno": 300,
+        "direccion": {
+          "calle": "Av. Presidente Masaryk 123",
+          "colonia": "Polanco",
+          "municipio": "Miguel Hidalgo",
+          "estado": "CDMX",
+          "cp": "11560",
+          "lat": 19.4326,
+          "lng": -99.1932
+        },
+        "imagenes": [
+          "https://cdn.ejemplo.com/1.jpg",
+          "https://cdn.ejemplo.com/2.jpg"
+        ],
+        "caracteristicas": ["Alberca", "Seguridad 24h"],
+        "market_center": "KW Premier",
+        "asesor_nombre": "Ana López",
+        "asesor_email": "ana@kwpremier.mx"
+      }
+    ]
+  }'</span></pre>
+
+      <h3>Respuesta</h3>
+      <pre><span class="k">{</span>
+  <span class="n">"ok"</span>: <span class="k">true</span>,
+  <span class="n">"recibidas"</span>: <span class="k">1</span>,
+  <span class="n">"guardadas"</span>: <span class="k">1</span>,
+  <span class="n">"duplicadas_en_la_peticion"</span>: <span class="k">0</span>,
+  <span class="n">"rechazadas"</span>: <span class="k">0</span>,
+  <span class="n">"errores"</span>: []
+<span class="k">}</span></pre>
+
+      <p>
+        Si alguna propiedad viene mal, las demás sí se guardan y en
+        <code>errores</code> te decimos cuál falló y por qué:
+      </p>
+      <pre><span class="k">{</span>
+  <span class="n">"ok"</span>: <span class="k">false</span>,
+  <span class="n">"recibidas"</span>: <span class="k">3</span>,
+  <span class="n">"guardadas"</span>: <span class="k">2</span>,
+  <span class="n">"rechazadas"</span>: <span class="k">1</span>,
+  <span class="n">"errores"</span>: [
+    <span class="k">{</span> <span class="n">"indice"</span>: <span class="k">1</span>, <span class="n">"id"</span>: <span class="s">"KW-1002"</span>,
+      <span class="n">"error"</span>: <span class="s">"\"operacion\" debe ser uno de: venta, renta. Recibido: alquiler"</span> <span class="k">}</span>
+  ]
+<span class="k">}</span></pre>
+
+      <div class="nota">
+        <strong>También aceptamos nombres en inglés</strong>
+        Si tu sistema ya exporta con otros nombres, entendemos
+        <code>title</code>, <code>price</code>, <code>bedrooms</code>,
+        <code>bathrooms</code>, <code>address</code>, <code>images</code>,
+        <code>property_type</code>, <code>status</code>, <code>agent_email</code>,
+        entre otros. No hace falta que traduzcas nada.
+      </div>
+    </div>
+
+    <div class="endpoint" id="get-props">
+      <div class="endpoint-head">
+        <span class="metodo m-get">GET</span>
+        <span class="ruta">/properties</span>
+      </div>
+      <div class="endpoint-desc">Lista lo que tenemos guardado. Útil para verificar que llegó completo.</div>
+      <table>
+        <thead><tr><th>Parámetro</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>page</code></td><td>Página. Por defecto 1.</td></tr>
+          <tr><td><code>limit</code></td><td>Cuántas por página. Por defecto 20, máximo 200.</td></tr>
+          <tr><td><code>estatus</code></td><td>Filtra por estatus. Acepta varios separados por coma.</td></tr>
+          <tr><td><code>operacion</code></td><td><code>venta</code> o <code>renta</code>.</td></tr>
+          <tr><td><code>updated_after</code></td><td>Solo las modificadas después de esa fecha (ISO 8601).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="endpoint" id="get-prop">
+      <div class="endpoint-head">
+        <span class="metodo m-get">GET</span>
+        <span class="ruta">/properties/:id</span>
+      </div>
+      <div class="endpoint-desc">
+        Detalle de una propiedad. El <code>:id</code> es el mismo que nos
+        mandaste al crearla.
+      </div>
+    </div>
+
+    <div class="endpoint" id="del-prop">
+      <div class="endpoint-head">
+        <span class="metodo m-delete">DELETE</span>
+        <span class="ruta">/properties/:id</span>
+      </div>
+      <div class="endpoint-desc">
+        Da de baja una propiedad del sitio. No se borra: queda como
+        <code>suspendida</code>, para no romper enlaces que ya se hayan
+        compartido. También puedes lograr lo mismo mandándola por
+        <code>POST</code> con <code>"estatus": "suspendida"</code>.
+      </div>
+    </div>
+
+    <h2 id="campos">Campos</h2>
+    <table>
+      <thead><tr><th>Campo</th><th></th><th>Tipo</th><th>Notas</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td><span class="req">obligatorio</span></td><td>texto</td><td>Tu identificador. Es lo que usamos para no duplicar.</td></tr>
+        <tr><td><code>titulo</code></td><td><span class="req">obligatorio</span></td><td>texto</td><td>Nombre que se muestra.</td></tr>
+        <tr><td><code>descripcion</code></td><td><span class="opt">opcional</span></td><td>texto</td><td></td></tr>
+        <tr><td><code>operacion</code></td><td><span class="opt">opcional</span></td><td>texto</td><td><code>venta</code> o <code>renta</code>.</td></tr>
+        <tr><td><code>estatus</code></td><td><span class="opt">opcional</span></td><td>texto</td><td>Si no lo mandas, asumimos <code>publicada</code>.</td></tr>
+        <tr><td><code>tipo</code></td><td><span class="opt">opcional</span></td><td>texto</td><td>Casa, Departamento, Terreno…</td></tr>
+        <tr><td><code>precio</code></td><td><span class="opt">opcional</span></td><td>número</td><td></td></tr>
+        <tr><td><code>moneda</code></td><td><span class="opt">opcional</span></td><td>texto</td><td>Por defecto <code>MXN</code>.</td></tr>
+        <tr><td><code>recamaras</code></td><td><span class="opt">opcional</span></td><td>número</td><td></td></tr>
+        <tr><td><code>banos</code></td><td><span class="opt">opcional</span></td><td>número</td><td>Acepta decimales (2.5).</td></tr>
+        <tr><td><code>estacionamientos</code></td><td><span class="opt">opcional</span></td><td>número</td><td></td></tr>
+        <tr><td><code>m2_construccion</code></td><td><span class="opt">opcional</span></td><td>número</td><td></td></tr>
+        <tr><td><code>m2_terreno</code></td><td><span class="opt">opcional</span></td><td>número</td><td></td></tr>
+        <tr><td><code>direccion</code></td><td><span class="opt">opcional</span></td><td>objeto</td><td><code>calle</code>, <code>colonia</code>, <code>municipio</code>, <code>estado</code>, <code>cp</code>, <code>lat</code>, <code>lng</code>. También se aceptan planos.</td></tr>
+        <tr><td><code>imagenes</code></td><td><span class="opt">opcional</span></td><td>lista</td><td>URLs completas, o bien <code>{"url": "…"}</code>. La primera es la portada.</td></tr>
+        <tr><td><code>caracteristicas</code></td><td><span class="opt">opcional</span></td><td>lista</td><td>Amenidades.</td></tr>
+        <tr><td><code>market_center</code></td><td><span class="opt">opcional</span></td><td>texto</td><td>Oficina a la que pertenece. Nos permite distinguir el inventario de KW Premier del resto.</td></tr>
+        <tr><td><code>asesor_nombre</code></td><td><span class="opt">opcional</span></td><td>texto</td><td></td></tr>
+        <tr><td><code>asesor_email</code></td><td><span class="opt">opcional</span></td><td>texto</td><td>Con esto ligamos la propiedad al asesor para que salga en su perfil.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="nota">
+      <strong>Manda lo que tengas</strong>
+      Solo <code>id</code> y <code>titulo</code> son obligatorios. Todo lo demás
+      es opcional: guardamos lo que llegue y lo que falte simplemente no se
+      muestra. También conservamos el registro original completo, así que si
+      mandas campos que no están en esta lista, no se pierden.
+    </div>
+
+    <h2 id="valores">Valores aceptados</h2>
+    <h3>operacion</h3>
+    <div><span class="pill">venta</span><span class="pill">renta</span></div>
+    <h3>estatus</h3>
+    <div>
+      <span class="pill">publicada</span><span class="pill">no_publicada</span>
+      <span class="pill">reservada</span><span class="pill">vendida</span>
+      <span class="pill">rentada</span><span class="pill">suspendida</span>
+    </div>
+    <p style="font-size:13.5px;margin-top:8px;">
+      Solo las <code>publicada</code> se muestran en el sitio.
+    </p>
+    <h3>tipo</h3>
+    <div>
+      <span class="pill">Casa</span><span class="pill">Departamento</span>
+      <span class="pill">Terreno</span><span class="pill">Local Comercial</span>
+      <span class="pill">Oficina</span><span class="pill">Bodega</span>
+      <span class="pill">Edificio</span><span class="pill">Rancho</span>
+      <span class="pill">Otro</span>
+    </div>
+
+    <h2 id="errores">Errores</h2>
+    <table>
+      <thead><tr><th>Código</th><th>Qué pasó</th></tr></thead>
+      <tbody>
+        <tr><td><code>400</code></td><td>El cuerpo no es JSON válido, o ninguna propiedad pasó la validación. Revisa <code>errores</code> en la respuesta.</td></tr>
+        <tr><td><code>401</code></td><td>Falta el header <code>x-api-key</code>, o la llave es inválida o fue revocada.</td></tr>
+        <tr><td><code>403</code></td><td>La llave no tiene permiso para esa operación.</td></tr>
+        <tr><td><code>404</code></td><td>El endpoint o la propiedad no existen.</td></tr>
+        <tr><td><code>500</code></td><td>Problema de nuestro lado. Si se repite, avísanos.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="dudas">Dudas frecuentes</h2>
+
+    <h3>¿Qué pasa si mando la misma propiedad dos veces?</h3>
+    <p>
+      Se actualiza, no se duplica. Usamos tu <code>id</code> como referencia,
+      así que puedes reenviar el inventario completo las veces que quieras.
+    </p>
+
+    <h3>¿Tengo que mandar solo lo que cambió?</h3>
+    <p>
+      No hace falta. Puedes mandar todo cada vez. Si prefieres mandar solo lo
+      modificado, también funciona.
+    </p>
+
+    <h3>¿Cómo quito una propiedad?</h3>
+    <p>
+      Mándala con <code>"estatus": "vendida"</code>, <code>"rentada"</code> o
+      <code>"suspendida"</code>, o usa <code>DELETE /properties/:id</code>.
+      Deja de mostrarse en el sitio de inmediato.
+    </p>
+
+    <h3>¿Puedo mandar el inventario de varias oficinas?</h3>
+    <p>
+      Sí. Usa el campo <code>market_center</code> en cada propiedad para
+      indicar de cuál es.
+    </p>
+
+    <h3>¿Aceptan XML en lugar de JSON?</h3>
+    <p>
+      Sí. Si ya tienes un feed en XML armado para otros portales, podemos
+      recibirlo tal cual sin que tengas que construir nada nuevo — dinos y te
+      pasamos el endpoint para eso.
+    </p>
+
+    <h3>¿Hay ambiente de pruebas?</h3>
+    <p>
+      No hace falta uno aparte: manda propiedades con
+      <code>"estatus": "no_publicada"</code> y podrás verificar que llegaron
+      con <code>GET /properties</code> sin que se publiquen en el sitio.
+    </p>
+
+    <footer>
+      API de Propiedades de KW Premier · v1<br />
+      ¿Dudas o algo no funciona como esperabas? Escríbenos y lo revisamos.
+    </footer>
+  </main>
+
+</div>
+</body>
+</html>
