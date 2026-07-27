@@ -2,8 +2,8 @@
 --
 -- Esta fase deja SOLO la base de datos lista: la tabla del catálogo, los
 -- permisos y el mecanismo para compartir con atribución. Todavía no hay
--- páginas visibles ni panel de carga — eso viene cuando KW apruebe la
--- integración y lleguen las credenciales.
+-- páginas visibles ni panel de carga — eso viene cuando tengamos el feed
+-- de Command (el XML/JSON que Command manda a los portales).
 --
 -- Cómo está pensado el catálogo:
 --   · Entra inventario de TODO KW, no solo de KW Premier. La columna
