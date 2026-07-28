@@ -98,17 +98,19 @@
   .micro-gracias strong { font-size: 15px; display: block; margin-bottom: 5px; }
   .micro-gracias span { font-size: 13px; color: var(--muted); line-height: 1.55; }
 
-  /* ── Columna 2: acerca de mí + acciones ── */
+  /* ── Columna 2: la tarjeta roja, con todo lo de la persona ── */
   .micro-acerca {
-    font-size: 14.5px; color: #444; line-height: 1.72;
+    font-size: 13.5px; line-height: 1.7;
+    color: rgba(255,255,255,0.94);
+    margin-top: 16px; text-align: left;
     white-space: pre-line;
   }
 
   .micro-acciones {
-    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px;
+    display: flex; flex-direction: column; gap: 9px; margin-top: 20px;
   }
   .btn-whatsapp, .btn-compartir {
-    display: inline-flex; align-items: center; gap: 9px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
     border-radius: 40px; padding: 13px 24px;
     font-size: 14px; font-weight: 700; font-family: inherit;
     text-decoration: none; cursor: pointer;
@@ -125,19 +127,19 @@
     box-shadow: 0 2px 6px rgba(37,211,102,0.3) inset;
   }
   .btn-compartir {
-    background: #fff; color: var(--text);
-    border: 1.5px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background: #fff; color: var(--red);
+    border: none;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.16);
   }
-  .btn-compartir:hover { background: #fafafa; border-color: #dcdcda; }
+  .btn-compartir:hover { background: #fff5f5; }
   .btn-compartir:active { transform: translateY(1px) scale(0.97); }
   .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
   .btn-compartir svg { width: 16px; height: 16px; }
 
-  /* ── Columna 3: la tarjeta roja con la foto encima ── */
+  /* La tarjeta roja: foto encima y todo lo de la persona adentro */
   .micro-tarjeta { padding-top: 62px; position: relative; }
   .micro-foto {
-    position: absolute; top: 0; right: 18px;
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
     width: 148px; height: 148px; border-radius: 50%;
     background: #fff3f3; color: var(--red);
     display: flex; align-items: center; justify-content: center;
@@ -195,24 +197,160 @@
   .micro-redes svg { width: 16px; height: 16px; fill: currentColor; }
   .micro-redes .sin-relleno { fill: none; stroke: currentColor; stroke-width: 2; }
 
+  /* ── Columna 3: Mis propiedades ── */
+  .props-top { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .props-top h2 { margin-bottom: 0; flex: 1; }
+  .btn-mas {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: var(--red); color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 10px rgba(204,0,0,0.3);
+    transition: filter 0.15s, transform 0.12s;
+  }
+  .btn-mas:hover { filter: brightness(1.1); }
+  .btn-mas:active { transform: scale(0.9); }
+  .btn-mas svg { width: 17px; height: 17px; }
+
+  .props-lista { display: flex; flex-direction: column; gap: 12px; }
+  .prop-mini {
+    display: block; background: #fff; border: 1.5px solid var(--border);
+    border-radius: 14px; overflow: hidden; text-decoration: none; color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .prop-mini:hover {
+    border-color: #dcdcda; transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+  .prop-mini-foto {
+    aspect-ratio: 16 / 10; background: #f0f0ef;
+    display: flex; align-items: center; justify-content: center;
+    color: #c9c9c7; position: relative;
+  }
+  .prop-mini-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .prop-mini-foto svg { width: 30px; height: 30px; }
+  .prop-mini-badge {
+    position: absolute; top: 9px; left: 9px;
+    background: rgba(0,0,0,0.62); color: #fff;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 4px 9px; border-radius: 20px;
+  }
+  .prop-mini-cuerpo { padding: 12px 13px 13px; }
+  .prop-mini-precio { font-size: 15.5px; font-weight: 800; color: var(--red); letter-spacing: -0.3px; }
+  .prop-mini-titulo {
+    font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .prop-mini-lugar { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .prop-mini-datos { font-size: 11.5px; color: var(--muted); margin-top: 7px; display: flex; gap: 10px; }
+
+  .btn-ver-todas {
+    width: 100%; margin-top: 4px;
+    border: 1.5px solid var(--border); background: #fff; border-radius: 12px;
+    padding: 11px; font-size: 13px; font-weight: 700; font-family: inherit;
+    color: var(--text); cursor: pointer;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn-ver-todas:hover { background: #fafafa; }
+  .btn-ver-todas:active { transform: scale(0.98); }
+
+  .props-vacio {
+    font-size: 13px; color: var(--muted); line-height: 1.6;
+    border: 1.5px dashed var(--border); border-radius: 14px;
+    padding: 22px 16px; text-align: center;
+  }
+
+  /* Quitar una propiedad elegida a mano (solo lo ve el dueño del perfil) */
+  .prop-mini-quitar {
+    position: absolute; top: 8px; right: 8px;
+    width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.55); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .prop-mini-quitar:hover { background: var(--red); }
+  .prop-mini-quitar:active { transform: scale(0.88); }
+  .prop-mini-quitar svg { width: 12px; height: 12px; }
+
+  /* ── Ventana para elegir propiedades del inventario ── */
+  .sel-fondo {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 8000; padding: 20px;
+  }
+  .sel-caja {
+    background: #fff; border-radius: 18px; width: 100%; max-width: 520px;
+    max-height: calc(100vh - 40px); display: flex; flex-direction: column;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.28); overflow: hidden;
+  }
+  .sel-top { padding: 20px 20px 14px; border-bottom: 1px solid var(--border); }
+  .sel-top-fila { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .sel-titulo { font-size: 16px; font-weight: 700; flex: 1; }
+  .sel-cerrar {
+    width: 30px; height: 30px; border: none; background: #f2f2f1; border-radius: 50%;
+    cursor: pointer; color: #555; display: flex; align-items: center; justify-content: center;
+  }
+  .sel-cerrar:hover { background: #e6e6e5; }
+  .sel-cerrar svg { width: 14px; height: 14px; }
+  .sel-buscar {
+    width: 100%; box-sizing: border-box;
+    border: 1.5px solid var(--border); border-radius: 11px;
+    padding: 10px 13px; font-size: 14px; font-family: inherit;
+  }
+  .sel-buscar:focus { outline: none; border-color: var(--red); }
+  .sel-cuerpo { overflow-y: auto; padding: 10px 14px; flex: 1; }
+  .sel-fila {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 10px; border: none; background: none; border-radius: 12px;
+    cursor: pointer; text-align: left; font-family: inherit;
+    transition: background 0.12s;
+  }
+  .sel-fila:hover { background: #fafafa; }
+  .sel-fila img, .sel-fila .sin-foto {
+    width: 58px; height: 44px; border-radius: 8px; object-fit: cover;
+    flex-shrink: 0; background: #f0f0ef;
+  }
+  .sel-info { flex: 1; min-width: 0; }
+  .sel-info .t { font-size: 13.5px; font-weight: 600; line-height: 1.35;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sel-info .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .sel-check {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+  }
+  .sel-fila.elegida .sel-check { background: var(--red); border-color: var(--red); }
+  .sel-check svg { width: 12px; height: 12px; opacity: 0; }
+  .sel-fila.elegida .sel-check svg { opacity: 1; }
+  .sel-pie { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .sel-pie button { flex: 1; border-radius: 12px; padding: 11px; font-size: 13.5px;
+    font-weight: 700; font-family: inherit; cursor: pointer; }
+  .sel-cancelar { border: 1.5px solid var(--border); background: #fff; color: var(--text); }
+  .sel-guardar {
+    border: none; color: #fff;
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+  }
+  .sel-guardar:disabled { opacity: 0.6; cursor: default; }
+  .sel-nada { text-align: center; color: var(--muted); font-size: 13.5px; padding: 34px 10px; line-height: 1.6; }
+
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 70px 0; }
 
+  /* Si el asesor no tiene ninguna propiedad, esa columna no se pinta y
+     el resto se reparte el espacio en vez de dejar un hueco. */
+  .micro-cols.sin-props { grid-template-columns: 1fr 1.15fr; max-width: 780px; margin: 0 auto; }
+
   @media (max-width: 900px) {
-    .micro-cols { grid-template-columns: 1fr; gap: 40px; max-width: 460px; margin: 0 auto; }
+    .micro-cols, .micro-cols.sin-props {
+      grid-template-columns: 1fr; gap: 40px; max-width: 460px; margin: 0 auto;
+    }
     /* La tarjeta con la foto va primero: presenta a la persona */
     .micro-tarjeta { order: 1; }
-    .micro-col-acerca { order: 2; }
+    .micro-col-props { order: 2; }
     .micro-col-form { order: 3; }
-    .micro-foto { right: 50%; transform: translateX(50%); }
   }
   @media (max-width: 640px) {
     main { padding: 84px 18px 44px; }
     .micro-titulo { font-size: 36px; }
     .micro-encabezado { margin-bottom: 34px; }
-    /* En pantalla angosta no caben lado a lado sin partir el texto en
-       dos renglones, así que se apilan a todo lo ancho. */
-    .micro-acciones { flex-direction: column; }
-    .micro-acciones .btn-whatsapp, .micro-acciones .btn-compartir { justify-content: center; }
   }
 </style>
 </head>
@@ -305,6 +443,9 @@
     correo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
     compartir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
     palomita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    mas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    tache: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    casa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
   };
 
   function redesHtml(p) {
@@ -324,7 +465,6 @@
 
   function pintarPerfil(p) {
     var nombreCompleto = ((p.nombre || '') + ' ' + (p.apellido || '')).trim() || 'Sin nombre';
-    var soloNombre = (p.nombre || '').trim() || nombreCompleto;
     var avatar = p.foto_url
       ? '<img src="' + escapeHtml(p.foto_url) + '" alt="' + escapeHtml(nombreCompleto) + '" />'
       : escapeHtml(iniciales(p.nombre, p.apellido));
@@ -339,9 +479,9 @@
         '<p class="micro-lema">' + LEMA + '</p>' +
       '</div>' +
 
-      '<div class="micro-cols">' +
+      '<div class="micro-cols" id="micro-cols">' +
 
-        // ── Formulario de contacto ──
+        // ── Columna 1: formulario de contacto ──
         '<section class="micro-col micro-col-form">' +
           '<h2>Contáctame</h2>' +
           '<form class="micro-form" id="form-prospecto" novalidate>' +
@@ -360,36 +500,322 @@
           '<div class="micro-gracias" id="micro-gracias">' +
             '<div class="palomita">' + ICONOS_RED.palomita + '</div>' +
             '<strong>¡Gracias!</strong>' +
-            '<span>' + escapeHtml(soloNombre) + ' recibió tus datos y te va a contactar muy pronto.</span>' +
+            '<span>' + escapeHtml((p.nombre || '').trim() || nombreCompleto) +
+            ' recibió tus datos y te va a contactar muy pronto.</span>' +
           '</div>' +
         '</section>' +
 
-        // ── Acerca de mí y acciones ──
-        '<section class="micro-col micro-col-acerca">' +
-          '<h2>Acerca de mí</h2>' +
-          '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
-          '<div class="micro-acciones">' +
-            (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' +
-                  ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
-            '<button type="button" class="btn-compartir" id="btn-compartir">' +
-              ICONOS_RED.compartir + 'Compartir perfil</button>' +
-          '</div>' +
-        '</section>' +
-
-        // ── Tarjeta roja ──
+        // ── Columna 2: la tarjeta roja con todo lo de la persona ──
         '<section class="micro-col micro-tarjeta">' +
           '<div class="micro-foto">' + avatar + '</div>' +
           '<div class="micro-panel">' +
             '<div class="micro-hola">Hola, soy<br>' + escapeHtml(nombreCompleto) + '</div>' +
             '<div class="micro-puesto">' + escapeHtml(puesto) + '</div>' +
             '<p class="micro-desc">' + escapeHtml(desc) + '</p>' +
+            '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
             (p.email ? '<a class="micro-correo" href="mailto:' + escapeHtml(p.email) + '">' +
                        ICONOS_RED.correo + escapeHtml(p.email) + '</a>' : '') +
             redesHtml(p) +
+            '<div class="micro-acciones">' +
+              (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' +
+                    ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
+              '<button type="button" class="btn-compartir" id="btn-compartir">' +
+                ICONOS_RED.compartir + 'Compartir perfil</button>' +
+            '</div>' +
           '</div>' +
         '</section>' +
 
+        // ── Columna 3: sus propiedades (se llena aparte, ver cargarPropiedades) ──
+        '<section class="micro-col micro-col-props" id="col-props" hidden>' +
+          '<div class="props-top"><h2>Mis propiedades</h2><span id="props-mas"></span></div>' +
+          '<div id="props-lista"></div>' +
+        '</section>' +
+
       '</div>';
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // Mis propiedades
+  //
+  // Salen dos grupos juntos: las que Command mande a nombre del asesor
+  // (vienen con asesor_id) y las que él haya elegido a mano del
+  // inventario. El botón "+" solo lo ve quien es dueño del perfil.
+  // ─────────────────────────────────────────────────────────────
+  var CAMPOS_PROP = 'id, titulo, operacion, tipo, precio, moneda, recamaras, banos, ' +
+                    'm2_construccion, colonia, municipio, estado, imagenes, asesor_id';
+
+  var TOPE_VISIBLE = 4;
+  var esDuenoDelPerfil = false;
+  var todasVisibles = false;
+  var propiedadesVisibles = [];
+  var elegidasAMano = [];   // ids escogidos del inventario
+
+  function precioTexto(p) {
+    if (p.precio === null || p.precio === undefined) return 'Precio a consultar';
+    var n = Number(p.precio);
+    if (!isFinite(n)) return 'Precio a consultar';
+    return '$' + n.toLocaleString('es-MX', { maximumFractionDigits: 0 }) +
+           ' ' + (p.moneda || 'MXN') + (p.operacion === 'renta' ? '/mes' : '');
+  }
+
+  function primeraFoto(p) {
+    var imgs = p.imagenes;
+    if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch (e) { imgs = []; } }
+    if (!Array.isArray(imgs) || !imgs.length) return null;
+    var uno = imgs[0];
+    var url = typeof uno === 'string' ? uno : (uno && uno.url);
+    return (typeof url === 'string' && url.startsWith('http')) ? url : null;
+  }
+
+  function lugarTexto(p) {
+    return [p.colonia, p.municipio || p.estado].filter(Boolean).join(', ');
+  }
+
+  function tarjetaProp(p) {
+    var foto = primeraFoto(p);
+    var lugar = lugarTexto(p);
+    var datos = [];
+    if (p.recamaras) datos.push(p.recamaras + ' rec');
+    if (p.banos) datos.push(p.banos + ' baños');
+    if (p.m2_construccion) datos.push(p.m2_construccion + ' m²');
+    // Solo se puede quitar lo que se eligió a mano; lo de Command lo
+    // manda el sistema y no es del asesor decidirlo aquí.
+    var quitable = esDuenoDelPerfil && elegidasAMano.indexOf(p.id) !== -1;
+
+    return '<a class="prop-mini" href="propiedad.html?id=' + encodeURIComponent(p.id) + '">' +
+      '<div class="prop-mini-foto">' +
+        (foto ? '<img src="' + escapeHtml(foto) + '" alt="' + escapeHtml(p.titulo || '') + '" loading="lazy" />'
+              : ICONOS_RED.casa) +
+        (p.operacion ? '<span class="prop-mini-badge">' + escapeHtml(p.operacion) + '</span>' : '') +
+        (quitable ? '<button type="button" class="prop-mini-quitar" data-quitar="' + p.id +
+                    '" title="Quitar de mi perfil" aria-label="Quitar de mi perfil">' +
+                    ICONOS_RED.tache + '</button>' : '') +
+      '</div>' +
+      '<div class="prop-mini-cuerpo">' +
+        '<div class="prop-mini-precio">' + escapeHtml(precioTexto(p)) + '</div>' +
+        '<div class="prop-mini-titulo">' + escapeHtml(p.titulo || 'Propiedad') + '</div>' +
+        (lugar ? '<div class="prop-mini-lugar">' + escapeHtml(lugar) + '</div>' : '') +
+        (datos.length ? '<div class="prop-mini-datos"><span>' + datos.join('</span><span>') + '</span></div>' : '') +
+      '</div>' +
+    '</a>';
+  }
+
+  function pintarPropiedades() {
+    var col = document.getElementById('col-props');
+    var lista = document.getElementById('props-lista');
+    var mas = document.getElementById('props-mas');
+
+    // Sin propiedades y sin poder agregarlas, la columna estorba: se
+    // esconde y las otras dos se reparten el ancho.
+    if (!propiedadesVisibles.length && !esDuenoDelPerfil) {
+      col.hidden = true;
+      document.getElementById('micro-cols').classList.add('sin-props');
+      return;
+    }
+    col.hidden = false;
+    document.getElementById('micro-cols').classList.remove('sin-props');
+
+    mas.innerHTML = esDuenoDelPerfil
+      ? '<button type="button" class="btn-mas" id="btn-agregar-prop" title="Elegir propiedades" ' +
+        'aria-label="Elegir propiedades del inventario">' + ICONOS_RED.mas + '</button>'
+      : '';
+    if (esDuenoDelPerfil) {
+      document.getElementById('btn-agregar-prop').addEventListener('click', abrirSelector);
+    }
+
+    // Con muchas propiedades la columna crecería muchísimo más que las
+    // otras dos, así que se muestran las primeras y el resto se despliega.
+    var aMostrar = todasVisibles ? propiedadesVisibles : propiedadesVisibles.slice(0, TOPE_VISIBLE);
+    var faltan = propiedadesVisibles.length - aMostrar.length;
+
+    lista.innerHTML = propiedadesVisibles.length
+      ? '<div class="props-lista">' + aMostrar.map(tarjetaProp).join('') +
+        (faltan > 0 ? '<button type="button" class="btn-ver-todas" id="btn-ver-todas">Ver las ' +
+                      propiedadesVisibles.length + ' propiedades</button>' : '') + '</div>'
+      : '<div class="props-vacio">Todavía no tienes propiedades aquí.<br>' +
+        'Toca <strong>+</strong> para elegirlas del inventario de KW.</div>';
+
+    if (faltan > 0) {
+      document.getElementById('btn-ver-todas').addEventListener('click', function () {
+        todasVisibles = true;
+        pintarPropiedades();
+      });
+    }
+
+    lista.querySelectorAll('[data-quitar]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        quitarPropiedad(b.getAttribute('data-quitar'), b);
+      });
+    });
+  }
+
+  async function cargarPropiedades() {
+    // ¿Quien está viendo es el dueño del perfil?
+    try {
+      var ses = await sbMicro.auth.getSession();
+      var yo = ses && ses.data && ses.data.session && ses.data.session.user;
+      esDuenoDelPerfil = !!yo && yo.id === id;
+    } catch (e) { esDuenoDelPerfil = false; }
+
+    // Las que trae asignadas + las que eligió a mano
+    var suyas = [];
+    try {
+      var r1 = await sbMicro.from('propiedades_publicas').select(CAMPOS_PROP).eq('asesor_id', id);
+      suyas = (r1 && r1.data) || [];
+    } catch (e) { suyas = []; }
+
+    try {
+      var r2 = await sbMicro.from('propiedades_destacadas')
+        .select('propiedad_id, orden').eq('asesor_id', id).order('orden');
+      elegidasAMano = ((r2 && r2.data) || []).map(function (d) { return d.propiedad_id; });
+    } catch (e) { elegidasAMano = []; }
+
+    var extra = [];
+    if (elegidasAMano.length) {
+      try {
+        var r3 = await sbMicro.from('propiedades_publicas').select(CAMPOS_PROP).in('id', elegidasAMano);
+        extra = (r3 && r3.data) || [];
+      } catch (e) { extra = []; }
+    }
+
+    // Una propiedad puede estar en los dos grupos: se muestra una sola vez
+    var porId = {};
+    suyas.concat(extra).forEach(function (p) { porId[p.id] = p; });
+    propiedadesVisibles = Object.keys(porId).map(function (k) { return porId[k]; });
+
+    pintarPropiedades();
+  }
+
+  async function quitarPropiedad(propId, boton) {
+    boton.disabled = true;
+    var r = await sbMicro.from('propiedades_destacadas')
+      .delete().eq('asesor_id', id).eq('propiedad_id', propId);
+    if (r && r.error) { boton.disabled = false; return; }
+    elegidasAMano = elegidasAMano.filter(function (x) { return x !== propId; });
+    // Si además viene asignada desde Command, se queda; solo se va la elección manual
+    var sigueSiendoSuya = propiedadesVisibles.some(function (p) {
+      return p.id === propId && p.asesor_id === id;
+    });
+    if (!sigueSiendoSuya) {
+      propiedadesVisibles = propiedadesVisibles.filter(function (p) { return p.id !== propId; });
+    }
+    pintarPropiedades();
+  }
+
+  // ── Ventana para elegir del inventario ──
+  var inventario = [];
+  var seleccion = [];
+
+  async function abrirSelector() {
+    var fondo = document.createElement('div');
+    fondo.className = 'sel-fondo';
+    fondo.innerHTML =
+      '<div class="sel-caja" role="dialog" aria-modal="true">' +
+        '<div class="sel-top">' +
+          '<div class="sel-top-fila">' +
+            '<div class="sel-titulo">Elegir propiedades</div>' +
+            '<button class="sel-cerrar" id="sel-cerrar" aria-label="Cerrar">' + ICONOS_RED.tache + '</button>' +
+          '</div>' +
+          '<input type="search" class="sel-buscar" id="sel-buscar" placeholder="Buscar por título, colonia o ciudad" />' +
+        '</div>' +
+        '<div class="sel-cuerpo" id="sel-cuerpo">' +
+          '<div class="sel-nada">Cargando el inventario...</div>' +
+        '</div>' +
+        '<div class="sel-pie">' +
+          '<button class="sel-cancelar" id="sel-cancelar">Cancelar</button>' +
+          '<button class="sel-guardar" id="sel-guardar">Guardar</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(fondo);
+
+    function cerrar() { fondo.remove(); document.removeEventListener('keydown', alEsc); }
+    function alEsc(e) { if (e.key === 'Escape') cerrar(); }
+    document.addEventListener('keydown', alEsc);
+    fondo.addEventListener('click', function (e) { if (e.target === fondo) cerrar(); });
+    document.getElementById('sel-cerrar').addEventListener('click', cerrar);
+    document.getElementById('sel-cancelar').addEventListener('click', cerrar);
+
+    seleccion = elegidasAMano.slice();
+
+    if (!inventario.length) {
+      var r = await sbMicro.from('propiedades_publicas')
+        .select(CAMPOS_PROP).order('updated_at', { ascending: false }).limit(300);
+      inventario = (r && r.data) || [];
+    }
+    pintarInventario('');
+
+    document.getElementById('sel-buscar').addEventListener('input', function (e) {
+      pintarInventario(e.target.value);
+    });
+
+    document.getElementById('sel-guardar').addEventListener('click', async function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      var quitar = elegidasAMano.filter(function (x) { return seleccion.indexOf(x) === -1; });
+      var poner = seleccion.filter(function (x) { return elegidasAMano.indexOf(x) === -1; });
+      try {
+        if (quitar.length) {
+          await sbMicro.from('propiedades_destacadas')
+            .delete().eq('asesor_id', id).in('propiedad_id', quitar);
+        }
+        if (poner.length) {
+          await sbMicro.from('propiedades_destacadas').insert(poner.map(function (pid, i) {
+            return { asesor_id: id, propiedad_id: pid, orden: i };
+          }));
+        }
+        cerrar();
+        await cargarPropiedades();
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+      }
+    });
+  }
+
+  function pintarInventario(filtro) {
+    var cuerpo = document.getElementById('sel-cuerpo');
+    if (!cuerpo) return;
+    var q = String(filtro || '').trim().toLowerCase();
+    var lista = q
+      ? inventario.filter(function (p) {
+          return [p.titulo, p.colonia, p.municipio, p.estado, p.tipo]
+            .filter(Boolean).join(' ').toLowerCase().indexOf(q) !== -1;
+        })
+      : inventario;
+
+    if (!lista.length) {
+      cuerpo.innerHTML = '<div class="sel-nada">' +
+        (inventario.length ? 'Ninguna propiedad coincide con esa búsqueda.'
+                           : 'Todavía no hay propiedades en el inventario.') + '</div>';
+      return;
+    }
+
+    cuerpo.innerHTML = lista.map(function (p) {
+      var foto = primeraFoto(p);
+      var elegida = seleccion.indexOf(p.id) !== -1;
+      return '<button type="button" class="sel-fila' + (elegida ? ' elegida' : '') +
+             '" data-elegir="' + p.id + '">' +
+        (foto ? '<img src="' + escapeHtml(foto) + '" alt="" loading="lazy" />' : '<span class="sin-foto"></span>') +
+        '<span class="sel-info">' +
+          '<span class="t">' + escapeHtml(p.titulo || 'Propiedad') + '</span>' +
+          '<span class="s">' + escapeHtml(precioTexto(p) + (lugarTexto(p) ? ' · ' + lugarTexto(p) : '')) + '</span>' +
+        '</span>' +
+        '<span class="sel-check">' + ICONOS_RED.palomita + '</span>' +
+      '</button>';
+    }).join('');
+
+    cuerpo.querySelectorAll('[data-elegir]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var pid = b.getAttribute('data-elegir');
+        var i = seleccion.indexOf(pid);
+        if (i === -1) { seleccion.push(pid); b.classList.add('elegida'); }
+        else { seleccion.splice(i, 1); b.classList.remove('elegida'); }
+      });
+    });
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -477,6 +903,7 @@
 
       cont.innerHTML = pintarPerfil(p);
       conectarFormulario();
+      cargarPropiedades();
 
       // Compartir: abre directo en el código QR, que es lo que se enseña
       // de frente cuando alguien quiere guardarse el perfil.
