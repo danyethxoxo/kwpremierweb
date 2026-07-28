@@ -145,6 +145,20 @@
     });
   }
 
+  // "Mi Perfil" ahora lleva al perfil público de cada quien (el que se
+  // comparte con los clientes), no al formulario: desde ahí hay un botón
+  // de Editar. Como el id sale de la sesión, se resuelve al vuelo; si no
+  // hay sesión se queda apuntando a perfil.html, que manda al login.
+  if (!esPublico) {
+    const enlacePerfil = document.querySelector(`.drawer-nav a[href="${BASE}/perfil.html"]`);
+    if (enlacePerfil && window.kwSupabase) {
+      window.kwSupabase.auth.getSession().then(({ data }) => {
+        const yo = data && data.session && data.session.user;
+        if (yo) enlacePerfil.href = `${BASE}/micrositio.html?id=${encodeURIComponent(yo.id)}`;
+      }).catch(() => {});
+    }
+  }
+
   // La barra del header se esconde al bajar y reaparece al subir; los
   // botones (menú y Atrás) se quedan siempre visibles. Se escucha en
   // fase de captura para cubrir también los contenedores con scroll
