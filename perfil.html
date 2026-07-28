@@ -122,6 +122,10 @@
       </div>
       <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" /></div>
       <div class="field"><label>Apellido</label><input type="text" id="perfil-apellido" /></div>
+      <div class="field"><label>Título de tu perfil</label><input type="text" id="perfil-titulo" maxlength="60" placeholder="Mi Perfil" />
+        <div class="ayuda-campo">El texto grande de arriba en tu perfil público.</div></div>
+      <div class="field"><label>Frase debajo del título</label><input type="text" id="perfil-lema" maxlength="120" placeholder="Soy un profesional inmobiliario." />
+        <div class="ayuda-campo">Una línea corta. Ej: Especialista en Polanco desde 2016.</div></div>
       <div class="field"><label>Presentación corta</label><textarea id="perfil-descripcion" maxlength="220" placeholder="Una o dos líneas para la tarjeta de tu perfil. Ej: Asesor inmobiliario especializado en Polanco y Condesa."></textarea>
         <div class="ayuda-campo">Aparece junto a tu foto, arriba de tus redes.</div></div>
       <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea>
@@ -272,7 +276,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url, acerca_de, descripcion_corta, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+      .select('nombre, apellido, email, role, foto_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -282,6 +286,8 @@
     document.getElementById('perfil-email').value = perfil.email || '';
     document.getElementById('perfil-acerca').value = perfil.acerca_de || '';
     document.getElementById('perfil-descripcion').value = perfil.descripcion_corta || '';
+    document.getElementById('perfil-titulo').value = perfil.titulo_publico || '';
+    document.getElementById('perfil-lema').value = perfil.lema_publico || '';
     document.getElementById('perfil-sitio').value = perfil.sitio_web || '';
     document.getElementById('perfil-whatsapp').value = perfil.whatsapp || '';
     document.getElementById('perfil-instagram').value = perfil.instagram || '';
@@ -425,9 +431,15 @@
       const apellido = document.getElementById('perfil-apellido').value.trim();
       const acerca = document.getElementById('perfil-acerca').value.trim() || null;
       const descripcion = document.getElementById('perfil-descripcion').value.trim() || null;
+      const tituloPub = document.getElementById('perfil-titulo').value.trim() || null;
+      const lemaPub = document.getElementById('perfil-lema').value.trim() || null;
       const { error } = await window.kwSupabase
         .from('profiles')
-        .update({ nombre, apellido, acerca_de: acerca, descripcion_corta: descripcion })
+        .update({
+          nombre, apellido,
+          acerca_de: acerca, descripcion_corta: descripcion,
+          titulo_publico: tituloPub, lema_publico: lemaPub,
+        })
         .eq('id', miUserId);
       if (error) throw error;
       setMsg('datos-msg', 'Datos actualizados.', 'ok');

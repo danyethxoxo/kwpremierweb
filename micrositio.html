@@ -135,19 +135,22 @@
   }
   .btn-compartir:hover { background: #fff5f5; }
 
-  /* Solo lo ve el dueño del perfil */
+  /* Solo lo ve el dueño del perfil. Va debajo de la tarjeta, alineado a
+     su orilla derecha. */
+  .ranura-editar { display: flex; justify-content: flex-end; margin-top: 14px; }
   .btn-editar {
-    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-    border-radius: 40px; padding: 13px 24px;
-    font-size: 14px; font-weight: 700; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 40px; padding: 10px 18px;
+    font-size: 13px; font-weight: 700; font-family: inherit;
     text-decoration: none; cursor: pointer;
-    background: rgba(255,255,255,0.16); color: #fff;
-    border: 1.5px solid rgba(255,255,255,0.45);
-    transition: background 0.15s, transform 0.12s;
+    background: #fff; color: var(--text);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    transition: background 0.15s, border-color 0.15s, transform 0.12s;
   }
-  .btn-editar:hover { background: rgba(255,255,255,0.28); }
+  .btn-editar:hover { background: #fafafa; border-color: #dcdcda; }
   .btn-editar:active { transform: translateY(1px) scale(0.97); }
-  .btn-editar svg { width: 16px; height: 16px; }
+  .btn-editar svg { width: 15px; height: 15px; }
   #ranura-editar:empty { display: none; }
   .btn-compartir:active { transform: translateY(1px) scale(0.97); }
   .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
@@ -187,19 +190,6 @@
     margin-top: 15px; color: rgba(255,255,255,0.92);
   }
 
-  .micro-correo {
-    display: inline-flex; align-items: center; gap: 7px;
-    margin-top: 18px; padding: 8px 15px;
-    background: rgba(255,255,255,0.14); border-radius: 30px;
-    color: #fff; text-decoration: none;
-    font-size: 12.5px; font-weight: 600;
-    word-break: break-all;
-    transition: background 0.15s, transform 0.12s;
-  }
-  .micro-correo:hover { background: rgba(255,255,255,0.24); }
-  .micro-correo:active { transform: scale(0.96); }
-  .micro-correo svg { width: 14px; height: 14px; flex-shrink: 0; }
-
   .micro-redes {
     display: flex; justify-content: center; gap: 9px;
     margin-top: 20px; flex-wrap: wrap;
@@ -213,6 +203,7 @@
   .micro-redes a:hover { background: #fff; color: var(--red); transform: translateY(-2px); }
   .micro-redes svg { width: 16px; height: 16px; fill: currentColor; }
   .micro-redes .sin-relleno { fill: none; stroke: currentColor; stroke-width: 2; }
+  .micro-redes svg[stroke] { fill: none; }
 
   /* ── Mis propiedades: franja de abajo, a todo lo ancho ── */
   .micro-props { margin-top: 52px; }
@@ -396,7 +387,8 @@
 
   // Textos por defecto, para quien todavía no llena su perfil. Se busca
   // que sirvan tal cual, sin sonar a hueco relleno.
-  var LEMA = 'Soy un profesional inmobiliario.';
+  var TITULO_POR_DEFECTO = 'Mi Perfil';
+  var LEMA_POR_DEFECTO = 'Soy un profesional inmobiliario.';
   var ACERCA_POR_DEFECTO =
     'Acompaño a mis clientes en todo el proceso de compra, venta o renta de su ' +
     'propiedad: desde encontrar la opción correcta hasta la firma. Trabajo con el ' +
@@ -465,6 +457,7 @@
 
   function redesHtml(p) {
     var links = [
+      ['correo', p.email ? 'mailto:' + p.email : null, 'Escríbeme por correo'],
       ['sitio_web', linkSeguro(p.sitio_web), 'Sitio web'],
       ['instagram', linkSeguro(p.instagram), 'Instagram'],
       ['facebook', linkSeguro(p.facebook), 'Facebook'],
@@ -473,7 +466,8 @@
     ].filter(function (r) { return r[1]; });
     if (!links.length) return '';
     return '<div class="micro-redes">' + links.map(function (r) {
-      return '<a href="' + escapeHtml(r[1]) + '" target="_blank" rel="noopener" aria-label="' +
+      var nuevaPestana = r[0] === 'correo' ? '' : ' target="_blank" rel="noopener"';
+      return '<a href="' + escapeHtml(r[1]) + '"' + nuevaPestana + ' aria-label="' +
              r[2] + '" title="' + r[2] + '">' + ICONOS_RED[r[0]] + '</a>';
     }).join('') + '</div>';
   }
@@ -490,8 +484,8 @@
 
     return '' +
       '<div class="micro-encabezado">' +
-        '<h1 class="micro-titulo">Mi Perfil</h1>' +
-        '<p class="micro-lema">' + LEMA + '</p>' +
+        '<h1 class="micro-titulo">' + escapeHtml((p.titulo_publico || '').trim() || TITULO_POR_DEFECTO) + '</h1>' +
+        '<p class="micro-lema">' + escapeHtml((p.lema_publico || '').trim() || LEMA_POR_DEFECTO) + '</p>' +
       '</div>' +
 
       '<div class="micro-cols" id="micro-cols">' +
@@ -504,19 +498,17 @@
             '<div class="micro-puesto">' + escapeHtml(puesto) + '</div>' +
             '<p class="micro-desc">' + escapeHtml(desc) + '</p>' +
             '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
-            (p.email ? '<a class="micro-correo" href="mailto:' + escapeHtml(p.email) + '">' +
-                       ICONOS_RED.correo + escapeHtml(p.email) + '</a>' : '') +
             redesHtml(p) +
             '<div class="micro-acciones">' +
               (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' +
                     ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
               '<button type="button" class="btn-compartir" id="btn-compartir">' +
                 ICONOS_RED.compartir + 'Compartir perfil</button>' +
-              // El de editar se agrega después, cuando ya se sabe si quien
-              // está viendo es el dueño del perfil (ver marcarSiEsMio).
-              '<span id="ranura-editar"></span>' +
             '</div>' +
           '</div>' +
+          // El de editar va fuera de la tarjeta y se agrega después,
+          // cuando ya se sabe si quien está viendo es el dueño.
+          '<div id="ranura-editar"></div>' +
         '</section>' +
 
         // ── Derecha: formulario de contacto ──
@@ -629,6 +621,7 @@
     ranura.innerHTML = esDuenoDelPerfil
       ? '<a class="btn-editar" href="/kwpremierweb/perfil.html">' + ICONOS_RED.lapiz + 'Editar mi perfil</a>'
       : '';
+    ranura.className = esDuenoDelPerfil ? 'ranura-editar' : '';
   }
 
   function pintarPropiedades() {
@@ -921,7 +914,7 @@
     try {
       var res = await sbMicro
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role, foto_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta')
+        .select('id, nombre, apellido, role, foto_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta, titulo_publico, lema_publico')
         .eq('id', id)
         .single();
       if (res.error || !res.data) throw (res.error || new Error('Perfil no encontrado.'));
@@ -942,7 +935,6 @@
           titulo: nombreCompleto,
           texto: 'Conoce el perfil de ' + nombreCompleto + ' en KW Premier',
           archivo: nombreArchivo(nombreCompleto),
-          vista: 'qr',
         });
       });
 

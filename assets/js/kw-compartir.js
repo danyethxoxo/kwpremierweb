@@ -61,6 +61,11 @@
     // Cuanto más grande se vea en pantalla, más fácil lo lee la cámara
     // de otro celular, que es como se comparte de persona a persona.
     '.kwc-qr{width:100%;max-width:340px;margin:0 auto 14px;display:block}',
+    '.kwc-qr-chico{max-width:190px;margin:0 auto 8px;cursor:pointer;border-radius:14px;',
+    'transition:transform .15s}',
+    '.kwc-qr-chico:hover{transform:scale(1.03)}',
+    '.kwc-qr-chico:focus-visible{outline:2px solid #CC0000;outline-offset:3px}',
+    '.kwc-nota-qr{margin-top:0;margin-bottom:16px}',
     '.kwc-qr svg{width:100%;height:auto;display:block}',
     '.kwc-acciones{display:flex;gap:9px}',
     '.kwc-acciones button{flex:1;border-radius:12px;padding:11px;font-size:13px;',
@@ -161,13 +166,22 @@
     fondo.addEventListener('click', function (e) { if (e.target === fondo) cerrar(); });
     document.addEventListener('keydown', alTeclado);
 
-    // ── Pantalla principal ──
+    // ── Pantalla principal: el QR arriba y las formas de mandarlo abajo ──
     function vistaOpciones() {
+      var codigo = '';
+      if (global.kwQR) {
+        try { codigo = global.kwQR.svg(url); } catch (e) { codigo = ''; }
+      }
+
       caja.innerHTML =
         '<div class="kwc-top">' +
           '<div class="kwc-titulo">Compartir perfil</div>' +
           '<button class="kwc-icono-btn" data-accion="cerrar" aria-label="Cerrar">' + ICONOS.cerrar + '</button>' +
         '</div>' +
+        (codigo ? '<div class="kwc-qr kwc-qr-chico" data-accion="qr" role="button" tabindex="0"' +
+                  ' title="Ver el código QR en grande">' + codigo + '</div>' +
+                  '<div class="kwc-nota kwc-nota-qr">Apunta la cámara para abrir el perfil. Tócalo para verlo en grande o descargarlo.</div>'
+                : '') +
         '<div class="kwc-enlace">' +
           '<input type="text" readonly value="' + escapar(url) + '" aria-label="Enlace del perfil" />' +
           '<button class="kwc-copiar" data-accion="copiar">Copiar</button>' +
@@ -179,13 +193,17 @@
           op1('instagram', 'Instagram', '#C13584') +
           op1('qr', 'Código QR', '#CC0000') +
           (navigator.share ? op1('mas', 'Más', '#3a3a3a') : '') +
-        '</div>' +
-        '<div class="kwc-nota">Quien abra el enlace verá tu perfil, tus datos de contacto y tus redes.</div>';
+        '</div>';
 
       caja.querySelectorAll('[data-accion]').forEach(function (b) {
         b.addEventListener('click', function () { ejecutar(b.getAttribute('data-accion')); });
+        if (b.getAttribute('tabindex') === '0') {
+          b.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ejecutar(b.getAttribute('data-accion')); }
+          });
+        }
       });
-      var input = caja.querySelector('input');
+      var input = caja.querySelector('.kwc-enlace input');
       input.addEventListener('focus', function () { input.select(); });
     }
 
