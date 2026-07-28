@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Perfil</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260726b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
 <style>
   html, body {
     min-height: 100%;
@@ -135,23 +135,23 @@
   }
   .btn-compartir:hover { background: #fff5f5; }
 
-  /* Solo lo ve el dueño del perfil. Va debajo de la tarjeta, alineado a
-     su orilla derecha. */
-  .ranura-editar { display: flex; justify-content: flex-end; margin-top: 14px; }
-  .btn-editar {
-    display: inline-flex; align-items: center; gap: 8px;
-    border-radius: 40px; padding: 10px 18px;
-    font-size: 13px; font-weight: 700; font-family: inherit;
-    text-decoration: none; cursor: pointer;
-    background: #fff; color: var(--text);
-    border: 1.5px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    transition: background 0.15s, border-color 0.15s, transform 0.12s;
-  }
-  .btn-editar:hover { background: #fafafa; border-color: #dcdcda; }
-  .btn-editar:active { transform: translateY(1px) scale(0.97); }
-  .btn-editar svg { width: 15px; height: 15px; }
+  /* Editar vive en el header y solo lo ve el dueño del perfil. Como en
+     kw-base.css el último hijo del header se pega a la derecha, aquí ese
+     papel pasa al botón de Atrás para que los dos queden juntos allá. */
+  header.kw-header .back-btn { margin-left: auto; }
+  header.kw-header > #ranura-editar { margin-left: 0; }
   #ranura-editar:empty { display: none; }
+  .btn-editar {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 34px; padding: 0 14px; border-radius: 17px;
+    font-size: 12.5px; font-weight: 700; font-family: inherit;
+    text-decoration: none; cursor: pointer;
+    background: #f5f5f5; color: #888; border: none;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+  .btn-editar:hover { background: #ffe0e0; color: var(--red); transform: translateY(-1px); }
+  .btn-editar:active { transform: scale(0.94); }
+  .btn-editar svg { width: 15px; height: 15px; }
   .btn-compartir:active { transform: translateY(1px) scale(0.97); }
   .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
   .btn-compartir svg { width: 16px; height: 16px; }
@@ -352,6 +352,11 @@
     .micro-props { margin-top: 44px; }
     .props-lista { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 13px; }
   }
+  @media (max-width: 480px) {
+    /* En pantalla chica solo el lápiz, para que quepa junto a Atrás */
+    .btn-editar span { display: none; }
+    .btn-editar { padding: 0; width: 34px; justify-content: center; }
+  }
   @media (max-width: 640px) {
     main { padding: 84px 18px 44px; }
     .micro-titulo { font-size: 36px; }
@@ -368,6 +373,7 @@
       </svg>
       <span>Atrás</span>
     </a>
+    <span id="ranura-editar"></span>
   </header>
 
   <main>
@@ -506,9 +512,6 @@
                 ICONOS_RED.compartir + 'Compartir perfil</button>' +
             '</div>' +
           '</div>' +
-          // El de editar va fuera de la tarjeta y se agrega después,
-          // cuando ya se sabe si quien está viendo es el dueño.
-          '<div id="ranura-editar"></div>' +
         '</section>' +
 
         // ── Derecha: formulario de contacto ──
@@ -619,9 +622,9 @@
     var ranura = document.getElementById('ranura-editar');
     if (!ranura) return;
     ranura.innerHTML = esDuenoDelPerfil
-      ? '<a class="btn-editar" href="/kwpremierweb/perfil.html">' + ICONOS_RED.lapiz + 'Editar mi perfil</a>'
+      ? '<a class="btn-editar" href="/kwpremierweb/perfil.html">' + ICONOS_RED.lapiz +
+        '<span>Editar perfil</span></a>'
       : '';
-    ranura.className = esDuenoDelPerfil ? 'ranura-editar' : '';
   }
 
   function pintarPropiedades() {
@@ -956,6 +959,6 @@
 </script>
 <script src="/kwpremierweb/assets/js/kw-qr.js?v=20260728"></script>
 <script src="/kwpremierweb/assets/js/kw-compartir.js?v=20260728"></script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260726b" data-menu="publico"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="publico"></script>
 </body>
 </html>
