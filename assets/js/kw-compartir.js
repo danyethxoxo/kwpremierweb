@@ -9,7 +9,8 @@
 //     url: 'https://…/micrositio.html?id=…',
 //     titulo: 'Ana López',
 //     texto: 'Conoce el perfil de Ana López en KW Premier',
-//     archivo: 'ana-lopez'          // nombre del PNG del QR
+//     archivo: 'ana-lopez',         // nombre del PNG del QR
+//     vista: 'qr'                   // opcional: abre directo en el QR
 //   });
 //
 // Requiere que la página incluya antes kw-qr.js.
@@ -290,7 +291,7 @@
       }
     }
 
-    vistaOpciones();
+    if (op.vista === 'qr') vistaQR(); else vistaOpciones();
     document.body.appendChild(fondo);
     requestAnimationFrame(function () { fondo.classList.add('abierto'); });
   }

@@ -70,6 +70,8 @@
   .crop-container { width: 100%; height: 320px; background: #333; border-radius: 10px; overflow: hidden; }
   .crop-container img { display: block; max-width: 100%; }
 
+  .ayuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
   .enlace-publico { display: flex; gap: 8px; margin-bottom: 14px; }
   .enlace-publico input {
     flex: 1; min-width: 0;
@@ -120,7 +122,10 @@
       </div>
       <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" /></div>
       <div class="field"><label>Apellido</label><input type="text" id="perfil-apellido" /></div>
-      <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea></div>
+      <div class="field"><label>Presentación corta</label><textarea id="perfil-descripcion" maxlength="220" placeholder="Una o dos líneas para la tarjeta de tu perfil. Ej: Asesor inmobiliario especializado en Polanco y Condesa."></textarea>
+        <div class="ayuda-campo">Aparece junto a tu foto, arriba de tus redes.</div></div>
+      <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea>
+        <div class="ayuda-campo">El texto largo de tu perfil público. Si lo dejas vacío se usa uno general.</div></div>
       <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar perfil</button>
       <div class="msg" id="datos-msg"></div>
     </div>
@@ -267,7 +272,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+      .select('nombre, apellido, email, role, foto_url, acerca_de, descripcion_corta, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -276,6 +281,7 @@
     document.getElementById('perfil-apellido').value = perfil.apellido || '';
     document.getElementById('perfil-email').value = perfil.email || '';
     document.getElementById('perfil-acerca').value = perfil.acerca_de || '';
+    document.getElementById('perfil-descripcion').value = perfil.descripcion_corta || '';
     document.getElementById('perfil-sitio').value = perfil.sitio_web || '';
     document.getElementById('perfil-whatsapp').value = perfil.whatsapp || '';
     document.getElementById('perfil-instagram').value = perfil.instagram || '';
@@ -418,9 +424,10 @@
       const nombre = document.getElementById('perfil-nombre').value.trim();
       const apellido = document.getElementById('perfil-apellido').value.trim();
       const acerca = document.getElementById('perfil-acerca').value.trim() || null;
+      const descripcion = document.getElementById('perfil-descripcion').value.trim() || null;
       const { error } = await window.kwSupabase
         .from('profiles')
-        .update({ nombre, apellido, acerca_de: acerca })
+        .update({ nombre, apellido, acerca_de: acerca, descripcion_corta: descripcion })
         .eq('id', miUserId);
       if (error) throw error;
       setMsg('datos-msg', 'Datos actualizados.', 'ok');

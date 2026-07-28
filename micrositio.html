@@ -16,98 +16,203 @@
 
   main {
     flex: 1;
-    max-width: 560px;
+    max-width: 1080px;
     width: 100%;
     margin: 0 auto;
-    padding: 90px 24px 50px;
-    text-align: center;
+    padding: 96px 24px 60px;
   }
 
-  .micro-card {
-    background: #fff;
-    border: 1.5px solid var(--border);
-    border-radius: 22px;
-    padding: 40px 28px 32px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  .micro-encabezado { text-align: center; margin-bottom: 46px; }
+  .micro-titulo {
+    font-size: 46px; font-weight: 800; letter-spacing: -1.2px;
+    color: var(--red); line-height: 1.05;
+  }
+  .micro-lema { font-size: 15px; color: var(--muted); margin-top: 10px; }
+
+  /* Tres columnas en escritorio; en móvil se apilan y la tarjeta roja
+     sube al principio, que es la que presenta a la persona. */
+  .micro-cols {
+    display: grid;
+    grid-template-columns: 0.95fr 1.15fr 0.95fr;
+    gap: 34px;
+    align-items: start;
   }
 
-  .micro-avatar {
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    background: #fff3f3;
-    color: var(--red);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px; font-weight: 700;
-    overflow: hidden;
-    margin: 0 auto 18px;
-    border: 3px solid #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  }
-  .micro-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-  .micro-nombre { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
-  .micro-puesto {
-    font-size: 12px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    margin-top: 4px;
+  .micro-col h2 {
+    font-size: 19px; font-weight: 700; letter-spacing: -0.3px;
+    margin-bottom: 16px;
   }
 
-  .micro-acerca {
-    font-size: 14px; color: #444; line-height: 1.65;
-    margin-top: 18px; text-align: center;
+  /* ── Columna 1: formulario de contacto ── */
+  .micro-form .campo { margin-bottom: 12px; }
+  .micro-form label {
+    display: block; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--red); margin-bottom: 5px;
   }
+  .micro-form input, .micro-form textarea {
+    width: 100%; box-sizing: border-box;
+    border: 1.5px solid var(--border); border-radius: 11px;
+    padding: 11px 13px; font-size: 14px; font-family: inherit;
+    color: var(--text); background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .micro-form input:focus, .micro-form textarea:focus {
+    outline: none; border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+  }
+  .micro-form textarea { resize: vertical; min-height: 74px; }
+  /* Trampa para robots: invisible para las personas, así que si viene
+     llena es que no la llenó una persona. */
+  .micro-form .trampa { position: absolute; left: -9999px; opacity: 0; }
 
-  .btn-whatsapp {
-    display: inline-flex; align-items: center; gap: 9px;
-    margin-top: 24px;
-    background: linear-gradient(180deg, #2ee06f 0%, #25D366 100%);
+  .btn-enviar {
+    width: 100%; margin-top: 6px;
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none; border-radius: 40px;
-    padding: 12px 24px; font-size: 14px; font-weight: 700;
+    padding: 13px; font-size: 14px; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.3);
+    transition: filter 0.15s, transform 0.12s;
+  }
+  .btn-enviar:hover { filter: brightness(1.06); }
+  .btn-enviar:active { transform: translateY(1px) scale(0.98); }
+  .btn-enviar:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+  .form-msg { font-size: 13px; margin-top: 10px; display: none; line-height: 1.5; }
+  .form-msg.ok { display: block; color: #1a7f37; }
+  .form-msg.error { display: block; color: var(--red); }
+
+  .micro-gracias {
+    display: none; text-align: center; padding: 26px 16px;
+    border: 1.5px dashed var(--border); border-radius: 14px;
+  }
+  .micro-gracias.visible { display: block; }
+  .micro-gracias .palomita {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: #eaf7ee; color: #1a7f37;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .micro-gracias .palomita svg { width: 22px; height: 22px; }
+  .micro-gracias strong { font-size: 15px; display: block; margin-bottom: 5px; }
+  .micro-gracias span { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+  /* ── Columna 2: acerca de mí + acciones ── */
+  .micro-acerca {
+    font-size: 14.5px; color: #444; line-height: 1.72;
+    white-space: pre-line;
+  }
+
+  .micro-acciones {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px;
+  }
+  .btn-whatsapp, .btn-compartir {
+    display: inline-flex; align-items: center; gap: 9px;
+    border-radius: 40px; padding: 13px 24px;
+    font-size: 14px; font-weight: 700; font-family: inherit;
     text-decoration: none; cursor: pointer;
+    transition: filter 0.15s, background 0.15s, box-shadow 0.12s, transform 0.12s;
+  }
+  .btn-whatsapp {
+    background: linear-gradient(180deg, #2ee06f 0%, #25D366 100%);
+    color: #fff; border: none;
     box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 16px rgba(37,211,102,0.35);
-    transition: filter 0.15s, box-shadow 0.12s, transform 0.12s;
   }
   .btn-whatsapp:hover { filter: brightness(1.05); }
   .btn-whatsapp:active {
     transform: translateY(1px) scale(0.97);
     box-shadow: 0 2px 6px rgba(37,211,102,0.3) inset;
   }
-  .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
-
-  .micro-acciones {
-    display: flex; align-items: center; justify-content: center;
-    gap: 10px; flex-wrap: wrap; margin-top: 24px;
-  }
-  .micro-acciones .btn-whatsapp { margin-top: 0; }
-
   .btn-compartir {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: #f4f4f3; color: var(--text);
-    border: 1px solid rgba(0,0,0,0.04); border-radius: 40px;
-    padding: 12px 22px; font-size: 14px; font-weight: 700;
-    font-family: inherit; cursor: pointer;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 3px 10px rgba(0,0,0,0.1);
-    transition: background 0.15s, box-shadow 0.12s, transform 0.12s;
+    background: #fff; color: var(--text);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .btn-compartir:hover { background: #ececeb; }
-  .btn-compartir:active {
-    transform: translateY(1px) scale(0.97);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
-  }
+  .btn-compartir:hover { background: #fafafa; border-color: #dcdcda; }
+  .btn-compartir:active { transform: translateY(1px) scale(0.97); }
+  .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
   .btn-compartir svg { width: 16px; height: 16px; }
 
-  .micro-redes {
-    display: flex; justify-content: center; gap: 10px;
-    margin-top: 24px; flex-wrap: wrap;
+  /* ── Columna 3: la tarjeta roja con la foto encima ── */
+  .micro-tarjeta { padding-top: 62px; position: relative; }
+  .micro-foto {
+    position: absolute; top: 0; right: 18px;
+    width: 148px; height: 148px; border-radius: 50%;
+    background: #fff3f3; color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; font-weight: 700;
+    overflow: hidden; z-index: 2;
+    border: 5px solid var(--bg);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
   }
-  .micro-redes .persona-red { width: 40px; height: 40px; }
-  .micro-redes .persona-red svg { width: 17px; height: 17px; }
+  .micro-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 60px 0; }
+  .micro-panel {
+    background: var(--red); color: #fff;
+    border-radius: 18px;
+    padding: 96px 26px 30px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(204,0,0,0.22);
+  }
+  .micro-hola {
+    font-size: 21px; font-weight: 800; line-height: 1.25;
+    text-transform: uppercase; letter-spacing: 0.01em;
+  }
+  .micro-puesto {
+    font-size: 11px; opacity: 0.82; margin-top: 7px;
+    text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600;
+  }
+  .micro-desc {
+    font-size: 13.5px; line-height: 1.65;
+    margin-top: 15px; color: rgba(255,255,255,0.92);
+  }
 
+  .micro-correo {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: 18px; padding: 8px 15px;
+    background: rgba(255,255,255,0.14); border-radius: 30px;
+    color: #fff; text-decoration: none;
+    font-size: 12.5px; font-weight: 600;
+    word-break: break-all;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .micro-correo:hover { background: rgba(255,255,255,0.24); }
+  .micro-correo:active { transform: scale(0.96); }
+  .micro-correo svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .micro-redes {
+    display: flex; justify-content: center; gap: 9px;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .micro-redes a {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.16); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .micro-redes a:hover { background: #fff; color: var(--red); transform: translateY(-2px); }
+  .micro-redes svg { width: 16px; height: 16px; fill: currentColor; }
+  .micro-redes .sin-relleno { fill: none; stroke: currentColor; stroke-width: 2; }
+
+  .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 70px 0; }
+
+  @media (max-width: 900px) {
+    .micro-cols { grid-template-columns: 1fr; gap: 40px; max-width: 460px; margin: 0 auto; }
+    /* La tarjeta con la foto va primero: presenta a la persona */
+    .micro-tarjeta { order: 1; }
+    .micro-col-acerca { order: 2; }
+    .micro-col-form { order: 3; }
+    .micro-foto { right: 50%; transform: translateX(50%); }
+  }
   @media (max-width: 640px) {
-    main { padding: 78px 16px 40px; }
-    .micro-card { padding: 32px 20px 26px; border-radius: 18px; }
+    main { padding: 84px 18px 44px; }
+    .micro-titulo { font-size: 36px; }
+    .micro-encabezado { margin-bottom: 34px; }
+    /* En pantalla angosta no caben lado a lado sin partir el texto en
+       dos renglones, así que se apilan a todo lo ancho. */
+    .micro-acciones { flex-direction: column; }
+    .micro-acciones .btn-whatsapp, .micro-acciones .btn-compartir { justify-content: center; }
   }
 </style>
 </head>
@@ -136,6 +241,21 @@
   var sbMicro = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   var ROL_LABELS = { master: 'Liderazgo', admin: 'Liderazgo', staff: 'Liderazgo', asociado: 'Asesor' };
+
+  // Textos por defecto, para quien todavía no llena su perfil. Se busca
+  // que sirvan tal cual, sin sonar a hueco relleno.
+  var LEMA = 'Soy un profesional inmobiliario.';
+  var ACERCA_POR_DEFECTO =
+    'Acompaño a mis clientes en todo el proceso de compra, venta o renta de su ' +
+    'propiedad: desde encontrar la opción correcta hasta la firma. Trabajo con el ' +
+    'respaldo de Keller Williams, la red inmobiliaria más grande del mundo, y con ' +
+    'acceso al inventario completo de KW Premier.\n\n' +
+    'Escríbeme y platicamos sin compromiso lo que estás buscando.';
+  var DESC_POR_DEFECTO =
+    'Asesor inmobiliario en KW Premier. Te ayudo a comprar, vender o rentar con ' +
+    'acompañamiento en cada paso.';
+
+  var id = new URLSearchParams(location.search).get('id');
 
   function escapeHtml(str) {
     var div = document.createElement('div');
@@ -168,6 +288,13 @@
     return 'https://wa.me/' + digitos;
   }
 
+  // "Ana López" -> "ana-lopez", para nombrar el PNG del QR
+  function nombreArchivo(nombre) {
+    return String(nombre).toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'perfil';
+  }
+
   var ICONOS_RED = {
     sitio_web: '<svg class="sin-relleno" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
     whatsapp: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>',
@@ -175,20 +302,9 @@
     facebook: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>',
     tiktok: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>',
     linkedin: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg>',
-  };
-
-  var ICONO_COMPARTIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
-
-  // Nombre del archivo al descargar el QR: "Ana López" -> "ana-lopez"
-  function nombreArchivo(nombre) {
-    return String(nombre).toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'perfil';
-  }
-
-  var CLASES_RED = {
-    sitio_web: 'red-sitio', whatsapp: 'red-whatsapp', instagram: 'red-instagram',
-    facebook: 'red-facebook', tiktok: 'red-tiktok', linkedin: 'red-linkedin',
+    correo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+    compartir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
+    palomita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   };
 
   function redesHtml(p) {
@@ -201,13 +317,148 @@
     ].filter(function (r) { return r[1]; });
     if (!links.length) return '';
     return '<div class="micro-redes">' + links.map(function (r) {
-      return '<a class="persona-red ' + CLASES_RED[r[0]] + '" href="' + escapeHtml(r[1]) + '" target="_blank" rel="noopener" aria-label="' + r[2] + '" title="' + r[2] + '">' + ICONOS_RED[r[0]] + '</a>';
+      return '<a href="' + escapeHtml(r[1]) + '" target="_blank" rel="noopener" aria-label="' +
+             r[2] + '" title="' + r[2] + '">' + ICONOS_RED[r[0]] + '</a>';
     }).join('') + '</div>';
+  }
+
+  function pintarPerfil(p) {
+    var nombreCompleto = ((p.nombre || '') + ' ' + (p.apellido || '')).trim() || 'Sin nombre';
+    var soloNombre = (p.nombre || '').trim() || nombreCompleto;
+    var avatar = p.foto_url
+      ? '<img src="' + escapeHtml(p.foto_url) + '" alt="' + escapeHtml(nombreCompleto) + '" />'
+      : escapeHtml(iniciales(p.nombre, p.apellido));
+    var wa = linkWhatsapp(p.whatsapp);
+    var acerca = (p.acerca_de || '').trim() || ACERCA_POR_DEFECTO;
+    var desc = (p.descripcion_corta || '').trim() || DESC_POR_DEFECTO;
+    var puesto = p.puesto || ROL_LABELS[p.role] || p.role;
+
+    return '' +
+      '<div class="micro-encabezado">' +
+        '<h1 class="micro-titulo">Mi Perfil</h1>' +
+        '<p class="micro-lema">' + LEMA + '</p>' +
+      '</div>' +
+
+      '<div class="micro-cols">' +
+
+        // ── Formulario de contacto ──
+        '<section class="micro-col micro-col-form">' +
+          '<h2>Contáctame</h2>' +
+          '<form class="micro-form" id="form-prospecto" novalidate>' +
+            '<div class="campo"><label for="pr-nombre">Nombre</label>' +
+              '<input type="text" id="pr-nombre" name="nombre" maxlength="120" autocomplete="name" required /></div>' +
+            '<div class="campo"><label for="pr-correo">Correo</label>' +
+              '<input type="email" id="pr-correo" name="correo" maxlength="160" autocomplete="email" /></div>' +
+            '<div class="campo"><label for="pr-telefono">Teléfono</label>' +
+              '<input type="tel" id="pr-telefono" name="telefono" maxlength="40" autocomplete="tel" /></div>' +
+            '<div class="campo"><label for="pr-mensaje">¿Qué estás buscando?</label>' +
+              '<textarea id="pr-mensaje" name="mensaje" maxlength="1000" placeholder="Opcional"></textarea></div>' +
+            '<input type="text" class="trampa" name="apodo" tabindex="-1" autocomplete="off" aria-hidden="true" />' +
+            '<button type="submit" class="btn-enviar" id="btn-enviar">Enviar mis datos</button>' +
+            '<div class="form-msg" id="form-msg"></div>' +
+          '</form>' +
+          '<div class="micro-gracias" id="micro-gracias">' +
+            '<div class="palomita">' + ICONOS_RED.palomita + '</div>' +
+            '<strong>¡Gracias!</strong>' +
+            '<span>' + escapeHtml(soloNombre) + ' recibió tus datos y te va a contactar muy pronto.</span>' +
+          '</div>' +
+        '</section>' +
+
+        // ── Acerca de mí y acciones ──
+        '<section class="micro-col micro-col-acerca">' +
+          '<h2>Acerca de mí</h2>' +
+          '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
+          '<div class="micro-acciones">' +
+            (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' +
+                  ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
+            '<button type="button" class="btn-compartir" id="btn-compartir">' +
+              ICONOS_RED.compartir + 'Compartir perfil</button>' +
+          '</div>' +
+        '</section>' +
+
+        // ── Tarjeta roja ──
+        '<section class="micro-col micro-tarjeta">' +
+          '<div class="micro-foto">' + avatar + '</div>' +
+          '<div class="micro-panel">' +
+            '<div class="micro-hola">Hola, soy<br>' + escapeHtml(nombreCompleto) + '</div>' +
+            '<div class="micro-puesto">' + escapeHtml(puesto) + '</div>' +
+            '<p class="micro-desc">' + escapeHtml(desc) + '</p>' +
+            (p.email ? '<a class="micro-correo" href="mailto:' + escapeHtml(p.email) + '">' +
+                       ICONOS_RED.correo + escapeHtml(p.email) + '</a>' : '') +
+            redesHtml(p) +
+          '</div>' +
+        '</section>' +
+
+      '</div>';
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Formulario: deja el prospecto en la tabla `prospectos`, que le
+  // manda un aviso a la campanita del asesor.
+  // ─────────────────────────────────────────────────────────────
+  function conectarFormulario() {
+    var form = document.getElementById('form-prospecto');
+    var msg = document.getElementById('form-msg');
+    var btn = document.getElementById('btn-enviar');
+
+    function decir(texto, clase) {
+      msg.textContent = texto;
+      msg.className = 'form-msg ' + (clase || '');
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      decir('', '');
+
+      // Si la trampa viene llena, fue un robot: se responde como si todo
+      // hubiera salido bien, pero no se guarda nada.
+      if (form.apodo.value) { mostrarGracias(); return; }
+
+      var nombre = form.nombre.value.trim();
+      var correo = form.correo.value.trim();
+      var telefono = form.telefono.value.trim();
+      var mensaje = form.mensaje.value.trim();
+
+      if (nombre.length < 2) { decir('Escribe tu nombre.', 'error'); form.nombre.focus(); return; }
+      if (!correo && !telefono) {
+        decir('Déjanos un correo o un teléfono para poder contactarte.', 'error');
+        form.correo.focus();
+        return;
+      }
+      if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) {
+        decir('Ese correo no se ve bien, revísalo por favor.', 'error');
+        form.correo.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+      try {
+        var res = await sbMicro.from('prospectos').insert({
+          asesor_id: id,
+          nombre: nombre,
+          correo: correo || null,
+          telefono: telefono || null,
+          mensaje: mensaje || null,
+          origen: 'micrositio',
+        });
+        if (res.error) throw res.error;
+        mostrarGracias();
+      } catch (err) {
+        decir('No se pudieron enviar tus datos. Intenta de nuevo o escríbenos por WhatsApp.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Enviar mis datos';
+      }
+    });
+  }
+
+  function mostrarGracias() {
+    document.getElementById('form-prospecto').style.display = 'none';
+    document.getElementById('micro-gracias').classList.add('visible');
   }
 
   async function cargarMicrositio() {
     var cont = document.getElementById('contenido');
-    var id = new URLSearchParams(location.search).get('id');
     if (!id) {
       cont.innerHTML = '<div class="estado-msg">Perfil no encontrado.</div>';
       return;
@@ -215,7 +466,7 @@
     try {
       var res = await sbMicro
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role, foto_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+        .select('id, nombre, apellido, role, foto_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta')
         .eq('id', id)
         .single();
       if (res.error || !res.data) throw (res.error || new Error('Perfil no encontrado.'));
@@ -224,29 +475,18 @@
       var nombreCompleto = ((p.nombre || '') + ' ' + (p.apellido || '')).trim() || 'Sin nombre';
       document.title = nombreCompleto;
 
-      var avatar = p.foto_url
-        ? '<img src="' + escapeHtml(p.foto_url) + '" alt="' + escapeHtml(nombreCompleto) + '" />'
-        : escapeHtml(iniciales(p.nombre, p.apellido));
-      var wa = linkWhatsapp(p.whatsapp);
+      cont.innerHTML = pintarPerfil(p);
+      conectarFormulario();
 
-      cont.innerHTML = '<div class="micro-card">' +
-        '<div class="micro-avatar">' + avatar + '</div>' +
-        '<h1 class="micro-nombre">' + escapeHtml(nombreCompleto) + '</h1>' +
-        '<div class="micro-puesto">' + escapeHtml(p.puesto || ROL_LABELS[p.role] || p.role) + '</div>' +
-        (p.acerca_de ? '<p class="micro-acerca">' + escapeHtml(p.acerca_de) + '</p>' : '') +
-        '<div class="micro-acciones">' +
-          (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' + ICONOS_RED.whatsapp + 'Escríbeme por WhatsApp</a>' : '') +
-          '<button type="button" class="btn-compartir" id="btn-compartir">' + ICONO_COMPARTIR + 'Compartir</button>' +
-        '</div>' +
-        redesHtml(p) +
-      '</div>';
-
+      // Compartir: abre directo en el código QR, que es lo que se enseña
+      // de frente cuando alguien quiere guardarse el perfil.
       document.getElementById('btn-compartir').addEventListener('click', function () {
         window.kwCompartir({
           url: location.origin + location.pathname + '?id=' + encodeURIComponent(id),
           titulo: nombreCompleto,
           texto: 'Conoce el perfil de ' + nombreCompleto + ' en KW Premier',
           archivo: nombreArchivo(nombreCompleto),
+          vista: 'qr',
         });
       });
 

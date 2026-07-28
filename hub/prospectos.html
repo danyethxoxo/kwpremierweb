@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prospectos</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260726b">
+<style>
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .page { flex: 1; max-width: 720px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
+  .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 24px; }
+
+  .filtros { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filtro {
+    border: 1.5px solid var(--border); background: #fff; border-radius: 30px;
+    padding: 7px 15px; font-size: 12.5px; font-weight: 700; font-family: inherit;
+    color: var(--text); cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+  }
+  .filtro:hover { background: #fafafa; }
+  .filtro:active { transform: scale(0.96); }
+  .filtro.activo { background: var(--red); border-color: var(--red); color: #fff; }
+
+  .prospecto {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 18px 16px; margin-bottom: 12px;
+  }
+  .prospecto.atendido { opacity: 0.62; }
+
+  .pr-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .pr-nombre { font-size: 16px; font-weight: 700; flex: 1; letter-spacing: -0.2px; }
+  .pr-fecha { font-size: 11.5px; color: var(--muted); white-space: nowrap; padding-top: 3px; }
+
+  .pr-datos { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .pr-dato {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13.5px; color: #444; text-decoration: none; width: fit-content;
+  }
+  .pr-dato:hover { color: var(--red); }
+  .pr-dato svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--muted); }
+
+  .pr-mensaje {
+    font-size: 13.5px; color: #444; line-height: 1.6;
+    background: #fafafa; border-radius: 10px; padding: 11px 13px; margin-bottom: 12px;
+    white-space: pre-line;
+  }
+
+  .pr-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pr-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 30px; padding: 8px 15px;
+    font-size: 12.5px; font-weight: 700; font-family: inherit;
+    text-decoration: none; cursor: pointer; border: 1.5px solid var(--border);
+    background: #fff; color: var(--text);
+    transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  }
+  .pr-btn:hover { background: #fafafa; }
+  .pr-btn:active { transform: scale(0.96); }
+  /* Sin `fill` general: el sobre y la palomita se dibujan con trazo y un
+     relleno los convertiría en una mancha. Solo el de WhatsApp es sólido. */
+  .pr-btn svg { width: 14px; height: 14px; }
+  .pr-btn.wa svg { fill: currentColor; }
+  .pr-btn.wa { background: #25D366; border-color: #25D366; color: #fff; }
+  .pr-btn.wa:hover { filter: brightness(1.05); background: #25D366; }
+  .pr-btn.hecho.si { background: #eaf7ee; border-color: #bfe3c9; color: #1a7f37; }
+
+  .vacio {
+    text-align: center; color: var(--muted); font-size: 14px;
+    padding: 56px 20px; border: 1.5px dashed var(--border); border-radius: 14px;
+    line-height: 1.6;
+  }
+  .vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
+
+  @media (max-width: 640px) {
+    .page-title, .page-desc { display: none; }
+    .page { padding-top: 84px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">Prospectos</span>
+    <a href="/kwpremierweb/portal.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Prospectos</h1>
+    <p class="page-desc">Quienes dejaron sus datos desde tu perfil público.</p>
+
+    <div class="filtros">
+      <button type="button" class="filtro activo" data-filtro="pendientes">Por atender</button>
+      <button type="button" class="filtro" data-filtro="todos">Todos</button>
+    </div>
+
+    <div id="lista">
+      <div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>
+    </div>
+  </main>
+
+<script>
+  var ICONOS = {
+    correo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+    tel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+    whatsapp: '<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>',
+    palomita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  };
+
+  var prospectos = [];
+  var filtro = 'pendientes';
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str == null ? '' : str;
+    return d.innerHTML;
+  }
+
+  function linkWhatsapp(tel) {
+    var digitos = String(tel || '').replace(/\D/g, '');
+    if (!digitos) return null;
+    if (digitos.length === 10) digitos = '52' + digitos;
+    return 'https://wa.me/' + digitos;
+  }
+
+  // "hace 3 horas", "ayer", "12 de marzo"
+  function cuando(iso) {
+    var d = new Date(iso), ahora = new Date();
+    var min = Math.round((ahora - d) / 60000);
+    if (min < 1) return 'ahora';
+    if (min < 60) return 'hace ' + min + ' min';
+    var horas = Math.round(min / 60);
+    if (horas < 24) return 'hace ' + horas + (horas === 1 ? ' hora' : ' horas');
+    var dias = Math.round(horas / 24);
+    if (dias === 1) return 'ayer';
+    if (dias < 7) return 'hace ' + dias + ' días';
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+  }
+
+  function tarjeta(p) {
+    var wa = linkWhatsapp(p.telefono);
+    return '<article class="prospecto' + (p.atendido ? ' atendido' : '') + '" data-id="' + p.id + '">' +
+      '<div class="pr-top">' +
+        '<div class="pr-nombre">' + escapeHtml(p.nombre) + '</div>' +
+        '<div class="pr-fecha">' + cuando(p.created_at) + '</div>' +
+      '</div>' +
+      '<div class="pr-datos">' +
+        (p.telefono ? '<a class="pr-dato" href="tel:' + escapeHtml(p.telefono) + '">' + ICONOS.tel + escapeHtml(p.telefono) + '</a>' : '') +
+        (p.correo ? '<a class="pr-dato" href="mailto:' + escapeHtml(p.correo) + '">' + ICONOS.correo + escapeHtml(p.correo) + '</a>' : '') +
+      '</div>' +
+      (p.mensaje ? '<div class="pr-mensaje">' + escapeHtml(p.mensaje) + '</div>' : '') +
+      '<div class="pr-acciones">' +
+        (wa ? '<a class="pr-btn wa" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' + ICONOS.whatsapp + 'WhatsApp</a>' : '') +
+        (p.correo ? '<a class="pr-btn" href="mailto:' + escapeHtml(p.correo) + '">' + ICONOS.correo + 'Correo</a>' : '') +
+        '<button type="button" class="pr-btn hecho' + (p.atendido ? ' si' : '') + '" data-marcar="' + p.id + '">' +
+          ICONOS.palomita + (p.atendido ? 'Atendido' : 'Marcar atendido') + '</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function pintar() {
+    var lista = document.getElementById('lista');
+    var visibles = filtro === 'pendientes'
+      ? prospectos.filter(function (p) { return !p.atendido; })
+      : prospectos;
+
+    if (!visibles.length) {
+      lista.innerHTML = '<div class="vacio">' +
+        (prospectos.length
+          ? '<strong>Todo al día</strong>No tienes prospectos pendientes por atender.'
+          : '<strong>Todavía no hay prospectos</strong>Cuando alguien deje sus datos en tu perfil público, aparecerá aquí y te llegará un aviso.') +
+        '</div>';
+      return;
+    }
+    lista.innerHTML = visibles.map(tarjeta).join('');
+    lista.querySelectorAll('[data-marcar]').forEach(function (b) {
+      b.addEventListener('click', function () { alternarAtendido(b.getAttribute('data-marcar'), b); });
+    });
+  }
+
+  async function alternarAtendido(id, boton) {
+    var p = prospectos.find(function (x) { return x.id === id; });
+    if (!p) return;
+    boton.disabled = true;
+    var nuevo = !p.atendido;
+    var res = await window.kwSupabase.from('prospectos').update({ atendido: nuevo }).eq('id', id);
+    boton.disabled = false;
+    if (res.error) return;
+    p.atendido = nuevo;
+    pintar();
+  }
+
+  async function cargar() {
+    var res = await window.kwSupabase
+      .from('prospectos')
+      .select('id, nombre, correo, telefono, mensaje, atendido, created_at')
+      .order('created_at', { ascending: false });
+    if (res.error) {
+      document.getElementById('lista').innerHTML =
+        '<div class="vacio">No se pudieron cargar tus prospectos.</div>';
+      return;
+    }
+    prospectos = res.data || [];
+    pintar();
+  }
+
+  document.querySelectorAll('.filtro').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.filtro').forEach(function (x) { x.classList.remove('activo'); });
+      b.classList.add('activo');
+      filtro = b.getAttribute('data-filtro');
+      pintar();
+    });
+  });
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
+  else window.addEventListener('kw-auth-ready', cargar, { once: true });
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260726b" data-menu="hub"></script>
+</body>
+</html>
