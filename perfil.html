@@ -70,6 +70,24 @@
   .crop-container { width: 100%; height: 320px; background: #333; border-radius: 10px; overflow: hidden; }
   .crop-container img { display: block; max-width: 100%; }
 
+  .enlace-publico { display: flex; gap: 8px; margin-bottom: 14px; }
+  .enlace-publico input {
+    flex: 1; min-width: 0;
+    border: 1.5px solid var(--border); border-radius: 11px;
+    padding: 10px 12px; font-size: 12.5px; color: var(--muted);
+    background: #fafafa; font-family: inherit;
+  }
+  .btn-ver {
+    display: flex; align-items: center;
+    background: #f4f4f3; border: 1px solid rgba(0,0,0,0.04); border-radius: 11px;
+    padding: 0 16px; font-size: 13px; font-weight: 700; color: var(--text);
+    text-decoration: none; flex-shrink: 0;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn-ver:hover { background: #ececeb; }
+  .btn-ver:active { transform: translateY(1px) scale(0.97); }
+
   @media (max-width: 640px) {
     .page-title, .page-desc { display: none; }
   }
@@ -107,7 +125,18 @@
       <div class="msg" id="datos-msg"></div>
     </div>
 
-    <!-- Módulo 2: Enlaces (sitio web y redes, con su ícono en cada campo) -->
+    <!-- Módulo 2: Tu enlace público, para compartirlo o imprimir su QR -->
+    <div class="card">
+      <h2>Mi perfil público</h2>
+      <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px;">Este es tu enlace personal. Compártelo con tus clientes o imprime el código QR en tu tarjeta.</p>
+      <div class="enlace-publico">
+        <input type="text" id="mi-enlace" readonly aria-label="Mi enlace público" />
+        <a id="ver-perfil" href="#" target="_blank" rel="noopener" class="btn-ver">Ver</a>
+      </div>
+      <button type="button" class="btn-guardar" id="btn-compartir-perfil" onclick="compartirMiPerfil()">Compartir mi perfil</button>
+    </div>
+
+    <!-- Módulo 3: Enlaces (sitio web y redes, con su ícono en cada campo) -->
     <div class="card">
       <h2>Enlaces</h2>
       <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 16px;">Aparecen en tu tarjeta y en tu perfil público. Todo es opcional — lo que dejes vacío no se muestra.</p>
@@ -197,6 +226,32 @@
 <script>
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Liderazgo', asociado: 'Asociado' };
   let miUserId = null;
+  let miNombreCompleto = '';
+
+  // El sitio se publica en /kwpremierweb/ (igual que en auth-guard.js)
+  const BASE_PATH = '/kwpremierweb';
+
+  function miEnlacePublico() {
+    return location.origin + BASE_PATH + '/micrositio.html?id=' + encodeURIComponent(miUserId);
+  }
+
+  // "Ana López" -> "ana-lopez", para nombrar el PNG del QR
+  function comoArchivo(nombre) {
+    return String(nombre).toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'perfil';
+  }
+
+  function compartirMiPerfil() {
+    if (!miUserId) return;
+    const nombre = miNombreCompleto || 'Mi perfil';
+    window.kwCompartir({
+      url: miEnlacePublico(),
+      titulo: nombre,
+      texto: 'Conoce el perfil de ' + nombre + ' en KW Premier',
+      archivo: comoArchivo(nombre),
+    });
+  }
 
   function setMsg(id, text, kind) {
     const el = document.getElementById(id);
@@ -231,6 +286,11 @@
     badge.textContent = ROLE_LABELS[perfil.role] || perfil.role;
     badge.classList.add('rol-' + perfil.role);
     mostrarFotoPreview(perfil.foto_url, perfil.nombre, perfil.apellido);
+
+    miNombreCompleto = ((perfil.nombre || '') + ' ' + (perfil.apellido || '')).trim();
+    const enlace = miEnlacePublico();
+    document.getElementById('mi-enlace').value = enlace;
+    document.getElementById('ver-perfil').href = enlace;
   }
 
   function mostrarFotoPreview(fotoUrl, nombre, apellido) {
@@ -432,6 +492,8 @@
     window.addEventListener('kw-auth-ready', cargarPerfil, { once: true });
   }
 </script>
+<script src="/kwpremierweb/assets/js/kw-qr.js?v=20260728"></script>
+<script src="/kwpremierweb/assets/js/kw-compartir.js?v=20260728"></script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260726b" data-menu="hub"></script>
 </body>
 </html>
