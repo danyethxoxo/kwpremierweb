@@ -16,193 +16,115 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
+<!-- Va en el <head> para que window.kwUI ya exista cuando el script de
+     la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <style>
-  :root {
-    --red: #CC0000;
-    --text: #1a1a1a;
-    --muted: #888;
-    --bg: #EFEFEF;
-    --card: #ffffff;
-    --border: rgba(0,0,0,0.07);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    min-height: 100%;
-    font-family: Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
+  /* Lo de esta pantalla nada más. Colores, tipografía, tarjetas,
+     pestañas, filtros, tablas, modales y campos vienen de kw-base.css:
+     esta hoja solo agrega lo que es propio del Panel. */
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  .page { flex: 1; max-width: 980px; margin: 0 auto; padding: 94px 24px 60px; }
+  /* Barra de arriba: el acceso al creador de formatos se va a la
+     derecha, separado de las pestañas, para que no se confunda con
+     ellas — no es una sección más del Panel, es otra pantalla. */
+  .barra-superior {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap;
+  }
+  /* Las pestañas ocupan lo que miden, no todo el renglón: estiradas
+     dejaban un plano gris vacío a la derecha del último botón.
+     El min-width:0 es lo que las deja encogerse en celular; sin él no
+     bajan de su ancho natural y empujan la página de lado. */
+  .barra-superior .kw-tabs { margin-bottom: 0; flex: 0 1 auto; min-width: 0; }
 
-  .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 24px; }
+  /* Todos los paneles arrancan del mismo alto, así cambiar de pestaña
+     no mueve la página de golpe. */
+  #panel-paneles { --panel-min: 620px; }
 
-  .tabs { display: flex; gap: 8px; margin-bottom: 22px; }
-  .tab-btn {
-    padding: 9px 18px; border-radius: 30px; border: 1.5px solid var(--border);
-    background: #fff; font-size: 13px; font-weight: 700; color: var(--muted);
-    cursor: pointer; font-family: Arial, sans-serif;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  .btn-formatos {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: var(--control-h); padding: 0 var(--sp-4);
+    border-radius: var(--r-pastilla); border: 1.5px solid var(--border);
+    background: #fff; color: var(--text); text-decoration: none;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+    box-shadow: var(--sombra-1);
+    transition: border-color var(--t-rapido), color var(--t-rapido), transform 0.12s, box-shadow var(--t-rapido);
   }
-  .tab-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-formatos:hover {
+    border-color: var(--red); color: var(--red);
+    box-shadow: var(--sombra-2); transform: translateY(-1px);
+  }
+  .btn-formatos:active { transform: translateY(0) scale(0.97); }
+  .btn-formatos svg { width: 15px; height: 15px; }
 
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 22px 20px;
-    margin-bottom: 24px;
+  /* Alta de usuario: los tres controles alineados por abajo y a la
+     misma altura, para que el botón no quede montado ni hundido. */
+  .invite-row {
+    display: grid; gap: var(--sp-2);
+    grid-template-columns: 1fr 190px auto;
+    align-items: end;
   }
-  .card h2 { font-size: 15px; margin-bottom: 14px; }
-
-  .card-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 16px; }
-  .card-head-icono {
-    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-    background: #fff0f0; color: var(--red);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .card-head-icono svg { width: 17px; height: 17px; }
-  .card-head h2 { margin-bottom: 2px; }
-  .card-sub { font-size: 12px; color: var(--muted); }
-
-  .invite-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-  .field { flex: 1; min-width: 180px; margin-bottom: 12px; }
-  .field label {
-    display: block; font-size: 11.5px; font-weight: 700;
-    letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--red); margin-bottom: 5px;
-  }
-  .field input, .field select {
-    width: 100%; padding: 9px 12px;
-    border: 1.5px solid var(--border); border-radius: 10px;
-    font-size: 13.5px; font-family: Arial, sans-serif;
-    color: var(--text); background: #fff; outline: none;
-  }
-  .field input:focus, .field select:focus {
-    border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
-  }
-  .field input:disabled { background: #f4f4f4; color: var(--muted); }
+  .invite-row .field { margin-bottom: 0; }
+  .invite-row .field label { margin-bottom: 5px; }
+  .invite-row .field input { height: var(--control-h); padding: 0 var(--sp-3); }
   .btn-invite {
+    height: var(--control-h); padding: 0 var(--sp-4);
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; border: none; border-radius: 10px;
-    padding: 10px 18px; font-size: 13.5px; font-weight: 700;
+    color: #fff; border: none; border-radius: var(--r-campo);
+    font-family: inherit; font-size: 13.5px; font-weight: 700;
     cursor: pointer; white-space: nowrap;
-    box-shadow: 0 4px 18px rgba(204,0,0,0.3);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.3);
+    transition: filter var(--t-rapido), transform 0.12s;
   }
   .btn-invite:hover { filter: brightness(1.08); }
-  .btn-invite:disabled { opacity: 0.6; cursor: default; }
+  .btn-invite:active { transform: translateY(1px) scale(0.98); }
+  .btn-invite:disabled { opacity: 0.6; cursor: default; transform: none; }
+  @media (max-width: 700px) {
+    .invite-row { grid-template-columns: 1fr; }
+  }
 
-  .msg {
-    font-size: 13px; padding: 10px 12px; border-radius: 10px;
-    margin-top: 12px; display: none;
-  }
-  .msg.error { display: block; background: #fdeaea; color: #a30000; }
-  .msg.ok { display: block; background: #eaf7ea; color: #1a7a1a; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 6px; border-bottom: 1px solid var(--border); }
-  td { padding: 10px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .rol-badge {
-    display: inline-block; padding: 2px 9px; border-radius: 20px;
-    font-size: 11px; font-weight: 700; text-transform: capitalize;
-  }
-  .rol-master { background: #f5e0ff; color: #7a1fa2; }
-  .rol-admin { background: #f5f0ff; color: #6741d9; }
-  .rol-staff { background: #e7f5ff; color: #1971c2; }
-  .rol-asociado { background: #f1f3f5; color: #495057; }
-
-  .btn-editar-usuario {
-    padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border);
-    background: #fff; font-size: 11.5px; font-weight: 700; color: var(--text);
-    cursor: pointer; font-family: Arial, sans-serif;
-  }
-  .btn-editar-usuario:hover { border-color: var(--red); color: var(--red); }
-  .btn-editar-usuario { text-decoration: none; display: inline-block; }
-  .doc-acciones { display: flex; gap: 6px; flex-wrap: wrap; white-space: nowrap; }
-
-  .doc-filtros {
-    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
-  }
-  .doc-filtros input, .doc-filtros select {
-    padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px;
-    font-size: 13px; font-family: Arial, sans-serif; color: var(--text);
-    background: #fff; outline: none;
-  }
-  .doc-filtros input:focus, .doc-filtros select:focus {
-    border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
-  }
-  #doc-buscador { flex: 2; min-width: 200px; }
-  .doc-filtros select, .doc-filtros input[type="date"] { flex: 1; min-width: 130px; }
-
+  /* ── Lista de usuarios ── */
   .usuario-item {
-    display: flex; align-items: center; gap: 13px;
-    padding: 13px 4px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-1);
+    border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
+    transition: background var(--t-rapido);
   }
   .usuario-item:last-child { border-bottom: none; }
+  .usuario-item:hover { background: #fafafa; }
   .usuario-avatar {
-    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
     background: #fff3f3; color: var(--red);
-    font-size: 15px; font-weight: 700;
+    font-size: 14px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
   }
   .usuario-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .usuario-info { flex: 1; min-width: 170px; }
-  .usuario-nombre { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .usuario-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-  .usuario-acciones { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-  .pill-visibilidad {
-    font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
-    background: #eaf7ea; color: #1a7a1a;
+  .usuario-nombre {
+    font-size: 13.5px; font-weight: 700;
+    display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
   }
-  .pill-visibilidad.oculto { background: #fdeaea; color: #a30000; }
+  .usuario-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .usuario-acciones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-  .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .denegado { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--muted); }
 
-  /* ── Móvil: las tablas se desplazan de lado dentro de su tarjeta en
-     vez de desbordar la pantalla, y los espacios se compactan. ── */
-  #usuarios-cont, #documentos-cont, #creados-cont { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  #usuarios-cont .kw-loader, #documentos-cont .kw-loader, #creados-cont .kw-loader { min-height: 0; padding: 20px 0; }
-  @media (max-width: 700px) {
-    .page { padding: 82px 14px 40px; }
-    .card { padding: 16px 14px; }
-    #documentos-cont table, #creados-cont table { min-width: 760px; }
-    .tabs { flex-wrap: wrap; }
-    .doc-filtros { flex-direction: column; }
-    .doc-filtros input, .doc-filtros select { width: 100%; }
-  }
-  @media (max-width: 640px) {
-    .page-title, .page-desc { display: none; }
-  }
-
-  /* ── Modal: editar usuario ── */
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,0.45);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-  }
-  .modal-box {
-    background: #fff; border-radius: 14px; padding: 24px;
-    width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
-  }
-  .modal-box h3 { font-size: 17px; margin-bottom: 16px; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
-  .btn-modal-cancelar, .btn-modal-confirmar {
-    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
-    font-family: Arial, sans-serif; cursor: pointer; border: none;
-  }
-  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
-  .btn-modal-confirmar { background: var(--red); color: #fff; }
+  /* ── Modal: editar usuario ──
+     Solo lo que cambia respecto al modal de kw-base.css: este es más
+     ancho porque lleva formulario, y trae el botón de eliminar. */
+  #modal-editar-usuario .modal-box { max-width: 430px; max-height: 90vh; overflow-y: auto; }
+  #modal-editar-usuario h3 { margin-bottom: var(--sp-4); }
   .btn-eliminar-usuario {
-    width: 100%; margin-top: 14px; padding: 10px; border-radius: 30px;
-    font-size: 12.5px; font-weight: 700; font-family: Arial, sans-serif;
+    width: 100%; margin-top: var(--sp-3); padding: 10px;
+    border-radius: var(--r-pastilla);
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
     background: none; border: 1.5px solid #a30000; color: #a30000; cursor: pointer;
+    transition: background var(--t-rapido);
   }
   .btn-eliminar-usuario:hover { background: #fdeaea; }
 </style>
@@ -219,35 +141,39 @@
     </a>
   </header>
 
-  <main class="page">
+  <main class="kw-page">
     <div id="contenido-panel" style="display:none;">
-      <h1 class="page-title" id="panel-title">Panel</h1>
-      <p class="page-desc" id="panel-desc"></p>
-
-      <a href="plantillas.html" class="btn-editar-usuario" id="acceso-plantillas" style="display:inline-flex;align-items:center;gap:7px;padding:10px 16px;margin-bottom:20px;font-size:13px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Creador de formatos
-      </a>
-
-      <div class="tabs" id="panel-tabs">
-        <button type="button" class="tab-btn active" data-tab="usuarios" onclick="cambiarTabPanel('usuarios')">Usuarios</button>
-        <button type="button" class="tab-btn" data-tab="documentos" onclick="cambiarTabPanel('documentos')">Documentos</button>
-        <button type="button" class="tab-btn" data-tab="creados" onclick="cambiarTabPanel('creados')">Documentos creados</button>
+      <div class="kw-page-encabezado">
+        <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
+        <p class="kw-page-desc" id="panel-desc"></p>
       </div>
 
-      <div id="tab-usuarios">
-        <div class="card">
-          <div class="card-head">
-            <div class="card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
-            <div><h2>Agregar nuevo usuario</h2><div class="card-sub">Se le enviará un correo para completar su registro.</div></div>
+      <div class="barra-superior">
+        <div class="kw-tabs" data-kw-tabs="panel-paneles" id="panel-tabs">
+          <button type="button" class="kw-tab activo" data-tab="usuarios">Usuarios</button>
+          <button type="button" class="kw-tab" data-tab="documentos">Documentos</button>
+          <button type="button" class="kw-tab" data-tab="creados">Documentos creados</button>
+        </div>
+        <a href="plantillas.html" class="btn-formatos" id="acceso-plantillas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Creador de formatos
+        </a>
+      </div>
+
+      <div class="kw-tabpanels" id="panel-paneles">
+      <section class="kw-tabpanel activo" data-panel="usuarios">
+        <div class="kw-card">
+          <div class="kw-card-head">
+            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+            <div><h2>Agregar nuevo usuario</h2><div class="kw-card-sub">Se le enviará un correo para completar su registro.</div></div>
           </div>
           <form id="invite-form" class="invite-row">
             <div class="field">
-              <label>Correo</label>
+              <label for="invite-email">Correo</label>
               <input type="email" id="invite-email" required />
             </div>
-            <div class="field" style="max-width:160px;">
-              <label>Rol</label>
+            <div class="field">
+              <label for="invite-rol">Rol</label>
               <select id="invite-rol">
                 <option value="admin">Admin</option>
                 <option value="staff">Liderazgo</option>
@@ -259,57 +185,100 @@
           <div class="msg" id="invite-msg"></div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <div class="card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <div><h2>Usuarios</h2><div class="card-sub">Todo el equipo registrado en la plataforma.</div></div>
+        <div class="kw-card">
+          <div class="kw-card-head">
+            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div><h2>Usuarios</h2><div class="kw-card-sub">Todo el equipo registrado en la plataforma.</div></div>
           </div>
-          <div id="usuarios-cont"><div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div></div>
+          <div id="usuarios-cont"></div>
         </div>
-      </div>
+      </section>
 
-      <div id="tab-documentos" style="display:none;">
-        <div class="card">
-          <div class="card-head">
-            <div class="card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-            <div><h2>Documentos de todo el equipo</h2><div class="card-sub">Consulta y filtra lo que ha generado el equipo.</div></div>
+      <section class="kw-tabpanel" data-panel="documentos">
+        <div class="kw-card">
+          <div class="kw-card-head">
+            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div><h2>Documentos de todo el equipo</h2><div class="kw-card-sub">Consulta y filtra lo que ha generado el equipo.</div></div>
           </div>
-          <div class="doc-filtros">
-            <input type="text" id="doc-buscador" placeholder="Buscar por nombre o folio..." oninput="filtrarDocumentosPanel()" />
-            <select id="doc-filtro-asesor" onchange="filtrarDocumentosPanel()"><option value="">Todos los asesores</option></select>
-            <select id="doc-filtro-tipo" onchange="filtrarDocumentosPanel()"><option value="">Todos los tipos</option></select>
-            <select id="doc-filtro-estatus" onchange="filtrarDocumentosPanel()">
-              <option value="">Todos los estatus</option>
-              <option value="borrador">Borrador</option>
-              <option value="finalizado">Finalizado</option>
-            </select>
-            <input type="date" id="doc-filtro-desde" onchange="filtrarDocumentosPanel()" title="Desde" />
-            <input type="date" id="doc-filtro-hasta" onchange="filtrarDocumentosPanel()" title="Hasta" />
+          <div class="kw-filtros">
+            <div class="kw-campo-filtro ancho">
+              <label for="doc-buscador">Buscar</label>
+              <div class="kw-buscador">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" class="kw-input" id="doc-buscador" placeholder="Nombre o folio…" oninput="filtrarDocumentosPanel()" />
+              </div>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="doc-filtro-asesor">Asesor</label>
+              <select id="doc-filtro-asesor" onchange="filtrarDocumentosPanel()"><option value="">Todos los asesores</option></select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="doc-filtro-tipo">Tipo</label>
+              <select id="doc-filtro-tipo" onchange="filtrarDocumentosPanel()"><option value="">Todos los tipos</option></select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="doc-filtro-estatus">Estatus</label>
+              <select id="doc-filtro-estatus" onchange="filtrarDocumentosPanel()">
+                <option value="">Todos los estatus</option>
+                <option value="borrador">Borrador</option>
+                <option value="finalizado">Finalizado</option>
+              </select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="doc-filtro-desde">Desde</label>
+              <input type="date" class="kw-input" id="doc-filtro-desde" onchange="filtrarDocumentosPanel()" />
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="doc-filtro-hasta">Hasta</label>
+              <input type="date" class="kw-input" id="doc-filtro-hasta" onchange="filtrarDocumentosPanel()" />
+            </div>
           </div>
-          <div id="documentos-cont"><div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div></div>
+          <div id="documentos-cont"></div>
         </div>
-      </div>
+      </section>
 
-      <div id="tab-creados" style="display:none;">
-        <div class="card">
-          <div class="card-head">
-            <div class="card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-            <div><h2>Documentos hechos con el creador de formatos</h2><div class="card-sub">Lo generado con los formatos nuevos, no los de siempre.</div></div>
+      <section class="kw-tabpanel" data-panel="creados">
+        <div class="kw-card">
+          <div class="kw-card-head">
+            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div><h2>Documentos hechos con el creador de formatos</h2><div class="kw-card-sub">Lo generado con los formatos nuevos, no los de siempre.</div></div>
           </div>
-          <div class="doc-filtros">
-            <input type="text" id="creado-buscador" placeholder="Buscar por título o folio..." oninput="filtrarDocumentosCreadosPanel()" />
-            <select id="creado-filtro-asesor" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los asesores</option></select>
-            <select id="creado-filtro-plantilla" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los formatos</option></select>
-            <select id="creado-filtro-estatus" onchange="filtrarDocumentosCreadosPanel()">
-              <option value="">Todos los estatus</option>
-              <option value="borrador">Borrador</option>
-              <option value="finalizado">Finalizado</option>
-            </select>
-            <input type="date" id="creado-filtro-desde" onchange="filtrarDocumentosCreadosPanel()" title="Desde" />
-            <input type="date" id="creado-filtro-hasta" onchange="filtrarDocumentosCreadosPanel()" title="Hasta" />
+          <div class="kw-filtros">
+            <div class="kw-campo-filtro ancho">
+              <label for="creado-buscador">Buscar</label>
+              <div class="kw-buscador">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" class="kw-input" id="creado-buscador" placeholder="Título o folio…" oninput="filtrarDocumentosCreadosPanel()" />
+              </div>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="creado-filtro-asesor">Asesor</label>
+              <select id="creado-filtro-asesor" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los asesores</option></select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="creado-filtro-plantilla">Formato</label>
+              <select id="creado-filtro-plantilla" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los formatos</option></select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="creado-filtro-estatus">Estatus</label>
+              <select id="creado-filtro-estatus" onchange="filtrarDocumentosCreadosPanel()">
+                <option value="">Todos los estatus</option>
+                <option value="borrador">Borrador</option>
+                <option value="finalizado">Finalizado</option>
+              </select>
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="creado-filtro-desde">Desde</label>
+              <input type="date" class="kw-input" id="creado-filtro-desde" onchange="filtrarDocumentosCreadosPanel()" />
+            </div>
+            <div class="kw-campo-filtro">
+              <label for="creado-filtro-hasta">Hasta</label>
+              <input type="date" class="kw-input" id="creado-filtro-hasta" onchange="filtrarDocumentosCreadosPanel()" />
+            </div>
           </div>
-          <div id="creados-cont"><div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div></div>
+          <div id="creados-cont"></div>
         </div>
+      </section>
       </div>
     </div>
 
@@ -425,10 +394,24 @@
   }
 
   function cambiarTabPanel(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    document.getElementById('tab-usuarios').style.display = tab === 'usuarios' ? '' : 'none';
-    document.getElementById('tab-documentos').style.display = tab === 'documentos' ? '' : 'none';
-    document.getElementById('tab-creados').style.display = tab === 'creados' ? '' : 'none';
+    window.kwUI.activarTab(tab, document.getElementById('panel-tabs'));
+  }
+
+  // Filas fantasma mientras llega la respuesta: ocupan el mismo lugar
+  // que las de verdad, así que al llegar los datos nada se recorre.
+  function esqueleto(filas, conAvatar) {
+    let html = '';
+    for (let i = 0; i < filas; i++) {
+      html += '<div class="kw-skel-fila">' +
+        (conAvatar ? '<div class="kw-skel kw-skel-circle" style="width:42px;height:42px;"></div>' : '') +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="kw-skel kw-skel-line kw-skel-w40" style="margin-bottom:7px;"></div>' +
+          '<div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w60"></div>' +
+        '</div>' +
+        '<div class="kw-skel kw-skel-line kw-skel-w30" style="max-width:120px;"></div>' +
+      '</div>';
+    }
+    return html;
   }
 
   async function llamarFuncion(url, payload) {
@@ -459,6 +442,7 @@
   // ── Usuarios ──
   async function cargarUsuarios() {
     const cont = document.getElementById('usuarios-cont');
+    if (!cont.innerHTML.trim()) cont.innerHTML = esqueleto(5, true);
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
@@ -468,7 +452,8 @@
       usuariosCache = data || [];
 
       if (usuariosCache.length === 0) {
-        cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No hay usuarios todavía.</p>';
+        cont.innerHTML = '<div class="kw-vacio"><strong>Todavía no hay usuarios</strong>' +
+          'Agrega al primero con el formulario de arriba.</div>';
         return;
       }
 
@@ -481,29 +466,29 @@
           ? `<img src="${escapeHtml(u.foto_url)}" alt="" />`
           : escapeHtml(((u.nombre || '').trim().charAt(0) + (u.apellido || '').trim().charAt(0)).toUpperCase() || '?');
         const sub = [u.email, u.puesto, 'Alta: ' + fmtFechaCorta(u.created_at)].filter(Boolean).map(escapeHtml).join(' · ');
-        html += `<div class="usuario-item">
+        html += `<div class="usuario-item kw-aparece-fila" style="animation-delay:${Math.min(i * 40, 320)}ms">
           <div class="usuario-avatar">${avatar}</div>
           <div class="usuario-info">
             <div class="usuario-nombre">${escapeHtml(nombreCompleto)} <span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></div>
             <div class="usuario-sub">${sub}</div>
           </div>
           <div class="usuario-acciones">
-            <span class="pill-visibilidad${oculto ? ' oculto' : ''}">${oculto ? 'Oculto' : 'Visible'}</span>
-            ${puedoEditar ? `<button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}
-            ${puedoEditar ? `<button type="button" class="btn-editar-usuario btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>` : ''}
+            <span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span>
+            ${puedoEditar ? `<button type="button" class="kw-btn-mini btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}
+            ${puedoEditar ? `<button type="button" class="kw-btn-mini btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>` : ''}
           </div>
         </div>`;
       });
       cont.innerHTML = html;
 
-      Array.from(cont.querySelectorAll('.btn-editar-usuario:not(.btn-toggle-oculto)')).forEach(btn => {
+      Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
       });
       Array.from(cont.querySelectorAll('.btn-toggle-oculto')).forEach(btn => {
         btn.addEventListener('click', () => toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)], btn));
       });
     } catch (err) {
-      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los usuarios.')}</p>`;
+      cont.innerHTML = `<div class="kw-vacio"><strong>No se pudieron cargar los usuarios</strong>${escapeHtml(err.message || '')}</div>`;
     }
   }
 
@@ -631,7 +616,7 @@
   // ── Documentos de todo el equipo ──
   async function cargarDocumentosPanel() {
     const cont = document.getElementById('documentos-cont');
-    cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
+    cont.innerHTML = esqueleto(6, false);
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_con_asesor')
@@ -656,7 +641,7 @@
 
       renderDocumentosPanel();
     } catch (err) {
-      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los documentos.')}</p>`;
+      cont.innerHTML = `<div class="kw-vacio"><strong>No se pudieron cargar los documentos</strong>${escapeHtml(err.message || '')}</div>`;
     }
   }
 
@@ -688,31 +673,34 @@
     });
 
     if (!filtrados.length) {
-      cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No se encontraron documentos con esos filtros.</p>';
+      cont.innerHTML = '<div class="kw-vacio"><strong>Nada con esos filtros</strong>' +
+        'Prueba quitando alguno para ver más resultados.</div>';
       return;
     }
 
-    let html = '<table><thead><tr><th>Documento</th><th>Asesor</th><th>Tipo</th><th>Folio</th><th>Estatus</th><th>Actualizado</th><th></th></tr></thead><tbody>';
-    filtrados.forEach(d => {
+    let html = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr>' +
+      '<th>Documento</th><th>Asesor</th><th>Tipo</th><th>Folio</th><th>Estatus</th><th>Actualizado</th>' +
+      '<th class="col-acciones"></th></tr></thead><tbody>';
+    filtrados.forEach((d, i) => {
       const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
       const urlBase = TIPO_URLS[d.tipo_documento];
       const acciones = (d.estado === 'finalizado' && urlBase)
-        ? `<div class="doc-acciones">
-            <a class="btn-editar-usuario" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
-            <button type="button" class="btn-editar-usuario" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
+        ? `<div class="kw-acciones">
+            <a class="kw-btn-mini" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
+            <button type="button" class="kw-btn-mini" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
           </div>`
         : '';
-      html += `<tr>
-        <td>${escapeHtml(d.nombre_archivo || 'Sin nombre')}</td>
+      html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
+        <td class="kw-tabla-principal">${escapeHtml(d.nombre_archivo || 'Sin nombre')}</td>
         <td>${escapeHtml(nombreAsesor)}</td>
         <td>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</td>
         <td>${escapeHtml(d.folio || '—')}</td>
-        <td><span class="rol-badge ${d.estado === 'finalizado' ? 'rol-admin' : 'rol-asociado'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
+        <td><span class="kw-pill ${d.estado === 'finalizado' ? 'kw-pill-ok' : 'kw-pill-espera'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
         <td>${fmtFechaCorta(d.updated_at)}</td>
-        <td>${acciones}</td>
+        <td class="col-acciones">${acciones}</td>
       </tr>`;
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     cont.innerHTML = html;
   }
 
@@ -721,7 +709,7 @@
 
   async function cargarDocumentosCreadosPanel() {
     const cont = document.getElementById('creados-cont');
-    cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
+    cont.innerHTML = esqueleto(6, false);
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_plantilla_con_asesor')
@@ -747,7 +735,7 @@
 
       renderDocumentosCreadosPanel();
     } catch (err) {
-      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los documentos.')}</p>`;
+      cont.innerHTML = `<div class="kw-vacio"><strong>No se pudieron cargar los documentos</strong>${escapeHtml(err.message || '')}</div>`;
     }
   }
 
@@ -779,27 +767,30 @@
     });
 
     if (!filtrados.length) {
-      cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No se encontraron documentos con esos filtros.</p>';
+      cont.innerHTML = '<div class="kw-vacio"><strong>Nada con esos filtros</strong>' +
+        'Aquí van los documentos que el equipo llene con los formatos del creador.</div>';
       return;
     }
 
-    let html = '<table><thead><tr><th>Documento</th><th>Asesor</th><th>Formato</th><th>Folio</th><th>Estatus</th><th>Actualizado</th><th></th></tr></thead><tbody>';
-    filtrados.forEach(d => {
+    let html = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr>' +
+      '<th>Documento</th><th>Asesor</th><th>Formato</th><th>Folio</th><th>Estatus</th><th>Actualizado</th>' +
+      '<th class="col-acciones"></th></tr></thead><tbody>';
+    filtrados.forEach((d, i) => {
       const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
       const acciones = d.plantilla_id
-        ? `<a class="btn-editar-usuario" href="../documentos/plantilla.html?id=${d.plantilla_id}&doc=${d.id}" target="_blank" rel="noopener">Ver</a>`
+        ? `<a class="kw-btn-mini" href="../documentos/plantilla.html?id=${d.plantilla_id}&doc=${d.id}" target="_blank" rel="noopener">Ver</a>`
         : '';
-      html += `<tr>
-        <td>${escapeHtml(d.titulo || 'Sin nombre')}</td>
+      html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
+        <td class="kw-tabla-principal">${escapeHtml(d.titulo || 'Sin nombre')}</td>
         <td>${escapeHtml(nombreAsesor)}</td>
         <td>${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</td>
         <td>${escapeHtml(d.folio || '—')}</td>
-        <td><span class="rol-badge ${d.estado === 'finalizado' ? 'rol-admin' : 'rol-asociado'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
+        <td><span class="kw-pill ${d.estado === 'finalizado' ? 'kw-pill-ok' : 'kw-pill-espera'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
         <td>${fmtFechaCorta(d.updated_at)}</td>
-        <td>${acciones}</td>
+        <td class="col-acciones">${acciones}</td>
       </tr>`;
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     cont.innerHTML = html;
   }
 
@@ -882,9 +873,13 @@
       document.getElementById('panel-title-header').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
 
       if (miRol === 'staff') {
+        // Liderazgo no administra usuarios: se le quita esa pestaña en
+        // vez de dejársela puesta y que le rebote.
         document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
-        document.querySelector('#panel-tabs [data-tab="usuarios"]').style.display = 'none';
-        document.getElementById('tab-usuarios').style.display = 'none';
+        const btnUsuarios = document.querySelector('#panel-tabs [data-tab="usuarios"]');
+        if (btnUsuarios) btnUsuarios.remove();
+        const panelUsuarios = document.querySelector('.kw-tabpanel[data-panel="usuarios"]');
+        if (panelUsuarios) panelUsuarios.remove();
         cambiarTabPanel('documentos');
       } else {
         document.getElementById('panel-desc').textContent = 'Agrega usuarios, consulta roles y revisa los documentos del equipo.';
