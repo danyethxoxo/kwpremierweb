@@ -165,12 +165,12 @@
 
   /* ── Móvil: las tablas se desplazan de lado dentro de su tarjeta en
      vez de desbordar la pantalla, y los espacios se compactan. ── */
-  #usuarios-cont, #documentos-cont { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  #usuarios-cont .kw-loader, #documentos-cont .kw-loader { min-height: 0; padding: 20px 0; }
+  #usuarios-cont, #documentos-cont, #creados-cont { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #usuarios-cont .kw-loader, #documentos-cont .kw-loader, #creados-cont .kw-loader { min-height: 0; padding: 20px 0; }
   @media (max-width: 700px) {
     .page { padding: 82px 14px 40px; }
     .card { padding: 16px 14px; }
-    #documentos-cont table { min-width: 760px; }
+    #documentos-cont table, #creados-cont table { min-width: 760px; }
     .tabs { flex-wrap: wrap; }
     .doc-filtros { flex-direction: column; }
     .doc-filtros input, .doc-filtros select { width: 100%; }
@@ -232,6 +232,7 @@
       <div class="tabs" id="panel-tabs">
         <button type="button" class="tab-btn active" data-tab="usuarios" onclick="cambiarTabPanel('usuarios')">Usuarios</button>
         <button type="button" class="tab-btn" data-tab="documentos" onclick="cambiarTabPanel('documentos')">Documentos</button>
+        <button type="button" class="tab-btn" data-tab="creados" onclick="cambiarTabPanel('creados')">Documentos creados</button>
       </div>
 
       <div id="tab-usuarios">
@@ -286,6 +287,28 @@
             <input type="date" id="doc-filtro-hasta" onchange="filtrarDocumentosPanel()" title="Hasta" />
           </div>
           <div id="documentos-cont"><div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div></div>
+        </div>
+      </div>
+
+      <div id="tab-creados" style="display:none;">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div><h2>Documentos hechos con el creador de formatos</h2><div class="card-sub">Lo generado con los formatos nuevos, no los de siempre.</div></div>
+          </div>
+          <div class="doc-filtros">
+            <input type="text" id="creado-buscador" placeholder="Buscar por título o folio..." oninput="filtrarDocumentosCreadosPanel()" />
+            <select id="creado-filtro-asesor" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los asesores</option></select>
+            <select id="creado-filtro-plantilla" onchange="filtrarDocumentosCreadosPanel()"><option value="">Todos los formatos</option></select>
+            <select id="creado-filtro-estatus" onchange="filtrarDocumentosCreadosPanel()">
+              <option value="">Todos los estatus</option>
+              <option value="borrador">Borrador</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+            <input type="date" id="creado-filtro-desde" onchange="filtrarDocumentosCreadosPanel()" title="Desde" />
+            <input type="date" id="creado-filtro-hasta" onchange="filtrarDocumentosCreadosPanel()" title="Hasta" />
+          </div>
+          <div id="creados-cont"><div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div></div>
         </div>
       </div>
     </div>
@@ -405,6 +428,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('tab-usuarios').style.display = tab === 'usuarios' ? '' : 'none';
     document.getElementById('tab-documentos').style.display = tab === 'documentos' ? '' : 'none';
+    document.getElementById('tab-creados').style.display = tab === 'creados' ? '' : 'none';
   }
 
   async function llamarFuncion(url, payload) {
@@ -692,6 +716,93 @@
     cont.innerHTML = html;
   }
 
+  // ── Documentos hechos con el creador de formatos ──
+  let documentosCreadosCache = [];
+
+  async function cargarDocumentosCreadosPanel() {
+    const cont = document.getElementById('creados-cont');
+    cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
+    try {
+      const { data, error } = await window.kwSupabase
+        .from('documentos_plantilla_con_asesor')
+        .select('id, plantilla_id, titulo, folio, estado, created_at, updated_at, asesor_nombre, asesor_apellido, asesor_email, plantilla_nombre, user_id')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      documentosCreadosCache = data || [];
+
+      const asesoresMap = new Map();
+      const plantillasMap = new Map();
+      documentosCreadosCache.forEach(d => {
+        const nombre = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+        asesoresMap.set(d.user_id, nombre);
+        if (d.plantilla_id) plantillasMap.set(d.plantilla_id, d.plantilla_nombre || 'Formato borrado');
+      });
+      const selectAsesor = document.getElementById('creado-filtro-asesor');
+      selectAsesor.innerHTML = '<option value="">Todos los asesores</option>' +
+        Array.from(asesoresMap.entries()).map(([id, nombre]) => `<option value="${id}">${escapeHtml(nombre)}</option>`).join('');
+
+      const selectPlantilla = document.getElementById('creado-filtro-plantilla');
+      selectPlantilla.innerHTML = '<option value="">Todos los formatos</option>' +
+        Array.from(plantillasMap.entries()).map(([id, nombre]) => `<option value="${id}">${escapeHtml(nombre)}</option>`).join('');
+
+      renderDocumentosCreadosPanel();
+    } catch (err) {
+      cont.innerHTML = `<p style="color:#a30000;font-size:13px;">${escapeHtml(err.message || 'Ocurrió un error al cargar los documentos.')}</p>`;
+    }
+  }
+
+  function filtrarDocumentosCreadosPanel() {
+    renderDocumentosCreadosPanel();
+  }
+
+  function renderDocumentosCreadosPanel() {
+    const cont = document.getElementById('creados-cont');
+    const q = (document.getElementById('creado-buscador').value || '').trim().toLowerCase();
+    const fAsesor = document.getElementById('creado-filtro-asesor').value;
+    const fPlantilla = document.getElementById('creado-filtro-plantilla').value;
+    const fEstatus = document.getElementById('creado-filtro-estatus').value;
+    const fDesde = document.getElementById('creado-filtro-desde').value;
+    const fHasta = document.getElementById('creado-filtro-hasta').value;
+
+    const filtrados = documentosCreadosCache.filter(d => {
+      if (fAsesor && d.user_id !== fAsesor) return false;
+      if (fPlantilla && d.plantilla_id !== fPlantilla) return false;
+      if (fEstatus && d.estado !== fEstatus) return false;
+      if (fDesde && new Date(d.created_at) < new Date(fDesde)) return false;
+      if (fHasta && new Date(d.created_at) > new Date(fHasta + 'T23:59:59')) return false;
+      if (q) {
+        const titulo = (d.titulo || '').toLowerCase();
+        const folio = (d.folio || '').toLowerCase();
+        if (!titulo.includes(q) && !folio.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (!filtrados.length) {
+      cont.innerHTML = '<p style="color:var(--muted);font-size:13px;">No se encontraron documentos con esos filtros.</p>';
+      return;
+    }
+
+    let html = '<table><thead><tr><th>Documento</th><th>Asesor</th><th>Formato</th><th>Folio</th><th>Estatus</th><th>Actualizado</th><th></th></tr></thead><tbody>';
+    filtrados.forEach(d => {
+      const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+      const acciones = d.plantilla_id
+        ? `<a class="btn-editar-usuario" href="../documentos/plantilla.html?id=${d.plantilla_id}&doc=${d.id}" target="_blank" rel="noopener">Ver</a>`
+        : '';
+      html += `<tr>
+        <td>${escapeHtml(d.titulo || 'Sin nombre')}</td>
+        <td>${escapeHtml(nombreAsesor)}</td>
+        <td>${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</td>
+        <td>${escapeHtml(d.folio || '—')}</td>
+        <td><span class="rol-badge ${d.estado === 'finalizado' ? 'rol-admin' : 'rol-asociado'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
+        <td>${fmtFechaCorta(d.updated_at)}</td>
+        <td>${acciones}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+  }
+
   const MODAL_COPIA_CONFIRM_HTML = `
     <h3>¿Hacer una copia de este documento?</h3>
     <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
@@ -772,9 +883,9 @@
 
       if (miRol === 'staff') {
         document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
-        document.getElementById('panel-tabs').style.display = 'none';
+        document.querySelector('#panel-tabs [data-tab="usuarios"]').style.display = 'none';
         document.getElementById('tab-usuarios').style.display = 'none';
-        document.getElementById('tab-documentos').style.display = '';
+        cambiarTabPanel('documentos');
       } else {
         document.getElementById('panel-desc').textContent = 'Agrega usuarios, consulta roles y revisa los documentos del equipo.';
         if (miRol !== 'master') {
@@ -786,6 +897,7 @@
 
       document.getElementById('contenido-panel').style.display = '';
       cargarDocumentosPanel();
+      cargarDocumentosCreadosPanel();
     } catch (err) {
       document.getElementById('denegado').style.display = '';
     }
