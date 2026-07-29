@@ -339,6 +339,98 @@
   }
 
   // ═════════════════════════════════════════════════════════════
+  // Confirmar sin salirse (el botón se voltea y pregunta)
+  // ═════════════════════════════════════════════════════════════
+
+  var confirmandoAhora = null;
+
+  function cerrarConfirmacion() {
+    if (!confirmandoAhora) return;
+    confirmandoAhora.classList.remove('abierto');
+    confirmandoAhora.style.width = '';
+    confirmandoAhora = null;
+  }
+
+  function armarConfirmar(btn) {
+    if (btn.dataset.kwListo) return;
+    btn.dataset.kwListo = '1';
+
+    var pregunta = btn.getAttribute('data-kw-confirmar') || '¿Seguro?';
+
+    // Lo que el botón hacía se guarda para ejecutarlo hasta el "Sí".
+    // Quien lo haya conectado con addEventListener no aparece aquí; para
+    // esos se avisa con el evento "kw-confirmado".
+    var accion = btn.onclick;
+    btn.onclick = null;
+
+    // Un botón que ocupaba todo el renglón lo debe seguir ocupando: si
+    // el envoltorio se encoge a su contenido, el botón se achica y la
+    // pregunta no cabe.
+    var ocupabaTodo = btn.offsetWidth >= (btn.parentNode.clientWidth - 2);
+
+    var caja = document.createElement('span');
+    caja.className = 'kw-confirmar';
+    if (ocupabaTodo) caja.classList.add('bloque');
+    btn.parentNode.insertBefore(caja, btn);
+    caja.appendChild(btn);
+    btn.classList.add('kw-confirmar-frente');
+
+    var atras = document.createElement('span');
+    atras.className = 'kw-confirmar-atras';
+    atras.innerHTML =
+      '<span class="kw-confirmar-pregunta">' + esc(pregunta) + '</span>' +
+      '<button type="button" class="kw-confirmar-si">Sí</button>' +
+      '<button type="button" class="kw-confirmar-no">No</button>';
+    caja.appendChild(atras);
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (btn.disabled) return;
+      cerrarConfirmacion();
+      confirmandoAhora = caja;
+
+      if (ocupabaTodo) { caja.classList.add('abierto'); return; }
+
+      // El reverso pide más ancho que el frente. Se mide con
+      // "max-content" porque, al estar pegado a las cuatro orillas,
+      // preguntarle su ancho a secas devuelve el del frente.
+      var ancho = caja.offsetWidth;
+      caja.style.width = ancho + 'px';
+      // Se le suelta la orilla derecha mientras se mide; pegado a las
+      // cuatro, el ancho que reporta es el del frente.
+      atras.style.width = 'max-content';
+      atras.style.right = 'auto';
+      var necesita = atras.offsetWidth + 2;
+      atras.style.width = '';
+      atras.style.right = '';
+      requestAnimationFrame(function () {
+        caja.style.width = Math.max(ancho, necesita) + 'px';
+        caja.classList.add('abierto');
+      });
+    });
+
+    atras.querySelector('.kw-confirmar-no').addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarConfirmacion();
+    });
+
+    atras.querySelector('.kw-confirmar-si').addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarConfirmacion();
+      if (accion) accion.call(btn, e);
+      btn.dispatchEvent(new CustomEvent('kw-confirmado', { bubbles: true }));
+    });
+  }
+
+  function armarConfirmaciones(raiz) {
+    (raiz || document).querySelectorAll('[data-kw-confirmar]:not([data-kw-listo])')
+      .forEach(armarConfirmar);
+  }
+
+  document.addEventListener('click', cerrarConfirmacion);
+
+  // ═════════════════════════════════════════════════════════════
   // Chips de opción (radio y casilla)
   // ═════════════════════════════════════════════════════════════
   // Para los navegadores que todavía no entienden :has(), que es quien
@@ -361,6 +453,7 @@
     armarSelects(raiz);
     armarFechas(raiz);
     armarTodasLasTabs(raiz);
+    armarConfirmaciones(raiz);
     pintarChips(raiz);
   }
 
@@ -369,6 +462,7 @@
     selects: armarSelects,
     fechas: armarFechas,
     tabs: armarTodasLasTabs,
+    confirmaciones: armarConfirmaciones,
     chips: pintarChips,
     activarTab: function (nombre, tabs) {
       var t = tabs || document.querySelector('[data-kw-tabs]');

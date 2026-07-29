@@ -305,7 +305,7 @@
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
         <button type="button" class="btn-modal-confirmar" onclick="guardarEdicionUsuario()">Guardar</button>
       </div>
-      <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" onclick="confirmarEliminarUsuario()">Eliminar usuario</button>
+      <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="¿Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar usuario</button>
     </div>
   </div>
 
@@ -540,7 +540,8 @@
 
     document.getElementById('edit-puesto').value = u.puesto || '';
 
-    document.getElementById('btn-eliminar-usuario').style.display = (u.id === miUserId) ? 'none' : '';
+    const btnBorrar = document.getElementById('btn-eliminar-usuario');
+    (btnBorrar.closest('.kw-confirmar') || btnBorrar).style.display = (u.id === miUserId) ? 'none' : '';
     setEditMsg('', '');
     document.getElementById('modal-editar-usuario').style.display = 'flex';
   }
@@ -580,10 +581,10 @@
     }
   }
 
+  // La pregunta la hace el propio botón al voltearse (data-kw-confirmar),
+  // así que aquí ya se viene con el "Sí" dado.
   async function confirmarEliminarUsuario() {
     if (!usuarioEnEdicion) return;
-    const ok = confirm('¿Seguro que quieres eliminar a este usuario? Esta acción no se puede deshacer.');
-    if (!ok) return;
     setEditMsg('', '');
     try {
       await llamarFuncion(GESTIONAR_URL, { accion: 'eliminar', user_id: usuarioEnEdicion.id });

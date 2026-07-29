@@ -528,6 +528,76 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 }
 .kw-chip:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(204,0,0,0.12); }
 
+/* ── Confirmar sin salirse ──────────────────────────────────────
+   Para lo que no se puede deshacer (borrar un usuario, un formato, un
+   ticket). En vez del cuadro del navegador o de un modal aparte, el
+   propio botón se voltea y del otro lado pregunta.
+
+   Se lee mejor porque la pregunta sale donde estaba el botón que
+   picaste, y de paso el volteo obliga a detenerse un segundo — que es
+   justo lo que uno quiere antes de borrar algo.
+
+   Uso: se le pone el atributo al botón de siempre y kw-ui.js hace el
+   resto; lo que ya tuviera en su onclick se ejecuta al decir "Sí".
+
+     <button data-kw-confirmar="¿Eliminar?" onclick="borrar()">Eliminar</button>
+
+   Si el botón se conecta con addEventListener, en vez de escuchar
+   "click" se escucha "kw-confirmado". */
+.kw-confirmar {
+  position: relative;
+  display: inline-block;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transition: width var(--t-lento) var(--curva-salida),
+              transform 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.kw-confirmar > .kw-confirmar-frente { width: 100%; backface-visibility: hidden; }
+/* Cuando el botón ocupaba todo el renglón, el envoltorio también. Va
+   por clase y no por estilo suelto: las páginas esconden y muestran
+   estos botones con style.display, y eso borraría el ajuste. */
+.kw-confirmar.bloque { display: block; }
+
+.kw-confirmar-atras {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 0 10px;
+  border: 1.5px solid var(--red); border-radius: var(--r-pastilla);
+  background: #fff3f3;
+  white-space: nowrap;
+  backface-visibility: hidden;
+  transform: rotateX(180deg) translateZ(1px);
+}
+/* La pregunta y los dos botones no se encogen: si se dejan, al medir
+   cuánto ancho pide el reverso sale un número más chico del real y la
+   respuesta queda cortada. */
+.kw-confirmar-atras > * { flex-shrink: 0; }
+.kw-confirmar-pregunta {
+  font-size: 12.5px; font-weight: 700; color: var(--red);
+}
+.kw-confirmar-si, .kw-confirmar-no {
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  padding: 6px 13px; border-radius: var(--r-pastilla);
+  transition: background var(--t-rapido), filter var(--t-rapido), transform 0.12s;
+}
+.kw-confirmar-si { background: var(--red); color: #fff; }
+.kw-confirmar-si:hover { filter: brightness(1.1); }
+.kw-confirmar-no { color: var(--red); }
+.kw-confirmar-no:hover { background: rgba(204,0,0,0.1); }
+.kw-confirmar-si:active, .kw-confirmar-no:active { transform: scale(0.94); }
+
+/* El giro va con perspectiva propia: así no hace falta que quien lo
+   use le ponga `perspective` al contenedor de arriba. */
+.kw-confirmar.abierto {
+  transform: perspective(900px) rotateX(180deg);
+  /* Dentro de una fila flexible, el renglón le recortaba el ancho que
+     pide el reverso y la respuesta salía cortada. Abierto, no se
+     encoge; si ya no cabe, la fila lo baja al siguiente renglón. */
+  flex-shrink: 0;
+}
+.kw-confirmar.abierto > .kw-confirmar-frente { pointer-events: none; }
+
 /* ── Estado vacío ──
    Cuando una lista no trae nada, decirlo bonito y en una sola línea
    en vez de dejar la tarjeta en blanco. */

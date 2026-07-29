@@ -414,7 +414,7 @@
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalDetalle()">Cerrar</button>
         <button type="button" class="btn-modal-confirmar" id="det-btn-guardar" onclick="guardarDetalleIncidencia()">Guardar</button>
       </div>
-      <button type="button" class="btn-eliminar-ticket" id="det-btn-eliminar" onclick="eliminarIncidencia()" style="display:none;">Eliminar ticket (sin dejar registro)</button>
+      <button type="button" class="btn-eliminar-ticket" id="det-btn-eliminar" data-kw-confirmar="¿Eliminarlo?" onclick="eliminarIncidencia()" style="display:none;">Eliminar ticket (sin dejar registro)</button>
     </div>
   </div>
 
@@ -768,10 +768,9 @@
     }
   }
 
+  // La pregunta la hace el propio botón al voltearse (data-kw-confirmar).
   async function eliminarIncidencia() {
     if (!incidenciaEnDetalle) return;
-    const ok = confirm('¿Seguro que quieres eliminar este ticket? Esta acción no se puede deshacer y no quedará ningún registro.');
-    if (!ok) return;
     setMsg('det-msg', '', '');
     try {
       const { error } = await window.kwSupabase.from('incidencias').delete().eq('id', incidenciaEnDetalle.id);

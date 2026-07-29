@@ -17,7 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/kw-hoja.js?v=20260729"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <style>
   html, body { min-height: 100%; background: var(--bg); color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -203,7 +204,7 @@
         '</div>' +
         '<div class="crece"></div>' +
         (finalizado() ? '' : '<button type="button" class="btn" id="btn-guardar">Guardar borrador</button>') +
-        (finalizado() ? '' : '<button type="button" class="btn" id="btn-finalizar">Finalizar</button>') +
+        (finalizado() ? '' : '<button type="button" class="btn" id="btn-finalizar" data-kw-confirmar="Ya no podrás editarlo. ¿Seguro?">Finalizar</button>') +
         '<button type="button" class="btn btn-rojo" id="btn-imprimir">Imprimir o guardar PDF</button>' +
       '</div>' +
 
@@ -231,8 +232,11 @@
     panel.addEventListener('change', alCambiar);
 
     if ($('btn-guardar')) $('btn-guardar').addEventListener('click', function () { guardar(false); });
-    if ($('btn-finalizar')) $('btn-finalizar').addEventListener('click', finalizar);
+    if ($('btn-finalizar')) $('btn-finalizar').addEventListener('kw-confirmado', finalizar);
     $('btn-imprimir').addEventListener('click', imprimir);
+    // La barra se vuelve a dibujar al cargar y al finalizar, así que el
+    // botón de confirmar hay que rearmarlo cada vez.
+    window.kwUI.confirmaciones();
 
     pintarPrevia();
   }
@@ -301,8 +305,8 @@
     }
   }
 
+  // La advertencia y el "¿seguro?" los hace el propio botón al voltearse.
   async function finalizar() {
-    if (!confirm('Al finalizar se le asigna folio y ya no se podrá editar. ¿Continuamos?')) return;
     var btn = $('btn-finalizar');
     btn.disabled = true;
     try {

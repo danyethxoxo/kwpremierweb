@@ -62,7 +62,7 @@
   }
   .etiqueta.publicada { background: #eaf7ee; color: #1a7f37; }
   .etiqueta.borrador { background: #fff7e8; color: #B76E00; }
-  .tp-acciones { display: flex; gap: 7px; margin-top: 10px; }
+  .tp-acciones { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
   .tp-acciones .btn { padding: 7px 12px; font-size: 12px; }
 
   /* ── Armador ── */
@@ -339,7 +339,7 @@
         '<div class="tp-acciones">' +
           '<button type="button" class="btn" data-editar="' + p.id + '">Editar</button>' +
           (p.publicada ? '<a class="btn" href="/kwpremierweb/documentos/plantilla.html?id=' + p.id + '">Llenar</a>' : '') +
-          '<button type="button" class="btn" data-borrar="' + p.id + '">Borrar</button>' +
+          '<button type="button" class="btn" data-borrar="' + p.id + '" data-kw-confirmar="¿Borrarlo?">Borrar</button>' +
         '</div>' +
       '</article>';
     }).join('') + '</div>';
@@ -352,9 +352,12 @@
         verArmador();
       });
     });
+    // El botón se voltea y pregunta antes de borrar (data-kw-confirmar);
+    // por eso se escucha el "sí" y no el click.
     cont.querySelectorAll('[data-borrar]').forEach(function (b) {
-      b.addEventListener('click', function () { borrarPlantilla(b.getAttribute('data-borrar')); });
+      b.addEventListener('kw-confirmado', function () { borrarPlantilla(b.getAttribute('data-borrar')); });
     });
+    window.kwUI.confirmaciones(cont);
   }
 
   // ── Elegir qué agregar ──
@@ -611,7 +614,6 @@
   async function borrarPlantilla(id) {
     var p = plantillas.find(function (x) { return x.id === id; });
     if (!p) return;
-    if (!confirm('¿Borrar el formato "' + p.nombre + '"?\n\nLos documentos que ya se hicieron con él no se tocan.')) return;
     var r = await window.kwSupabase.from('plantillas_documento').delete().eq('id', id);
     if (r.error) { alert('No se pudo borrar: ' + r.error.message); return; }
     await cargar(true);
