@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260729">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <title>Acuerdo de Colaboración entre Asesores</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -327,16 +329,6 @@
   }
   .btn-volver:hover { background: #ececec; }
   .btn-volver:active { transform: scale(0.96); }
-  .lista-item-folio {
-    display: inline-block; font-size: 10.5px; font-weight: 700;
-    color: #6741d9; background: #f5f0ff; border-radius: 20px;
-    padding: 2px 9px; margin-top: 4px;
-  }
-  .lista-item-borrador {
-    display: inline-block; font-size: 10.5px; font-weight: 700;
-    color: #888; background: #f1f1f1; border-radius: 20px;
-    padding: 2px 9px; margin-top: 4px;
-  }
 
   .acuerdos-preview-col {
     overflow: auto;
@@ -551,31 +543,17 @@
   .lista-loading, .lista-vacio {
     color: var(--muted); font-size: 13.5px; padding: 20px 4px;
   }
-  .lista-item {
-    display: flex; align-items: center; justify-content: space-between;
-    background: #fff; border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 16px; cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .lista-item:hover { border-color: var(--red); box-shadow: 0 2px 12px rgba(204,0,0,0.08); }
-  .lista-item-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
-  .lista-item-fecha { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .lista-item-flecha { font-size: 20px; color: var(--muted); }
-  .lista-item-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .lista-item-copiar {
+  /* ── Lista de guardados: la tabla compartida (kw-ui.css) ── */
+  tr.lista-item { cursor: pointer; }
+  .lista-item-copiar, .lista-item-eliminar {
     display: flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border);
     background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
-    transition: border-color 0.15s, color 0.15s;
+    transition: border-color 0.15s, color 0.15s, transform 0.12s;
   }
   .lista-item-copiar:hover { border-color: #1971c2; color: #1971c2; }
-  .lista-item-eliminar {
-    display: flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
-    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
-    transition: border-color 0.15s, color 0.15s;
-  }
   .lista-item-eliminar:hover { border-color: #a30000; color: #a30000; }
+  .lista-item-copiar:active, .lista-item-eliminar:active { transform: scale(0.92); }
 
   /* ── Modal: nombre del documento ── */
   .modal-overlay {
@@ -659,17 +637,17 @@
     <div class="lista-columna activa-mobile" id="columna-borradores">
       <div class="lista-columna-title">Borradores</div>
       <div id="lista-borradores" class="lista-documentos">
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
       </div>
     </div>
     <div class="lista-columna" id="columna-finalizados">
       <div class="lista-columna-title lista-columna-title-finalizados">Finalizados</div>
       <div id="lista-finalizados" class="lista-documentos">
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
-        <div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
+        <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
       </div>
     </div>
   </div>
@@ -1147,8 +1125,8 @@ let documentosCache = [];
 async function cargarListaDocumentos() {
   const contB = document.getElementById('lista-borradores');
   const contF = document.getElementById('lista-finalizados');
-  contB.innerHTML = '<div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>';
-  contF.innerHTML = '<div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="lista-item" style="pointer-events:none;"><div class="lista-item-info" style="flex:1;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:8px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>';
+  contB.innerHTML = '<div class="kw-tabla-marco"><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div>';
+  contF.innerHTML = '<div class="kw-tabla-marco"><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div><div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div>';
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data: userData, error: userError } = await window.kwSupabase.auth.getUser();
@@ -1208,26 +1186,31 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
     cont.innerHTML = `<div class="lista-vacio">${escapeHtml(vacioTexto)}</div>`;
     return;
   }
-  cont.innerHTML = rows.map((row, i) => `
-    <div class="lista-item kw-aparece" data-idx="${i}" style="animation-delay:${Math.min(i,8)*40}ms;">
-      <div class="lista-item-info">
-        <div class="lista-item-nombre">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
-        <div class="lista-item-fecha">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
-        ${row.estado === 'finalizado'
-          ? `<span class="lista-item-folio">Folio: ${escapeHtml(row.folio || '')}</span>`
-          : `<span class="lista-item-borrador">Borrador</span>`}
-      </div>
-      <div class="lista-item-acciones">
-        <button type="button" class="lista-item-copiar" data-idx="${i}" title="Hacer una copia">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
-        ${row.estado !== 'finalizado' ? `<button type="button" class="lista-item-eliminar" data-idx="${i}" title="Eliminar borrador">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-        </button>` : ''}
-        <div class="lista-item-flecha">&rsaquo;</div>
-      </div>
-    </div>
-  `).join('');
+  cont.innerHTML = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr>'
+    + '<th>Documento</th><th>Estatus</th><th class="col-acciones"></th>'
+    + '</tr></thead><tbody>'
+    + rows.map((row, i) => `
+    <tr class="lista-item kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i,8)*30}ms;">
+      <td>
+        <div class="kw-tabla-principal">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</div>
+        <div class="kw-tabla-secundario">Actualizado: ${fmtFechaCorta(row.updated_at)}</div>
+      </td>
+      <td class="col-junta">${row.estado === 'finalizado'
+        ? `<span class="kw-pill kw-pill-ok">${escapeHtml(row.folio || 'Finalizado')}</span>`
+        : `<span class="kw-pill kw-pill-espera">Borrador</span>`}</td>
+      <td class="col-acciones">
+        <div class="kw-acciones">
+          <button type="button" class="lista-item-copiar" data-idx="${i}" title="Hacer una copia">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          ${row.estado !== 'finalizado' ? `<button type="button" class="lista-item-eliminar" data-idx="${i}" title="Eliminar borrador">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('')
+    + '</tbody></table></div>';
 
   Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
     el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));

@@ -86,32 +86,6 @@
     .invite-row { grid-template-columns: 1fr; }
   }
 
-  /* ── Lista de usuarios ── */
-  .usuario-item {
-    display: flex; align-items: center; gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-1);
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-    transition: background var(--t-rapido);
-  }
-  .usuario-item:last-child { border-bottom: none; }
-  .usuario-item:hover { background: #fafafa; }
-  .usuario-avatar {
-    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
-    background: #fff3f3; color: var(--red);
-    font-size: 14px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-  }
-  .usuario-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .usuario-info { flex: 1; min-width: 170px; }
-  .usuario-nombre {
-    font-size: 13.5px; font-weight: 700;
-    display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
-  }
-  .usuario-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .usuario-acciones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-
   .denegado { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--muted); }
 
   /* ── Modal: editar usuario ──
@@ -442,7 +416,7 @@
   // ── Usuarios ──
   async function cargarUsuarios() {
     const cont = document.getElementById('usuarios-cont');
-    if (!cont.innerHTML.trim()) cont.innerHTML = esqueleto(5, true);
+    if (!cont.innerHTML.trim()) cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(5, true) + '</div>';
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
@@ -457,7 +431,9 @@
         return;
       }
 
-      let html = '';
+      let html = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr>' +
+        '<th>Usuario</th><th>Correo</th><th>Puesto</th><th>Rol</th><th>Alta</th><th>Visibilidad</th>' +
+        '<th class="col-acciones"></th></tr></thead><tbody>';
       usuariosCache.forEach((u, i) => {
         const nombreCompleto = [u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)';
         const puedoEditar = miRol === 'master' || (miRol === 'admin' && (u.role === 'staff' || u.role === 'asociado'));
@@ -465,20 +441,25 @@
         const avatar = u.foto_url
           ? `<img src="${escapeHtml(u.foto_url)}" alt="" />`
           : escapeHtml(((u.nombre || '').trim().charAt(0) + (u.apellido || '').trim().charAt(0)).toUpperCase() || '?');
-        const sub = [u.email, u.puesto, 'Alta: ' + fmtFechaCorta(u.created_at)].filter(Boolean).map(escapeHtml).join(' · ');
-        html += `<div class="usuario-item kw-aparece-fila" style="animation-delay:${Math.min(i * 40, 320)}ms">
-          <div class="usuario-avatar">${avatar}</div>
-          <div class="usuario-info">
-            <div class="usuario-nombre">${escapeHtml(nombreCompleto)} <span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></div>
-            <div class="usuario-sub">${sub}</div>
-          </div>
-          <div class="usuario-acciones">
-            <span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span>
-            ${puedoEditar ? `<button type="button" class="kw-btn-mini btn-editar-usuario" data-idx="${i}">Editar</button>` : ''}
-            ${puedoEditar ? `<button type="button" class="kw-btn-mini btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>` : ''}
-          </div>
-        </div>`;
+        html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 30, 300)}ms">
+          <td>
+            <div class="kw-tabla-persona">
+              <div class="kw-tabla-avatar">${avatar}</div>
+              <span class="kw-tabla-principal">${escapeHtml(nombreCompleto)}</span>
+            </div>
+          </td>
+          <td>${escapeHtml(u.email || '—')}</td>
+          <td>${escapeHtml(u.puesto || '—')}</td>
+          <td><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></td>
+          <td class="col-junta">${fmtFechaCorta(u.created_at)}</td>
+          <td><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></td>
+          <td class="col-acciones">${puedoEditar ? `<div class="kw-acciones">
+            <button type="button" class="kw-btn-mini btn-editar-usuario" data-idx="${i}">Editar</button>
+            <button type="button" class="kw-btn-mini btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
+          </div>` : ''}</td>
+        </tr>`;
       });
+      html += '</tbody></table></div>';
       cont.innerHTML = html;
 
       Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
@@ -616,7 +597,7 @@
   // ── Documentos de todo el equipo ──
   async function cargarDocumentosPanel() {
     const cont = document.getElementById('documentos-cont');
-    cont.innerHTML = esqueleto(6, false);
+    cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(6, false) + '</div>';
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_con_asesor')
@@ -709,7 +690,7 @@
 
   async function cargarDocumentosCreadosPanel() {
     const cont = document.getElementById('creados-cont');
-    cont.innerHTML = esqueleto(6, false);
+    cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(6, false) + '</div>';
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_plantilla_con_asesor')
