@@ -87,6 +87,31 @@
   }
   .btn-limpiar:hover { background: #ececec; }
 
+  .btn-mas-filtros {
+    align-self: end; display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-size: 12.5px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    color: var(--text); cursor: pointer; transition: background 0.15s;
+  }
+  .btn-mas-filtros:hover { background: #fafafa; }
+  .btn-mas-filtros .chevron { width: 15px; height: 15px; transition: transform 0.18s; }
+  .btn-mas-filtros[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+  .cuenta-filtros[hidden] { display: none; }
+  .cuenta-filtros {
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 20px;
+    background: var(--red); color: #fff; font-size: 10.5px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* El bloque de abajo se pega visualmente al de arriba cuando se abre */
+  .filtros-extra { margin-top: -12px; border-top-left-radius: 0; border-top-right-radius: 0; }
+  .filtros-extra[hidden] { display: none; }
+  #filtros:has(+ .filtros-extra:not([hidden])) {
+    margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+  }
+
   .prop-pie {
     font-size: 11.5px; color: var(--muted); margin-top: 8px;
     padding-top: 8px; border-top: 1px solid var(--border);
@@ -180,7 +205,7 @@
     <h1 class="page-title">Propiedades</h1>
     <p class="page-sub">Explora el inventario de KW Premier.</p>
 
-    <form class="filtros" id="filtros" autocomplete="off">
+    <div class="filtros" id="filtros" autocomplete="off">
       <div class="filtro">
         <label for="f-buscar">Buscar</label>
         <input type="search" id="f-buscar" placeholder="Título, colonia, calle…" />
@@ -212,6 +237,16 @@
         <label for="f-tipo">Tipo de propiedad</label>
         <select id="f-tipo"><option value="">Todos</option></select>
       </div>
+      <button type="button" class="btn-mas-filtros" id="btn-mas-filtros"
+              aria-expanded="false" aria-controls="filtros-extra">
+        <span id="txt-mas-filtros">Más opciones</span>
+        <span class="cuenta-filtros" id="cuenta-filtros" hidden></span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="filtros filtros-extra" id="filtros-extra" hidden>
       <div class="filtro">
         <label for="f-mc">Market Center</label>
         <select id="f-mc"><option value="">Todos</option></select>
@@ -265,7 +300,8 @@
         </select>
       </div>
       <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
-    </form>
+    </div>
+
 
 <div class="conteo" id="conteo"></div>
 
@@ -418,6 +454,7 @@
     });
 
     vis = ordenar(vis, val('f-orden'));
+    marcarFiltrosEscondidos();
 
     var cont = document.getElementById('lista');
     document.getElementById('conteo').innerHTML =
@@ -429,6 +466,19 @@
       return;
     }
     cont.innerHTML = vis.map(tarjeta).join('');
+  }
+
+  // Si hay filtros aplicados dentro del plegable, se avisa con un número:
+  // de otro modo alguien puede no entender por qué ve tan pocos resultados.
+  var CAMPOS_EXTRA = ['f-mc', 'f-asesor', 'f-estado', 'f-municipio', 'f-colonia',
+                      'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'];
+
+  function marcarFiltrosEscondidos() {
+    var puestos = CAMPOS_EXTRA.filter(function (id) { return val(id) !== ''; }).length;
+    if (val('f-orden') !== 'reciente') puestos++;
+    var chip = document.getElementById('cuenta-filtros');
+    chip.textContent = puestos;
+    chip.hidden = puestos === 0;
   }
 
   function limpiarFiltros() {
@@ -523,9 +573,21 @@
     }
   }
 
-  document.getElementById('filtros').addEventListener('change', pintar);
-  document.getElementById('filtros').addEventListener('input', pintar);
-  document.getElementById('filtros').addEventListener('submit', function (e) { e.preventDefault(); });
+  ['filtros', 'filtros-extra'].forEach(function (id) {
+    var caja = document.getElementById(id);
+    caja.addEventListener('change', pintar);
+    caja.addEventListener('input', pintar);
+  });
+
+  // Los filtros de siempre quedan a la vista y el resto se despliega, para
+  // que la barra no llegue saturada de entrada.
+  document.getElementById('btn-mas-filtros').addEventListener('click', function () {
+    var extra = document.getElementById('filtros-extra');
+    var abierto = extra.hidden;
+    extra.hidden = !abierto;
+    this.setAttribute('aria-expanded', String(abierto));
+    document.getElementById('txt-mas-filtros').textContent = abierto ? 'Menos opciones' : 'Más opciones';
+  });
 
   cargar();
 </script>
