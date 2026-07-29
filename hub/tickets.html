@@ -98,7 +98,7 @@
     display: flex; align-items: center; justify-content: center; line-height: 1; border: 2px solid #fff;
   }
 
-  .page { flex: 1; max-width: 900px; margin: 0 auto; padding: 100px 24px 60px; }
+  .page { flex: 1; width: 100%; max-width: var(--ancho-pagina); margin: 0 auto; padding: 90px var(--sp-4) var(--sp-6); }
   .page-title { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px; }
   .page-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
 
@@ -115,7 +115,7 @@
   .btn-reportar svg { width: 15px; height: 15px; }
 
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; }
-  .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 8px 20px; }
+  .card-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-tarjeta); padding: var(--sp-4); box-shadow: var(--sombra-1); }
 
   .incidencias-lista { display: flex; flex-direction: column; gap: 12px; }
   .incidencia-item {
@@ -126,15 +126,18 @@
   .incidencia-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .incidencia-titulo { font-size: 14.5px; font-weight: 700; }
   .incidencia-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  /* Mismo tamaño para las tres, como las insignias del Panel: en una
+     columna se leen como columna y no como parches disparejos. */
   .estatus-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    flex-shrink: 0; font-size: 11px; font-weight: 700; text-transform: uppercase;
-    padding: 4px 11px 4px 9px; border-radius: 20px; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    flex-shrink: 0; min-width: 110px;
+    font-size: 12px; font-weight: 700;
+    padding: 6px 14px; border-radius: var(--r-pastilla); white-space: nowrap;
   }
   .estatus-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  .estatus-abierto { background: #fdeaea; color: #a30000; }
-  .estatus-en_revision { background: #fff6e0; color: #a3690a; }
-  .estatus-resuelto { background: #eaf7ea; color: #1a7a1a; }
+  .estatus-abierto { background: #fdd8d8; color: #961414; }
+  .estatus-en_revision { background: #ffeec9; color: #93600a; }
+  .estatus-resuelto { background: #d9f5e3; color: #10713a; }
   .incidencia-desc { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; }
   .incidencia-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   .incidencia-img-wrap { position: relative; width: 92px; height: 92px; cursor: pointer; }
@@ -152,13 +155,9 @@
     color: var(--red); display: block; margin-bottom: 3px; font-size: 11px;
     text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .estado-vacio { padding: 20px 0; color: var(--muted); font-size: 13px; text-align: center; }
+  .estado-vacio { padding: var(--sp-6) var(--sp-4); color: var(--muted); font-size: 13.5px; text-align: center; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 10px 8px; border-bottom: 1px solid var(--border); }
-  td { padding: 13px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  tr.fila-incidencia { cursor: pointer; transition: background 0.12s; }
-  tr.fila-incidencia:hover td { background: #fafafa; }
+  tr.fila-incidencia { cursor: pointer; }
 
   /* ── Modales ── */
   .modal-overlay {
@@ -328,16 +327,16 @@
           Reportar incidencia
         </button>
       </div>
-      <div class="card-box" style="overflow-x:auto;">
+      <div class="card-box">
         <div id="todas-incidencias-cont">
-          <table>
+          <div class="kw-tabla-marco"><table class="kw-tabla">
             <thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead>
             <tbody>
               <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
               <tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>
               <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     </div>
@@ -682,11 +681,11 @@
   // ── Vista gestión (Master/Admin): todas las incidencias ──
   async function cargarTodasIncidencias() {
     const cont = document.getElementById('todas-incidencias-cont');
-    cont.innerHTML = '<table><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>'
+    cont.innerHTML = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>'
       + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
       + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>'
       + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
-      + '</tbody></table>';
+      + '</tbody></table></div>';
     try {
       const { data, error } = await window.kwSupabase
         .from('incidencias_con_reportante')
@@ -700,17 +699,17 @@
         return;
       }
 
-      let html = '<table><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>';
+      let html = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr><th>Fecha</th><th>Asesor</th><th>Título</th><th>Estatus</th></tr></thead><tbody>';
       todasIncidenciasCache.forEach((inc, i) => {
         const nombreAsesor = [inc.reportante_nombre, inc.reportante_apellido].filter(Boolean).join(' ') || inc.reportante_email || 'Sin nombre';
         html += `<tr class="fila-incidencia kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
-          <td>${fmtFechaCorta(inc.created_at)}</td>
+          <td class="col-junta">${fmtFechaCorta(inc.created_at)}</td>
           <td>${escapeHtml(nombreAsesor)}</td>
-          <td>${escapeHtml(inc.titulo)}</td>
+          <td class="kw-tabla-principal">${escapeHtml(inc.titulo)}</td>
           <td><span class="estatus-badge estatus-${inc.estatus}">${ESTATUS_LABELS[inc.estatus] || inc.estatus}</span></td>
         </tr>`;
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       cont.innerHTML = html;
 
       Array.from(cont.querySelectorAll('.fila-incidencia')).forEach(tr => {

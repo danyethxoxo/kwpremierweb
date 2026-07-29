@@ -67,7 +67,16 @@
      sin que los renglones queden tan largos que cueste leerlos. */
   --ancho-pagina: 1180px;
   --ancho-angosto: 780px;
+
+  /* El texto de ejemplo de un campo vacío va más tenue que el texto de
+     verdad: si van del mismo gris, parece que el campo ya trae algo
+     escrito y la gente no lo llena. */
+  --placeholder: #b9b9b9;
 }
+
+/* Vale para toda la plataforma, no solo para los campos con clase. */
+input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
+input::-webkit-input-placeholder, textarea::-webkit-input-placeholder { color: var(--placeholder); }
 
 /* Quien prefiera menos movimiento en su sistema, no lo ve. */
 @media (prefers-reduced-motion: reduce) {
@@ -890,13 +899,12 @@ header > *:last-child { margin-left: auto; }
 }
 .kw-input:hover { border-color: rgba(0,0,0,0.16); }
 .kw-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
-.kw-input::placeholder { color: var(--muted); }
 /* El ícono de calendario del navegador es gris y diminuto; así al menos
    crece y se puede picar sin apuntar tan fino. */
-.kw-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer; opacity: 0.55; transition: opacity var(--t-rapido);
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer; opacity: 0.5; transition: opacity var(--t-rapido);
 }
-.kw-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
+input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 
 /* Buscador con lupa adentro. */
 .kw-buscador { position: relative; }
@@ -935,36 +943,71 @@ header > *:last-child { margin-left: auto; }
 }
 
 /* ── Tablas ─────────────────────────────────────────────────────
-   Se desplazan de lado dentro de su tarjeta en vez de desbordar la
-   pantalla, y el encabezado se queda pegado arriba al recorrer. */
-.kw-tabla-marco { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.kw-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
-.kw-tabla th {
-  position: sticky; top: 0; z-index: 1;
+   La tabla va dentro de su propio marco con borde y esquinas
+   redondeadas, y el encabezado sobre una franja gris. Así se lee como
+   un bloque y no como renglones sueltos flotando en la tarjeta.
+
+   Los renglones son altos a propósito: apretados se ven como una hoja
+   de cálculo, y esto lo consulta gente que solo quiere encontrar un
+   documento.
+
+   En pantalla angosta la tabla se desliza de lado dentro del marco,
+   en vez de desbordar la página. */
+.kw-tabla-marco {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
-  text-align: left; font-size: 10.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
-  padding: 0 var(--sp-2) var(--sp-2);
-  border-bottom: 1px solid var(--border);
+}
+.kw-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+
+.kw-tabla thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: #f4f4f6;
+  text-align: left;
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.01em;
+  padding: var(--sp-3) var(--sp-4);
   white-space: nowrap;
 }
+.kw-tabla thead th:first-child { border-top-left-radius: 11px; }
+.kw-tabla thead th:last-child { border-top-right-radius: 11px; }
+
 .kw-tabla td {
-  padding: var(--sp-3) var(--sp-2);
-  border-bottom: 1px solid var(--border);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
   vertical-align: middle;
+  color: #444;
 }
 .kw-tabla tbody tr { transition: background var(--t-rapido); }
-.kw-tabla tbody tr:hover { background: #fafafa; }
-.kw-tabla tbody tr:last-child td { border-bottom: none; }
+.kw-tabla tbody tr:hover { background: #fafafb; }
+
 /* La columna de acciones se queda del ancho de sus botones y no los
    deja apilarse: dos botones uno encima del otro estiran el renglón y
    descuadran toda la tabla. */
 .kw-tabla .col-acciones { text-align: right; white-space: nowrap; width: 1%; }
-.kw-tabla-principal { font-weight: 600; color: var(--text); }
+/* Para folios y fechas: son cortos y partidos en dos renglones se leen
+   fatal ("AR" arriba y "0003" abajo). */
+.kw-tabla .col-junta { white-space: nowrap; width: 1%; }
+.kw-tabla-principal { font-weight: 700; color: var(--text); }
 .kw-tabla-secundario { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Foto (o iniciales) junto al nombre, como en la lista de usuarios. */
+.kw-tabla-persona { display: flex; align-items: center; gap: var(--sp-2); }
+.kw-tabla-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: #fff3f3; color: var(--red);
+  font-size: 11.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.kw-tabla-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 @media (max-width: 700px) {
   .kw-tabla { min-width: 720px; }
+  .kw-tabla thead th, .kw-tabla td { padding: var(--sp-3); }
 }
 
 /* ── Botón chico de acción (dentro de listas y tablas) ── */
@@ -981,15 +1024,21 @@ header > *:last-child { margin-left: auto; }
 .kw-btn-mini svg { width: 13px; height: 13px; }
 .kw-acciones { display: inline-flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
 
-/* ── Insignias de estado ── */
+/* ── Insignias de estado ──
+   Del ancho de su texto no: todas miden lo mismo dentro de una tabla,
+   para que la columna se lea como columna y no como parches de
+   distinto tamaño. */
 .kw-pill {
-  display: inline-block; padding: 3px 10px; border-radius: var(--r-pastilla);
-  font-size: 11px; font-weight: 700; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 92px; padding: 6px 14px;
+  border-radius: var(--r-pastilla);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
 }
-.kw-pill-ok { background: #eaf7ee; color: #1a7f37; }
-.kw-pill-espera { background: #fff7e8; color: #B76E00; }
-.kw-pill-neutro { background: #f1f3f5; color: #495057; }
-.kw-pill-alerta { background: #fdeaea; color: #a30000; }
+.kw-pill-ok { background: #d9f5e3; color: #10713a; }
+.kw-pill-espera { background: #ffeec9; color: #93600a; }
+.kw-pill-neutro { background: #e8eaed; color: #41474e; }
+.kw-pill-alerta { background: #fdd8d8; color: #961414; }
+.kw-pill-info { background: #d4ebfd; color: #10558f; }
 
 /* ── Chips de opción (radio y casilla) ──────────────────────────
    En vez del puntito gris del navegador, una pastilla que se pinta
@@ -999,25 +1048,48 @@ header > *:last-child { margin-left: auto; }
      <div class="kw-chips">
        <label class="kw-chip"><input type="radio" name="x" value="a">Casa</label>
      </div> */
-.kw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.kw-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .kw-chip {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 14px; border-radius: var(--r-pastilla);
+  position: relative;
+  display: inline-flex; align-items: center; gap: 9px;
+  min-height: 40px; padding: 8px 18px 8px 14px;
+  border-radius: var(--r-pastilla);
   border: 1.5px solid var(--border); background: #fff;
-  font-size: 13px; font-weight: 600; color: #555;
-  cursor: pointer; user-select: none;
+  font-size: 13.5px; font-weight: 600; color: #555;
+  cursor: pointer; user-select: none; line-height: 1.3;
   transition: border-color var(--t-rapido), background var(--t-rapido), color var(--t-rapido), transform 0.12s;
 }
-.kw-chip:hover { border-color: rgba(0,0,0,0.18); }
-.kw-chip:active { transform: scale(0.96); }
-.kw-chip input { width: 14px; height: 14px; margin: 0; accent-color: var(--red); cursor: pointer; }
+.kw-chip:hover { border-color: rgba(0,0,0,0.2); background: #fafafa; }
+.kw-chip:active { transform: scale(0.97); }
+
+/* El control del navegador se esconde y se dibuja uno propio: el nativo
+   no se puede separar bien del texto ni pintar del rojo de la casa, y
+   era lo que hacía que la palabra se viera pegada al circulito. */
+.kw-chip input {
+  position: absolute; opacity: 0; width: 0; height: 0; margin: 0; pointer-events: none;
+}
+.kw-chip::before {
+  content: '';
+  width: 17px; height: 17px; flex-shrink: 0;
+  border: 1.8px solid #c7c7c7; border-radius: 50%;
+  background: #fff;
+  transition: border-color var(--t-rapido), background var(--t-rapido), box-shadow var(--t-rapido);
+}
+/* Las casillas (varias a la vez) van cuadradas; los radios, redondos. */
+.kw-chip:has(input[type="checkbox"])::before { border-radius: 5px; }
+
 /* :has() para los navegadores de hoy; la clase .elegido la pone kw-ui.js
    para los que no lo entienden. Se deja igual escrito en los dos lados. */
 .kw-chip:has(input:checked),
 .kw-chip.elegido {
   border-color: var(--red); background: #fff3f3; color: var(--red); font-weight: 700;
 }
-.kw-chip:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(204,0,0,0.10); }
+.kw-chip:has(input:checked)::before,
+.kw-chip.elegido::before {
+  border-color: var(--red); background: var(--red);
+  box-shadow: inset 0 0 0 3.5px #fff;
+}
+.kw-chip:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(204,0,0,0.12); }
 
 /* ── Estado vacío ──
    Cuando una lista no trae nada, decirlo bonito y en una sola línea

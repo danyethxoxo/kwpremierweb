@@ -296,6 +296,49 @@
   }
 
   // ═════════════════════════════════════════════════════════════
+  // Campos de fecha
+  // ═════════════════════════════════════════════════════════════
+  // Un <input type="date"> vacío enseña "dd/mm/aaaa", que se lee como
+  // si el campo ya trajera algo. No se le puede poner un texto de
+  // ejemplo propio porque ese formato lo dibuja el navegador.
+  //
+  // Así que mientras está vacío el campo es de texto y dice "Fecha";
+  // al picarlo se vuelve de fecha y abre el calendario de siempre. Con
+  // una fecha puesta se queda como fecha, para que se vea con el
+  // formato de acá y siga valiendo como fecha para el código.
+
+  function armarFecha(inp) {
+    if (inp.dataset.kwFecha) return;
+    inp.dataset.kwFecha = '1';
+    var texto = inp.getAttribute('data-texto') || 'Fecha';
+
+    function aTexto() {
+      if (inp.value) return;
+      inp.type = 'text';
+      inp.placeholder = texto;
+    }
+    function aFecha() {
+      if (inp.type !== 'date') inp.type = 'date';
+    }
+
+    inp.addEventListener('focus', function () {
+      aFecha();
+      // Cambiar el tipo puede soltar el foco en algunos navegadores.
+      if (document.activeElement !== inp) inp.focus();
+      try { if (inp.showPicker) inp.showPicker(); } catch (e) { /* sin gesto válido */ }
+    });
+    inp.addEventListener('blur', aTexto);
+    inp.addEventListener('change', function () { if (!inp.value) aTexto(); });
+
+    aTexto();
+  }
+
+  function armarFechas(raiz) {
+    (raiz || document).querySelectorAll('input[type="date"]:not([data-kw-fecha]):not([data-kw-no])')
+      .forEach(armarFecha);
+  }
+
+  // ═════════════════════════════════════════════════════════════
   // Chips de opción (radio y casilla)
   // ═════════════════════════════════════════════════════════════
   // Para los navegadores que todavía no entienden :has(), que es quien
@@ -316,6 +359,7 @@
 
   function iniciar(raiz) {
     armarSelects(raiz);
+    armarFechas(raiz);
     armarTodasLasTabs(raiz);
     pintarChips(raiz);
   }
@@ -323,6 +367,7 @@
   global.kwUI = {
     iniciar: iniciar,
     selects: armarSelects,
+    fechas: armarFechas,
     tabs: armarTodasLasTabs,
     chips: pintarChips,
     activarTab: function (nombre, tabs) {

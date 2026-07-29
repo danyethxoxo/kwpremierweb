@@ -110,7 +110,10 @@
   .section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
 
   .field { margin-bottom: 12px; }
-  .field label {
+  /* Solo la etiqueta del campo, no las de los chips que van adentro:
+     con `.field label` a secas, los chips heredaban las mayúsculas y
+     los 10px de la etiqueta y salían apretados y en versalitas. */
+  .field > label {
     display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
     text-transform: uppercase; color: #555; margin-bottom: 4px;
   }
@@ -121,14 +124,37 @@
   }
   .field input:focus, .field select:focus { border-color: var(--red); }
 
-  .radio-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* Chips de opción. El puntito del navegador se esconde y se dibuja
+     uno propio: el nativo no se deja separar del texto (se veía pegado
+     a la palabra) ni pintar del rojo de la casa. */
+  .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
   .radio-chip {
-    display: flex; align-items: center; gap: 5px; padding: 6px 10px;
-    border: 1.5px solid var(--border); border-radius: 20px; font-size: 11.5px;
+    position: relative;
+    display: inline-flex; align-items: center; gap: 9px;
+    min-height: 38px; padding: 7px 16px 7px 13px;
+    border: 1.5px solid var(--border); border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; color: #555; line-height: 1.3;
     cursor: pointer; user-select: none; background: #fff;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
   }
-  .radio-chip input { width: 13px; height: 13px; margin: 0; accent-color: var(--red); }
-  .radio-chip.checked { border-color: var(--red); background: #FFF3F3; color: var(--red); font-weight: 700; }
+  .radio-chip:hover { border-color: rgba(0,0,0,0.2); background: #fafafa; }
+  .radio-chip:active { transform: scale(0.97); }
+  .radio-chip input {
+    position: absolute; opacity: 0; width: 0; height: 0; margin: 0; pointer-events: none;
+  }
+  .radio-chip::before {
+    content: '';
+    width: 16px; height: 16px; flex-shrink: 0;
+    border: 1.8px solid #c7c7c7; border-radius: 50%; background: #fff;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+  .radio-chip.checked {
+    border-color: var(--red); background: #FFF3F3; color: var(--red); font-weight: 700;
+  }
+  .radio-chip.checked::before {
+    border-color: var(--red); background: var(--red);
+    box-shadow: inset 0 0 0 3.5px #fff;
+  }
 
   .btn-dl {
     width: 100%; padding: 11px;
