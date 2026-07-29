@@ -53,11 +53,20 @@
 
   /* ── Filtros ── */
   .filtros {
-    display: flex; flex-wrap: wrap; gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
     background: var(--card); border: 1px solid var(--border);
-    border-radius: 14px; padding: 14px 16px; margin-bottom: 24px;
+    border-radius: 14px; padding: 16px; margin-bottom: 20px;
+    align-items: end;
   }
-  .filtro { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 130px; }
+  .filtro { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  /* `display: flex` le gana al atributo `hidden`, y el filtro de estatus
+     se le alcanzaba a ver a quien entra sin sesión. */
+  .filtro[hidden] { display: none; }
+  .filtro-rango { grid-column: span 2; }
+  .rango { display: flex; gap: 8px; }
+  .rango input { width: 100%; min-width: 0; }
   .filtro label {
     font-size: 10.5px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; color: var(--muted);
@@ -71,14 +80,33 @@
     border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
   }
   .btn-limpiar {
-    align-self: flex-end; padding: 9px 16px; border-radius: 10px;
+    align-self: end; padding: 9px 16px; border-radius: 10px;
     border: 1.5px solid var(--border); background: #f7f7f6;
     font-size: 12.5px; font-weight: 700; font-family: 'DM Sans', sans-serif;
     color: #555; cursor: pointer; transition: background 0.15s;
   }
   .btn-limpiar:hover { background: #ececec; }
 
-  .conteo { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .prop-pie {
+    font-size: 11.5px; color: var(--muted); margin-top: 8px;
+    padding-top: 8px; border-top: 1px solid var(--border);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .conteo {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 13px; color: var(--muted); margin-bottom: 14px;
+  }
+  .chip-estatus {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 4px 10px; border-radius: 20px;
+    background: #f0f0ef; color: #666;
+  }
+  .chip-estatus.publicada { background: #eaf7ee; color: #1a7f37; }
+  .chip-estatus.vendida   { background: #fff0f0; color: #CC0000; }
+  .chip-estatus.rentada   { background: #eef4ff; color: #1971C2; }
+  .chip-estatus.no_publicada { background: #f6f2ff; color: #6741d9; }
 
   /* ── Tarjetas ── */
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -109,7 +137,10 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.14);
   }
   .prop-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
-  .prop-precio { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+  .prop-precio {
+    font-size: 19px; font-weight: 800; letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
   .prop-titulo {
     font-size: 14.5px; font-weight: 700; margin-top: 3px; line-height: 1.35;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -149,31 +180,94 @@
     <h1 class="page-title">Propiedades</h1>
     <p class="page-sub">Explora el inventario de KW Premier.</p>
 
-    <div class="filtros">
+    <form class="filtros" id="filtros" autocomplete="off">
       <div class="filtro">
-        <label for="f-operacion">Operación</label>
-        <select id="f-operacion"><option value="">Todas</option><option value="venta">Venta</option><option value="renta">Renta</option></select>
+        <label for="f-buscar">Buscar</label>
+        <input type="search" id="f-buscar" placeholder="Título, colonia, calle…" />
       </div>
       <div class="filtro">
-        <label for="f-tipo">Tipo</label>
+        <label for="f-operacion">Operación</label>
+        <select id="f-operacion">
+          <option value="">Todas</option>
+          <option value="venta">Venta</option>
+          <option value="renta">Renta</option>
+        </select>
+      </div>
+      <!-- El estatus solo tiene sentido para quien trabaja aquí; hacia
+           afuera solo existe lo publicado, así que se muestra únicamente
+           con sesión iniciada (ver prepararFiltros). -->
+      <div class="filtro" id="filtro-estatus" hidden>
+        <label for="f-estatus">Estatus</label>
+        <select id="f-estatus">
+          <option value="publicada">Activa</option>
+          <option value="vendida">Vendida</option>
+          <option value="rentada">Rentada</option>
+          <option value="no_publicada">Borrador</option>
+          <option value="reservada">Reservada</option>
+          <option value="suspendida">Suspendida</option>
+          <option value="">Todos los estatus</option>
+        </select>
+      </div>
+      <div class="filtro">
+        <label for="f-tipo">Tipo de propiedad</label>
         <select id="f-tipo"><option value="">Todos</option></select>
       </div>
       <div class="filtro">
-        <label for="f-ciudad">Ciudad</label>
-        <select id="f-ciudad"><option value="">Todas</option></select>
+        <label for="f-mc">Market Center</label>
+        <select id="f-mc"><option value="">Todos</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-asesor">Asesor</label>
+        <select id="f-asesor"><option value="">Todos</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-estado">Ciudad / Estado</label>
+        <select id="f-estado"><option value="">Todas</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-municipio">Alcaldía / Municipio</label>
+        <select id="f-municipio"><option value="">Todas</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-colonia">Colonia</label>
+        <select id="f-colonia"><option value="">Todas</option></select>
+      </div>
+      <div class="filtro filtro-rango">
+        <label>Precio</label>
+        <div class="rango">
+          <input type="number" id="f-min" placeholder="Desde" min="0" step="100000" />
+          <input type="number" id="f-max" placeholder="Hasta" min="0" step="100000" />
+        </div>
       </div>
       <div class="filtro">
         <label for="f-recamaras">Recámaras (mín.)</label>
         <select id="f-recamaras"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
       </div>
       <div class="filtro">
-        <label for="f-max">Precio máximo</label>
-        <input type="number" id="f-max" placeholder="Sin límite" min="0" step="100000" />
+        <label for="f-banos">Baños (mín.)</label>
+        <select id="f-banos"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
       </div>
-      <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
-    </div>
+      <div class="filtro">
+        <label for="f-estacionamientos">Estacionamientos (mín.)</label>
+        <select id="f-estacionamientos"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-m2">m² construcción (mín.)</label>
+        <input type="number" id="f-m2" placeholder="Sin mínimo" min="0" step="10" />
+      </div>
+      <div class="filtro">
+        <label for="f-orden">Ordenar por</label>
+        <select id="f-orden">
+          <option value="reciente">Más recientes</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+          <option value="m2-desc">Más grandes</option>
+        </select>
+      </div>
+      <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
+    </form>
 
-    <div class="conteo" id="conteo"></div>
+<div class="conteo" id="conteo"></div>
 
     <div class="grid" id="lista">
       <div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>
@@ -222,6 +316,11 @@
     casa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
   };
 
+  var ETIQUETA_ESTATUS = {
+    publicada: 'Activa', no_publicada: 'Borrador', reservada: 'Reservada',
+    vendida: 'Vendida', rentada: 'Rentada', suspendida: 'Suspendida',
+  };
+
   function tarjeta(p, i) {
     var ubic = [p.colonia, p.municipio].filter(Boolean).join(', ');
     var foto = (p.imagenes && p.imagenes.length)
@@ -233,38 +332,97 @@
     if (p.banos) datos.push('<span class="prop-dato">' + ICO.bano + p.banos + '</span>');
     if (p.m2_construccion) datos.push('<span class="prop-dato">' + ICO.area + p.m2_construccion + ' m²</span>');
 
+    // El sello de estatus solo se pinta cuando no es una publicada: hacia
+    // afuera todas lo son y sería ruido; adentro sirve para ubicarlas.
+    var sello = (p.estatus && p.estatus !== 'publicada')
+      ? '<span class="chip-estatus ' + escapeHtml(p.estatus) + '">' +
+        escapeHtml(ETIQUETA_ESTATUS[p.estatus] || p.estatus) + '</span>'
+      : '';
+
+    var pie = [p.asesor_nombre, p.market_center].filter(Boolean).join(' · ');
+
     return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="/kwpremierweb/propiedad.html?id=' + encodeURIComponent(p.id) + '">' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
       '<div class="prop-body">' +
-        '<div class="prop-precio">' + fmtPrecio(p.precio, p.moneda) + '</div>' +
+        '<div class="prop-precio">' + fmtPrecio(p.precio, p.moneda) + sello + '</div>' +
         '<div class="prop-titulo">' + escapeHtml(p.titulo) + '</div>' +
         (ubic ? '<div class="prop-ubic">' + ICO.pin + escapeHtml(ubic) + '</div>' : '') +
         (datos.length ? '<div class="prop-datos">' + datos.join('') + '</div>' : '') +
+        (pie ? '<div class="prop-pie">' + escapeHtml(pie) + '</div>' : '') +
       '</div>' +
     '</a>';
   }
 
+  function val(id) {
+    var el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  }
+  function num(id) {
+    var n = Number(val(id));
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function ordenar(lista, modo) {
+    var copia = lista.slice();
+    if (modo === 'precio-asc') {
+      copia.sort(function (a, b) { return (a.precio || Infinity) - (b.precio || Infinity); });
+    } else if (modo === 'precio-desc') {
+      copia.sort(function (a, b) { return (b.precio || 0) - (a.precio || 0); });
+    } else if (modo === 'm2-desc') {
+      copia.sort(function (a, b) { return (b.m2_construccion || 0) - (a.m2_construccion || 0); });
+    }
+    // "reciente" ya viene así de la consulta
+    return copia;
+  }
+
   function pintar() {
-    var op = document.getElementById('f-operacion').value;
-    var tipo = document.getElementById('f-tipo').value;
-    var ciudad = document.getElementById('f-ciudad').value;
-    var rec = Number(document.getElementById('f-recamaras').value || 0);
-    var max = Number(document.getElementById('f-max').value || 0);
+    var texto = val('f-buscar').toLowerCase();
+    var op = val('f-operacion');
+    var estatus = val('f-estatus');
+    var tipo = val('f-tipo');
+    var mc = val('f-mc');
+    var asesor = val('f-asesor');
+    var estado = val('f-estado');
+    var municipio = val('f-municipio');
+    var colonia = val('f-colonia');
+    var minPrecio = num('f-min');
+    var maxPrecio = num('f-max');
+    var rec = num('f-recamaras');
+    var banos = num('f-banos');
+    var est = num('f-estacionamientos');
+    var m2 = num('f-m2');
 
     var vis = todas.filter(function (p) {
       if (op && p.operacion !== op) return false;
+      if (estatus && p.estatus !== estatus) return false;
       if (tipo && p.tipo !== tipo) return false;
-      if (ciudad && p.municipio !== ciudad) return false;
+      if (mc && p.market_center !== mc) return false;
+      if (asesor && p.asesor_nombre !== asesor) return false;
+      if (estado && p.estado !== estado) return false;
+      if (municipio && p.municipio !== municipio) return false;
+      if (colonia && p.colonia !== colonia) return false;
+      if (minPrecio && Number(p.precio || 0) < minPrecio) return false;
+      if (maxPrecio && Number(p.precio || 0) > maxPrecio) return false;
       if (rec && Number(p.recamaras || 0) < rec) return false;
-      if (max && Number(p.precio || 0) > max) return false;
+      if (banos && Number(p.banos || 0) < banos) return false;
+      if (est && Number(p.estacionamientos || 0) < est) return false;
+      if (m2 && Number(p.m2_construccion || 0) < m2) return false;
+      if (texto) {
+        var donde = [p.titulo, p.calle, p.colonia, p.municipio, p.estado, p.tipo, p.asesor_nombre]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (donde.indexOf(texto) === -1) return false;
+      }
       return true;
     });
 
+    vis = ordenar(vis, val('f-orden'));
+
     var cont = document.getElementById('lista');
-    document.getElementById('conteo').textContent =
-      vis.length + (vis.length === 1 ? ' propiedad' : ' propiedades');
+    document.getElementById('conteo').innerHTML =
+      '<span>' + vis.length + (vis.length === 1 ? ' propiedad' : ' propiedades') +
+      (vis.length !== todas.length ? ' de ' + todas.length : '') + '</span>';
 
     if (!vis.length) {
       cont.innerHTML = '<div class="estado-msg">No encontramos propiedades con esos filtros.</div>';
@@ -274,29 +432,80 @@
   }
 
   function limpiarFiltros() {
-    ['f-operacion', 'f-tipo', 'f-ciudad', 'f-recamaras', 'f-max'].forEach(function (id) {
-      document.getElementById(id).value = '';
+    ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
+     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'
+    ].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
     });
+    document.getElementById('f-orden').value = 'reciente';
+    // El estatus vuelve a "Activa", que es el arranque razonable: lo
+    // normal es querer ver lo que sí está a la venta.
+    var e = document.getElementById('f-estatus');
+    if (e) e.value = 'publicada';
     pintar();
   }
 
   function llenarSelect(id, valores) {
     var sel = document.getElementById(id);
-    valores.sort().forEach(function (v) {
-      var o = document.createElement('option');
-      o.value = v; o.textContent = v;
-      sel.appendChild(o);
-    });
+    if (!sel) return;
+    valores.sort(function (a, b) { return String(a).localeCompare(String(b), 'es'); })
+      .forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
   }
+
+  function distintos(campo) {
+    var vistos = {};
+    todas.forEach(function (p) {
+      var v = p[campo];
+      if (v !== null && v !== undefined && String(v).trim() !== '') vistos[v] = true;
+    });
+    return Object.keys(vistos);
+  }
+
+  // Las listas se arman con lo que de verdad hay en el inventario, no con
+  // catálogos fijos: cuando llegue lo de Command, los valores salen solos.
+  function llenarListas() {
+    llenarSelect('f-tipo', distintos('tipo'));
+    llenarSelect('f-mc', distintos('market_center'));
+    llenarSelect('f-asesor', distintos('asesor_nombre'));
+    llenarSelect('f-estado', distintos('estado'));
+    llenarSelect('f-municipio', distintos('municipio'));
+    llenarSelect('f-colonia', distintos('colonia'));
+  }
+
+  var CAMPOS = 'id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
+               'estacionamientos, m2_construccion, calle, colonia, municipio, estado, ' +
+               'imagenes, asesor_nombre, market_center';
 
   async function cargar() {
     var cont = document.getElementById('lista');
     try {
-      var r = await sb.from('propiedades_publicas')
-        .select('id, titulo, operacion, tipo, precio, moneda, recamaras, banos, m2_construccion, colonia, municipio, imagenes')
-        .order('updated_at', { ascending: false })
-        .limit(300);
+      // Con sesión se ve el inventario completo (para poder filtrar por
+      // vendidas, rentadas o borradores); sin ella, solo lo publicado.
+      var hayIngreso = false;
+      try {
+        var ses = await sb.auth.getSession();
+        hayIngreso = !!(ses && ses.data && ses.data.session);
+      } catch (e) { hayIngreso = false; }
+
+      var origen = hayIngreso ? 'propiedades_inventario' : 'propiedades_publicas';
+      var r = await sb.from(origen).select(CAMPOS)
+        .order('updated_at', { ascending: false }).limit(500);
+
+      // Si la vista interna todavía no existe en la base, no se rompe la
+      // página: se cae a la pública y se esconde el filtro de estatus.
+      if (r.error && hayIngreso) {
+        hayIngreso = false;
+        r = await sb.from('propiedades_publicas').select(CAMPOS)
+          .order('updated_at', { ascending: false }).limit(500);
+      }
       if (r.error) throw r.error;
+
+      document.getElementById('filtro-estatus').hidden = !hayIngreso;
       todas = r.data || [];
 
       if (!todas.length) {
@@ -305,8 +514,8 @@
         return;
       }
 
-      llenarSelect('f-tipo', [...new Set(todas.map(function (p) { return p.tipo; }).filter(Boolean))]);
-      llenarSelect('f-ciudad', [...new Set(todas.map(function (p) { return p.municipio; }).filter(Boolean))]);
+      llenarListas();
+      if (hayIngreso) document.getElementById('f-estatus').value = 'publicada';
       pintar();
     } catch (err) {
       cont.innerHTML = '<div class="estado-msg">No se pudieron cargar las propiedades.<br>' +
@@ -314,10 +523,9 @@
     }
   }
 
-  ['f-operacion', 'f-tipo', 'f-ciudad', 'f-recamaras'].forEach(function (id) {
-    document.getElementById(id).addEventListener('change', pintar);
-  });
-  document.getElementById('f-max').addEventListener('input', pintar);
+  document.getElementById('filtros').addEventListener('change', pintar);
+  document.getElementById('filtros').addEventListener('input', pintar);
+  document.getElementById('filtros').addEventListener('submit', function (e) { e.preventDefault(); });
 
   cargar();
 </script>
