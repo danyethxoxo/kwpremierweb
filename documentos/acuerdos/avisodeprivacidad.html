@@ -492,7 +492,11 @@
      pantalla grande las dos listas se ven lado a lado. */
   .lista-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .lista-barra .lista-buscador { flex: 1; min-width: 0; margin-bottom: 0; }
-  .lista-barra .kw-tabs { display: none; margin-bottom: 0; flex-shrink: 0; }
+  /* Se deja encoger: en una pantalla muy angosta (o con el navegador
+     muy acercado) un ancho fijo empujaba la fila fuera de la página.
+     Al encogerse, las pestañas se deslizan de lado dentro de su
+     propia pastilla. */
+  .lista-barra .kw-tabs { display: none; margin-bottom: 0; flex-shrink: 1; min-width: 0; }
   .lista-barra .kw-tab { height: 32px; padding: 0 13px; font-size: 12px; }
   @media (max-width: 400px) {
     .lista-barra .kw-tab { padding: 0 10px; font-size: 11.5px; }
@@ -502,9 +506,14 @@
     .vista-lista { padding-top: 14px; }
     .lista-sticky-bar {
       position: sticky; top: 0; z-index: 5;
-      padding-top: 10px; margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+      margin: 0 -24px; padding: 14px 24px 12px;
       box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
     }
+    /* El margen del último renglón se salía de la barra (los márgenes
+       se escapan cuando el contenedor no tiene relleno abajo), y el
+       buscador quedaba pegado a la orilla. El aire ahora lo pone la
+       barra con su propio relleno. */
+    .lista-sticky-bar .lista-barra { margin-bottom: 0; }
     .vista-lista-header { margin-bottom: 12px; }
     .vista-lista-header > div:first-of-type { flex: 1 0 100%; }
     /* Crear documento pasa a ser el botón flotante de abajo. */
@@ -531,6 +540,11 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
     align-items: start;
   }
+  /* Sin esto, la columna se estira a lo que mida la tabla y empuja la
+     página de lado: los hijos de una cuadrícula no se encogen por
+     debajo de su contenido a menos que se les diga. Con min-width:0,
+     la tabla se desliza dentro de su marco. */
+  .lista-columna { min-width: 0; }
   .lista-columna-title {
     font-size: 12px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; color: #888; margin-bottom: 10px;
