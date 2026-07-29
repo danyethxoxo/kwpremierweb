@@ -436,8 +436,15 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 .kw-tabla-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 @media (max-width: 700px) {
-  .kw-tabla { min-width: 720px; }
-  .kw-tabla thead th, .kw-tabla td { padding: var(--sp-3); }
+  /* Solo las tablas de muchas columnas piden desplazarse de lado; una
+     de tres cabe en el celular y forzarla a 720px la sacaba de la
+     pantalla sin necesidad. */
+  .kw-tabla.ancha { min-width: 720px; }
+  .kw-tabla thead th, .kw-tabla td { padding: var(--sp-3) var(--sp-2); }
+  .kw-tabla { font-size: 12.5px; }
+  /* La insignia deja de medir todas lo mismo: en un renglón angosto se
+     comía el espacio del nombre del documento. */
+  .kw-pill { min-width: 0; padding: 5px 11px; font-size: 11.5px; }
 }
 
 /* ── Botón chico de acción (dentro de listas y tablas) ── */

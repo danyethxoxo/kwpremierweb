@@ -493,15 +493,17 @@
   .btn-nuevo-documento:hover { filter: brightness(1.08); }
   .btn-nuevo-documento:active { transform: scale(0.96); }
 
-  .lista-tabs-mobile { display: none; gap: 6px; }
-  .lista-tab-mobile {
-    flex: 1; padding: 9px; border-radius: 10px;
-    border: 1.5px solid var(--border); background: #fff;
-    font-size: 12.5px; font-weight: 700; color: var(--muted);
-    cursor: pointer; font-family: Arial, sans-serif;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  /* El selector de Borradores/Finalizados es el mismo control de
+     pestañas del Panel (kw-ui.css): la pastilla se desliza de una a
+     otra en vez de prenderse y apagarse. Solo aplica en celular; en
+     pantalla grande las dos listas se ven lado a lado. */
+  .lista-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .lista-barra .lista-buscador { flex: 1; min-width: 0; margin-bottom: 0; }
+  .lista-barra .kw-tabs { display: none; margin-bottom: 0; flex-shrink: 0; }
+  .lista-barra .kw-tab { height: 32px; padding: 0 13px; font-size: 12px; }
+  @media (max-width: 400px) {
+    .lista-barra .kw-tab { padding: 0 10px; font-size: 11.5px; }
   }
-  .lista-tab-mobile.active { background: #6741d9; border-color: #6741d9; color: #fff; }
 
   @media (max-width: 900px) {
     .vista-lista { padding-top: 14px; }
@@ -512,9 +514,9 @@
     }
     .vista-lista-header { margin-bottom: 12px; }
     .vista-lista-header > div:first-of-type { flex: 1 0 100%; }
-    .btn-nuevo-documento { flex: 1; padding: 9px 12px; font-size: 12px; }
-    .lista-tabs-mobile { display: flex; flex: 1; width: auto; max-width: 190px; }
-    .lista-tab-mobile { padding: 8px 6px; font-size: 11px; }
+    /* Crear documento pasa a ser el botón flotante de abajo. */
+    .btn-nuevo-documento { display: none; }
+    .lista-barra .kw-tabs { display: flex; }
   }
 
   .lista-buscador {
@@ -541,11 +543,19 @@
     letter-spacing: 0.05em; color: #888; margin-bottom: 10px;
   }
   .lista-columna-title-finalizados { color: #6741d9; }
-  @media (max-width: 900px) {
-    .lista-columnas { grid-template-columns: 1fr; }
-    .lista-columna { display: none; }
-    .lista-columna.activa-mobile { display: block; }
+  /* En pantalla grande las dos listas conviven; el panel escondido de
+     kw-ui.css solo debe aplicar en celular. */
+  @media (min-width: 901px) {
+    .lista-columnas .kw-tabpanel { display: block; animation: none; }
   }
+  @media (max-width: 900px) {
+    .lista-columnas { grid-template-columns: 1fr; --panel-min: 0; }
+  }
+
+  /* Botón flotante para crear, en el mismo lugar que el de guardar del
+     formulario: al picarlo sale la etiqueta y al volver a picar, crea. */
+  .fab-nuevo { background: linear-gradient(180deg, #e81010, var(--red)); }
+  .fab-label-nuevo { background: var(--red); }
 
   .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
   .lista-loading, .lista-vacio {
@@ -620,25 +630,24 @@
 <div id="vista-lista" class="vista-lista">
   <div class="lista-sticky-bar">
     <div class="vista-lista-header">
-      <div>
-        <div class="vista-lista-title">Formato de Referido</div>
-        <div class="vista-lista-sub">Tus documentos guardados de este tipo.</div>
-      </div>
+      <div class="vista-lista-title">Formato de Referido</div>
       <button type="button" class="btn-nuevo-documento" onclick="crearNuevoDocumento()">+ Crear nuevo documento</button>
-      <div class="lista-tabs-mobile" id="lista-tabs-mobile">
-        <button type="button" class="lista-tab-mobile active" data-tab="borradores" onclick="cambiarTabListaMobile('borradores')">Borradores</button>
-        <button type="button" class="lista-tab-mobile" data-tab="finalizados" onclick="cambiarTabListaMobile('finalizados')">Finalizados</button>
-      </div>
     </div>
 
-    <div class="lista-buscador">
+    <div class="lista-barra">
+      <div class="lista-buscador">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="buscador-input" placeholder="Buscar por nombre, fecha o folio..." oninput="filtrarListaDocumentos()" />
+      <input type="text" id="buscador-input" placeholder="Buscar documento…" oninput="filtrarListaDocumentos()" />
+      </div>
+      <div class="kw-tabs" data-kw-tabs="lista-columnas" id="lista-tabs-mobile">
+        <button type="button" class="kw-tab activo" data-tab="borradores">Borradores</button>
+        <button type="button" class="kw-tab" data-tab="finalizados">Finalizados</button>
+      </div>
     </div>
   </div>
 
-  <div class="lista-columnas">
-    <div class="lista-columna activa-mobile" id="columna-borradores">
+  <div class="lista-columnas kw-tabpanels" id="lista-columnas">
+    <div class="lista-columna kw-tabpanel activo" data-panel="borradores" id="columna-borradores">
       <div class="lista-columna-title">Borradores</div>
       <div id="lista-borradores" class="lista-documentos">
         <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
@@ -646,13 +655,22 @@
         <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
       </div>
     </div>
-    <div class="lista-columna" id="columna-finalizados">
+    <div class="lista-columna kw-tabpanel" data-panel="finalizados" id="columna-finalizados">
       <div class="lista-columna-title lista-columna-title-finalizados">Finalizados</div>
       <div id="lista-finalizados" class="lista-documentos">
         <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
         <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
         <div class="kw-skel-fila"><div style="flex:1;min-width:0;"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div>
       </div>
+    </div>
+  </div>
+
+  <div class="fab-wrap" id="fab-nuevo-wrap">
+    <div class="fab-item-principal">
+      <span class="fab-label fab-label-nuevo">Crear nuevo documento</span>
+      <button type="button" class="fab-principal fab-nuevo" onclick="onFabNuevoClick()" title="Crear nuevo documento" aria-label="Crear nuevo documento">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -1105,13 +1123,12 @@ function onFabGuardarClick() {
 
 (function () {
   function cerrarFAB() {
-    const wrap = document.getElementById('fab-wrap');
-    if (wrap) wrap.classList.remove('abierto');
+    document.querySelectorAll('.fab-wrap.abierto').forEach(w => w.classList.remove('abierto'));
     resetAvisosFAB();
   }
   document.addEventListener('click', function (e) {
-    const wrap = document.getElementById('fab-wrap');
-    if (!wrap || !wrap.classList.contains('abierto')) return;
+    const wrap = document.querySelector('.fab-wrap.abierto');
+    if (!wrap) return;
     if (!wrap.contains(e.target)) cerrarFAB();
   }, true);
   document.addEventListener('scroll', cerrarFAB, true);
@@ -1235,12 +1252,25 @@ function filtrarListaDocumentos() {
   renderListaDocumentos();
 }
 
+
+// El botón flotante de crear: el primer toque enseña de qué es y el
+// segundo lo hace, igual que el de guardar del formulario.
+function onFabNuevoClick() {
+  const wrap = document.getElementById('fab-nuevo-wrap');
+  if (!wrap) return;
+  if (!wrap.classList.contains('abierto')) {
+    wrap.classList.add('abierto');
+  } else {
+    wrap.classList.remove('abierto');
+    crearNuevoDocumento();
+  }
+}
+
+// El cambio entre Borradores y Finalizados lo lleva kw-ui.js, que es
+// quien mueve la pastilla. Esto queda para quien quiera cambiarlo desde
+// código (por ejemplo, mandar a Finalizados después de finalizar uno).
 function cambiarTabListaMobile(tab) {
-  document.querySelectorAll('.lista-tab-mobile').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
-  });
-  document.getElementById('columna-borradores').classList.toggle('activa-mobile', tab === 'borradores');
-  document.getElementById('columna-finalizados').classList.toggle('activa-mobile', tab === 'finalizados');
+  if (window.kwUI) window.kwUI.activarTab(tab, document.getElementById('lista-tabs-mobile'));
 }
 
 function renderListaDocumentos() {
