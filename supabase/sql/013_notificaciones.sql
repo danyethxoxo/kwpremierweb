@@ -46,7 +46,7 @@ begin
   insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
   select p.id, 'usuario_nuevo', 'Nuevo usuario agregado',
          v_nombre || ' se unió como ' || new.role,
-         '/hub/admin.html'
+         '/kwpremierweb/hub/admin.html'
   from public.profiles p
   where p.role in ('master', 'admin') and p.id <> new.id;
   return new;
@@ -73,7 +73,7 @@ begin
   insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
   select p.id, 'ticket_nuevo', 'Nuevo ticket: ' || new.titulo,
          coalesce(v_reportante, 'Alguien') || ' reportó una incidencia',
-         '/hub/tickets.html'
+         '/kwpremierweb/hub/tickets.html'
   from public.profiles p
   where p.role in ('master', 'admin', 'staff') and p.id <> new.user_id;
   return new;
@@ -101,7 +101,7 @@ begin
           then 'Te respondieron: ' || left(new.respuesta, 120)
         else 'Nuevo estatus: ' || new.estatus
       end,
-      '/hub/tickets.html'
+      '/kwpremierweb/hub/tickets.html'
     );
   end if;
   return new;

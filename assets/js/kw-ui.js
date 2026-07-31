@@ -2,7 +2,7 @@
 //
 // Se incluye al final del <body>, después del contenido:
 //
-//   <script src="/assets/js/kw-ui.js"></script>
+//   <script src="/kwpremierweb/assets/js/kw-ui.js"></script>
 //
 // Hace tres cosas, solas, sin que la página tenga que llamar a nada:
 //

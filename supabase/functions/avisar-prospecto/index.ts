@@ -29,7 +29,7 @@ const CORREO_REMITENTE = Deno.env.get('CORREO_REMITENTE') || 'KW Premier <onboar
 const CORREO_COPIA = Deno.env.get('CORREO_COPIA')
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
 
-const SITIO = 'https://kwpremier.com.mx'
+const SITIO = 'https://danyethxoxo.github.io/kwpremierweb'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

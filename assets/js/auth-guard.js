@@ -8,11 +8,9 @@
 // por defecto refresca el token indefinidamente mientras se use el
 // sitio, así que sin esto una sesión nunca expira sola).
 (function () {
-  // El sitio se publica en / (GitHub Pages de proyecto,
+  // El sitio se publica en /kwpremierweb/ (GitHub Pages de proyecto,
   // no dominio propio) — si eso cambia algún día, ajustar solo aquí.
-  // El sitio vive en la raíz del dominio, así que no hay tramo que
-  // anteponer; se deja la constante para armar las rutas en un solo lugar.
-  var BASE_PATH = '';
+  var BASE_PATH = '/kwpremierweb';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   var INACTIVITY_MS = 4 * 60 * 60 * 1000; // 4 horas sin uso -> se cierra sola

@@ -17,7 +17,7 @@
 (function (global) {
   'use strict';
 
-  var LOGO = '/assets/img/logo-kw-premier.png';
+  var LOGO = '/kwpremierweb/assets/img/logo-kw-premier.png';
 
   var ESTILOS = [
     '.hoja{background:#fff;width:21.6cm;min-height:27.9cm;padding:1.6cm 1.9cm;',

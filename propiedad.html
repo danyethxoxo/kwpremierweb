@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Propiedad · KW Premier</title>
-<link rel="icon" type="image/png" href="/assets/img/favicon.png" />
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20260728">
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
@@ -154,7 +154,7 @@
 
   <header class="kw-header">
     <span class="kw-header-title">Propiedad</span>
-    <a href="/propiedades.html" class="back-btn">
+    <a href="/kwpremierweb/propiedades.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
@@ -264,17 +264,17 @@
 
     if (!sesion) {
       // Sin sesión se comparte el enlace normal
-      copiar(location.origin + '/propiedad.html?id=' + encodeURIComponent(ID));
+      copiar(location.origin + '/kwpremierweb/propiedad.html?id=' + encodeURIComponent(ID));
       return;
     }
     try {
       var r = await sb.rpc('crear_enlace_compartido', { p_propiedad_id: ID });
       if (r.error) throw r.error;
-      copiar(location.origin + '/propiedad.html?ref=' + r.data);
+      copiar(location.origin + '/kwpremierweb/propiedad.html?ref=' + r.data);
       toast('Enlace copiado. Quien lo abra verá tus datos de contacto.');
       return;
     } catch (err) {
-      copiar(location.origin + '/propiedad.html?id=' + encodeURIComponent(ID));
+      copiar(location.origin + '/kwpremierweb/propiedad.html?id=' + encodeURIComponent(ID));
     }
   }
 
@@ -347,7 +347,7 @@
         '?subject=' + encodeURIComponent('Interés en: ' + p.titulo) + '">' + ICO.mail + 'Enviar correo</a>';
     }
     if (!botones) {
-      botones = '<a class="btn-contacto btn-mail" href="/asesores.html">' + ICO.mail + 'Contactar a un asesor</a>';
+      botones = '<a class="btn-contacto btn-mail" href="/kwpremierweb/asesores.html">' + ICO.mail + 'Contactar a un asesor</a>';
     }
     botones += '<button type="button" class="btn-contacto btn-compartir" onclick="compartir()">' + ICO.share + 'Compartir</button>';
 
@@ -370,7 +370,7 @@
       '</div>';
 
     document.getElementById('contenido').innerHTML =
-      '<a class="volver" href="/propiedades.html">' + ICO.flecha + 'Todas las propiedades</a>' +
+      '<a class="volver" href="/kwpremierweb/propiedades.html">' + ICO.flecha + 'Todas las propiedades</a>' +
       galeria +
       '<div class="columnas"><div>' + principal + '</div><div>' + lateral + '</div></div>';
 
@@ -386,7 +386,7 @@
         var r = await sb.rpc('resolver_propiedad_compartida', { p_codigo: REF });
         if (r.error) throw r.error;
         if (!r.data) {
-          cont.innerHTML = '<div class="estado-msg">Este enlace ya no está disponible.<br><a href="/propiedades.html">Ver todas las propiedades</a></div>';
+          cont.innerHTML = '<div class="estado-msg">Este enlace ya no está disponible.<br><a href="/kwpremierweb/propiedades.html">Ver todas las propiedades</a></div>';
           return;
         }
         propiedad = r.data.propiedad;
@@ -400,7 +400,7 @@
         var q = await sb.from('propiedades_publicas').select('*').eq('id', ID).maybeSingle();
         if (q.error) throw q.error;
         if (!q.data) {
-          cont.innerHTML = '<div class="estado-msg">No encontramos esta propiedad.<br><a href="/propiedades.html">Ver todas las propiedades</a></div>';
+          cont.innerHTML = '<div class="estado-msg">No encontramos esta propiedad.<br><a href="/kwpremierweb/propiedades.html">Ver todas las propiedades</a></div>';
           return;
         }
         propiedad = q.data;
@@ -419,6 +419,6 @@
   cargar();
 </script>
 
-<script src="/assets/js/drawer.js?v=20260728" data-menu="publico"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="publico"></script>
 </body>
 </html>
