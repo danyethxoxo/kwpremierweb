@@ -175,6 +175,31 @@
     return params.get('redirect') || '/kwpremierweb/portal.html';
   }
 
+  // Pantalla de carga: el mismo velo con el logo que usan las páginas
+  // con sesión (assets/js/auth-guard.js). Aquí se repite porque el
+  // login no carga ese archivo — es la única pantalla sin sesión.
+  function mostrarCargando() {
+    if (document.getElementById('kw-cargando')) return;
+    const estilo = document.createElement('style');
+    estilo.textContent =
+      '#kw-cargando{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;' +
+      'justify-content:center;background:rgba(239,239,239,0.72);' +
+      'backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);' +
+      'animation:kw-entra 0.3s ease both}' +
+      '#kw-cargando img{width:150px;max-width:52vw;height:auto;display:block;' +
+      'animation:kw-latido 1.9s ease-in-out infinite}' +
+      '@keyframes kw-entra{from{opacity:0}to{opacity:1}}' +
+      '@keyframes kw-latido{0%,100%{opacity:0.5;transform:scale(0.97)}50%{opacity:1;transform:scale(1)}}' +
+      '@media (prefers-reduced-motion:reduce){#kw-cargando img{animation:none;opacity:1}}';
+    document.head.appendChild(estilo);
+    const capa = document.createElement('div');
+    capa.id = 'kw-cargando';
+    capa.setAttribute('role', 'status');
+    capa.setAttribute('aria-label', 'Cargando');
+    capa.innerHTML = '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier" />';
+    document.body.appendChild(capa);
+  }
+
   function showMsg(text, kind) {
     const el = document.getElementById('msg');
     el.textContent = text;
@@ -198,17 +223,25 @@
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Se estrena el reloj de inactividad aquí mismo. Antes no se
+      // tocaba, y quien volvía después de cuatro horas entraba, el
+      // guardián de la siguiente página veía la marca vieja y lo
+      // regresaba: dos inicios de sesión para entrar una vez.
+      try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
+      mostrarCargando();
       location.replace(getRedirectTarget());
     } catch (err) {
       showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
-    } finally {
       submitBtn.disabled = false;
     }
   });
 
   // Si ya hay sesión activa, no tiene caso mostrar el login.
   sb.auth.getSession().then(({ data }) => {
-    if (data && data.session) location.replace(getRedirectTarget());
+    if (data && data.session) {
+      mostrarCargando();
+      location.replace(getRedirectTarget());
+    }
   });
 
   function togglePasswordVisibility() {
