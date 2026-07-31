@@ -27,7 +27,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <onboarding@resend.dev>'
-const SITE_TICKETS_URL = 'https://danyethxoxo.github.io/kwpremierweb/hub/tickets.html'
+const SITE_TICKETS_URL = 'https://kwpremier.com.mx/hub/tickets.html'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

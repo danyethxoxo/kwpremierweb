@@ -5,7 +5,7 @@
 // Neojaus para que a quien la integre le resulte familiar: la llave va
 // en el header `x-api-key` y los endpoints son REST sobre /properties.
 //
-// La documentación para terceros está en /kwpremierweb/api.html y la
+// La documentación para terceros está en /api.html y la
 // colección de Postman en docs/kwpremier-api.postman_collection.json.
 //
 // ─────────────────────────────────────────────────────────────

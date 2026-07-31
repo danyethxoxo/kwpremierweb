@@ -123,7 +123,7 @@ begin
     'prospecto_nuevo',
     'Nuevo prospecto: ' || new.nombre,
     coalesce(v_contacto, 'Dejó sus datos desde tu perfil'),
-    '/kwpremierweb/hub/prospectos.html'
+    '/hub/prospectos.html'
   );
   return new;
 end;
