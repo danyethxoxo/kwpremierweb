@@ -150,6 +150,8 @@
         <div class="ayuda-campo">Una línea corta. Ej: Especialista en Polanco desde 2016.</div></div>
       <div class="field"><label>Presentación corta</label><textarea id="perfil-descripcion" maxlength="220" placeholder="Una o dos líneas para la tarjeta de tu perfil. Ej: Asesor inmobiliario especializado en Polanco y Condesa."></textarea>
         <div class="ayuda-campo">Aparece junto a tu foto, arriba de tus redes.</div></div>
+      <div class="field"><label>Título de la sección "Conóceme"</label><input type="text" id="perfil-titulo-conoceme" maxlength="60" placeholder="Acerca de mí" />
+        <div class="ayuda-campo">El encabezado arriba de tu presentación larga. Si lo dejas vacío dice "Acerca de mí".</div></div>
       <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea>
         <div class="ayuda-campo">El texto largo de tu perfil público. Si lo dejas vacío se usa uno general.</div></div>
       <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar perfil</button>
@@ -298,7 +300,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url, portada_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+      .select('nombre, apellido, email, role, foto_url, portada_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, titulo_conoceme, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -307,6 +309,7 @@
     document.getElementById('perfil-apellido').value = perfil.apellido || '';
     document.getElementById('perfil-email').value = perfil.email || '';
     document.getElementById('perfil-acerca').value = perfil.acerca_de || '';
+    document.getElementById('perfil-titulo-conoceme').value = perfil.titulo_conoceme || '';
     document.getElementById('perfil-descripcion').value = perfil.descripcion_corta || '';
     document.getElementById('perfil-titulo').value = perfil.titulo_publico || '';
     document.getElementById('perfil-lema').value = perfil.lema_publico || '';
@@ -521,6 +524,7 @@
       const nombre = document.getElementById('perfil-nombre').value.trim();
       const apellido = document.getElementById('perfil-apellido').value.trim();
       const acerca = document.getElementById('perfil-acerca').value.trim() || null;
+      const tituloConoceme = document.getElementById('perfil-titulo-conoceme').value.trim() || null;
       const descripcion = document.getElementById('perfil-descripcion').value.trim() || null;
       const tituloPub = document.getElementById('perfil-titulo').value.trim() || null;
       const lemaPub = document.getElementById('perfil-lema').value.trim() || null;
@@ -528,7 +532,7 @@
         .from('profiles')
         .update({
           nombre, apellido,
-          acerca_de: acerca, descripcion_corta: descripcion,
+          acerca_de: acerca, descripcion_corta: descripcion, titulo_conoceme: tituloConoceme,
           titulo_publico: tituloPub, lema_publico: lemaPub,
         })
         .eq('id', miUserId);

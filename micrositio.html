@@ -70,17 +70,31 @@
   .micro-form .trampa { position: absolute; left: -9999px; opacity: 0; }
 
   .btn-enviar {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
     width: 100%; margin-top: 6px;
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none; border-radius: 40px;
     padding: 13px; font-size: 14px; font-weight: 700; font-family: inherit;
     cursor: pointer;
     box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.3);
-    transition: filter 0.15s, transform 0.12s;
+    transition: filter 0.15s, transform 0.12s, background 0.15s, box-shadow 0.15s;
   }
   .btn-enviar:hover { filter: brightness(1.06); }
   .btn-enviar:active { transform: translateY(1px) scale(0.98); }
-  .btn-enviar:disabled { opacity: 0.6; cursor: default; transform: none; }
+  /* Deshabilitado no es "más pálido del mismo color": aquí importa que
+     se note que todavía no se puede picar, no solo que está ocupado. */
+  .btn-enviar:disabled {
+    background: #e2e2e0; color: #999; box-shadow: none;
+    cursor: default; transform: none; filter: none;
+  }
+  .btn-enviar svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+  /* Cuando el asesor tiene WhatsApp, este es el único botón para
+     contactarlo: se viste de WhatsApp para que se entienda de un
+     vistazo qué va a pasar al picarle. */
+  .btn-enviar.btn-whatsapp-submit:not(:disabled) {
+    background: linear-gradient(180deg, #2ee06f 0%, #25D366 100%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 16px rgba(37,211,102,0.32);
+  }
 
   .form-msg { font-size: 13px; margin-top: 10px; display: none; line-height: 1.5; }
   .form-msg.ok { display: block; color: #1a7f37; }
@@ -467,6 +481,9 @@
     'acompañamiento en cada paso.';
 
   var id = new URLSearchParams(location.search).get('id');
+  // El botón de enviar dobla como botón de WhatsApp cuando el asesor
+  // tiene uno; pintarPerfil() la llena, conectarFormulario() la usa.
+  var waLinkActual = null;
 
   function escapeHtml(str) {
     var div = document.createElement('div');
@@ -563,6 +580,7 @@
       ? '<img src="' + escapeHtml(p.foto_url) + '" alt="' + escapeHtml(nombreCompleto) + '" />'
       : escapeHtml(iniciales(p.nombre, p.apellido));
     var wa = linkWhatsapp(p.whatsapp);
+    waLinkActual = wa;
     var acerca = (p.acerca_de || '').trim() || ACERCA_POR_DEFECTO;
     var desc = (p.descripcion_corta || '').trim() || DESC_POR_DEFECTO;
     var puesto = p.puesto || ROL_LABELS[p.role] || p.role;
@@ -591,25 +609,23 @@
 
       // ── Las tres secciones del perfil ──
       '<div class="kw-tabs" data-kw-tabs="micro-paneles" id="micro-tabs">' +
-        '<button type="button" class="kw-tab activo" data-tab="acerca">Acerca de mí</button>' +
+        '<button type="button" class="kw-tab activo" data-tab="acerca">Conóceme</button>' +
         '<button type="button" class="kw-tab" data-tab="enlaces">Enlaces</button>' +
         '<button type="button" class="kw-tab" data-tab="propiedades">Propiedades</button>' +
       '</div>' +
 
       '<div class="kw-tabpanels" id="micro-paneles">' +
 
-        // Acerca de mí: lo que escribió, el WhatsApp y el formulario.
+        // Conóceme: lo que escribió, y el formulario que dobla como botón
+        // de WhatsApp (ver conectarFormulario).
         '<section class="kw-tabpanel activo" data-panel="acerca">' +
           '<div class="kw-card">' +
-            '<h2 class="micro-h2">Acerca de mí</h2>' +
+            '<h2 class="micro-h2">' + escapeHtml((p.titulo_conoceme || '').trim() || 'Acerca de mí') + '</h2>' +
             '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
-            (wa ? '<a class="btn-whatsapp ancho" style="margin-top:var(--sp-4);" href="' +
-                  escapeHtml(wa) + '" target="_blank" rel="noopener">' +
-                  ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
           '</div>' +
 
           '<div class="kw-card">' +
-            '<h2 class="micro-h2">Déjame tus datos</h2>' +
+            '<h2 class="micro-h2">Déjame tus datos para una asesoría personalizada gratuita</h2>' +
             '<form class="micro-form" id="form-prospecto" novalidate>' +
               '<div class="campo"><label for="pr-nombre">Nombre</label>' +
                 '<input type="text" id="pr-nombre" name="nombre" maxlength="120" autocomplete="name" required /></div>' +
@@ -617,10 +633,18 @@
                 '<input type="email" id="pr-correo" name="correo" maxlength="160" autocomplete="email" /></div>' +
               '<div class="campo"><label for="pr-telefono">Teléfono</label>' +
                 '<input type="tel" id="pr-telefono" name="telefono" maxlength="40" autocomplete="tel" /></div>' +
-              '<div class="campo"><label for="pr-mensaje">¿Qué estás buscando?</label>' +
+              '<div class="campo"><label for="pr-mensaje">¿En qué te puedo ayudar?</label>' +
                 '<textarea id="pr-mensaje" name="mensaje" maxlength="1000" placeholder="Opcional"></textarea></div>' +
               '<input type="text" class="trampa" name="apodo" tabindex="-1" autocomplete="off" aria-hidden="true" />' +
-              '<button type="submit" class="btn-enviar" id="btn-enviar">Enviar mis datos</button>' +
+              // Este botón ES el contacto por WhatsApp cuando el asesor
+              // tiene uno registrado: se queda deshabilitado hasta que
+              // el formulario esté completo (conectarFormulario se
+              // encarga), y al picarle abre el chat mientras se guardan
+              // los datos. Sin WhatsApp configurado, es el envío normal.
+              '<button type="submit" class="btn-enviar' + (wa ? ' btn-whatsapp-submit' : '') + '" id="btn-enviar" disabled>' +
+                (wa ? ICONOS_RED.whatsapp : '') +
+                '<span id="btn-enviar-texto">' + (wa ? 'Enviar y platicar por WhatsApp' : 'Enviar mis datos') + '</span>' +
+              '</button>' +
               '<div class="form-msg" id="form-msg"></div>' +
             '</form>' +
             '<div class="micro-gracias" id="micro-gracias">' +
@@ -947,11 +971,36 @@
     var form = document.getElementById('form-prospecto');
     var msg = document.getElementById('form-msg');
     var btn = document.getElementById('btn-enviar');
+    // El texto vive en un <span> aparte del ícono de WhatsApp: así se
+    // puede decir "Enviando..." sin borrar el ícono del botón.
+    var btnTexto = document.getElementById('btn-enviar-texto');
+    var textoOriginal = btnTexto ? btnTexto.textContent : '';
 
     function decir(texto, clase) {
       msg.textContent = texto;
       msg.className = 'form-msg ' + (clase || '');
     }
+
+    function ponerTexto(t) { if (btnTexto) btnTexto.textContent = t; }
+
+    // Los mismos requisitos de siempre (nombre, y correo o teléfono),
+    // pero en vivo: el botón no se habilita hasta que se cumplan, para
+    // que a nadie se le vaya a abrir WhatsApp con un formulario vacío.
+    function formularioCompleto() {
+      var nombre = form.nombre.value.trim();
+      var correo = form.correo.value.trim();
+      var telefono = form.telefono.value.trim();
+      if (nombre.length < 2) return false;
+      if (!correo && !telefono) return false;
+      if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return false;
+      return true;
+    }
+
+    function actualizarBoton() { btn.disabled = !formularioCompleto(); }
+    ['nombre', 'correo', 'telefono'].forEach(function (campo) {
+      form[campo].addEventListener('input', actualizarBoton);
+    });
+    actualizarBoton();
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -978,8 +1027,13 @@
         return;
       }
 
+      // El chat se abre aquí, todavía dentro del mismo clic: si se
+      // espera a que termine de guardar (con await de por medio), el
+      // navegador ya no lo cuenta como gesto del usuario y lo bloquea.
+      if (waLinkActual) window.open(waLinkActual, '_blank', 'noopener');
+
       btn.disabled = true;
-      btn.textContent = 'Enviando...';
+      ponerTexto('Enviando...');
       try {
         var res = await sbMicro.from('prospectos').insert({
           asesor_id: id,
@@ -994,7 +1048,7 @@
       } catch (err) {
         decir('No se pudieron enviar tus datos. Intenta de nuevo o escríbenos por WhatsApp.', 'error');
         btn.disabled = false;
-        btn.textContent = 'Enviar mis datos';
+        ponerTexto(textoOriginal);
       }
     });
   }
@@ -1013,7 +1067,7 @@
     try {
       var res = await sbMicro
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role, foto_url, portada_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta, titulo_publico, lema_publico')
+        .select('id, nombre, apellido, role, foto_url, portada_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta, titulo_publico, lema_publico, titulo_conoceme')
         .eq('id', id)
         .single();
       if (res.error || !res.data) throw (res.error || new Error('Perfil no encontrado.'));
