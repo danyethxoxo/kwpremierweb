@@ -21,7 +21,8 @@
 <meta property="og:image:alt" content="KW Premier · Keller Williams · Bienes Raíces" />
 <meta name="twitter:card" content="summary" />
 <meta name="description" content="Conoce a nuestro equipo de asesores inmobiliarios de KW Premier." />
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <style>
   html, body {
     min-height: 100%;
@@ -32,33 +33,17 @@
 
   main {
     flex: 1;
-    max-width: 1080px;
+    max-width: 860px;
     width: 100%;
     margin: 0 auto;
     padding: 96px 24px 60px;
   }
 
-  .micro-encabezado { text-align: center; margin-bottom: 46px; }
-  .micro-titulo {
-    font-size: 46px; font-weight: 800; letter-spacing: -1.2px;
-    color: var(--red); line-height: 1.05;
-  }
-  .micro-lema { font-size: 15px; color: var(--muted); margin-top: 10px; }
-
-  /* Arriba, la tarjeta y el formulario lado a lado; las propiedades van
-     abajo, a todo lo ancho. En móvil se apila en ese mismo orden. */
-  .micro-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 34px;
-    align-items: start;
-    max-width: 800px;
-    margin: 0 auto;
-  }
-
-  .micro-col h2 {
-    font-size: 19px; font-weight: 700; letter-spacing: -0.3px;
-    margin-bottom: 16px;
+  /* El ancho se limita para que el perfil se lea como una ficha y no
+     como una página estirada de lado a lado. */
+  .micro-h2 {
+    font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+    margin-bottom: var(--sp-3);
   }
 
   /* ── Columna 1: formulario de contacto ── */
@@ -116,40 +101,110 @@
   .micro-gracias strong { font-size: 15px; display: block; margin-bottom: 5px; }
   .micro-gracias span { font-size: 13px; color: var(--muted); line-height: 1.55; }
 
-  /* ── Columna 2: la tarjeta roja, con todo lo de la persona ── */
-  .micro-acerca {
-    font-size: 13.5px; line-height: 1.7;
-    color: rgba(255,255,255,0.94);
-    margin-top: 16px; text-align: left;
-    white-space: pre-line;
+  /* ── Encabezado: portada, foto y nombre ────────────────────
+     Como una red social: una imagen ancha arriba y la foto encimada.
+     Sin portada propia se pinta un degradado en rojo KW. */
+  .micro-cabecera {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-tarjeta);
+    overflow: hidden;
+    box-shadow: var(--sombra-1);
+    margin-bottom: var(--sp-4);
+  }
+  .micro-portada {
+    height: 210px;
+    background: linear-gradient(135deg, #e81010 0%, var(--red) 55%, #8f0000 100%);
+    background-size: cover; background-position: center;
+    position: relative;
+  }
+  .micro-portada-editar {
+    position: absolute; right: 14px; bottom: 14px;
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 34px; padding: 0 14px; border-radius: var(--r-pastilla);
+    border: none; cursor: pointer; font-family: inherit;
+    font-size: 12.5px; font-weight: 700;
+    background: rgba(255,255,255,0.92); color: var(--text);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: background 0.15s, transform 0.12s;
+  }
+  .micro-portada-editar:hover { background: #fff; }
+  .micro-portada-editar:active { transform: scale(0.95); }
+  .micro-portada-editar svg { width: 14px; height: 14px; }
+
+  /* La foto sube sobre la portada; el hueco de la izquierda lo deja el
+     padding, para que el nombre no se le encime. */
+  /* Solo la foto sube sobre la portada. Si se sube el renglón entero,
+     el nombre se mete debajo de la imagen y queda cortado. */
+  .micro-identidad {
+    display: flex; align-items: flex-end; gap: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  }
+  .micro-foto {
+    /* La portada lleva position:relative (por el botón de cambiarla) y
+       eso la hace pintarse encima de lo que no está posicionado: sin
+       este z-index, la foto queda por debajo y se ve cortada. */
+    position: relative; z-index: 1;
+    margin-top: -70px;
+    width: 132px; height: 132px; border-radius: 50%; flex-shrink: 0;
+    background: #fff3f3; color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px; font-weight: 700;
+    overflow: hidden;
+    border: 5px solid var(--card);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+  }
+  .micro-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .micro-datos { flex: 1; min-width: 0; padding-bottom: 6px; }
+  .micro-nombre {
+    font-size: 25px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.15;
+  }
+  .micro-puesto {
+    font-size: 12px; font-weight: 700; color: var(--red);
+    text-transform: uppercase; letter-spacing: 0.07em; margin-top: 5px;
+  }
+  .micro-desc {
+    font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-top: 8px;
+  }
+  .micro-cab-acciones { display: flex; gap: var(--sp-2); padding-bottom: 6px; flex-shrink: 0; }
+
+  @media (max-width: 700px) {
+    .micro-portada { height: 140px; }
+    .micro-identidad {
+      flex-direction: column; align-items: center; text-align: center;
+      gap: var(--sp-3); padding: var(--sp-2) var(--sp-3) var(--sp-3);
+    }
+    .micro-foto { margin-top: -56px; width: 104px; height: 104px; font-size: 30px; }
+    .micro-nombre { font-size: 21px; }
+    .micro-cab-acciones { width: 100%; }
+    .micro-cab-acciones > * { flex: 1; }
   }
 
-  .micro-acciones {
-    display: flex; flex-direction: column; gap: 9px; margin-top: 20px;
-  }
+  /* ── Botones ── */
   .btn-whatsapp, .btn-compartir {
     display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-    border-radius: 40px; padding: 13px 24px;
+    border-radius: var(--r-pastilla); padding: 12px 22px;
     font-size: 14px; font-weight: 700; font-family: inherit;
-    text-decoration: none; cursor: pointer;
+    text-decoration: none; cursor: pointer; white-space: nowrap;
     transition: filter 0.15s, background 0.15s, box-shadow 0.12s, transform 0.12s;
   }
   .btn-whatsapp {
     background: linear-gradient(180deg, #2ee06f 0%, #25D366 100%);
     color: #fff; border: none;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 16px rgba(37,211,102,0.35);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 16px rgba(37,211,102,0.32);
   }
   .btn-whatsapp:hover { filter: brightness(1.05); }
-  .btn-whatsapp:active {
-    transform: translateY(1px) scale(0.97);
-    box-shadow: 0 2px 6px rgba(37,211,102,0.3) inset;
-  }
+  .btn-whatsapp:active { transform: translateY(1px) scale(0.97); }
+  .btn-whatsapp.ancho { width: 100%; padding: 14px 22px; font-size: 15px; }
   .btn-compartir {
-    background: #fff; color: var(--red);
-    border: none;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.16);
+    background: #fff; color: var(--red); border: 1.5px solid var(--border);
+    box-shadow: var(--sombra-1);
   }
-  .btn-compartir:hover { background: #fff5f5; }
+  .btn-compartir:hover { background: #fff5f5; border-color: var(--red); }
+  .btn-compartir:active { transform: translateY(1px) scale(0.97); }
+  .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
+  .btn-compartir svg { width: 16px; height: 16px; }
 
   /* Editar vive en el header y solo lo ve el dueño del perfil. Como en
      kw-base.css el último hijo del header se pega a la derecha, aquí ese
@@ -168,58 +223,51 @@
   .btn-editar:hover { background: #ffe0e0; color: var(--red); transform: translateY(-1px); }
   .btn-editar:active { transform: scale(0.94); }
   .btn-editar svg { width: 15px; height: 15px; }
-  .btn-compartir:active { transform: translateY(1px) scale(0.97); }
-  .btn-whatsapp svg { width: 17px; height: 17px; fill: currentColor; }
-  .btn-compartir svg { width: 16px; height: 16px; }
 
-  /* La tarjeta roja: foto encima y todo lo de la persona adentro */
-  .micro-tarjeta { padding-top: 62px; position: relative; }
-  .micro-foto {
-    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    width: 148px; height: 148px; border-radius: 50%;
-    background: #fff3f3; color: var(--red);
+  /* ── Enlaces: renglones, no iconitos sueltos ──
+     Con el nombre de cada red al lado se sabe a dónde lleva antes de
+     picarle; los círculos de puro icono obligaban a adivinar. */
+  .micro-enlaces { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .micro-enlace {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: 13px 15px; border-radius: var(--r-campo);
+    border: 1.5px solid var(--border); background: #fff;
+    text-decoration: none; color: var(--text);
+    transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  }
+  .micro-enlace:hover {
+    border-color: var(--red); transform: translateY(-1px);
+    box-shadow: var(--sombra-2);
+  }
+  .micro-enlace:active { transform: translateY(0) scale(0.99); }
+  .micro-enlace-icono {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: #f5f5f5; color: #666;
     display: flex; align-items: center; justify-content: center;
-    font-size: 42px; font-weight: 700;
-    overflow: hidden; z-index: 2;
-    border: 5px solid var(--bg);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+    transition: background 0.15s, color 0.15s;
   }
-  .micro-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .micro-enlace:hover .micro-enlace-icono { background: #fff0f0; color: var(--red); }
+  .micro-enlace-icono svg { width: 16px; height: 16px; fill: currentColor; }
+  .micro-enlace-icono svg[stroke], .micro-enlace-icono .sin-relleno {
+    fill: none; stroke: currentColor; stroke-width: 2;
+  }
+  /* Son <span>, así que sin esto el nombre de la red y su dirección
+     salen pegados en el mismo renglón. */
+  .micro-enlace-texto { flex: 1; min-width: 0; display: block; }
+  .micro-enlace-red { display: block; font-size: 14px; font-weight: 700; }
+  .micro-enlace-url {
+    display: block;
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .micro-enlace-flecha { color: #ccc; flex-shrink: 0; }
+  .micro-enlace-flecha svg { width: 15px; height: 15px; }
 
-  .micro-panel {
-    background: var(--red); color: #fff;
-    border-radius: 18px;
-    padding: 96px 26px 30px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(204,0,0,0.22);
+  /* Lo que se lee de la persona, tal como lo escribió. */
+  .micro-acerca {
+    font-size: 14.5px; line-height: 1.75; color: #444;
+    white-space: pre-line;
   }
-  .micro-hola {
-    font-size: 21px; font-weight: 800; line-height: 1.25;
-    text-transform: uppercase; letter-spacing: 0.01em;
-  }
-  .micro-puesto {
-    font-size: 11px; opacity: 0.82; margin-top: 7px;
-    text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600;
-  }
-  .micro-desc {
-    font-size: 13.5px; line-height: 1.65;
-    margin-top: 15px; color: rgba(255,255,255,0.92);
-  }
-
-  .micro-redes {
-    display: flex; justify-content: center; gap: 9px;
-    margin-top: 20px; flex-wrap: wrap;
-  }
-  .micro-redes a {
-    width: 38px; height: 38px; border-radius: 50%;
-    background: rgba(255,255,255,0.16); color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, transform 0.15s;
-  }
-  .micro-redes a:hover { background: #fff; color: var(--red); transform: translateY(-2px); }
-  .micro-redes svg { width: 16px; height: 16px; fill: currentColor; }
-  .micro-redes .sin-relleno { fill: none; stroke: currentColor; stroke-width: 2; }
-  .micro-redes svg[stroke] { fill: none; }
 
   /* ── Mis propiedades: franja de abajo, a todo lo ancho ── */
   .micro-props { margin-top: 52px; }
@@ -364,8 +412,6 @@
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 70px 0; }
 
   @media (max-width: 900px) {
-    .micro-cols { grid-template-columns: 1fr; gap: 40px; max-width: 460px; }
-    .micro-props { margin-top: 44px; }
     .props-lista { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 13px; }
   }
   @media (max-width: 480px) {
@@ -374,9 +420,8 @@
     .btn-editar { padding: 0; width: 34px; justify-content: center; }
   }
   @media (max-width: 640px) {
-    main { padding: 84px 18px 44px; }
-    .micro-titulo { font-size: 36px; }
-    .micro-encabezado { margin-bottom: 34px; }
+    main { padding: 84px 16px 44px; }
+    .props-lista { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -477,20 +522,38 @@
     casa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
   };
 
+  // Cada enlace en su renglón, con el nombre de la red y a dónde va.
+  // Antes eran círculos de puro icono: había que adivinar y picarle.
   function redesHtml(p) {
     var links = [
-      ['correo', p.email ? 'mailto:' + p.email : null, 'Escríbeme por correo'],
-      ['sitio_web', linkSeguro(p.sitio_web), 'Sitio web'],
-      ['instagram', linkSeguro(p.instagram), 'Instagram'],
-      ['facebook', linkSeguro(p.facebook), 'Facebook'],
-      ['tiktok', linkSeguro(p.tiktok), 'TikTok'],
-      ['linkedin', linkSeguro(p.linkedin), 'LinkedIn'],
+      ['correo', p.email ? 'mailto:' + p.email : null, 'Correo', p.email],
+      ['sitio_web', linkSeguro(p.sitio_web), 'Sitio web', p.sitio_web],
+      ['instagram', linkSeguro(p.instagram), 'Instagram', p.instagram],
+      ['facebook', linkSeguro(p.facebook), 'Facebook', p.facebook],
+      ['tiktok', linkSeguro(p.tiktok), 'TikTok', p.tiktok],
+      ['linkedin', linkSeguro(p.linkedin), 'LinkedIn', p.linkedin],
     ].filter(function (r) { return r[1]; });
-    if (!links.length) return '';
-    return '<div class="micro-redes">' + links.map(function (r) {
-      var nuevaPestana = r[0] === 'correo' ? '' : ' target="_blank" rel="noopener"';
-      return '<a href="' + escapeHtml(r[1]) + '"' + nuevaPestana + ' aria-label="' +
-             r[2] + '" title="' + r[2] + '">' + ICONOS_RED[r[0]] + '</a>';
+
+    if (!links.length) {
+      return '<div class="kw-vacio">Este perfil todavía no tiene enlaces publicados.</div>';
+    }
+
+    return '<div class="micro-enlaces">' + links.map(function (r) {
+      var nueva = r[0] === 'correo' ? '' : ' target="_blank" rel="noopener"';
+      // Se enseña la dirección sin el "https://" ni la diagonal final:
+      // lo que importa es reconocer la cuenta, no leer el protocolo.
+      var visible = String(r[3] || '').replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      return '<a class="micro-enlace" href="' + escapeHtml(r[1]) + '"' + nueva + '>' +
+        '<span class="micro-enlace-icono">' + ICONOS_RED[r[0]] + '</span>' +
+        '<span class="micro-enlace-texto">' +
+          '<span class="micro-enlace-red">' + r[2] + '</span>' +
+          '<span class="micro-enlace-url">' + escapeHtml(visible) + '</span>' +
+        '</span>' +
+        '<span class="micro-enlace-flecha">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+          'stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>' +
+        '</span>' +
+      '</a>';
     }).join('') + '</div>';
   }
 
@@ -503,64 +566,89 @@
     var acerca = (p.acerca_de || '').trim() || ACERCA_POR_DEFECTO;
     var desc = (p.descripcion_corta || '').trim() || DESC_POR_DEFECTO;
     var puesto = p.puesto || ROL_LABELS[p.role] || p.role;
+    // Sin portada propia se queda el degradado que pone el CSS.
+    var portada = p.portada_url
+      ? ' style="background-image:url(\'' + escapeHtml(p.portada_url) + '\')"'
+      : '';
 
     return '' +
-      '<div class="micro-encabezado">' +
-        '<h1 class="micro-titulo">' + escapeHtml((p.titulo_publico || '').trim() || TITULO_POR_DEFECTO) + '</h1>' +
-        '<p class="micro-lema">' + escapeHtml((p.lema_publico || '').trim() || LEMA_POR_DEFECTO) + '</p>' +
-      '</div>' +
-
-      '<div class="micro-cols" id="micro-cols">' +
-
-        // ── Izquierda: la tarjeta roja con todo lo de la persona ──
-        '<section class="micro-col micro-tarjeta">' +
+      // ── Encabezado: portada, foto, nombre y las dos acciones ──
+      '<section class="micro-cabecera">' +
+        '<div class="micro-portada" id="micro-portada"' + portada + '></div>' +
+        '<div class="micro-identidad">' +
           '<div class="micro-foto">' + avatar + '</div>' +
-          '<div class="micro-panel">' +
-            '<div class="micro-hola">Hola, soy<br>' + escapeHtml(nombreCompleto) + '</div>' +
+          '<div class="micro-datos">' +
+            '<h1 class="micro-nombre">' + escapeHtml(nombreCompleto) + '</h1>' +
             '<div class="micro-puesto">' + escapeHtml(puesto) + '</div>' +
             '<p class="micro-desc">' + escapeHtml(desc) + '</p>' +
+          '</div>' +
+          '<div class="micro-cab-acciones">' +
+            '<button type="button" class="btn-compartir" id="btn-compartir">' +
+              ICONOS_RED.compartir + 'Compartir</button>' +
+          '</div>' +
+        '</div>' +
+      '</section>' +
+
+      // ── Las tres secciones del perfil ──
+      '<div class="kw-tabs" data-kw-tabs="micro-paneles" id="micro-tabs">' +
+        '<button type="button" class="kw-tab activo" data-tab="acerca">Acerca de mí</button>' +
+        '<button type="button" class="kw-tab" data-tab="enlaces">Enlaces</button>' +
+        '<button type="button" class="kw-tab" data-tab="propiedades">Propiedades</button>' +
+      '</div>' +
+
+      '<div class="kw-tabpanels" id="micro-paneles">' +
+
+        // Acerca de mí: lo que escribió, el WhatsApp y el formulario.
+        '<section class="kw-tabpanel activo" data-panel="acerca">' +
+          '<div class="kw-card">' +
+            '<h2 class="micro-h2">Acerca de mí</h2>' +
             '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
-            redesHtml(p) +
-            '<div class="micro-acciones">' +
-              (wa ? '<a class="btn-whatsapp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' +
-                    ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
-              '<button type="button" class="btn-compartir" id="btn-compartir">' +
-                ICONOS_RED.compartir + 'Compartir perfil</button>' +
+            (wa ? '<a class="btn-whatsapp ancho" style="margin-top:var(--sp-4);" href="' +
+                  escapeHtml(wa) + '" target="_blank" rel="noopener">' +
+                  ICONOS_RED.whatsapp + 'Contáctame por WhatsApp</a>' : '') +
+          '</div>' +
+
+          '<div class="kw-card">' +
+            '<h2 class="micro-h2">Déjame tus datos</h2>' +
+            '<form class="micro-form" id="form-prospecto" novalidate>' +
+              '<div class="campo"><label for="pr-nombre">Nombre</label>' +
+                '<input type="text" id="pr-nombre" name="nombre" maxlength="120" autocomplete="name" required /></div>' +
+              '<div class="campo"><label for="pr-correo">Correo</label>' +
+                '<input type="email" id="pr-correo" name="correo" maxlength="160" autocomplete="email" /></div>' +
+              '<div class="campo"><label for="pr-telefono">Teléfono</label>' +
+                '<input type="tel" id="pr-telefono" name="telefono" maxlength="40" autocomplete="tel" /></div>' +
+              '<div class="campo"><label for="pr-mensaje">¿Qué estás buscando?</label>' +
+                '<textarea id="pr-mensaje" name="mensaje" maxlength="1000" placeholder="Opcional"></textarea></div>' +
+              '<input type="text" class="trampa" name="apodo" tabindex="-1" autocomplete="off" aria-hidden="true" />' +
+              '<button type="submit" class="btn-enviar" id="btn-enviar">Enviar mis datos</button>' +
+              '<div class="form-msg" id="form-msg"></div>' +
+            '</form>' +
+            '<div class="micro-gracias" id="micro-gracias">' +
+              '<div class="palomita">' + ICONOS_RED.palomita + '</div>' +
+              '<strong>¡Gracias!</strong>' +
+              '<span>' + escapeHtml((p.nombre || '').trim() || nombreCompleto) +
+              ' recibió tus datos y te va a contactar muy pronto.</span>' +
             '</div>' +
           '</div>' +
         '</section>' +
 
-        // ── Derecha: formulario de contacto ──
-        '<section class="micro-col micro-col-form">' +
-          '<h2>Contáctame</h2>' +
-          '<form class="micro-form" id="form-prospecto" novalidate>' +
-            '<div class="campo"><label for="pr-nombre">Nombre</label>' +
-              '<input type="text" id="pr-nombre" name="nombre" maxlength="120" autocomplete="name" required /></div>' +
-            '<div class="campo"><label for="pr-correo">Correo</label>' +
-              '<input type="email" id="pr-correo" name="correo" maxlength="160" autocomplete="email" /></div>' +
-            '<div class="campo"><label for="pr-telefono">Teléfono</label>' +
-              '<input type="tel" id="pr-telefono" name="telefono" maxlength="40" autocomplete="tel" /></div>' +
-            '<div class="campo"><label for="pr-mensaje">¿Qué estás buscando?</label>' +
-              '<textarea id="pr-mensaje" name="mensaje" maxlength="1000" placeholder="Opcional"></textarea></div>' +
-            '<input type="text" class="trampa" name="apodo" tabindex="-1" autocomplete="off" aria-hidden="true" />' +
-            '<button type="submit" class="btn-enviar" id="btn-enviar">Enviar mis datos</button>' +
-            '<div class="form-msg" id="form-msg"></div>' +
-          '</form>' +
-          '<div class="micro-gracias" id="micro-gracias">' +
-            '<div class="palomita">' + ICONOS_RED.palomita + '</div>' +
-            '<strong>¡Gracias!</strong>' +
-            '<span>' + escapeHtml((p.nombre || '').trim() || nombreCompleto) +
-            ' recibió tus datos y te va a contactar muy pronto.</span>' +
+        // Enlaces: sus redes y su sitio.
+        '<section class="kw-tabpanel" data-panel="enlaces">' +
+          '<div class="kw-card">' +
+            '<h2 class="micro-h2">Dónde encontrarme</h2>' +
+            redesHtml(p) +
           '</div>' +
         '</section>' +
 
-      '</div>' +
+        // Propiedades: se llenan en cargarPropiedades().
+        '<section class="kw-tabpanel" data-panel="propiedades">' +
+          '<div class="kw-card">' +
+            '<div class="props-top"><h2 class="micro-h2">Mis propiedades</h2><span id="props-mas"></span></div>' +
+            '<div id="props-lista"></div>' +
+          '</div>' +
+        '</section>' +
 
-      // ── Abajo, a todo lo ancho: sus propiedades (ver cargarPropiedades) ──
-      '<section class="micro-props" id="col-props" hidden>' +
-        '<div class="props-top"><h2>Mis propiedades</h2><span id="props-mas"></span></div>' +
-        '<div id="props-lista"></div>' +
-      '</section>';
+      '</div>';
   }
 
 
@@ -644,17 +732,9 @@
   }
 
   function pintarPropiedades() {
-    var col = document.getElementById('col-props');
     var lista = document.getElementById('props-lista');
     var mas = document.getElementById('props-mas');
-
-    // Sin propiedades y sin poder agregarlas, esta franja solo dejaría un
-    // hueco con un título: se esconde completa.
-    if (!propiedadesVisibles.length && !esDuenoDelPerfil) {
-      col.hidden = true;
-      return;
-    }
-    col.hidden = false;
+    if (!lista) return;
 
     mas.innerHTML = esDuenoDelPerfil
       ? '<button type="button" class="btn-mas" id="btn-agregar-prop" title="Elegir propiedades" ' +
@@ -933,7 +1013,7 @@
     try {
       var res = await sbMicro
         .from('perfiles_publicos')
-        .select('id, nombre, apellido, role, foto_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta, titulo_publico, lema_publico')
+        .select('id, nombre, apellido, role, foto_url, portada_url, puesto, acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin, email, descripcion_corta, titulo_publico, lema_publico')
         .eq('id', id)
         .single();
       if (res.error || !res.data) throw (res.error || new Error('Perfil no encontrado.'));
@@ -943,6 +1023,9 @@
       document.title = nombreCompleto;
 
       cont.innerHTML = pintarPerfil(p);
+      // El perfil se dibuja de golpe con JS, así que las pestañas hay
+      // que armarlas después: kw-ui.js ya pasó cuando cargó la página.
+      if (window.kwUI) window.kwUI.iniciar(cont);
       conectarFormulario();
       cargarPropiedades();
 

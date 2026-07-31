@@ -51,6 +51,15 @@
     border: 2px solid var(--border);
   }
   .foto-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .portada-wrap { margin-bottom: 20px; }
+  .portada-preview {
+    height: 130px; border-radius: 12px;
+    background: linear-gradient(135deg, #e81010 0%, var(--red) 55%, #8f0000 100%);
+    background-size: cover; background-position: center;
+    border: 1px solid var(--border);
+  }
+  .portada-acciones { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
   .btn-foto {
     background: #f4f4f3; border: 1px solid rgba(0,0,0,0.04); border-radius: 30px;
     padding: 7px 16px; font-size: 12.5px; font-weight: 700; color: var(--text);
@@ -114,6 +123,19 @@
     <!-- Módulo 1: Perfil (foto, nombre y acerca de mí) -->
     <div class="card">
       <h2>Perfil</h2>
+      <!-- La portada es la imagen ancha del perfil público. Va sin
+           recorte guiado: se sube y se acomoda centrada, que es lo que
+           hace falta para una franja. -->
+      <div class="portada-wrap">
+        <div class="portada-preview" id="portada-preview"></div>
+        <div class="portada-acciones">
+          <input type="file" id="portada-input" accept="image/*" style="display:none;" onchange="subirPortada(event)" />
+          <button type="button" class="btn-foto" onclick="document.getElementById('portada-input').click()">Cambiar portada</button>
+          <button type="button" class="btn-foto" id="btn-quitar-portada" onclick="quitarPortada()" style="display:none;">Quitar</button>
+        </div>
+        <div class="msg" id="portada-msg"></div>
+      </div>
+
       <div class="foto-wrap">
         <div class="foto-preview" id="foto-preview">?</div>
         <input type="file" id="foto-input" accept="image/*" style="display:none;" onchange="iniciarCropFoto(event)" />
@@ -276,7 +298,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+      .select('nombre, apellido, email, role, foto_url, portada_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -298,6 +320,7 @@
     badge.textContent = ROLE_LABELS[perfil.role] || perfil.role;
     badge.classList.add('rol-' + perfil.role);
     mostrarFotoPreview(perfil.foto_url, perfil.nombre, perfil.apellido);
+    mostrarPortadaPreview(perfil.portada_url);
 
     miNombreCompleto = ((perfil.nombre || '') + ' ' + (perfil.apellido || '')).trim();
     const enlace = miEnlacePublico();
@@ -319,6 +342,74 @@
   // Va bajando la calidad JPEG hasta que el resultado pese maxBytes o
   // menos (o hasta un piso de calidad razonable, para no dejar una
   // foto irreconocible).
+  // ── Portada del perfil público ──
+  function mostrarPortadaPreview(url) {
+    const caja = document.getElementById('portada-preview');
+    const quitar = document.getElementById('btn-quitar-portada');
+    caja.style.backgroundImage = url ? "url('" + url + "')" : '';
+    quitar.style.display = url ? '' : 'none';
+  }
+
+  async function subirPortada(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    setMsg('portada-msg', '', '');
+    if (!file.type.startsWith('image/')) {
+      setMsg('portada-msg', 'El archivo debe ser una imagen.', 'error');
+      return;
+    }
+    setMsg('portada-msg', 'Subiendo portada...', 'ok');
+    try {
+      // Se redibuja a 1600 de ancho: una franja no necesita más, y así
+      // no se sube una foto de 8 MB que después tarda en abrir.
+      const img = await new Promise((ok, mal) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => mal(new Error('No se pudo leer la imagen.'));
+        i.src = URL.createObjectURL(file);
+      });
+      const ancho = Math.min(img.naturalWidth, 1600);
+      const alto = Math.round(ancho * (img.naturalHeight / img.naturalWidth));
+      const canvas = document.createElement('canvas');
+      canvas.width = ancho; canvas.height = alto;
+      canvas.getContext('2d').drawImage(img, 0, 0, ancho, alto);
+      URL.revokeObjectURL(img.src);
+
+      const blob = await comprimirCanvas(canvas, 900 * 1024);
+      const ruta = miUserId + '/portada.jpg';
+      const { error: errSubida } = await window.kwSupabase.storage
+        .from('perfiles')
+        .upload(ruta, blob, { upsert: true, cacheControl: '3600', contentType: 'image/jpeg' });
+      if (errSubida) throw errSubida;
+
+      const { data: urlData } = window.kwSupabase.storage.from('perfiles').getPublicUrl(ruta);
+      const portadaUrl = urlData.publicUrl + '?t=' + Date.now();
+
+      const { error: errGuardar } = await window.kwSupabase
+        .from('profiles').update({ portada_url: portadaUrl }).eq('id', miUserId);
+      if (errGuardar) throw errGuardar;
+
+      mostrarPortadaPreview(portadaUrl);
+      setMsg('portada-msg', 'Portada actualizada.', 'ok');
+    } catch (err) {
+      setMsg('portada-msg', err.message || 'Ocurrió un error al subir la portada.', 'error');
+    }
+  }
+
+  async function quitarPortada() {
+    setMsg('portada-msg', '', '');
+    try {
+      const { error } = await window.kwSupabase
+        .from('profiles').update({ portada_url: null }).eq('id', miUserId);
+      if (error) throw error;
+      mostrarPortadaPreview(null);
+      setMsg('portada-msg', 'Se quitó la portada.', 'ok');
+    } catch (err) {
+      setMsg('portada-msg', err.message || 'Ocurrió un error.', 'error');
+    }
+  }
+
   function comprimirCanvas(canvas, maxBytes) {
     return new Promise((resolve, reject) => {
       function intentar(calidad) {
