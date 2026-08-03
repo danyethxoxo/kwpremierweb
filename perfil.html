@@ -16,6 +16,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260728"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
@@ -79,6 +80,23 @@
   .crop-container { width: 100%; height: 320px; background: #333; border-radius: 10px; overflow: hidden; }
   .crop-container img { display: block; max-width: 100%; }
 
+  /* Modal de posición de portada: dos marcos a escala, con el mismo
+     alto relativo que tiene la portada real en celular y escritorio,
+     para que mover una sola barra ajuste bien las dos vistas a la vez. */
+  .modal-box-ancha { max-width: 480px; }
+  .pos-etiqueta {
+    display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted); margin: 14px 0 6px;
+  }
+  .pos-marco {
+    width: 100%; border-radius: 10px; overflow: hidden;
+    background: linear-gradient(135deg, #e81010 0%, var(--red) 55%, #8f0000 100%);
+    background-size: cover; background-position: center 50%;
+  }
+  .pos-marco-escritorio { height: 120px; }
+  .pos-marco-celular { height: 108px; max-width: 220px; margin: 0 auto; }
+  #pos-slider { width: 100%; margin: 16px 0 4px; accent-color: var(--red); }
+
   .ayuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
 
   .enlace-publico { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -120,17 +138,28 @@
     <h1 class="page-title">Mi Perfil</h1>
     <p class="page-desc">Tu perfil, tus enlaces y tu configuración.</p>
 
+    <div class="kw-tabs" data-kw-tabs="perfil-paneles" id="perfil-tabs">
+      <button type="button" class="kw-tab activo" data-tab="perfil">Perfil</button>
+      <button type="button" class="kw-tab" data-tab="enlaces">Enlaces</button>
+      <button type="button" class="kw-tab" data-tab="avanzado">Configuración avanzada</button>
+    </div>
+
+    <div class="kw-tabpanels" id="perfil-paneles">
+    <section class="kw-tabpanel activo" data-panel="perfil">
+
     <!-- Módulo 1: Perfil (foto, nombre y acerca de mí) -->
     <div class="card">
       <h2>Perfil</h2>
-      <!-- La portada es la imagen ancha del perfil público. Va sin
-           recorte guiado: se sube y se acomoda centrada, que es lo que
-           hace falta para una franja. -->
+      <!-- La portada se ve distinto en celular y escritorio (son de
+           alturas distintas), así que además de subirla se puede
+           ajustar qué parte se ancla arriba/abajo en el modal de
+           posición (ver abrirModalPosPortada). -->
       <div class="portada-wrap">
         <div class="portada-preview" id="portada-preview"></div>
         <div class="portada-acciones">
-          <input type="file" id="portada-input" accept="image/*" style="display:none;" onchange="subirPortada(event)" />
+          <input type="file" id="portada-input" accept="image/*" style="display:none;" onchange="iniciarAjustePortada(event)" />
           <button type="button" class="btn-foto" onclick="document.getElementById('portada-input').click()">Cambiar portada</button>
+          <button type="button" class="btn-foto" id="btn-ajustar-portada" onclick="ajustarPortadaActual()" style="display:none;">Ajustar posición</button>
           <button type="button" class="btn-foto" id="btn-quitar-portada" onclick="quitarPortada()" style="display:none;">Quitar</button>
         </div>
         <div class="msg" id="portada-msg"></div>
@@ -144,10 +173,6 @@
       </div>
       <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" /></div>
       <div class="field"><label>Apellido</label><input type="text" id="perfil-apellido" /></div>
-      <div class="field"><label>Título de tu perfil</label><input type="text" id="perfil-titulo" maxlength="60" placeholder="Mi Perfil" />
-        <div class="ayuda-campo">El texto grande de arriba en tu perfil público.</div></div>
-      <div class="field"><label>Frase debajo del título</label><input type="text" id="perfil-lema" maxlength="120" placeholder="Soy un profesional inmobiliario." />
-        <div class="ayuda-campo">Una línea corta. Ej: Especialista en Polanco desde 2016.</div></div>
       <div class="field"><label>Presentación corta</label><textarea id="perfil-descripcion" maxlength="220" placeholder="Una o dos líneas para la tarjeta de tu perfil. Ej: Asesor inmobiliario especializado en Polanco y Condesa."></textarea>
         <div class="ayuda-campo">Aparece junto a tu foto, arriba de tus redes.</div></div>
       <div class="field"><label>Título de la sección "Conóceme"</label><input type="text" id="perfil-titulo-conoceme" maxlength="60" placeholder="Acerca de mí" />
@@ -168,6 +193,9 @@
       </div>
       <button type="button" class="btn-guardar" id="btn-compartir-perfil" onclick="compartirMiPerfil()">Compartir mi perfil</button>
     </div>
+
+    </section>
+    <section class="kw-tabpanel" data-panel="enlaces">
 
     <!-- Módulo 3: Enlaces (sitio web y redes, con su ícono en cada campo) -->
     <div class="card">
@@ -213,7 +241,10 @@
       <div class="msg" id="publico-msg"></div>
     </div>
 
-    <!-- Módulo 3: Información adicional (correo, rol y contraseña) -->
+    </section>
+    <section class="kw-tabpanel" data-panel="avanzado">
+
+    <!-- Módulo 4: Información adicional (correo, rol y contraseña) -->
     <div class="card">
       <h2>Información adicional</h2>
       <div class="field"><label>Correo</label><input type="email" id="perfil-email" disabled /></div>
@@ -225,6 +256,9 @@
       <div class="field"><label>Confirmar contraseña</label><input type="password" id="nueva-password2" autocomplete="new-password" /></div>
       <button type="button" class="btn-guardar" id="btn-cambiar-password" onclick="cambiarPasswordPerfil()">Actualizar contraseña</button>
       <div class="msg" id="password-msg"></div>
+    </div>
+
+    </section>
     </div>
   </main>
 
@@ -252,6 +286,27 @@
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cancelarCropFoto()">Cancelar</button>
         <button type="button" class="btn-modal-confirmar" id="btn-confirmar-crop" onclick="confirmarCropFoto()">Usar esta foto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: elegir qué parte de la portada se ve en cada tamaño -->
+  <div id="modal-pos-portada" class="modal-overlay" style="display:none;">
+    <div class="modal-box modal-box-ancha">
+      <h3>Ajusta tu portada</h3>
+      <p class="modal-sub">Mueve la barra para elegir qué parte se ve en celular y en escritorio.</p>
+
+      <span class="pos-etiqueta">Vista de escritorio</span>
+      <div class="pos-marco pos-marco-escritorio" id="pos-marco-escritorio"></div>
+
+      <span class="pos-etiqueta">Vista de celular</span>
+      <div class="pos-marco pos-marco-celular" id="pos-marco-celular"></div>
+
+      <input type="range" id="pos-slider" min="0" max="100" value="50" oninput="actualizarPosPreview(this.value)" />
+
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cancelarPosPortada()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="btn-confirmar-pos" onclick="confirmarPosPortada()">Guardar portada</button>
       </div>
     </div>
   </div>
@@ -300,7 +355,7 @@
 
     const { data: perfil, error } = await window.kwSupabase
       .from('profiles')
-      .select('nombre, apellido, email, role, foto_url, portada_url, acerca_de, descripcion_corta, titulo_publico, lema_publico, titulo_conoceme, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
+      .select('nombre, apellido, email, role, foto_url, portada_url, portada_pos_y, acerca_de, descripcion_corta, titulo_conoceme, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
       .single();
     if (error || !perfil) return;
@@ -311,8 +366,6 @@
     document.getElementById('perfil-acerca').value = perfil.acerca_de || '';
     document.getElementById('perfil-titulo-conoceme').value = perfil.titulo_conoceme || '';
     document.getElementById('perfil-descripcion').value = perfil.descripcion_corta || '';
-    document.getElementById('perfil-titulo').value = perfil.titulo_publico || '';
-    document.getElementById('perfil-lema').value = perfil.lema_publico || '';
     document.getElementById('perfil-sitio').value = perfil.sitio_web || '';
     document.getElementById('perfil-whatsapp').value = perfil.whatsapp || '';
     document.getElementById('perfil-instagram').value = perfil.instagram || '';
@@ -323,6 +376,7 @@
     badge.textContent = ROLE_LABELS[perfil.role] || perfil.role;
     badge.classList.add('rol-' + perfil.role);
     mostrarFotoPreview(perfil.foto_url, perfil.nombre, perfil.apellido);
+    portadaPosY = (perfil.portada_pos_y == null) ? 50 : perfil.portada_pos_y;
     mostrarPortadaPreview(perfil.portada_url);
 
     miNombreCompleto = ((perfil.nombre || '') + ' ' + (perfil.apellido || '')).trim();
@@ -342,18 +396,30 @@
     }
   }
 
-  // Va bajando la calidad JPEG hasta que el resultado pese maxBytes o
-  // menos (o hasta un piso de calidad razonable, para no dejar una
-  // foto irreconocible).
   // ── Portada del perfil público ──
+  // La portada se recorta distinto en celular y escritorio (son de
+  // alturas distintas), así que en vez de un recorte fijo se guarda en
+  // qué punto vertical "anclarla" (portadaPosY, 0-100) y se usa como
+  // background-position: así el navegador la recorta bien en cada
+  // tamaño a partir del mismo ajuste.
+  let portadaPosY = 50;
+  let portadaPosArchivo = null;   // archivo pendiente de subir, si se está cambiando la foto
+  let portadaPosObjectUrl = null;
+
   function mostrarPortadaPreview(url) {
     const caja = document.getElementById('portada-preview');
+    const ajustar = document.getElementById('btn-ajustar-portada');
     const quitar = document.getElementById('btn-quitar-portada');
     caja.style.backgroundImage = url ? "url('" + url + "')" : '';
+    caja.style.backgroundPosition = 'center ' + portadaPosY + '%';
+    ajustar.style.display = url ? '' : 'none';
     quitar.style.display = url ? '' : 'none';
   }
 
-  async function subirPortada(event) {
+  // Paso 1: se eligió un archivo nuevo. Antes de subirlo se abre el
+  // modal de posición para elegir el ancla; la subida real ocurre al
+  // confirmar (ver confirmarPosPortada).
+  function iniciarAjustePortada(event) {
     const file = event.target.files && event.target.files[0];
     event.target.value = '';
     if (!file) return;
@@ -362,6 +428,70 @@
       setMsg('portada-msg', 'El archivo debe ser una imagen.', 'error');
       return;
     }
+    portadaPosArchivo = file;
+    portadaPosObjectUrl = URL.createObjectURL(file);
+    abrirModalPosPortada(portadaPosObjectUrl, 50);
+  }
+
+  // Reajustar la portada que ya está subida, sin volver a elegir foto.
+  function ajustarPortadaActual() {
+    const caja = document.getElementById('portada-preview');
+    if (!caja.style.backgroundImage || caja.style.backgroundImage === 'none') return;
+    portadaPosArchivo = null;
+    portadaPosObjectUrl = null;
+    const url = caja.style.backgroundImage.slice(5, -2); // quita url('...')
+    abrirModalPosPortada(url, portadaPosY);
+  }
+
+  function abrirModalPosPortada(imgUrl, posY) {
+    document.getElementById('pos-marco-escritorio').style.backgroundImage = "url('" + imgUrl + "')";
+    document.getElementById('pos-marco-celular').style.backgroundImage = "url('" + imgUrl + "')";
+    document.getElementById('pos-slider').value = posY;
+    actualizarPosPreview(posY);
+    document.getElementById('modal-pos-portada').style.display = 'flex';
+  }
+
+  function actualizarPosPreview(v) {
+    const pos = 'center ' + v + '%';
+    document.getElementById('pos-marco-escritorio').style.backgroundPosition = pos;
+    document.getElementById('pos-marco-celular').style.backgroundPosition = pos;
+  }
+
+  function cerrarModalPosPortada() {
+    document.getElementById('modal-pos-portada').style.display = 'none';
+    if (portadaPosObjectUrl) { URL.revokeObjectURL(portadaPosObjectUrl); portadaPosObjectUrl = null; }
+    portadaPosArchivo = null;
+  }
+
+  function cancelarPosPortada() {
+    cerrarModalPosPortada();
+  }
+
+  async function confirmarPosPortada() {
+    const btn = document.getElementById('btn-confirmar-pos');
+    const posY = Number(document.getElementById('pos-slider').value);
+    const archivo = portadaPosArchivo;
+    btn.disabled = true;
+    try {
+      if (archivo) {
+        await subirPortada(archivo, posY);
+      } else {
+        const { error } = await window.kwSupabase
+          .from('profiles').update({ portada_pos_y: posY }).eq('id', miUserId);
+        if (error) throw error;
+        portadaPosY = posY;
+        document.getElementById('portada-preview').style.backgroundPosition = 'center ' + posY + '%';
+        setMsg('portada-msg', 'Posición actualizada.', 'ok');
+      }
+      cerrarModalPosPortada();
+    } catch (err) {
+      setMsg('portada-msg', err.message || 'Ocurrió un error.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function subirPortada(file, posY) {
     setMsg('portada-msg', 'Subiendo portada...', 'ok');
     try {
       // Se redibuja a 1600 de ancho: una franja no necesita más, y así
@@ -390,9 +520,10 @@
       const portadaUrl = urlData.publicUrl + '?t=' + Date.now();
 
       const { error: errGuardar } = await window.kwSupabase
-        .from('profiles').update({ portada_url: portadaUrl }).eq('id', miUserId);
+        .from('profiles').update({ portada_url: portadaUrl, portada_pos_y: posY }).eq('id', miUserId);
       if (errGuardar) throw errGuardar;
 
+      portadaPosY = posY;
       mostrarPortadaPreview(portadaUrl);
       setMsg('portada-msg', 'Portada actualizada.', 'ok');
     } catch (err) {
@@ -526,14 +657,11 @@
       const acerca = document.getElementById('perfil-acerca').value.trim() || null;
       const tituloConoceme = document.getElementById('perfil-titulo-conoceme').value.trim() || null;
       const descripcion = document.getElementById('perfil-descripcion').value.trim() || null;
-      const tituloPub = document.getElementById('perfil-titulo').value.trim() || null;
-      const lemaPub = document.getElementById('perfil-lema').value.trim() || null;
       const { error } = await window.kwSupabase
         .from('profiles')
         .update({
           nombre, apellido,
           acerca_de: acerca, descripcion_corta: descripcion, titulo_conoceme: tituloConoceme,
-          titulo_publico: tituloPub, lema_publico: lemaPub,
         })
         .eq('id', miUserId);
       if (error) throw error;
@@ -600,10 +728,15 @@
     }
   }
 
-  if (document.documentElement.classList.contains('kw-auth-ok')) {
+  function iniciarPagina() {
     cargarPerfil();
+    window.kwUI.iniciar();
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    iniciarPagina();
   } else {
-    window.addEventListener('kw-auth-ready', cargarPerfil, { once: true });
+    window.addEventListener('kw-auth-ready', iniciarPagina, { once: true });
   }
 </script>
 <script src="/kwpremierweb/assets/js/kw-qr.js?v=20260728"></script>
