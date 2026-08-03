@@ -52,6 +52,12 @@
     box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset;
   }
 
+  /* Solo se ve cuando ya hay sesión iniciada (ver irAlPortal): "Accede
+     al Portal" a alguien que ya entró le hacía dudar si su sesión
+     seguía activa. */
+  .bienvenida { display: none; font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+  .bienvenida.visible { display: block; }
+
   main {
     flex: 1;
     display: flex;
@@ -136,6 +142,7 @@
     main { padding: 74px 16px 30px; justify-content: flex-start; }
     .tagline { display: none; }
     .btn-portal { display: none; }
+    .bienvenida.visible { display: none; }
     .kw-index-header {
       background: rgba(255,255,255,0.75);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -167,9 +174,9 @@
 <body>
 
   <header class="kw-index-header">
-    <button type="button" class="btn-portal-header" onclick="irAlPortal(this)">
+    <button type="button" class="btn-portal-header" id="btn-portal-header" onclick="irAlPortal(this)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Accede al Portal
+      <span id="btn-portal-header-texto">Inicia Sesión</span>
     </button>
   </header>
 
@@ -213,9 +220,10 @@
       </a>
     </div>
 
-    <button type="button" class="btn-portal" onclick="irAlPortal(this)">
+    <div class="bienvenida" id="bienvenida"></div>
+    <button type="button" class="btn-portal" id="btn-portal" onclick="irAlPortal(this)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Accede al Portal
+      <span id="btn-portal-texto">Inicia Sesión</span>
     </button>
   </main>
 
@@ -248,6 +256,33 @@
       location.href = '/kwpremierweb/login.html';
     }
   }
+
+  // "Accede al Portal" no dejaba claro si ya se había entrado o no.
+  // Por defecto el botón dice "Inicia Sesión"; si ya hay sesión activa,
+  // aquí se cambia por un saludo y el botón pasa a "Ingresa al Portal".
+  async function reflejarSesion() {
+    try {
+      var result = await sbPortal.auth.getSession();
+      var session = result && result.data && result.data.session;
+      if (!session) return;
+
+      var nombre = '';
+      try {
+        var perfil = await sbPortal.from('profiles').select('nombre').eq('id', session.user.id).single();
+        nombre = (perfil.data && perfil.data.nombre) || '';
+      } catch (e) {}
+
+      document.getElementById('btn-portal-header-texto').textContent = 'Ir al Portal';
+      document.getElementById('btn-portal-texto').textContent = 'Ingresa al Portal';
+
+      var bienvenida = document.getElementById('bienvenida');
+      bienvenida.textContent = nombre ? ('Bienvenido, ' + nombre) : 'Ya iniciaste sesión';
+      bienvenida.classList.add('visible');
+    } catch (err) {
+      // Sin sesión o sin conexión: se queda con "Inicia Sesión".
+    }
+  }
+  reflejarSesion();
 </script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="publico"></script>
 </body>

@@ -78,7 +78,7 @@
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
   const homeHref = esPublico ? `${BASE}/index.html` : `${BASE}/portal.html`;
   const footerHtml = esPublico
-    ? `<a href="#" class="drawer-link" id="drawer-cta" style="color: var(--red);">${ICONS.logout}Accede al Portal</a>`
+    ? `<a href="#" class="drawer-link" id="drawer-cta" style="color: var(--red);">${ICONS.logout}Inicia Sesión</a>`
     : `<a href="#" class="drawer-link" id="drawer-logout">${ICONS.logout}Cerrar sesión</a>`;
 
   const contenedor = document.createElement('div');
