@@ -127,10 +127,28 @@
     margin-bottom: var(--sp-4);
   }
   .micro-portada {
-    height: 210px;
+    height: 260px;
     background: linear-gradient(135deg, #e81010 0%, var(--red) 55%, #8f0000 100%);
-    background-size: cover; background-position: center;
     position: relative;
+    overflow: hidden;
+  }
+  /* La foto real va difuminada y un poco más grande que el marco, para
+     que el desenfoque no deje ver el borde recto de la imagen. Vive
+     aparte de .micro-portada para que el desenfoque no le pegue también
+     al botón de editar ni al degradado de abajo. */
+  .micro-portada-img {
+    position: absolute; inset: -18px;
+    background-size: cover; background-position: center;
+    filter: blur(14px);
+    transform: scale(1.12);
+  }
+  /* El degradado de abajo hace que la portada se apague justo donde
+     empieza la foto de perfil, en vez de cortar en seco. */
+  .micro-portada::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.42) 100%);
+    pointer-events: none;
   }
   .micro-portada-editar {
     position: absolute; right: 14px; bottom: 14px;
@@ -184,7 +202,7 @@
   .micro-cab-acciones { display: flex; gap: var(--sp-2); padding-bottom: 6px; flex-shrink: 0; }
 
   @media (max-width: 700px) {
-    .micro-portada { height: 140px; }
+    .micro-portada { height: 180px; }
     .micro-identidad {
       flex-direction: column; align-items: center; text-align: center;
       gap: var(--sp-3); padding: var(--sp-2) var(--sp-3) var(--sp-3);
@@ -238,44 +256,26 @@
   .btn-editar:active { transform: scale(0.94); }
   .btn-editar svg { width: 15px; height: 15px; }
 
-  /* ── Enlaces: renglones, no iconitos sueltos ──
-     Con el nombre de cada red al lado se sabe a dónde lleva antes de
-     picarle; los círculos de puro icono obligaban a adivinar. */
-  .micro-enlaces { display: flex; flex-direction: column; gap: var(--sp-2); }
-  .micro-enlace {
-    display: flex; align-items: center; gap: var(--sp-3);
-    padding: 13px 15px; border-radius: var(--r-campo);
-    border: 1.5px solid var(--border); background: #fff;
-    text-decoration: none; color: var(--text);
-    transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
-  }
-  .micro-enlace:hover {
-    border-color: var(--red); transform: translateY(-1px);
-    box-shadow: var(--sombra-2);
-  }
-  .micro-enlace:active { transform: translateY(0) scale(0.99); }
-  .micro-enlace-icono {
-    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-    background: #f5f5f5; color: #666;
+  /* ── Redes sociales: círculos de color, visibles de una vez ──
+     Antes vivían escondidas en una pestaña aparte ("Enlaces"); ahora se
+     ven junto con el nombre, como en cualquier perfil de red social. */
+  .micro-redes-fila { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
+  .micro-red-icono {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s;
+    color: #fff; text-decoration: none;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+    transition: transform 0.15s, box-shadow 0.15s;
   }
-  .micro-enlace:hover .micro-enlace-icono { background: #fff0f0; color: var(--red); }
-  .micro-enlace-icono svg { width: 16px; height: 16px; fill: currentColor; }
-  .micro-enlace-icono svg[stroke], .micro-enlace-icono .sin-relleno {
+  .micro-red-icono:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,0,0,0.26); }
+  .micro-red-icono:active { transform: translateY(0) scale(0.92); }
+  .micro-red-icono svg { width: 17px; height: 17px; fill: currentColor; }
+  .micro-red-icono svg.sin-relleno, .micro-red-icono svg[stroke] {
     fill: none; stroke: currentColor; stroke-width: 2;
   }
-  /* Son <span>, así que sin esto el nombre de la red y su dirección
-     salen pegados en el mismo renglón. */
-  .micro-enlace-texto { flex: 1; min-width: 0; display: block; }
-  .micro-enlace-red { display: block; font-size: 14px; font-weight: 700; }
-  .micro-enlace-url {
-    display: block;
-    font-size: 12px; color: var(--muted); margin-top: 2px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  @media (max-width: 700px) {
+    .micro-redes-fila { justify-content: center; }
   }
-  .micro-enlace-flecha { color: #ccc; flex-shrink: 0; }
-  .micro-enlace-flecha svg { width: 15px; height: 15px; }
 
   /* Lo que se lee de la persona, tal como lo escribió. */
   .micro-acerca {
@@ -539,37 +539,40 @@
     casa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
   };
 
-  // Cada enlace en su renglón, con el nombre de la red y a dónde va.
-  // Antes eran círculos de puro icono: había que adivinar y picarle.
-  function redesHtml(p) {
+  // Un color por red, para que el círculo se reconozca de un vistazo sin
+  // tener que leer el icono de cerca.
+  var COLOR_REDES = {
+    whatsapp: '#25D366',
+    instagram: 'linear-gradient(45deg,#f9ce34,#ee2a7b 45%,#6228d7)',
+    facebook: '#1877F2',
+    tiktok: '#000',
+    linkedin: '#0A66C2',
+    sitio_web: '#555',
+    correo: '#8a8a8a',
+  };
+
+  // Fila de círculos de color, uno por red que el asesor sí haya
+  // llenado. Antes iban en su propia pestaña ("Enlaces"); ahora se ven
+  // junto con el nombre, como en cualquier perfil de red social.
+  function redesIconosHtml(p) {
     var links = [
-      ['correo', p.email ? 'mailto:' + p.email : null, 'Correo', p.email],
-      ['sitio_web', linkSeguro(p.sitio_web), 'Sitio web', p.sitio_web],
-      ['instagram', linkSeguro(p.instagram), 'Instagram', p.instagram],
-      ['facebook', linkSeguro(p.facebook), 'Facebook', p.facebook],
-      ['tiktok', linkSeguro(p.tiktok), 'TikTok', p.tiktok],
-      ['linkedin', linkSeguro(p.linkedin), 'LinkedIn', p.linkedin],
+      ['whatsapp', linkWhatsapp(p.whatsapp), 'WhatsApp'],
+      ['instagram', linkSeguro(p.instagram), 'Instagram'],
+      ['facebook', linkSeguro(p.facebook), 'Facebook'],
+      ['tiktok', linkSeguro(p.tiktok), 'TikTok'],
+      ['linkedin', linkSeguro(p.linkedin), 'LinkedIn'],
+      ['sitio_web', linkSeguro(p.sitio_web), 'Sitio web'],
+      ['correo', p.email ? 'mailto:' + p.email : null, 'Correo'],
     ].filter(function (r) { return r[1]; });
 
-    if (!links.length) {
-      return '<div class="kw-vacio">Este perfil todavía no tiene enlaces publicados.</div>';
-    }
+    if (!links.length) return '';
 
-    return '<div class="micro-enlaces">' + links.map(function (r) {
+    return '<div class="micro-redes-fila">' + links.map(function (r) {
       var nueva = r[0] === 'correo' ? '' : ' target="_blank" rel="noopener"';
-      // Se enseña la dirección sin el "https://" ni la diagonal final:
-      // lo que importa es reconocer la cuenta, no leer el protocolo.
-      var visible = String(r[3] || '').replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      return '<a class="micro-enlace" href="' + escapeHtml(r[1]) + '"' + nueva + '>' +
-        '<span class="micro-enlace-icono">' + ICONOS_RED[r[0]] + '</span>' +
-        '<span class="micro-enlace-texto">' +
-          '<span class="micro-enlace-red">' + r[2] + '</span>' +
-          '<span class="micro-enlace-url">' + escapeHtml(visible) + '</span>' +
-        '</span>' +
-        '<span class="micro-enlace-flecha">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
-          'stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>' +
-        '</span>' +
+      return '<a class="micro-red-icono" style="background:' + COLOR_REDES[r[0]] + '" ' +
+        'href="' + escapeHtml(r[1]) + '"' + nueva +
+        ' title="' + escapeHtml(r[2]) + '" aria-label="' + escapeHtml(r[2]) + '">' +
+        ICONOS_RED[r[0]] +
       '</a>';
     }).join('') + '</div>';
   }
@@ -584,21 +587,23 @@
     var acerca = (p.acerca_de || '').trim() || ACERCA_POR_DEFECTO;
     var desc = (p.descripcion_corta || '').trim() || DESC_POR_DEFECTO;
     var puesto = p.puesto || ROL_LABELS[p.role] || p.role;
-    // Sin portada propia se queda el degradado que pone el CSS.
-    var portada = p.portada_url
-      ? ' style="background-image:url(\'' + escapeHtml(p.portada_url) + '\')"'
+    // Sin portada propia se queda solo el degradado que pone el CSS; con
+    // ella, va difuminada en su propia capa (ver .micro-portada-img).
+    var portadaImg = p.portada_url
+      ? '<div class="micro-portada-img" style="background-image:url(\'' + escapeHtml(p.portada_url) + '\')"></div>'
       : '';
 
     return '' +
-      // ── Encabezado: portada, foto, nombre y las dos acciones ──
+      // ── Encabezado: portada, foto, nombre, redes y acciones ──
       '<section class="micro-cabecera">' +
-        '<div class="micro-portada" id="micro-portada"' + portada + '></div>' +
+        '<div class="micro-portada" id="micro-portada">' + portadaImg + '</div>' +
         '<div class="micro-identidad">' +
           '<div class="micro-foto">' + avatar + '</div>' +
           '<div class="micro-datos">' +
             '<h1 class="micro-nombre">' + escapeHtml(nombreCompleto) + '</h1>' +
             '<div class="micro-puesto">' + escapeHtml(puesto) + '</div>' +
             '<p class="micro-desc">' + escapeHtml(desc) + '</p>' +
+            redesIconosHtml(p) +
           '</div>' +
           '<div class="micro-cab-acciones">' +
             '<button type="button" class="btn-compartir" id="btn-compartir">' +
@@ -607,10 +612,10 @@
         '</div>' +
       '</section>' +
 
-      // ── Las tres secciones del perfil ──
+      // ── Las dos secciones del perfil: Conóceme (con el formulario) y
+      // Propiedades. Las redes ya se ven arriba, junto con el nombre. ──
       '<div class="kw-tabs" data-kw-tabs="micro-paneles" id="micro-tabs">' +
         '<button type="button" class="kw-tab activo" data-tab="acerca">Conóceme</button>' +
-        '<button type="button" class="kw-tab" data-tab="enlaces">Enlaces</button>' +
         '<button type="button" class="kw-tab" data-tab="propiedades">Propiedades</button>' +
       '</div>' +
 
@@ -653,14 +658,6 @@
               '<span>' + escapeHtml((p.nombre || '').trim() || nombreCompleto) +
               ' recibió tus datos y te va a contactar muy pronto.</span>' +
             '</div>' +
-          '</div>' +
-        '</section>' +
-
-        // Enlaces: sus redes y su sitio.
-        '<section class="kw-tabpanel" data-panel="enlaces">' +
-          '<div class="kw-card">' +
-            '<h2 class="micro-h2">Dónde encontrarme</h2>' +
-            redesHtml(p) +
           '</div>' +
         '</section>' +
 
