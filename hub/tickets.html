@@ -368,12 +368,13 @@
   <div id="modal-reportar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3>Reportar una incidencia</h3>
-      <div class="field">
-        <label>Título</label>
+      <p class="modal-sub">Los campos con <span style="color:var(--red);font-weight:700;">*</span> son obligatorios.</p>
+      <div class="field requerido">
+        <label for="rep-titulo">Título</label>
         <input type="text" id="rep-titulo" placeholder="Ej. No puedo generar un documento" />
       </div>
-      <div class="field">
-        <label>Descripción</label>
+      <div class="field requerido">
+        <label for="rep-descripcion">Descripción</label>
         <textarea id="rep-descripcion" rows="4" placeholder="Cuéntanos qué pasó..."></textarea>
       </div>
       <div class="field">
@@ -389,7 +390,9 @@
       <div class="msg" id="rep-msg"></div>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalReportar()">Cancelar</button>
-        <button type="button" class="btn-modal-confirmar" id="rep-btn-enviar" onclick="enviarIncidencia()">Enviar</button>
+        <button type="button" class="btn-modal-confirmar" id="rep-btn-enviar" onclick="enviarIncidencia()" disabled>
+          <span class="kw-btn-cont" id="rep-btn-cont">Enviar</span>
+        </button>
       </div>
     </div>
   </div>
@@ -472,12 +475,49 @@
     repArchivosSeleccionados = [];
     renderPreviewImagenes();
     setMsg('rep-msg', '', '');
+    ponerEstadoBotonReportar('inicial');
     document.getElementById('modal-reportar').style.display = 'flex';
   }
 
   function cerrarModalReportar() {
-    document.getElementById('modal-reportar').style.display = 'none';
+    window.kwUI.cerrarModal('modal-reportar');
   }
+
+  // ── Estado del botón Enviar ──
+  // Apagado mientras falte algo (así se entiende que el formulario no
+  // está completo sin tener que picarle para que te lo digan), y con
+  // aviso de "Enviando" / "Enviado" para que se note que sí pasó algo.
+  const REP_OBLIGATORIOS = ['rep-titulo', 'rep-descripcion'];
+
+  function repFormularioCompleto() {
+    return REP_OBLIGATORIOS.every(function (id) {
+      return document.getElementById(id).value.trim() !== '';
+    });
+  }
+
+  function ponerEstadoBotonReportar(estado) {
+    const btn = document.getElementById('rep-btn-enviar');
+    const cont = document.getElementById('rep-btn-cont');
+    btn.classList.remove('enviando', 'enviado');
+    if (estado === 'enviando') {
+      btn.disabled = true;
+      btn.classList.add('enviando');
+      cont.innerHTML = '<span class="kw-btn-spinner"></span>Enviando...';
+    } else if (estado === 'enviado') {
+      btn.disabled = true;
+      btn.classList.add('enviado');
+      cont.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Enviado';
+    } else {
+      btn.disabled = !repFormularioCompleto();
+      cont.textContent = 'Enviar';
+    }
+  }
+
+  REP_OBLIGATORIOS.forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () {
+      ponerEstadoBotonReportar('inicial');
+    });
+  });
 
   function previsualizarImagenes() {
     const input = document.getElementById('rep-imagenes');
@@ -565,8 +605,7 @@
       return;
     }
 
-    const btn = document.getElementById('rep-btn-enviar');
-    btn.disabled = true;
+    ponerEstadoBotonReportar('enviando');
     setMsg('rep-msg', '', '');
     try {
       const imagenes = [];
@@ -585,14 +624,15 @@
 
       notificarIncidenciaPorCorreo(titulo, descripcion);
 
-      setMsg('rep-msg', 'Incidencia enviada. Gracias por avisarnos.', 'ok');
+      // El botón en verde ya dice que se mandó; el letrero de abajo
+      // sobraba y encima movía el modal justo antes de cerrarse.
+      ponerEstadoBotonReportar('enviado');
       if (ROLES_GESTION.includes(miRol)) cargarTodasIncidencias();
       else cargarMisIncidencias();
-      setTimeout(cerrarModalReportar, 900);
+      setTimeout(cerrarModalReportar, 850);
     } catch (err) {
       setMsg('rep-msg', (err && err.message) || 'Ocurrió un error al enviar la incidencia.', 'error');
-    } finally {
-      btn.disabled = false;
+      ponerEstadoBotonReportar('inicial');
     }
   }
 
@@ -744,8 +784,7 @@
   }
 
   function cerrarModalDetalle() {
-    document.getElementById('modal-detalle').style.display = 'none';
-    incidenciaEnDetalle = null;
+    window.kwUI.cerrarModal('modal-detalle', function () { incidenciaEnDetalle = null; });
   }
 
   async function guardarDetalleIncidencia() {

@@ -448,6 +448,34 @@
   });
 
   // ═════════════════════════════════════════════════════════════
+  // Cerrar modales con animación
+  // ═════════════════════════════════════════════════════════════
+  // Cada página prende y apaga sus modales con style.display, así que
+  // la salida no puede ser una transition: hay que esperar a que la
+  // animación termine y hasta entonces esconderlo. Esto lo hace por
+  // todas, para no repetir el mismo setTimeout en cada pantalla.
+
+  function cerrarModal(el, despues) {
+    var caja = typeof el === 'string' ? document.getElementById(el) : el;
+    if (!caja || caja.style.display === 'none') return;
+
+    function terminar() {
+      caja.classList.remove('cerrando');
+      caja.style.display = 'none';
+      if (typeof despues === 'function') despues();
+    }
+
+    caja.classList.add('cerrando');
+    // Se escucha el fin de la animación en vez de contar milisegundos a
+    // mano; el respaldo por tiempo es por si el navegador la salta
+    // (reduce-motion, pestaña en segundo plano) y nunca avisa.
+    var listo = false;
+    function unaVez() { if (listo) return; listo = true; terminar(); }
+    caja.addEventListener('animationend', unaVez, { once: true });
+    setTimeout(unaVez, 400);
+  }
+
+  // ═════════════════════════════════════════════════════════════
 
   function iniciar(raiz) {
     armarSelects(raiz);
@@ -464,6 +492,7 @@
     tabs: armarTodasLasTabs,
     confirmaciones: armarConfirmaciones,
     chips: pintarChips,
+    cerrarModal: cerrarModal,
     activarTab: function (nombre, tabs) {
       var t = tabs || document.querySelector('[data-kw-tabs]');
       if (t) activar(t, nombre);
