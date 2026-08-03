@@ -139,6 +139,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Creador de formatos
         </a>
+        <!-- Solo para los correos del equipo de altas; lo prende
+             mostrarAccesoAlta() al comprobar quién entró. -->
+        <a href="alta.html" class="btn-formatos" id="acceso-alta" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          Proceso de Alta
+        </a>
       </div>
 
       <div class="kw-tabpanels" id="panel-paneles">
@@ -879,11 +885,28 @@
         cargarUsuarios();
       }
 
+      mostrarAccesoAlta(userData.user.email);
+
       document.getElementById('contenido-panel').style.display = '';
       cargarDocumentosPanel();
       cargarDocumentosCreadosPanel();
     } catch (err) {
       document.getElementById('denegado').style.display = '';
+    }
+  }
+
+  // El acceso al Proceso de Alta. Esto solo decide si se ENSEÑA el
+  // botón: el candado real está en la Edge Function, que compara el
+  // correo contra su secreto ALTA_EMAILS. Aquí se usa el rol master y
+  // el correo de altas para no tener que repetir esa lista en el
+  // cliente; si alguien más entra por aquí, la pantalla le contesta que
+  // no es para él.
+  const CORREOS_ALTA = ['dani.guerrero@kwmexico.mx'];
+
+  function mostrarAccesoAlta(correo) {
+    const mio = String(correo || '').toLowerCase();
+    if (miRol === 'master' || CORREOS_ALTA.includes(mio)) {
+      document.getElementById('acceso-alta').style.display = '';
     }
   }
 
