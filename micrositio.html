@@ -132,22 +132,25 @@
     position: relative;
     overflow: hidden;
   }
-  /* La foto real va difuminada y un poco más grande que el marco, para
-     que el desenfoque no deje ver el borde recto de la imagen. Vive
-     aparte de .micro-portada para que el desenfoque no le pegue también
-     al botón de editar ni al degradado de abajo. */
+  /* La foto va nítida; lo que se difumina es solo la franja de abajo
+     (ver .micro-portada-fundido), no la imagen completa. */
   .micro-portada-img {
-    position: absolute; inset: -18px;
+    position: absolute; inset: 0;
     background-size: cover; background-position: center;
-    filter: blur(14px);
-    transform: scale(1.12);
   }
-  /* El degradado de abajo hace que la portada se apague justo donde
-     empieza la foto de perfil, en vez de cortar en seco. */
+  /* Franja borrosa solo al fondo de la portada, para que se funda con
+     la tarjeta de abajo en vez de cortar en seco. El desenfoque
+     (backdrop-filter) y el color de la tarjeta entran poco a poco de
+     arriba hacia abajo gracias a mask-image: arriba de la franja no se
+     nota nada, y ya para el borde queda completamente fundida. */
   .micro-portada::after {
     content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.42) 100%);
+    position: absolute; left: 0; right: 0; bottom: 0; height: 110px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--card) 92%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 65%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 65%);
     pointer-events: none;
   }
   .micro-portada-editar {
@@ -542,7 +545,6 @@
   // Un color por red, para que el círculo se reconozca de un vistazo sin
   // tener que leer el icono de cerca.
   var COLOR_REDES = {
-    whatsapp: '#25D366',
     instagram: 'linear-gradient(45deg,#f9ce34,#ee2a7b 45%,#6228d7)',
     facebook: '#1877F2',
     tiktok: '#000',
@@ -554,9 +556,11 @@
   // Fila de círculos de color, uno por red que el asesor sí haya
   // llenado. Antes iban en su propia pestaña ("Enlaces"); ahora se ven
   // junto con el nombre, como en cualquier perfil de red social.
+  // WhatsApp no entra aquí a propósito: ese contacto ya lo cubre el
+  // botón del formulario (ver conectarFormulario), y ponerlo dos veces
+  // solo confunde a dónde lleva cada quien.
   function redesIconosHtml(p) {
     var links = [
-      ['whatsapp', linkWhatsapp(p.whatsapp), 'WhatsApp'],
       ['instagram', linkSeguro(p.instagram), 'Instagram'],
       ['facebook', linkSeguro(p.facebook), 'Facebook'],
       ['tiktok', linkSeguro(p.tiktok), 'TikTok'],
@@ -612,23 +616,20 @@
         '</div>' +
       '</section>' +
 
-      // ── Las dos secciones del perfil: Conóceme (con el formulario) y
-      // Propiedades. Las redes ya se ven arriba, junto con el nombre. ──
+      // ── Las tres secciones del perfil: primero el formulario (es lo
+      // que más conviene que se vea de entrada), luego Conóceme y al
+      // final Propiedades. Las redes ya se ven arriba, junto al nombre. ──
       '<div class="kw-tabs" data-kw-tabs="micro-paneles" id="micro-tabs">' +
-        '<button type="button" class="kw-tab activo" data-tab="acerca">Conóceme</button>' +
+        '<button type="button" class="kw-tab activo" data-tab="contacto">Contacto</button>' +
+        '<button type="button" class="kw-tab" data-tab="acerca">Conóceme</button>' +
         '<button type="button" class="kw-tab" data-tab="propiedades">Propiedades</button>' +
       '</div>' +
 
       '<div class="kw-tabpanels" id="micro-paneles">' +
 
-        // Conóceme: lo que escribió, y el formulario que dobla como botón
-        // de WhatsApp (ver conectarFormulario).
-        '<section class="kw-tabpanel activo" data-panel="acerca">' +
-          '<div class="kw-card">' +
-            '<h2 class="micro-h2">' + escapeHtml((p.titulo_conoceme || '').trim() || 'Acerca de mí') + '</h2>' +
-            '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
-          '</div>' +
-
+        // Contacto: el formulario que dobla como botón de WhatsApp (ver
+        // conectarFormulario).
+        '<section class="kw-tabpanel activo" data-panel="contacto">' +
           '<div class="kw-card">' +
             '<h2 class="micro-h2">Déjame tus datos para una asesoría personalizada gratuita</h2>' +
             '<form class="micro-form" id="form-prospecto" novalidate>' +
@@ -658,6 +659,14 @@
               '<span>' + escapeHtml((p.nombre || '').trim() || nombreCompleto) +
               ' recibió tus datos y te va a contactar muy pronto.</span>' +
             '</div>' +
+          '</div>' +
+        '</section>' +
+
+        // Conóceme: lo que escribió el asesor sobre sí mismo.
+        '<section class="kw-tabpanel" data-panel="acerca">' +
+          '<div class="kw-card">' +
+            '<h2 class="micro-h2">' + escapeHtml((p.titulo_conoceme || '').trim() || 'Acerca de mí') + '</h2>' +
+            '<p class="micro-acerca">' + escapeHtml(acerca) + '</p>' +
           '</div>' +
         '</section>' +
 
