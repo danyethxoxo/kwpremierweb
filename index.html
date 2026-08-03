@@ -310,12 +310,21 @@
       </div>
     </section>
 
-    <!-- Testimonios: se arman desde TESTIMONIOS (abajo). Sin datos, la
-         sección entera no se pinta. -->
+    <!-- Testimonios: se arman desde TESTIMONIOS (abajo); sin datos, esa
+         cuadrícula simplemente no sale. El botón de reseña es
+         independiente —depende de RESENA_URL, no de si ya hay
+         testimonios— para poder invitar a dejar la primera. La sección
+         completa solo se esconde si no hay NINGUNA de las dos cosas. -->
     <section class="seccion" id="seccion-testimonios" style="display:none;">
       <h2 class="seccion-titulo">Lo que dicen nuestros clientes</h2>
       <p class="seccion-sub">Personas que ya compraron, vendieron o rentaron con el acompañamiento de un asesor de KW Premier.</p>
-      <div class="testimonios" id="lista-testimonios"></div>
+      <div class="testimonios" id="lista-testimonios" style="display:none;"></div>
+      <div id="resena-cta" style="display:none; text-align:center; margin-top:22px;">
+        <a class="btn-unete" id="resena-link" href="#" target="_blank" rel="noopener" style="background:var(--red); color:#fff;">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          Danos tu reseña
+        </a>
+      </div>
     </section>
 
     <!-- Oficina y mapa: igual, salen de OFICINA (abajo). -->
@@ -357,22 +366,30 @@
   //              SOLO la dirección que va dentro de src="...".
   //   telefono / correo: opcionales; sin ellos simplemente no salen.
   const OFICINA = {
-    direccion: '',
-    mapaEmbed: '',
+    direccion: 'San Francisco 25, Despacho 201-202, Col. del Valle Norte, Benito Juárez, 03103 Ciudad de México, CDMX',
+    mapaEmbed: 'https://www.google.com/maps?q=San%20Francisco%2025%20Despacho%20201-202%2C%20Col.%20del%20Valle%20Norte%2C%20Benito%20Ju%C3%A1rez%2C%2003103%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX&output=embed',
     telefono: '',
     correo: '',
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // TESTIMONIOS
+  // TESTIMONIOS Y RESEÑAS
   // ═══════════════════════════════════════════════════════════════
-  // Cada uno: { texto, nombre, rol }. Con la lista vacía la sección no
-  // se pinta. Van aquí y no en la base porque son pocos y no cambian
-  // seguido; si algún día se administran desde el portal, se cambia
-  // esto por una consulta y lo demás sigue igual.
+  // Cada uno: { texto, nombre, rol }. Con la lista vacía no se pinta la
+  // cuadrícula (pero si hay RESENA_URL, sí se pinta el botón para
+  // invitar a dejar la primera). Van aquí y no en la base porque son
+  // pocos y no cambian seguido; si algún día se administran desde el
+  // portal, se cambia esto por una consulta y lo demás sigue igual.
+  //
+  // Importante: aquí solo van reseñas que alguien realmente escribió.
+  // Nunca se inventa una a nombre de una persona real.
   const TESTIMONIOS = [
     // { texto: 'Nos acompañaron en todo el proceso...', nombre: 'Nombre Apellido', rol: 'Compró en Polanco' },
   ];
+
+  // Link de "Escribir una reseña" de tu perfil de Google Business (o el
+  // que uses). Vacío = el botón no se pinta.
+  const RESENA_URL = '';
 
   const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
@@ -422,24 +439,34 @@
   }
 
   function pintarTestimonios() {
-    if (!TESTIMONIOS.length) return;
     var iniciales = function (n) {
       return String(n || '').trim().split(/\s+/).slice(0, 2)
         .map(function (p) { return p.charAt(0); }).join('').toUpperCase() || '?';
     };
-    document.getElementById('lista-testimonios').innerHTML = TESTIMONIOS.map(function (t) {
-      return '<figure class="testimonio">' +
-        '<blockquote class="testimonio-texto">“' + escapeHtml(t.texto) + '”</blockquote>' +
-        '<figcaption class="testimonio-quien">' +
-          '<span class="testimonio-avatar">' + escapeHtml(iniciales(t.nombre)) + '</span>' +
-          '<span>' +
-            '<span class="testimonio-nombre">' + escapeHtml(t.nombre) + '</span>' +
-            (t.rol ? '<span class="testimonio-rol" style="display:block;">' + escapeHtml(t.rol) + '</span>' : '') +
-          '</span>' +
-        '</figcaption>' +
-      '</figure>';
-    }).join('');
-    document.getElementById('seccion-testimonios').style.display = '';
+    if (TESTIMONIOS.length) {
+      document.getElementById('lista-testimonios').innerHTML = TESTIMONIOS.map(function (t) {
+        return '<figure class="testimonio">' +
+          '<blockquote class="testimonio-texto">“' + escapeHtml(t.texto) + '”</blockquote>' +
+          '<figcaption class="testimonio-quien">' +
+            '<span class="testimonio-avatar">' + escapeHtml(iniciales(t.nombre)) + '</span>' +
+            '<span>' +
+              '<span class="testimonio-nombre">' + escapeHtml(t.nombre) + '</span>' +
+              (t.rol ? '<span class="testimonio-rol" style="display:block;">' + escapeHtml(t.rol) + '</span>' : '') +
+            '</span>' +
+          '</figcaption>' +
+        '</figure>';
+      }).join('');
+      document.getElementById('lista-testimonios').style.display = '';
+    }
+    if (RESENA_URL) {
+      document.getElementById('resena-link').href = RESENA_URL;
+      document.getElementById('resena-cta').style.display = '';
+    }
+    // La sección solo tiene caso mostrarla si hay algo que enseñar: ya
+    // sea testimonios de verdad o al menos la invitación a dejar uno.
+    if (TESTIMONIOS.length || RESENA_URL) {
+      document.getElementById('seccion-testimonios').style.display = '';
+    }
   }
 
   function pintarOficina() {
@@ -449,8 +476,10 @@
     var tel = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
     var sobre = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>';
 
+    var comoLlegar = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(OFICINA.direccion);
     var filas = [
-      [pin, 'Dirección', escapeHtml(OFICINA.direccion)],
+      [pin, 'Dirección', '<a href="' + escapeHtml(comoLlegar) + '" target="_blank" rel="noopener">' +
+        escapeHtml(OFICINA.direccion) + '</a>'],
     ];
     if (OFICINA.telefono) {
       filas.push([tel, 'Teléfono',

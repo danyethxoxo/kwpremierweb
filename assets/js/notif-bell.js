@@ -107,6 +107,11 @@
       const dd = document.getElementById('notif-dropdown');
       if (dd) dd.classList.add('abierto');
       getBackdrop().classList.add('abierto');
+      // Con el fondo bloqueado no hay scroll de la página que dispare el
+      // "esconder header al bajar" de drawer.js — no hace falta tocar
+      // ese código para que no se confunda pensando que se sigue
+      // navegando la página de atrás.
+      document.body.style.overflow = 'hidden';
       // Al abrirla ya se dio por vista: el numerito no debe esperar a
       // que se pique cada renglón para desaparecer. Se marca un poco
       // después (no de inmediato) porque marcarTodasLeidas() rehace el
@@ -124,6 +129,7 @@
     const dd = document.getElementById('notif-dropdown');
     if (dd) dd.classList.remove('abierto');
     if (backdropEl) backdropEl.classList.remove('abierto');
+    document.body.style.overflow = '';
   }
 
   function abrirNotificacion(id, url) {
