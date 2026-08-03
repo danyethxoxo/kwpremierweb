@@ -18,13 +18,17 @@ comment on column public.profiles.portada_pos_y is
 
 -- La vista pública nombra sus columnas una por una (ver 033), así que
 -- hay que volver a crearla para que este campo se asome del otro lado.
+-- Ojo: create or replace view solo deja agregar columnas al final, no
+-- en medio — por eso portada_pos_y va después de titulo_conoceme y no
+-- junto a portada_url, aunque estén relacionadas.
 create or replace view public.perfiles_publicos as
 select id, nombre, apellido, role, foto_url, puesto,
        acerca_de, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin,
        email, descripcion_corta,
        titulo_publico, lema_publico,
-       portada_url, portada_pos_y,
-       titulo_conoceme
+       portada_url,
+       titulo_conoceme,
+       portada_pos_y
 from public.profiles
 where oculto = false;
 
