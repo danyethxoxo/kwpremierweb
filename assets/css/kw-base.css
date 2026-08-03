@@ -551,16 +551,37 @@ header > *:last-child { margin-left: auto; }
    ya habían empezado a separarse. Aquí queda una sola: cada página se
    queda nada más con el estilo de su botón, que sí cambia según el
    header donde va.
-   El desplegable cuelga de la orilla derecha del botón y se abre hacia
-   la izquierda; en un celular la campanita ya viene pegada a la derecha,
-   así que esos 320px se salían de la pantalla y cortaban el texto. Por
-   eso en pantalla angosta deja de colgar del botón y se vuelve una hoja
-   a lo ancho, debajo del header. */
+   Solo existe en escritorio: en celular la campanita es un enlace a su
+   propia página (hub/notificaciones.html) — un desplegable de 320px no
+   cabía bien ahí y ya se sentía encimado con el header. */
+.notif-backdrop {
+  position: fixed; inset: 0; z-index: 49;
+  background: rgba(15,15,15,0.35);
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--t-medio) var(--curva);
+}
+.notif-backdrop.abierto { opacity: 1; pointer-events: auto; }
+
+/* El desplegable cuelga de la orilla derecha del botón y se abre hacia
+   la izquierda. Nace ya en el DOM (no con display:none) para poder
+   animar su entrada; oculto se le quitan además los clics y se saca
+   del orden de lectura, para que no estorbe ni se pueda tabular hasta
+   él mientras está cerrado. */
 .notif-dropdown {
-  position: absolute; top: 46px; right: 0; width: 320px; max-width: 88vw; max-height: 420px;
+  position: absolute; top: 46px; right: 0; width: 320px; max-height: 420px;
   background: #fff; border: 1px solid var(--border); border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.15); overflow: hidden; z-index: 50;
+  box-shadow: var(--sombra-3); overflow: hidden; z-index: 50;
   display: flex; flex-direction: column; text-align: left;
+  transform-origin: top right;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateY(-6px) scale(0.96);
+  transition: opacity var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva-salida),
+              visibility var(--t-rapido);
+}
+.notif-dropdown.abierto {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transform: translateY(0) scale(1);
 }
 .notif-dropdown-head {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -584,16 +605,3 @@ header > *:last-child { margin-left: auto; }
 .notif-item-msg { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .notif-item-fecha { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .notif-vacio { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
-
-@media (max-width: 700px) {
-  .notif-dropdown {
-    position: fixed;
-    top: 62px; left: 10px; right: 10px;
-    width: auto; max-width: none;
-    max-height: calc(100vh - 84px);
-  }
-  .notif-dropdown-head { padding: 13px 15px; }
-  .notif-item { padding: 12px 15px; }
-  .notif-item-titulo { font-size: 13.5px; }
-  .notif-item-msg { font-size: 12.5px; word-break: break-word; }
-}

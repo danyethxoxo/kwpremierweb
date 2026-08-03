@@ -2,8 +2,19 @@
 // las páginas que quieran mostrarla. Requiere un elemento vacío con
 // id="notif-bell-slot" en el header; este script se encarga de dibujar
 // el ícono, el contador y el desplegable ahí adentro.
+//
+// En celular no se abre un desplegable (no hay espacio y se sentía
+// encimado con el header): la campanita es un enlace que lleva a
+// hub/notificaciones.html, una página completa con la misma lista.
 (function () {
+  const BASE = '/kwpremierweb';
   let notificaciones = [];
+  let abierta = false;
+  let backdropEl = null;
+
+  function esMovil() {
+    return window.matchMedia('(max-width: 700px)').matches;
+  }
 
   function fmtRelativo(iso) {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -24,17 +35,43 @@
     return div.innerHTML;
   }
 
+  // El fondo oscuro/difuminado detrás del desplegable vive suelto en
+  // <body>, no dentro del slot: así no lo recorta ningún contenedor con
+  // overflow, y sobrevive a que render() rehaga el slot por dentro cada
+  // vez que llega una notificación nueva.
+  function getBackdrop() {
+    if (backdropEl) return backdropEl;
+    backdropEl = document.createElement('div');
+    backdropEl.className = 'notif-backdrop';
+    backdropEl.id = 'notif-backdrop';
+    document.body.appendChild(backdropEl);
+    return backdropEl;
+  }
+
   function render() {
     const slot = document.getElementById('notif-bell-slot');
     if (!slot) return;
     const noLeidas = notificaciones.filter(n => !n.leido).length;
+    const badge = noLeidas > 0 ? `<span class="notif-bell-badge">${noLeidas > 9 ? '9+' : noLeidas}</span>` : '';
+
+    if (esMovil()) {
+      // En celular no hay desplegable que animar ni fondo que oscurecer:
+      // la campanita manda derecho a su propia página.
+      slot.innerHTML = `
+        <a href="${BASE}/hub/notificaciones.html" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          ${badge}
+        </a>`;
+      if (backdropEl) backdropEl.classList.remove('abierto');
+      return;
+    }
 
     slot.innerHTML = `
-      <button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones">
+      <button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="${abierta}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        ${noLeidas > 0 ? `<span class="notif-bell-badge">${noLeidas > 9 ? '9+' : noLeidas}</span>` : ''}
+        ${badge}
       </button>
-      <div class="notif-dropdown" id="notif-dropdown" style="display:none;">
+      <div class="notif-dropdown${abierta ? ' abierto' : ''}" id="notif-dropdown">
         <div class="notif-dropdown-head">
           <span>Notificaciones</span>
           ${noLeidas > 0 ? `<button type="button" class="notif-marcar-todas" id="notif-marcar-todas">Marcar todas como leídas</button>` : ''}
@@ -60,16 +97,33 @@
     Array.from(slot.querySelectorAll('.notif-item')).forEach(function (btn) {
       btn.addEventListener('click', function () { abrirNotificacion(btn.dataset.id, btn.dataset.url); });
     });
+
+    getBackdrop().classList.toggle('abierto', abierta);
   }
 
   function toggleDropdown() {
-    const dd = document.getElementById('notif-dropdown');
-    if (dd) dd.style.display = (dd.style.display === 'none') ? 'block' : 'none';
+    abierta = !abierta;
+    if (abierta) {
+      const dd = document.getElementById('notif-dropdown');
+      if (dd) dd.classList.add('abierto');
+      getBackdrop().classList.add('abierto');
+      // Al abrirla ya se dio por vista: el numerito no debe esperar a
+      // que se pique cada renglón para desaparecer. Se marca un poco
+      // después (no de inmediato) porque marcarTodasLeidas() rehace el
+      // desplegable entero, y hacerlo en el mismo instante del clic
+      // interrumpía la animación de apertura antes de que se alcanzara
+      // a ver.
+      setTimeout(marcarTodasLeidas, 220);
+    } else {
+      cerrarDropdown();
+    }
   }
 
   function cerrarDropdown() {
+    abierta = false;
     const dd = document.getElementById('notif-dropdown');
-    if (dd) dd.style.display = 'none';
+    if (dd) dd.classList.remove('abierto');
+    if (backdropEl) backdropEl.classList.remove('abierto');
   }
 
   function abrirNotificacion(id, url) {
@@ -84,11 +138,10 @@
 
   function marcarTodasLeidas() {
     const idsNoLeidas = notificaciones.filter(function (n) { return !n.leido; }).map(function (n) { return n.id; });
+    if (!idsNoLeidas.length) return;
     notificaciones.forEach(function (n) { n.leido = true; });
     render();
-    if (idsNoLeidas.length) {
-      window.kwSupabase.from('notificaciones').update({ leido: true }).in('id', idsNoLeidas).then(function () {});
-    }
+    window.kwSupabase.from('notificaciones').update({ leido: true }).in('id', idsNoLeidas).then(function () {});
   }
 
   function cargarNotificaciones() {
@@ -120,8 +173,19 @@
   }
 
   document.addEventListener('click', function (e) {
+    if (!abierta) return;
     const slot = document.getElementById('notif-bell-slot');
     if (slot && !slot.contains(e.target)) cerrarDropdown();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && abierta) cerrarDropdown();
+  });
+  window.addEventListener('resize', function () {
+    // Cruzar el punto de quiebre celular/escritorio con el desplegable
+    // abierto lo dejaba en un estado raro (o el fondo oscuro suelto sin
+    // nada que oscurecer). Más simple: se vuelve a dibujar tal cual.
+    cerrarDropdown();
+    render();
   });
 
   function init() {
