@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Déjanos una reseña · KW Premier</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<meta name="description" content="Cuéntanos cómo te fue con KW Premier. Tu opinión nos ayuda a mejorar y a que más personas nos conozcan." />
+
+<!-- Esta liga se manda por WhatsApp o correo a los clientes, así que
+     conviene que se vea bien al pegarla. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="KW Premier" />
+<meta property="og:title" content="Déjanos una reseña · KW Premier" />
+<meta property="og:description" content="Cuéntanos cómo te fue con KW Premier. Solo te toma un minuto." />
+<meta property="og:image" content="https://danyethxoxo.github.io/kwpremierweb/assets/img/logo-kw-premier.png" />
+<meta name="twitter:card" content="summary" />
+
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
+<style>
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .cabecera {
+    display: flex; justify-content: center; padding: 30px 20px 0;
+  }
+  .cabecera img { height: 52px; width: auto; display: block; }
+
+  .page { flex: 1; width: 100%; max-width: 520px; margin: 0 auto; padding: 26px 20px 50px; }
+
+  .tarjeta {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 30px 26px; box-shadow: var(--sombra-1);
+  }
+  .titulo { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; text-align: center; }
+  .sub {
+    font-size: 13.5px; color: var(--muted); text-align: center;
+    line-height: 1.6; margin: 8px 0 26px;
+  }
+
+  /* ── Calificación con estrellas ── */
+  .estrellas-campo { text-align: center; margin-bottom: 24px; }
+  .estrellas-btns { display: flex; justify-content: center; gap: 6px; }
+  .estrella {
+    background: none; border: none; padding: 2px; cursor: pointer;
+    color: #ddd; line-height: 0;
+    transition: color 0.12s, transform 0.12s;
+  }
+  .estrella svg { width: 38px; height: 38px; }
+  .estrella:hover { transform: scale(1.12); }
+  .estrella.activa { color: #f5b301; }
+  .estrellas-texto {
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    margin-top: 8px; min-height: 17px;
+  }
+
+  .btn-enviar {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; margin-top: 8px;
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; border: none; border-radius: 40px;
+    padding: 14px; font-size: 14.5px; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(204,0,0,0.3);
+    transition: filter 0.15s, transform 0.12s, background 0.15s, box-shadow 0.15s;
+  }
+  .btn-enviar:hover:not(:disabled) { filter: brightness(1.06); }
+  .btn-enviar:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
+  .btn-enviar:disabled {
+    background: #e2e2e0; color: #999; box-shadow: none;
+    cursor: default; transform: none; filter: none;
+  }
+  .btn-enviar.enviado:disabled {
+    background: #1a7a1a; color: #fff;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(26,122,26,0.3);
+  }
+
+  .trampa { position: absolute; left: -9999px; opacity: 0; }
+
+  /* Pantalla de gracias, en lugar del formulario */
+  .gracias { display: none; text-align: center; padding: 14px 0 6px; }
+  .gracias.visible { display: block; }
+  .gracias-palomita {
+    width: 62px; height: 62px; border-radius: 50%;
+    background: #eaf7ee; color: #1a7f37;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .gracias-palomita svg { width: 30px; height: 30px; }
+  .gracias h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+  .gracias p { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+  .gracias .btn-volver-inicio {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 22px;
+    padding: 11px 24px; border-radius: 40px;
+    border: 1.5px solid var(--border); background: #fff;
+    color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 700;
+  }
+  .gracias .btn-volver-inicio:hover { border-color: var(--red); color: var(--red); }
+
+  @media (max-width: 640px) {
+    .cabecera { padding-top: 22px; }
+    .cabecera img { height: 42px; }
+    .tarjeta { padding: 24px 18px; border-radius: 15px; }
+    .titulo { font-size: 20px; }
+    .estrella svg { width: 34px; height: 34px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="cabecera">
+    <a href="/kwpremierweb/index.html" aria-label="KW Premier">
+      <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
+    </a>
+  </div>
+
+  <main class="page">
+    <div class="tarjeta">
+
+      <div id="formulario">
+        <h1 class="titulo">¿Cómo te fue con nosotros?</h1>
+        <p class="sub">Tu opinión nos ayuda a mejorar y a que más personas nos conozcan. Te toma menos de un minuto.</p>
+
+        <div class="estrellas-campo">
+          <div class="estrellas-btns" id="estrellas" role="group" aria-label="Calificación"></div>
+          <div class="estrellas-texto" id="estrellas-texto"></div>
+        </div>
+
+        <div class="field requerido">
+          <label for="res-nombre">Tu nombre</label>
+          <input type="text" id="res-nombre" maxlength="120" autocomplete="name" />
+        </div>
+
+        <div class="field requerido">
+          <label for="res-texto">Tu reseña</label>
+          <textarea id="res-texto" rows="4" maxlength="600" placeholder="Cuéntanos cómo fue tu experiencia..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="res-rol">¿Qué hiciste con nosotros? (opcional)</label>
+          <input type="text" id="res-rol" maxlength="120" placeholder="Ej. Compré un departamento en Del Valle" />
+        </div>
+
+        <input type="text" id="res-apodo" class="trampa" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+        <div class="msg" id="res-msg"></div>
+
+        <button type="button" class="btn-enviar" id="res-btn" onclick="enviarResena()" disabled>
+          <span class="kw-btn-cont" id="res-btn-cont">Enviar mi reseña</span>
+        </button>
+      </div>
+
+      <div class="gracias" id="gracias">
+        <div class="gracias-palomita">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h2>¡Gracias por tu reseña!</h2>
+        <p>La leemos con cuidado antes de publicarla. Te agradecemos mucho el tiempo que te tomaste.</p>
+        <a class="btn-volver-inicio" href="/kwpremierweb/index.html">Ir al inicio</a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+    </a>
+    <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" class="footer-social" aria-label="Instagram">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+    </a>
+    <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="footer-social" aria-label="TikTok">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
+    </a>
+  </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const LEYENDAS = ['', 'Muy mal', 'Mal', 'Regular', 'Bien', '¡Excelente!'];
+  let calificacion = 0;
+
+  const ESTRELLA_SVG = '<svg viewBox="0 0 24 24" fill="currentColor">' +
+    '<path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+
+  function pintarEstrellas() {
+    const cont = document.getElementById('estrellas');
+    cont.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'estrella' + (i <= calificacion ? ' activa' : '');
+      b.innerHTML = ESTRELLA_SVG;
+      b.setAttribute('aria-label', i + ' de 5 estrellas');
+      b.addEventListener('click', function () {
+        calificacion = i;
+        pintarEstrellas();
+        actualizarBoton();
+      });
+      cont.appendChild(b);
+    }
+    document.getElementById('estrellas-texto').textContent = LEYENDAS[calificacion] || '';
+  }
+
+  function completo() {
+    return calificacion > 0
+      && document.getElementById('res-nombre').value.trim() !== ''
+      && document.getElementById('res-texto').value.trim().length >= 3;
+  }
+
+  function actualizarBoton(estado) {
+    const btn = document.getElementById('res-btn');
+    const cont = document.getElementById('res-btn-cont');
+    btn.classList.remove('enviado');
+    if (estado === 'enviando') {
+      btn.disabled = true;
+      cont.innerHTML = '<span class="kw-btn-spinner"></span>Enviando...';
+    } else if (estado === 'enviado') {
+      btn.disabled = true;
+      btn.classList.add('enviado');
+      cont.textContent = '¡Enviada!';
+    } else {
+      btn.disabled = !completo();
+      cont.textContent = 'Enviar mi reseña';
+    }
+  }
+
+  async function enviarResena() {
+    // Trampa para robots: si viene llena, se hace como que todo salió
+    // bien y no se guarda nada.
+    if (document.getElementById('res-apodo').value) {
+      mostrarGracias();
+      return;
+    }
+    if (!completo()) return;
+
+    actualizarBoton('enviando');
+    const msg = document.getElementById('res-msg');
+    msg.style.display = 'none';
+    try {
+      const { error } = await sb.from('resenas').insert({
+        nombre: document.getElementById('res-nombre').value.trim(),
+        texto: document.getElementById('res-texto').value.trim(),
+        estrellas: calificacion,
+        rol: document.getElementById('res-rol').value.trim() || null,
+      });
+      if (error) throw error;
+      actualizarBoton('enviado');
+      setTimeout(mostrarGracias, 600);
+    } catch (err) {
+      msg.textContent = (err && err.message) || 'No se pudo enviar. Inténtalo de nuevo.';
+      msg.className = 'msg error';
+      actualizarBoton('inicial');
+    }
+  }
+
+  function mostrarGracias() {
+    document.getElementById('formulario').style.display = 'none';
+    document.getElementById('gracias').classList.add('visible');
+  }
+
+  ['res-nombre', 'res-texto'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () { actualizarBoton(); });
+  });
+
+  pintarEstrellas();
+  actualizarBoton();
+</script>
+</body>
+</html>

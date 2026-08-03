@@ -170,6 +170,14 @@
   if (kwHeader) {
     let lastY = 0;
     document.addEventListener('scroll', (e) => {
+      // Con algo abierto encima (las notificaciones), la barra se queda
+      // quieta: escuchamos en captura, así que hasta el scroll DENTRO de
+      // la lista de avisos llegaba aquí y escondía el header justo
+      // mientras se leía. Quien abre pone la marca; ver notif-bell.js.
+      if (document.documentElement.classList.contains('kw-header-anclado')) {
+        kwHeader.classList.remove('kw-header-oculto');
+        return;
+      }
       const t = e.target;
       const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
       const y = esVentana

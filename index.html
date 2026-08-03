@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <meta name="description" content="KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, venta y renta de propiedades con acompañamiento profesional." />
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <style>
   html, body { background: var(--bg); color: var(--text); }
   /* Antes la página cabía exacta en la pantalla (height:100%) y no se
@@ -50,7 +51,23 @@
   .btn-portal:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset; }
   .btn-portal svg { width: 15px; height: 15px; flex-shrink: 0; }
 
+  .btn-resena {
+    display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+    padding: 9px 16px; border-radius: 40px;
+    border: 1.5px solid var(--border); background: #fff;
+    color: var(--text); text-decoration: none;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s, transform 0.12s;
+  }
+  .btn-resena:hover { border-color: var(--red); color: var(--red); }
+  .btn-resena:active { transform: translateY(1px) scale(0.97); }
+  .btn-resena svg { width: 15px; height: 15px; color: #f5b301; flex-shrink: 0; }
+
   main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 92px 20px 40px; }
+
+  /* Trampa para robots: invisible para las personas, así que si viene
+     llena es que no la llenó una persona. */
+  .trampa { position: absolute; left: -9999px; opacity: 0; }
 
   /* ── Las cuatro puertas del sitio ──
      Tarjetas grandes con foto: la foto hace el trabajo de explicar a
@@ -65,21 +82,26 @@
     position: relative; display: flex; align-items: flex-end;
     min-height: 260px; padding: 22px;
     border-radius: 18px; overflow: hidden;
-    text-decoration: none; color: #fff;
+    text-decoration: none; color: var(--text);
     background-image: var(--foto, none);
-    background-color: #2a2a2a;
+    background-color: var(--card);
     background-size: cover; background-position: center;
-    box-shadow: var(--sombra-2);
+    border: 1px solid var(--border);
+    box-shadow: var(--sombra-1);
     transition: transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
   }
   .acceso:hover { transform: translateY(-3px); box-shadow: var(--sombra-3); }
   .acceso:active { transform: translateY(0) scale(0.99); }
-  /* Sin foto propia, este degradado es lo que se ve; con foto, la
-     oscurece lo suficiente para que el texto encima se lea siempre. */
+  /* Mientras no hay foto, la tarjeta se queda clara para ir a juego con
+     el resto del sitio (fondo gris, tarjetas blancas, rojo de acento).
+     En cuanto se le pone foto, .con-foto la voltea a texto blanco sobre
+     un velo oscuro, que es lo que necesita una imagen para leerse. */
   .acceso::before {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(150deg, #8f0000 0%, #4a0000 55%, #1f1f1f 100%);
-    opacity: var(--velo, 1);
+    background: radial-gradient(120% 90% at 85% 0%, #fff5f5 0%, #fafafa 55%, #f2f2f0 100%);
+  }
+  .acceso.con-foto {
+    color: #fff; border-color: transparent; background-color: #2a2a2a;
   }
   .acceso.con-foto::before {
     background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.72) 100%);
@@ -87,25 +109,29 @@
   .acceso-icono {
     position: absolute; top: 22px; left: 22px;
     width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(255,255,255,0.14);
+    background: #fff0f0; color: var(--red);
     display: flex; align-items: center; justify-content: center;
-    color: #fff;
   }
   .acceso-icono svg { width: 24px; height: 24px; }
   .acceso.con-foto .acceso-icono { display: none; }
-  /* Caja de vidrio: el texto se lee igual sobre una foto clara o una
-     oscura, sin depender de qué foto le toque a cada tarjeta. */
+  /* Sin foto no hace falta caja: el texto va directo sobre la tarjeta
+     clara. Con foto sí, porque el vidrio es lo que deja leerlo pase lo
+     que pase con la imagen de atrás. */
   .acceso-caja {
     position: relative;
+    border-radius: 14px;
+    max-width: 88%;
+  }
+  .acceso.con-foto .acceso-caja {
     background: rgba(20,20,20,0.55);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: 14px; padding: 15px 18px;
-    max-width: 88%;
+    padding: 15px 18px;
   }
   /* Son <span> (van dentro de un <a>), así que sin esto el título y su
      descripción salen pegados en el mismo renglón. */
   .acceso-titulo { display: block; font-size: 21px; font-weight: 800; letter-spacing: -0.4px; }
-  .acceso-sub { display: block; font-size: 13px; color: rgba(255,255,255,0.86); line-height: 1.45; margin-top: 4px; }
+  .acceso-sub { display: block; font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: 4px; }
+  .acceso.con-foto .acceso-sub { color: rgba(255,255,255,0.86); }
 
   /* ── Secciones de abajo ── */
   .seccion { margin-bottom: 52px; scroll-margin-top: 84px; }
@@ -157,6 +183,10 @@
     padding: 22px; box-shadow: var(--sombra-1);
     display: flex; flex-direction: column; gap: 12px;
   }
+  .testimonio-estrellas { display: flex; gap: 2px; }
+  .testimonio-estrellas svg { width: 16px; height: 16px; }
+  .testimonio-estrellas .llena { color: #f5b301; }
+  .testimonio-estrellas .vacia { color: #ddd; }
   .testimonio-texto { font-size: 14px; line-height: 1.65; color: #444; flex: 1; }
   .testimonio-quien { display: flex; align-items: center; gap: 11px; }
   .testimonio-avatar {
@@ -168,24 +198,47 @@
   .testimonio-nombre { font-size: 13.5px; font-weight: 700; }
   .testimonio-rol { font-size: 12px; color: var(--muted); }
 
-  /* Oficina y mapa */
-  .oficina { display: grid; grid-template-columns: 1fr 1.25fr; gap: 20px; align-items: stretch; }
+  /* Oficina y mapa: el mapa a todo lo ancho y los datos debajo. */
+  .oficina { display: flex; flex-direction: column; gap: 16px; }
   .oficina-datos {
     background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    padding: 26px; box-shadow: var(--sombra-1);
-    display: flex; flex-direction: column; gap: 18px;
+    padding: 22px 26px; box-shadow: var(--sombra-1);
+    display: flex; flex-wrap: wrap; gap: 26px;
   }
   .oficina-dato { display: flex; gap: 13px; align-items: flex-start; }
-  .oficina-dato svg { width: 19px; height: 19px; color: var(--red); flex-shrink: 0; margin-top: 2px; }
+  .oficina-dato > svg { width: 19px; height: 19px; color: var(--red); flex-shrink: 0; margin-top: 2px; }
   .oficina-dato-titulo { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
   .oficina-dato-valor { font-size: 14px; line-height: 1.55; margin-top: 3px; }
   .oficina-dato-valor a { color: var(--text); text-decoration: none; }
   .oficina-dato-valor a:hover { color: var(--red); }
   .oficina-mapa {
-    border-radius: 16px; overflow: hidden; min-height: 320px;
+    position: relative;
+    border-radius: 16px; overflow: hidden; min-height: 400px;
     border: 1px solid var(--border); box-shadow: var(--sombra-1); background: #e6e6e6;
   }
-  .oficina-mapa iframe { width: 100%; height: 100%; min-height: 320px; border: 0; display: block; }
+  .oficina-mapa iframe { width: 100%; height: 100%; min-height: 400px; border: 0; display: block; }
+  /* Pin propio encima del mapa. Google no deja cambiar el suyo en un
+     mapa embebido (eso pide la API de pago), así que va este encima,
+     centrado justo donde el mapa pone el suyo y más grande para
+     taparlo. pointer-events:none para no estorbar el arrastre. */
+  .mapa-pin {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -100%);
+    pointer-events: none; z-index: 2;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
+  }
+  .mapa-pin-cuerpo {
+    width: 74px; height: 74px; border-radius: 50%;
+    background: var(--red); border: 4px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mapa-pin-cuerpo img { width: 46px; height: auto; display: block; filter: brightness(0) invert(1); }
+  /* La puntita del pin, hecha con un triángulo CSS. */
+  .mapa-pin-punta {
+    width: 0; height: 0; margin: -6px auto 0;
+    border-left: 11px solid transparent; border-right: 11px solid transparent;
+    border-top: 16px solid #fff;
+  }
 
   @media (max-width: 860px) {
     .unete-puntos { grid-template-columns: 1fr; max-width: 420px; }
@@ -199,6 +252,11 @@
     .inicio-bienvenida .nombre { font-size: 12.5px; }
     .btn-portal { padding: 9px 16px; font-size: 12.5px; gap: 6px; }
     .btn-portal svg { width: 13px; height: 13px; }
+    /* En una barra tan angosta el botón de reseña se queda de pura
+       estrella: con su texto ya no cabían los tres elementos. */
+    .btn-resena { padding: 9px 11px; }
+    .btn-resena span { display: none; }
+    .inicio-header-der { gap: 8px; }
     main { padding: 76px 14px 30px; }
     .accesos { gap: 11px; margin-bottom: 40px; }
     .acceso { min-height: 165px; padding: 14px; border-radius: 15px; }
@@ -223,6 +281,13 @@
       <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
     <div class="inicio-header-der">
+      <!-- Liga aparte a propósito: es la que se manda por WhatsApp o
+           correo a un cliente para pedirle su reseña, así que tiene que
+           poder vivir sola sin pasar por aquí. -->
+      <a class="btn-resena" href="/kwpremierweb/resena.html">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <span>Déjanos una reseña</span>
+      </a>
       <div class="inicio-bienvenida" id="bienvenida">
         <span class="saludo">Bienvenido,</span>
         <span class="nombre" id="bienvenida-nombre"></span>
@@ -303,18 +368,16 @@
             <span>Un staff dedicado a apoyarte en cada operación, no a dejarte solo.</span>
           </div>
         </div>
-        <a class="btn-unete" href="market-center.html">
+        <button type="button" class="btn-unete" onclick="abrirModalReclutamiento()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-          Quiero saber más
-        </a>
+          Quiero ser parte
+        </button>
       </div>
     </section>
 
-    <!-- Testimonios: se arman desde TESTIMONIOS (abajo); sin datos, esa
-         cuadrícula simplemente no sale. El botón de reseña es
-         independiente —depende de RESENA_URL, no de si ya hay
-         testimonios— para poder invitar a dejar la primera. La sección
-         completa solo se esconde si no hay NINGUNA de las dos cosas. -->
+    <!-- Reseñas: salen de la tabla `resenas`, solo las aprobadas (lo
+         limita la política de RLS). Sin ninguna, esa cuadrícula no sale
+         pero el botón sí, para invitar a dejar la primera. -->
     <section class="seccion" id="seccion-testimonios" style="display:none;">
       <h2 class="seccion-titulo">Lo que dicen nuestros clientes</h2>
       <p class="seccion-sub">Personas que ya compraron, vendieron o rentaron con el acompañamiento de un asesor de KW Premier.</p>
@@ -332,12 +395,52 @@
       <h2 class="seccion-titulo">Visítanos</h2>
       <p class="seccion-sub">Nuestro Market Center está en la Ciudad de México. Pasa a conocernos o escríbenos para agendar una cita.</p>
       <div class="oficina">
-        <div class="oficina-datos" id="oficina-datos"></div>
         <div class="oficina-mapa" id="oficina-mapa"></div>
+        <div class="oficina-datos" id="oficina-datos"></div>
       </div>
     </section>
 
   </main>
+
+  <!-- Modal: quiero ser parte (reclutamiento) -->
+  <div id="modal-reclutamiento" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Quiero ser parte</h3>
+      <p class="modal-sub">Déjanos tus datos y te contactamos para platicar. Los campos con <span style="color:var(--red);font-weight:700;">*</span> son obligatorios.</p>
+      <div class="field requerido">
+        <label for="rec-nombre">Nombre</label>
+        <input type="text" id="rec-nombre" maxlength="120" autocomplete="name" />
+      </div>
+      <div class="field requerido">
+        <label for="rec-correo">Correo</label>
+        <input type="email" id="rec-correo" maxlength="160" autocomplete="email" />
+      </div>
+      <div class="field requerido">
+        <label for="rec-telefono">Teléfono</label>
+        <input type="tel" id="rec-telefono" maxlength="40" autocomplete="tel" />
+      </div>
+      <div class="field">
+        <label for="rec-experiencia">¿Tienes experiencia en bienes raíces?</label>
+        <select id="rec-experiencia">
+          <option value="ninguna">Voy empezando</option>
+          <option value="algo">Algo de experiencia</option>
+          <option value="mucha">Varios años en el sector</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="rec-mensaje">¿Algo que quieras contarnos?</label>
+        <textarea id="rec-mensaje" rows="3" maxlength="1000" placeholder="Opcional"></textarea>
+      </div>
+      <input type="text" id="rec-apodo" class="trampa" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <div class="msg" id="rec-msg"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalReclutamiento()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="rec-btn" onclick="enviarReclutamiento()" disabled>
+          <span class="kw-btn-cont" id="rec-btn-cont">Enviar mis datos</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
@@ -372,24 +475,11 @@
     correo: '',
   };
 
-  // ═══════════════════════════════════════════════════════════════
-  // TESTIMONIOS Y RESEÑAS
-  // ═══════════════════════════════════════════════════════════════
-  // Cada uno: { texto, nombre, rol }. Con la lista vacía no se pinta la
-  // cuadrícula (pero si hay RESENA_URL, sí se pinta el botón para
-  // invitar a dejar la primera). Van aquí y no en la base porque son
-  // pocos y no cambian seguido; si algún día se administran desde el
-  // portal, se cambia esto por una consulta y lo demás sigue igual.
-  //
-  // Importante: aquí solo van reseñas que alguien realmente escribió.
-  // Nunca se inventa una a nombre de una persona real.
-  const TESTIMONIOS = [
-    // { texto: 'Nos acompañaron en todo el proceso...', nombre: 'Nombre Apellido', rol: 'Compró en Polanco' },
-  ];
-
-  // Link de "Escribir una reseña" de tu perfil de Google Business (o el
-  // que uses). Vacío = el botón no se pinta.
-  const RESENA_URL = '';
+  // Las reseñas salen de la tabla `resenas` (ver 039_reclutamiento_y_
+  // resenas.sql): cualquiera las deja desde resena.html, pero solo se
+  // publican las que el equipo aprueba. Aquí solo se leen las aprobadas
+  // —de eso se encarga la política de RLS, no este código—.
+  const RESENA_URL = '/kwpremierweb/resena.html';
 
   const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
@@ -438,14 +528,36 @@
     }
   }
 
-  function pintarTestimonios() {
+  function estrellasHtml(n) {
+    var out = '';
+    for (var i = 1; i <= 5; i++) {
+      out += '<svg viewBox="0 0 24 24" class="' + (i <= n ? 'llena' : 'vacia') + '" fill="currentColor">' +
+        '<path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+    }
+    return '<div class="testimonio-estrellas" aria-label="' + n + ' de 5 estrellas">' + out + '</div>';
+  }
+
+  async function pintarTestimonios() {
     var iniciales = function (n) {
       return String(n || '').trim().split(/\s+/).slice(0, 2)
         .map(function (p) { return p.charAt(0); }).join('').toUpperCase() || '?';
     };
-    if (TESTIMONIOS.length) {
-      document.getElementById('lista-testimonios').innerHTML = TESTIMONIOS.map(function (t) {
+
+    var resenas = [];
+    try {
+      // La política de RLS ya limita esto a las aprobadas; aquí no hay
+      // que filtrar nada a mano.
+      var r = await sbPortal.from('resenas')
+        .select('nombre, texto, estrellas, rol')
+        .order('created_at', { ascending: false })
+        .limit(6);
+      if (!r.error) resenas = r.data || [];
+    } catch (e) {}
+
+    if (resenas.length) {
+      document.getElementById('lista-testimonios').innerHTML = resenas.map(function (t) {
         return '<figure class="testimonio">' +
+          estrellasHtml(t.estrellas) +
           '<blockquote class="testimonio-texto">“' + escapeHtml(t.texto) + '”</blockquote>' +
           '<figcaption class="testimonio-quien">' +
             '<span class="testimonio-avatar">' + escapeHtml(iniciales(t.nombre)) + '</span>' +
@@ -463,8 +575,8 @@
       document.getElementById('resena-cta').style.display = '';
     }
     // La sección solo tiene caso mostrarla si hay algo que enseñar: ya
-    // sea testimonios de verdad o al menos la invitación a dejar uno.
-    if (TESTIMONIOS.length || RESENA_URL) {
+    // sea reseñas aprobadas o al menos la invitación a dejar la primera.
+    if (resenas.length || RESENA_URL) {
       document.getElementById('seccion-testimonios').style.display = '';
     }
   }
@@ -500,13 +612,99 @@
     if (OFICINA.mapaEmbed) {
       mapa.innerHTML = '<iframe src="' + escapeHtml(OFICINA.mapaEmbed) + '" loading="lazy" ' +
         'referrerpolicy="no-referrer-when-downgrade" title="Ubicación de KW Premier" ' +
-        'allowfullscreen></iframe>';
+        'allowfullscreen></iframe>' +
+        '<div class="mapa-pin" aria-hidden="true">' +
+          '<div class="mapa-pin-cuerpo">' +
+            '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="" />' +
+          '</div>' +
+          '<div class="mapa-pin-punta"></div>' +
+        '</div>';
     } else {
       mapa.style.display = 'none';
     }
 
     document.getElementById('seccion-oficina').style.display = '';
   }
+
+  // ── Quiero ser parte (reclutamiento) ──
+  // Mismo trato que el de incidencias: el botón nace apagado hasta que
+  // estén los campos obligatorios, y avisa "Enviando" / "Enviado" en vez
+  // de quedarse mudo.
+  const REC_OBLIGATORIOS = ['rec-nombre', 'rec-correo', 'rec-telefono'];
+
+  function recCompleto() {
+    return REC_OBLIGATORIOS.every(function (id) {
+      return document.getElementById(id).value.trim() !== '';
+    });
+  }
+
+  function recEstado(estado) {
+    var btn = document.getElementById('rec-btn');
+    var cont = document.getElementById('rec-btn-cont');
+    btn.classList.remove('enviando', 'enviado');
+    if (estado === 'enviando') {
+      btn.disabled = true;
+      btn.classList.add('enviando');
+      cont.innerHTML = '<span class="kw-btn-spinner"></span>Enviando...';
+    } else if (estado === 'enviado') {
+      btn.disabled = true;
+      btn.classList.add('enviado');
+      cont.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>¡Listo! Te contactamos';
+    } else {
+      btn.disabled = !recCompleto();
+      cont.textContent = 'Enviar mis datos';
+    }
+  }
+
+  function abrirModalReclutamiento() {
+    ['rec-nombre', 'rec-correo', 'rec-telefono', 'rec-mensaje', 'rec-apodo'].forEach(function (id) {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('rec-experiencia').value = 'ninguna';
+    document.getElementById('rec-msg').style.display = 'none';
+    recEstado('inicial');
+    document.getElementById('modal-reclutamiento').style.display = 'flex';
+  }
+
+  function cerrarModalReclutamiento() {
+    window.kwUI.cerrarModal('modal-reclutamiento');
+  }
+
+  async function enviarReclutamiento() {
+    // Si la trampa viene llena, no la llenó una persona: se hace como
+    // que todo salió bien y no se guarda nada.
+    if (document.getElementById('rec-apodo').value) {
+      recEstado('enviado');
+      setTimeout(cerrarModalReclutamiento, 900);
+      return;
+    }
+    if (!recCompleto()) return;
+
+    recEstado('enviando');
+    var msg = document.getElementById('rec-msg');
+    msg.style.display = 'none';
+    try {
+      var val = function (id) { return document.getElementById(id).value.trim() || null; };
+      var res = await sbPortal.from('prospectos_reclutamiento').insert({
+        nombre: document.getElementById('rec-nombre').value.trim(),
+        correo: val('rec-correo'),
+        telefono: val('rec-telefono'),
+        experiencia: document.getElementById('rec-experiencia').value,
+        mensaje: val('rec-mensaje'),
+      });
+      if (res.error) throw res.error;
+      recEstado('enviado');
+      setTimeout(cerrarModalReclutamiento, 1400);
+    } catch (err) {
+      msg.textContent = (err && err.message) || 'No se pudo enviar. Inténtalo de nuevo.';
+      msg.className = 'msg error';
+      recEstado('inicial');
+    }
+  }
+
+  REC_OBLIGATORIOS.forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () { recEstado('inicial'); });
+  });
 
   reflejarSesion();
   pintarTestimonios();

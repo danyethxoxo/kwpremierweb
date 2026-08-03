@@ -107,11 +107,13 @@
       const dd = document.getElementById('notif-dropdown');
       if (dd) dd.classList.add('abierto');
       getBackdrop().classList.add('abierto');
-      // Con el fondo bloqueado no hay scroll de la página que dispare el
-      // "esconder header al bajar" de drawer.js — no hace falta tocar
-      // ese código para que no se confunda pensando que se sigue
-      // navegando la página de atrás.
+      // Dos candados distintos: el overflow evita que se mueva la página
+      // de atrás, y la marca en <html> le dice a drawer.js que no
+      // esconda el header. Hacen falta los dos: drawer.js escucha el
+      // scroll en fase de captura, así que hasta el de adentro de esta
+      // misma lista llegaba allá y escondía la barra al leer.
       document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('kw-header-anclado');
       // Al abrirla ya se dio por vista: el numerito no debe esperar a
       // que se pique cada renglón para desaparecer. Se marca un poco
       // después (no de inmediato) porque marcarTodasLeidas() rehace el
@@ -130,6 +132,7 @@
     if (dd) dd.classList.remove('abierto');
     if (backdropEl) backdropEl.classList.remove('abierto');
     document.body.style.overflow = '';
+    document.documentElement.classList.remove('kw-header-anclado');
   }
 
   function abrirNotificacion(id, url) {
