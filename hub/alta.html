@@ -152,9 +152,11 @@
     </div>
 
     <p class="alta-explica">
-      <strong>Qué pasa al dar de alta a alguien:</strong> se agrega a tus contactos de dani.guerrero@kwmexico.mx,
+      <strong>Qué pasa al dar de alta a alguien:</strong> se agrega a tus contactos de dani.guerrero@kwmexico.mx
+      (con correo, teléfono, cumpleaños si la hoja lo trae, y el puesto "Profesional Inmobiliario · KW PREMIER"),
       se le comparte la carpeta de Drive como lector y se le da acceso de lectura al calendario de KW Premier.
-      Los tres pasos son independientes: si uno falla, los demás sí se hacen y aquí te decimos cuál falló.
+      Los tres pasos son independientes: si uno falla, los demás sí se hacen y aquí te decimos cuál falló. Si el
+      contacto ya existe no se vuelve a crear.
     </p>
 
     <div class="barra">
@@ -348,7 +350,7 @@
     const btn = document.getElementById('btn-marcar-todos');
     const msg = document.getElementById('marcar-msg');
     btn.disabled = true;
-    msg.style.display = 'none';
+    msg.className = 'msg';
     try {
       const data = await llamar({ accion: 'marcar_manual' });
       msg.textContent = data.marcados
@@ -384,7 +386,7 @@
       .filter(Boolean).join(' · ');
     // Si ya se había intentado, se muestra cómo quedó la última vez.
     document.getElementById('alta-pasos').innerHTML = pasosHtml(p.alta ? p.alta.pasos : null);
-    document.getElementById('alta-msg').style.display = 'none';
+    document.getElementById('alta-msg').className = 'msg';
     document.getElementById('alta-btn-cerrar').textContent = 'Cancelar';
     estadoBoton('inicial');
     document.getElementById('alta-btn').style.display = '';
@@ -417,13 +419,14 @@
     if (!personaActual) return;
     estadoBoton('enviando');
     const msg = document.getElementById('alta-msg');
-    msg.style.display = 'none';
+    msg.className = 'msg';
     try {
       const data = await llamar({
         accion: 'procesar',
         correo: personaActual.correo,
         nombre: personaActual.nombre,
         telefono: personaActual.telefono,
+        cumpleanos: personaActual.cumpleanos,
       });
 
       const porClave = {};
