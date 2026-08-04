@@ -178,11 +178,13 @@ async function leerHoja(token: string) {
 // Cada uno devuelve { ok, detalle } y nunca tira: quien los llama junta
 // los resultados para poder decir exactamente qué salió y qué no.
 
-// Antes de crear se revisa si el correo ya está en los contactos: sin
-// esto, cada clic en "Volver a intentar" (o un doble clic sin querer)
-// mete un contacto duplicado, porque createContact no lo evita solo.
-async function buscarContactoPorCorreo(token: string, correo: string): Promise<boolean> {
-  const objetivo = correo.toLowerCase()
+// Los tres "quién ya está" se piden completos una sola vez (no por
+// persona) y se comparan en memoria: así "verificar" cuesta 3 llamadas
+// a Google sin importar cuánta gente haya en la hoja, y agregarContacto
+// reusa el mismo listado para no crear un contacto duplicado.
+
+async function listarContactos(token: string): Promise<Set<string>> {
+  const correos = new Set<string>()
   let pageToken: string | undefined
   do {
     const url = new URL('https://people.googleapis.com/v1/people/me/connections')
@@ -194,20 +196,65 @@ async function buscarContactoPorCorreo(token: string, correo: string): Promise<b
     if (!res.ok) throw new Error(`No se pudo revisar los contactos existentes: ${res.status} ${await res.text()}`)
     const data = await res.json()
 
-    const encontrado = (data.connections || []).some((p: { emailAddresses?: { value?: string }[] }) =>
-      (p.emailAddresses || []).some((e) => String(e.value || '').toLowerCase() === objetivo)
-    )
-    if (encontrado) return true
+    for (const p of (data.connections || []) as { emailAddresses?: { value?: string }[] }[]) {
+      for (const e of p.emailAddresses || []) {
+        if (e.value) correos.add(String(e.value).toLowerCase())
+      }
+    }
     pageToken = data.nextPageToken
   } while (pageToken)
-  return false
+  return correos
+}
+
+async function listarPermisosDrive(token: string): Promise<Set<string>> {
+  const correos = new Set<string>()
+  if (!ALTA_DRIVE_FOLDER_ID) return correos
+  let pageToken: string | undefined
+  do {
+    const url = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(ALTA_DRIVE_FOLDER_ID)}/permissions`)
+    url.searchParams.set('fields', 'nextPageToken, permissions(emailAddress)')
+    url.searchParams.set('supportsAllDrives', 'true')
+    url.searchParams.set('pageSize', '100')
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error(`No se pudo revisar los permisos de Drive: ${res.status} ${await res.text()}`)
+    const data = await res.json()
+
+    for (const p of (data.permissions || []) as { emailAddress?: string }[]) {
+      if (p.emailAddress) correos.add(String(p.emailAddress).toLowerCase())
+    }
+    pageToken = data.nextPageToken
+  } while (pageToken)
+  return correos
+}
+
+async function listarAclCalendario(token: string): Promise<Set<string>> {
+  const correos = new Set<string>()
+  if (!GOOGLE_CALENDAR_ID) return correos
+  let pageToken: string | undefined
+  do {
+    const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/acl`)
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error(`No se pudo revisar el calendario: ${res.status} ${await res.text()}`)
+    const data = await res.json()
+
+    for (const r of (data.items || []) as { scope?: { type?: string; value?: string } }[]) {
+      if (r.scope?.type === 'user' && r.scope.value) correos.add(String(r.scope.value).toLowerCase())
+    }
+    pageToken = data.nextPageToken
+  } while (pageToken)
+  return correos
 }
 
 async function agregarContacto(
   token: string,
   persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
 ) {
-  if (await buscarContactoPorCorreo(token, persona.correo)) {
+  const contactos = await listarContactos(token)
+  if (contactos.has(persona.correo.toLowerCase())) {
     return 'Ya existía en Contactos, no se creó de nuevo'
   }
 
@@ -399,6 +446,42 @@ Deno.serve(async (req: Request) => {
       if (errGuardar) return respond({ error: 'No se pudo guardar: ' + errGuardar.message }, 500)
 
       return respond({ ok: true, marcados: pendientes.length })
+    }
+
+    // ── Verificar: revisa en Google (no en la base de datos) quién ya
+    // está en cada una de las tres plataformas, para poder comparar
+    // contra lo que dice el sistema. No cambia nada, solo informa.
+    if (accion === 'verificar') {
+      const personas = await leerHoja(tokenPrincipal)
+
+      const [contactos, drive, calendario] = await Promise.all([
+        listarContactos(tokenPrincipal),
+        listarPermisosDrive(tokenPrincipal),
+        listarAclCalendario(tokenPrincipal),
+      ])
+
+      const { data: yaHechas } = await admin
+        .from('altas_procesadas')
+        .select('correo, completo')
+
+      const completosBD = new Set<string>()
+      for (const a of yaHechas || []) {
+        if (a.completo) completosBD.add(String(a.correo).toLowerCase())
+      }
+
+      return respond({
+        personas: personas.map((p) => {
+          const correo = p.correo.toLowerCase()
+          return {
+            correo: p.correo,
+            nombre: p.nombre,
+            contactos: contactos.has(correo),
+            drive: drive.has(correo),
+            calendario: calendario.has(correo),
+            enSistema: completosBD.has(correo),
+          }
+        }),
+      })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)
