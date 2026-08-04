@@ -105,8 +105,8 @@ function limpiarCorreo(s: unknown): string {
 }
 
 // Convierte "DD/MM/AAAA" (o con guiones, o "AAAA-MM-DD") al formato de
-// fecha de la People API. El a\u00F1o es opcional: si la celda solo trae
-// d\u00EDa y mes, el cumplea\u00F1os igual se guarda (sin a\u00F1o) en vez de
+// fecha de la People API. El anio es opcional: si la celda solo trae
+// dia y mes, el cumpleanos igual se guarda (sin anio) en vez de
 // descartarse.
 function parseFecha(s: string): { day: number; month: number; year?: number } | null {
   const texto = String(s || '').trim()
