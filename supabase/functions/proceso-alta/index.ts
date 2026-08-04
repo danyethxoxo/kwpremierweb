@@ -104,22 +104,6 @@ function limpiarCorreo(s: unknown): string {
   return String(s || '').replace(/[\u200B\u200C\u200D\uFEFF\s]/g, '')
 }
 
-// Convierte "DD/MM/AAAA" (o con guiones, o "AAAA-MM-DD") al formato de
-// fecha de la People API. El anio es opcional: si la celda solo trae
-// dia y mes, el cumpleanos igual se guarda (sin anio) en vez de
-// descartarse.
-function parseFecha(s: string): { day: number; month: number; year?: number } | null {
-  const texto = String(s || '').trim()
-  if (!texto) return null
-  let m = texto.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
-  if (m) return { day: Number(m[1]), month: Number(m[2]), year: Number(m[3]) }
-  m = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
-  if (m) return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) }
-  m = texto.match(/^(\d{1,2})[\/\-](\d{1,2})$/)
-  if (m) return { day: Number(m[1]), month: Number(m[2]) }
-  return null
-}
-
 function indiceDe(encabezados: string[], claves: string[]): number {
   const limpio = encabezados.map((h) =>
     String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -152,7 +136,6 @@ async function leerHoja(token: string) {
   const iTelefono = indiceDe(encabezados, ['telefono', 'celular', 'movil', 'whatsapp'])
   const iKwid = indiceDe(encabezados, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
   const iFechaIngreso = indiceDe(encabezados, ['fecha de ingreso', 'fecha ingreso'])
-  const iCumpleanos = indiceDe(encabezados, ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'])
 
   if (iCorreo === -1) {
     throw new Error('La hoja no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
@@ -170,7 +153,6 @@ async function leerHoja(token: string) {
       telefono: iTelefono !== -1 ? String(fila[iTelefono] || '').trim() : '',
       kwid: iKwid !== -1 ? String(fila[iKwid] || '').trim() : '',
       fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
-      cumpleanos: iCumpleanos !== -1 ? String(fila[iCumpleanos] || '').trim() : '',
     }
   }).filter((p) => p.correo)
 }
@@ -179,10 +161,7 @@ async function leerHoja(token: string) {
 // Cada uno devuelve { ok, detalle } y nunca tira: quien los llama junta
 // los resultados para poder decir exactamente qué salió y qué no.
 
-async function agregarContacto(
-  token: string,
-  persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
-) {
+async function agregarContacto(token: string, persona: { nombre: string; correo: string; telefono: string }) {
   const partes = persona.nombre.trim().split(/\s+/)
   const cuerpo: Record<string, unknown> = {
     names: [{
@@ -190,14 +169,8 @@ async function agregarContacto(
       familyName: partes.slice(1).join(' ') || undefined,
     }],
     emailAddresses: [{ value: persona.correo }],
-    // Así se identifica de un vistazo en Contacts a quién pertenece
-    // cada tarjeta, sin tener que abrir cada una.
-    organizations: [{ name: 'KW PREMIER', title: 'Profesional Inmobiliario' }],
   }
   if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
-
-  const fecha = parseFecha(persona.cumpleanos || '')
-  if (fecha) cuerpo.birthdays = [{ date: fecha }]
 
   const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
     method: 'POST',
@@ -308,10 +281,9 @@ Deno.serve(async (req: Request) => {
       const correo = limpiarCorreo(body.correo)
       const nombre = String(body.nombre || '').trim()
       const telefono = String(body.telefono || '').trim()
-      const cumpleanos = String(body.cumpleanos || '').trim()
       if (!correo) return respond({ error: 'Falta el correo de la persona.' }, 400)
 
-      const persona = { nombre, correo, telefono, cumpleanos }
+      const persona = { nombre, correo, telefono }
       const resultados = []
 
       resultados.push(await intentar('contactos_dani', () =>
