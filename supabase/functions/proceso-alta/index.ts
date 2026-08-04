@@ -117,17 +117,22 @@ async function leerHoja(token: string) {
   if (!filas.length) return []
 
   const encabezados = filas[0]
+  // "agente" es el nombre real de la persona; "nombre" (si existe aparte)
+  // suele ser el nombre comercial, así que "agente" tiene prioridad.
+  const iAgente = indiceDe(encabezados, ['agente'])
   const iNombre = indiceDe(encabezados, ['nombre completo', 'nombre'])
   const iApellido = indiceDe(encabezados, ['apellido'])
   const iCorreo = indiceDe(encabezados, ['correo', 'email', 'e-mail', 'mail'])
   const iTelefono = indiceDe(encabezados, ['telefono', 'celular', 'movil', 'whatsapp'])
+  const iKwid = indiceDe(encabezados, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
+  const iFechaIngreso = indiceDe(encabezados, ['fecha de ingreso', 'fecha ingreso'])
 
   if (iCorreo === -1) {
     throw new Error('La hoja no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
   }
 
   return filas.slice(1).map((fila, n) => {
-    const nombre = [
+    const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
       iNombre !== -1 ? fila[iNombre] : '',
       iApellido !== -1 ? fila[iApellido] : '',
     ].filter(Boolean).join(' ').trim()
@@ -136,6 +141,8 @@ async function leerHoja(token: string) {
       nombre,
       correo: String(fila[iCorreo] || '').trim(),
       telefono: iTelefono !== -1 ? String(fila[iTelefono] || '').trim() : '',
+      kwid: iKwid !== -1 ? String(fila[iKwid] || '').trim() : '',
+      fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
     }
   }).filter((p) => p.correo)
 }

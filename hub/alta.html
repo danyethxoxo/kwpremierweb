@@ -252,7 +252,10 @@
     const buscador = document.getElementById('buscador-nombre');
     const filtro = buscador ? buscador.value.trim().toLowerCase() : '';
     const visibles = !filtro ? personas : personas.filter(function (p) {
-      return (p.nombre || '').toLowerCase().includes(filtro) || p.correo.toLowerCase().includes(filtro);
+      return (p.nombre || '').toLowerCase().includes(filtro)
+        || p.correo.toLowerCase().includes(filtro)
+        || (p.kwid || '').toLowerCase().includes(filtro)
+        || (p.telefono || '').toLowerCase().includes(filtro);
     });
 
     if (!visibles.length) {
@@ -260,14 +263,18 @@
       return;
     }
 
-    let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
-      '<thead><tr><th>Nombre</th><th>Correo</th><th>Estado</th><th class="col-acciones"></th></tr></thead><tbody>';
+    let html = '<div class="kw-tabla-marco"><table class="kw-tabla ancha">' +
+      '<thead><tr><th>Nombre</th><th>Celular</th><th>KWID</th><th>Fecha de ingreso</th>' +
+      '<th>Correo</th><th>Estado</th><th class="col-acciones"></th></tr></thead><tbody>';
     visibles.forEach(function (p) {
       // Se busca por correo (único) en vez de por índice: con el
       // buscador filtrando, la posición en la lista visible ya no
       // coincide con la posición en el arreglo completo.
       html += '<tr>' +
         '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || '—') + '</td>' +
+        '<td class="col-junta">' + escapeHtml(p.telefono || '—') + '</td>' +
+        '<td class="col-junta">' + escapeHtml(p.kwid || '—') + '</td>' +
+        '<td class="col-junta">' + escapeHtml(p.fechaIngreso || '—') + '</td>' +
         '<td>' + escapeHtml(p.correo) + '</td>' +
         '<td>' + estadoHtml(p.alta) + '</td>' +
         '<td class="col-acciones"><button type="button" class="btn btn-rojo" data-correo="' + escapeHtml(p.correo) + '">' +
@@ -322,7 +329,8 @@
   function abrirModalAlta(p) {
     personaActual = p;
     document.getElementById('alta-titulo').textContent = p.nombre || p.correo;
-    document.getElementById('alta-sub').textContent = p.correo;
+    document.getElementById('alta-sub').textContent = [p.correo, p.telefono, p.kwid ? ('KWID ' + p.kwid) : '']
+      .filter(Boolean).join(' · ');
     // Si ya se había intentado, se muestra cómo quedó la última vez.
     document.getElementById('alta-pasos').innerHTML = pasosHtml(p.alta ? p.alta.pasos : null);
     document.getElementById('alta-msg').style.display = 'none';
