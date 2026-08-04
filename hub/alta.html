@@ -44,6 +44,22 @@
   .barra { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .barra .crece { flex: 1; }
 
+  .buscador {
+    display: flex; align-items: center; gap: 8px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 0 12px; height: 38px; background: #fff;
+    min-width: 220px; flex: 1; max-width: 320px;
+  }
+  .buscador svg { width: 15px; height: 15px; color: var(--muted); flex-shrink: 0; }
+  .buscador input {
+    border: none; outline: none; font-family: inherit; font-size: 13px;
+    flex: 1; min-width: 0; background: transparent; color: var(--text);
+  }
+  .buscador input::placeholder { color: var(--placeholder, #aaa); }
+  @media (max-width: 640px) {
+    .buscador { max-width: none; order: -1; flex-basis: 100%; }
+  }
+
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
     border-radius: 10px; padding: 9px 16px; border: 1.5px solid var(--border);
@@ -132,6 +148,10 @@
       </div>
 
       <div class="barra">
+        <div class="buscador">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="buscador-nombre" placeholder="Buscar por nombre o correo..." oninput="pintarLista()" />
+        </div>
         <span class="crece"></span>
         <button type="button" class="btn" id="btn-recargar" onclick="cargarLista()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -229,22 +249,39 @@
       return;
     }
 
+    const buscador = document.getElementById('buscador-nombre');
+    const filtro = buscador ? buscador.value.trim().toLowerCase() : '';
+    const visibles = !filtro ? personas : personas.filter(function (p) {
+      return (p.nombre || '').toLowerCase().includes(filtro) || p.correo.toLowerCase().includes(filtro);
+    });
+
+    if (!visibles.length) {
+      cont.innerHTML = '<div class="kw-vacio">Nadie coincide con "' + escapeHtml(filtro) + '".</div>';
+      return;
+    }
+
     let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
       '<thead><tr><th>Nombre</th><th>Correo</th><th>Estado</th><th class="col-acciones"></th></tr></thead><tbody>';
-    personas.forEach(function (p, i) {
+    visibles.forEach(function (p) {
+      // Se busca por correo (único) en vez de por índice: con el
+      // buscador filtrando, la posición en la lista visible ya no
+      // coincide con la posición en el arreglo completo.
       html += '<tr>' +
         '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || '—') + '</td>' +
         '<td>' + escapeHtml(p.correo) + '</td>' +
         '<td>' + estadoHtml(p.alta) + '</td>' +
-        '<td class="col-acciones"><button type="button" class="btn btn-rojo" data-i="' + i + '">' +
+        '<td class="col-acciones"><button type="button" class="btn btn-rojo" data-correo="' + escapeHtml(p.correo) + '">' +
           (p.alta ? 'Volver a intentar' : 'Dar de alta') + '</button></td>' +
       '</tr>';
     });
     html += '</tbody></table></div>';
     cont.innerHTML = html;
 
-    Array.from(cont.querySelectorAll('button[data-i]')).forEach(function (b) {
-      b.addEventListener('click', function () { abrirModalAlta(personas[Number(b.dataset.i)]); });
+    Array.from(cont.querySelectorAll('button[data-correo]')).forEach(function (b) {
+      b.addEventListener('click', function () {
+        const p = personas.find(function (x) { return x.correo === b.dataset.correo; });
+        if (p) abrirModalAlta(p);
+      });
     });
   }
 
