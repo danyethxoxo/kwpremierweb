@@ -94,6 +94,16 @@ async function getAccessToken(refreshToken: string): Promise<string> {
 // ── Lectura del Google Sheet ────────────────────────────────
 // Las columnas se buscan por su encabezado, no por posición: la hoja se
 // llena a mano y mover una columna no debe romper esto.
+// La hoja se llena a mano (a veces pegando desde Word o el correo), y
+// eso a veces mete caracteres invisibles (espacios de ancho cero, BOM)
+// que no se ven pero rompen el correo para las APIs de Google — por
+// ejemplo "nombre@‌dominio.mx" truena con "invalidSharingRequest"
+// aunque en la hoja se vea perfecto. trim() no los quita porque no
+// están en los extremos, así que se limpian de todo el texto.
+function limpiarCorreo(s: unknown): string {
+  return String(s || '').replace(/[\u200B\u200C\u200D\uFEFF\s]/g, '')
+}
+
 function indiceDe(encabezados: string[], claves: string[]): number {
   const limpio = encabezados.map((h) =>
     String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -139,7 +149,7 @@ async function leerHoja(token: string) {
     return {
       fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
       nombre,
-      correo: String(fila[iCorreo] || '').trim(),
+      correo: limpiarCorreo(fila[iCorreo]),
       telefono: iTelefono !== -1 ? String(fila[iTelefono] || '').trim() : '',
       kwid: iKwid !== -1 ? String(fila[iKwid] || '').trim() : '',
       fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
@@ -268,7 +278,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Procesar: dar de alta a una persona ──
     if (accion === 'procesar') {
-      const correo = String(body.correo || '').trim()
+      const correo = limpiarCorreo(body.correo)
       const nombre = String(body.nombre || '').trim()
       const telefono = String(body.telefono || '').trim()
       if (!correo) return respond({ error: 'Falta el correo de la persona.' }, 400)
