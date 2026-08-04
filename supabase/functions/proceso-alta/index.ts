@@ -4,17 +4,16 @@
 // Panel, sin tener que entrar a cada una a mano:
 //
 //   1. Lo agrega a Google Contacts de dani.guerrero@kwmexico.mx
-//   2. Lo agrega a Google Contacts de kwpremier@kwmexico.mx
-//   3. Le comparte la carpeta de Drive como lector
-//   4. Le da acceso de lectura al calendario de KW Premier
+//   2. Le comparte la carpeta de Drive como lector
+//   3. Le da acceso de lectura al calendario de KW Premier
 //
 // Los asesores nuevos se leen de un Google Sheet que se llena a mano;
 // esta función lo lee y devuelve las filas para que en la pantalla se
 // elija a quién procesar.
 //
-// Cada paso va por separado a propósito: si uno falla (por ejemplo, la
-// segunda cuenta todavía no está conectada), los demás sí se hacen y se
-// reporta cuál falló. Así nunca se queda a medias sin saber en qué.
+// Cada paso va por separado a propósito: si uno falla, los demás sí se
+// hacen y se reporta cuál falló. Así nunca se queda a medias sin saber
+// en qué.
 //
 // ─────────────────────────────────────────────────────────────
 // CÓMO SE PONE A FUNCIONAR (una sola vez)
@@ -32,21 +31,15 @@
 //      https://www.googleapis.com/auth/calendar
 //    El token que salga de ahí reemplaza a GOOGLE_REFRESH_TOKEN.
 //
-// C) Repetir la autorización entrando con kwpremier@kwmexico.mx y
-//    guardar ESE token aparte, en GOOGLE_REFRESH_TOKEN_KWPREMIER. Son
-//    dos cuentas distintas, así que hacen falta dos tokens: uno no
-//    puede tocar los contactos del otro.
-//
-// D) Project Settings > Edge Functions > Secrets:
-//      ALTA_SHEET_ID                 el id del Google Sheet (va en su URL,
-//                                    entre /d/ y /edit)
-//      ALTA_SHEET_RANGO              opcional, por defecto 'A1:Z500'
-//      ALTA_DRIVE_FOLDER_ID          el id de la carpeta de Drive (va en
-//                                    su URL, después de /folders/)
-//      ALTA_EMAILS                   los correos que pueden usar esto,
-//                                    separados por coma. Ej:
-//                                    dani.guerrero@kwmexico.mx,tumaster@correo.com
-//      GOOGLE_REFRESH_TOKEN_KWPREMIER  el token del paso C
+// C) Project Settings > Edge Functions > Secrets:
+//      ALTA_SHEET_ID          el id del Google Sheet (va en su URL,
+//                             entre /d/ y /edit)
+//      ALTA_SHEET_RANGO       opcional, por defecto 'A1:Z500'
+//      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
+//                             URL, después de /folders/)
+//      ALTA_EMAILS            los correos que pueden usar esto,
+//                             separados por coma. Ej:
+//                             dani.guerrero@kwmexico.mx,tumaster@correo.com
 //
 // Ya existen y se reusan: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 // GOOGLE_REFRESH_TOKEN, GOOGLE_CALENDAR_ID.
@@ -59,7 +52,6 @@ const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!
 const GOOGLE_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN')!
-const GOOGLE_REFRESH_TOKEN_KWPREMIER = Deno.env.get('GOOGLE_REFRESH_TOKEN_KWPREMIER')
 const GOOGLE_CALENDAR_ID = Deno.env.get('GOOGLE_CALENDAR_ID')
 
 const ALTA_SHEET_ID = Deno.env.get('ALTA_SHEET_ID')
@@ -273,14 +265,6 @@ Deno.serve(async (req: Request) => {
 
       resultados.push(await intentar('contactos_dani', () =>
         agregarContacto(tokenPrincipal, persona)))
-
-      resultados.push(await intentar('contactos_kwpremier', async () => {
-        if (!GOOGLE_REFRESH_TOKEN_KWPREMIER) {
-          throw new Error('Falta GOOGLE_REFRESH_TOKEN_KWPREMIER: la cuenta kwpremier@ todavía no está conectada.')
-        }
-        const t = await getAccessToken(GOOGLE_REFRESH_TOKEN_KWPREMIER)
-        return agregarContacto(t, persona)
-      }))
 
       resultados.push(await intentar('drive', () => compartirCarpeta(tokenPrincipal, correo)))
       resultados.push(await intentar('calendario', () => darAccesoCalendario(tokenPrincipal, correo)))
