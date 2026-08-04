@@ -500,18 +500,36 @@
     });
   }
 
-  async function corregirUno(correo, btn) {
+  // El mensaje se pone SIEMPRE después de abrirVerificacion(), porque esa
+  // función lo limpia al empezar: puesto antes, se borraba solo y por eso
+  // una corrección fallida parecía "no hacer nada".
+  function mostrarMsgVerif(texto, clase) {
     const msg = document.getElementById('verificar-msg');
+    msg.innerHTML = texto;
+    msg.className = 'msg ' + clase;
+  }
+
+  function textoFallas(fallas) {
+    return 'No se pudo completar:<br>' + fallas.map(function (f) {
+      return '· ' + escapeHtml((f.correo ? f.correo + ' — ' : '') + (NOMBRE_PASO[f.paso] || f.paso) + ': ' + f.detalle);
+    }).join('<br>');
+  }
+
+  async function corregirUno(correo, btn) {
     btn.disabled = true;
     btn.textContent = 'Corrigiendo...';
-    msg.className = 'msg';
     try {
-      await llamar({ accion: 'corregir', correo: correo });
+      const data = await llamar({ accion: 'corregir', correo: correo });
+      // La función responde 200 aunque un paso falle (informa paso por
+      // paso), así que hay que mirar los resultados, no solo el status.
+      const fallaron = (data.resultados || []).filter(function (r) { return !r.ok; });
       await abrirVerificacion();
+      if (fallaron.length) mostrarMsgVerif(textoFallas(fallaron), 'error');
+      else if (data.aviso) mostrarMsgVerif(escapeHtml(data.aviso), 'error');
+      else mostrarMsgVerif('Listo, acceso completado.', 'ok');
       cargarLista();
     } catch (err) {
-      msg.textContent = err.message || 'No se pudo corregir.';
-      msg.className = 'msg error';
+      mostrarMsgVerif(escapeHtml(err.message || 'No se pudo corregir.'), 'error');
       btn.disabled = false;
       btn.textContent = 'Corregir';
     }
@@ -519,20 +537,20 @@
 
   async function corregirTodos() {
     const btn = document.getElementById('btn-corregir-todos');
-    const msg = document.getElementById('verificar-msg');
     btn.disabled = true;
-    msg.className = 'msg';
     try {
       const data = await llamar({ accion: 'corregir_todos' });
-      msg.textContent = data.corregidos
-        ? ('Se corrigió el acceso de ' + data.corregidos + (data.corregidos === 1 ? ' persona.' : ' personas.'))
-        : 'No había accesos faltantes.';
-      msg.className = 'msg ok';
       await abrirVerificacion();
+      if ((data.fallas || []).length) {
+        mostrarMsgVerif(textoFallas(data.fallas), 'error');
+      } else {
+        mostrarMsgVerif(data.corregidos
+          ? ('Se corrigió el acceso de ' + data.corregidos + (data.corregidos === 1 ? ' persona.' : ' personas.'))
+          : 'No había accesos faltantes.', 'ok');
+      }
       cargarLista();
     } catch (err) {
-      msg.textContent = err.message || 'No se pudo corregir.';
-      msg.className = 'msg error';
+      mostrarMsgVerif(escapeHtml(err.message || 'No se pudo corregir.'), 'error');
     } finally {
       btn.disabled = false;
     }

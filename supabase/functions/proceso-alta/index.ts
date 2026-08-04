@@ -73,22 +73,30 @@ function respond(body: unknown, status = 200) {
 
 // Un token de acceso por cuenta. Se piden al vuelo porque duran una
 // hora; guardarlos no vale la pena para lo poco que se usa esto.
+// Google a veces contesta 500 "internal_failure" sin más, y a los pocos
+// segundos funciona igual: por eso se reintenta en vez de tumbar toda la
+// pantalla. Un 400/401 sí es configuración mal puesta (token revocado,
+// client_secret cambiado) y ahí reintentar no arregla nada.
 async function getAccessToken(refreshToken: string): Promise<string> {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  })
-  if (!res.ok) {
-    throw new Error(`No se pudo renovar el token de Google: ${res.status} ${await res.text()}`)
+  let ultimoError = ''
+  for (let intento = 0; intento < 3; intento++) {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    })
+    if (res.ok) return (await res.json()).access_token as string
+
+    ultimoError = `${res.status} ${await res.text()}`
+    if (res.status < 500) break
+    await new Promise((r) => setTimeout(r, 500 * (intento + 1)))
   }
-  const data = await res.json()
-  return data.access_token as string
+  throw new Error(`No se pudo renovar el token de Google: ${ultimoError}`)
 }
 
 // ── Lectura del Google Sheet ────────────────────────────────
@@ -564,11 +572,16 @@ Deno.serve(async (req: Request) => {
         return !contactos.has(c) || !drive.has(c) || !calendario.has(c)
       })
 
+      const fallas: { correo: string; paso: string; detalle: string }[] = []
+
       for (const persona of faltantes) {
         const resultados = await corregirPersona(tokenPrincipal, persona, contactos, drive, calendario)
         const completo = resultados.every((r) => r.ok)
         const pasos: Record<string, unknown> = {}
-        for (const r of resultados) pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
+        for (const r of resultados) {
+          pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
+          if (!r.ok) fallas.push({ correo: persona.correo, paso: r.paso, detalle: r.detalle })
+        }
 
         // Si se acaba de crear el contacto, se anota aquí mismo para que
         // a la siguiente persona de esta misma corrida no la vuelva a
@@ -581,7 +594,7 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      return respond({ ok: true, corregidos: faltantes.length })
+      return respond({ ok: fallas.length === 0, corregidos: faltantes.length, fallas })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)
