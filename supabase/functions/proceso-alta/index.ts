@@ -252,8 +252,9 @@ async function listarAclCalendario(token: string): Promise<Set<string>> {
 async function agregarContacto(
   token: string,
   persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
+  contactosExistentes?: Set<string>,
 ) {
-  const contactos = await listarContactos(token)
+  const contactos = contactosExistentes ?? await listarContactos(token)
   if (contactos.has(persona.correo.toLowerCase())) {
     return 'Ya existía en Contactos, no se creó de nuevo'
   }
@@ -317,6 +318,35 @@ async function intentar(nombre: string, fn: () => Promise<string>) {
   } catch (err) {
     return { paso: nombre, ok: false, detalle: (err as Error).message || 'Error inesperado' }
   }
+}
+
+// Compara contra lo que ya se sabe de Google (los tres Set de
+// listarContactos/Drive/Calendario, pedidos una sola vez desde afuera)
+// y solo llama a la API del paso que de verdad falta. Lo usan tanto
+// "corregir" (una persona) como "corregir_todos" (todas las pendientes).
+async function corregirPersona(
+  token: string,
+  persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
+  contactos: Set<string>,
+  drive: Set<string>,
+  calendario: Set<string>,
+) {
+  const c = persona.correo.toLowerCase()
+  const resultados = []
+
+  resultados.push(contactos.has(c)
+    ? { paso: 'contactos_dani', ok: true, detalle: 'Ya estaba en Contactos' }
+    : await intentar('contactos_dani', () => agregarContacto(token, persona, contactos)))
+
+  resultados.push(drive.has(c)
+    ? { paso: 'drive', ok: true, detalle: 'Ya tenía acceso a Drive' }
+    : await intentar('drive', () => compartirCarpeta(token, persona.correo)))
+
+  resultados.push(calendario.has(c)
+    ? { paso: 'calendario', ok: true, detalle: 'Ya tenía acceso al calendario' }
+    : await intentar('calendario', () => darAccesoCalendario(token, persona.correo)))
+
+  return resultados
 }
 
 Deno.serve(async (req: Request) => {
@@ -482,6 +512,76 @@ Deno.serve(async (req: Request) => {
           }
         }),
       })
+    }
+
+    // ── Corregir: a una sola persona le completa nada más el acceso que
+    // le falta (según lo que hay de verdad en Google), sin repetir lo
+    // que ya tiene.
+    if (accion === 'corregir') {
+      const correo = limpiarCorreo(body.correo)
+      if (!correo) return respond({ error: 'Falta el correo de la persona.' }, 400)
+
+      const personas = await leerHoja(tokenPrincipal)
+      const persona = personas.find((p) => p.correo.toLowerCase() === correo.toLowerCase())
+      if (!persona) return respond({ error: 'No se encontró a esa persona en la hoja.' }, 404)
+
+      const [contactos, drive, calendario] = await Promise.all([
+        listarContactos(tokenPrincipal),
+        listarPermisosDrive(tokenPrincipal),
+        listarAclCalendario(tokenPrincipal),
+      ])
+
+      const resultados = await corregirPersona(tokenPrincipal, persona, contactos, drive, calendario)
+      const completo = resultados.every((r) => r.ok)
+      const pasos: Record<string, unknown> = {}
+      for (const r of resultados) pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
+
+      const { error: errGuardar } = await admin.from('altas_procesadas').insert({
+        correo: persona.correo, nombre: persona.nombre || null, telefono: persona.telefono || null,
+        pasos, completo, procesado_por: quien.user.id,
+      })
+      if (errGuardar) {
+        return respond({ ok: completo, resultados, aviso: 'No se pudo guardar el registro: ' + errGuardar.message })
+      }
+
+      return respond({ ok: completo, resultados })
+    }
+
+    // ── Corregir todos: igual que "corregir" pero para cada persona de
+    // la hoja a la que le falte algo. Los tres listados de Google se
+    // piden una sola vez y se reusan para todos, no uno por persona.
+    if (accion === 'corregir_todos') {
+      const personas = await leerHoja(tokenPrincipal)
+
+      const [contactos, drive, calendario] = await Promise.all([
+        listarContactos(tokenPrincipal),
+        listarPermisosDrive(tokenPrincipal),
+        listarAclCalendario(tokenPrincipal),
+      ])
+
+      const faltantes = personas.filter((p) => {
+        const c = p.correo.toLowerCase()
+        return !contactos.has(c) || !drive.has(c) || !calendario.has(c)
+      })
+
+      for (const persona of faltantes) {
+        const resultados = await corregirPersona(tokenPrincipal, persona, contactos, drive, calendario)
+        const completo = resultados.every((r) => r.ok)
+        const pasos: Record<string, unknown> = {}
+        for (const r of resultados) pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
+
+        // Si se acaba de crear el contacto, se anota aquí mismo para que
+        // a la siguiente persona de esta misma corrida no la vuelva a
+        // revisar contra un listado ya desactualizado.
+        if (resultados[0]?.ok) contactos.add(persona.correo.toLowerCase())
+
+        await admin.from('altas_procesadas').insert({
+          correo: persona.correo, nombre: persona.nombre || null, telefono: persona.telefono || null,
+          pasos, completo, procesado_por: quien.user.id,
+        })
+      }
+
+      return respond({ ok: true, corregidos: faltantes.length })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)

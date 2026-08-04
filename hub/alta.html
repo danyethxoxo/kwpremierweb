@@ -96,6 +96,7 @@
   }
   .btn-rojo:hover:not(:disabled) { filter: brightness(1.07); }
   .btn-rojo:disabled { background: #e2e2e0; color: #999; box-shadow: none; }
+  .btn-mini { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
 
   .estado-alta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .estado-alta.pendiente { color: var(--muted); }
@@ -227,10 +228,16 @@
   <div id="modal-verificar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3>Comprobar en Google</h3>
-      <p class="modal-sub">Revisa directo en Contactos, Drive y Calendario — sin cambiar nada.</p>
+      <p class="modal-sub">Revisa directo en Contactos, Drive y Calendario. "Corregir" solo completa lo que le falte a esa persona; lo que ya tenga no se vuelve a tocar.</p>
       <div id="verificar-cont"></div>
+      <div class="msg" id="verificar-msg"></div>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="window.kwUI.cerrarModal('modal-verificar')">Cerrar</button>
+        <button type="button" class="btn-modal-confirmar" id="btn-corregir-todos" style="display:none;"
+          data-kw-confirmar="¿Corregir el acceso faltante de todos los pendientes?"
+          onclick="corregirTodos()">
+          Corregir todos los accesos
+        </button>
       </div>
     </div>
   </div>
@@ -406,41 +413,102 @@
     return '<span class="verif-check ' + (si ? 'si' : 'no') + '">' + (si ? ICONO_CHECK : ICONO_EQUIS) + '</span>';
   }
 
+  const NOMBRE_CAMPO_VERIF = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
+  let ultimaVerificacion = [];
+
   async function abrirVerificacion() {
     const btn = document.getElementById('btn-verificar');
     const cont = document.getElementById('verificar-cont');
+    const msg = document.getElementById('verificar-msg');
     btn.disabled = true;
+    msg.className = 'msg';
     cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
     document.getElementById('modal-verificar').style.display = 'flex';
     try {
       const data = await llamar({ accion: 'verificar' });
-      const filas = data.personas || [];
-      if (!filas.length) {
-        cont.innerHTML = '<div class="kw-vacio">La hoja no tiene filas con correo todavía.</div>';
-        return;
-      }
-      let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
-        '<thead><tr><th>Nombre</th><th>Contactos</th><th>Drive</th><th>Calendario</th><th>En el sistema</th></tr></thead><tbody>';
-      filas.forEach(function (p) {
-        const completo = p.contactos && p.drive && p.calendario;
-        const difiere = completo !== p.enSistema;
-        html += '<tr' + (difiere ? ' class="verif-fila-discrepancia"' : '') + '>' +
-          '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || p.correo) + '</td>' +
-          '<td>' + verifIcono(p.contactos) + '</td>' +
-          '<td>' + verifIcono(p.drive) + '</td>' +
-          '<td>' + verifIcono(p.calendario) + '</td>' +
-          '<td>' + verifIcono(p.enSistema) + '</td>' +
-        '</tr>';
-      });
-      html += '</tbody></table></div>';
-      const discrepancias = filas.filter(function (p) { return (p.contactos && p.drive && p.calendario) !== p.enSistema; }).length;
-      if (discrepancias) {
-        html = '<div class="msg error" style="display:block;">' + discrepancias +
-          ' no coinciden entre lo que dice el sistema y lo que hay en Google (resaltados abajo).</div>' + html;
-      }
-      cont.innerHTML = html;
+      ultimaVerificacion = data.personas || [];
+      pintarVerificacion();
     } catch (err) {
       cont.innerHTML = '<div class="kw-vacio">' + escapeHtml(err.message || 'No se pudo comprobar.') + '</div>';
+      document.getElementById('btn-corregir-todos').style.display = 'none';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function pintarVerificacion() {
+    const cont = document.getElementById('verificar-cont');
+    const btnTodos = document.getElementById('btn-corregir-todos');
+    const filas = ultimaVerificacion;
+
+    if (!filas.length) {
+      cont.innerHTML = '<div class="kw-vacio">La hoja no tiene filas con correo todavía.</div>';
+      btnTodos.style.display = 'none';
+      return;
+    }
+
+    let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
+      '<thead><tr><th>Nombre</th><th>Contactos</th><th>Drive</th><th>Calendario</th><th>En el sistema</th><th class="col-acciones"></th></tr></thead><tbody>';
+    let faltantes = 0;
+    filas.forEach(function (p) {
+      const faltan = ['contactos', 'drive', 'calendario'].filter(function (k) { return !p[k]; });
+      if (faltan.length) faltantes++;
+      const difiere = (faltan.length === 0) !== p.enSistema;
+      html += '<tr' + (difiere ? ' class="verif-fila-discrepancia"' : '') + '>' +
+        '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || p.correo) + '</td>' +
+        '<td>' + verifIcono(p.contactos) + '</td>' +
+        '<td>' + verifIcono(p.drive) + '</td>' +
+        '<td>' + verifIcono(p.calendario) + '</td>' +
+        '<td>' + verifIcono(p.enSistema) + '</td>' +
+        '<td class="col-acciones">' + (faltan.length
+          ? '<button type="button" class="btn btn-rojo btn-mini" data-corregir="' + escapeHtml(p.correo) + '" ' +
+            'title="Falta: ' + escapeHtml(faltan.map(function (k) { return NOMBRE_CAMPO_VERIF[k]; }).join(', ')) + '">Corregir</button>'
+          : '') + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+    cont.innerHTML = html;
+
+    btnTodos.style.display = faltantes ? '' : 'none';
+
+    Array.from(cont.querySelectorAll('button[data-corregir]')).forEach(function (b) {
+      b.addEventListener('click', function () { corregirUno(b.dataset.corregir, b); });
+    });
+  }
+
+  async function corregirUno(correo, btn) {
+    const msg = document.getElementById('verificar-msg');
+    btn.disabled = true;
+    btn.textContent = 'Corrigiendo...';
+    msg.className = 'msg';
+    try {
+      await llamar({ accion: 'corregir', correo: correo });
+      await abrirVerificacion();
+      cargarLista();
+    } catch (err) {
+      msg.textContent = err.message || 'No se pudo corregir.';
+      msg.className = 'msg error';
+      btn.disabled = false;
+      btn.textContent = 'Corregir';
+    }
+  }
+
+  async function corregirTodos() {
+    const btn = document.getElementById('btn-corregir-todos');
+    const msg = document.getElementById('verificar-msg');
+    btn.disabled = true;
+    msg.className = 'msg';
+    try {
+      const data = await llamar({ accion: 'corregir_todos' });
+      msg.textContent = data.corregidos
+        ? ('Se corrigió el acceso de ' + data.corregidos + (data.corregidos === 1 ? ' persona.' : ' personas.'))
+        : 'No había accesos faltantes.';
+      msg.className = 'msg ok';
+      await abrirVerificacion();
+      cargarLista();
+    } catch (err) {
+      msg.textContent = err.message || 'No se pudo corregir.';
+      msg.className = 'msg error';
     } finally {
       btn.disabled = false;
     }
