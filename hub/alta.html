@@ -112,12 +112,15 @@
 
   .denegado { text-align: center; padding: 70px 20px; color: var(--muted); }
 
-  #modal-verificar .modal-box { max-width: 640px; max-height: 85vh; overflow-y: auto; }
+  #modal-verificar .modal-box { max-width: 700px; max-height: 85vh; overflow-y: auto; }
   .verif-check { display: inline-flex; }
   .verif-check svg { width: 17px; height: 17px; }
   .verif-check.si { color: #1a7a1a; }
   .verif-check.no { color: #c4c4c4; }
   .verif-fila-discrepancia { background: #fff8e6; }
+  /* Las columnas de ícono se estiraban de más y empujaban "Corregir"
+     fuera de la vista; se angostan al contenido y se centra el ícono. */
+  #verificar-cont .col-junta { text-align: center; }
 
   /* Resultado de cada paso, en el modal */
   .pasos { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 6px; }
@@ -448,7 +451,8 @@
     }
 
     let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
-      '<thead><tr><th>Nombre</th><th>Contactos</th><th>Drive</th><th>Calendario</th><th>En el sistema</th><th class="col-acciones"></th></tr></thead><tbody>';
+      '<thead><tr><th>Nombre</th><th class="col-junta">Contactos</th><th class="col-junta">Drive</th>' +
+      '<th class="col-junta">Calendario</th><th class="col-junta">En el sistema</th><th class="col-acciones"></th></tr></thead><tbody>';
     let faltantes = 0;
     filas.forEach(function (p) {
       const faltan = ['contactos', 'drive', 'calendario'].filter(function (k) { return !p[k]; });
@@ -456,10 +460,10 @@
       const difiere = (faltan.length === 0) !== p.enSistema;
       html += '<tr' + (difiere ? ' class="verif-fila-discrepancia"' : '') + '>' +
         '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || p.correo) + '</td>' +
-        '<td>' + verifIcono(p.contactos) + '</td>' +
-        '<td>' + verifIcono(p.drive) + '</td>' +
-        '<td>' + verifIcono(p.calendario) + '</td>' +
-        '<td>' + verifIcono(p.enSistema) + '</td>' +
+        '<td class="col-junta">' + verifIcono(p.contactos) + '</td>' +
+        '<td class="col-junta">' + verifIcono(p.drive) + '</td>' +
+        '<td class="col-junta">' + verifIcono(p.calendario) + '</td>' +
+        '<td class="col-junta">' + verifIcono(p.enSistema) + '</td>' +
         '<td class="col-acciones">' + (faltan.length
           ? '<button type="button" class="btn btn-rojo btn-mini" data-corregir="' + escapeHtml(p.correo) + '" ' +
             'title="Falta: ' + escapeHtml(faltan.map(function (k) { return NOMBRE_CAMPO_VERIF[k]; }).join(', ')) + '">Corregir</button>'
