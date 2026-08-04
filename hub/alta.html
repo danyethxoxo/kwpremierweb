@@ -112,7 +112,16 @@
 
   .denegado { text-align: center; padding: 70px 20px; color: var(--muted); }
 
-  #modal-verificar .modal-box { max-width: 700px; max-height: 85vh; overflow-y: auto; }
+  /* Cerrar y Corregir todos se quedan fijos arriba (junto con el
+     título): solo la tabla de abajo hace scroll, así los botones
+     siguen a la mano sin tener que bajar hasta el final de la lista. */
+  #modal-verificar .modal-box {
+    max-width: 700px; max-height: 85vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .verif-acciones-arriba { margin: 2px 0 12px; flex-shrink: 0; }
+  #verificar-msg { flex-shrink: 0; }
+  .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .verif-check { display: inline-flex; }
   .verif-check svg { width: 17px; height: 17px; }
   .verif-check.si { color: #1a7a1a; }
@@ -232,9 +241,7 @@
     <div class="modal-box">
       <h3>Comprobar en Google</h3>
       <p class="modal-sub">Revisa directo en Contactos, Drive y Calendario. "Corregir" solo completa lo que le falte a esa persona; lo que ya tenga no se vuelve a tocar.</p>
-      <div id="verificar-cont"></div>
-      <div class="msg" id="verificar-msg"></div>
-      <div class="modal-actions">
+      <div class="modal-actions verif-acciones-arriba">
         <button type="button" class="btn-modal-cancelar" onclick="window.kwUI.cerrarModal('modal-verificar')">Cerrar</button>
         <button type="button" class="btn-modal-confirmar" id="btn-corregir-todos" style="display:none;"
           data-kw-confirmar="¿Corregir el acceso faltante de todos los pendientes?"
@@ -242,6 +249,8 @@
           Corregir todos los accesos
         </button>
       </div>
+      <div class="msg" id="verificar-msg"></div>
+      <div id="verificar-cont" class="verif-scroll"></div>
     </div>
   </div>
 
