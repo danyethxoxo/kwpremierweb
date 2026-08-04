@@ -309,6 +309,42 @@ Deno.serve(async (req: Request) => {
       return respond({ ok: completo, resultados })
     }
 
+    // ── Marcar manual: para quienes ya se dieron de alta antes de este
+    // proceso (o por fuera de él). No toca las APIs de Google — solo
+    // asienta que ya están, para no duplicar el contacto ni reenviarle a
+    // alguien que ya tiene acceso los avisos de "se compartió contigo".
+    if (accion === 'marcar_manual') {
+      const personas = await leerHoja(tokenPrincipal)
+
+      const { data: yaHechas } = await admin
+        .from('altas_procesadas')
+        .select('correo, completo')
+
+      const completos = new Set<string>()
+      for (const a of yaHechas || []) {
+        if (a.completo) completos.add(String(a.correo).toLowerCase())
+      }
+
+      const pendientes = personas.filter((p) => !completos.has(p.correo.toLowerCase()))
+      if (!pendientes.length) return respond({ ok: true, marcados: 0 })
+
+      const pasosManual = {
+        contactos_dani: { ok: true, detalle: 'Marcado manualmente (ya estaba dado de alta antes de este proceso)' },
+        drive: { ok: true, detalle: 'Marcado manualmente' },
+        calendario: { ok: true, detalle: 'Marcado manualmente' },
+      }
+
+      const { error: errGuardar } = await admin.from('altas_procesadas').insert(
+        pendientes.map((p) => ({
+          correo: p.correo, nombre: p.nombre || null, telefono: p.telefono || null,
+          pasos: pasosManual, completo: true, procesado_por: quien.user.id,
+        }))
+      )
+      if (errGuardar) return respond({ error: 'No se pudo guardar: ' + errGuardar.message }, 500)
+
+      return respond({ ok: true, marcados: pendientes.length })
+    }
+
     return respond({ error: 'Acción no reconocida.' }, 400)
   } catch (err) {
     return respond({ error: (err as Error).message || 'Error inesperado' }, 500)

@@ -22,9 +22,9 @@
 <style>
   html, body { min-height: 100%; background: var(--bg); color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
-  .page { flex: 1; width: 100%; max-width: var(--ancho-pagina); margin: 0 auto; padding: 90px 20px 50px; }
+  .page { flex: 1; width: 100%; margin: 0 auto; padding: 90px clamp(20px, 4vw, 56px) 50px; }
   .page-title { font-size: 24px; font-weight: 700; }
-  .page-desc { font-size: 13.5px; color: var(--muted); margin: 4px 0 22px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin: 4px 0 18px; }
 
   #notif-bell-slot { position: relative; }
   .notif-bell-btn {
@@ -93,12 +93,12 @@
   .estado-alta.parcial { color: #93600a; }
   .estado-alta svg { width: 14px; height: 14px; }
 
-  .aviso {
-    background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 12px;
-    padding: 14px 16px; font-size: 13px; line-height: 1.6; color: #6b4e08;
-    margin-bottom: 18px;
-  }
-  .aviso strong { display: block; margin-bottom: 4px; }
+  .alta-explica { font-size: 13.5px; color: var(--muted); line-height: 1.6; max-width: 860px; margin: 0 0 20px; }
+  .alta-explica strong { color: var(--text); }
+
+  .resumen-activos { display: inline-flex; align-items: baseline; gap: 8px; margin-bottom: 18px; }
+  .resumen-activos .num { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
+  .resumen-activos .etiqueta { font-size: 13px; color: var(--muted); }
 
   .denegado { text-align: center; padding: 70px 20px; color: var(--muted); }
 
@@ -143,31 +143,42 @@
   </header>
 
   <main class="page">
-    <div id="contenido" style="display:none;">
-      <h1 class="page-title">Proceso de Alta</h1>
-      <p class="page-desc">Da de alta a los asesores nuevos en las plataformas de Google, sin entrar a cada una a mano.</p>
+    <h1 class="page-title">Proceso de Alta</h1>
+    <p class="page-desc">Da de alta a los asesores nuevos en las plataformas de Google, sin entrar a cada una a mano.</p>
 
-      <div class="aviso">
-        <strong>Qué pasa al dar de alta a alguien</strong>
-        Se agrega a tus contactos de dani.guerrero@kwmexico.mx, se le comparte la carpeta
-        de Drive como lector y se le da acceso de lectura al calendario de KW Premier. Los
-        tres pasos son independientes: si uno falla, los demás sí se hacen y aquí te
-        decimos cuál falló.
+    <div class="resumen-activos">
+      <span class="num" id="num-activos">—</span>
+      <span class="etiqueta">asesores activos</span>
+    </div>
+
+    <p class="alta-explica">
+      <strong>Qué pasa al dar de alta a alguien:</strong> se agrega a tus contactos de dani.guerrero@kwmexico.mx,
+      se le comparte la carpeta de Drive como lector y se le da acceso de lectura al calendario de KW Premier.
+      Los tres pasos son independientes: si uno falla, los demás sí se hacen y aquí te decimos cuál falló.
+    </p>
+
+    <div class="barra">
+      <div class="buscador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="buscador-nombre" placeholder="Buscar por nombre o correo..." oninput="pintarLista()" />
       </div>
+      <span class="crece"></span>
+      <button type="button" class="btn" id="btn-marcar-todos"
+        data-kw-confirmar="¿Marcar a todos los pendientes como ya dados de alta, sin repetir los pasos en Google?"
+        onclick="marcarTodosManual()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Marcar todos como dados de alta
+      </button>
+      <button type="button" class="btn" id="btn-recargar" onclick="cargarLista()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Volver a leer la hoja
+      </button>
+    </div>
 
-      <div class="barra">
-        <div class="buscador">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="buscador-nombre" placeholder="Buscar por nombre o correo..." oninput="pintarLista()" />
-        </div>
-        <span class="crece"></span>
-        <button type="button" class="btn" id="btn-recargar" onclick="cargarLista()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Volver a leer la hoja
-        </button>
-      </div>
+    <div class="msg" id="marcar-msg"></div>
 
-      <div id="lista"></div>
+    <div id="lista">
+      <div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>
     </div>
 
     <div id="denegado" class="denegado" style="display:none;">
@@ -250,7 +261,16 @@
     return '<span class="estado-alta parcial">' + ICONO_ALERTA + 'Quedó a medias</span>';
   }
 
+  function actualizarResumen() {
+    const activos = personas.filter(function (p) { return p.alta && p.alta.completo; }).length;
+    document.getElementById('num-activos').textContent = String(activos);
+    const pendientes = personas.length - activos;
+    const btnTodos = document.getElementById('btn-marcar-todos');
+    btnTodos.disabled = pendientes === 0;
+  }
+
   function pintarLista() {
+    actualizarResumen();
     const cont = document.getElementById('lista');
     if (!personas.length) {
       cont.innerHTML = '<div class="kw-vacio">La hoja no tiene filas con correo todavía.</div>';
@@ -316,6 +336,29 @@
     } catch (err) {
       cont.innerHTML = '<div class="kw-vacio">' + escapeHtml(err.message || 'No se pudo leer la hoja.') + '</div>';
     } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // A quienes ya se les dio de alta a mano antes de que existiera esta
+  // pantalla (o por fuera de ella) se les marca así, sin volver a llamar
+  // a las APIs de Google: repetir esos pasos no actualiza nada útil y sí
+  // duplica el contacto y reenvía los correos de "se compartió contigo".
+  async function marcarTodosManual() {
+    const btn = document.getElementById('btn-marcar-todos');
+    const msg = document.getElementById('marcar-msg');
+    btn.disabled = true;
+    msg.style.display = 'none';
+    try {
+      const data = await llamar({ accion: 'marcar_manual' });
+      msg.textContent = data.marcados
+        ? ('Se marcaron ' + data.marcados + ' asesores como dados de alta.')
+        : 'No había nadie pendiente por marcar.';
+      msg.className = 'msg ok';
+      await cargarLista();
+    } catch (err) {
+      msg.textContent = err.message || 'No se pudo marcar.';
+      msg.className = 'msg error';
       btn.disabled = false;
     }
   }
@@ -411,24 +454,30 @@
   // El candado de verdad vive en la Edge Function (comprueba el correo
   // contra ALTA_EMAILS). Esto de aquí solo evita enseñar una pantalla
   // que de todos modos no va a funcionar.
+  function mostrarDenegado(err) {
+    Array.from(document.querySelector('main.page').children).forEach(function (el) {
+      if (el.id !== 'denegado') el.style.display = 'none';
+    });
+    const denegado = document.getElementById('denegado');
+    denegado.style.display = '';
+    // Diagnóstico temporal: se quita en cuanto quede resuelto.
+    if (err && err.diagnostico) {
+      denegado.innerHTML +=
+        '<pre style="text-align:left;max-width:500px;margin:16px auto 0;font-size:11px;' +
+        'background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;">' +
+        escapeHtml(JSON.stringify(err.diagnostico, null, 2)) + '</pre>';
+    }
+  }
+
   async function initAlta() {
     try {
       const data = await llamar({ accion: 'listar' });
       personas = data.personas || [];
-      document.getElementById('contenido').style.display = '';
       pintarLista();
     } catch (err) {
       if (/solo para el equipo|permiso|403/i.test(err.message || '')) {
-        document.getElementById('denegado').style.display = '';
-        // Diagnóstico temporal: se quita en cuanto quede resuelto.
-        if (err.diagnostico) {
-          document.getElementById('denegado').innerHTML +=
-            '<pre style="text-align:left;max-width:500px;margin:16px auto 0;font-size:11px;' +
-            'background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;">' +
-            escapeHtml(JSON.stringify(err.diagnostico, null, 2)) + '</pre>';
-        }
+        mostrarDenegado(err);
       } else {
-        document.getElementById('contenido').style.display = '';
         document.getElementById('lista').innerHTML =
           '<div class="kw-vacio">' + escapeHtml(err.message || 'No se pudo cargar.') + '</div>';
       }
