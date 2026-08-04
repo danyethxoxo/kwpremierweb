@@ -113,23 +113,34 @@
   .denegado { text-align: center; padding: 70px 20px; color: var(--muted); }
 
   /* Cerrar y Corregir todos se quedan fijos arriba (junto con el
-     título): solo la tabla de abajo hace scroll, así los botones
-     siguen a la mano sin tener que bajar hasta el final de la lista. */
+     título): solo la lista de abajo hace scroll, así los botones
+     siguen a la mano sin tener que bajar hasta el final. */
   #modal-verificar .modal-box {
-    max-width: 700px; max-height: 85vh;
+    max-width: 620px; max-height: 85vh;
     display: flex; flex-direction: column; overflow: hidden;
   }
   .verif-acciones-arriba { margin: 2px 0 12px; flex-shrink: 0; }
   #verificar-msg { flex-shrink: 0; }
   .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-  .verif-check { display: inline-flex; }
-  .verif-check svg { width: 17px; height: 17px; }
-  .verif-check.si { color: #1a7a1a; }
-  .verif-check.no { color: #c4c4c4; }
-  .verif-fila-discrepancia { background: #fff8e6; }
-  /* Las columnas de ícono se estiraban de más y empujaban "Corregir"
-     fuera de la vista; se angostan al contenido y se centra el ícono. */
-  #verificar-cont .col-junta { text-align: center; }
+
+  /* Tarjetas apiladas en vez de tabla: con 6 datos por persona, una
+     tabla no cabe sin scroll lateral en pantallas angostas. Apiladas,
+     todo se lee sin importar el ancho — solo se desplaza hacia abajo. */
+  .verif-lista { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .verif-item { padding: 12px 14px; background: #fff; }
+  .verif-item + .verif-item { border-top: 1px solid var(--border); }
+  .verif-item.discrepancia { background: #fff8e6; }
+  .verif-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .verif-nombre { font-weight: 700; font-size: 13.5px; }
+  .verif-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .verif-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 20px;
+    white-space: nowrap;
+  }
+  .verif-chip svg { width: 11px; height: 11px; }
+  .verif-chip.si { background: #eaf7ea; color: #1a7a1a; }
+  .verif-chip.no { background: #f0f0f0; color: #999; }
 
   /* Resultado de cada paso, en el modal */
   .pasos { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 6px; }
@@ -421,8 +432,8 @@
   const ICONO_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
   const ICONO_EQUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-  function verifIcono(si) {
-    return '<span class="verif-check ' + (si ? 'si' : 'no') + '">' + (si ? ICONO_CHECK : ICONO_EQUIS) + '</span>';
+  function verifChip(si, etiqueta) {
+    return '<span class="verif-chip ' + (si ? 'si' : 'no') + '">' + (si ? ICONO_CHECK : ICONO_EQUIS) + etiqueta + '</span>';
   }
 
   const NOMBRE_CAMPO_VERIF = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
@@ -459,27 +470,29 @@
       return;
     }
 
-    let html = '<div class="kw-tabla-marco"><table class="kw-tabla">' +
-      '<thead><tr><th>Nombre</th><th class="col-junta">Contactos</th><th class="col-junta">Drive</th>' +
-      '<th class="col-junta">Calendario</th><th class="col-junta">En el sistema</th><th class="col-acciones"></th></tr></thead><tbody>';
+    let html = '<div class="verif-lista">';
     let faltantes = 0;
     filas.forEach(function (p) {
       const faltan = ['contactos', 'drive', 'calendario'].filter(function (k) { return !p[k]; });
       if (faltan.length) faltantes++;
       const difiere = (faltan.length === 0) !== p.enSistema;
-      html += '<tr' + (difiere ? ' class="verif-fila-discrepancia"' : '') + '>' +
-        '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || p.correo) + '</td>' +
-        '<td class="col-junta">' + verifIcono(p.contactos) + '</td>' +
-        '<td class="col-junta">' + verifIcono(p.drive) + '</td>' +
-        '<td class="col-junta">' + verifIcono(p.calendario) + '</td>' +
-        '<td class="col-junta">' + verifIcono(p.enSistema) + '</td>' +
-        '<td class="col-acciones">' + (faltan.length
-          ? '<button type="button" class="btn btn-rojo btn-mini" data-corregir="' + escapeHtml(p.correo) + '" ' +
-            'title="Falta: ' + escapeHtml(faltan.map(function (k) { return NOMBRE_CAMPO_VERIF[k]; }).join(', ')) + '">Corregir</button>'
-          : '') + '</td>' +
-      '</tr>';
+      html += '<div class="verif-item' + (difiere ? ' discrepancia' : '') + '">' +
+        '<div class="verif-item-top">' +
+          '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
+          (faltan.length
+            ? '<button type="button" class="btn btn-rojo btn-mini" data-corregir="' + escapeHtml(p.correo) + '">' +
+              'Corregir (' + escapeHtml(faltan.map(function (k) { return NOMBRE_CAMPO_VERIF[k]; }).join(', ')) + ')</button>'
+            : '') +
+        '</div>' +
+        '<div class="verif-chips">' +
+          verifChip(p.contactos, 'Contactos') +
+          verifChip(p.drive, 'Drive') +
+          verifChip(p.calendario, 'Calendario') +
+          verifChip(p.enSistema, 'En el sistema') +
+        '</div>' +
+      '</div>';
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     cont.innerHTML = html;
 
     btnTodos.style.display = faltantes ? '' : 'none';
