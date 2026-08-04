@@ -75,10 +75,13 @@
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none;
     box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 3px 10px rgba(204,0,0,0.28);
-    /* Sin esto, Safari a veces no pinta el degradado del primer botón
-       insertado por innerHTML hasta el primer repaint (p.ej. al pasar el
-       mouse), y se ve en blanco hasta entonces. */
-    transform: translateZ(0);
+    /* .btn trae "transition: background ...", y ese degradado heredando
+       una transición de "background" hace que Chrome a veces no lo pinte
+       al insertarlo por innerHTML — se queda en blanco hasta el primer
+       recalculo de estilo (por ejemplo, al pasar el mouse). btn-rojo no
+       necesita transición de background (el hover usa filter), así que
+       se quita aquí para que pinte bien desde el primer momento. */
+    transition: border-color 0.15s, transform 0.12s;
   }
   .btn-rojo:hover:not(:disabled) { filter: brightness(1.07); }
   .btn-rojo:disabled { background: #e2e2e0; color: #999; box-shadow: none; }
