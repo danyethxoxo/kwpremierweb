@@ -225,7 +225,13 @@ Deno.serve(async (req: Request) => {
       return respond({ error: 'Falta configurar ALTA_EMAILS en los secretos de la función.' }, 500)
     }
     if (!permitidos.includes(miCorreo)) {
-      return respond({ error: 'Esta sección es solo para el equipo de altas.' }, 403)
+      // Aviso temporal para diagnosticar por qué no coincide (se quita
+      // en cuanto quede resuelto): enseña qué correo detectó la función
+      // y contra qué lista lo comparó.
+      return respond({
+        error: 'Esta sección es solo para el equipo de altas.',
+        diagnostico: { tu_correo: miCorreo, lista_permitidos: permitidos },
+      }, 403)
     }
 
     const body = await req.json().catch(() => ({}))

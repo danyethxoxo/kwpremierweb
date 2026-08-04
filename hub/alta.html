@@ -203,7 +203,11 @@
       body: JSON.stringify(cuerpo),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+    if (!res.ok) {
+      const err = new Error(data.error || ('Error ' + res.status));
+      err.diagnostico = data.diagnostico;
+      throw err;
+    }
     return data;
   }
 
@@ -363,6 +367,13 @@
     } catch (err) {
       if (/solo para el equipo|permiso|403/i.test(err.message || '')) {
         document.getElementById('denegado').style.display = '';
+        // Diagnóstico temporal: se quita en cuanto quede resuelto.
+        if (err.diagnostico) {
+          document.getElementById('denegado').innerHTML +=
+            '<pre style="text-align:left;max-width:500px;margin:16px auto 0;font-size:11px;' +
+            'background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;">' +
+            escapeHtml(JSON.stringify(err.diagnostico, null, 2)) + '</pre>';
+        }
       } else {
         document.getElementById('contenido').style.display = '';
         document.getElementById('lista').innerHTML =
