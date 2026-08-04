@@ -67,7 +67,15 @@
     font-size: 13px; font-weight: 700; font-family: inherit;
     transition: background 0.15s, border-color 0.15s, transform 0.12s;
   }
-  .btn:hover { background: #fafafa; }
+  /* :not(.btn-rojo) a propósito: ".btn:hover" (dos selectores) es más
+     específico que ".btn-rojo" solo (uno), así que sin este freno, al
+     pasar el mouse por un botón rojo este "background: #fafafa" le
+     ganaba al degradado rojo y el botón se veía en blanco mientras
+     estaba encima — justo el bug reportado ("se ve blanco, y al pasar
+     el puntero..."). El brillo del hover en rojo lo pone .btn-rojo:hover
+     de abajo, con filter, sin tocar el background.
+  */
+  .btn:hover:not(.btn-rojo) { background: #fafafa; }
   .btn:active { transform: translateY(1px) scale(0.98); }
   .btn:disabled { opacity: 0.55; cursor: default; }
   .btn svg { width: 15px; height: 15px; }
@@ -75,13 +83,6 @@
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none;
     box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 3px 10px rgba(204,0,0,0.28);
-    /* .btn trae "transition: background ...", y ese degradado heredando
-       una transición de "background" hace que Chrome a veces no lo pinte
-       al insertarlo por innerHTML — se queda en blanco hasta el primer
-       recalculo de estilo (por ejemplo, al pasar el mouse). btn-rojo no
-       necesita transición de background (el hover usa filter), así que
-       se quita aquí para que pinte bien desde el primer momento. */
-    transition: border-color 0.15s, transform 0.12s;
   }
   .btn-rojo:hover:not(:disabled) { filter: brightness(1.07); }
   .btn-rojo:disabled { background: #e2e2e0; color: #999; box-shadow: none; }
