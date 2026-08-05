@@ -194,6 +194,23 @@
       <button type="button" class="btn-guardar" id="btn-compartir-perfil" onclick="compartirMiPerfil()">Compartir mi perfil</button>
     </div>
 
+    <!-- Módulo 2b: Enlace de propiedades personalizado — a quien entre
+         por aquí, todo lo que navegue le muestra tus datos de contacto,
+         aunque la propiedad sea de otro asesor. -->
+    <div class="card">
+      <h2>Mi catálogo de propiedades</h2>
+      <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px;">
+        Comparte este enlace en vez del genérico: quien entre por aquí navega el mismo catálogo de
+        propiedades, pero en cada una le apareces tú como contacto — aunque la propiedad la tenga
+        listada otro asesor.
+      </p>
+      <div class="enlace-publico">
+        <input type="text" id="mi-enlace-propiedades" readonly aria-label="Mi enlace de propiedades" />
+        <a id="ver-propiedades" href="#" target="_blank" rel="noopener" class="btn-ver">Ver</a>
+      </div>
+      <button type="button" class="btn-guardar" onclick="compartirMisPropiedades()">Compartir mi catálogo</button>
+    </div>
+
     </section>
     <section class="kw-tabpanel" data-panel="enlaces">
 
@@ -323,6 +340,10 @@
     return location.origin + BASE_PATH + '/micrositio.html?id=' + encodeURIComponent(miUserId);
   }
 
+  function miEnlacePropiedades() {
+    return location.origin + BASE_PATH + '/propiedades.html?asesor=' + encodeURIComponent(miUserId);
+  }
+
   // "Ana López" -> "ana-lopez", para nombrar el PNG del QR
   function comoArchivo(nombre) {
     return String(nombre).toLowerCase()
@@ -338,6 +359,17 @@
       titulo: nombre,
       texto: '¡Hola! Soy ' + nombre + ' de KW Premier, conoce más de mí en:',
       archivo: comoArchivo(nombre),
+    });
+  }
+
+  function compartirMisPropiedades() {
+    if (!miUserId) return;
+    const nombre = miNombreCompleto || 'Mi catálogo';
+    window.kwCompartir({
+      url: miEnlacePropiedades(),
+      titulo: nombre,
+      texto: 'Este es el catálogo de propiedades de KW Premier. Cualquier duda, contáctame:',
+      archivo: comoArchivo(nombre) + '-propiedades',
     });
   }
 
@@ -383,6 +415,10 @@
     const enlace = miEnlacePublico();
     document.getElementById('mi-enlace').value = enlace;
     document.getElementById('ver-perfil').href = enlace;
+
+    const enlaceProps = miEnlacePropiedades();
+    document.getElementById('mi-enlace-propiedades').value = enlaceProps;
+    document.getElementById('ver-propiedades').href = enlaceProps;
   }
 
   function mostrarFotoPreview(fotoUrl, nombre, apellido) {

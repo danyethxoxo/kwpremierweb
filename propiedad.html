@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/kw-ref-asesor.js?v=20260805"></script>
 <!-- El mapa (Google Maps, o OpenStreetMap mientras no haya llave) se
      carga solo cuando la propiedad trae coordenadas: ver montarMapa. -->
 <style>
@@ -309,6 +310,7 @@
 
   var propiedad = null;
   var contacto = null;      // a quién se muestra como contacto
+  var refAsesorActivo = false;  // el contacto viene del link personalizado, no del listado real
   var fotos = [];
   var idxFoto = 0;
 
@@ -669,7 +671,8 @@
                 (contacto && contacto.puesto) || p.market_center || 'KW Premier') + '</div>' +
           '</div>' +
         '</div>' +
-        (REF && contacto ? '<div class="asesor-nota">Te compartió esta propiedad.</div>' : '') +
+        (REF && contacto ? '<div class="asesor-nota">Te compartió esta propiedad.</div>' :
+         refAsesorActivo && contacto ? '<div class="asesor-nota">Estás viendo el catálogo con los datos de contacto de ' + escapeHtml(nombre) + '.</div>' : '') +
         formulario +
         '<div class="contactos">' + botones + '</div>' +
       '</div>';
@@ -773,8 +776,20 @@
           return;
         }
         propiedad = q.data;
-        // Si la propiedad tiene asesor de KW Premier, se muestra a él
-        if (propiedad.asesor_id) {
+
+        // El link personalizado de un asesor (propiedades.html?asesor=…,
+        // o llegando directo a una ficha con ese mismo parámetro) le gana
+        // al asesor real de la propiedad: es la misma idea que un enlace
+        // compartido, pero puesta para todo el catálogo en vez de una
+        // sola propiedad — quien entró por ahí es prospecto de quien
+        // compartió el link, no de quien tenga listada esta propiedad.
+        var marca = null;
+        try { marca = await window.kwRefAsesor.capturar(sb); } catch (e) { /* se sigue sin marca */ }
+
+        if (marca) {
+          contacto = marca; contacto.email = null;
+          refAsesorActivo = true;
+        } else if (propiedad.asesor_id) {
           var a = await sb.from('perfiles_publicos').select('*').eq('id', propiedad.asesor_id).maybeSingle();
           if (a.data) { contacto = a.data; contacto.email = null; }
         }

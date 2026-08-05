@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
+<script src="/kwpremierweb/assets/js/kw-ref-asesor.js?v=20260805"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
@@ -138,6 +139,25 @@
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     font-size: 13px; color: var(--muted); margin-bottom: 14px;
   }
+
+  /* Aviso de que se está navegando con la marca de un asesor: cualquier
+     propiedad que se abra desde aquí le va a mostrar como contacto. */
+  .banner-ref {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #fff3f3; border: 1px solid rgba(204,0,0,0.18); border-radius: 12px;
+    padding: 11px 15px; margin-bottom: 18px; font-size: 13px;
+  }
+  .banner-ref-foto {
+    width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
+    background: #fff; color: var(--red); font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .banner-ref b { color: var(--text); }
+  .banner-ref-quitar {
+    margin-left: auto; background: none; border: none; color: var(--muted);
+    font-size: 12px; text-decoration: underline; cursor: pointer; font-family: inherit;
+  }
+  .banner-ref-quitar:hover { color: var(--text); }
   .chip-estatus {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -245,6 +265,8 @@
     <div class="kw-page-encabezado">
       <h1 class="page-title">Propiedades</h1>
     </div>
+
+    <div class="banner-ref" id="banner-ref" style="display:none;"></div>
 
     <div class="filtros" id="filtros" autocomplete="off">
       <div class="filtro">
@@ -578,9 +600,33 @@
                'estacionamientos, m2_construccion, calle, colonia, municipio, estado, ' +
                'imagenes, asesor_nombre, market_center';
 
+  function pintarBannerRef(asesor) {
+    var banner = document.getElementById('banner-ref');
+    if (!asesor) { banner.style.display = 'none'; return; }
+    var nombre = [asesor.nombre, asesor.apellido].filter(Boolean).join(' ') || 'tu asesor';
+    var iniciales = nombre.split(' ').filter(Boolean).slice(0, 2).map(function (x) { return x[0]; }).join('').toUpperCase();
+    banner.innerHTML =
+      (asesor.foto_url
+        ? '<img class="banner-ref-foto" src="' + escapeHtml(asesor.foto_url) + '" alt="' + escapeHtml(nombre) + '" />'
+        : '<span class="banner-ref-foto">' + escapeHtml(iniciales || 'KW') + '</span>') +
+      '<span>Estás viendo el catálogo con los datos de contacto de <b>' + escapeHtml(nombre) + '</b>.</span>' +
+      '<button type="button" class="banner-ref-quitar" onclick="quitarRefAsesor()">Quitar</button>';
+    banner.style.display = 'flex';
+  }
+
+  function quitarRefAsesor() {
+    window.kwRefAsesor.limpiar();
+    pintarBannerRef(null);
+  }
+
   async function cargar() {
     var cont = document.getElementById('lista');
     try {
+      try {
+        var asesorRef = await window.kwRefAsesor.capturar(sb);
+        pintarBannerRef(asesorRef);
+      } catch (e) { /* si falla, se navega igual sin la marca */ }
+
       // Con sesión se ve el inventario completo (para poder filtrar por
       // vendidas, rentadas o borradores); sin ella, solo lo publicado.
       var hayIngreso = false;
