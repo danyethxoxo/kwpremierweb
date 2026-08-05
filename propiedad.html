@@ -10,10 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<!-- Leaflet + OpenStreetMap para el mapa: no pide llave de API ni
-     facturación, a diferencia de Google Maps. -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- El mapa (Google Maps, o OpenStreetMap mientras no haya llave) se
+     carga solo cuando la propiedad trae coordenadas: ver montarMapa. -->
 <style>
   :root {
     --red: #CC0000; --text: #1a1a1a; --muted: #888;
@@ -155,6 +153,33 @@
     font-size: 11.5px; color: var(--muted); background: #f7f7f6;
     border-radius: 8px; padding: 7px 10px; margin-top: 12px;
   }
+  /* ── Formulario de contacto ── */
+  .form-lead { display: flex; flex-direction: column; gap: 9px; margin-top: 15px; }
+  .form-lead input, .form-lead textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-size: 13.5px; font-family: 'DM Sans', sans-serif;
+    color: var(--text); background: #fff; outline: none;
+  }
+  .form-lead textarea { resize: vertical; min-height: 74px; line-height: 1.5; }
+  .form-lead input:focus, .form-lead textarea:focus {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+  }
+  /* Trampa para robots: la llenan los que rellenan todo a ciegas, y
+     así se descartan sin molestar a nadie con un captcha. */
+  .trampa { position: absolute; left: -9999px; opacity: 0; height: 0; }
+  .lead-msg { font-size: 12.5px; border-radius: 9px; padding: 9px 11px; display: none; }
+  .lead-msg.error { display: block; background: #fdeaea; color: #a30000; }
+  .lead-gracias { display: none; text-align: center; padding: 18px 6px; }
+  .lead-gracias.visible { display: block; }
+  .lead-gracias-ico {
+    width: 42px; height: 42px; border-radius: 50%; background: #eaf7ee;
+    color: #1a7f37; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+  }
+  .lead-gracias-ico svg { width: 21px; height: 21px; }
+  .lead-gracias strong { display: block; font-size: 15px; margin-bottom: 4px; }
+  .lead-gracias span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
   .contactos { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
   .btn-contacto {
     display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -269,6 +294,15 @@
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // Llave de Google Maps. Va aquí a la vista a propósito: las llaves de
+  // Maps son públicas por diseño (viajan en la URL del script), y lo que
+  // impide que alguien más las use es la restricción por dominio que se
+  // pone en Google Cloud — no esconderlas.
+  // ⚠ Antes de pegarla aquí hay que restringirla a los dominios del
+  //   sitio; sin restringir, cualquiera puede gastar la cuota.
+  // Mientras esté vacía, el mapa se dibuja con OpenStreetMap.
+  var GOOGLE_MAPS_KEY = '';
+
   var params = new URLSearchParams(location.search);
   var ID = params.get('id');
   var REF = params.get('ref');   // enlace compartido: muestra al que comparte
@@ -322,8 +356,18 @@
     area: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>',
     terreno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/></svg>',
     reloj: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    fotos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
+    fotos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
   };
+
+  // El mensaje ya viene escrito para que baste con darle enviar, y trae
+  // el título de la propiedad: en `prospectos` no se guarda de cuál se
+  // trata, así que es lo que le dice al asesor por qué lo contactan.
+  function MENSAJE_BASE(p) {
+    return 'Hola, me interesa la propiedad "' + p.titulo + '". ¿Me pueden dar más información?';
+  }
+
+  var waLinkActual = null;
 
   // Chincheta roja de KW para el mapa.
   var PIN_KW = '<svg viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">' +
@@ -428,31 +472,71 @@
     return partes.length ? '<div class="meta-linea">' + partes.join('') + '</div>' : '';
   }
 
-  // El mapa se arma después de meter el HTML: Leaflet necesita que el
-  // contenedor ya exista y tenga tamaño para calcular los mosaicos.
+  // El mapa se arma después de meter el HTML: la librería necesita que
+  // el contenedor ya exista y tenga tamaño para calcular los mosaicos.
   function montarMapa(p) {
-    if (!tieneCoords(p) || !window.L) return;
+    if (!tieneCoords(p)) return;
     var caja = document.getElementById('mapa');
     if (!caja) return;
+    if (GOOGLE_MAPS_KEY) montarGoogle(caja, p);
+    else montarOSM(caja, p);
+  }
 
-    var punto = [Number(p.lat), Number(p.lng)];
-    var mapa = L.map(caja, { scrollWheelZoom: false }).setView(punto, 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap',
-    }).addTo(mapa);
+  function cargarScript(src, alCargar) {
+    var s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = alCargar || null;
+    document.head.appendChild(s);
+  }
 
-    // draggable va apagado (es el valor por omisión, pero se deja
-    // explícito): el pin marca la propiedad, no debe poder moverse.
-    // Navegar el mapa sí se puede: arrastrar, acercar y alejar.
-    L.marker(punto, {
-      draggable: false,
-      keyboard: false,
-      icon: L.divIcon({
-        className: 'pin-kw', html: PIN_KW,
-        iconSize: [34, 44], iconAnchor: [17, 44],
-      }),
-    }).addTo(mapa);
+  function montarGoogle(caja, p) {
+    var punto = { lat: Number(p.lat), lng: Number(p.lng) };
+    // El callback tiene que ser global: así lo pide el cargador de Google.
+    window.__mapaKwListo = function () {
+      var mapa = new google.maps.Map(caja, {
+        center: punto, zoom: 16,
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        // El scroll de la rueda queda apagado para que al recorrer la
+        // página no se acerque el mapa sin querer; con Ctrl sí funciona.
+        gestureHandling: 'cooperative',
+      });
+      new google.maps.Marker({
+        position: punto, map: mapa, draggable: false,
+        title: p.titulo,
+        icon: {
+          url: 'data:image/svg+xml;base64,' + btoa(PIN_KW),
+          scaledSize: new google.maps.Size(34, 44),
+          anchor: new google.maps.Point(17, 44),
+        },
+      });
+    };
+    cargarScript('https://maps.googleapis.com/maps/api/js?key=' +
+      encodeURIComponent(GOOGLE_MAPS_KEY) + '&callback=__mapaKwListo&loading=async');
+  }
+
+  // Respaldo mientras no se configure la llave de Google: OpenStreetMap
+  // no pide llave ni facturación. Se puede quitar en cuanto la de Google
+  // quede puesta.
+  function montarOSM(caja, p) {
+    var hoja = document.createElement('link');
+    hoja.rel = 'stylesheet';
+    hoja.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(hoja);
+
+    cargarScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', function () {
+      if (!window.L) return;
+      var punto = [Number(p.lat), Number(p.lng)];
+      var mapa = L.map(caja, { scrollWheelZoom: false }).setView(punto, 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap',
+      }).addTo(mapa);
+      // draggable apagado: el pin marca la propiedad y no debe moverse.
+      // Navegar el mapa sí se puede: arrastrar, acercar y alejar.
+      L.marker(punto, {
+        draggable: false, keyboard: false,
+        icon: L.divIcon({ className: 'pin-kw', html: PIN_KW, iconSize: [34, 44], iconAnchor: [17, 44] }),
+      }).addTo(mapa);
+    });
   }
 
   // ── Render ──
@@ -529,20 +613,47 @@
       : (p.asesor_nombre || 'KW Premier');
     var iniciales = nombre.split(' ').filter(Boolean).slice(0, 2).map(function (x) { return x[0]; }).join('').toUpperCase();
 
-    var botones = '';
+    // El formulario solo se puede mostrar cuando hay un asesor de KW
+    // Premier al cual mandarle el prospecto: la base exige un asesor_id
+    // que exista. Para propiedades de otra oficina (sin perfil aquí) se
+    // deja el enlace al directorio, como antes.
+    var hayDestino = !!(contacto && contacto.id);
+    waLinkActual = null;
     if (contacto && contacto.whatsapp) {
       var wa = String(contacto.whatsapp).replace(/\D/g, '');
-      var msg = encodeURIComponent('Hola, me interesa la propiedad "' + p.titulo + '".');
-      botones += '<a class="btn-contacto btn-wa" target="_blank" rel="noopener" href="https://wa.me/' + (wa.length === 10 ? '52' + wa : wa) + '?text=' + msg + '">' + ICO.wa + 'WhatsApp</a>';
+      waLinkActual = 'https://wa.me/' + (wa.length === 10 ? '52' + wa : wa) +
+        '?text=' + encodeURIComponent(MENSAJE_BASE(p));
     }
-    if (contacto && contacto.email) {
-      botones += '<a class="btn-contacto btn-mail" href="mailto:' + escapeHtml(contacto.email) +
-        '?subject=' + encodeURIComponent('Interés en: ' + p.titulo) + '">' + ICO.mail + 'Enviar correo</a>';
+
+    var botones = '';
+    if (waLinkActual) {
+      botones += '<a class="btn-contacto btn-wa" target="_blank" rel="noopener" href="' +
+        escapeHtml(waLinkActual) + '">' + ICO.wa + 'WhatsApp</a>';
     }
-    if (!botones) {
-      botones = '<a class="btn-contacto btn-mail" href="/kwpremierweb/asesores.html">' + ICO.mail + 'Contactar a un asesor</a>';
+    if (!hayDestino) {
+      botones += '<a class="btn-contacto btn-mail" href="/kwpremierweb/asesores.html">' + ICO.mail + 'Contactar a un asesor</a>';
     }
     botones += '<button type="button" class="btn-contacto btn-compartir" onclick="compartir()">' + ICO.share + 'Compartir</button>';
+
+    var formulario = hayDestino
+      ? '<form class="form-lead" id="form-lead" autocomplete="on">' +
+          '<div class="lead-msg" id="lead-msg"></div>' +
+          '<input class="trampa" type="text" name="apodo" tabindex="-1" autocomplete="off" aria-hidden="true" />' +
+          '<input type="text" name="nombre" placeholder="Tu nombre" maxlength="120" autocomplete="name" required />' +
+          '<input type="email" name="correo" placeholder="Tu correo" maxlength="160" autocomplete="email" />' +
+          '<input type="tel" name="telefono" placeholder="Tu teléfono" maxlength="40" autocomplete="tel" />' +
+          '<textarea name="mensaje" maxlength="1000" placeholder="Mensaje">' +
+            escapeHtml(MENSAJE_BASE(p)) + '</textarea>' +
+          '<button type="submit" class="btn-contacto btn-mail" id="lead-btn">' +
+            ICO.mail + '<span>Enviar mensaje</span></button>' +
+        '</form>' +
+        '<div class="lead-gracias" id="lead-gracias">' +
+          '<div class="lead-gracias-ico">' + ICO.check + '</div>' +
+          '<strong>¡Listo!</strong>' +
+          '<span>Tus datos le llegaron a ' + escapeHtml(nombre.split(' ')[0] || 'el asesor') +
+            '. Te contactará muy pronto.</span>' +
+        '</div>'
+      : '';
 
     var lateral =
       '<div class="bloque asesor">' +
@@ -559,6 +670,7 @@
           '</div>' +
         '</div>' +
         (REF && contacto ? '<div class="asesor-nota">Te compartió esta propiedad.</div>' : '') +
+        formulario +
         '<div class="contactos">' + botones + '</div>' +
       '</div>';
 
@@ -569,6 +681,69 @@
 
     document.title = p.titulo + ' · KW Premier';
     montarMapa(p);
+    armarFormularioLead();
+  }
+
+  // ── Formulario de prospecto ──
+  // Reusa la tabla `prospectos` del micrositio: su política ya acepta
+  // origen 'propiedad', y el disparador de la campanita ya avisa al
+  // asesor, así que no hace falta nada nuevo en la base.
+  function armarFormularioLead() {
+    var form = document.getElementById('form-lead');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('lead-msg');
+      var btn = document.getElementById('lead-btn');
+      var decir = function (t) { msg.textContent = t; msg.className = 'lead-msg error'; };
+      msg.className = 'lead-msg';
+
+      // Si la trampa viene llena fue un robot: se responde como si todo
+      // hubiera salido bien, pero no se guarda nada.
+      if (form.apodo.value) { mostrarGracias(); return; }
+
+      var nombre = form.nombre.value.trim();
+      var correo = form.correo.value.trim();
+      var telefono = form.telefono.value.trim();
+      var mensaje = form.mensaje.value.trim();
+
+      if (nombre.length < 2) { decir('Escribe tu nombre.'); form.nombre.focus(); return; }
+      if (!correo && !telefono) {
+        decir('Déjanos un correo o un teléfono para poder contactarte.');
+        form.correo.focus();
+        return;
+      }
+      if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) {
+        decir('Ese correo no se ve bien, revísalo por favor.');
+        form.correo.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.querySelector('span').textContent = 'Enviando...';
+      try {
+        var res = await sb.from('prospectos').insert({
+          asesor_id: contacto.id,
+          nombre: nombre,
+          correo: correo || null,
+          telefono: telefono || null,
+          mensaje: mensaje || null,
+          origen: 'propiedad',
+        });
+        if (res.error) throw res.error;
+        mostrarGracias();
+      } catch (err) {
+        decir('No se pudieron enviar tus datos. Intenta de nuevo o escríbenos por WhatsApp.');
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Enviar mensaje';
+      }
+    });
+  }
+
+  function mostrarGracias() {
+    document.getElementById('form-lead').style.display = 'none';
+    document.getElementById('lead-gracias').classList.add('visible');
   }
 
   async function cargar() {
