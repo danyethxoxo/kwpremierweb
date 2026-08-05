@@ -207,9 +207,24 @@
     });
   }
   function fmtPrecio(p, m) {
-    if (p == null) return 'Precio a consultar';
+    // 0 también es "no lo mandaron": varios CRMs lo usan como plantilla
+    // para "precio a consultar" en vez de dejarlo vacío.
+    if (p == null || Number(p) <= 0) return 'Precio a consultar';
     try { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: m || 'MXN', maximumFractionDigits: 0 }).format(p); }
     catch (e) { return '$' + Number(p).toLocaleString('es-MX'); }
+  }
+
+  // Si la foto principal no carga, se prueba con la siguiente de la
+  // lista (pueden venir varias vencidas seguidas); si se acaban, se
+  // reemplaza por el mismo "sin foto" de cuando no hay ninguna.
+  function siguienteFotoPrincipal(img) {
+    var intento = Number(img.dataset.intento || 0) + 1;
+    if (intento >= fotos.length) {
+      img.closest('.foto-principal').innerHTML = '<div class="sin-foto">' + ICO.casa + '</div>';
+      return;
+    }
+    img.dataset.intento = intento;
+    img.src = fotos[intento];
   }
   function toast(msg) {
     var t = document.getElementById('toast');
@@ -294,15 +309,23 @@
 
     var ubic = [p.colonia, p.municipio, p.estado].filter(Boolean).join(', ');
 
+    // Las URLs de fotos vienen de un CRM externo: pueden vencerse o
+    // fallar. En la principal se prueba con la siguiente de la lista en
+    // vez de quedarse con el ícono roto del navegador; si ninguna carga,
+    // cae al mismo "sin foto" que cuando no hay ninguna. En las
+    // miniaturas basta con esconder la que falló.
+    var sinFotoHtml = '<div class="sin-foto">' + ICO.casa + '</div>';
     var galeria = '<div class="galeria">' +
       '<div class="foto-principal" onclick="abrirVisor(idxFoto)">' +
         (fotos.length
-          ? '<img id="foto-grande" src="' + escapeHtml(fotos[0]) + '" alt="' + escapeHtml(p.titulo) + '" />'
-          : '<div class="sin-foto">' + ICO.casa + '</div>') +
+          ? '<img id="foto-grande" src="' + escapeHtml(fotos[0]) + '" alt="' + escapeHtml(p.titulo) + '" ' +
+            'data-intento="0" onerror="siguienteFotoPrincipal(this)" />'
+          : sinFotoHtml) +
       '</div>' +
       (fotos.length > 1
         ? '<div class="miniaturas">' + fotos.map(function (u, i) {
-            return '<img class="miniatura' + (i === 0 ? ' activa' : '') + '" src="' + escapeHtml(u) + '" onclick="verFoto(' + i + ')" alt="Foto ' + (i + 1) + '" />';
+            return '<img class="miniatura' + (i === 0 ? ' activa' : '') + '" src="' + escapeHtml(u) + '" ' +
+              'onclick="verFoto(' + i + ')" onerror="this.style.display=\'none\'" alt="Foto ' + (i + 1) + '" />';
           }).join('') + '</div>'
         : '') +
       '</div>';

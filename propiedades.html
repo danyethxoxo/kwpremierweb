@@ -350,7 +350,9 @@
   }
 
   function fmtPrecio(p, moneda) {
-    if (p == null) return 'Precio a consultar';
+    // 0 también es "no lo mandaron": varios CRMs lo usan como plantilla
+    // para "precio a consultar" en vez de dejarlo vacío.
+    if (p == null || Number(p) <= 0) return 'Precio a consultar';
     try {
       return new Intl.NumberFormat('es-MX', {
         style: 'currency', currency: moneda || 'MXN', maximumFractionDigits: 0
