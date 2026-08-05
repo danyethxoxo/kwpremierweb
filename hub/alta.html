@@ -327,9 +327,10 @@
   }
 
   function actualizarResumen() {
-    const activos = personas.filter(function (p) { return p.alta && p.alta.completo; }).length;
-    document.getElementById('num-activos').textContent = String(activos);
-    const pendientes = personas.length - activos;
+    // "Activos" es quien sale en la hoja, no quien ya se dio de alta en
+    // las plataformas: la hoja ya es la lista de asesores vigentes.
+    document.getElementById('num-activos').textContent = String(personas.length);
+    const pendientes = personas.filter(function (p) { return !(p.alta && p.alta.completo); }).length;
     const btnTodos = document.getElementById('btn-marcar-todos');
     btnTodos.disabled = pendientes === 0;
   }
