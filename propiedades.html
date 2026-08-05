@@ -32,12 +32,19 @@
   /* La barra de arriba es la compartida (header.kw-header de
      kw-base.css): hamburguesa, título al centro y botón de regresar,
      igual que en el resto del sitio. */
-  main { flex: 1; max-width: 1140px; margin: 0 auto; padding: 90px 24px 60px; width: 100%; }
+  /* Sin tope de ancho: en pantalla grande entran más tarjetas por
+     renglón en vez de dejar dos franjas vacías a los lados. */
+  main { flex: 1; width: 100%; margin: 0 auto; padding: 90px clamp(20px, 3vw, 48px) 60px; }
 
-  .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; text-align: center; }
-  .page-sub { font-size: 15px; color: var(--muted); text-align: center; margin: 6px 0 28px; }
+  .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; text-align: center; margin-bottom: 22px; }
 
   /* ── Filtros ── */
+  /* z-index alto y `position: relative` a propósito: la animación de
+     entrada de kw-base.css deja un transform puesto (fill-mode both), y
+     un transform crea contexto de apilamiento — eso encerraba el
+     z-index del menú desplegable dentro de la barra, y las tarjetas, que
+     van después en el HTML, le pasaban por encima. Subiendo la barra
+     entera por encima de la lista, los menús vuelven a verse. */
   .filtros {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -45,7 +52,9 @@
     background: var(--card); border: 1px solid var(--border);
     border-radius: 14px; padding: 16px; margin-bottom: 20px;
     align-items: end;
+    position: relative; z-index: 30;
   }
+  #lista { position: relative; z-index: 1; }
   .filtro { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   /* `display: flex` le gana al atributo `hidden`, y el filtro de estatus
      se le alcanzaba a ver a quien entra sin sesión. */
@@ -96,10 +105,25 @@
     display: inline-flex; align-items: center; justify-content: center;
   }
 
-  /* El bloque de abajo se pega visualmente al de arriba cuando se abre */
+  /* El bloque de abajo se pega visualmente al de arriba cuando se abre.
+     La apertura se anima con grid-template-rows de 0fr a 1fr: es la
+     forma de animar hacia una altura "automática" sin fijar un máximo a
+     mano, que se rompería según cuántos filtros quepan por renglón.
+     Antes solo se prendía y apagaba con [hidden], y por eso la lista de
+     abajo pegaba el brinco. */
+  .extra-wrap {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; z-index: 29;
+  }
+  .extra-wrap > div { overflow: hidden; min-height: 0; }
+  .extra-wrap.abierto { grid-template-rows: 1fr; }
+  /* El contenido entra un pelín después que la altura, para que no se
+     vea aplastado mientras el bloque todavía se está abriendo. */
+  .extra-wrap .filtros-extra { opacity: 0; transition: opacity 0.22s ease 0.06s; }
+  .extra-wrap.abierto .filtros-extra { opacity: 1; }
   .filtros-extra { margin-top: -12px; border-top-left-radius: 0; border-top-right-radius: 0; }
-  .filtros-extra[hidden] { display: none; }
-  #filtros:has(+ .filtros-extra:not([hidden])) {
+  #filtros:has(+ .extra-wrap.abierto) {
     margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
     border-bottom-color: transparent;
   }
@@ -126,7 +150,11 @@
   .chip-estatus.no_publicada { background: #f6f2ff; color: #6741d9; }
 
   /* ── Tarjetas ── */
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  /* Columnas por ancho disponible, no un número fijo: con tres fijas, en
+     una pantalla grande cada tarjeta se estiraba a más de 500px y se
+     veía media docena de propiedades en toda la pantalla. Así entran
+     las que quepan y se aprovecha el ancho. */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 18px; }
 
   .prop-card {
     background: var(--card); border: 1px solid var(--border); border-radius: 16px;
@@ -216,7 +244,6 @@
   <main>
     <div class="kw-page-encabezado">
       <h1 class="page-title">Propiedades</h1>
-      <p class="page-sub">Explora el inventario de KW Premier.</p>
     </div>
 
     <div class="filtros" id="filtros" autocomplete="off">
@@ -232,9 +259,21 @@
           <option value="renta">Renta</option>
         </select>
       </div>
+      <div class="filtro">
+        <label for="f-mc">Market Center</label>
+        <select id="f-mc"><option value="">Todos</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-asesor">Asesor</label>
+        <select id="f-asesor"><option value="">Todos</option></select>
+      </div>
+      <div class="filtro">
+        <label for="f-tipo">Tipo de propiedad</label>
+        <select id="f-tipo"><option value="">Todos</option></select>
+      </div>
       <!-- El estatus solo tiene sentido para quien trabaja aquí; hacia
            afuera solo existe lo publicado, así que se muestra únicamente
-           con sesión iniciada (ver prepararFiltros). -->
+           con sesión iniciada (ver cargar). -->
       <div class="filtro" id="filtro-estatus" hidden>
         <label for="f-estatus">Estatus</label>
         <select id="f-estatus">
@@ -247,10 +286,6 @@
           <option value="">Todos los estatus</option>
         </select>
       </div>
-      <div class="filtro">
-        <label for="f-tipo">Tipo de propiedad</label>
-        <select id="f-tipo"><option value="">Todos</option></select>
-      </div>
       <button type="button" class="btn-mas-filtros" id="btn-mas-filtros"
               aria-expanded="false" aria-controls="filtros-extra">
         <span id="txt-mas-filtros">Más opciones</span>
@@ -260,15 +295,8 @@
       </button>
     </div>
 
-    <div class="filtros filtros-extra" id="filtros-extra" hidden>
-      <div class="filtro">
-        <label for="f-mc">Market Center</label>
-        <select id="f-mc"><option value="">Todos</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-asesor">Asesor</label>
-        <select id="f-asesor"><option value="">Todos</option></select>
-      </div>
+    <div class="extra-wrap" id="extra-wrap"><div>
+    <div class="filtros filtros-extra" id="filtros-extra">
       <div class="filtro">
         <label for="f-estado">Ciudad / Estado</label>
         <select id="f-estado"><option value="">Todas</option></select>
@@ -315,7 +343,7 @@
       </div>
       <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
     </div>
-
+    </div></div>
 
 <div class="conteo" id="conteo"></div>
 
@@ -486,7 +514,10 @@
 
   // Si hay filtros aplicados dentro del plegable, se avisa con un número:
   // de otro modo alguien puede no entender por qué ve tan pocos resultados.
-  var CAMPOS_EXTRA = ['f-mc', 'f-asesor', 'f-estado', 'f-municipio', 'f-colonia',
+  // Solo los que viven dentro del plegable: Market Center y Asesor ya
+  // están a la vista en la barra, así que contarlos aquí marcaría el
+  // aviso por un filtro que la persona sí puede ver.
+  var CAMPOS_EXTRA = ['f-estado', 'f-municipio', 'f-colonia',
                       'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'];
 
   function marcarFiltrosEscondidos() {
@@ -598,11 +629,26 @@
   // Los filtros de siempre quedan a la vista y el resto se despliega, para
   // que la barra no llegue saturada de entrada.
   document.getElementById('btn-mas-filtros').addEventListener('click', function () {
-    var extra = document.getElementById('filtros-extra');
-    var abierto = extra.hidden;
-    extra.hidden = !abierto;
+    var wrap = document.getElementById('extra-wrap');
+    var caja = wrap.firstElementChild;
+    var abierto = wrap.classList.toggle('abierto');
     this.setAttribute('aria-expanded', String(abierto));
     document.getElementById('txt-mas-filtros').textContent = abierto ? 'Menos opciones' : 'Más opciones';
+
+    // El overflow:hidden es lo que deja animar la altura, pero también
+    // recorta los menús de los filtros de adentro. Se suelta en cuanto
+    // termina de abrir y se vuelve a poner al cerrar. Se revisa que
+    // siga abierto por si alguien alcanzó a cerrarlo antes de que
+    // terminara la animación.
+    if (abierto) {
+      wrap.addEventListener('transitionend', function unaVez(e) {
+        if (e.target !== wrap) return;
+        wrap.removeEventListener('transitionend', unaVez);
+        if (wrap.classList.contains('abierto')) caja.style.overflow = 'visible';
+      });
+    } else {
+      caja.style.overflow = '';
+    }
   });
 
   cargar();

@@ -10,6 +10,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Leaflet + OpenStreetMap para el mapa: no pide llave de API ni
+     facturación, a diferencia de Google Maps. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     --red: #CC0000; --text: #1a1a1a; --muted: #888;
@@ -20,7 +24,10 @@
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
 
-  main { flex: 1; max-width: 1060px; margin: 0 auto; padding: 90px 24px 60px; width: 100%; }
+  /* Más ancha que antes para que la galería luzca, pero con tope: a lo
+     ancho de una pantalla grande, los renglones de la descripción se
+     volverían incómodos de leer. */
+  main { flex: 1; max-width: 1320px; margin: 0 auto; padding: 90px clamp(20px, 3vw, 40px) 60px; width: 100%; }
 
   .volver {
     display: inline-flex; align-items: center; gap: 6px;
@@ -30,23 +37,59 @@
   .volver svg { width: 14px; height: 14px; }
   .volver:hover { color: var(--red); }
 
-  /* ── Galería ── */
-  .galeria { border-radius: 16px; overflow: hidden; background: #e4e4e4; margin-bottom: 22px; }
+  /* ── Galería ──
+     Mosaico: la principal grande a la izquierda y cuatro chicas a la
+     derecha, como en los portales inmobiliarios. Con menos de cinco
+     fotos la principal se lleva todo el ancho, para no dejar huecos. */
+  .galeria {
+    display: grid; grid-template-columns: 2fr 1fr; grid-auto-rows: 1fr;
+    gap: 8px; margin-bottom: 22px; height: 440px;
+  }
+  .galeria.solo-una { grid-template-columns: 1fr; }
+  .galeria-lado { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* Con menos de cuatro secundarias, la retícula 2×2 dejaría celdas
+     vacías: se reacomodan para que el bloque quede lleno. */
+  @media (min-width: 861px) {
+    .galeria-lado[data-n="1"] { grid-template-columns: 1fr; }
+    .galeria-lado[data-n="2"] { grid-template-columns: 1fr; }
+    .galeria-lado[data-n="3"] > :first-child { grid-column: span 2; }
+  }
   .foto-principal {
-    position: relative; aspect-ratio: 16 / 9; max-height: 460px; background: #e4e4e4;
-    display: flex; align-items: center; justify-content: center; cursor: zoom-in;
+    position: relative; background: #e4e4e4; overflow: hidden;
+    border-radius: 14px; cursor: zoom-in;
+    display: flex; align-items: center; justify-content: center;
   }
   .foto-principal img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto-chica {
+    position: relative; background: #e4e4e4; overflow: hidden;
+    border-radius: 12px; cursor: zoom-in;
+  }
+  .foto-chica img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .foto-chica:hover img { transform: scale(1.05); }
+  .ver-mas-fotos {
+    position: absolute; inset: 0; border: none; cursor: pointer;
+    background: rgba(0,0,0,0.55); color: #fff;
+    font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    transition: background 0.2s;
+  }
+  .ver-mas-fotos:hover { background: rgba(0,0,0,0.66); }
+  .ver-mas-fotos svg { width: 20px; height: 20px; }
   .sin-foto { color: #bbb; }
   .sin-foto svg { width: 54px; height: 54px; }
-  .miniaturas { display: flex; gap: 8px; padding: 8px; background: #fff; overflow-x: auto; }
-  .miniatura {
-    width: 78px; height: 58px; border-radius: 8px; object-fit: cover;
-    cursor: pointer; flex-shrink: 0; border: 2px solid transparent; display: block;
-  }
-  .miniatura.activa { border-color: var(--red); }
 
-  .columnas { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+  @media (max-width: 860px) {
+    .galeria { grid-template-columns: 1fr; height: auto; }
+    .foto-principal { aspect-ratio: 4 / 3; }
+    /* De lado se ven las cuatro chicas sin comerse la pantalla a lo
+       alto; la principal ya ocupó su espacio arriba. */
+    .galeria-lado { grid-template-columns: repeat(4, 1fr); height: 82px; }
+  }
+
+  .columnas { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
 
   .bloque {
     background: var(--card); border: 1px solid var(--border);
@@ -65,10 +108,29 @@
   .datos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
   .dato {
     flex: 1; min-width: 92px; background: #f7f7f6; border-radius: 12px;
-    padding: 12px; text-align: center;
+    padding: 13px 12px; text-align: center;
   }
+  .dato-ico { color: var(--red); margin-bottom: 6px; }
+  .dato-ico svg { width: 19px; height: 19px; }
   .dato-valor { font-size: 17px; font-weight: 700; }
   .dato-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+  /* Días en el mercado: es el dato que más peso tiene al negociar, así
+     que va junto al precio y no escondido entre las características. */
+  .meta-linea {
+    display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .meta-item { display: inline-flex; align-items: center; gap: 6px; }
+  .meta-item svg { width: 13px; height: 13px; }
+
+  /* ── Mapa ── */
+  #mapa { height: 320px; border-radius: 12px; overflow: hidden; z-index: 0; }
+  .mapa-nota { font-size: 11.5px; color: var(--muted); margin-top: 9px; }
+  /* El pin es el chincheta roja de KW; el div lo pinta Leaflet sin
+     fondo propio para que solo se vea el SVG. */
+  .pin-kw { background: none; border: none; }
+  .pin-kw svg { width: 34px; height: 44px; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
 
   .bloque h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
   .descripcion { font-size: 14px; line-height: 1.7; color: #444; white-space: pre-wrap; }
@@ -115,7 +177,21 @@
     position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.88);
     display: none; align-items: center; justify-content: center; cursor: zoom-out;
   }
-  #visor img { max-width: 92vw; max-height: 88vh; border-radius: 10px; }
+  #visor { flex-direction: column; gap: 12px; }
+  #visor img#visor-img { max-width: 92vw; max-height: calc(88vh - 96px); border-radius: 10px; }
+  /* Tira de miniaturas del visor: deja saltar a cualquier foto sin
+     tener que pasar una por una con las flechas. */
+  .visor-tira {
+    display: flex; gap: 7px; max-width: 92vw; overflow-x: auto;
+    padding: 4px 2px; cursor: default;
+  }
+  .visor-tira img {
+    width: 72px; height: 54px; object-fit: cover; border-radius: 7px;
+    flex-shrink: 0; cursor: pointer; opacity: 0.5;
+    border: 2px solid transparent; transition: opacity 0.15s, border-color 0.15s;
+  }
+  .visor-tira img:hover { opacity: 0.85; }
+  .visor-tira img.activa { opacity: 1; border-color: var(--red); }
   .visor-nav {
     position: absolute; top: 50%; transform: translateY(-50%);
     width: 46px; height: 46px; border-radius: 50%; border: none;
@@ -182,6 +258,7 @@
     <button type="button" class="visor-nav" id="visor-prev" onclick="navVisor(-1,event)">&lsaquo;</button>
     <img id="visor-img" src="" alt="" />
     <button type="button" class="visor-nav" id="visor-next" onclick="navVisor(1,event)">&rsaquo;</button>
+    <div class="visor-tira" id="visor-tira" onclick="event.stopPropagation()"></div>
     <div id="visor-contador"></div>
   </div>
 
@@ -238,10 +315,38 @@
     wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.86 1.21 3.06c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.75-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12 2a10 10 0 0 0-8.6 15.06L2 22l5.06-1.33A10 10 0 1 0 12 2z"/></svg>',
     mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 6 12 13 2 6"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>',
-    flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
+    flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+    cama: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>',
+    bano: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-3 0V17a3 3 0 0 0 3 3h11a3 3 0 0 0 3-3v-1H6"/><line x1="4" y1="12" x2="20" y2="12"/></svg>',
+    auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3v-5l2-5h14l2 5v5h-2"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M5 12h14"/></svg>',
+    area: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>',
+    terreno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/></svg>',
+    reloj: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    fotos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
   };
 
+  // Chincheta roja de KW para el mapa.
+  var PIN_KW = '<svg viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="#CC0000"/>' +
+    '<circle cx="12" cy="12" r="4.6" fill="#fff"/></svg>';
+
   // ── Visor ──
+  function pintarTiraVisor() {
+    var tira = document.getElementById('visor-tira');
+    if (fotos.length < 2) { tira.innerHTML = ''; return; }
+    tira.innerHTML = fotos.map(function (u, i) {
+      return '<img src="' + escapeHtml(u) + '" alt="Foto ' + (i + 1) + '"' +
+        (i === idxFoto ? ' class="activa"' : '') +
+        ' onclick="abrirVisor(' + i + ')" onerror="this.style.display=\'none\'" />';
+    }).join('');
+    // Que la miniatura activa quede siempre a la vista al navegar con
+    // las flechas, aunque haya muchas fotos.
+    var activa = tira.querySelector('.activa');
+    if (activa && activa.scrollIntoView) {
+      activa.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    }
+  }
+
   function abrirVisor(i) {
     if (!fotos.length) return;
     idxFoto = i;
@@ -250,6 +355,7 @@
     document.getElementById('visor-prev').style.display = fotos.length > 1 ? 'flex' : 'none';
     document.getElementById('visor-next').style.display = fotos.length > 1 ? 'flex' : 'none';
     document.getElementById('visor').style.display = 'flex';
+    pintarTiraVisor();
   }
   function cerrarVisor() { document.getElementById('visor').style.display = 'none'; }
   function navVisor(d, e) {
@@ -263,14 +369,6 @@
     else if (e.key === 'ArrowLeft') navVisor(-1);
     else if (e.key === 'ArrowRight') navVisor(1);
   });
-
-  function verFoto(i) {
-    idxFoto = i;
-    document.getElementById('foto-grande').src = fotos[i];
-    document.querySelectorAll('.miniatura').forEach(function (m, j) {
-      m.classList.toggle('activa', j === i);
-    });
-  }
 
   // ── Compartir ──
   async function compartir() {
@@ -302,6 +400,61 @@
       function () { prompt('Copia el enlace:', url); });
   }
 
+  function tieneCoords(p) {
+    return p && isFinite(Number(p.lat)) && isFinite(Number(p.lng))
+      && Number(p.lat) !== 0 && Number(p.lng) !== 0;
+  }
+
+  // Días desde que la propiedad entró a nuestro sistema. Si Command
+  // manda su propia fecha de publicación se usa esa, que es la que de
+  // verdad importa; si no, created_at es la mejor aproximación.
+  function diasEnMercado(p) {
+    var desde = p.publicada_at || p.created_at;
+    if (!desde) return null;
+    var ms = Date.now() - new Date(desde).getTime();
+    if (!isFinite(ms) || ms < 0) return null;
+    return Math.floor(ms / 86400000);
+  }
+
+  function metaHtml(p) {
+    var partes = [];
+    var dias = diasEnMercado(p);
+    if (dias !== null) {
+      partes.push('<span class="meta-item">' + ICO.reloj +
+        (dias === 0 ? 'Publicada hoy'
+          : dias === 1 ? '1 día en el mercado'
+          : dias + ' días en el mercado') + '</span>');
+    }
+    return partes.length ? '<div class="meta-linea">' + partes.join('') + '</div>' : '';
+  }
+
+  // El mapa se arma después de meter el HTML: Leaflet necesita que el
+  // contenedor ya exista y tenga tamaño para calcular los mosaicos.
+  function montarMapa(p) {
+    if (!tieneCoords(p) || !window.L) return;
+    var caja = document.getElementById('mapa');
+    if (!caja) return;
+
+    var punto = [Number(p.lat), Number(p.lng)];
+    var mapa = L.map(caja, { scrollWheelZoom: false }).setView(punto, 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(mapa);
+
+    // draggable va apagado (es el valor por omisión, pero se deja
+    // explícito): el pin marca la propiedad, no debe poder moverse.
+    // Navegar el mapa sí se puede: arrastrar, acercar y alejar.
+    L.marker(punto, {
+      draggable: false,
+      keyboard: false,
+      icon: L.divIcon({
+        className: 'pin-kw', html: PIN_KW,
+        iconSize: [34, 44], iconAnchor: [17, 44],
+      }),
+    }).addTo(mapa);
+  }
+
   // ── Render ──
   function render() {
     var p = propiedad;
@@ -309,33 +462,42 @@
 
     var ubic = [p.colonia, p.municipio, p.estado].filter(Boolean).join(', ');
 
-    // Las URLs de fotos vienen de un CRM externo: pueden vencerse o
-    // fallar. En la principal se prueba con la siguiente de la lista en
-    // vez de quedarse con el ícono roto del navegador; si ninguna carga,
-    // cae al mismo "sin foto" que cuando no hay ninguna. En las
-    // miniaturas basta con esconder la que falló.
+    // Mosaico: la principal grande y hasta cuatro chicas al lado. En la
+    // cuarta chica, si todavía quedan fotos, va el botón de "ver más".
+    // Las URLs vienen de un CRM externo y pueden vencerse: la principal
+    // prueba con la siguiente de la lista antes de rendirse y las chicas
+    // rotas simplemente se esconden.
     var sinFotoHtml = '<div class="sin-foto">' + ICO.casa + '</div>';
-    var galeria = '<div class="galeria">' +
-      '<div class="foto-principal" onclick="abrirVisor(idxFoto)">' +
+    var lado = fotos.slice(1, 5);
+    var restantes = fotos.length - 5;
+
+    var galeria = '<div class="galeria' + (lado.length ? '' : ' solo-una') + '">' +
+      '<div class="foto-principal" onclick="abrirVisor(0)">' +
         (fotos.length
           ? '<img id="foto-grande" src="' + escapeHtml(fotos[0]) + '" alt="' + escapeHtml(p.titulo) + '" ' +
             'data-intento="0" onerror="siguienteFotoPrincipal(this)" />'
           : sinFotoHtml) +
       '</div>' +
-      (fotos.length > 1
-        ? '<div class="miniaturas">' + fotos.map(function (u, i) {
-            return '<img class="miniatura' + (i === 0 ? ' activa' : '') + '" src="' + escapeHtml(u) + '" ' +
-              'onclick="verFoto(' + i + ')" onerror="this.style.display=\'none\'" alt="Foto ' + (i + 1) + '" />';
+      (lado.length
+        ? '<div class="galeria-lado" data-n="' + lado.length + '">' + lado.map(function (u, i) {
+            var esUltima = i === lado.length - 1 && restantes > 0;
+            return '<div class="foto-chica" onclick="abrirVisor(' + (i + 1) + ')">' +
+              '<img src="' + escapeHtml(u) + '" alt="Foto ' + (i + 2) + '" onerror="this.style.display=\'none\'" />' +
+              (esUltima
+                ? '<button type="button" class="ver-mas-fotos">' + ICO.fotos +
+                  '<span>Ver ' + restantes + ' foto' + (restantes === 1 ? '' : 's') + ' más</span></button>'
+                : '') +
+            '</div>';
           }).join('') + '</div>'
         : '') +
       '</div>';
 
     var datos = [];
-    if (p.recamaras) datos.push({ v: p.recamaras, l: p.recamaras === 1 ? 'Recámara' : 'Recámaras' });
-    if (p.banos) datos.push({ v: p.banos, l: p.banos === 1 ? 'Baño' : 'Baños' });
-    if (p.estacionamientos) datos.push({ v: p.estacionamientos, l: 'Estac.' });
-    if (p.m2_construccion) datos.push({ v: p.m2_construccion, l: 'm² const.' });
-    if (p.m2_terreno) datos.push({ v: p.m2_terreno, l: 'm² terreno' });
+    if (p.recamaras) datos.push({ i: ICO.cama, v: p.recamaras, l: p.recamaras === 1 ? 'Recámara' : 'Recámaras' });
+    if (p.banos) datos.push({ i: ICO.bano, v: p.banos, l: p.banos === 1 ? 'Baño' : 'Baños' });
+    if (p.estacionamientos) datos.push({ i: ICO.auto, v: p.estacionamientos, l: 'Estac.' });
+    if (p.m2_construccion) datos.push({ i: ICO.area, v: p.m2_construccion, l: 'm² const.' });
+    if (p.m2_terreno) datos.push({ i: ICO.terreno, v: p.m2_terreno, l: 'm² terreno' });
 
     var caracts = (p.caracteristicas || []).filter(function (c) { return typeof c === 'string'; });
 
@@ -345,13 +507,21 @@
         '<div class="precio">' + fmtPrecio(p.precio, p.moneda) + '</div>' +
         '<div class="titulo">' + escapeHtml(p.titulo) + '</div>' +
         (ubic ? '<div class="ubic">' + ICO.pin + escapeHtml(ubic) + '</div>' : '') +
+        metaHtml(p) +
         (datos.length ? '<div class="datos">' + datos.map(function (d) {
-          return '<div class="dato"><div class="dato-valor">' + d.v + '</div><div class="dato-label">' + d.l + '</div></div>';
+          return '<div class="dato"><div class="dato-ico">' + d.i + '</div>' +
+            '<div class="dato-valor">' + d.v + '</div><div class="dato-label">' + d.l + '</div></div>';
         }).join('') + '</div>' : '') +
       '</div>' +
       (p.descripcion ? '<div class="bloque"><h2>Descripción</h2><div class="descripcion">' + escapeHtml(p.descripcion) + '</div></div>' : '') +
       (caracts.length ? '<div class="bloque"><h2>Características</h2><div class="caracteristicas">' +
-        caracts.map(function (c) { return '<span class="caract">' + escapeHtml(c) + '</span>'; }).join('') + '</div></div>' : '');
+        caracts.map(function (c) { return '<span class="caract">' + escapeHtml(c) + '</span>'; }).join('') + '</div></div>' : '') +
+      // El mapa solo se arma si la propiedad trae coordenadas; con
+      // dirección sin lat/lng no hay nada que ubicar.
+      (tieneCoords(p)
+        ? '<div class="bloque"><h2>Ubicación</h2><div id="mapa"></div>' +
+          '<div class="mapa-nota">Ubicación aproximada.</div></div>'
+        : '');
 
     // ── Panel de contacto ──
     var nombre = contacto
@@ -398,6 +568,7 @@
       '<div class="columnas"><div>' + principal + '</div><div>' + lateral + '</div></div>';
 
     document.title = p.titulo + ' · KW Premier';
+    montarMapa(p);
   }
 
   async function cargar() {
