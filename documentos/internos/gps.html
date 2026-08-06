@@ -24,41 +24,44 @@
   :root {
     --red: #CC0000; --text: #1a1a1a; --muted: #888;
     --bg: #EFEFEF; --card: #fff; --border: rgba(0,0,0,0.07);
-    --azul: #1F3864;   /* el mismo azul del formato original */
-    --gris-fila: #F2F2F2;
+    --verde: #1a7f37;
+    --linea: #dcdcdc;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { min-height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  .page { flex: 1; width: 100%; margin: 0 auto; padding: 90px clamp(16px, 3vw, 40px) 60px; }
-
-  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-  .breadcrumb a { color: var(--muted); text-decoration: none; }
-  .breadcrumb a:hover { color: var(--text); }
-  .breadcrumb span { color: var(--text); font-weight: 500; }
+  .page { flex: 1; width: 100%; margin: 0 auto; padding: 88px clamp(16px, 3vw, 40px) 60px; }
 
   .encabezado { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-title { font-size: 27px; font-weight: 700; letter-spacing: -0.5px; }
   .page-desc { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
 
-  .acciones { display: flex; gap: 9px; flex-wrap: wrap; }
+  .acciones { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; }
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
     border-radius: 10px; padding: 9px 15px; border: 1.5px solid var(--border);
     background: #fff; color: var(--text); cursor: pointer;
     font-size: 13px; font-weight: 700; font-family: inherit;
-    transition: background 0.15s, transform 0.12s;
+    transition: background 0.15s, transform 0.12s, border-color 0.15s;
+    text-decoration: none;
   }
-  .btn:hover { background: #fafafa; }
+  /* :not(.btn-rojo) a propósito: ".btn:hover:not(:disabled)" es más
+     específico que ".btn-rojo" solo, así que sin este freno el fondo
+     gris le gana al degradado rojo y el botón se queda blanco con el
+     texto blanco encima — o sea, invisible mientras el mouse está
+     arriba. El brillo del rojo lo pone .btn-rojo:hover con filter. */
+  .btn:hover:not(.btn-rojo):not(:disabled) { background: #fafafa; }
   .btn:active { transform: translateY(1px) scale(0.98); }
+  .btn:disabled { opacity: 0.55; cursor: default; }
   .btn svg { width: 15px; height: 15px; }
   .btn-rojo {
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
     color: #fff; border: none;
     box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 3px 10px rgba(204,0,0,0.28);
   }
-  .btn-rojo:hover { filter: brightness(1.07); background: linear-gradient(180deg, #e81010 0%, var(--red) 100%); }
+  .btn-rojo:hover:not(:disabled) { filter: brightness(1.07); }
+  .btn-mini { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
 
   .hoja { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
 
@@ -77,45 +80,103 @@
   .campo input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
   @media (max-width: 720px) { .datos { grid-template-columns: 1fr; } }
 
-  /* ── Tabla ── */
-  .marco { width: 100%; overflow-x: auto; border: 1px solid #d9d9d9; border-radius: 10px; }
+  /* ── Tabla ──
+     Sin rellenos de color: la jerarquía se marca con el contorno. El
+     encabezado se distingue con línea roja y el total con verde. */
+  .marco { width: 100%; overflow-x: auto; border: 1px solid var(--linea); border-radius: 10px; }
   table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
-  th, td { border: 1px solid #d9d9d9; padding: 7px 8px; text-align: center; }
-  thead th { background: var(--azul); color: #fff; font-weight: 700; white-space: nowrap; }
-  thead tr.sub th { background: #2d4d7d; font-size: 11px; font-weight: 600; }
+  th, td { border: 1px solid var(--linea); padding: 7px 8px; text-align: center; }
+
+  thead th {
+    background: #fff; color: var(--text); font-weight: 700; white-space: nowrap;
+    border-bottom: 2px solid var(--red);
+  }
+  thead tr.sub th {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--red);
+  }
+  thead tr:first-child th { border-top: none; }
+
   /* La columna de la métrica se queda a la vista al recorrer de lado:
      sin ella no se sabe de qué renglón son los números. */
   .col-metrica {
     position: sticky; left: 0; z-index: 2;
-    text-align: left; min-width: 240px; background: #fff; font-weight: 600;
+    text-align: left; min-width: 250px; background: #fff; font-weight: 600;
   }
-  thead .col-metrica { background: var(--azul); z-index: 3; }
-  tbody tr:nth-child(even) .col-metrica { background: var(--gris-fila); }
-  tbody tr:nth-child(even) td { background: var(--gris-fila); }
-  /* Separador entre trimestres, para no perderse entre tantas columnas */
-  .inicio-trim { border-left: 2px solid #b6b6b6; }
+  tbody tr:hover td { background: #fcfcfc; }
+  tbody tr:hover .col-metrica { background: #fcfcfc; }
 
-  td input {
+  /* Separador entre trimestres, para no perderse entre tantas columnas */
+  .inicio-trim { border-left: 2px solid #c4c4c4; }
+
+  td input.celda {
     width: 100%; border: none; background: transparent; outline: none;
     font-family: inherit; font-size: 12.5px; text-align: center; color: var(--text);
     padding: 2px 0; border-radius: 5px;
   }
-  td input:focus { background: #fff3f3; box-shadow: 0 0 0 2px rgba(204,0,0,0.18); }
-  td input::-webkit-outer-spin-button, td input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  td input[type=number] { -moz-appearance: textfield; }
+  td input.celda:focus { background: #fff5f5; box-shadow: 0 0 0 2px rgba(204,0,0,0.2); }
+  td input.celda::-webkit-outer-spin-button, td input.celda::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  td input.celda[type=number] { -moz-appearance: textfield; }
+
+  /* Métrica editable: se ve como texto hasta que se toca */
+  .metrica-fila { display: flex; align-items: center; gap: 6px; }
+  input.metrica-txt {
+    flex: 1; min-width: 0; border: 1.5px solid transparent; background: transparent;
+    font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--text);
+    padding: 4px 7px; border-radius: 7px; outline: none;
+  }
+  input.metrica-txt:hover { border-color: var(--border); }
+  input.metrica-txt:focus { border-color: var(--red); background: #fff; box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+  .quitar-fila {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 6px; border: none;
+    background: none; color: #c9c9c9; cursor: pointer; font-size: 15px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s;
+  }
+  .quitar-fila:hover { background: #fdeaea; color: var(--red); }
+  .quitar-fila svg { width: 13px; height: 13px; }
 
   .pct { font-weight: 700; color: var(--muted); white-space: nowrap; }
-  .pct.bien { color: #1a7f37; }
+  .pct.bien { color: var(--verde); }
   .pct.medio { color: #b7791f; }
   .pct.bajo { color: var(--red); }
 
-  .col-total { background: #fff8e6 !important; font-weight: 800; border-left: 2px solid #b6b6b6; }
-  thead .col-total { background: #8a6d1f !important; color: #fff; }
+  /* El total se marca con verde, solo en el contorno */
+  .col-total { border-left: 2px solid var(--verde); font-weight: 800; }
+  thead .col-total { border-bottom-color: var(--verde); color: var(--verde); }
 
-  .nota { font-size: 11.5px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+  .pie-tabla { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .nota { font-size: 11.5px; color: var(--muted); line-height: 1.5; max-width: 620px; }
+
+  .msg { font-size: 13px; padding: 10px 12px; border-radius: 10px; margin-top: 14px; display: none; }
+  .msg.error { display: block; background: #fdeaea; color: #a30000; }
+  .msg.ok { display: block; background: #eaf7ea; color: #1a7a1a; }
+
+  /* ── Lista de GPS guardados ── */
+  .lista-item {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .lista-item:hover { border-color: rgba(204,0,0,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+  .lista-item.es-oculto { opacity: 0.62; border-style: dashed; }
+  .lista-nombre { font-size: 15px; font-weight: 700; }
+  .lista-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .lista-crece { flex: 1; min-width: 120px; }
+  .lista-acciones { display: flex; gap: 7px; flex-wrap: wrap; }
+  .pill-oculto {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    background: #f0f0ef; color: #666; padding: 3px 9px; border-radius: 20px;
+  }
+  .vacio {
+    text-align: center; color: var(--muted); font-size: 14px;
+    padding: 46px 20px; border: 1.5px dashed var(--border); border-radius: 14px; line-height: 1.6;
+  }
+  .vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 5px; }
 
   @media (max-width: 640px) {
-    .page { padding: 82px 12px 40px; }
+    .page { padding: 80px 12px 40px; }
     .hoja { padding: 14px; }
     .encabezado { display: none; }
   }
@@ -125,7 +186,7 @@
 
   <header class="kw-header">
     <span class="kw-header-title">GPS</span>
-    <a href="index.html" class="back-btn">
+    <a href="index.html" class="back-btn" id="btn-atras">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
@@ -136,29 +197,45 @@
   <main class="page">
 
     <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:var(--muted);">
-      No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
+      Esta sección es solo para Liderazgo. <a href="../documentos.html">Regresar</a>.
     </div>
 
-    <div id="contenido">
-      <div class="breadcrumb">
-        <a href="../documentos.html">Documentos</a> ›
-        <a href="index.html">Internos</a> ›
-        <span>GPS</span>
-      </div>
-
+    <!-- ══ Vista 1: lista de GPS guardados ══ -->
+    <div id="vista-lista" style="display:none;">
       <div class="encabezado">
         <div>
           <h1 class="page-title">GPS</h1>
-          <p class="page-desc">Programa trimestral de seguimiento. Los porcentajes se calculan solos.</p>
+          <p class="page-desc">Programa trimestral de seguimiento del equipo.</p>
         </div>
         <div class="acciones">
-          <button type="button" class="btn" onclick="limpiarTodo()" data-kw-confirmar="¿Borrar todo lo capturado?">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-            Limpiar
+          <button type="button" class="btn btn-rojo" onclick="nuevoGps()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo GPS
           </button>
-          <button type="button" class="btn btn-rojo" onclick="imprimir()">
+        </div>
+      </div>
+      <div id="lista"></div>
+    </div>
+
+    <!-- ══ Vista 2: el formato ══ -->
+    <div id="vista-doc" style="display:none;">
+      <div class="encabezado">
+        <div>
+          <h1 class="page-title" id="doc-titulo">Nuevo GPS</h1>
+          <p class="page-desc" id="doc-sub">Los porcentajes se calculan solos.</p>
+        </div>
+        <div class="acciones">
+          <button type="button" class="btn" onclick="verLista()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Ver todos
+          </button>
+          <button type="button" class="btn" onclick="imprimir()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
             Imprimir / PDF
+          </button>
+          <button type="button" class="btn btn-rojo" id="btn-guardar" onclick="guardar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span id="txt-guardar">Guardar</span>
           </button>
         </div>
       </div>
@@ -193,11 +270,18 @@
           </table>
         </div>
 
-        <p class="nota">
-          La columna <b>Total</b> es el acumulado del año de cada métrica: suma los cuatro logros
-          entre la suma de las cuatro metas. No es el promedio de los porcentajes trimestrales —
-          así un trimestre con metas grandes pesa lo que debe pesar.
-        </p>
+        <div class="pie-tabla">
+          <button type="button" class="btn btn-mini" onclick="agregarMetrica()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar métrica
+          </button>
+          <p class="nota">
+            La columna <b>Total</b> es el acumulado del año de cada métrica: suma los cuatro logros
+            entre la suma de las cuatro metas, no el promedio de los porcentajes trimestrales.
+          </p>
+        </div>
+
+        <div class="msg" id="msg"></div>
       </div>
     </div>
 
@@ -205,8 +289,10 @@
 
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <script>
-  // Las métricas vienen del formato original (Formato PC Program Trimestral).
-  var METRICAS = [
+  // Métricas con las que arranca un GPS nuevo (las del formato
+  // original). A partir de ahí cada documento lleva las suyas: se
+  // pueden renombrar, quitar y agregar.
+  var METRICAS_BASE = [
     'Total inscritos en PC Program',
     'Agentes productivos (con árbol, listado, oferta o cierre)',
     'Agentes no productivos',
@@ -217,139 +303,344 @@
     'Honorarios recibidos por PC ($)',
   ];
   var TRIMS = 4;
-  var CLAVE = 'kw_gps_datos';
 
+  var metricas = [];
+  var celdas = {};          // { "0-2-meta": "100" }
+  var docActual = null;     // el registro guardado, o null si es nuevo
+  var miId = null, miRol = null, miNombre = '';
+
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
   function num(v) {
     var n = parseFloat(String(v == null ? '' : v).replace(/[^\d.-]/g, ''));
     return isFinite(n) ? n : null;
   }
+  function decir(texto, clase) {
+    var m = document.getElementById('msg');
+    m.textContent = texto;
+    m.className = 'msg ' + (clase || '');
+  }
 
+  // ── Tabla ──
   function pintarTabla() {
     var cuerpo = document.getElementById('cuerpo');
-    cuerpo.innerHTML = METRICAS.map(function (m, i) {
-      var celdas = '';
+    if (!metricas.length) {
+      cuerpo.innerHTML = '<tr><td colspan="14" style="padding:26px;color:var(--muted);">' +
+        'Sin métricas. Agrega la primera con el botón de abajo.</td></tr>';
+      return;
+    }
+    cuerpo.innerHTML = metricas.map(function (m, i) {
+      var cel = '';
       for (var t = 0; t < TRIMS; t++) {
-        celdas +=
-          '<td class="inicio-trim"><input type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
-          '<td><input type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
-          '<td class="pct" id="p-' + i + '-' + t + '">—</td>';
+        cel += '<td class="inicio-trim"><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
+               '<td><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
+               '<td class="pct" id="p-' + i + '-' + t + '">—</td>';
       }
       return '<tr>' +
-        '<td class="col-metrica">' + m + '</td>' + celdas +
+        '<td class="col-metrica"><div class="metrica-fila">' +
+          '<input class="metrica-txt" type="text" data-m="' + i + '" value="' + esc(m) + '" placeholder="Nombre de la métrica" />' +
+          '<button type="button" class="quitar-fila" title="Quitar métrica" data-quitar="' + i + '">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+          '</button>' +
+        '</div></td>' + cel +
         '<td class="col-total pct" id="tot-' + i + '">—</td>' +
       '</tr>';
     }).join('');
+
+    // Se reponen los valores que ya estaban capturados
+    document.querySelectorAll('#cuerpo input.celda').forEach(function (el) {
+      var k = el.dataset.f + '-' + el.dataset.t + '-' + el.dataset.c;
+      if (celdas[k] != null) el.value = celdas[k];
+    });
+    recalcular();
   }
 
-  function claseSegun(pct) {
-    if (pct >= 90) return 'pct bien';
-    if (pct >= 70) return 'pct medio';
+  function claseSegun(p) {
+    if (p >= 90) return 'pct bien';
+    if (p >= 70) return 'pct medio';
     return 'pct bajo';
   }
 
   function recalcular() {
-    for (var i = 0; i < METRICAS.length; i++) {
-      var sumaMeta = 0, sumaLogro = 0, hayAlgo = false;
-
+    for (var i = 0; i < metricas.length; i++) {
+      var sMeta = 0, sLogro = 0, hay = false;
       for (var t = 0; t < TRIMS; t++) {
-        var meta = num(valor(i, t, 'meta'));
-        var logro = num(valor(i, t, 'logro'));
-        var celda = document.getElementById('p-' + i + '-' + t);
-
+        var meta = num(celdas[i + '-' + t + '-meta']);
+        var logro = num(celdas[i + '-' + t + '-logro']);
+        var c = document.getElementById('p-' + i + '-' + t);
+        if (!c) continue;
         if (meta !== null && meta !== 0 && logro !== null) {
-          var pct = (logro / meta) * 100;
-          celda.textContent = Math.round(pct) + '%';
-          celda.className = claseSegun(pct);
+          var p = (logro / meta) * 100;
+          c.textContent = Math.round(p) + '%';
+          c.className = claseSegun(p);
         } else {
-          celda.textContent = '—';
-          celda.className = 'pct';
+          c.textContent = '—';
+          c.className = 'pct';
         }
-        // Para el acumulado solo cuentan los trimestres con meta puesta:
-        // si no, un trimestre en blanco arrastraría el total hacia abajo.
-        if (meta !== null && meta !== 0) {
-          sumaMeta += meta;
-          sumaLogro += (logro || 0);
-          hayAlgo = true;
-        }
+        // Solo cuentan los trimestres con meta puesta: si no, un
+        // trimestre en blanco arrastraría el total hacia abajo.
+        if (meta !== null && meta !== 0) { sMeta += meta; sLogro += (logro || 0); hay = true; }
       }
-
       var tot = document.getElementById('tot-' + i);
-      if (hayAlgo) {
-        var pctTot = (sumaLogro / sumaMeta) * 100;
-        tot.textContent = Math.round(pctTot) + '%';
-        tot.className = 'col-total ' + claseSegun(pctTot);
+      if (!tot) continue;
+      if (hay) {
+        var pt = (sLogro / sMeta) * 100;
+        tot.textContent = Math.round(pt) + '%';
+        tot.className = 'col-total ' + claseSegun(pt);
       } else {
         tot.textContent = '—';
         tot.className = 'col-total pct';
       }
     }
-    guardar();
   }
 
-  function valor(i, t, c) {
-    var el = document.querySelector('input[data-f="' + i + '"][data-t="' + t + '"][data-c="' + c + '"]');
-    return el ? el.value : '';
+  function agregarMetrica() {
+    metricas.push('');
+    pintarTabla();
+    var ult = document.querySelector('input.metrica-txt[data-m="' + (metricas.length - 1) + '"]');
+    if (ult) ult.focus();
   }
 
-  // Se guarda en el navegador para que no se pierda lo capturado al
-  // recargar; no va a la base porque este formato es de trabajo interno
-  // y cada quien lleva el suyo.
-  function guardar() {
-    var datos = { campos: {}, celdas: {} };
-    ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
-      datos.campos[id] = document.getElementById(id).value;
-    });
-    document.querySelectorAll('#cuerpo input').forEach(function (el) {
-      if (el.value !== '') datos.celdas[el.dataset.f + '-' + el.dataset.t + '-' + el.dataset.c] = el.value;
-    });
-    try { localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch (e) {}
-  }
-
-  function cargar() {
-    var datos;
-    try { datos = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { return; }
-    if (!datos) return;
-    Object.keys(datos.campos || {}).forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.value = datos.campos[id];
-    });
-    Object.keys(datos.celdas || {}).forEach(function (k) {
+  // Al quitar una métrica hay que recorrer los índices de las celdas que
+  // quedan abajo: si no, los números se quedarían pegados a la fila que
+  // ocupaba ese lugar y aparecerían en la métrica equivocada.
+  function quitarMetrica(i) {
+    metricas.splice(i, 1);
+    var nuevas = {};
+    Object.keys(celdas).forEach(function (k) {
       var p = k.split('-');
-      var el = document.querySelector('input[data-f="' + p[0] + '"][data-t="' + p[1] + '"][data-c="' + p[2] + '"]');
-      if (el) el.value = datos.celdas[k];
+      var f = Number(p[0]);
+      if (f === i) return;
+      var destino = f > i ? (f - 1) : f;
+      nuevas[destino + '-' + p[1] + '-' + p[2]] = celdas[k];
     });
+    celdas = nuevas;
+    pintarTabla();
   }
 
-  function limpiarTodo() {
-    try { localStorage.removeItem(CLAVE); } catch (e) {}
-    document.querySelectorAll('#cuerpo input').forEach(function (el) { el.value = ''; });
+  // ── Vistas ──
+  function verLista() {
+    document.getElementById('vista-doc').style.display = 'none';
+    document.getElementById('vista-lista').style.display = '';
+    document.getElementById('btn-atras').href = 'index.html';
+    cargarLista();
+  }
+
+  function verDoc() {
+    document.getElementById('vista-lista').style.display = 'none';
+    document.getElementById('vista-doc').style.display = '';
+    document.getElementById('btn-atras').href = 'javascript:verLista()';
+  }
+
+  function nuevoGps() {
+    docActual = null;
+    metricas = METRICAS_BASE.slice();
+    celdas = {};
     ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
       document.getElementById(id).value = '';
     });
-    recalcular();
+    document.getElementById('doc-titulo').textContent = 'Nuevo GPS';
+    document.getElementById('doc-sub').textContent = 'Los porcentajes se calculan solos.';
+    document.getElementById('txt-guardar').textContent = 'Guardar';
+    decir('', '');
+    pintarTabla();
+    verDoc();
   }
 
-  // Se imprime en horizontal: con cuatro trimestres de tres columnas cada
-  // uno más el total, en vertical no cabe sin quedar ilegible.
+  function abrirGps(reg) {
+    docActual = reg;
+    metricas = Array.isArray(reg.metricas) ? reg.metricas.slice() : METRICAS_BASE.slice();
+    celdas = (reg.celdas && typeof reg.celdas === 'object') ? Object.assign({}, reg.celdas) : {};
+    document.getElementById('f-nombre').value = reg.nombre || '';
+    document.getElementById('f-puesto').value = reg.puesto || '';
+    document.getElementById('f-ingreso').value = reg.fecha_ingreso || '';
+    document.getElementById('f-lider').value = reg.lider || '';
+    document.getElementById('doc-titulo').textContent = reg.nombre || 'GPS';
+    document.getElementById('doc-sub').textContent =
+      'Creado por ' + (reg.creado_por_nombre || '—') + ' · ' + fecha(reg.updated_at);
+    document.getElementById('txt-guardar').textContent = puedeEditar(reg) ? 'Guardar cambios' : 'Guardar copia';
+    decir('', '');
+    pintarTabla();
+    verDoc();
+  }
+
+  function puedeEditar(reg) {
+    if (!reg) return true;
+    return reg.creado_por === miId || miRol === 'master' || miRol === 'admin';
+  }
+
+  function fecha(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) { return ''; }
+  }
+
+  // ── Guardar ──
+  async function guardar() {
+    var btn = document.getElementById('btn-guardar');
+    var nombre = document.getElementById('f-nombre').value.trim();
+    if (!nombre) {
+      decir('Ponle el nombre de la persona antes de guardar.', 'error');
+      document.getElementById('f-nombre').focus();
+      return;
+    }
+    // Las métricas en blanco no se guardan: quedaron de un "Agregar" que
+    // no se llenó y solo estorbarían al abrirlo después.
+    var limpias = [], mapa = {};
+    metricas.forEach(function (m, i) {
+      if (String(m || '').trim() === '') return;
+      mapa[i] = limpias.length;
+      limpias.push(String(m).trim());
+    });
+    var celdasLimpias = {};
+    Object.keys(celdas).forEach(function (k) {
+      var p = k.split('-');
+      if (mapa[p[0]] === undefined) return;
+      if (celdas[k] === '' || celdas[k] == null) return;
+      celdasLimpias[mapa[p[0]] + '-' + p[1] + '-' + p[2]] = celdas[k];
+    });
+
+    var fila = {
+      nombre: nombre,
+      puesto: document.getElementById('f-puesto').value.trim() || null,
+      fecha_ingreso: document.getElementById('f-ingreso').value.trim() || null,
+      lider: document.getElementById('f-lider').value.trim() || null,
+      metricas: limpias,
+      celdas: celdasLimpias,
+    };
+
+    btn.disabled = true;
+    decir('', '');
+    try {
+      var r;
+      if (docActual && puedeEditar(docActual)) {
+        r = await window.kwSupabase.from('gps_documentos').update(fila).eq('id', docActual.id).select().single();
+      } else {
+        // Si es nuevo —o si es de alguien más y solo se puede copiar—
+        // se crea un registro a nombre de quien está guardando.
+        fila.creado_por = miId;
+        fila.creado_por_nombre = miNombre;
+        fila.anio = new Date().getFullYear();
+        r = await window.kwSupabase.from('gps_documentos').insert(fila).select().single();
+      }
+      if (r.error) throw r.error;
+      docActual = r.data;
+      metricas = limpias;
+      celdas = celdasLimpias;
+      pintarTabla();
+      document.getElementById('doc-titulo').textContent = nombre;
+      document.getElementById('txt-guardar').textContent = 'Guardar cambios';
+      decir('Guardado.', 'ok');
+    } catch (err) {
+      decir(err.message || 'No se pudo guardar.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Lista ──
+  async function cargarLista() {
+    var cont = document.getElementById('lista');
+    cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
+    try {
+      var r = await window.kwSupabase.from('gps_documentos').select('*').order('updated_at', { ascending: false });
+      if (r.error) throw r.error;
+      var filas = r.data || [];
+      if (!filas.length) {
+        cont.innerHTML = '<div class="vacio"><strong>Todavía no hay ningún GPS</strong>' +
+          'Crea el primero con el botón de arriba.</div>';
+        return;
+      }
+      var esAdmin = (miRol === 'master' || miRol === 'admin');
+      cont.innerHTML = filas.map(function (f, i) {
+        var mio = f.creado_por === miId;
+        return '<div class="lista-item' + (f.oculto ? ' es-oculto' : '') + ' kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 40) + 'ms">' +
+          '<div class="lista-crece">' +
+            '<div class="lista-nombre">' + esc(f.nombre || 'Sin nombre') +
+              (f.oculto ? ' <span class="pill-oculto">Oculto</span>' : '') + '</div>' +
+            '<div class="lista-meta">' +
+              (f.puesto ? esc(f.puesto) + ' · ' : '') +
+              'Creado por ' + esc(f.creado_por_nombre || '—') +
+              ' · Actualizado ' + fecha(f.updated_at) +
+            '</div>' +
+          '</div>' +
+          '<div class="lista-acciones">' +
+            '<button type="button" class="btn btn-mini" data-abrir="' + f.id + '">' +
+              (mio || esAdmin ? 'Abrir' : 'Consultar') + '</button>' +
+            (esAdmin
+              ? '<button type="button" class="btn btn-mini" data-ocultar="' + f.id + '" data-val="' + (f.oculto ? '0' : '1') + '">' +
+                (f.oculto ? 'Mostrar' : 'Ocultar') + '</button>'
+              : '') +
+            (mio || esAdmin
+              ? '<button type="button" class="btn btn-mini" data-borrar="' + f.id + '" data-kw-confirmar="¿Borrar este GPS?">Borrar</button>'
+              : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      var porId = {};
+      filas.forEach(function (f) { porId[f.id] = f; });
+
+      cont.querySelectorAll('[data-abrir]').forEach(function (b) {
+        b.addEventListener('click', function () { abrirGps(porId[b.dataset.abrir]); });
+      });
+      cont.querySelectorAll('[data-ocultar]').forEach(function (b) {
+        b.addEventListener('click', function () { cambiarOculto(b.dataset.ocultar, b.dataset.val === '1'); });
+      });
+      cont.querySelectorAll('[data-borrar]').forEach(function (b) {
+        b.addEventListener('click', function () { borrar(b.dataset.borrar); });
+      });
+      if (window.kwUI && window.kwUI.confirmaciones) window.kwUI.confirmaciones(cont);
+    } catch (err) {
+      cont.innerHTML = '<div class="vacio">' + esc(err.message || 'No se pudo cargar la lista.') + '</div>';
+    }
+  }
+
+  async function cambiarOculto(id, oculto) {
+    try {
+      var r = await window.kwSupabase.from('gps_documentos').update({ oculto: oculto }).eq('id', id);
+      if (r.error) throw r.error;
+      cargarLista();
+    } catch (err) { alert(err.message || 'No se pudo cambiar.'); }
+  }
+
+  async function borrar(id) {
+    try {
+      var r = await window.kwSupabase.from('gps_documentos').delete().eq('id', id);
+      if (r.error) throw r.error;
+      cargarLista();
+    } catch (err) { alert(err.message || 'No se pudo borrar.'); }
+  }
+
+  // ── Impresión ──
+  // Horizontal: con cuatro trimestres de tres columnas cada uno más el
+  // total, en vertical no cabe sin quedar ilegible.
   function imprimir() {
     var nombre = document.getElementById('f-nombre').value.trim();
     var titulo = 'GPS' + (nombre ? ' - ' + nombre : '');
 
-    var filas = METRICAS.map(function (m, i) {
-      var celdas = '';
+    var filas = metricas.map(function (m, i) {
+      if (String(m || '').trim() === '') return '';
+      var cel = '';
       for (var t = 0; t < TRIMS; t++) {
-        celdas += '<td class="sep">' + (valor(i, t, 'meta') || '') + '</td>' +
-                  '<td>' + (valor(i, t, 'logro') || '') + '</td>' +
-                  '<td>' + document.getElementById('p-' + i + '-' + t).textContent.replace('—', '') + '</td>';
+        var pc = document.getElementById('p-' + i + '-' + t);
+        cel += '<td class="sep">' + esc(celdas[i + '-' + t + '-meta'] || '') + '</td>' +
+               '<td>' + esc(celdas[i + '-' + t + '-logro'] || '') + '</td>' +
+               '<td>' + (pc ? pc.textContent.replace('—', '') : '') + '</td>';
       }
-      return '<tr><td class="met">' + m + '</td>' + celdas +
-        '<td class="tot">' + document.getElementById('tot-' + i).textContent.replace('—', '') + '</td></tr>';
+      var tt = document.getElementById('tot-' + i);
+      return '<tr><td class="met">' + esc(m) + '</td>' + cel +
+        '<td class="tot">' + (tt ? tt.textContent.replace('—', '') : '') + '</td></tr>';
     }).join('');
 
-    var dato = function (id) { return document.getElementById(id).value.trim() || '&nbsp;'; };
+    var dato = function (id) { return esc(document.getElementById(id).value.trim()) || '&nbsp;'; };
 
     var win = window.open('', '_blank', 'width=1100,height=800');
-    win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + titulo + '</title><style>' +
+    win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(titulo) + '</title><style>' +
       '@page { size: Letter landscape; margin: 1cm; }' +
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +
       'body { font-family: Arial, sans-serif; font-size: 8pt; color: #000; }' +
@@ -358,18 +649,16 @@
       '.sub { font-size: 8pt; color: #555; }' +
       '.linea { height: 2.5px; background: #CC0000; margin-bottom: 10px; }' +
       '.datos { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-bottom: 10px; font-size: 8.5pt; }' +
-      '.datos div { border-bottom: 1px solid #999; padding-bottom: 2px; }' +
+      '.datos div { border-bottom: 1px solid #bbb; padding-bottom: 2px; }' +
       '.datos b { text-transform: uppercase; font-size: 7pt; color: #555; letter-spacing: 0.05em; }' +
       'table { border-collapse: collapse; width: 100%; }' +
-      'th, td { border: 1px solid #999; padding: 3px 4px; text-align: center; }' +
-      'thead th { background: #1F3864; color: #fff; font-size: 7.5pt; }' +
-      'thead tr.s th { background: #2d4d7d; font-size: 7pt; }' +
+      'th, td { border: 1px solid #cfcfcf; padding: 3px 4px; text-align: center; }' +
+      'thead th { font-size: 7.5pt; font-weight: 700; border-bottom: 2px solid #CC0000; }' +
+      'thead tr.s th { font-size: 7pt; color: #555; text-transform: uppercase; }' +
       'td.met { text-align: left; font-weight: 600; width: 22%; }' +
-      'tbody tr:nth-child(even) td { background: #F2F2F2; }' +
-      '.sep { border-left: 1.6px solid #666; }' +
-      '.tot, th.tot { border-left: 1.6px solid #666; font-weight: 800; }' +
-      'td.tot { background: #fff8e6 !important; }' +
-      'th.tot { background: #8a6d1f; }' +
+      '.sep { border-left: 1.6px solid #999; }' +
+      '.tot, th.tot { border-left: 2px solid #1a7f37; font-weight: 800; }' +
+      'th.tot { color: #1a7f37; border-bottom-color: #1a7f37; }' +
       '</style></head><body>' +
       '<div class="top"><div><div class="tit">GPS</div><div class="sub">Programa trimestral de seguimiento</div></div>' +
       '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" style="height:30px" /></div>' +
@@ -396,33 +685,46 @@
     setTimeout(function () { win.print(); }, 400);
   }
 
-  // ── Inicio ──
-  pintarTabla();
-  cargar();
-  recalcular();
-
-  document.getElementById('cuerpo').addEventListener('input', recalcular);
-  ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
-    document.getElementById(id).addEventListener('input', guardar);
+  // ── Eventos ──
+  document.getElementById('cuerpo').addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.classList.contains('celda')) {
+      celdas[el.dataset.f + '-' + el.dataset.t + '-' + el.dataset.c] = el.value;
+      recalcular();
+    } else if (el.classList.contains('metrica-txt')) {
+      metricas[Number(el.dataset.m)] = el.value;
+    }
+  });
+  document.getElementById('cuerpo').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-quitar]');
+    if (b) quitarMetrica(Number(b.dataset.quitar));
   });
 
-  // Mismo candado que el resto de documentos internos: los asociados no
-  // entran aquí.
-  async function verificarAcceso() {
-    const { data: userData } = await window.kwSupabase.auth.getUser();
+  // ── Inicio ──
+  async function iniciar() {
+    var { data: userData } = await window.kwSupabase.auth.getUser();
     if (!userData || !userData.user) return;
-    const { data: perfil, error } = await window.kwSupabase
-      .from('profiles').select('role').eq('id', userData.user.id).single();
+    miId = userData.user.id;
+
+    var { data: perfil, error } = await window.kwSupabase
+      .from('profiles').select('role, nombre, apellido').eq('id', miId).single();
     if (error || !perfil) return;
-    if (perfil.role === 'asociado') {
-      document.getElementById('contenido').style.display = 'none';
+    miRol = perfil.role;
+    miNombre = ((perfil.nombre || '') + ' ' + (perfil.apellido || '')).trim();
+
+    // El candado de verdad está en las políticas de la tabla; esto solo
+    // evita enseñar una pantalla que de todos modos no traería nada.
+    if (miRol === 'asociado') {
       document.getElementById('denegado').style.display = '';
+      return;
     }
+    verLista();
   }
+
   if (document.documentElement.classList.contains('kw-auth-ok')) {
-    verificarAcceso();
+    iniciar();
   } else {
-    window.addEventListener('kw-auth-ready', verificarAcceso, { once: true });
+    window.addEventListener('kw-auth-ready', iniciar, { once: true });
   }
 </script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
