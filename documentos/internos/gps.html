@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPS · Programa Trimestral</title>
+  <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --red: #CC0000; --text: #1a1a1a; --muted: #888;
+    --bg: #EFEFEF; --card: #fff; --border: rgba(0,0,0,0.07);
+    --azul: #1F3864;   /* el mismo azul del formato original */
+    --gris-fila: #F2F2F2;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { min-height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .page { flex: 1; width: 100%; margin: 0 auto; padding: 90px clamp(16px, 3vw, 40px) 60px; }
+
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--text); }
+  .breadcrumb span { color: var(--text); font-weight: 500; }
+
+  .encabezado { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+
+  .acciones { display: flex; gap: 9px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 10px; padding: 9px 15px; border: 1.5px solid var(--border);
+    background: #fff; color: var(--text); cursor: pointer;
+    font-size: 13px; font-weight: 700; font-family: inherit;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn:hover { background: #fafafa; }
+  .btn:active { transform: translateY(1px) scale(0.98); }
+  .btn svg { width: 15px; height: 15px; }
+  .btn-rojo {
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; border: none;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 3px 10px rgba(204,0,0,0.28);
+  }
+  .btn-rojo:hover { filter: brightness(1.07); background: linear-gradient(180deg, #e81010 0%, var(--red) 100%); }
+
+  .hoja { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+
+  /* ── Datos de arriba ── */
+  .datos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+  .campo { display: flex; align-items: center; gap: 10px; }
+  .campo label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); white-space: nowrap;
+  }
+  .campo input {
+    flex: 1; min-width: 0; height: 38px; padding: 0 11px;
+    border: 1.5px solid var(--border); border-radius: 9px;
+    font-family: inherit; font-size: 13.5px; color: var(--text); background: #fff; outline: none;
+  }
+  .campo input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+  @media (max-width: 720px) { .datos { grid-template-columns: 1fr; } }
+
+  /* ── Tabla ── */
+  .marco { width: 100%; overflow-x: auto; border: 1px solid #d9d9d9; border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border: 1px solid #d9d9d9; padding: 7px 8px; text-align: center; }
+  thead th { background: var(--azul); color: #fff; font-weight: 700; white-space: nowrap; }
+  thead tr.sub th { background: #2d4d7d; font-size: 11px; font-weight: 600; }
+  /* La columna de la métrica se queda a la vista al recorrer de lado:
+     sin ella no se sabe de qué renglón son los números. */
+  .col-metrica {
+    position: sticky; left: 0; z-index: 2;
+    text-align: left; min-width: 240px; background: #fff; font-weight: 600;
+  }
+  thead .col-metrica { background: var(--azul); z-index: 3; }
+  tbody tr:nth-child(even) .col-metrica { background: var(--gris-fila); }
+  tbody tr:nth-child(even) td { background: var(--gris-fila); }
+  /* Separador entre trimestres, para no perderse entre tantas columnas */
+  .inicio-trim { border-left: 2px solid #b6b6b6; }
+
+  td input {
+    width: 100%; border: none; background: transparent; outline: none;
+    font-family: inherit; font-size: 12.5px; text-align: center; color: var(--text);
+    padding: 2px 0; border-radius: 5px;
+  }
+  td input:focus { background: #fff3f3; box-shadow: 0 0 0 2px rgba(204,0,0,0.18); }
+  td input::-webkit-outer-spin-button, td input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  td input[type=number] { -moz-appearance: textfield; }
+
+  .pct { font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .pct.bien { color: #1a7f37; }
+  .pct.medio { color: #b7791f; }
+  .pct.bajo { color: var(--red); }
+
+  .col-total { background: #fff8e6 !important; font-weight: 800; border-left: 2px solid #b6b6b6; }
+  thead .col-total { background: #8a6d1f !important; color: #fff; }
+
+  .nota { font-size: 11.5px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+
+  @media (max-width: 640px) {
+    .page { padding: 82px 12px 40px; }
+    .hoja { padding: 14px; }
+    .encabezado { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">GPS</span>
+    <a href="index.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="page">
+
+    <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:var(--muted);">
+      No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
+    </div>
+
+    <div id="contenido">
+      <div class="breadcrumb">
+        <a href="../documentos.html">Documentos</a> ›
+        <a href="index.html">Internos</a> ›
+        <span>GPS</span>
+      </div>
+
+      <div class="encabezado">
+        <div>
+          <h1 class="page-title">GPS</h1>
+          <p class="page-desc">Programa trimestral de seguimiento. Los porcentajes se calculan solos.</p>
+        </div>
+        <div class="acciones">
+          <button type="button" class="btn" onclick="limpiarTodo()" data-kw-confirmar="¿Borrar todo lo capturado?">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+            Limpiar
+          </button>
+          <button type="button" class="btn btn-rojo" onclick="imprimir()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+            Imprimir / PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="hoja">
+        <div class="datos">
+          <div class="campo"><label for="f-nombre">Nombre</label><input type="text" id="f-nombre" /></div>
+          <div class="campo"><label for="f-puesto">Puesto</label><input type="text" id="f-puesto" /></div>
+          <div class="campo"><label for="f-ingreso">Fecha de ingreso</label><input type="text" id="f-ingreso" placeholder="dd/mm/aaaa" /></div>
+          <div class="campo"><label for="f-lider">Líder directo</label><input type="text" id="f-lider" /></div>
+        </div>
+
+        <div class="marco">
+          <table id="tabla">
+            <thead>
+              <tr>
+                <th rowspan="2" class="col-metrica">Métrica</th>
+                <th colspan="3" class="inicio-trim">T1 Ene–Mar</th>
+                <th colspan="3" class="inicio-trim">T2 Abr–Jun</th>
+                <th colspan="3" class="inicio-trim">T3 Jul–Sep</th>
+                <th colspan="3" class="inicio-trim">T4 Oct–Dic</th>
+                <th rowspan="2" class="col-total">Total</th>
+              </tr>
+              <tr class="sub">
+                <th class="inicio-trim">Meta</th><th>Logro</th><th>%</th>
+                <th class="inicio-trim">Meta</th><th>Logro</th><th>%</th>
+                <th class="inicio-trim">Meta</th><th>Logro</th><th>%</th>
+                <th class="inicio-trim">Meta</th><th>Logro</th><th>%</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpo"></tbody>
+          </table>
+        </div>
+
+        <p class="nota">
+          La columna <b>Total</b> es el acumulado del año de cada métrica: suma los cuatro logros
+          entre la suma de las cuatro metas. No es el promedio de los porcentajes trimestrales —
+          así un trimestre con metas grandes pesa lo que debe pesar.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
+<script>
+  // Las métricas vienen del formato original (Formato PC Program Trimestral).
+  var METRICAS = [
+    'Total inscritos en PC Program',
+    'Agentes productivos (con árbol, listado, oferta o cierre)',
+    'Agentes no productivos',
+    '% productividad del grupo',
+    'Bajas / salidas del programa',
+    'GCI total aportado por el grupo ($)',
+    'Company aportado ($)',
+    'Honorarios recibidos por PC ($)',
+  ];
+  var TRIMS = 4;
+  var CLAVE = 'kw_gps_datos';
+
+  function num(v) {
+    var n = parseFloat(String(v == null ? '' : v).replace(/[^\d.-]/g, ''));
+    return isFinite(n) ? n : null;
+  }
+
+  function pintarTabla() {
+    var cuerpo = document.getElementById('cuerpo');
+    cuerpo.innerHTML = METRICAS.map(function (m, i) {
+      var celdas = '';
+      for (var t = 0; t < TRIMS; t++) {
+        celdas +=
+          '<td class="inicio-trim"><input type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
+          '<td><input type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
+          '<td class="pct" id="p-' + i + '-' + t + '">—</td>';
+      }
+      return '<tr>' +
+        '<td class="col-metrica">' + m + '</td>' + celdas +
+        '<td class="col-total pct" id="tot-' + i + '">—</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function claseSegun(pct) {
+    if (pct >= 90) return 'pct bien';
+    if (pct >= 70) return 'pct medio';
+    return 'pct bajo';
+  }
+
+  function recalcular() {
+    for (var i = 0; i < METRICAS.length; i++) {
+      var sumaMeta = 0, sumaLogro = 0, hayAlgo = false;
+
+      for (var t = 0; t < TRIMS; t++) {
+        var meta = num(valor(i, t, 'meta'));
+        var logro = num(valor(i, t, 'logro'));
+        var celda = document.getElementById('p-' + i + '-' + t);
+
+        if (meta !== null && meta !== 0 && logro !== null) {
+          var pct = (logro / meta) * 100;
+          celda.textContent = Math.round(pct) + '%';
+          celda.className = claseSegun(pct);
+        } else {
+          celda.textContent = '—';
+          celda.className = 'pct';
+        }
+        // Para el acumulado solo cuentan los trimestres con meta puesta:
+        // si no, un trimestre en blanco arrastraría el total hacia abajo.
+        if (meta !== null && meta !== 0) {
+          sumaMeta += meta;
+          sumaLogro += (logro || 0);
+          hayAlgo = true;
+        }
+      }
+
+      var tot = document.getElementById('tot-' + i);
+      if (hayAlgo) {
+        var pctTot = (sumaLogro / sumaMeta) * 100;
+        tot.textContent = Math.round(pctTot) + '%';
+        tot.className = 'col-total ' + claseSegun(pctTot);
+      } else {
+        tot.textContent = '—';
+        tot.className = 'col-total pct';
+      }
+    }
+    guardar();
+  }
+
+  function valor(i, t, c) {
+    var el = document.querySelector('input[data-f="' + i + '"][data-t="' + t + '"][data-c="' + c + '"]');
+    return el ? el.value : '';
+  }
+
+  // Se guarda en el navegador para que no se pierda lo capturado al
+  // recargar; no va a la base porque este formato es de trabajo interno
+  // y cada quien lleva el suyo.
+  function guardar() {
+    var datos = { campos: {}, celdas: {} };
+    ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
+      datos.campos[id] = document.getElementById(id).value;
+    });
+    document.querySelectorAll('#cuerpo input').forEach(function (el) {
+      if (el.value !== '') datos.celdas[el.dataset.f + '-' + el.dataset.t + '-' + el.dataset.c] = el.value;
+    });
+    try { localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch (e) {}
+  }
+
+  function cargar() {
+    var datos;
+    try { datos = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { return; }
+    if (!datos) return;
+    Object.keys(datos.campos || {}).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = datos.campos[id];
+    });
+    Object.keys(datos.celdas || {}).forEach(function (k) {
+      var p = k.split('-');
+      var el = document.querySelector('input[data-f="' + p[0] + '"][data-t="' + p[1] + '"][data-c="' + p[2] + '"]');
+      if (el) el.value = datos.celdas[k];
+    });
+  }
+
+  function limpiarTodo() {
+    try { localStorage.removeItem(CLAVE); } catch (e) {}
+    document.querySelectorAll('#cuerpo input').forEach(function (el) { el.value = ''; });
+    ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
+      document.getElementById(id).value = '';
+    });
+    recalcular();
+  }
+
+  // Se imprime en horizontal: con cuatro trimestres de tres columnas cada
+  // uno más el total, en vertical no cabe sin quedar ilegible.
+  function imprimir() {
+    var nombre = document.getElementById('f-nombre').value.trim();
+    var titulo = 'GPS' + (nombre ? ' - ' + nombre : '');
+
+    var filas = METRICAS.map(function (m, i) {
+      var celdas = '';
+      for (var t = 0; t < TRIMS; t++) {
+        celdas += '<td class="sep">' + (valor(i, t, 'meta') || '') + '</td>' +
+                  '<td>' + (valor(i, t, 'logro') || '') + '</td>' +
+                  '<td>' + document.getElementById('p-' + i + '-' + t).textContent.replace('—', '') + '</td>';
+      }
+      return '<tr><td class="met">' + m + '</td>' + celdas +
+        '<td class="tot">' + document.getElementById('tot-' + i).textContent.replace('—', '') + '</td></tr>';
+    }).join('');
+
+    var dato = function (id) { return document.getElementById(id).value.trim() || '&nbsp;'; };
+
+    var win = window.open('', '_blank', 'width=1100,height=800');
+    win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + titulo + '</title><style>' +
+      '@page { size: Letter landscape; margin: 1cm; }' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body { font-family: Arial, sans-serif; font-size: 8pt; color: #000; }' +
+      '.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }' +
+      '.tit { font-size: 15pt; font-weight: 800; letter-spacing: 0.04em; }' +
+      '.sub { font-size: 8pt; color: #555; }' +
+      '.linea { height: 2.5px; background: #CC0000; margin-bottom: 10px; }' +
+      '.datos { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-bottom: 10px; font-size: 8.5pt; }' +
+      '.datos div { border-bottom: 1px solid #999; padding-bottom: 2px; }' +
+      '.datos b { text-transform: uppercase; font-size: 7pt; color: #555; letter-spacing: 0.05em; }' +
+      'table { border-collapse: collapse; width: 100%; }' +
+      'th, td { border: 1px solid #999; padding: 3px 4px; text-align: center; }' +
+      'thead th { background: #1F3864; color: #fff; font-size: 7.5pt; }' +
+      'thead tr.s th { background: #2d4d7d; font-size: 7pt; }' +
+      'td.met { text-align: left; font-weight: 600; width: 22%; }' +
+      'tbody tr:nth-child(even) td { background: #F2F2F2; }' +
+      '.sep { border-left: 1.6px solid #666; }' +
+      '.tot, th.tot { border-left: 1.6px solid #666; font-weight: 800; }' +
+      'td.tot { background: #fff8e6 !important; }' +
+      'th.tot { background: #8a6d1f; }' +
+      '</style></head><body>' +
+      '<div class="top"><div><div class="tit">GPS</div><div class="sub">Programa trimestral de seguimiento</div></div>' +
+      '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" style="height:30px" /></div>' +
+      '<div class="linea"></div>' +
+      '<div class="datos">' +
+        '<div><b>Nombre:</b> ' + dato('f-nombre') + '</div>' +
+        '<div><b>Puesto:</b> ' + dato('f-puesto') + '</div>' +
+        '<div><b>Fecha de ingreso:</b> ' + dato('f-ingreso') + '</div>' +
+        '<div><b>Líder directo:</b> ' + dato('f-lider') + '</div>' +
+      '</div>' +
+      '<table><thead>' +
+        '<tr><th rowspan="2">Métrica</th>' +
+          '<th colspan="3" class="sep">T1 Ene–Mar</th><th colspan="3" class="sep">T2 Abr–Jun</th>' +
+          '<th colspan="3" class="sep">T3 Jul–Sep</th><th colspan="3" class="sep">T4 Oct–Dic</th>' +
+          '<th rowspan="2" class="tot">Total</th></tr>' +
+        '<tr class="s"><th class="sep">Meta</th><th>Logro</th><th>%</th>' +
+          '<th class="sep">Meta</th><th>Logro</th><th>%</th>' +
+          '<th class="sep">Meta</th><th>Logro</th><th>%</th>' +
+          '<th class="sep">Meta</th><th>Logro</th><th>%</th></tr>' +
+      '</thead><tbody>' + filas + '</tbody></table>' +
+      '</body></html>');
+    win.document.close();
+    win.focus();
+    setTimeout(function () { win.print(); }, 400);
+  }
+
+  // ── Inicio ──
+  pintarTabla();
+  cargar();
+  recalcular();
+
+  document.getElementById('cuerpo').addEventListener('input', recalcular);
+  ['f-nombre', 'f-puesto', 'f-ingreso', 'f-lider'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', guardar);
+  });
+
+  // Mismo candado que el resto de documentos internos: los asociados no
+  // entran aquí.
+  async function verificarAcceso() {
+    const { data: userData } = await window.kwSupabase.auth.getUser();
+    if (!userData || !userData.user) return;
+    const { data: perfil, error } = await window.kwSupabase
+      .from('profiles').select('role').eq('id', userData.user.id).single();
+    if (error || !perfil) return;
+    if (perfil.role === 'asociado') {
+      document.getElementById('contenido').style.display = 'none';
+      document.getElementById('denegado').style.display = '';
+    }
+  }
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    verificarAcceso();
+  } else {
+    window.addEventListener('kw-auth-ready', verificarAcceso, { once: true });
+  }
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
+</body>
+</html>
