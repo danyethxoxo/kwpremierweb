@@ -32,11 +32,21 @@
   .inicio-logo img { height: 42px; width: auto; display: block; }
 
   .inicio-header-der { display: flex; align-items: center; gap: 16px; }
-  /* Solo aparece con sesión iniciada (lo prende reflejarSesion). */
-  .inicio-bienvenida { display: none; text-align: right; line-height: 1.25; }
-  .inicio-bienvenida.visible { display: block; }
+  /* Solo aparece con sesión iniciada (lo prende reflejarSesion). En
+     escritorio se ve el saludo completo; en celular no hay lugar para
+     "Bienvenido, Fulano" junto al logo y los botones, así que se cambia
+     por solo las iniciales en un circulito. */
+  .inicio-bienvenida { display: none; align-items: center; line-height: 1.25; }
+  .inicio-bienvenida.visible { display: flex; }
   .inicio-bienvenida .saludo { font-size: 12.5px; color: var(--muted); display: block; }
   .inicio-bienvenida .nombre { font-size: 14.5px; font-weight: 700; display: block; }
+  .inicio-bienvenida .bienvenida-iniciales {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
+  }
 
   .btn-portal {
     display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0;
@@ -248,8 +258,10 @@
   @media (max-width: 640px) {
     .inicio-header { padding: 8px 14px; min-height: 60px; gap: 8px; }
     .inicio-logo img { height: 32px; }
-    .inicio-bienvenida .saludo { font-size: 11px; }
-    .inicio-bienvenida .nombre { font-size: 12.5px; }
+    /* En celular no cabe "Bienvenido, Nombre" junto al logo: se cambia
+       por solo las iniciales. */
+    .inicio-bienvenida .bienvenida-texto { display: none; }
+    .inicio-bienvenida .bienvenida-iniciales { display: flex; }
     .btn-portal { padding: 9px 16px; font-size: 12.5px; gap: 6px; }
     .btn-portal svg { width: 13px; height: 13px; }
     /* En una barra tan angosta el botón de reseña se queda de pura
@@ -280,6 +292,17 @@
     <a href="/kwpremierweb/index.html" class="inicio-logo" aria-label="KW Premier">
       <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
+    <!-- Va aparte del logo (no dentro de inicio-header-der) para que caiga
+         justo después: "header > *:last-child" en kw-base.css es lo que
+         empuja el grupo de la derecha, así que cualquier hijo de en medio
+         se queda pegado al logo sin necesitar más reglas. -->
+    <div class="inicio-bienvenida" id="bienvenida">
+      <span class="bienvenida-texto">
+        <span class="saludo">Bienvenido,</span>
+        <span class="nombre" id="bienvenida-nombre"></span>
+      </span>
+      <span class="bienvenida-iniciales" id="bienvenida-iniciales"></span>
+    </div>
     <div class="inicio-header-der">
       <!-- Liga aparte a propósito: es la que se manda por WhatsApp o
            correo a un cliente para pedirle su reseña, así que tiene que
@@ -288,10 +311,6 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
         <span>Déjanos una reseña</span>
       </a>
-      <div class="inicio-bienvenida" id="bienvenida">
-        <span class="saludo">Bienvenido,</span>
-        <span class="nombre" id="bienvenida-nombre"></span>
-      </div>
       <button type="button" class="btn-portal" id="btn-portal" onclick="irAlPortal(this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span id="btn-portal-texto">Iniciar Sesión</span>
@@ -510,17 +529,23 @@
       var session = result && result.data && result.data.session;
       if (!session) return;
 
-      var nombre = '';
+      var nombre = '', iniciales = '';
       try {
         var perfil = await sbPortal.from('profiles').select('nombre, apellido').eq('id', session.user.id).single();
         if (perfil.data) {
-          nombre = ((perfil.data.nombre || '') + ' ' + (perfil.data.apellido || '')).trim();
+          var pNombre = (perfil.data.nombre || '').trim();
+          var pApellido = (perfil.data.apellido || '').trim();
+          nombre = (pNombre + ' ' + pApellido).trim();
+          // Si no hay apellido, la segunda inicial sale de la siguiente
+          // palabra del nombre (para no repetir la misma letra dos veces).
+          iniciales = (pNombre.charAt(0) + (pApellido || pNombre.split(' ')[1] || '').charAt(0)).toUpperCase();
         }
       } catch (e) {}
 
       document.getElementById('btn-portal-texto').textContent = 'Ir al Portal';
       if (nombre) {
         document.getElementById('bienvenida-nombre').textContent = nombre;
+        document.getElementById('bienvenida-iniciales').textContent = iniciales;
         document.getElementById('bienvenida').classList.add('visible');
       }
     } catch (err) {
