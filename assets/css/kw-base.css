@@ -518,6 +518,70 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .hamburger-btn.fijo { position: fixed; top: 14px; left: 12px; z-index: 150; }
 .hamburger-btn:active { color: var(--red); transform: scale(0.88); }
 .hamburger-btn svg { width: 22px; height: 22px; }
+/* La lupa comparte estilo con la hamburguesa (misma clase) y vive justo
+   a su derecha; en páginas sin <header> también flota fijo, corrido lo
+   justo para no encimarse con ella. */
+.hamburger-btn.fijo-buscar { left: 54px; }
+
+/* ── Buscador del sitio (lupa junto al menú) ──
+   Inyectado por drawer.js. Panel flotante centrado que se desliza desde
+   arriba, no un desplegable pegado al header: los headers cambian mucho
+   de forma entre páginas (con o sin título, con o sin Atrás, con o sin
+   campanita), y anclarlo a cada uno habría significado una regla
+   distinta por página. Así funciona igual en todas. */
+.kw-buscar-overlay {
+  position: fixed; inset: 0; z-index: 210;
+  background: rgba(15,15,15,0.4);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none;
+  display: flex; justify-content: center;
+  padding: 90px 16px 16px;
+  transition: opacity 0.22s;
+}
+.kw-buscar-overlay.open { opacity: 1; pointer-events: auto; }
+.kw-buscar-panel {
+  width: 100%; max-width: 560px; max-height: calc(100vh - 120px);
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  display: flex; flex-direction: column; overflow: hidden;
+  transform: translateY(-16px); opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+}
+.kw-buscar-overlay.open .kw-buscar-panel { transform: translateY(0); opacity: 1; }
+.kw-buscar-campo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.kw-buscar-campo > svg:first-child { width: 19px; height: 19px; color: var(--muted); flex-shrink: 0; }
+.kw-buscar-campo input {
+  flex: 1; min-width: 0; border: none; outline: none; background: none;
+  font-family: inherit; font-size: 15px; color: var(--text);
+}
+.kw-buscar-cerrar {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: none;
+  background: #f4f4f3; color: var(--muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.kw-buscar-cerrar:hover { background: #ececec; color: var(--text); }
+.kw-buscar-cerrar svg { width: 13px; height: 13px; }
+.kw-buscar-resultados { overflow-y: auto; padding: 8px; }
+.kw-buscar-vacio { padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.kw-buscar-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 12px; border-radius: 10px;
+  text-decoration: none; color: var(--text);
+  transition: background 0.15s;
+}
+.kw-buscar-item:hover { background: #f5f5f5; }
+.kw-buscar-item-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kw-buscar-item-label { font-size: 14px; font-weight: 600; }
+.kw-buscar-item-cat { font-size: 11.5px; color: var(--muted); }
+.kw-buscar-item > svg { width: 15px; height: 15px; color: #c9c9c9; flex-shrink: 0; }
+.kw-buscar-item:hover > svg { color: var(--red); }
+
+@media (max-width: 640px) {
+  .kw-buscar-overlay { padding: 76px 10px 10px; }
+}
 
 /* Con el botón insertado como primer hijo del header, el último hijo
    (back-btn, grupo de la derecha, etc.) se recorre al extremo derecho. */
