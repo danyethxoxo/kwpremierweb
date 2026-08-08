@@ -1161,11 +1161,24 @@ function setGuardarMsg(text, kind) {
   el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
 }
 
-function mostrarVista(vista) {
+// Entrar al formulario (nuevo o abrir uno guardado) se marca en el
+// historial del navegador (con pushState, sin cambiar la URL) para que
+// "atrás" regrese a la lista de este documento en vez de saltarse toda
+// la página y salir a "Seleccionar un acuerdo". Sin esto, cambiar de
+// vista aquí adentro no tocaba el historial, así que el navegador no
+// tenía nada que deshacer ahí adentro.
+function mostrarVista(vista, marcar) {
   document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
   document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
   if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
+  if (marcar !== false) history.pushState({ kwVista: vista }, '', location.href);
 }
+
+window.addEventListener('popstate', function (ev) {
+  var vista = (ev.state && ev.state.kwVista) || 'lista';
+  mostrarVista(vista, false);
+  if (vista === 'lista') cargarListaDocumentos();
+});
 
 function actualizarVisibilidadBotones() {
   const finalizado = estadoActual === 'finalizado';
@@ -1844,7 +1857,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderClientesFields();
 
   updatePreview();
-  mostrarVista('lista');
+  mostrarVista('lista', false);
+  history.replaceState({ kwVista: 'lista' }, '', location.href);
   initSlideFinalizar();
 
   // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
