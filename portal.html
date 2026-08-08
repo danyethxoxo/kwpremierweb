@@ -304,20 +304,21 @@
         </div>
       </a>
 
-      <!-- La carpeta que se comparte con cada quien en el Proceso de Alta.
-           Se abre en Drive en vez de mostrarse aquí dentro: la carpeta está
-           compartida persona por persona (no con liga pública), y un iframe
-           de Drive necesita la cookie de Google del visitante, que Safari y
-           el modo incógnito bloquean por ser de otro dominio. Ahí acabaría
-           enseñando "Necesitas acceso" a media oficina. -->
-      <a href="#" id="card-drive" target="_blank" rel="noopener" class="hover-card" style="--card-color: #6741D9; display: none;">
+      <!-- Los archivos se listan dentro del sitio (hub/drive.html) y al
+           abrir uno se va a Drive. No se incrusta la carpeta en un iframe
+           porque está compartida persona por persona, no con liga
+           pública: el iframe necesitaría la cookie de Google del
+           visitante, que Safari y el modo incógnito bloquean por ser de
+           otro dominio, y acabaría enseñando "Necesitas acceso" a media
+           oficina. -->
+      <a href="hub/drive.html" class="hover-card" style="--card-color: #6741D9;">
         <div class="hover-card-icon icon-drive">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
         </div>
         <div>
-          <div class="hover-card-title">Carpeta de Drive</div>
+          <div class="hover-card-title">Documentos del MC</div>
           <div class="hover-card-desc">Formatos, manuales y material del Market Center</div>
         </div>
         <div class="hover-card-arrow">
@@ -341,19 +342,6 @@
   </footer>
 
 <script>
-  // Id de la carpeta de Drive del Market Center — la misma que el Proceso
-  // de Alta le comparte a cada persona (la variable ALTA_DRIVE_FOLDER_ID de
-  // la Edge Function). Sale de la URL de la carpeta, después de /folders/.
-  // Mientras esté vacío la tarjeta no aparece, para no dejar una liga muerta.
-  var DRIVE_FOLDER_ID = '';
-
-  (function () {
-    if (!DRIVE_FOLDER_ID) return;
-    var card = document.getElementById('card-drive');
-    card.href = 'https://drive.google.com/drive/folders/' + encodeURIComponent(DRIVE_FOLDER_ID);
-    card.style.display = '';
-  })();
-
   // Muestra el botón de Panel si el rol del usuario es
   // 'admin', 'master' o 'staff'.
   async function mostrarTarjetaAdminSiAplica() {

@@ -46,6 +46,7 @@
     { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
     { href: `${BASE}/hub/calendario.html`, label: 'Calendario', icon: 'calendar' },
     { href: `${BASE}/documentos/documentos.html`, label: 'Documentos', icon: 'doc' },
+    { href: `${BASE}/hub/drive.html`, label: 'Documentos del MC', icon: 'doc' },
     { href: `${BASE}/hub/plantillas.html`, label: 'Creador de formatos', icon: 'doc' },
     { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },

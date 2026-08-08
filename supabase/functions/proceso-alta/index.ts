@@ -15,6 +15,14 @@
 // hacen y se reporta cuál falló. Así nunca se queda a medias sin saber
 // en qué.
 //
+// Además atiende la pantalla de Documentos del Market Center
+// (hub/drive.html): devuelve el árbol de la carpeta de Drive para que
+// los asesores la consulten desde el sitio. Eso vive aquí, y no en una
+// función aparte, porque ya tiene el token de Google con permiso de
+// Drive y la variable de la carpeta — una función nueva sería otro slug
+// que configurar sin ganar nada. Ojo: esa acción (`drive_arbol`) la
+// puede llamar cualquiera con sesión, no solo el equipo de altas.
+//
 // ─────────────────────────────────────────────────────────────
 // CÓMO SE PONE A FUNCIONAR (una sola vez)
 // ─────────────────────────────────────────────────────────────
@@ -237,6 +245,89 @@ async function listarPermisosDrive(token: string): Promise<Set<string>> {
   return correos
 }
 
+// ── Árbol de la carpeta de Drive ────────────────────────────
+// Para la pantalla donde los asesores consultan los documentos del
+// Market Center. Se devuelve el árbol completo de una vez y la pantalla
+// se encarga de navegar y buscar sin volver a preguntar: son pocos
+// archivos y así el buscador responde al instante.
+//
+// Devolver el árbol completo (en vez de recibir "dame esta carpeta")
+// también es lo que hace esto seguro: la pantalla nunca puede pedir una
+// carpeta arbitraria, porque aquí solo se camina hacia abajo desde
+// ALTA_DRIVE_FOLDER_ID. Si se aceptara un id desde afuera, cualquiera
+// podría pedir carpetas ajenas — el token de la función ve todo el Drive
+// de la cuenta, no solo esta carpeta.
+type ElementoDrive = {
+  id: string
+  nombre: string
+  tipo: 'carpeta' | 'archivo'
+  padre: string
+  mime: string
+  link: string
+  modificado: string | null
+}
+
+// Tope de carpetas a recorrer: una carpeta con miles de subcarpetas
+// dejaría la petición colgada. Con este límite la respuesta siempre
+// llega; si algún día la carpeta crece de más, se avisa en pantalla.
+const MAX_CARPETAS = 80
+
+async function listarHijos(token: string, carpetaId: string) {
+  const items: Record<string, unknown>[] = []
+  let pageToken: string | undefined
+  do {
+    const url = new URL('https://www.googleapis.com/drive/v3/files')
+    url.searchParams.set('q', `'${carpetaId}' in parents and trashed = false`)
+    url.searchParams.set('fields', 'nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime)')
+    url.searchParams.set('orderBy', 'folder,name')
+    url.searchParams.set('pageSize', '1000')
+    // Sin estos dos, una carpeta que viva en una unidad compartida
+    // devuelve vacío en vez de su contenido.
+    url.searchParams.set('supportsAllDrives', 'true')
+    url.searchParams.set('includeItemsFromAllDrives', 'true')
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error(`No se pudo leer la carpeta de Drive: ${res.status} ${await res.text()}`)
+    const data = await res.json()
+    items.push(...(data.files || []))
+    pageToken = data.nextPageToken
+  } while (pageToken)
+  return items
+}
+
+async function leerArbolDrive(token: string) {
+  if (!ALTA_DRIVE_FOLDER_ID) throw new Error('Falta configurar ALTA_DRIVE_FOLDER_ID.')
+
+  const elementos: ElementoDrive[] = []
+  const porVisitar = [ALTA_DRIVE_FOLDER_ID]
+  const visitadas = new Set<string>()
+  let truncado = false
+
+  while (porVisitar.length) {
+    if (visitadas.size >= MAX_CARPETAS) { truncado = true; break }
+    const actual = porVisitar.shift()!
+    if (visitadas.has(actual)) continue
+    visitadas.add(actual)
+
+    for (const f of await listarHijos(token, actual)) {
+      const esCarpeta = f.mimeType === 'application/vnd.google-apps.folder'
+      elementos.push({
+        id: String(f.id),
+        nombre: String(f.name || 'Sin nombre'),
+        tipo: esCarpeta ? 'carpeta' : 'archivo',
+        padre: actual,
+        mime: String(f.mimeType || ''),
+        link: String(f.webViewLink || ''),
+        modificado: f.modifiedTime ? String(f.modifiedTime) : null,
+      })
+      if (esCarpeta) porVisitar.push(String(f.id))
+    }
+  }
+
+  return { raiz: ALTA_DRIVE_FOLDER_ID, elementos, truncado }
+}
+
 async function listarAclCalendario(token: string): Promise<Set<string>> {
   const correos = new Set<string>()
   if (!GOOGLE_CALENDAR_ID) return correos
@@ -374,27 +465,41 @@ Deno.serve(async (req: Request) => {
     const { data: quien, error: errQuien } = await admin.auth.getUser(token)
     if (errQuien || !quien?.user) return respond({ error: 'Sesión inválida' }, 401)
 
-    // El candado de verdad va aquí, no en la pantalla: esconder un botón
-    // no impide que alguien llame a la función por su cuenta.
-    const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
-    const miCorreo = String(quien.user.email || '').toLowerCase()
-    if (!permitidos.length) {
-      return respond({ error: 'Falta configurar ALTA_EMAILS en los secretos de la función.' }, 500)
-    }
-    if (!permitidos.includes(miCorreo)) {
-      // Aviso temporal para diagnosticar por qué no coincide (se quita
-      // en cuanto quede resuelto): enseña qué correo detectó la función
-      // y contra qué lista lo comparó.
-      return respond({
-        error: 'Esta sección es solo para el equipo de altas.',
-        diagnostico: { tu_correo: miCorreo, lista_permitidos: permitidos },
-      }, 403)
-    }
-
     const body = await req.json().catch(() => ({}))
     const accion = String(body.accion || 'listar')
 
+    // Consultar la carpeta de Drive lo hace cualquiera con sesión: esa
+    // carpeta ya se le comparte a todo el mundo en el alta, así que ver
+    // los nombres de los archivos no enseña nada que no tuvieran. Abrir
+    // uno sigue dependiendo de su propio permiso en Drive. Las acciones
+    // del alta sí se quedan restringidas.
+    const ACCIONES_ABIERTAS = ['drive_arbol']
+
+    if (!ACCIONES_ABIERTAS.includes(accion)) {
+      // El candado de verdad va aquí, no en la pantalla: esconder un botón
+      // no impide que alguien llame a la función por su cuenta.
+      const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
+      const miCorreo = String(quien.user.email || '').toLowerCase()
+      if (!permitidos.length) {
+        return respond({ error: 'Falta configurar ALTA_EMAILS en los secretos de la función.' }, 500)
+      }
+      if (!permitidos.includes(miCorreo)) {
+        // Aviso temporal para diagnosticar por qué no coincide (se quita
+        // en cuanto quede resuelto): enseña qué correo detectó la función
+        // y contra qué lista lo comparó.
+        return respond({
+          error: 'Esta sección es solo para el equipo de altas.',
+          diagnostico: { tu_correo: miCorreo, lista_permitidos: permitidos },
+        }, 403)
+      }
+    }
+
     const tokenPrincipal = await getAccessToken(GOOGLE_REFRESH_TOKEN)
+
+    // ── Árbol de la carpeta de Drive (pantalla de Documentos) ──
+    if (accion === 'drive_arbol') {
+      return respond(await leerArbolDrive(tokenPrincipal))
+    }
 
     // ── Listar: lo que hay en la hoja + lo que ya se procesó ──
     if (accion === 'listar') {
