@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentos del Market Center</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<style>
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .page { flex: 1; max-width: 1000px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
+  .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 22px; }
+
+  /* ── Buscador ── */
+  .buscador { position: relative; margin-bottom: 16px; }
+  .buscador svg.lupa {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 17px; height: 17px; color: var(--muted); pointer-events: none;
+  }
+  .buscador input {
+    width: 100%; height: 46px; padding: 0 42px 0 40px;
+    border: 1.5px solid var(--border); border-radius: 12px; background: #fff;
+    font-family: inherit; font-size: 14.5px; color: var(--text); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,0.08); }
+  .limpiar-busq {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border: none; background: none; cursor: pointer;
+    color: var(--muted); border-radius: 7px; display: none;
+    align-items: center; justify-content: center;
+  }
+  .limpiar-busq:hover { background: #f0f0ef; color: var(--text); }
+  .limpiar-busq svg { width: 14px; height: 14px; }
+  .limpiar-busq.se-ve { display: flex; }
+
+  /* ── Ruta de carpetas ── */
+  .ruta {
+    display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+    font-size: 13px; margin-bottom: 14px; min-height: 24px;
+  }
+  .ruta button {
+    border: none; background: none; cursor: pointer; font-family: inherit;
+    font-size: 13px; color: var(--muted); padding: 4px 7px; border-radius: 7px;
+    font-weight: 600;
+  }
+  .ruta button:hover { background: #eaeaea; color: var(--text); }
+  .ruta .actual { color: var(--text); font-weight: 700; padding: 4px 7px; }
+  .ruta .sep { color: #c4c4c4; font-size: 12px; }
+
+  /* ── Lista ── */
+  .fila {
+    display: flex; align-items: center; gap: 13px;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 15px; margin-bottom: 8px; cursor: pointer;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  }
+  .fila:hover { border-color: rgba(204,0,0,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+  .fila:active { transform: scale(0.995); }
+  .ico {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ico svg { width: 19px; height: 19px; }
+  .i-carpeta { background: #f3f0ff; color: #6741D9; }
+  .i-doc     { background: #eef4ff; color: #1971C2; }
+  .i-hoja    { background: #eefaf0; color: #1a7f37; }
+  .i-pres    { background: #fff6e8; color: #B76E00; }
+  .i-pdf     { background: #fdeaea; color: #CC0000; }
+  .i-img     { background: #fdf0f8; color: #C2255C; }
+  .i-otro    { background: #f1f1f0; color: #777; }
+
+  .fila-crece { flex: 1; min-width: 0; }
+  .fila-nombre {
+    font-size: 14.5px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fila-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .fila-flecha { flex-shrink: 0; color: #c9c9c9; }
+  .fila-flecha svg { width: 16px; height: 16px; display: block; }
+  .fila:hover .fila-flecha { color: var(--red); }
+
+  .titulo-grupo {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 9px;
+  }
+  .titulo-grupo:first-child { margin-top: 0; }
+
+  .vacio {
+    text-align: center; color: var(--muted); font-size: 14px;
+    padding: 48px 20px; border: 1.5px dashed var(--border);
+    border-radius: 14px; line-height: 1.6;
+  }
+  .vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 5px; }
+
+  .aviso {
+    font-size: 12.5px; color: #7a5c00; background: #fff8e5;
+    border: 1px solid #f0e0b0; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 16px; line-height: 1.5;
+  }
+
+  .pie {
+    margin-top: 22px; font-size: 12.5px; color: var(--muted);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .pie a { color: var(--muted); font-weight: 600; }
+  .pie a:hover { color: var(--red); }
+
+  @media (max-width: 640px) {
+    .page { padding: 86px 14px 40px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">Documentos</span>
+    <a href="../portal.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Documentos del Market Center</h1>
+    <p class="page-desc">Formatos, manuales y material del equipo. Al abrir un archivo se ve en Drive.</p>
+
+    <div class="buscador">
+      <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="busq" placeholder="Buscar un archivo o carpeta…" autocomplete="off" />
+      <button type="button" class="limpiar-busq" id="btn-limpiar" title="Limpiar" aria-label="Limpiar búsqueda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="ruta" id="ruta"></div>
+    <div id="aviso-tope"></div>
+    <div id="contenido"></div>
+    <div class="pie" id="pie"></div>
+  </main>
+
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
+<script>
+  // Misma función que el Proceso de Alta: ahí ya vive el token de Google
+  // con permiso de Drive. Si algún día cambia el slug de la función, se
+  // ajusta aquí y en hub/alta.html.
+  var DRIVE_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
+
+  var elementos = [];      // el árbol plano que devuelve la función
+  var raiz = null;
+  var carpetaActual = null;
+  var porId = {};
+
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fecha(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) { return ''; }
+  }
+
+  // El tipo se saca del mime de Google. Los de Google Workspace traen su
+  // propio mime ("...google-apps.document"), los subidos traen el normal
+  // ("application/pdf"), por eso se revisan las dos formas.
+  function tipoDe(mime) {
+    var m = String(mime || '');
+    if (m.indexOf('folder') >= 0) return { c: 'i-carpeta', n: 'Carpeta' };
+    if (m.indexOf('spreadsheet') >= 0 || m.indexOf('excel') >= 0 || m.indexOf('csv') >= 0) return { c: 'i-hoja', n: 'Hoja de cálculo' };
+    if (m.indexOf('presentation') >= 0 || m.indexOf('powerpoint') >= 0) return { c: 'i-pres', n: 'Presentación' };
+    if (m.indexOf('pdf') >= 0) return { c: 'i-pdf', n: 'PDF' };
+    if (m.indexOf('image') >= 0) return { c: 'i-img', n: 'Imagen' };
+    if (m.indexOf('document') >= 0 || m.indexOf('word') >= 0 || m.indexOf('text') >= 0) return { c: 'i-doc', n: 'Documento' };
+    return { c: 'i-otro', n: 'Archivo' };
+  }
+
+  function svgDe(clase) {
+    if (clase === 'i-carpeta') {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+    }
+    if (clase === 'i-img') {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+    }
+    if (clase === 'i-hoja') {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  }
+
+  // Ruta legible de un elemento ("Manuales › Ventas"), para que en los
+  // resultados de búsqueda se sepa de dónde salió cada archivo.
+  function rutaDe(id) {
+    var partes = [], guarda = 0;
+    var p = porId[id] ? porId[id].padre : null;
+    while (p && p !== raiz && guarda++ < 20) {
+      var c = porId[p];
+      if (!c) break;
+      partes.unshift(c.nombre);
+      p = c.padre;
+    }
+    return partes.join(' › ');
+  }
+
+  function filaHTML(el, conRuta) {
+    var t = tipoDe(el.mime);
+    var meta = el.tipo === 'carpeta'
+      ? (conRuta && rutaDe(el.id) ? rutaDe(el.id) : contarDentro(el.id))
+      : [t.n, fecha(el.modificado), conRuta ? rutaDe(el.id) : ''].filter(Boolean).join(' · ');
+
+    var flecha = el.tipo === 'carpeta'
+      ? '<polyline points="9 18 15 12 9 6"/>'
+      : '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>';
+
+    var attrs = el.tipo === 'carpeta'
+      ? 'href="#" data-carpeta="' + esc(el.id) + '"'
+      : 'href="' + esc(el.link) + '" target="_blank" rel="noopener"';
+
+    return '<a class="fila kw-aparece" ' + attrs + '>' +
+      '<div class="ico ' + t.c + '">' + svgDe(t.c) + '</div>' +
+      '<div class="fila-crece">' +
+        '<div class="fila-nombre">' + esc(el.nombre) + '</div>' +
+        (meta ? '<div class="fila-meta">' + esc(meta) + '</div>' : '') +
+      '</div>' +
+      '<div class="fila-flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + flecha + '</svg></div>' +
+    '</a>';
+  }
+
+  function contarDentro(id) {
+    var n = elementos.filter(function (e) { return e.padre === id; }).length;
+    if (!n) return 'Vacía';
+    return n === 1 ? '1 elemento' : n + ' elementos';
+  }
+
+  function pintarRuta() {
+    var cont = document.getElementById('ruta');
+    if (document.getElementById('busq').value.trim()) { cont.innerHTML = ''; return; }
+
+    var cadena = [], p = carpetaActual, guarda = 0;
+    while (p && p !== raiz && guarda++ < 20) {
+      var c = porId[p];
+      if (!c) break;
+      cadena.unshift(c);
+      p = c.padre;
+    }
+
+    var html = '<button type="button" data-ir="' + esc(raiz) + '">Documentos</button>';
+    cadena.forEach(function (c, i) {
+      html += '<span class="sep">›</span>';
+      html += (i === cadena.length - 1)
+        ? '<span class="actual">' + esc(c.nombre) + '</span>'
+        : '<button type="button" data-ir="' + esc(c.id) + '">' + esc(c.nombre) + '</button>';
+    });
+    cont.innerHTML = cadena.length ? html : '';
+
+    cont.querySelectorAll('[data-ir]').forEach(function (b) {
+      b.addEventListener('click', function () { abrirCarpeta(b.dataset.ir); });
+    });
+  }
+
+  function pintar() {
+    var cont = document.getElementById('contenido');
+    var termino = document.getElementById('busq').value.trim().toLowerCase();
+    document.getElementById('btn-limpiar').classList.toggle('se-ve', !!termino);
+    pintarRuta();
+
+    var lista, buscando = !!termino;
+    if (buscando) {
+      // Se busca en todo el árbol, no solo en la carpeta abierta: la
+      // gracia es encontrar el archivo sin saber dónde quedó guardado.
+      lista = elementos.filter(function (e) {
+        return e.nombre.toLowerCase().indexOf(termino) >= 0;
+      });
+    } else {
+      lista = elementos.filter(function (e) { return e.padre === carpetaActual; });
+    }
+
+    if (!lista.length) {
+      cont.innerHTML = buscando
+        ? '<div class="vacio"><strong>Sin resultados</strong>No hay nada que se llame "' + esc(termino) + '".</div>'
+        : '<div class="vacio"><strong>Esta carpeta está vacía</strong>Todavía no hay archivos aquí.</div>';
+      return;
+    }
+
+    var carpetas = lista.filter(function (e) { return e.tipo === 'carpeta'; });
+    var archivos = lista.filter(function (e) { return e.tipo === 'archivo'; });
+    var html = '';
+    if (carpetas.length) {
+      html += '<div class="titulo-grupo">Carpetas</div>' +
+        carpetas.map(function (e) { return filaHTML(e, buscando); }).join('');
+    }
+    if (archivos.length) {
+      html += '<div class="titulo-grupo">Archivos</div>' +
+        archivos.map(function (e) { return filaHTML(e, buscando); }).join('');
+    }
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('[data-carpeta]').forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        document.getElementById('busq').value = '';
+        abrirCarpeta(a.dataset.carpeta);
+      });
+    });
+  }
+
+  function abrirCarpeta(id) {
+    carpetaActual = id;
+    pintar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('busq').addEventListener('input', pintar);
+  document.getElementById('btn-limpiar').addEventListener('click', function () {
+    document.getElementById('busq').value = '';
+    pintar();
+    document.getElementById('busq').focus();
+  });
+
+  async function cargar() {
+    var cont = document.getElementById('contenido');
+    cont.innerHTML = '<div class="kw-loader"><div class="dash uno"></div><div class="dash dos"></div><div class="dash tres"></div><div class="dash cuatro"></div></div>';
+    try {
+      var { data: ses } = await window.kwSupabase.auth.getSession();
+      if (!ses || !ses.session) throw new Error('Sesión no válida.');
+
+      var res = await fetch(DRIVE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + ses.session.access_token,
+        },
+        body: JSON.stringify({ accion: 'drive_arbol' }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.error || ('No se pudo cargar (' + res.status + ').'));
+
+      elementos = data.elementos || [];
+      raiz = data.raiz;
+      carpetaActual = raiz;
+      porId = {};
+      elementos.forEach(function (e) { porId[e.id] = e; });
+
+      if (data.truncado) {
+        document.getElementById('aviso-tope').innerHTML =
+          '<div class="aviso">La carpeta tiene muchas subcarpetas y no se alcanzaron a leer todas. ' +
+          'Lo que falte se puede ver abriendo Drive directamente.</div>';
+      }
+
+      document.getElementById('pie').innerHTML =
+        '<span>' + elementos.filter(function (e) { return e.tipo === 'archivo'; }).length + ' archivos en total</span>' +
+        '<a href="https://drive.google.com/drive/folders/' + encodeURIComponent(raiz) + '" target="_blank" rel="noopener">Abrir en Drive ↗</a>';
+
+      pintar();
+    } catch (err) {
+      cont.innerHTML = '<div class="vacio"><strong>No se pudo cargar</strong>' + esc(err.message || '') + '</div>';
+    }
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    cargar();
+  } else {
+    window.addEventListener('kw-auth-ready', cargar, { once: true });
+  }
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
+</body>
+</html>
