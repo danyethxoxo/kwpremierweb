@@ -270,7 +270,30 @@ type ElementoDrive = {
 // Tope de carpetas a recorrer: una carpeta con miles de subcarpetas
 // dejaría la petición colgada. Con este límite la respuesta siempre
 // llega; si algún día la carpeta crece de más, se avisa en pantalla.
-const MAX_CARPETAS = 80
+const MAX_CARPETAS = 600
+
+// Cuántas carpetas se leen al mismo tiempo. Leerlas una por una (esperar
+// la respuesta antes de pedir la siguiente) es lo que hacía que una
+// carpeta con muchas subcarpetas se quedara corta con el límite de
+// arriba: cada carpeta son 200-400ms de ida y vuelta a Google, y en
+// serie eso se acumula rápido. En paralelo, un lote de 100 tarda lo
+// mismo que una sola. El número es un punto medio a ojo entre "aprovechar
+// el paralelismo" y "no verse como un ataque" ante el límite de la API
+// de Drive (que es por minuto, no por golpe, así que esto no lo topa).
+const LOTE_CONCURRENTE = 10
+
+async function mapConcurrente<T, R>(items: T[], limite: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const resultados: R[] = new Array(items.length)
+  let siguiente = 0
+  async function trabajador() {
+    while (siguiente < items.length) {
+      const i = siguiente++
+      resultados[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limite, items.length) }, trabajador))
+  return resultados
+}
 
 async function listarHijos(token: string, carpetaId: string) {
   const items: Record<string, unknown>[] = []
@@ -300,29 +323,39 @@ async function leerArbolDrive(token: string) {
   if (!ALTA_DRIVE_FOLDER_ID) throw new Error('Falta configurar ALTA_DRIVE_FOLDER_ID.')
 
   const elementos: ElementoDrive[] = []
-  const porVisitar = [ALTA_DRIVE_FOLDER_ID]
-  const visitadas = new Set<string>()
+  const visitadas = new Set<string>([ALTA_DRIVE_FOLDER_ID])
+  let nivel = [ALTA_DRIVE_FOLDER_ID]
   let truncado = false
 
-  while (porVisitar.length) {
-    if (visitadas.size >= MAX_CARPETAS) { truncado = true; break }
-    const actual = porVisitar.shift()!
-    if (visitadas.has(actual)) continue
-    visitadas.add(actual)
+  // Se lee nivel por nivel (todas las carpetas de la raíz a la vez,
+  // luego todas sus subcarpetas a la vez, etc.) en vez de una por una:
+  // así el tiempo total depende de qué tan profunda está la carpeta más
+  // honda, no de cuántas carpetas hay en total.
+  while (nivel.length) {
+    const listas = await mapConcurrente(nivel, LOTE_CONCURRENTE, (id) => listarHijos(token, id))
+    const siguienteNivel: string[] = []
 
-    for (const f of await listarHijos(token, actual)) {
-      const esCarpeta = f.mimeType === 'application/vnd.google-apps.folder'
-      elementos.push({
-        id: String(f.id),
-        nombre: String(f.name || 'Sin nombre'),
-        tipo: esCarpeta ? 'carpeta' : 'archivo',
-        padre: actual,
-        mime: String(f.mimeType || ''),
-        link: String(f.webViewLink || ''),
-        modificado: f.modifiedTime ? String(f.modifiedTime) : null,
-      })
-      if (esCarpeta) porVisitar.push(String(f.id))
-    }
+    nivel.forEach((padreId, i) => {
+      for (const f of listas[i]) {
+        const esCarpeta = f.mimeType === 'application/vnd.google-apps.folder'
+        elementos.push({
+          id: String(f.id),
+          nombre: String(f.name || 'Sin nombre'),
+          tipo: esCarpeta ? 'carpeta' : 'archivo',
+          padre: padreId,
+          mime: String(f.mimeType || ''),
+          link: String(f.webViewLink || ''),
+          modificado: f.modifiedTime ? String(f.modifiedTime) : null,
+        })
+        if (esCarpeta && !visitadas.has(String(f.id))) {
+          visitadas.add(String(f.id))
+          siguienteNivel.push(String(f.id))
+        }
+      }
+    })
+
+    if (visitadas.size >= MAX_CARPETAS) { truncado = true; break }
+    nivel = siguienteNivel
   }
 
   return { raiz: ALTA_DRIVE_FOLDER_ID, elementos, truncado }
