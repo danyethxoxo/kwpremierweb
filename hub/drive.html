@@ -327,11 +327,26 @@
     });
   }
 
-  function abrirCarpeta(id) {
+  // Entrar a una carpeta se marca en el historial del navegador (con
+  // pushState, sin cambiar la URL) para que "atrás" regrese un nivel en
+  // vez de sacar de la página entera. Sin esto, como navegar entre
+  // carpetas no cambiaba de URL, el navegador no tenía nada que "deshacer"
+  // ahí adentro y el primer "atrás" te mandaba de una vez al portal.
+  function abrirCarpeta(id, marcar) {
     carpetaActual = id;
+    document.getElementById('busq').value = '';
     pintar();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (marcar !== false) history.pushState({ kwCarpeta: id }, '', location.href);
   }
+
+  window.addEventListener('popstate', function (ev) {
+    var id = (ev.state && ev.state.kwCarpeta) || raiz;
+    if (!id) return; // todavía no ha cargado el árbol
+    carpetaActual = id;
+    document.getElementById('busq').value = '';
+    pintar();
+  });
 
   document.getElementById('busq').addEventListener('input', pintar);
   document.getElementById('btn-limpiar').addEventListener('click', function () {
@@ -363,6 +378,11 @@
       carpetaActual = raiz;
       porId = {};
       elementos.forEach(function (e) { porId[e.id] = e; });
+
+      // Se reemplaza el estado inicial (no se "empuja") para que la
+      // raíz no cuente como un paso navegado: el primer "atrás" desde
+      // ahí sí debe salir al portal, como se espera.
+      history.replaceState({ kwCarpeta: raiz }, '', location.href);
 
       if (data.truncado) {
         document.getElementById('aviso-tope').innerHTML =
