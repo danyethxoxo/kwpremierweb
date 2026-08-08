@@ -145,6 +145,48 @@ function aFecha(s: string): string | null {
   return `${String(f.year).padStart(4, '0')}-${String(f.month).padStart(2, '0')}-${String(f.day).padStart(2, '0')}`
 }
 
+// Lectura de la hoja para el ABC: solo nombre, KW ID y fecha de ingreso
+// — el DT asignado y el avance se administran a mano desde el sitio, no
+// vienen de aquí. A propósito NO reusa leerHoja(): esa filtra las filas
+// sin correo (la necesita para invitar por email en el alta), y aquí eso
+// sería peligroso — un asesor viejo sin correo capturado desaparecería
+// de la lista y la sincronización lo marcaría como baja por error. Aquí
+// lo único que se exige es el KW ID.
+async function leerHojaABC(token: string) {
+  if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}` +
+    `/values/${encodeURIComponent(ALTA_SHEET_RANGO)}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`No se pudo leer la hoja: ${res.status} ${await res.text()}`)
+
+  const filas: string[][] = (await res.json()).values || []
+  if (!filas.length) return []
+
+  const encabezados = filas[0]
+  const iAgente = indiceDe(encabezados, ['agente'])
+  const iNombre = indiceDe(encabezados, ['nombre completo', 'nombre'])
+  const iApellido = indiceDe(encabezados, ['apellido'])
+  const iKwid = indiceDe(encabezados, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
+  const iFechaIngreso = indiceDe(encabezados, ['fecha de ingreso', 'fecha ingreso'])
+
+  if (iKwid === -1) {
+    throw new Error('La hoja no tiene una columna de KW ID. Se busca un encabezado que diga "kwid", "kw id" o similar.')
+  }
+
+  return filas.slice(1).map((fila) => {
+    const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
+      iNombre !== -1 ? fila[iNombre] : '',
+      iApellido !== -1 ? fila[iApellido] : '',
+    ].filter(Boolean).join(' ').trim()
+    return {
+      nombre,
+      kwid: String(fila[iKwid] || '').trim(),
+      fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
+    }
+  }).filter((p) => p.kwid)
+}
+
 function indiceDe(encabezados: string[], claves: string[]): number {
   const limpio = encabezados.map((h) =>
     String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -567,7 +609,7 @@ Deno.serve(async (req: Request) => {
     // que ya tenía registrado se queda intacto.
     if (accion === 'abc_sync') {
       const aplicar = body.aplicar === true
-      const enHoja = (await leerHoja(tokenPrincipal)).filter((p) => p.kwid)
+      const enHoja = await leerHojaABC(tokenPrincipal)
 
       if (!enHoja.length) {
         return respond({ error: 'La hoja no devolvió ningún asesor con KW ID. No se cambió nada.' }, 400)
@@ -607,7 +649,6 @@ Deno.serve(async (req: Request) => {
       const filas = enHoja.map((p) => ({
         kwid: p.kwid,
         nombre: p.nombre || `KW ${p.kwid}`,
-        correo: p.correo || null,
         fecha_ingreso: aFecha(p.fechaIngreso),
         activo: true,
         sincronizado_en: ahora,

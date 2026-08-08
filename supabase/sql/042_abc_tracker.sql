@@ -36,7 +36,6 @@ comment on table public.abc_temas is
 create table if not exists public.abc_asesores (
   kwid            text primary key,
   nombre          text not null,
-  correo          text,
   fecha_ingreso   date,
   dt_asignado     text,
   activo          boolean not null default true,
@@ -49,6 +48,8 @@ comment on column public.abc_asesores.kwid is
   'KW ID. Es la llave real del asesor: los palomeos cuelgan de aquí, no de la posición en una lista.';
 comment on column public.abc_asesores.activo is
   'Una baja se marca false, nunca se borra. Así el historial de avance se conserva.';
+comment on column public.abc_asesores.dt_asignado is
+  'Se administra a mano desde el sitio. La sincronización con la hoja de asesores nunca lo toca (nombre, kwid y fecha_ingreso sí vienen de ahí).';
 
 create index if not exists abc_asesores_activo_idx on public.abc_asesores (activo);
 create index if not exists abc_asesores_dt_idx     on public.abc_asesores (dt_asignado);
