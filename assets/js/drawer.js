@@ -30,6 +30,7 @@
     alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
   };
 
   const NAV_PUBLICO = [
@@ -75,6 +76,74 @@
     }).join('');
   }
 
+  // ── Índice de búsqueda del sitio ──
+  // Aparte del menú (que solo trae las secciones grandes), aquí va cada
+  // destino puntual — cada acuerdo, cada contrato — para poder llegar
+  // directo escribiendo "renta" o "colaboración" en vez de navegar
+  // Documentos > Acuerdos > buscarlo a ojo. `alias` son palabras que no
+  // están en el título pero con las que alguien buscaría lo mismo.
+  const INDICE_BUSQUEDA = [
+    { label: 'Inicio del Hub', href: `${BASE}/portal.html`, cat: 'Hub' },
+    { label: 'Accesos Directos', href: `${BASE}/hub/accesosdirectos.html`, cat: 'Hub', alias: 'command weetrust kw one' },
+    { label: 'Calendario', href: `${BASE}/hub/calendario.html`, cat: 'Hub', alias: 'agenda sala de juntas evento' },
+    { label: 'Acuerdos y Contratos', href: `${BASE}/documentos/documentos.html`, cat: 'Hub', alias: 'documentos' },
+    { label: 'Documentos del Market Center', href: `${BASE}/hub/drive.html`, cat: 'Hub', alias: 'drive carpeta archivos formatos manuales' },
+    { label: 'Creador de formatos', href: `${BASE}/hub/plantillas.html`, cat: 'Hub', alias: 'plantillas' },
+    { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub' },
+    { label: 'Reporta una Incidencia', href: `${BASE}/hub/tickets.html`, cat: 'Hub', alias: 'ticket soporte tecnico ayuda' },
+    { label: 'Proceso de Alta', href: `${BASE}/hub/alta.html`, cat: 'Hub', alias: 'dar de alta asesor nuevo' },
+    { label: 'Panel de Admin', href: `${BASE}/hub/admin.html`, cat: 'Hub', alias: 'administracion' },
+    { label: 'Mi Perfil', href: `${BASE}/perfil.html`, cat: 'Hub', alias: 'micrositio perfil publico' },
+
+    { label: 'Carta de Terminación Anticipada', href: `${BASE}/documentos/acuerdos/cartaterminacion.html`, cat: 'Acuerdos', alias: 'terminar cancelar' },
+    { label: 'Aceptación de Oferta de Arrendamiento', href: `${BASE}/documentos/acuerdos/aceptacionoferta.html`, cat: 'Acuerdos', alias: 'oferta arrendamiento' },
+    { label: 'Contrapropuesta de Arrendamiento', href: `${BASE}/documentos/acuerdos/contrapropuesta.html`, cat: 'Acuerdos', alias: 'arrendamiento' },
+    { label: 'Check List Vendedor y Comprador', href: `${BASE}/documentos/acuerdos/checklist.html`, cat: 'Acuerdos', alias: 'checklist vendedor comprador' },
+    { label: 'Acuerdo de Colaboración entre Asesores', href: `${BASE}/documentos/acuerdos/colaboracion.html`, cat: 'Acuerdos', alias: 'colaboracion' },
+    { label: 'Cédula de Registro de Cliente', href: `${BASE}/documentos/acuerdos/cedularegistro.html`, cat: 'Acuerdos', alias: 'registro cliente' },
+    { label: 'Aviso de Privacidad', href: `${BASE}/documentos/acuerdos/avisodeprivacidad.html`, cat: 'Acuerdos', alias: 'privacidad' },
+    { label: 'Formato de Referido', href: `${BASE}/documentos/acuerdos/referido.html`, cat: 'Acuerdos', alias: 'referido' },
+
+    { label: 'Acuerdo de Renta', href: `${BASE}/documentos/contratos/renta.html`, cat: 'Contratos', alias: 'renta arrendamiento contrato' },
+
+    { label: 'GPS · Programa Trimestral', href: `${BASE}/documentos/internos/gps.html`, cat: 'Internos (Liderazgo)', alias: 'gps trimestral seguimiento pc program' },
+    { label: 'Constancia ABC de la Tecnología', href: `${BASE}/documentos/internos/abc.html`, cat: 'Internos (Liderazgo)', alias: 'abc tecnologia' },
+
+    { label: 'Inicio', href: `${BASE}/index.html`, cat: 'Sitio público' },
+    { label: 'Propiedades', href: `${BASE}/propiedades.html`, cat: 'Sitio público', alias: 'inventario listados' },
+    { label: 'Asesores', href: `${BASE}/asesores.html`, cat: 'Sitio público' },
+    { label: 'Liderazgo', href: `${BASE}/staff.html`, cat: 'Sitio público' },
+    { label: 'Nuestro Market Center', href: `${BASE}/market-center.html`, cat: 'Sitio público', alias: 'oficina mc' },
+    { label: 'Déjanos una reseña', href: `${BASE}/resena.html`, cat: 'Sitio público', alias: 'review calificacion' },
+  ];
+
+  function normalizar(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function buscarEnIndice(termino) {
+    const q = normalizar(termino).trim();
+    if (!q) return [];
+    const palabras = q.split(/\s+/);
+    return INDICE_BUSQUEDA
+      .map((item) => {
+        const texto = normalizar(item.label + ' ' + item.cat + ' ' + (item.alias || ''));
+        // Todas las palabras escritas tienen que aparecer en algún lado
+        // (en cualquier orden), no la frase completa tal cual.
+        if (!palabras.every((p) => texto.indexOf(p) >= 0)) return null;
+        // Coincidir desde el principio del título puntúa más alto que
+        // coincidir a media palabra o solo en el alias.
+        const enTitulo = normalizar(item.label).indexOf(q) >= 0;
+        const alInicio = normalizar(item.label).indexOf(q) === 0;
+        const puntaje = alInicio ? 0 : enTitulo ? 1 : 2;
+        return { item, puntaje };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.puntaje - b.puntaje)
+      .slice(0, 8)
+      .map((r) => r.item);
+  }
+
   const esPublico = modo === 'publico';
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
   const homeHref = esPublico ? `${BASE}/index.html` : `${BASE}/portal.html`;
@@ -93,6 +162,16 @@
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
+    <div class="kw-buscar-overlay" id="kw-buscar-overlay">
+      <div class="kw-buscar-panel" id="kw-buscar-panel">
+        <div class="kw-buscar-campo">
+          ${ICONS.search}
+          <input type="text" id="kw-buscar-input" placeholder="Buscar en el sitio… (ej. acuerdo de renta, calendario)" autocomplete="off" />
+          <button type="button" class="kw-buscar-cerrar" id="kw-buscar-cerrar" aria-label="Cerrar búsqueda">${ICONS.close}</button>
+        </div>
+        <div class="kw-buscar-resultados" id="kw-buscar-resultados"></div>
+      </div>
+    </div>
   `;
   while (contenedor.firstChild) document.body.appendChild(contenedor.firstChild);
 
@@ -106,13 +185,83 @@
   toggleBtn.setAttribute('aria-label', 'Menú');
   toggleBtn.innerHTML = ICONS.menu;
 
+  // A la derecha del de hamburguesa, siempre — se crea junto con él y se
+  // inserta justo después, sin importar cómo esté armado el header de
+  // cada página.
+  const searchBtn = document.createElement('button');
+  searchBtn.type = 'button';
+  searchBtn.id = 'kw-buscar-toggle';
+  searchBtn.className = 'hamburger-btn kw-buscar-btn';
+  searchBtn.setAttribute('aria-label', 'Buscar en el sitio');
+  searchBtn.innerHTML = ICONS.search;
+
   const header = document.querySelector('header');
   if (header) {
     header.insertBefore(toggleBtn, header.firstElementChild);
+    toggleBtn.insertAdjacentElement('afterend', searchBtn);
   } else {
     toggleBtn.classList.add('fijo');
+    searchBtn.classList.add('fijo', 'fijo-buscar');
+    document.body.insertBefore(searchBtn, document.body.firstChild);
     document.body.insertBefore(toggleBtn, document.body.firstChild);
   }
+
+  // ── Buscador ──
+  const buscarOverlay = document.getElementById('kw-buscar-overlay');
+  const buscarInput = document.getElementById('kw-buscar-input');
+  const buscarResultados = document.getElementById('kw-buscar-resultados');
+
+  function abrirBuscar() {
+    buscarOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    pintarResultados('');
+    // El foco espera al siguiente cuadro: si se pide en el mismo tick en
+    // que el panel todavía tiene la transición de entrada, algunos
+    // navegadores lo ignoran.
+    requestAnimationFrame(() => buscarInput.focus());
+  }
+  function cerrarBuscar() {
+    buscarOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    buscarInput.value = '';
+  }
+
+  function pintarResultados(termino) {
+    const q = termino.trim();
+    if (!q) {
+      buscarResultados.innerHTML = '<div class="kw-buscar-vacio">Escribe para buscar páginas y herramientas del sitio.</div>';
+      return;
+    }
+    const resultados = buscarEnIndice(q);
+    if (!resultados.length) {
+      buscarResultados.innerHTML = `<div class="kw-buscar-vacio">Sin resultados para "${q.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}".</div>`;
+      return;
+    }
+    buscarResultados.innerHTML = resultados.map((item) => `
+      <a class="kw-buscar-item" href="${item.href}">
+        <span class="kw-buscar-item-texto">
+          <span class="kw-buscar-item-label">${item.label}</span>
+          <span class="kw-buscar-item-cat">${item.cat}</span>
+        </span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    `).join('');
+  }
+
+  searchBtn.addEventListener('click', abrirBuscar);
+  document.getElementById('kw-buscar-cerrar').addEventListener('click', cerrarBuscar);
+  buscarOverlay.addEventListener('click', (e) => { if (e.target === buscarOverlay) cerrarBuscar(); });
+  buscarInput.addEventListener('input', () => pintarResultados(buscarInput.value));
+  buscarInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { cerrarBuscar(); return; }
+    if (e.key === 'Enter') {
+      const primero = buscarResultados.querySelector('.kw-buscar-item');
+      if (primero) location.href = primero.getAttribute('href');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && buscarOverlay.classList.contains('open')) cerrarBuscar();
+  });
 
   function abrir() {
     document.getElementById('drawer').classList.add('open');
