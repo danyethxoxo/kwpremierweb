@@ -121,11 +121,74 @@
     return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
 
+  // Drive y Calendario se agregan al buscador solo con sesión (hub), y
+  // solo se piden una vez por apertura del panel — no en cada tecla — para
+  // no golpear las APIs de Google en cada letra escrita. `null` = todavía
+  // no se pidieron; una vez que llegan quedan en memoria para el resto de
+  // la sesión de la pestaña.
+  let driveItems = null;
+  let calendarItems = null;
+  let extrasPromise = null;
+
+  function formatoFechaEvento(ev) {
+    const d = new Date(ev.start);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function cargarExtras() {
+    if (extrasPromise || esPublico || !window.kwSupabase) return;
+    extrasPromise = window.kwSupabase.auth.getSession().then(({ data }) => {
+      const token = data && data.session && data.session.access_token;
+      if (!token) return;
+
+      const pDrive = fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ accion: 'drive_arbol' }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          driveItems = (data.elementos || [])
+            .filter((e) => e.link)
+            .map((e) => ({
+              label: e.nombre,
+              href: e.link,
+              cat: e.tipo === 'carpeta' ? 'Carpeta de Drive' : 'Archivo de Drive',
+              externo: true,
+            }));
+        })
+        .catch(() => { driveItems = []; });
+
+      const pCalendario = fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/calendar-events')
+        .then((r) => r.json())
+        .then((data) => {
+          calendarItems = (data.events || []).map((ev) => {
+            const fecha = formatoFechaEvento(ev);
+            return {
+              label: ev.title,
+              href: ev.htmlLink,
+              cat: fecha ? `Calendario · ${fecha}` : 'Calendario',
+              externo: true,
+            };
+          });
+        })
+        .catch(() => { calendarItems = []; });
+
+      return Promise.all([pDrive, pCalendario]).then(() => {
+        // Si el panel se sigue viendo, se repinta con lo que ya se tenía
+        // escrito para que los resultados nuevos aparezcan sin que la
+        // persona tenga que volver a teclear.
+        if (buscarOverlay.classList.contains('open')) pintarResultados(buscarInput.value);
+      });
+    }).catch(() => {});
+  }
+
   function buscarEnIndice(termino) {
     const q = normalizar(termino).trim();
     if (!q) return [];
     const palabras = q.split(/\s+/);
-    return INDICE_BUSQUEDA
+    return INDICE_BUSQUEDA.concat(driveItems || [], calendarItems || [])
       .map((item) => {
         const texto = normalizar(item.label + ' ' + item.cat + ' ' + (item.alias || ''));
         // Todas las palabras escritas tienen que aparecer en algún lado
@@ -140,7 +203,7 @@
       })
       .filter(Boolean)
       .sort((a, b) => a.puntaje - b.puntaje)
-      .slice(0, 8)
+      .slice(0, 10)
       .map((r) => r.item);
   }
 
@@ -215,6 +278,7 @@
     buscarOverlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     pintarResultados('');
+    cargarExtras();
     // El foco espera al siguiente cuadro: si se pide en el mismo tick en
     // que el panel todavía tiene la transición de entrada, algunos
     // navegadores lo ignoran.
@@ -229,7 +293,9 @@
   function pintarResultados(termino) {
     const q = termino.trim();
     if (!q) {
-      buscarResultados.innerHTML = '<div class="kw-buscar-vacio">Escribe para buscar páginas y herramientas del sitio.</div>';
+      buscarResultados.innerHTML = esPublico
+        ? '<div class="kw-buscar-vacio">Escribe para buscar páginas y herramientas del sitio.</div>'
+        : '<div class="kw-buscar-vacio">Escribe para buscar páginas del sitio, archivos de Drive y eventos del calendario.</div>';
       return;
     }
     const resultados = buscarEnIndice(q);
@@ -238,7 +304,7 @@
       return;
     }
     buscarResultados.innerHTML = resultados.map((item) => `
-      <a class="kw-buscar-item" href="${item.href}">
+      <a class="kw-buscar-item" href="${item.href}"${item.externo ? ' target="_blank" rel="noopener"' : ''}>
         <span class="kw-buscar-item-texto">
           <span class="kw-buscar-item-label">${item.label}</span>
           <span class="kw-buscar-item-cat">${item.cat}</span>
