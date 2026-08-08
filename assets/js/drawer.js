@@ -106,6 +106,7 @@
 
     { label: 'Acuerdo de Renta', href: `${BASE}/documentos/contratos/renta.html`, cat: 'Contratos', alias: 'renta arrendamiento contrato' },
 
+    { label: 'ABC · Seguimiento de asesores', href: `${BASE}/documentos/internos/dt/abc-tracker.html`, cat: 'Internos (DT)', alias: 'abc tracker adopcion tecnologia avance palomear checklist dt' },
     { label: 'GPS · Programa Trimestral', href: `${BASE}/documentos/internos/gps.html`, cat: 'Internos (Liderazgo)', alias: 'gps trimestral seguimiento pc program' },
     { label: 'Constancia ABC de la Tecnología', href: `${BASE}/documentos/internos/abc.html`, cat: 'Internos (Liderazgo)', alias: 'abc tecnologia' },
 

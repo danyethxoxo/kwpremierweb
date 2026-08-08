@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ABC de la Tecnología — Seguimiento</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<style>
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .page { flex: 1; max-width: 1180px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
+  .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 22px; }
+
+  /* ── Tarjetas de resumen ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat-num { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat-lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── Barra de herramientas ── */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .buscador { position: relative; flex: 1; min-width: 200px; }
+  .buscador svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+  .buscador input { width: 100%; height: 42px; padding: 0 14px 0 38px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 14px; color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; }
+  .buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,.08); }
+  select.filtro { height: 42px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; color: var(--text); outline: none; cursor: pointer; }
+  select.filtro:focus { border-color: var(--red); }
+  .btn { height: 42px; padding: 0 16px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s, border-color .15s, color .15s; }
+  .btn:hover { background: #f6f6f6; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.primario { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.primario:hover { background: #b30000; }
+  .btn:disabled { opacity: .55; cursor: default; }
+
+  .segmentado { display: inline-flex; border: 1.5px solid var(--border); border-radius: 11px; overflow: hidden; background: #fff; }
+  .segmentado button { height: 40px; padding: 0 14px; border: none; background: none; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .segmentado button.activo { background: var(--red); color: #fff; }
+
+  /* ── Vista lista ── */
+  .lista { display: flex; flex-direction: column; gap: 8px; }
+  .fila { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .12s; text-align: left; font-family: inherit; width: 100%; }
+  .fila:hover { border-color: #d4d4d4; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+  .fila:active { transform: scale(.995); }
+  .fila-txt { flex: 1; min-width: 0; }
+  .fila-nom { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fila-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .fila-baja { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #92400e; background: #fef3c7; border-radius: 5px; padding: 2px 6px; margin-left: 6px; vertical-align: 1px; }
+  .barra { width: 120px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
+  .barra i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .3s; }
+  .pct { font-size: 13px; font-weight: 700; width: 46px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  @media (max-width: 620px) { .barra { display: none; } }
+
+  /* ── Vista matriz ── */
+  .matriz-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+  table.matriz { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  table.matriz th, table.matriz td { border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; padding: 0; }
+  /* Solo la columna del nombre se queda fija (al desplazar en horizontal
+     hay que seguir sabiendo de quién es cada renglón). El encabezado NO
+     se fija en vertical a propósito: son dos filas — sesiones y temas —
+     y fijar ambas en top:0 las encimaría. */
+  table.matriz thead th { background: #fafafa; font-weight: 600; color: var(--muted); }
+  table.matriz th.nom, table.matriz td.nom { position: sticky; left: 0; z-index: 3; background: #fff; text-align: left; padding: 8px 12px; min-width: 210px; max-width: 210px; box-shadow: 1px 0 0 #ececec; }
+  table.matriz thead th.nom { background: #fafafa; z-index: 4; }
+  table.matriz td.nom { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.matriz th.ses { text-align: center; padding: 6px 8px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #ececec; }
+  table.matriz th.tema { height: 132px; width: 30px; min-width: 30px; vertical-align: bottom; padding-bottom: 8px; }
+  table.matriz th.tema span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 11px; font-weight: 500; color: #666; }
+  table.matriz td.celda { text-align: center; width: 30px; min-width: 30px; }
+  table.matriz td.pctcol { text-align: right; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.matriz tbody tr:hover td { background: #fcfcfc; }
+  table.matriz tbody tr:hover td.nom { background: #fcfcfc; }
+  table.matriz tfoot td { background: #fafafa; font-size: 10.5px; color: var(--muted); text-align: center; padding: 6px 0; font-variant-numeric: tabular-nums; }
+  table.matriz tfoot td.nom { text-align: left; font-weight: 600; color: var(--text); }
+
+  /* ── Casilla ── */
+  .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; margin: 6px 0; }
+  .chk:hover { border-color: var(--red); }
+  .chk:checked { background: var(--red); border-color: var(--red); }
+  .chk:checked::after { content: ''; position: absolute; left: 5px; top: 1.5px; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .chk:disabled { opacity: .45; cursor: default; }
+  .chk.guardando { opacity: .5; }
+
+  /* ── Panel de un asesor ── */
+  .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.42); opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .panel-overlay.open { opacity: 1; pointer-events: auto; }
+  .panel { background: #fff; border-radius: 16px; width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column; transform: translateY(14px) scale(.985); transition: transform .22s; overflow: hidden; }
+  .panel-overlay.open .panel { transform: none; }
+  .panel-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+  .panel-nom { font-size: 17px; font-weight: 700; padding-right: 34px; }
+  .panel-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .panel-cerrar { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border: none; background: #f2f2f2; border-radius: 8px; cursor: pointer; color: #666; display: flex; align-items: center; justify-content: center; }
+  .panel-cerrar:hover { background: #e8e8e8; color: var(--text); }
+  .panel-cerrar svg { width: 14px; height: 14px; }
+  .panel-prog { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .panel-prog .barra { flex: 1; width: auto; }
+  .panel-body { overflow-y: auto; padding: 6px 20px 20px; }
+  .grupo { margin-top: 16px; }
+  .grupo-t { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .tema { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background .12s; }
+  .tema:hover { background: #f7f7f7; }
+  .tema span { font-size: 13.5px; line-height: 1.35; }
+  .tema input:checked + span { color: var(--muted); text-decoration: line-through; }
+
+  .vacio { text-align: center; padding: 46px 20px; color: var(--muted); font-size: 13.5px; }
+  .vacio strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 5px; }
+  .aviso { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; color: #7a5c00; margin-bottom: 14px; }
+  .aviso.error { background: #fdecea; border-color: #f5c6c2; color: #8b1a10; }
+
+  @media (max-width: 640px) {
+    .page { padding: 82px 14px 40px; }
+    .page-title, .page-desc { display: none; }
+    .segmentado { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="kw-header">
+  <span class="kw-header-title">ABC — Seguimiento</span>
+  <a href="../index.html" class="back-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    <span>Atrás</span>
+  </a>
+</header>
+
+<main class="page">
+  <div id="denegado" style="display:none" class="vacio">
+    <strong>Sin permiso</strong>Esta pantalla es para el equipo de liderazgo. <a href="../index.html">Regresar</a>.
+  </div>
+
+  <div id="contenido">
+    <h1 class="page-title">ABC de la Tecnología</h1>
+    <p class="page-desc">Avance de adopción tecnológica por asesor. Cada palomeo queda guardado al instante y ligado al KW ID.</p>
+
+    <div id="avisos"></div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="s-asesores">—</div><div class="stat-lbl">Asesores activos</div></div>
+      <div class="stat"><div class="stat-num" id="s-adopcion">—</div><div class="stat-lbl">Adopción del MC</div></div>
+      <div class="stat"><div class="stat-num" id="s-completos">—</div><div class="stat-lbl">Al 100%</div></div>
+      <div class="stat"><div class="stat-num" id="s-temas">—</div><div class="stat-lbl">Temas del ABC</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="buscador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="busq" placeholder="Buscar por nombre o KW ID…" autocomplete="off" />
+      </div>
+      <select class="filtro" id="f-dt"><option value="">Todos los DT</option></select>
+      <select class="filtro" id="f-estado">
+        <option value="activos">Solo activos</option>
+        <option value="todos">Activos y bajas</option>
+        <option value="bajas">Solo bajas</option>
+      </select>
+      <div class="segmentado">
+        <button type="button" id="v-lista" class="activo">Lista</button>
+        <button type="button" id="v-matriz">Matriz</button>
+      </div>
+      <button type="button" class="btn" id="btn-sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        Sincronizar
+      </button>
+    </div>
+
+    <div id="salida"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
+  </div>
+</main>
+
+<div class="panel-overlay" id="panel-overlay">
+  <div class="panel" style="position:relative">
+    <button type="button" class="panel-cerrar" id="panel-cerrar" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="panel-head">
+      <div class="panel-nom" id="panel-nom"></div>
+      <div class="panel-sub" id="panel-sub"></div>
+      <div class="panel-prog">
+        <div class="barra"><i id="panel-barra" style="width:0"></i></div>
+        <span class="pct" id="panel-pct">0%</span>
+      </div>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
+
+  var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
+  var vista = 'lista', abierto = null, puedeEditar = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function llave(kwid, temaId) { return kwid + '|' + temaId; }
+  function norm(s) {
+    return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // El porcentaje se calcula igual que en el libro de Sheets: temas
+  // palomeados entre el total de temas activos. Se hace aquí y no en la
+  // base para que la barra se mueva en el momento en que se palomea,
+  // sin volver a preguntar.
+  function pctDe(kwid) {
+    if (!temas.length) return 0;
+    var n = 0;
+    for (var i = 0; i < temas.length; i++) if (avance.get(llave(kwid, temas[i].id))) n++;
+    return Math.round(n * 100 / temas.length);
+  }
+
+  function avisar(msg, tipo) {
+    document.getElementById('avisos').innerHTML =
+      '<div class="aviso' + (tipo === 'error' ? ' error' : '') + '">' + esc(msg) + '</div>';
+  }
+  function limpiarAviso() { document.getElementById('avisos').innerHTML = ''; }
+
+  function filtrados() {
+    var q = norm(document.getElementById('busq').value.trim());
+    var dt = document.getElementById('f-dt').value;
+    var estado = document.getElementById('f-estado').value;
+    return asesores.filter(function (a) {
+      if (estado === 'activos' && !a.activo) return false;
+      if (estado === 'bajas' && a.activo) return false;
+      if (dt && (a.dt_asignado || '') !== dt) return false;
+      if (q) {
+        var texto = norm(a.nombre + ' ' + a.kwid);
+        var palabras = q.split(/\s+/);
+        for (var i = 0; i < palabras.length; i++) if (texto.indexOf(palabras[i]) < 0) return false;
+      }
+      return true;
+    });
+  }
+
+  function pintarStats() {
+    var activos = asesores.filter(function (a) { return a.activo; });
+    document.getElementById('s-asesores').textContent = activos.length;
+    document.getElementById('s-temas').textContent = temas.length;
+    if (!activos.length || !temas.length) {
+      document.getElementById('s-adopcion').textContent = '—';
+      document.getElementById('s-completos').textContent = '—';
+      return;
+    }
+    var suma = 0, completos = 0;
+    activos.forEach(function (a) {
+      var p = pctDe(a.kwid);
+      suma += p;
+      if (p === 100) completos++;
+    });
+    document.getElementById('s-adopcion').textContent = Math.round(suma / activos.length) + '%';
+    document.getElementById('s-completos').textContent = completos;
+  }
+
+  function pintar() {
+    pintarStats();
+    var salida = document.getElementById('salida');
+    var lista = filtrados();
+    if (!lista.length) {
+      salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>Nadie coincide con lo que buscas.</div>';
+      return;
+    }
+    salida.innerHTML = vista === 'lista' ? htmlLista(lista) : htmlMatriz(lista);
+    if (vista === 'lista') {
+      salida.querySelectorAll('[data-abrir]').forEach(function (el) {
+        el.addEventListener('click', function () { abrirPanel(el.dataset.abrir); });
+      });
+    } else {
+      salida.querySelectorAll('input.chk').forEach(function (c) {
+        c.addEventListener('change', function () { alPalomear(c, c.dataset.kwid, Number(c.dataset.tema)); });
+      });
+      salida.querySelectorAll('[data-abrir]').forEach(function (el) {
+        el.addEventListener('click', function () { abrirPanel(el.dataset.abrir); });
+      });
+    }
+  }
+
+  function htmlLista(lista) {
+    return '<div class="lista">' + lista.map(function (a) {
+      var p = pctDe(a.kwid);
+      return '<button type="button" class="fila" data-abrir="' + esc(a.kwid) + '">' +
+        '<span class="fila-txt">' +
+          '<span class="fila-nom">' + esc(a.nombre) +
+            (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</span>' +
+          '<span class="fila-sub">KW ' + esc(a.kwid) +
+            (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : ' · Sin DT asignado') + '</span>' +
+        '</span>' +
+        '<span class="barra"><i style="width:' + p + '%"></i></span>' +
+        '<span class="pct">' + p + '%</span>' +
+      '</button>';
+    }).join('') + '</div>';
+  }
+
+  function htmlMatriz(lista) {
+    // Los encabezados se agrupan por sesión igual que en el libro: una
+    // fila de sesiones arriba (con colspan) y debajo el nombre de cada
+    // tema en vertical, que es lo único que cabe en 30px de ancho.
+    var grupos = [], actual = null;
+    temas.forEach(function (t) {
+      if (!actual || actual.sesion !== t.sesion) { actual = { sesion: t.sesion, n: 0 }; grupos.push(actual); }
+      actual.n++;
+    });
+
+    var h = '<div class="matriz-wrap"><table class="matriz"><thead>';
+    h += '<tr><th class="nom" rowspan="2">Asesor</th>';
+    grupos.forEach(function (g) { h += '<th class="ses" colspan="' + g.n + '">' + esc(g.sesion) + '</th>'; });
+    h += '<th class="ses" rowspan="2">%</th></tr><tr>';
+    temas.forEach(function (t) { h += '<th class="tema"><span>' + esc(t.nombre) + '</span></th>'; });
+    h += '</tr></thead><tbody>';
+
+    lista.forEach(function (a) {
+      h += '<tr><td class="nom"><span data-abrir="' + esc(a.kwid) + '" style="cursor:pointer">' + esc(a.nombre) + '</span></td>';
+      temas.forEach(function (t) {
+        var on = !!avance.get(llave(a.kwid, t.id));
+        h += '<td class="celda"><input type="checkbox" class="chk"' +
+          (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
+          ' data-kwid="' + esc(a.kwid) + '" data-tema="' + t.id + '"' +
+          ' aria-label="' + esc(a.nombre + ' — ' + t.nombre) + '" /></td>';
+      });
+      h += '<td class="pctcol">' + pctDe(a.kwid) + '%</td></tr>';
+    });
+
+    // Pie: qué tan cubierto está cada tema en el grupo que se ve.
+    h += '</tbody><tfoot><tr><td class="nom">Cobertura</td>';
+    temas.forEach(function (t) {
+      var n = 0;
+      lista.forEach(function (a) { if (avance.get(llave(a.kwid, t.id))) n++; });
+      h += '<td>' + (lista.length ? Math.round(n * 100 / lista.length) : 0) + '%</td>';
+    });
+    h += '<td class="pctcol"></td></tr></tfoot></table></div>';
+    return h;
+  }
+
+  // ── Panel de un asesor ──
+  function abrirPanel(kwid) {
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!a) return;
+    abierto = kwid;
+    document.getElementById('panel-nom').textContent = a.nombre;
+    document.getElementById('panel-sub').textContent =
+      'KW ' + a.kwid + (a.dt_asignado ? ' · ' + a.dt_asignado : ' · Sin DT asignado') +
+      (a.activo ? '' : ' · Baja');
+
+    var body = document.getElementById('panel-body'), h = '', ses = null;
+    temas.forEach(function (t) {
+      if (t.sesion !== ses) {
+        if (ses !== null) h += '</div>';
+        h += '<div class="grupo"><div class="grupo-t">' + esc(t.sesion) + '</div>';
+        ses = t.sesion;
+      }
+      var on = !!avance.get(llave(kwid, t.id));
+      h += '<label class="tema"><input type="checkbox" class="chk"' +
+        (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
+        ' data-kwid="' + esc(kwid) + '" data-tema="' + t.id + '" />' +
+        '<span>' + esc(t.nombre) + '</span></label>';
+    });
+    if (ses !== null) h += '</div>';
+    body.innerHTML = h;
+
+    body.querySelectorAll('input.chk').forEach(function (c) {
+      c.addEventListener('change', function () { alPalomear(c, kwid, Number(c.dataset.tema)); });
+    });
+
+    refrescarPanelProgreso();
+    document.getElementById('panel-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function refrescarPanelProgreso() {
+    if (!abierto) return;
+    var p = pctDe(abierto);
+    document.getElementById('panel-barra').style.width = p + '%';
+    document.getElementById('panel-pct').textContent = p + '%';
+  }
+
+  function cerrarPanel() {
+    document.getElementById('panel-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    abierto = null;
+    pintar();
+  }
+
+  // ── Guardar un palomeo ──
+  //
+  // Se escribe de inmediato y la pantalla se actualiza sin esperar a la
+  // respuesta: en sesión se palomea rápido y esperar el viaje al
+  // servidor por cada clic se siente lento. Si la escritura falla, la
+  // casilla se regresa a como estaba y se avisa — nunca se queda
+  // mostrando algo que no se guardó.
+  async function alPalomear(input, kwid, temaId) {
+    if (!puedeEditar) return;
+    var quiere = input.checked;
+    var antes = !!avance.get(llave(kwid, temaId));
+
+    avance.set(llave(kwid, temaId), quiere);
+    if (!quiere) avance.delete(llave(kwid, temaId));
+    input.classList.add('guardando');
+    refrescarPanelProgreso();
+    pintarStats();
+
+    try {
+      var { data: ses } = await window.kwSupabase.auth.getSession();
+      var uid = ses && ses.session && ses.session.user ? ses.session.user.id : null;
+      var { error } = await window.kwSupabase.from('abc_avance').upsert({
+        kwid: kwid,
+        tema_id: temaId,
+        completado: quiere,
+        marcado_por: uid,
+        marcado_en: new Date().toISOString(),
+      }, { onConflict: 'kwid,tema_id' });
+      if (error) throw error;
+
+      input.classList.remove('guardando');
+      limpiarAviso();
+      // La fila de la lista y el % de la matriz solo se redibujan cuando
+      // el panel está cerrado: repintar con el panel abierto lo cerraría
+      // a media sesión.
+      if (!abierto) pintar();
+    } catch (err) {
+      if (antes) avance.set(llave(kwid, temaId), true); else avance.delete(llave(kwid, temaId));
+      input.checked = antes;
+      input.classList.remove('guardando');
+      refrescarPanelProgreso();
+      pintarStats();
+      avisar('No se pudo guardar el cambio: ' + (err.message || err) + '. Revisa tu conexión e inténtalo de nuevo.', 'error');
+    }
+  }
+
+  // ── Sincronizar con la hoja de asesores ──
+  //
+  // Primero pide la vista previa (sin escribir) y enseña qué cambiaría.
+  // Solo si se confirma se manda aplicar. Las bajas se deducen de "ya no
+  // está en la hoja", así que verlas antes evita un desastre si algún
+  // día la hoja se lee incompleta.
+  async function sincronizar() {
+    var btn = document.getElementById('btn-sync');
+    btn.disabled = true;
+    limpiarAviso();
+    try {
+      var previa = await llamarSync(false);
+      var n = previa.nuevos.length, r = previa.reactivados.length, b = previa.bajas.length;
+
+      if (!n && !r && !b) {
+        avisar('El padrón ya está al día: ' + previa.total_hoja + ' asesores en la hoja, nada que cambiar.');
+        return;
+      }
+
+      var resumen = [];
+      if (n) resumen.push(n + ' alta(s) nueva(s)');
+      if (r) resumen.push(r + ' reactivación(es)');
+      if (b) resumen.push(b + ' baja(s)');
+
+      var detalle = '';
+      if (n) detalle += '\n\nNuevos:\n· ' + previa.nuevos.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (n > 12 ? '\n· …y ' + (n - 12) + ' más' : '');
+      if (b) detalle += '\n\nSe marcarán como BAJA (no se borra nada, su avance se conserva):\n· ' + previa.bajas.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (b > 12 ? '\n· …y ' + (b - 12) + ' más' : '');
+
+      if (!confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicaría: ' + resumen.join(', ') + '.' + detalle + '\n\n¿Aplicar estos cambios?')) return;
+
+      var hecho = await llamarSync(true);
+      await cargar();
+      avisar('Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivación(es) y ' + hecho.bajas.length + ' baja(s).');
+    } catch (err) {
+      avisar('No se pudo sincronizar: ' + (err.message || err), 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function llamarSync(aplicar) {
+    var { data: ses } = await window.kwSupabase.auth.getSession();
+    if (!ses || !ses.session) throw new Error('Sesión no válida.');
+    var res = await fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.session.access_token },
+      body: JSON.stringify({ accion: 'abc_sync', aplicar: aplicar }),
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+    return data;
+  }
+
+  // ── Carga ──
+  async function cargar() {
+    var r = await Promise.all([
+      window.kwSupabase.from('abc_temas').select('id, orden, sesion, nombre').eq('activo', true).order('orden'),
+      window.kwSupabase.from('abc_asesores').select('kwid, nombre, dt_asignado, activo, fecha_ingreso').order('nombre'),
+      window.kwSupabase.from('abc_avance').select('kwid, tema_id').eq('completado', true),
+    ]);
+    for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
+
+    temas = r[0].data || [];
+    asesores = (r[1].data || []).map(function (a) { return Object.assign({}, a, { kwid: String(a.kwid) }); });
+    avance = new Map();
+    (r[2].data || []).forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
+
+    var dts = Array.from(new Set(asesores.map(function (a) { return a.dt_asignado; }).filter(Boolean))).sort();
+    var sel = document.getElementById('f-dt'), previo = sel.value;
+    sel.innerHTML = '<option value="">Todos los DT</option>' +
+      dts.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
+    sel.value = previo;
+  }
+
+  async function iniciar() {
+    try {
+      var { data: userData } = await window.kwSupabase.auth.getUser();
+      if (!userData || !userData.user) return;
+      var { data: perfil } = await window.kwSupabase
+        .from('profiles').select('role').eq('id', userData.user.id).single();
+      var rol = perfil ? perfil.role : null;
+
+      if (!perfil || ['master', 'admin', 'staff'].indexOf(rol) < 0) {
+        document.getElementById('contenido').style.display = 'none';
+        document.getElementById('denegado').style.display = '';
+        return;
+      }
+      puedeEditar = true;
+
+      await cargar();
+      pintar();
+    } catch (err) {
+      document.getElementById('salida').innerHTML =
+        '<div class="vacio"><strong>No se pudo cargar</strong>' + esc(err.message || err) + '</div>';
+    }
+  }
+
+  document.getElementById('busq').addEventListener('input', pintar);
+  document.getElementById('f-dt').addEventListener('change', pintar);
+  document.getElementById('f-estado').addEventListener('change', pintar);
+  document.getElementById('btn-sync').addEventListener('click', sincronizar);
+  document.getElementById('panel-cerrar').addEventListener('click', cerrarPanel);
+  document.getElementById('panel-overlay').addEventListener('click', function (e) {
+    if (e.target === document.getElementById('panel-overlay')) cerrarPanel();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && abierto) cerrarPanel();
+  });
+  document.getElementById('v-lista').addEventListener('click', function () {
+    vista = 'lista';
+    this.classList.add('activo');
+    document.getElementById('v-matriz').classList.remove('activo');
+    pintar();
+  });
+  document.getElementById('v-matriz').addEventListener('click', function () {
+    vista = 'matriz';
+    this.classList.add('activo');
+    document.getElementById('v-lista').classList.remove('activo');
+    pintar();
+  });
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
+  else window.addEventListener('kw-auth-ready', iniciar, { once: true });
+})();
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
+</body>
+</html>

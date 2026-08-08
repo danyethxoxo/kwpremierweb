@@ -135,6 +135,16 @@ function parseFecha(s: string): { day: number; month: number; year?: number } | 
   return null
 }
 
+// Igual que parseFecha pero para una columna `date` de Postgres: regresa
+// "AAAA-MM-DD" o null. Sin año no sirve (una fecha de ingreso a medias no
+// se puede guardar), así que en ese caso se descarta.
+function aFecha(s: string): string | null {
+  const f = parseFecha(s)
+  if (!f || !f.year) return null
+  if (f.month < 1 || f.month > 12 || f.day < 1 || f.day > 31) return null
+  return `${String(f.year).padStart(4, '0')}-${String(f.month).padStart(2, '0')}-${String(f.day).padStart(2, '0')}`
+}
+
 function indiceDe(encabezados: string[], claves: string[]): number {
   const limpio = encabezados.map((h) =>
     String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -508,7 +518,17 @@ Deno.serve(async (req: Request) => {
     // del alta sí se quedan restringidas.
     const ACCIONES_ABIERTAS = ['drive_arbol']
 
-    if (!ACCIONES_ABIERTAS.includes(accion)) {
+    // El ABC lo sincroniza el equipo de liderazgo (Master/Admin/Staff),
+    // que es quien da las sesiones — no solo los correos del alta.
+    const ACCIONES_STAFF = ['abc_sync']
+
+    if (ACCIONES_STAFF.includes(accion)) {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', quien.user.id).single()
+      if (!perfil || !['master', 'admin', 'staff'].includes(String(perfil.role))) {
+        return respond({ error: 'Esta acción es solo para el equipo de liderazgo.' }, 403)
+      }
+    } else if (!ACCIONES_ABIERTAS.includes(accion)) {
       // El candado de verdad va aquí, no en la pantalla: esconder un botón
       // no impide que alguien llame a la función por su cuenta.
       const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
@@ -532,6 +552,83 @@ Deno.serve(async (req: Request) => {
     // ── Árbol de la carpeta de Drive (pantalla de Documentos) ──
     if (accion === 'drive_arbol') {
       return respond(await leerArbolDrive(tokenPrincipal))
+    }
+
+    // ── Sincronizar el padrón del ABC con la hoja de asesores ──
+    //
+    // Va en dos tiempos a propósito. Con `aplicar: false` (el default)
+    // solo REPORTA qué cambiaría; hasta que se manda `aplicar: true` se
+    // escribe. La razón es la baja: se deduce de "ya no aparece en la
+    // hoja", así que si algún día la hoja se lee a medias (un rango mal
+    // puesto, un permiso caído) aplicar a ciegas daría de baja a medio
+    // Market Center. Enseñándolo antes, eso se ve y se cancela.
+    //
+    // Nunca se borra a nadie: una baja es activo = false, y el avance
+    // que ya tenía registrado se queda intacto.
+    if (accion === 'abc_sync') {
+      const aplicar = body.aplicar === true
+      const enHoja = (await leerHoja(tokenPrincipal)).filter((p) => p.kwid)
+
+      if (!enHoja.length) {
+        return respond({ error: 'La hoja no devolvió ningún asesor con KW ID. No se cambió nada.' }, 400)
+      }
+
+      type FilaPadron = { kwid: string; nombre: string; activo: boolean }
+      const { data: actuales, error: errLeer } = await admin
+        .from('abc_asesores').select('kwid, nombre, activo')
+      if (errLeer) return respond({ error: `No se pudo leer el padrón: ${errLeer.message}` }, 500)
+
+      const padron: FilaPadron[] = (actuales || []).map((a: Record<string, unknown>) => ({
+        kwid: String(a.kwid),
+        nombre: String(a.nombre || ''),
+        activo: a.activo !== false,
+      }))
+
+      const mapaHoja = new Map(enHoja.map((p) => [p.kwid, p] as const))
+      const mapaDb = new Map(padron.map((a) => [a.kwid, a] as const))
+
+      const nuevos = enHoja.filter((p) => !mapaDb.has(p.kwid))
+      const reactivados = enHoja.filter((p) => mapaDb.get(p.kwid)?.activo === false)
+      const bajas = padron
+        .filter((a) => a.activo && !mapaHoja.has(a.kwid))
+        .map((a) => ({ kwid: a.kwid, nombre: a.nombre }))
+
+      const resumen = {
+        total_hoja: enHoja.length,
+        total_padron: padron.length,
+        nuevos: nuevos.map((p) => ({ kwid: p.kwid, nombre: p.nombre })),
+        reactivados: reactivados.map((p) => ({ kwid: p.kwid, nombre: p.nombre })),
+        bajas,
+      }
+
+      if (!aplicar) return respond({ aplicado: false, ...resumen })
+
+      const ahora = new Date().toISOString()
+      const filas = enHoja.map((p) => ({
+        kwid: p.kwid,
+        nombre: p.nombre || `KW ${p.kwid}`,
+        correo: p.correo || null,
+        fecha_ingreso: aFecha(p.fechaIngreso),
+        activo: true,
+        sincronizado_en: ahora,
+      }))
+
+      // El upsert no manda dt_asignado: ese dato se administra desde el
+      // sitio y la hoja no lo trae, así que pisarlo borraría el trabajo
+      // de asignación cada vez que alguien sincroniza.
+      const { error: errUp } = await admin
+        .from('abc_asesores').upsert(filas, { onConflict: 'kwid' })
+      if (errUp) return respond({ error: `No se pudo guardar el padrón: ${errUp.message}` }, 500)
+
+      if (bajas.length) {
+        const { error: errBaja } = await admin
+          .from('abc_asesores')
+          .update({ activo: false, sincronizado_en: ahora })
+          .in('kwid', bajas.map((b) => b.kwid))
+        if (errBaja) return respond({ error: `No se pudieron marcar las bajas: ${errBaja.message}` }, 500)
+      }
+
+      return respond({ aplicado: true, ...resumen })
     }
 
     // ── Listar: lo que hay en la hoja + lo que ya se procesó ──
