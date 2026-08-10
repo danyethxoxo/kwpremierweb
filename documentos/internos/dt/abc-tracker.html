@@ -829,9 +829,25 @@
     try {
       var previa = await llamarSync(false);
       var n = previa.nuevos.length, r = previa.reactivados.length, b = previa.bajas.length;
+      var omitidos = previa.omitidos || [];
+
+      // Antes, alguien nuevo en la hoja sin KW ID capturado todavía
+      // simplemente no aparecía en ningún lado y nadie se enteraba de
+      // por qué — el sync "corría bien" pero se comía gente en
+      // silencio. Ahora se avisa por nombre, pase lo que pase con el
+      // resto de la sincronización.
+      var avisoOmitidos = omitidos.length
+        ? '\n\n' + omitidos.length + ' persona(s) en la hoja no se pudieron traer por falta de KW ID:\n· ' +
+          omitidos.slice(0, 12).map(function (o) { return o.nombre + ' (fila ' + o.fila + ')'; }).join('\n· ') +
+          (omitidos.length > 12 ? '\n· …y ' + (omitidos.length - 12) + ' más' : '') +
+          '\nCaptúrales el KW ID en la hoja y vuelve a sincronizar.'
+        : '';
 
       if (!n && !r && !b) {
-        avisar('El padrón ya está al día: ' + previa.total_hoja + ' asesores en la hoja, nada que cambiar.');
+        avisar(
+          'El padrón ya está al día: ' + previa.total_hoja + ' asesores en la hoja, nada que cambiar.' + avisoOmitidos,
+          omitidos.length ? 'error' : undefined
+        );
         return;
       }
 
@@ -843,13 +859,15 @@
       var detalle = '';
       if (n) detalle += '\n\nNuevos:\n· ' + previa.nuevos.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (n > 12 ? '\n· …y ' + (n - 12) + ' más' : '');
       if (b) detalle += '\n\nSe marcarán como BAJA (no se borra nada, su avance se conserva):\n· ' + previa.bajas.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (b > 12 ? '\n· …y ' + (b - 12) + ' más' : '');
+      detalle += avisoOmitidos;
 
       if (!confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicaría: ' + resumen.join(', ') + '.' + detalle + '\n\n¿Aplicar estos cambios?')) return;
 
       var hecho = await llamarSync(true);
       await cargar();
       pintar();
-      avisar('Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivación(es) y ' + hecho.bajas.length + ' baja(s).');
+      var msg = 'Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivación(es) y ' + hecho.bajas.length + ' baja(s).';
+      avisar(msg + avisoOmitidos, omitidos.length ? 'error' : undefined);
     } catch (err) {
       avisar('No se pudo sincronizar: ' + (err.message || err), 'error');
     } finally {
