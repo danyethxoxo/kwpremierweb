@@ -19,6 +19,15 @@
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
 <style>
+  /* Sin esto, cualquier elemento que también traiga su propio "display"
+     (como .chips-row o .input-clear, que son flex) le gana en la
+     cascada al [hidden] del navegador — una regla de autor siempre
+     gana sobre la hoja del user-agent, sin importar qué tan específico
+     sea el atributo. Con !important se garantiza que ocultarlo con el
+     atributo `hidden` siempre funcione, sin tener que pelear la
+     especificidad cada vez que un componente nuevo use flex. */
+  [hidden] { display: none !important; }
+
   html, body { min-height: 100%; background: var(--bg); color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .page { flex: 1; max-width: 1180px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
@@ -33,88 +42,85 @@
   @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
   /* ── Barra de herramientas ── */
-  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
-  .buscador { position: relative; flex: 1; min-width: 200px; }
-  .buscador svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
-  .buscador input { width: 100%; height: 42px; padding: 0 14px 0 38px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 14px; color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .buscador { position: relative; flex: 1; min-width: 220px; }
+  .buscador svg.lupa { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+  .buscador input { width: 100%; height: 42px; padding: 0 34px 0 38px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 14px; color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; }
   .buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(204,0,0,.08); }
+  .input-clear { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); width: 23px; height: 23px; border: none; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #666; padding: 0; }
+  .input-clear:hover { background: #ddd; color: #111; }
+  .input-clear svg { width: 11px; height: 11px; }
+
+  .sugerencias { position: absolute; top: 47px; left: 0; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 11px; box-shadow: 0 12px 32px rgba(0,0,0,.14); z-index: 50; max-height: 300px; overflow-y: auto; padding: 5px; }
+  .sug { display: flex; flex-direction: column; width: 100%; text-align: left; border: none; background: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .sug:hover, .sug.resaltado { background: #f5f5f5; }
+  .sug-nom { font-size: 13.5px; font-weight: 600; }
+  .sug-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
   select.filtro { height: 42px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; color: var(--text); outline: none; cursor: pointer; }
   select.filtro:focus { border-color: var(--red); }
   .btn { height: 42px; padding: 0 16px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s, border-color .15s, color .15s; }
   .btn:hover { background: #f6f6f6; }
   .btn svg { width: 15px; height: 15px; }
-  .btn.primario { background: var(--red); border-color: var(--red); color: #fff; }
-  .btn.primario:hover { background: #b30000; }
   .btn:disabled { opacity: .55; cursor: default; }
 
-  .segmentado { display: inline-flex; border: 1.5px solid var(--border); border-radius: 11px; overflow: hidden; background: #fff; }
-  .segmentado button { height: 40px; padding: 0 14px; border: none; background: none; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
-  .segmentado button.activo { background: var(--red); color: #fff; }
+  /* ── Chips de asesores fijados (filtro múltiple) ── */
+  .chips-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 16px; }
+  .chips-nota { font-size: 11.5px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 5px 6px 5px 12px; font-size: 12.5px; font-weight: 600; }
+  .chip-x { width: 18px; height: 18px; border: none; border-radius: 50%; background: #eee; color: #666; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .chip-x:hover { background: var(--red); color: #fff; }
 
-  /* ── Vista lista ── */
+  /* ── Lista de asesores ── */
   .lista { display: flex; flex-direction: column; gap: 8px; }
-  .fila { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .12s; text-align: left; font-family: inherit; width: 100%; }
-  .fila:hover { border-color: #d4d4d4; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
-  .fila:active { transform: scale(.995); }
+  .fila { background: #fff; border: 1px solid var(--border); border-left: 4px solid transparent; border-radius: 12px; transition: box-shadow .15s; }
+  .fila:hover { box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+  .fila-main { display: flex; align-items: center; gap: 14px; padding: 13px 16px; cursor: pointer; }
   .fila-txt { flex: 1; min-width: 0; }
-  .fila-nom { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fila-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-  .fila-baja { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #92400e; background: #fef3c7; border-radius: 5px; padding: 2px 6px; margin-left: 6px; vertical-align: 1px; }
-  .barra { width: 120px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
+  .fila-nom { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fila-baja { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #92400e; background: #fef3c7; border-radius: 5px; padding: 2px 6px; margin-left: 7px; vertical-align: 2px; }
+  .fila-meta { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .fila-dt { display: inline-flex; align-items: center; gap: 5px; }
+  .fila-dt i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .fila-prog { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .barra { width: 110px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
   .barra i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .3s; }
-  .pct { font-size: 13px; font-weight: 700; width: 46px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-  @media (max-width: 620px) { .barra { display: none; } }
+  .pct { font-size: 13px; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .fila-flecha { width: 16px; height: 16px; color: #aaa; flex-shrink: 0; transition: transform .2s; }
+  @media (max-width: 680px) { .fila-meta span:last-child { display: none; } }
+  @media (max-width: 480px) {
+    .fila-main { flex-wrap: wrap; }
+    .fila-prog { order: 3; width: 100%; margin-top: 8px; }
+    .barra { display: block; flex: 1; }
+  }
 
-  /* ── Vista matriz ── */
-  .matriz-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
-  table.matriz { border-collapse: separate; border-spacing: 0; font-size: 12px; }
-  table.matriz th, table.matriz td { border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; padding: 0; }
-  /* Solo la columna del nombre se queda fija (al desplazar en horizontal
-     hay que seguir sabiendo de quién es cada renglón). El encabezado NO
-     se fija en vertical a propósito: son dos filas — sesiones y temas —
-     y fijar ambas en top:0 las encimaría. */
-  table.matriz thead th { background: #fafafa; font-weight: 600; color: var(--muted); }
-  table.matriz th.nom, table.matriz td.nom { position: sticky; left: 0; z-index: 3; background: #fff; text-align: left; padding: 8px 12px; min-width: 210px; max-width: 210px; box-shadow: 1px 0 0 #ececec; }
-  table.matriz thead th.nom { background: #fafafa; z-index: 4; }
-  table.matriz td.nom { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  table.matriz th.ses { text-align: center; padding: 6px 8px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #ececec; }
-  table.matriz th.tema { height: 132px; width: 30px; min-width: 30px; vertical-align: bottom; padding-bottom: 8px; }
-  table.matriz th.tema span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 11px; font-weight: 500; color: #666; }
-  table.matriz td.celda { text-align: center; width: 30px; min-width: 30px; }
-  table.matriz td.pctcol { text-align: right; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  table.matriz tbody tr:hover td { background: #fcfcfc; }
-  table.matriz tbody tr:hover td.nom { background: #fcfcfc; }
-  table.matriz tfoot td { background: #fafafa; font-size: 10.5px; color: var(--muted); text-align: center; padding: 6px 0; font-variant-numeric: tabular-nums; }
-  table.matriz tfoot td.nom { text-align: left; font-weight: 600; color: var(--text); }
+  /* Panel del checklist: se despliega hacia abajo del renglón, con las
+     vibras del libro de Sheets — sesiones arriba, temas en columnas
+     angostas con el nombre en vertical, un solo renglón de casillas.
+     El truco de grid-template-rows 0fr→1fr anima el alto sin medirlo
+     por JS y sin que se le note un salto cuando el checklist se
+     construye la primera vez que se abre (se arma solo una vez, no en
+     cada palomeo). */
+  .fila-checklist-outer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+  .fila-checklist-outer.abierto { grid-template-rows: 1fr; }
+  .fila-checklist-inner { overflow: hidden; }
+  .fila-checklist-outer.abierto .fila-checklist-inner { border-top: 1px solid var(--border); }
+  .chk-scroll { overflow-x: auto; padding: 10px 16px 14px; }
+  table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
+  table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; white-space: nowrap; }
+  table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+  table.chk-tabla thead tr:last-child th { height: 112px; width: 30px; min-width: 30px; vertical-align: bottom; padding-bottom: 6px; }
+  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10.5px; font-weight: 500; color: #666; white-space: nowrap; }
+  table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #f5f5f5; width: 30px; }
 
   /* ── Casilla ── */
-  .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; margin: 6px 0; }
+  .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; }
   .chk:hover { border-color: var(--red); }
   .chk:checked { background: var(--red); border-color: var(--red); }
   .chk:checked::after { content: ''; position: absolute; left: 5px; top: 1.5px; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   .chk:disabled { opacity: .45; cursor: default; }
   .chk.guardando { opacity: .5; }
-
-  /* ── Panel de un asesor ── */
-  .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.42); opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .panel-overlay.open { opacity: 1; pointer-events: auto; }
-  .panel { background: #fff; border-radius: 16px; width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column; transform: translateY(14px) scale(.985); transition: transform .22s; overflow: hidden; }
-  .panel-overlay.open .panel { transform: none; }
-  .panel-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
-  .panel-nom { font-size: 17px; font-weight: 700; padding-right: 34px; }
-  .panel-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .panel-cerrar { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border: none; background: #f2f2f2; border-radius: 8px; cursor: pointer; color: #666; display: flex; align-items: center; justify-content: center; }
-  .panel-cerrar:hover { background: #e8e8e8; color: var(--text); }
-  .panel-cerrar svg { width: 14px; height: 14px; }
-  .panel-prog { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-  .panel-prog .barra { flex: 1; width: auto; }
-  .panel-body { overflow-y: auto; padding: 6px 20px 20px; }
-  .grupo { margin-top: 16px; }
-  .grupo-t { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .tema { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background .12s; }
-  .tema:hover { background: #f7f7f7; }
-  .tema span { font-size: 13.5px; line-height: 1.35; }
-  .tema input:checked + span { color: var(--muted); text-decoration: line-through; }
 
   .vacio { text-align: center; padding: 46px 20px; color: var(--muted); font-size: 13.5px; }
   .vacio strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 5px; }
@@ -124,7 +130,6 @@
   @media (max-width: 640px) {
     .page { padding: 82px 14px 40px; }
     .page-title, .page-desc { display: none; }
-    .segmentado { display: none; }
   }
 </style>
 </head>
@@ -145,7 +150,7 @@
 
   <div id="contenido">
     <h1 class="page-title">ABC de la Tecnología</h1>
-    <p class="page-desc">Avance de adopción tecnológica por asesor. Cada palomeo queda guardado al instante y ligado al KW ID.</p>
+    <p class="page-desc">Avance de adopción tecnológica por asesor. Da clic en un asesor para ver y editar su checklist — cada palomeo queda guardado al instante.</p>
 
     <div id="avisos"></div>
 
@@ -158,8 +163,12 @@
 
     <div class="toolbar">
       <div class="buscador">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="busq" placeholder="Buscar por nombre o KW ID…" autocomplete="off" />
+        <button type="button" class="input-clear" id="busq-clear" aria-label="Limpiar búsqueda" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="sugerencias" id="sugerencias" hidden></div>
       </div>
       <select class="filtro" id="f-dt"><option value="">Todos los DT</option></select>
       <select class="filtro" id="f-estado">
@@ -167,43 +176,29 @@
         <option value="todos">Activos y bajas</option>
         <option value="bajas">Solo bajas</option>
       </select>
-      <div class="segmentado">
-        <button type="button" id="v-lista" class="activo">Lista</button>
-        <button type="button" id="v-matriz">Matriz</button>
-      </div>
       <button type="button" class="btn" id="btn-sync">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
         Sincronizar
       </button>
     </div>
 
+    <div class="chips-row" id="chips-row" hidden>
+      <span class="chips-nota">Mostrando solo tu selección — el buscador y los filtros no aplican mientras haya nombres fijados:</span>
+      <div class="chips" id="chips"></div>
+    </div>
+
     <div id="salida"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
   </div>
 </main>
-
-<div class="panel-overlay" id="panel-overlay">
-  <div class="panel" style="position:relative">
-    <button type="button" class="panel-cerrar" id="panel-cerrar" aria-label="Cerrar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="panel-head">
-      <div class="panel-nom" id="panel-nom"></div>
-      <div class="panel-sub" id="panel-sub"></div>
-      <div class="panel-prog">
-        <div class="barra"><i id="panel-barra" style="width:0"></i></div>
-        <span class="pct" id="panel-pct">0%</span>
-      </div>
-    </div>
-    <div class="panel-body" id="panel-body"></div>
-  </div>
-</div>
 
 <script>
 (function () {
   var FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
-  var vista = 'lista', abierto = null, puedeEditar = false;
+  var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
+  var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
+  var puedeEditar = false;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -226,13 +221,41 @@
     return Math.round(n * 100 / temas.length);
   }
 
+  // Un color estable por DT (mismo nombre → mismo color siempre), sin
+  // tener que mantener una tabla a mano: un hash simple del nombre
+  // elige de una paleta fija. Sirve nada más para ubicar de un vistazo
+  // quién es de quién, no es información sensible ni necesita ser
+  // perfectamente distinguible entre sí.
+  var PALETA_DT = ['#4F46E5', '#0891B2', '#059669', '#B45309', '#BE185D', '#7C3AED', '#0D9488', '#C2410C', '#1D4ED8', '#65A30D'];
+  function colorDT(nombre) {
+    if (!nombre) return '#b5b5b5';
+    var h = 0;
+    for (var i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
+    return PALETA_DT[h % PALETA_DT.length];
+  }
+
+  var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  // Se parsea el "AAAA-MM-DD" a mano en vez de `new Date(iso)`: eso
+  // interpreta la fecha en UTC medianoche, y con huso horario negativo
+  // se corre un día para atrás al mostrarla en local.
+  function fechaCorta(iso) {
+    var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return Number(m[3]) + ' ' + MESES[Number(m[2]) - 1] + ' ' + m[1];
+  }
+
   function avisar(msg, tipo) {
     document.getElementById('avisos').innerHTML =
       '<div class="aviso' + (tipo === 'error' ? ' error' : '') + '">' + esc(msg) + '</div>';
   }
   function limpiarAviso() { document.getElementById('avisos').innerHTML = ''; }
 
+  // Con nombres fijados (chips), la lista es exactamente esa selección
+  // — ignora buscador, DT y estado a propósito, porque fijar a alguien
+  // es una elección explícita que no debería desaparecer si además
+  // está de baja o no coincide con el DT elegido en el otro filtro.
   function filtrados() {
+    if (pinned.size) return Array.from(pinned.values());
     var q = norm(document.getElementById('busq').value.trim());
     var dt = document.getElementById('f-dt').value;
     var estado = document.getElementById('f-estado').value;
@@ -268,132 +291,110 @@
     document.getElementById('s-completos').textContent = completos;
   }
 
+  function pintarChips() {
+    var fila = document.getElementById('chips-row');
+    if (!pinned.size) { fila.hidden = true; return; }
+    fila.hidden = false;
+    document.getElementById('chips').innerHTML = Array.from(pinned.values()).map(function (a) {
+      return '<span class="chip">' + esc(a.nombre) +
+        '<button type="button" class="chip-x" data-kwid="' + esc(a.kwid) + '" aria-label="Quitar ' + esc(a.nombre) + '">' +
+        '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button></span>';
+    }).join('');
+  }
+
   function pintar() {
     pintarStats();
+    pintarChips();
     var salida = document.getElementById('salida');
     var lista = filtrados();
+    filaEls = new Map();
     if (!lista.length) {
-      salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>Nadie coincide con lo que buscas.</div>';
+      salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>' +
+        (pinned.size ? 'Ninguno de los nombres fijados sigue en el padrón.' : 'Nadie coincide con lo que buscas.') +
+        '</div>';
       return;
     }
-    salida.innerHTML = vista === 'lista' ? htmlLista(lista) : htmlMatriz(lista);
-    if (vista === 'lista') {
-      salida.querySelectorAll('[data-abrir]').forEach(function (el) {
-        el.addEventListener('click', function () { abrirPanel(el.dataset.abrir); });
-      });
-    } else {
-      salida.querySelectorAll('input.chk').forEach(function (c) {
-        c.addEventListener('change', function () { alPalomear(c, c.dataset.kwid, Number(c.dataset.tema)); });
-      });
-      salida.querySelectorAll('[data-abrir]').forEach(function (el) {
-        el.addEventListener('click', function () { abrirPanel(el.dataset.abrir); });
-      });
-    }
+    salida.innerHTML = '<div class="lista">' + lista.map(htmlFila).join('') + '</div>';
+    salida.querySelectorAll('.fila').forEach(function (el) { filaEls.set(el.dataset.kwid, el); });
   }
 
-  function htmlLista(lista) {
-    return '<div class="lista">' + lista.map(function (a) {
-      var p = pctDe(a.kwid);
-      return '<button type="button" class="fila" data-abrir="' + esc(a.kwid) + '">' +
-        '<span class="fila-txt">' +
-          '<span class="fila-nom">' + esc(a.nombre) +
-            (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</span>' +
-          '<span class="fila-sub">KW ' + esc(a.kwid) +
-            (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : ' · Sin DT asignado') + '</span>' +
-        '</span>' +
-        '<span class="barra"><i style="width:' + p + '%"></i></span>' +
-        '<span class="pct">' + p + '%</span>' +
-      '</button>';
-    }).join('') + '</div>';
+  function htmlFila(a) {
+    var p = pctDe(a.kwid);
+    var color = colorDT(a.dt_asignado);
+    var fecha = fechaCorta(a.fecha_ingreso);
+    return '<div class="fila" data-kwid="' + esc(a.kwid) + '" style="border-left-color:' + color + '">' +
+      '<div class="fila-main" role="button" tabindex="0" aria-expanded="false">' +
+        '<div class="fila-txt">' +
+          '<div class="fila-nom">' + esc(a.nombre) + (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</div>' +
+          '<div class="fila-meta">' +
+            '<span>KW ' + esc(a.kwid) + '</span>' +
+            '<span class="fila-dt"><i style="background:' + color + '"></i>' +
+              (a.dt_asignado ? 'DT: ' + esc(a.dt_asignado) : 'Sin DT asignado') + '</span>' +
+            (fecha ? '<span>Ingreso ' + fecha + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="fila-prog">' +
+          '<span class="barra"><i style="width:' + p + '%"></i></span>' +
+          '<span class="pct">' + p + '%</span>' +
+        '</div>' +
+        '<svg class="fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+      '</div>' +
+      '<div class="fila-checklist-outer"><div class="fila-checklist-inner"></div></div>' +
+    '</div>';
   }
 
-  function htmlMatriz(lista) {
-    // Los encabezados se agrupan por sesión igual que en el libro: una
-    // fila de sesiones arriba (con colspan) y debajo el nombre de cada
-    // tema en vertical, que es lo único que cabe en 30px de ancho.
+  // El checklist de un asesor: sesiones arriba, temas como columnas
+  // angostas con el nombre en vertical y un solo renglón de casillas —
+  // la idea de la cuadrícula del libro, pero para un asesor a la vez.
+  function htmlChecklistHorizontal(kwid) {
     var grupos = [], actual = null;
     temas.forEach(function (t) {
       if (!actual || actual.sesion !== t.sesion) { actual = { sesion: t.sesion, n: 0 }; grupos.push(actual); }
       actual.n++;
     });
 
-    var h = '<div class="matriz-wrap"><table class="matriz"><thead>';
-    h += '<tr><th class="nom" rowspan="2">Asesor</th>';
-    grupos.forEach(function (g) { h += '<th class="ses" colspan="' + g.n + '">' + esc(g.sesion) + '</th>'; });
-    h += '<th class="ses" rowspan="2">%</th></tr><tr>';
-    temas.forEach(function (t) { h += '<th class="tema"><span>' + esc(t.nombre) + '</span></th>'; });
-    h += '</tr></thead><tbody>';
-
-    lista.forEach(function (a) {
-      h += '<tr><td class="nom"><span data-abrir="' + esc(a.kwid) + '" style="cursor:pointer">' + esc(a.nombre) + '</span></td>';
-      temas.forEach(function (t) {
-        var on = !!avance.get(llave(a.kwid, t.id));
-        h += '<td class="celda"><input type="checkbox" class="chk"' +
-          (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
-          ' data-kwid="' + esc(a.kwid) + '" data-tema="' + t.id + '"' +
-          ' aria-label="' + esc(a.nombre + ' — ' + t.nombre) + '" /></td>';
-      });
-      h += '<td class="pctcol">' + pctDe(a.kwid) + '%</td></tr>';
-    });
-
-    // Pie: qué tan cubierto está cada tema en el grupo que se ve.
-    h += '</tbody><tfoot><tr><td class="nom">Cobertura</td>';
+    var h = '<div class="chk-scroll"><table class="chk-tabla"><thead><tr>';
+    grupos.forEach(function (g) { h += '<th colspan="' + g.n + '">' + esc(g.sesion) + '</th>'; });
+    h += '</tr><tr>';
+    temas.forEach(function (t) { h += '<th><span>' + esc(t.nombre) + '</span></th>'; });
+    h += '</tr></thead><tbody><tr>';
     temas.forEach(function (t) {
-      var n = 0;
-      lista.forEach(function (a) { if (avance.get(llave(a.kwid, t.id))) n++; });
-      h += '<td>' + (lista.length ? Math.round(n * 100 / lista.length) : 0) + '%</td>';
+      var on = !!avance.get(llave(kwid, t.id));
+      h += '<td><input type="checkbox" class="chk"' +
+        (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
+        ' data-kwid="' + esc(kwid) + '" data-tema="' + t.id + '"' +
+        ' aria-label="' + esc(t.nombre) + '" /></td>';
     });
-    h += '<td class="pctcol"></td></tr></tfoot></table></div>';
+    h += '</tr></tbody></table></div>';
     return h;
   }
 
-  // ── Panel de un asesor ──
-  function abrirPanel(kwid) {
-    var a = asesores.find(function (x) { return x.kwid === kwid; });
-    if (!a) return;
-    abierto = kwid;
-    document.getElementById('panel-nom').textContent = a.nombre;
-    document.getElementById('panel-sub').textContent =
-      'KW ' + a.kwid + (a.dt_asignado ? ' · ' + a.dt_asignado : ' · Sin DT asignado') +
-      (a.activo ? '' : ' · Baja');
+  // Abre o cierra el checklist de un renglón in place — el checklist se
+  // construye la primera vez que se abre (no en cada render) para no
+  // armar de entrada 100 tablas de 25 casillas que nadie va a ver.
+  function alternarFila(kwid) {
+    var fila = filaEls.get(kwid);
+    if (!fila) return;
+    var outer = fila.querySelector('.fila-checklist-outer');
+    var main = fila.querySelector('.fila-main');
+    var abierta = outer.classList.toggle('abierto');
+    main.setAttribute('aria-expanded', abierta ? 'true' : 'false');
 
-    var body = document.getElementById('panel-body'), h = '', ses = null;
-    temas.forEach(function (t) {
-      if (t.sesion !== ses) {
-        if (ses !== null) h += '</div>';
-        h += '<div class="grupo"><div class="grupo-t">' + esc(t.sesion) + '</div>';
-        ses = t.sesion;
-      }
-      var on = !!avance.get(llave(kwid, t.id));
-      h += '<label class="tema"><input type="checkbox" class="chk"' +
-        (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
-        ' data-kwid="' + esc(kwid) + '" data-tema="' + t.id + '" />' +
-        '<span>' + esc(t.nombre) + '</span></label>';
-    });
-    if (ses !== null) h += '</div>';
-    body.innerHTML = h;
-
-    body.querySelectorAll('input.chk').forEach(function (c) {
-      c.addEventListener('change', function () { alPalomear(c, kwid, Number(c.dataset.tema)); });
-    });
-
-    refrescarPanelProgreso();
-    document.getElementById('panel-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    if (abierta && !outer.dataset.construido) {
+      outer.querySelector('.fila-checklist-inner').innerHTML = htmlChecklistHorizontal(kwid);
+      outer.dataset.construido = '1';
+    }
   }
 
-  function refrescarPanelProgreso() {
-    if (!abierto) return;
-    var p = pctDe(abierto);
-    document.getElementById('panel-barra').style.width = p + '%';
-    document.getElementById('panel-pct').textContent = p + '%';
-  }
-
-  function cerrarPanel() {
-    document.getElementById('panel-overlay').classList.remove('open');
-    document.body.style.overflow = '';
-    abierto = null;
-    pintar();
+  function actualizarProgresoFila(kwid) {
+    var fila = filaEls.get(kwid);
+    if (!fila) return;
+    var p = pctDe(kwid);
+    var barra = fila.querySelector('.fila-prog .barra i');
+    var pct = fila.querySelector('.fila-prog .pct');
+    if (barra) barra.style.width = p + '%';
+    if (pct) pct.textContent = p + '%';
   }
 
   // ── Guardar un palomeo ──
@@ -402,7 +403,8 @@
   // respuesta: en sesión se palomea rápido y esperar el viaje al
   // servidor por cada clic se siente lento. Si la escritura falla, la
   // casilla se regresa a como estaba y se avisa — nunca se queda
-  // mostrando algo que no se guardó.
+  // mostrando algo que no se guardó. Solo se actualiza el renglón que
+  // cambió (no toda la lista), así que el checklist se queda abierto.
   async function alPalomear(input, kwid, temaId) {
     if (!puedeEditar) return;
     var quiere = input.checked;
@@ -411,7 +413,7 @@
     avance.set(llave(kwid, temaId), quiere);
     if (!quiere) avance.delete(llave(kwid, temaId));
     input.classList.add('guardando');
-    refrescarPanelProgreso();
+    actualizarProgresoFila(kwid);
     pintarStats();
 
     try {
@@ -428,18 +430,59 @@
 
       input.classList.remove('guardando');
       limpiarAviso();
-      // La fila de la lista y el % de la matriz solo se redibujan cuando
-      // el panel está cerrado: repintar con el panel abierto lo cerraría
-      // a media sesión.
-      if (!abierto) pintar();
     } catch (err) {
       if (antes) avance.set(llave(kwid, temaId), true); else avance.delete(llave(kwid, temaId));
       input.checked = antes;
       input.classList.remove('guardando');
-      refrescarPanelProgreso();
+      actualizarProgresoFila(kwid);
       pintarStats();
       avisar('No se pudo guardar el cambio: ' + (err.message || err) + '. Revisa tu conexión e inténtalo de nuevo.', 'error');
     }
+  }
+
+  // ── Fijar / quitar un asesor de la selección (chips) ──
+  function fijarAsesor(kwid) {
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!a) return;
+    pinned.set(kwid, a);
+    var input = document.getElementById('busq');
+    input.value = '';
+    document.getElementById('busq-clear').hidden = true;
+    ocultarSugerencias();
+    input.focus();
+    pintar();
+  }
+  function quitarFijado(kwid) {
+    pinned.delete(kwid);
+    pintar();
+  }
+
+  // ── Sugerencias de búsqueda ──
+  function candidatosPara(q) {
+    var palabras = norm(q).trim().split(/\s+/).filter(Boolean);
+    if (!palabras.length) return [];
+    return asesores.filter(function (a) {
+      if (pinned.has(a.kwid)) return false;
+      var texto = norm(a.nombre + ' ' + a.kwid);
+      return palabras.every(function (p) { return texto.indexOf(p) >= 0; });
+    }).slice(0, 8);
+  }
+  function pintarSugerencias(q) {
+    var cont = document.getElementById('sugerencias');
+    var candidatos = candidatosPara(q);
+    if (!candidatos.length) { cont.hidden = true; cont.innerHTML = ''; return; }
+    cont.hidden = false;
+    cont.innerHTML = candidatos.map(function (a) {
+      return '<button type="button" class="sug" data-kwid="' + esc(a.kwid) + '">' +
+        '<span class="sug-nom">' + esc(a.nombre) + (a.activo ? '' : ' · Baja') + '</span>' +
+        '<span class="sug-sub">KW ' + esc(a.kwid) + (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : '') + '</span>' +
+      '</button>';
+    }).join('');
+  }
+  function ocultarSugerencias() {
+    var cont = document.getElementById('sugerencias');
+    cont.hidden = true;
+    cont.innerHTML = '';
   }
 
   // ── Sincronizar con la hoja de asesores ──
@@ -474,6 +517,7 @@
 
       var hecho = await llamarSync(true);
       await cargar();
+      pintar();
       avisar('Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivación(es) y ' + hecho.bajas.length + ' baja(s).');
     } catch (err) {
       avisar('No se pudo sincronizar: ' + (err.message || err), 'error');
@@ -509,6 +553,16 @@
     avance = new Map();
     (r[2].data || []).forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
 
+    // Los nombres fijados apuntan a los objetos "asesor" de antes de
+    // recargar; se refrescan contra el padrón nuevo (y si alguno ya no
+    // existe, se suelta solo en vez de quedarse con datos viejos).
+    var kwidsFijados = Array.from(pinned.keys());
+    pinned = new Map();
+    kwidsFijados.forEach(function (k) {
+      var a = asesores.find(function (x) { return x.kwid === k; });
+      if (a) pinned.set(k, a);
+    });
+
     var dts = Array.from(new Set(asesores.map(function (a) { return a.dt_asignado; }).filter(Boolean))).sort();
     var sel = document.getElementById('f-dt'), previo = sel.value;
     sel.innerHTML = '<option value="">Todos los DT</option>' +
@@ -539,29 +593,72 @@
     }
   }
 
-  document.getElementById('busq').addEventListener('input', pintar);
+  // ── Eventos de la lista, por delegación: los renglones y sus
+  //    checklists se reconstruyen en cada pintar(), así que engancharlos
+  //    uno por uno se tendría que repetir cada vez. Aquí se engancha una
+  //    sola vez sobre el contenedor. ──
+  var salidaEl = document.getElementById('salida');
+  salidaEl.addEventListener('click', function (e) {
+    var main = e.target.closest('.fila-main');
+    if (main) alternarFila(main.closest('.fila').dataset.kwid);
+  });
+  salidaEl.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var main = e.target.closest('.fila-main');
+    if (!main) return;
+    e.preventDefault();
+    alternarFila(main.closest('.fila').dataset.kwid);
+  });
+  salidaEl.addEventListener('change', function (e) {
+    if (e.target.classList.contains('chk')) {
+      alPalomear(e.target, e.target.dataset.kwid, Number(e.target.dataset.tema));
+    }
+  });
+
+  document.getElementById('chips').addEventListener('click', function (e) {
+    var btn = e.target.closest('.chip-x');
+    if (btn) quitarFijado(btn.dataset.kwid);
+  });
+
+  // ── Buscador + sugerencias ──
+  var busq = document.getElementById('busq');
+  var busqClear = document.getElementById('busq-clear');
+
+  busq.addEventListener('input', function () {
+    busqClear.hidden = !busq.value;
+    pintarSugerencias(busq.value);
+    if (!pinned.size) pintar(); // sin nombres fijados, escribir filtra la lista en vivo, como antes
+  });
+  busq.addEventListener('focus', function () {
+    if (busq.value.trim()) pintarSugerencias(busq.value);
+  });
+  busq.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var primero = document.querySelector('#sugerencias .sug');
+      if (primero) fijarAsesor(primero.dataset.kwid);
+    } else if (e.key === 'Escape') {
+      ocultarSugerencias();
+    }
+  });
+  document.getElementById('sugerencias').addEventListener('click', function (e) {
+    var btn = e.target.closest('.sug');
+    if (btn) fijarAsesor(btn.dataset.kwid);
+  });
+  busqClear.addEventListener('click', function () {
+    busq.value = '';
+    busqClear.hidden = true;
+    ocultarSugerencias();
+    if (!pinned.size) pintar();
+    busq.focus();
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.buscador')) ocultarSugerencias();
+  });
+
   document.getElementById('f-dt').addEventListener('change', pintar);
   document.getElementById('f-estado').addEventListener('change', pintar);
   document.getElementById('btn-sync').addEventListener('click', sincronizar);
-  document.getElementById('panel-cerrar').addEventListener('click', cerrarPanel);
-  document.getElementById('panel-overlay').addEventListener('click', function (e) {
-    if (e.target === document.getElementById('panel-overlay')) cerrarPanel();
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && abierto) cerrarPanel();
-  });
-  document.getElementById('v-lista').addEventListener('click', function () {
-    vista = 'lista';
-    this.classList.add('activo');
-    document.getElementById('v-matriz').classList.remove('activo');
-    pintar();
-  });
-  document.getElementById('v-matriz').addEventListener('click', function () {
-    vista = 'matriz';
-    this.classList.add('activo');
-    document.getElementById('v-lista').classList.remove('activo');
-    pintar();
-  });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
