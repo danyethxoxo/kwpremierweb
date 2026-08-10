@@ -93,6 +93,21 @@
   .barra i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .3s; }
   .pct { font-size: 13px; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .fila-flecha { width: 16px; height: 16px; color: #aaa; flex-shrink: 0; transition: transform .2s; }
+
+  /* Menú de tres puntos: cambiar DT o dar de baja, hasta la derecha de
+     la tarjeta. Va en su propio contenedor position:relative para que
+     el menú se despliegue anclado a él y no a toda la fila. */
+  .fila-opciones { position: relative; flex-shrink: 0; }
+  .fila-menu-btn { width: 28px; height: 28px; border: none; background: none; border-radius: 8px; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .fila-menu-btn:hover { background: #f2f2f2; color: #333; }
+  .fila-menu-btn svg { width: 16px; height: 16px; pointer-events: none; }
+  .fila-menu { position: absolute; top: 32px; right: 0; min-width: 180px; background: #fff; border: 1px solid var(--border); border-radius: 11px; box-shadow: 0 12px 32px rgba(0,0,0,.14); z-index: 30; padding: 5px; }
+  .fila-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: none; font-family: inherit; font-size: 13.5px; color: var(--text); padding: 9px 10px; border-radius: 8px; cursor: pointer; text-align: left; }
+  .fila-menu button:hover { background: #f5f5f5; }
+  .fila-menu button svg { width: 15px; height: 15px; flex-shrink: 0; color: #666; }
+  .fila-menu button.peligro { color: #b91c1c; }
+  .fila-menu button.peligro:hover { background: #fef2f2; }
+  .fila-menu button.peligro svg { color: #b91c1c; }
   @media (max-width: 680px) { .fila-meta span:last-child { display: none; } }
   @media (max-width: 480px) {
     .fila-main { flex-wrap: wrap; }
@@ -119,16 +134,32 @@
      que sea la de los temas (la de arriba trae colspans por sesión). */
   .chk-scroll { overflow-x: auto; padding: 10px 16px 14px; }
   table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; width: 100%; table-layout: fixed; }
-  table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; }
+  table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #e5e7eb; }
   table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  table.chk-tabla thead tr:last-child th { height: 96px; vertical-align: bottom; padding-bottom: 6px; }
+  /* vertical-align: top (no bottom) es lo que hace que los nombres de
+     tema arranquen todos desde el mismo punto arriba, en vez de quedar
+     pegados al fondo y verse "escalonados" cuando unos ocupan una línea
+     y otros dos o tres. */
+  table.chk-tabla thead tr:last-child th { height: 96px; vertical-align: top; padding-top: 8px; }
   /* En vertical-rl el ancho de la celda es lo que decide cuántas
      líneas caben lado a lado (por eso el colgroup ya resuelve ese
      lado); el "height" de la celda es lo que dispara el salto de
      línea — de ahí que el wrap se controle con max-height, no con
-     max-width, al revés de como se piensa en texto horizontal. */
-  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; max-height: 90px; display: inline-block; }
-  table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #f5f5f5; }
+     max-width, al revés de como se piensa en texto horizontal.
+     text-align: start dentro de vertical-rl es "arriba", no centrado:
+     así el texto se lee de corrido de arriba hacia abajo en vez de
+     quedar centrado dentro de su propio bloque. */
+  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); text-align: start; font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; max-height: 90px; display: inline-block; }
+  table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #e5e7eb; }
+
+  /* Bandas por sesión: un tinte claro alterna de sesión a sesión (de
+     encabezado a casillas, la columna completa) para que se note de un
+     vistazo qué temas van juntos, y un borde más marcado en el límite
+     entre una sesión y la siguiente — más fuerte que el separador fino
+     que ya llevan todas las columnas entre sí. */
+  table.chk-tabla th.banda-b, table.chk-tabla td.banda-b { background: #EEF1F8; }
+  table.chk-tabla thead tr:first-child th.banda-b { background: #E4E9F5; }
+  table.chk-tabla .fin-grupo { border-right: 2px solid #ccd1dc; }
 
   /* ── Casilla ── */
   .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; }
@@ -329,6 +360,7 @@
     var salida = document.getElementById('salida');
     var lista = filtrados();
     filaEls = new Map();
+    menuFilaAbierto = null; // un repintado completo se lleva entre las patas cualquier menú abierto
     if (!lista.length) {
       salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>' +
         (pinned.size ? 'Ninguno de los nombres fijados sigue en el padrón.' : 'Nadie coincide con lo que buscas.') +
@@ -365,6 +397,11 @@
           '<span class="barra"><i style="width:' + p + '%"></i></span>' +
           '<span class="pct">' + p + '%</span>' +
         '</div>' +
+        (puedeEditar
+          ? '<div class="fila-opciones"><button type="button" class="fila-menu-btn" data-kwid="' + esc(a.kwid) + '" aria-label="Más opciones">' +
+              '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>' +
+            '</button></div>'
+          : '') +
         '<svg class="fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</div>';
   }
@@ -472,14 +509,101 @@
     }
   }
 
+  // ── Menú de tres puntos: cambiar DT o dar de baja ──
+  var menuFilaAbierto = null; // kwid del renglón con el menú abierto, o null
+
+  function cerrarMenuFila() {
+    if (!menuFilaAbierto) return;
+    var fila = filaEls.get(menuFilaAbierto);
+    var m = fila && fila.querySelector('.fila-menu');
+    if (m) m.remove();
+    menuFilaAbierto = null;
+  }
+
+  function abrirMenuFila(kwid) {
+    if (menuFilaAbierto === kwid) { cerrarMenuFila(); return; }
+    cerrarMenuFila();
+    var fila = filaEls.get(kwid);
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    var host = fila && fila.querySelector('.fila-opciones');
+    if (!host || !a) return;
+
+    var svgLapiz = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    var svgBaja = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    var svgAlta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+
+    var m = document.createElement('div');
+    m.className = 'fila-menu';
+    m.innerHTML =
+      '<button type="button" data-accion="dt">' + svgLapiz + 'Cambiar DT</button>' +
+      '<button type="button" class="' + (a.activo ? 'peligro' : '') + '" data-accion="baja">' +
+        (a.activo ? svgBaja + 'Dar de baja' : svgAlta + 'Reactivar') +
+      '</button>';
+    host.appendChild(m);
+    menuFilaAbierto = kwid;
+
+    m.querySelector('[data-accion="dt"]').addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarMenuFila();
+      abrirEditorDT(kwid);
+    });
+    m.querySelector('[data-accion="baja"]').addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarMenuFila();
+      alternarActivo(kwid);
+    });
+  }
+
+  // Dar de baja NUNCA borra nada — solo marca activo=false, igual que
+  // hace la sincronización con la hoja. El avance del asesor se queda
+  // intacto por si regresa.
+  async function alternarActivo(kwid) {
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!a) return;
+    var anterior = a.activo;
+    a.activo = !a.activo;
+    refrescarFilaMain(kwid);
+    pintarStats();
+
+    try {
+      var { error } = await window.kwSupabase
+        .from('abc_asesores').update({ activo: a.activo }).eq('kwid', kwid);
+      if (error) throw error;
+      limpiarAviso();
+      // Si el filtro de estado está activo (no en "todos"), esto puede
+      // sacar al asesor de la lista visible o meterlo — a diferencia del
+      // DT, aquí sí hace falta repintar todo para que se refleje. Con
+      // nombres fijados (chips) no aplica: esos se quedan en pantalla
+      // pase lo que pase con su estado.
+      if (!pinned.size && document.getElementById('f-estado').value !== 'todos') pintar();
+    } catch (err) {
+      a.activo = anterior;
+      refrescarFilaMain(kwid);
+      pintarStats();
+      avisar('No se pudo cambiar el estado: ' + (err.message || err) + '.', 'error');
+    }
+  }
+
+  // "Sesión 1" -> "S1"; nombres que no siguen ese patrón (Onboarding)
+  // se dejan tal cual.
+  function siglaSesion(nombre) {
+    var m = String(nombre || '').match(/^sesi[oó]n\s+(\d+)$/i);
+    return m ? 'S' + m[1] : nombre;
+  }
+
   // El checklist de un asesor: sesiones arriba, temas como columnas
   // angostas con el nombre en vertical y un solo renglón de casillas —
   // la idea de la cuadrícula del libro, pero para un asesor a la vez.
   function htmlChecklistHorizontal(kwid) {
-    var grupos = [], actual = null;
+    // grupos: una entrada por sesión, con cuántos temas trae (para el
+    // colspan). grupoDeTema: a qué grupo pertenece cada tema, en el
+    // mismo orden que `temas`, para poder alternar el color de fondo y
+    // saber dónde termina cada sesión (para el separador más marcado).
+    var grupos = [], grupoDeTema = [], actual = null;
     temas.forEach(function (t) {
       if (!actual || actual.sesion !== t.sesion) { actual = { sesion: t.sesion, n: 0 }; grupos.push(actual); }
       actual.n++;
+      grupoDeTema.push(grupos.length - 1);
     });
 
     // Un <col> por tema, todas del mismo ancho: con table-layout:fixed
@@ -491,16 +615,28 @@
     // como scrollea .chk-scroll.
     var anchoCol = (100 / temas.length).toFixed(4) + '%';
     var anchoMinTotal = (temas.length * 40) + 'px';
+
+    // banda(i): tinte alterno por sesión. finGrupo(i): separador más
+    // marcado en el último tema de cada sesión, para que el corte entre
+    // una sesión y la siguiente se note más que el separador fino entre
+    // dos temas de la misma sesión.
+    function banda(i) { return grupoDeTema[i] % 2 ? ' banda-b' : ''; }
+    function finGrupo(i) { return (grupoDeTema[i] !== grupoDeTema[i + 1]) ? ' fin-grupo' : ''; }
+
     var h = '<div class="chk-scroll"><table class="chk-tabla" style="min-width:' + anchoMinTotal + '">';
     h += '<colgroup>' + temas.map(function () { return '<col style="width:' + anchoCol + '">'; }).join('') + '</colgroup>';
     h += '<thead><tr>';
-    grupos.forEach(function (g) { h += '<th colspan="' + g.n + '">' + esc(g.sesion) + '</th>'; });
+    grupos.forEach(function (g, gi) {
+      h += '<th class="' + (gi % 2 ? 'banda-b' : '') + ' fin-grupo" colspan="' + g.n + '">' + esc(siglaSesion(g.sesion)) + '</th>';
+    });
     h += '</tr><tr>';
-    temas.forEach(function (t) { h += '<th><span>' + esc(t.nombre) + '</span></th>'; });
+    temas.forEach(function (t, i) {
+      h += '<th class="' + banda(i) + finGrupo(i) + '"><span>' + esc(t.nombre) + '</span></th>';
+    });
     h += '</tr></thead><tbody><tr>';
-    temas.forEach(function (t) {
+    temas.forEach(function (t, i) {
       var on = !!avance.get(llave(kwid, t.id));
-      h += '<td><input type="checkbox" class="chk"' +
+      h += '<td class="' + banda(i) + finGrupo(i) + '"><input type="checkbox" class="chk"' +
         (on ? ' checked' : '') + (puedeEditar ? '' : ' disabled') +
         ' data-kwid="' + esc(kwid) + '" data-tema="' + t.id + '"' +
         ' aria-label="' + esc(t.nombre) + '" /></td>';
@@ -742,9 +878,11 @@
   //    sola vez sobre el contenedor. ──
   var salidaEl = document.getElementById('salida');
   salidaEl.addEventListener('click', function (e) {
-    // El botón de DT vive DENTRO de .fila-main — hay que resolverlo
-    // primero, si no el clic también dispararía abrir/cerrar el
-    // checklist.
+    // El botón de DT y el de tres puntos viven DENTRO de .fila-main —
+    // hay que resolverlos primero, si no el clic también dispararía
+    // abrir/cerrar el checklist.
+    var menuBtn = e.target.closest('.fila-menu-btn');
+    if (menuBtn) { abrirMenuFila(menuBtn.dataset.kwid); return; }
     var dtBtn = e.target.closest('button.fila-dt');
     if (dtBtn) { abrirEditorDT(dtBtn.dataset.kwid); return; }
     var main = e.target.closest('.fila-main');
@@ -752,7 +890,7 @@
   });
   salidaEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    if (e.target.closest('button.fila-dt, select.fila-dt-select')) return; // que el teclado del select siga siendo del select
+    if (e.target.closest('button.fila-dt, select.fila-dt-select, .fila-menu-btn, .fila-menu')) return; // que el teclado del select/menú siga siendo suyo
     var main = e.target.closest('.fila-main');
     if (!main) return;
     e.preventDefault();
@@ -803,6 +941,10 @@
   });
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.buscador')) ocultarSugerencias();
+    if (menuFilaAbierto && !e.target.closest('.fila-opciones')) cerrarMenuFila();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && menuFilaAbierto) cerrarMenuFila();
   });
 
   document.getElementById('f-dt').addEventListener('change', pintar);
