@@ -11,12 +11,12 @@
 // ─────────────────────────────────────────────────────────────
 // VARIABLES DE ENTORNO (Project Settings > Edge Functions > Secrets)
 // ─────────────────────────────────────────────────────────────
-//   SERVICE_ROLE_KEY   — ya la usan las otras funciones del proyecto
-//   RESEND_API_KEY     — la llave de Resend (resend.com), quien manda el correo
-//   CORREO_REMITENTE   — de dónde sale, p. ej. "KW Premier <avisos@tudominio.com>"
+//   SERVICE_ROLE_KEY   - ya la usan las otras funciones del proyecto
+//   RESEND_API_KEY     - la llave de Resend (resend.com), quien manda el correo
+//   CORREO_REMITENTE   - de dónde sale, p. ej. "KW Premier <avisos@tudominio.com>"
 //                        Tiene que ser de un dominio verificado en Resend.
-//   CORREO_COPIA       — opcional, para que le llegue copia a la oficina
-//   SYNC_SECRET        — la misma que ya se usa; autoriza la llamada
+//   CORREO_COPIA       - opcional, para que le llegue copia a la oficina
+//   SYNC_SECRET        - la misma que ya se usa; autoriza la llamada
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 

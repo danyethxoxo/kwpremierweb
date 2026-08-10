@@ -270,7 +270,7 @@
       for (var t = 0; t < TRIMS; t++) {
         cel += '<td class="inicio-trim"><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
                '<td><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
-               '<td class="pct" id="p-' + i + '-' + t + '">—</td>';
+               '<td class="pct" id="p-' + i + '-' + t + '">·</td>';
       }
       return '<tr>' +
         '<td class="col-metrica"><div class="metrica-fila">' +
@@ -279,7 +279,7 @@
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
           '</button>' +
         '</div></td>' + cel +
-        '<td class="col-total pct" id="tot-' + i + '">—</td>' +
+        '<td class="col-total pct" id="tot-' + i + '">·</td>' +
       '</tr>';
     }).join('');
 
@@ -309,7 +309,7 @@
           c.textContent = Math.round(p) + '%';
           c.className = claseSegun(p);
         } else {
-          c.textContent = '—';
+          c.textContent = '·';
           c.className = 'pct';
         }
         if (meta !== null && meta !== 0) { sMeta += meta; sLogro += (logro || 0); hay = true; }
@@ -321,7 +321,7 @@
         tot.textContent = Math.round(pt) + '%';
         tot.className = 'col-total ' + claseSegun(pt);
       } else {
-        tot.textContent = '—';
+        tot.textContent = '·';
         tot.className = 'col-total pct';
       }
     }
@@ -402,11 +402,11 @@
         var pc = document.getElementById('p-' + i + '-' + t);
         cel += '<td class="sep">' + esc(celdas[i + '-' + t + '-meta'] || '') + '</td>' +
                '<td>' + esc(celdas[i + '-' + t + '-logro'] || '') + '</td>' +
-               '<td>' + (pc ? pc.textContent.replace('—', '') : '') + '</td>';
+               '<td>' + (pc ? pc.textContent.replace('·', '') : '') + '</td>';
       }
       var tt = document.getElementById('tot-' + i);
       return '<tr><td class="met">' + esc(m) + '</td>' + cel +
-        '<td class="tot">' + (tt ? tt.textContent.replace('—', '') : '') + '</td></tr>';
+        '<td class="tot">' + (tt ? tt.textContent.replace('·', '') : '') + '</td></tr>';
     }).join('');
 
     var dato = function (id) { return esc(document.getElementById(id).value.trim()) || '&nbsp;'; };

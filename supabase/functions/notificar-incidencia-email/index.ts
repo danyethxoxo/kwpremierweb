@@ -3,15 +3,15 @@
 // cuando alguien reporta una incidencia nueva (hub/tickets.html la llama
 // justo después de insertar en la tabla `incidencias`). Las notificaciones
 // dentro de la plataforma (campanita) ya se manejan aparte, vía triggers
-// en supabase/sql/013_notificaciones.sql — esta función solo cubre el
+// en supabase/sql/013_notificaciones.sql - esta función solo cubre el
 // correo adicional al Director de Tecnología.
 //
 // Requiere configurar, en Project Settings > Edge Functions > Secrets:
-//   RESEND_API_KEY   — llave de una cuenta en https://resend.com (tiene
+//   RESEND_API_KEY   - llave de una cuenta en https://resend.com (tiene
 //                       plan gratuito). Sin esta variable, la función no
 //                       manda el correo pero tampoco rompe el flujo de
 //                       reportar incidencias (responde ok:false con aviso).
-//   EMAIL_FROM        — opcional. Remitente a usar una vez que se verifique
+//   EMAIL_FROM        - opcional. Remitente a usar una vez que se verifique
 //                       un dominio propio en Resend, ej.
 //                       'KW Premier <notificaciones@tudominio.com>'.
 //                       Si no se configura, usa el remitente de pruebas

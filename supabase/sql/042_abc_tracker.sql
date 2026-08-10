@@ -1,10 +1,10 @@
--- Fase 42: ABC de la Tecnología — seguimiento de adopción por asesor.
+-- Fase 42: ABC de la Tecnología - seguimiento de adopción por asesor.
 --
 -- Reemplaza el libro de Sheets "ABC AHORA SI EL BUENO", donde el avance
 -- vivía en una cuadrícula de casillas y el orden de las filas era lo
 -- único que amarraba un palomeo con su asesor. Ese es justo el problema
 -- que este esquema elimina: aquí un palomeo es una fila
--- (kwid, tema_id) — está pegado al KW ID, no a una posición. Dar de baja
+-- (kwid, tema_id) - está pegado al KW ID, no a una posición. Dar de baja
 -- a alguien no puede recorrerle los checks a otro, porque no hay orden
 -- que romper.
 --
@@ -90,7 +90,7 @@ create trigger abc_asesores_touch
 -- 5) Permisos (RLS)
 --
 -- El ABC es material de liderazgo: lo consulta y lo palomea Master,
--- Admin y Staff — los mismos que ya pueden entrar a Documentos
+-- Admin y Staff - los mismos que ya pueden entrar a Documentos
 -- Internos. Asociado no entra (igual que hoy en internos/index.html).
 -- ─────────────────────────────────────────────────────────────
 alter table public.abc_temas    enable row level security;
@@ -115,7 +115,7 @@ drop policy if exists "abc_asesores_write" on public.abc_asesores;
 create policy "abc_asesores_write" on public.abc_asesores
   for all using (public.is_staff_or_above()) with check (public.is_staff_or_above());
 
--- Avance: igual — quien da la sesión es quien palomea.
+-- Avance: igual - quien da la sesión es quien palomea.
 drop policy if exists "abc_avance_select" on public.abc_avance;
 create policy "abc_avance_select" on public.abc_avance
   for select using (public.is_staff_or_above());
@@ -125,7 +125,7 @@ create policy "abc_avance_write" on public.abc_avance
   for all using (public.is_staff_or_above()) with check (public.is_staff_or_above());
 
 -- ─────────────────────────────────────────────────────────────
--- 6) Temario inicial — los 25 temas tal cual están en el libro,
+-- 6) Temario inicial - los 25 temas tal cual están en el libro,
 --    agrupados por sesión en el mismo orden.
 -- ─────────────────────────────────────────────────────────────
 insert into public.abc_temas (id, orden, sesion, nombre) values

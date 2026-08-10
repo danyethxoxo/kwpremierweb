@@ -56,7 +56,7 @@ $$;
 -- 4) Función pública (RPC): finaliza un documento propio (o de
 --    cualquiera, si eres master). Le asigna folio y lo vuelve
 --    inmutable. Es la ÚNICA forma de pasar un documento a
---    "finalizado" — un update directo del cliente no puede hacerlo
+--    "finalizado" - un update directo del cliente no puede hacerlo
 --    (ver política de update más abajo).
 create or replace function public.finalizar_documento(p_id uuid)
 returns text

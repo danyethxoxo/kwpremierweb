@@ -1,4 +1,4 @@
--- Fase 18: foto de perfil — se pide en Mi Perfil y se muestra ahí mismo
+-- Fase 18: foto de perfil - se pide en Mi Perfil y se muestra ahí mismo
 -- y en las tarjetas de Asesores/Staff. Se guarda solo la URL pública en
 -- profiles.foto_url; el archivo en sí vive en un bucket de Storage
 -- público para lectura (mismo patrón que el bucket "incidencias" de la

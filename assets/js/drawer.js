@@ -1,4 +1,4 @@
-// Menu lateral (hamburguesa) compartido — se incluye en cualquier
+// Menu lateral (hamburguesa) compartido - se incluye en cualquier
 // pagina agregando, justo antes de cerrar </body>:
 //
 //   <script src="/kwpremierweb/assets/js/drawer.js" data-menu="publico"></script>
@@ -78,7 +78,7 @@
 
   // ── Índice de búsqueda del sitio ──
   // Aparte del menú (que solo trae las secciones grandes), aquí va cada
-  // destino puntual — cada acuerdo, cada contrato — para poder llegar
+  // destino puntual - cada acuerdo, cada contrato - para poder llegar
   // directo escribiendo "renta" o "colaboración" en vez de navegar
   // Documentos > Acuerdos > buscarlo a ojo. `alias` son palabras que no
   // están en el título pero con las que alguien buscaría lo mismo.
@@ -123,7 +123,7 @@
   }
 
   // Drive y Calendario se agregan al buscador solo con sesión (hub), y
-  // solo se piden una vez por apertura del panel — no en cada tecla — para
+  // solo se piden una vez por apertura del panel - no en cada tecla - para
   // no golpear las APIs de Google en cada letra escrita. `null` = todavía
   // no se pidieron; una vez que llegan quedan en memoria para el resto de
   // la sesión de la pestaña.
@@ -249,7 +249,7 @@
   toggleBtn.setAttribute('aria-label', 'Menú');
   toggleBtn.innerHTML = ICONS.menu;
 
-  // A la derecha del de hamburguesa, siempre — se crea junto con él y se
+  // A la derecha del de hamburguesa, siempre - se crea junto con él y se
   // inserta justo después, sin importar cómo esté armado el header de
   // cada página.
   const searchBtn = document.createElement('button');
@@ -382,7 +382,7 @@
   // fase de captura para cubrir también los contenedores con scroll
   // interno (por ejemplo la agenda del calendario), no solo la ventana.
   // Cualquier <header> participa (los kw-header se difuminan; los
-  // demás simplemente se deslizan hacia arriba — CSS de cada uno).
+  // demás simplemente se deslizan hacia arriba - CSS de cada uno).
   const kwHeader = document.querySelector('header');
   if (kwHeader) {
     let lastY = 0;

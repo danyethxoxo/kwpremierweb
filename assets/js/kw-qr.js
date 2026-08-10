@@ -1,7 +1,7 @@
 // Generador de códigos QR con la identidad de KW Premier.
 //
 // No usa librerías externas: implementa el estándar ISO/IEC 18004 (modo
-// byte) y dibuja el resultado como SVG con el estilo de la marca —
+// byte) y dibuja el resultado como SVG con el estilo de la marca
 // puntos redondos, esquinas con las puntas suavizadas y la "kw" al
 // centro. Se hizo así para que el QR salga con la identidad de KW en vez
 // de la de un servicio de terceros, y para que siga funcionando aunque
@@ -392,7 +392,7 @@
         // Radio 0.5: los puntos se tocan de lado y quedan separados en
         // diagonal, que es como se ve el estilo de puntos. Con puntos más
         // chicos algunos lectores dejan de reconocer el código cuando se
-        // muestra en grande — se probó contra dos decodificadores.
+        // muestra en grande - se probó contra dos decodificadores.
         puntos.push('<circle cx="' + (margen + j + 0.5).toFixed(2) +
                     '" cy="' + (margen + i + 0.5).toFixed(2) + '" r="0.5"/>');
       }

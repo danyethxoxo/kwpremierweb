@@ -1,4 +1,4 @@
-// Guardia de sesión compartida — se incluye al inicio de cada página
+// Guardia de sesión compartida - se incluye al inicio de cada página
 // protegida junto con el cliente de Supabase (CDN). Si no hay sesión
 // activa, redirige a login.html. La protección real de los datos vive
 // en las políticas de RLS de Supabase, no en este script: esto solo
@@ -13,7 +13,7 @@
 // entretanto es un blanco.
 (function () {
   // El sitio se publica en /kwpremierweb/ (GitHub Pages de proyecto,
-  // no dominio propio) — si eso cambia algún día, ajustar solo aquí.
+  // no dominio propio) - si eso cambia algún día, ajustar solo aquí.
   var BASE_PATH = '/kwpremierweb';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';

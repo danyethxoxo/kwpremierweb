@@ -49,7 +49,7 @@
   /* :not(.btn-rojo) a propósito: ".btn:hover:not(:disabled)" es más
      específico que ".btn-rojo" solo, así que sin este freno el fondo
      gris le gana al degradado rojo y el botón se queda blanco con el
-     texto blanco encima — o sea, invisible mientras el mouse está
+     texto blanco encima - o sea, invisible mientras el mouse está
      arriba. El brillo del rojo lo pone .btn-rojo:hover con filter. */
   .btn:hover:not(.btn-rojo):not(:disabled) { background: #fafafa; }
   .btn:active { transform: translateY(1px) scale(0.98); }
@@ -337,7 +337,7 @@
       for (var t = 0; t < TRIMS; t++) {
         cel += '<td class="inicio-trim"><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
                '<td><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
-               '<td class="pct" id="p-' + i + '-' + t + '">—</td>';
+               '<td class="pct" id="p-' + i + '-' + t + '">·</td>';
       }
       return '<tr>' +
         '<td class="col-metrica"><div class="metrica-fila">' +
@@ -346,7 +346,7 @@
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
           '</button>' +
         '</div></td>' + cel +
-        '<td class="col-total pct" id="tot-' + i + '">—</td>' +
+        '<td class="col-total pct" id="tot-' + i + '">·</td>' +
       '</tr>';
     }).join('');
 
@@ -377,7 +377,7 @@
           c.textContent = Math.round(p) + '%';
           c.className = claseSegun(p);
         } else {
-          c.textContent = '—';
+          c.textContent = '·';
           c.className = 'pct';
         }
         // Solo cuentan los trimestres con meta puesta: si no, un
@@ -391,7 +391,7 @@
         tot.textContent = Math.round(pt) + '%';
         tot.className = 'col-total ' + claseSegun(pt);
       } else {
-        tot.textContent = '—';
+        tot.textContent = '·';
         tot.className = 'col-total pct';
       }
     }
@@ -460,7 +460,7 @@
     document.getElementById('f-lider').value = reg.lider || '';
     document.getElementById('doc-titulo').textContent = reg.nombre || 'GPS';
     document.getElementById('doc-sub').textContent =
-      'Creado por ' + (reg.creado_por_nombre || '—') + ' · ' + fecha(reg.updated_at);
+      'Creado por ' + (reg.creado_por_nombre || '·') + ' · ' + fecha(reg.updated_at);
     document.getElementById('txt-guardar').textContent = puedeEditar(reg) ? 'Guardar cambios' : 'Guardar copia';
     decir('', '');
     pintarTabla();
@@ -520,7 +520,7 @@
       if (docActual && puedeEditar(docActual)) {
         r = await window.kwSupabase.from('gps_documentos').update(fila).eq('id', docActual.id).select().single();
       } else {
-        // Si es nuevo —o si es de alguien más y solo se puede copiar—
+        // Si es nuevo -o si es de alguien más y solo se puede copiar-
         // se crea un registro a nombre de quien está guardando.
         fila.creado_por = miId;
         fila.creado_por_nombre = miNombre;
@@ -564,7 +564,7 @@
               (f.oculto ? ' <span class="pill-oculto">Oculto</span>' : '') + '</div>' +
             '<div class="lista-meta">' +
               (f.puesto ? esc(f.puesto) + ' · ' : '') +
-              'Creado por ' + esc(f.creado_por_nombre || '—') +
+              'Creado por ' + esc(f.creado_por_nombre || '·') +
               ' · Actualizado ' + fecha(f.updated_at) +
             '</div>' +
           '</div>' +
@@ -630,11 +630,11 @@
         var pc = document.getElementById('p-' + i + '-' + t);
         cel += '<td class="sep">' + esc(celdas[i + '-' + t + '-meta'] || '') + '</td>' +
                '<td>' + esc(celdas[i + '-' + t + '-logro'] || '') + '</td>' +
-               '<td>' + (pc ? pc.textContent.replace('—', '') : '') + '</td>';
+               '<td>' + (pc ? pc.textContent.replace('·', '') : '') + '</td>';
       }
       var tt = document.getElementById('tot-' + i);
       return '<tr><td class="met">' + esc(m) + '</td>' + cel +
-        '<td class="tot">' + (tt ? tt.textContent.replace('—', '') : '') + '</td></tr>';
+        '<td class="tot">' + (tt ? tt.textContent.replace('·', '') : '') + '</td></tr>';
     }).join('');
 
     var dato = function (id) { return esc(document.getElementById(id).value.trim()) || '&nbsp;'; };

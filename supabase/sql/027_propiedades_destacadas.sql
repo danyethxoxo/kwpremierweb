@@ -3,7 +3,7 @@
 -- En el micrositio, la tercera columna muestra las propiedades del
 -- asesor. Por omisión salen las que vengan de Command a su nombre (las
 -- que ya traen asesor_id), y además cada quien puede escoger a mano
--- otras del inventario de KW para mostrarlas en su perfil — para eso es
+-- otras del inventario de KW para mostrarlas en su perfil - para eso es
 -- esta tabla.
 --
 -- Requiere 023_propiedades.sql y 026_micrositio_y_prospectos.sql.

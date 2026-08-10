@@ -1,4 +1,4 @@
--- Fase 10: paneles por rol — gestión de usuarios (editar/borrar con
+-- Fase 10: paneles por rol - gestión de usuarios (editar/borrar con
 -- permisos por rol) y vista de todos los documentos con su asesor.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
 

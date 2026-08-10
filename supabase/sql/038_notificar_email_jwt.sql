@@ -1,5 +1,5 @@
 -- Fase 33: el 401 "UNAUTHORIZED_NO_AUTH_HEADER" no lo manda nuestra
--- función (esa contesta "No autorizado" en español, distinto) — lo
+-- función (esa contesta "No autorizado" en español, distinto) - lo
 -- manda la puerta de entrada de Supabase, que por defecto exige un
 -- token de sesión (JWT) en TODAS las Edge Functions antes de dejar que
 -- corra el código de adentro. pg_net no manda eso, así que nunca

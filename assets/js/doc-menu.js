@@ -5,15 +5,15 @@
    `.grid`), sin tocar el HTML de cada página: las envuelve en un
    contenedor y le cuelga el botón al lado del enlace. Se hace así, y no
    metiendo el botón dentro de la tarjeta, porque la tarjeta es un <a> y
-   un botón dentro de un enlace es HTML inválido — además de que el clic
+   un botón dentro de un enlace es HTML inválido - además de que el clic
    navegaría en vez de abrir el menú.
 
    Dos opciones:
 
-   · Compartir — la ve cualquiera. En celular usa el compartir del
+   · Compartir - la ve cualquiera. En celular usa el compartir del
      sistema; en escritorio copia la liga.
 
-   · Hacer visible para — solo Staff/Admin/Master, y solo en tarjetas
+   · Hacer visible para - solo Staff/Admin/Master, y solo en tarjetas
      que traigan data-doc-id (o sea, documentos internos registrados en
      la base). Cambia en qué carpetas de rol aparece el documento.
 

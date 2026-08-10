@@ -2,7 +2,7 @@
 --
 -- Esta fase deja SOLO la base de datos lista: la tabla del catálogo, los
 -- permisos y el mecanismo para compartir con atribución. Todavía no hay
--- páginas visibles ni panel de carga — eso viene cuando tengamos el feed
+-- páginas visibles ni panel de carga - eso viene cuando tengamos el feed
 -- de Command (el XML/JSON que Command manda a los portales).
 --
 -- Cómo está pensado el catálogo:
@@ -14,7 +14,7 @@
 --     propiedad es de un asesor de otra oficina, que no tiene perfil
 --     aquí; en ese caso el nombre se guarda en `asesor_nombre`.
 --   · Cualquier usuario puede compartir cualquier propiedad y que salgan
---     SUS datos de contacto — ver la tabla `propiedades_compartidas` y la
+--     SUS datos de contacto - ver la tabla `propiedades_compartidas` y la
 --     función `resolver_propiedad_compartida()` más abajo.
 --
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.

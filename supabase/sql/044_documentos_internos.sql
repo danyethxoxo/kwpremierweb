@@ -68,7 +68,7 @@ create index if not exists documentos_internos_roles_idx
 --
 -- `roles` es un arreglo de texto, así que sin esto un typo ("dt" en
 -- minúscula, "MCAA") se guardaría sin quejarse y el documento
--- simplemente no aparecería en ninguna carpeta — un bug callado y
+-- simplemente no aparecería en ninguna carpeta - un bug callado y
 -- molesto de rastrear. Mejor que la escritura falle en el momento.
 -- ─────────────────────────────────────────────────────────────
 create or replace function public.validar_roles_documento()
@@ -115,7 +115,7 @@ create trigger documentos_internos_touch
 --
 -- Documentos Internos ya es material de liderazgo, así que leer y editar
 -- van al mismo grupo: Master/Admin/Staff. "Hacer visible para" queda
--- cubierto por la política de escritura — un asociado ni siquiera puede
+-- cubierto por la política de escritura - un asociado ni siquiera puede
 -- leer estas tablas.
 -- ─────────────────────────────────────────────────────────────
 alter table public.roles_kw            enable row level security;
@@ -144,7 +144,7 @@ create policy "documentos_internos_write" on public.documentos_internos
 -- usan los cuatro puestos.
 -- ─────────────────────────────────────────────────────────────
 insert into public.documentos_internos (id, titulo, descripcion, href, icono, roles, orden) values
-  ('abc-tracker', 'ABC — Seguimiento',
+  ('abc-tracker', 'ABC - Seguimiento',
    'Avance de adopción tecnológica por asesor: palomea los temas de cada sesión y consulta porcentajes',
    'dt/abc-tracker.html', 'check', array['DT'], 1),
   ('abc', 'ABC del Asesor',

@@ -1,10 +1,10 @@
--- Fase 20: perfil público extendido — cada quien puede llenar desde
+-- Fase 20: perfil público extendido - cada quien puede llenar desde
 -- Mi Perfil su "Acerca de mí", sitio web, WhatsApp y redes sociales,
 -- y esa info se muestra en su tarjeta de Asesores/Staff.
 --
 -- Nota: cuando se construya la integración con Command (pendiente),
 -- estos mismos campos podrán sincronizarse desde allá si su API trae
--- info de agentes — por eso viven como columnas normales de profiles.
+-- info de agentes - por eso viven como columnas normales de profiles.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
 
 alter table public.profiles add column if not exists acerca_de text;

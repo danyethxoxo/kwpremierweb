@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────
 // VARIABLES DE ENTORNO
 // ─────────────────────────────────────────────────────────────
-//   SERVICE_ROLE_KEY  — ya la usan las otras funciones del proyecto
+//   SERVICE_ROLE_KEY  - ya la usan las otras funciones del proyecto
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     const idRuta = ruta[1] ?? null
 
     // ══════════════════════════════════════════════════
-    // Administración de llaves — con sesión, no con llave
+    // Administración de llaves - con sesión, no con llave
     // ══════════════════════════════════════════════════
     if (recurso === 'llaves') {
       const token = (req.headers.get('Authorization') || '').replace('Bearer ', '')
@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════════════
-    // Resto de la API — autenticación por x-api-key
+    // Resto de la API - autenticación por x-api-key
     // ══════════════════════════════════════════════════
     const llave = req.headers.get('x-api-key')
     if (!llave) {
@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
 
     // ── /properties ──
     if (recurso === 'properties') {
-      // POST /properties — recibir inventario
+      // POST /properties - recibir inventario
       if (req.method === 'POST') {
         if (!puede('propiedades:escribir')) {
           return error('Esta llave no tiene permiso de escritura.', 403)

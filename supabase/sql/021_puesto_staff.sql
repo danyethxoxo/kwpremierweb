@@ -1,4 +1,4 @@
--- Fase 19: puesto de Staff — título específico que se muestra en la
+-- Fase 19: puesto de Staff - título específico que se muestra en la
 -- tarjeta de cada persona en staff.html (ej. "Team Leader", "Technology
 -- Director"), en vez de solo decir "Staff" para todos.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.

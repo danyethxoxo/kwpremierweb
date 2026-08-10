@@ -1,4 +1,4 @@
-// Campanita de notificaciones — se incluye después de auth-guard.js en
+// Campanita de notificaciones - se incluye después de auth-guard.js en
 // las páginas que quieran mostrarla. Requiere un elemento vacío con
 // id="notif-bell-slot" en el header; este script se encarga de dibujar
 // el ícono, el contador y el desplegable ahí adentro.

@@ -1,4 +1,4 @@
--- Fase 11c: ajuste de permisos de incidencias — faltaba Staff en el
+-- Fase 11c: ajuste de permisos de incidencias - faltaba Staff en el
 -- seguimiento (Admin, Master y Staff ven y dan seguimiento a todas);
 -- solo Master puede eliminar un ticket por completo.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
