@@ -136,29 +136,52 @@
   table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; width: 100%; table-layout: fixed; }
   table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #e5e7eb; }
   table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* vertical-align: top (no bottom) es lo que hace que los nombres de
-     tema arranquen todos desde el mismo punto arriba, en vez de quedar
-     pegados al fondo y verse "escalonados" cuando unos ocupan una línea
-     y otros dos o tres. */
-  table.chk-tabla thead tr:last-child th { height: 96px; vertical-align: top; padding-top: 8px; }
+  /* vertical-align (la propiedad de celda de tabla) combinada con
+     writing-mode vertical + un transform de rotación es justo la
+     receta de bugs cruzados entre navegadores — en algunos arranca
+     parejo, en otros los textos de una sola línea se quedan pegados al
+     fondo como si fuera vertical-align:bottom. En vez de pelear con
+     eso, el th ni se toca: adentro va un <div> que alinea con flexbox,
+     que sí es consistente entre navegadores para esto. */
+  table.chk-tabla thead tr:last-child th { height: 96px; padding: 0; }
+  table.chk-tabla .chk-cabeza { display: flex; align-items: flex-start; justify-content: center; height: 100%; padding-top: 8px; }
   /* En vertical-rl el ancho de la celda es lo que decide cuántas
      líneas caben lado a lado (por eso el colgroup ya resuelve ese
-     lado); el "height" de la celda es lo que dispara el salto de
-     línea — de ahí que el wrap se controle con max-height, no con
-     max-width, al revés de como se piensa en texto horizontal.
+     lado); el "height" del <span> (max-height) es lo que dispara el
+     salto de línea — de ahí que el wrap se controle con max-height, no
+     con max-width, al revés de como se piensa en texto horizontal.
      text-align: start dentro de vertical-rl es "arriba", no centrado:
      así el texto se lee de corrido de arriba hacia abajo en vez de
      quedar centrado dentro de su propio bloque. */
-  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); text-align: start; font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; max-height: 90px; display: inline-block; }
+  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); text-align: start; font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; max-height: 90px; }
   table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #e5e7eb; }
 
-  /* Bandas por sesión: un tinte claro alterna de sesión a sesión (de
-     encabezado a casillas, la columna completa) para que se note de un
-     vistazo qué temas van juntos, y un borde más marcado en el límite
+  /* Bandas por sesión: cada sesión trae su propio tono, no solo
+     alternado entre dos — con 11 grupos (Onboarding + S1..S10) y 8
+     tonos que se repiten en ciclo, dos sesiones nunca vecinas
+     terminan compartiendo color. Corre de encabezado a casillas, la
+     columna completa, y además hay un borde más marcado en el límite
      entre una sesión y la siguiente — más fuerte que el separador fino
-     que ya llevan todas las columnas entre sí. */
-  table.chk-tabla th.banda-b, table.chk-tabla td.banda-b { background: #EEF1F8; }
-  table.chk-tabla thead tr:first-child th.banda-b { background: #E4E9F5; }
+     que ya llevan los temas entre sí dentro de la misma sesión. */
+  table.chk-tabla th.banda-0, table.chk-tabla td.banda-0 { background: #EEF1F8; }
+  table.chk-tabla th.banda-1, table.chk-tabla td.banda-1 { background: #FBF2E9; }
+  table.chk-tabla th.banda-2, table.chk-tabla td.banda-2 { background: #EAF6EF; }
+  table.chk-tabla th.banda-3, table.chk-tabla td.banda-3 { background: #F5EEFB; }
+  table.chk-tabla th.banda-4, table.chk-tabla td.banda-4 { background: #FDF0F0; }
+  table.chk-tabla th.banda-5, table.chk-tabla td.banda-5 { background: #FFF9E6; }
+  table.chk-tabla th.banda-6, table.chk-tabla td.banda-6 { background: #E9F5FB; }
+  table.chk-tabla th.banda-7, table.chk-tabla td.banda-7 { background: #F2F2F2; }
+  /* El renglón de arriba (la sigla de la sesión) va un punto más
+     saturado que sus propias casillas, para que el nombre de la
+     sesión se distinga incluso entre dos tonos parecidos. */
+  table.chk-tabla thead tr:first-child th.banda-0 { background: #E4E9F5; }
+  table.chk-tabla thead tr:first-child th.banda-1 { background: #F7E9DA; }
+  table.chk-tabla thead tr:first-child th.banda-2 { background: #DFF0E6; }
+  table.chk-tabla thead tr:first-child th.banda-3 { background: #EEE1F7; }
+  table.chk-tabla thead tr:first-child th.banda-4 { background: #FAE3E3; }
+  table.chk-tabla thead tr:first-child th.banda-5 { background: #FCF0C8; }
+  table.chk-tabla thead tr:first-child th.banda-6 { background: #DBEEF7; }
+  table.chk-tabla thead tr:first-child th.banda-7 { background: #E6E6E6; }
   table.chk-tabla .fin-grupo { border-right: 2px solid #ccd1dc; }
 
   /* ── Casilla ── */
@@ -528,25 +551,21 @@
     var host = fila && fila.querySelector('.fila-opciones');
     if (!host || !a) return;
 
-    var svgLapiz = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    // "Cambiar DT" no va aquí: el propio texto "DT: …" del renglón ya
+    // es un botón que abre ese mismo editor — tenerlo dos veces sería
+    // redundante.
     var svgBaja = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
     var svgAlta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
 
     var m = document.createElement('div');
     m.className = 'fila-menu';
     m.innerHTML =
-      '<button type="button" data-accion="dt">' + svgLapiz + 'Cambiar DT</button>' +
       '<button type="button" class="' + (a.activo ? 'peligro' : '') + '" data-accion="baja">' +
         (a.activo ? svgBaja + 'Dar de baja' : svgAlta + 'Reactivar') +
       '</button>';
     host.appendChild(m);
     menuFilaAbierto = kwid;
 
-    m.querySelector('[data-accion="dt"]').addEventListener('click', function (e) {
-      e.stopPropagation();
-      cerrarMenuFila();
-      abrirEditorDT(kwid);
-    });
     m.querySelector('[data-accion="baja"]').addEventListener('click', function (e) {
       e.stopPropagation();
       cerrarMenuFila();
@@ -616,22 +635,23 @@
     var anchoCol = (100 / temas.length).toFixed(4) + '%';
     var anchoMinTotal = (temas.length * 40) + 'px';
 
-    // banda(i): tinte alterno por sesión. finGrupo(i): separador más
+    // banda(i): tinte propio por sesión (8 tonos en ciclo, así que dos
+    // sesiones VECINAS nunca se repiten). finGrupo(i): separador más
     // marcado en el último tema de cada sesión, para que el corte entre
     // una sesión y la siguiente se note más que el separador fino entre
     // dos temas de la misma sesión.
-    function banda(i) { return grupoDeTema[i] % 2 ? ' banda-b' : ''; }
+    function banda(i) { return ' banda-' + (grupoDeTema[i] % 8); }
     function finGrupo(i) { return (grupoDeTema[i] !== grupoDeTema[i + 1]) ? ' fin-grupo' : ''; }
 
     var h = '<div class="chk-scroll"><table class="chk-tabla" style="min-width:' + anchoMinTotal + '">';
     h += '<colgroup>' + temas.map(function () { return '<col style="width:' + anchoCol + '">'; }).join('') + '</colgroup>';
     h += '<thead><tr>';
     grupos.forEach(function (g, gi) {
-      h += '<th class="' + (gi % 2 ? 'banda-b' : '') + ' fin-grupo" colspan="' + g.n + '">' + esc(siglaSesion(g.sesion)) + '</th>';
+      h += '<th class="banda-' + (gi % 8) + ' fin-grupo" colspan="' + g.n + '">' + esc(siglaSesion(g.sesion)) + '</th>';
     });
     h += '</tr><tr>';
     temas.forEach(function (t, i) {
-      h += '<th class="' + banda(i) + finGrupo(i) + '"><span>' + esc(t.nombre) + '</span></th>';
+      h += '<th class="' + banda(i) + finGrupo(i) + '"><div class="chk-cabeza"><span>' + esc(t.nombre) + '</span></div></th>';
     });
     h += '</tr></thead><tbody><tr>';
     temas.forEach(function (t, i) {
