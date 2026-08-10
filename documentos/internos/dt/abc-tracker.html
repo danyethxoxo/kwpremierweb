@@ -83,6 +83,11 @@
   .fila-meta { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
   .fila-dt { display: inline-flex; align-items: center; gap: 5px; }
   .fila-dt i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  button.fila-dt { border: none; background: none; padding: 0; font: inherit; font-size: 11.5px; color: var(--muted); cursor: pointer; }
+  button.fila-dt:hover { color: var(--text); text-decoration: underline; }
+  button.fila-dt .fila-dt-lapiz { width: 10px; height: 10px; opacity: .45; flex-shrink: 0; }
+  button.fila-dt:hover .fila-dt-lapiz { opacity: .9; }
+  .fila-dt-select { font: inherit; font-size: 11.5px; border: 1.5px solid var(--red); border-radius: 6px; padding: 2px 4px; background: #fff; color: var(--text); max-width: 220px; }
   .fila-prog { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .barra { width: 110px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
   .barra i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .3s; }
@@ -106,13 +111,24 @@
   .fila-checklist-outer.abierto { grid-template-rows: 1fr; }
   .fila-checklist-inner { overflow: hidden; }
   .fila-checklist-outer.abierto .fila-checklist-inner { border-top: 1px solid var(--border); }
+  /* table-layout:fixed + un <colgroup> con un ancho igual por columna
+     (en JS, 100 / cantidad de temas) es lo que reparte las 25 columnas
+     a lo ancho de toda la tarjeta en vez de amontonarse a la izquierda
+     con espacio en blanco sobrando a la derecha. Sin el colgroup,
+     "fixed" divide el ancho por la fila con más celdas sin garantía de
+     que sea la de los temas (la de arriba trae colspans por sesión). */
   .chk-scroll { overflow-x: auto; padding: 10px 16px 14px; }
-  table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
-  table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; white-space: nowrap; }
-  table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
-  table.chk-tabla thead tr:last-child th { height: 112px; width: 30px; min-width: 30px; vertical-align: bottom; padding-bottom: 6px; }
-  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10.5px; font-weight: 500; color: #666; white-space: nowrap; }
-  table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #f5f5f5; width: 30px; }
+  table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; width: 100%; table-layout: fixed; }
+  table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f5f5f5; }
+  table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.chk-tabla thead tr:last-child th { height: 96px; vertical-align: bottom; padding-bottom: 6px; }
+  /* En vertical-rl el ancho de la celda es lo que decide cuántas
+     líneas caben lado a lado (por eso el colgroup ya resuelve ese
+     lado); el "height" de la celda es lo que dispara el salto de
+     línea — de ahí que el wrap se controle con max-height, no con
+     max-width, al revés de como se piensa en texto horizontal. */
+  table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; max-height: 90px; display: inline-block; }
+  table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #f5f5f5; }
 
   /* ── Casilla ── */
   .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; }
@@ -196,6 +212,7 @@
   var FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
+  var dtsConocidos = []; // nombres de DT ya vistos en el padrón, para el filtro y el editor
   var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
   var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
@@ -221,14 +238,17 @@
     return Math.round(n * 100 / temas.length);
   }
 
-  // Un color estable por DT (mismo nombre → mismo color siempre), sin
-  // tener que mantener una tabla a mano: un hash simple del nombre
-  // elige de una paleta fija. Sirve nada más para ubicar de un vistazo
-  // quién es de quién, no es información sensible ni necesita ser
-  // perfectamente distinguible entre sí.
-  var PALETA_DT = ['#4F46E5', '#0891B2', '#059669', '#B45309', '#BE185D', '#7C3AED', '#0D9488', '#C2410C', '#1D4ED8', '#65A30D'];
+  // Un color por DT para ubicar de un vistazo quién es de quién. Daniel
+  // y Jessica tienen color fijo porque así se pidió (azul y naranja); a
+  // cualquier otro DT que se agregue después se le asigna uno estable
+  // de una paleta vía hash del nombre, para no tener que acordarse de
+  // venir aquí a mano cada vez que entra alguien nuevo al equipo.
+  var COLOR_DT_FIJO = { daniel: '#2563EB', jess: '#EA580C' };
+  var PALETA_DT = ['#4F46E5', '#0891B2', '#059669', '#7C3AED', '#0D9488', '#BE185D', '#65A30D', '#C2410C'];
   function colorDT(nombre) {
     if (!nombre) return '#b5b5b5';
+    var n = norm(nombre);
+    for (var clave in COLOR_DT_FIJO) if (n.indexOf(clave) >= 0) return COLOR_DT_FIJO[clave];
     var h = 0;
     for (var i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
     return PALETA_DT[h % PALETA_DT.length];
@@ -319,18 +339,25 @@
     salida.querySelectorAll('.fila').forEach(function (el) { filaEls.set(el.dataset.kwid, el); });
   }
 
-  function htmlFila(a) {
+  // Separado de htmlFila() porque el editor de DT necesita poder
+  // repintar solo esta parte (el .fila-main) sin tocar el checklist que
+  // pueda estar abierto debajo.
+  function htmlFilaMain(a) {
     var p = pctDe(a.kwid);
     var color = colorDT(a.dt_asignado);
     var fecha = fechaCorta(a.fecha_ingreso);
-    return '<div class="fila" data-kwid="' + esc(a.kwid) + '" style="border-left-color:' + color + '">' +
-      '<div class="fila-main" role="button" tabindex="0" aria-expanded="false">' +
+    var textoDT = a.dt_asignado ? 'DT: ' + esc(a.dt_asignado) : 'Sin DT asignado';
+    var puntoDT = '<i style="background:' + color + '"></i>';
+    var lapiz = '<svg class="fila-dt-lapiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    var dtHtml = puedeEditar
+      ? '<button type="button" class="fila-dt" data-kwid="' + esc(a.kwid) + '">' + puntoDT + textoDT + lapiz + '</button>'
+      : '<span class="fila-dt">' + puntoDT + textoDT + '</span>';
+    return '<div class="fila-main" role="button" tabindex="0" aria-expanded="false">' +
         '<div class="fila-txt">' +
           '<div class="fila-nom">' + esc(a.nombre) + (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</div>' +
           '<div class="fila-meta">' +
             '<span>KW ' + esc(a.kwid) + '</span>' +
-            '<span class="fila-dt"><i style="background:' + color + '"></i>' +
-              (a.dt_asignado ? 'DT: ' + esc(a.dt_asignado) : 'Sin DT asignado') + '</span>' +
+            dtHtml +
             (fecha ? '<span>Ingreso ' + fecha + '</span>' : '') +
           '</div>' +
         '</div>' +
@@ -339,9 +366,110 @@
           '<span class="pct">' + p + '%</span>' +
         '</div>' +
         '<svg class="fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
-      '</div>' +
+      '</div>';
+  }
+
+  function htmlFila(a) {
+    return '<div class="fila" data-kwid="' + esc(a.kwid) + '" style="border-left-color:' + colorDT(a.dt_asignado) + '">' +
+      htmlFilaMain(a) +
       '<div class="fila-checklist-outer"><div class="fila-checklist-inner"></div></div>' +
     '</div>';
+  }
+
+  // Repinta solo el .fila-main de un renglón (después de cambiar su DT),
+  // sin tocar el checklist que pueda estar abierto debajo ni el resto
+  // de la lista.
+  function refrescarFilaMain(kwid) {
+    var fila = filaEls.get(kwid);
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!fila || !a) return;
+    var abierta = fila.querySelector('.fila-main').getAttribute('aria-expanded') === 'true';
+    fila.querySelector('.fila-main').outerHTML = htmlFilaMain(a);
+    fila.style.borderLeftColor = colorDT(a.dt_asignado);
+    fila.querySelector('.fila-main').setAttribute('aria-expanded', abierta ? 'true' : 'false');
+  }
+
+  // ── Asignar/cambiar el DT de un asesor ──
+  //
+  // Se abre como un <select> nativo en el lugar del texto "DT: …" — sin
+  // modal ni popover a la medida, para no reinventar algo que el propio
+  // navegador ya resuelve bien (teclado, accesibilidad, cerrar con
+  // Escape). Guarda apenas se elige una opción distinta; si no se
+  // cambia nada y se hace clic fuera, se cierra solo sin guardar nada.
+  function abrirEditorDT(kwid) {
+    var fila = filaEls.get(kwid);
+    if (!fila) return;
+    var btn = fila.querySelector('button.fila-dt');
+    if (!btn) return; // sin permiso, o ya está en edición
+
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!a) return;
+
+    var opciones = dtsConocidos.slice();
+    if (a.dt_asignado && opciones.indexOf(a.dt_asignado) < 0) opciones.push(a.dt_asignado);
+    opciones.sort();
+
+    var sel = document.createElement('select');
+    sel.className = 'fila-dt-select';
+    sel.innerHTML = '<option value="">Sin DT asignado</option>' +
+      opciones.map(function (d) {
+        return '<option value="' + esc(d) + '"' + (d === a.dt_asignado ? ' selected' : '') + '>' + esc(d) + '</option>';
+      }).join('') +
+      '<option value="__nuevo__">+ Agregar nuevo DT…</option>';
+
+    btn.replaceWith(sel);
+    sel.focus();
+
+    // `resuelto` evita que "change" y "blur" cierren el editor dos
+    // veces. No basta con revisar si el <select> sigue en el DOM: tanto
+    // el propio prompt() (al abrirse le quita el foco al select) como
+    // el outerHTML de refrescarFilaMain() disparan "blur" DE FORMA
+    // SÍNCRONA, así que cuando el blur handler se ejecuta el select
+    // puede seguir técnicamente conectado a mitad del reemplazo — y
+    // llamar a refrescarFilaMain() otra vez ahí revienta ("node no
+    // longer a child"). Con la bandera, quien llega primero gana y el
+    // otro no hace nada, sin importar el orden exacto en que disparen.
+    var resuelto = false;
+    sel.addEventListener('click', function (e) { e.stopPropagation(); });
+    sel.addEventListener('change', function () {
+      if (resuelto) return;
+      resuelto = true;
+      var valor = sel.value;
+      if (valor === '__nuevo__') {
+        valor = (prompt('Nombre del nuevo DT:') || '').trim();
+        if (!valor) { refrescarFilaMain(kwid); return; }
+      }
+      guardarDT(kwid, valor);
+    });
+    sel.addEventListener('blur', function () {
+      if (resuelto) return;
+      resuelto = true;
+      refrescarFilaMain(kwid);
+    }, { once: true });
+  }
+
+  async function guardarDT(kwid, nuevoValor) {
+    var a = asesores.find(function (x) { return x.kwid === kwid; });
+    if (!a) return;
+    var anterior = a.dt_asignado;
+    a.dt_asignado = nuevoValor || null;
+    refrescarFilaMain(kwid); // optimista: se ve el cambio antes de que responda el servidor
+
+    try {
+      var { error } = await window.kwSupabase
+        .from('abc_asesores').update({ dt_asignado: a.dt_asignado }).eq('kwid', kwid);
+      if (error) throw error;
+      if (a.dt_asignado && dtsConocidos.indexOf(a.dt_asignado) < 0) {
+        dtsConocidos.push(a.dt_asignado);
+        dtsConocidos.sort();
+        refrescarSelectFDT();
+      }
+      limpiarAviso();
+    } catch (err) {
+      a.dt_asignado = anterior;
+      refrescarFilaMain(kwid);
+      avisar('No se pudo cambiar el DT: ' + (err.message || err) + '.', 'error');
+    }
   }
 
   // El checklist de un asesor: sesiones arriba, temas como columnas
@@ -354,7 +482,18 @@
       actual.n++;
     });
 
-    var h = '<div class="chk-scroll"><table class="chk-tabla"><thead><tr>';
+    // Un <col> por tema, todas del mismo ancho: con table-layout:fixed
+    // eso es lo que reparte la tabla a todo lo ancho de la tarjeta en
+    // vez de dejarla amontonada a la izquierda. El min-width es lo que
+    // evita que esto se rompa en celular: ahí el 100% del contenedor es
+    // angosto, y sin un mínimo por columna el texto vertical se
+    // encimaría entre sí en vez de simplemente scrollear horizontal
+    // como scrollea .chk-scroll.
+    var anchoCol = (100 / temas.length).toFixed(4) + '%';
+    var anchoMinTotal = (temas.length * 40) + 'px';
+    var h = '<div class="chk-scroll"><table class="chk-tabla" style="min-width:' + anchoMinTotal + '">';
+    h += '<colgroup>' + temas.map(function () { return '<col style="width:' + anchoCol + '">'; }).join('') + '</colgroup>';
+    h += '<thead><tr>';
     grupos.forEach(function (g) { h += '<th colspan="' + g.n + '">' + esc(g.sesion) + '</th>'; });
     h += '</tr><tr>';
     temas.forEach(function (t) { h += '<th><span>' + esc(t.nombre) + '</span></th>'; });
@@ -563,10 +702,14 @@
       if (a) pinned.set(k, a);
     });
 
-    var dts = Array.from(new Set(asesores.map(function (a) { return a.dt_asignado; }).filter(Boolean))).sort();
+    dtsConocidos = Array.from(new Set(asesores.map(function (a) { return a.dt_asignado; }).filter(Boolean))).sort();
+    refrescarSelectFDT();
+  }
+
+  function refrescarSelectFDT() {
     var sel = document.getElementById('f-dt'), previo = sel.value;
     sel.innerHTML = '<option value="">Todos los DT</option>' +
-      dts.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
+      dtsConocidos.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
     sel.value = previo;
   }
 
@@ -599,11 +742,17 @@
   //    sola vez sobre el contenedor. ──
   var salidaEl = document.getElementById('salida');
   salidaEl.addEventListener('click', function (e) {
+    // El botón de DT vive DENTRO de .fila-main — hay que resolverlo
+    // primero, si no el clic también dispararía abrir/cerrar el
+    // checklist.
+    var dtBtn = e.target.closest('button.fila-dt');
+    if (dtBtn) { abrirEditorDT(dtBtn.dataset.kwid); return; }
     var main = e.target.closest('.fila-main');
     if (main) alternarFila(main.closest('.fila').dataset.kwid);
   });
   salidaEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target.closest('button.fila-dt, select.fila-dt-select')) return; // que el teclado del select siga siendo del select
     var main = e.target.closest('.fila-main');
     if (!main) return;
     e.preventDefault();
