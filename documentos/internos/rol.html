@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentos por rol</title>
+  <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red: #CC0000;
+      --text: #1a1a1a;
+      --muted: #888;
+      --bg: #EFEFEF;
+      --card: #ffffff;
+      --border: rgba(0,0,0,0.07);
+      --rol: #4F46E5;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { min-height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .page { flex: 1; max-width: 860px; width: 100%; margin: 0 auto; padding: 100px 24px 60px; }
+
+    .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .breadcrumb a { color: var(--muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--text); }
+    .breadcrumb span { color: var(--text); font-weight: 500; }
+
+    .cab { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+    .cab-sigla {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 46px; height: 46px; padding: 0 11px; border-radius: 12px;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: #fff; background: var(--rol);
+    }
+    .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+    .page-desc { font-size: 15px; color: var(--muted); margin-bottom: 34px; }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; gap: 10px; }
+      .page-title { font-size: 24px; }
+      .page { padding: 88px 16px 40px; }
+    }
+
+    .card {
+      background: var(--card); border-radius: 14px; border: 1px solid var(--border);
+      padding: 22px 20px 20px; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column;
+      transition: background 0.25s, box-shadow 0.18s, transform 0.18s, border-color 0.25s;
+    }
+    .card:hover {
+      background: var(--rol); border-color: var(--rol);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.14); transform: translateY(-2px);
+    }
+    .card:active { transform: translateY(0) scale(0.97); }
+
+    .card-icon {
+      width: 40px; height: 40px; border-radius: 10px; background: #EEF2FF;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px; flex-shrink: 0; transition: background 0.2s;
+    }
+    .card-icon svg { width: 20px; height: 20px; color: var(--rol); transition: color 0.2s; }
+    .card:hover .card-icon { background: rgba(255,255,255,0.2); }
+    .card:hover .card-icon svg { color: #fff; }
+
+    /* Espacio para que el botón de tres puntos no se encime con el título */
+    .card-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; line-height: 1.3; padding-right: 26px; transition: color 0.2s; }
+    .card:hover .card-title { color: #fff; }
+    .card-desc { font-size: 12px; color: var(--muted); line-height: 1.55; flex: 1; transition: color 0.2s; }
+    .card:hover .card-desc { color: rgba(255,255,255,0.85); }
+    .card-cta { margin-top: 16px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--rol); transition: color 0.2s; }
+    .card:hover .card-cta { color: #fff; }
+    .card-cta svg { width: 12px; height: 12px; }
+
+    .aviso { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--muted); font-size: 13.5px; }
+    .aviso strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">Internos</span>
+    <a href="index.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="page">
+
+    <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:var(--muted);">
+      No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
+    </div>
+
+    <div id="contenido">
+      <div class="breadcrumb">
+        <a href="../documentos.html">Documentos</a> ›
+        <a href="index.html">Internos</a> ›
+        <span id="bc-rol">…</span>
+      </div>
+
+      <div class="cab">
+        <span class="cab-sigla" id="sigla">…</span>
+        <h1 class="page-title" id="titulo">Cargando…</h1>
+      </div>
+      <p class="page-desc" id="desc"></p>
+
+      <div class="grid" id="docs">
+        <div class="aviso">Cargando documentos…</div>
+      </div>
+    </div>
+
+  </main>
+
+<script src="/kwpremierweb/assets/js/doc-menu.js?v=20260810"></script>
+<script>
+(function () {
+  var rolId = new URLSearchParams(location.search).get('rol') || '';
+  var rol = null;
+
+  function escapar(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // Los documentos guardan una clave de icono, no el SVG: así el dibujo
+  // vive aquí (donde se puede versionar) y la base solo guarda datos.
+  var ICONOS = {
+    libro:      '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    grafica:    '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
+    check:      '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    documento:  '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    carpeta:    '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  };
+  function icono(k) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      (ICONOS[k] || ICONOS.documento) + '</svg>';
+  }
+
+  function pintarDocs(docs) {
+    var caja = document.getElementById('docs');
+    if (!docs.length) {
+      caja.innerHTML = '<div class="aviso"><strong>Esta carpeta está vacía</strong>' +
+        'Ningún documento está marcado como visible para ' + escapar(rolId) + ' todavía. ' +
+        'Puedes agregarlo desde el menú de tres puntos de cualquier documento.</div>';
+      return;
+    }
+    caja.innerHTML = docs.map(function (d) {
+      return '<a href="' + escapar(d.href) + '" class="card" data-doc-id="' + escapar(d.id) + '">' +
+        '<div class="card-icon">' + icono(d.icono) + '</div>' +
+        '<div class="card-title">' + escapar(d.titulo) + '</div>' +
+        '<div class="card-desc">' + escapar(d.descripcion || '') + '</div>' +
+        '<div class="card-cta">Abrir <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>' +
+      '</a>';
+    }).join('');
+    window.kwDocMenu.montar(caja);
+  }
+
+  async function cargarDocs() {
+    var r = await window.kwSupabase
+      .from('documentos_internos')
+      .select('id, titulo, descripcion, href, icono, roles')
+      .eq('activo', true)
+      .contains('roles', [rolId])
+      .order('orden');
+    if (r.error) throw r.error;
+    pintarDocs(r.data || []);
+  }
+
+  async function iniciar() {
+    try {
+      var u = await window.kwSupabase.auth.getUser();
+      if (!u.data || !u.data.user) return;
+      var p = await window.kwSupabase.from('profiles').select('role').eq('id', u.data.user.id).single();
+      if (p.error || !p.data || p.data.role === 'asociado') {
+        document.getElementById('contenido').style.display = 'none';
+        document.getElementById('denegado').style.display = '';
+        return;
+      }
+
+      var rr = await window.kwSupabase
+        .from('roles_kw').select('id, nombre, descripcion, color').eq('id', rolId).single();
+      if (rr.error || !rr.data) {
+        document.getElementById('titulo').textContent = 'Carpeta no encontrada';
+        document.getElementById('docs').innerHTML =
+          '<div class="aviso"><strong>Esa carpeta no existe</strong><a href="index.html">Ver todas las carpetas</a></div>';
+        return;
+      }
+      rol = rr.data;
+
+      document.documentElement.style.setProperty('--rol', rol.color || '#4F46E5');
+      document.title = rol.nombre + ' — Internos';
+      document.getElementById('sigla').textContent = rol.id;
+      document.getElementById('titulo').textContent = rol.nombre;
+      document.getElementById('desc').textContent = rol.descripcion || '';
+      document.getElementById('bc-rol').textContent = rol.id;
+
+      await window.kwDocMenu.init(null);
+      await cargarDocs();
+    } catch (err) {
+      document.getElementById('docs').innerHTML =
+        '<div class="aviso"><strong>No se pudo cargar</strong>' + escapar(err.message || err) + '</div>';
+    }
+  }
+
+  // Si desde el menú se le quita este rol a un documento, tiene que
+  // desaparecer de la carpeta en ese momento, no hasta recargar.
+  window.addEventListener('kw-doc-visibilidad', function () { cargarDocs(); });
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
+  else window.addEventListener('kw-auth-ready', iniciar, { once: true });
+})();
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
+</body>
+</html>
