@@ -152,7 +152,13 @@ function aFecha(s: string): string | null {
 // sería peligroso - un asesor viejo sin correo capturado desaparecería
 // de la lista y la sincronización lo marcaría como baja por error. Aquí
 // lo único que se exige es el KW ID.
-async function leerHojaABC(token: string) {
+//
+// `omitidos`, si se manda, se llena con quien tenía nombre pero le
+// faltó el KW ID - así, en vez de desaparecer de la sincronización sin
+// dejar rastro (que es justo lo que pasaba antes: alguien nuevo en la
+// hoja, sin KW ID asignado todavía, simplemente no aparecía en ningún
+// lado y nadie se enteraba de por qué), se puede avisar por nombre.
+async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
   if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}` +
@@ -174,17 +180,28 @@ async function leerHojaABC(token: string) {
     throw new Error('La hoja no tiene una columna de KW ID. Se busca un encabezado que diga "kwid", "kw id" o similar.')
   }
 
-  return filas.slice(1).map((fila) => {
+  const todas = filas.slice(1).map((fila, n) => {
     const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
       iNombre !== -1 ? fila[iNombre] : '',
       iApellido !== -1 ? fila[iApellido] : '',
     ].filter(Boolean).join(' ').trim()
     return {
+      fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
       nombre,
       kwid: String(fila[iKwid] || '').trim(),
       fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
     }
-  }).filter((p) => p.kwid)
+  })
+
+  if (omitidos) {
+    for (const p of todas) {
+      // Fila realmente vacía (nadie capturó nada todavía): no cuenta
+      // como omisión, es solo una fila sin usar.
+      if (!p.kwid && p.nombre) omitidos.push({ fila: p.fila, nombre: p.nombre, motivo: 'sin KW ID' })
+    }
+  }
+
+  return todas.filter((p) => p.kwid)
 }
 
 function indiceDe(encabezados: string[], claves: string[]): number {
@@ -198,7 +215,11 @@ function indiceDe(encabezados: string[], claves: string[]): number {
   return -1
 }
 
-async function leerHoja(token: string) {
+// `omitidos`, si se manda, se llena con quien tenía nombre pero le
+// faltó el correo - mismo motivo que en leerHojaABC: alguien recién
+// agregado a la hoja sin correo capturado todavía desaparecía de la
+// lista de altas sin que nadie se enterara de por qué.
+async function leerHoja(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
   if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}` +
@@ -225,7 +246,7 @@ async function leerHoja(token: string) {
     throw new Error('La hoja no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
   }
 
-  return filas.slice(1).map((fila, n) => {
+  const todas = filas.slice(1).map((fila, n) => {
     const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
       iNombre !== -1 ? fila[iNombre] : '',
       iApellido !== -1 ? fila[iApellido] : '',
@@ -239,7 +260,15 @@ async function leerHoja(token: string) {
       fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
       cumpleanos: iCumpleanos !== -1 ? String(fila[iCumpleanos] || '').trim() : '',
     }
-  }).filter((p) => p.correo)
+  })
+
+  if (omitidos) {
+    for (const p of todas) {
+      if (!p.correo && p.nombre) omitidos.push({ fila: p.fila, nombre: p.nombre, motivo: 'sin correo' })
+    }
+  }
+
+  return todas.filter((p) => p.correo)
 }
 
 // ── Los pasos del alta ──────────────────────────────────────
@@ -609,7 +638,8 @@ Deno.serve(async (req: Request) => {
     // que ya tenía registrado se queda intacto.
     if (accion === 'abc_sync') {
       const aplicar = body.aplicar === true
-      const enHoja = await leerHojaABC(tokenPrincipal)
+      const omitidos: { fila: number; nombre: string; motivo: string }[] = []
+      const enHoja = await leerHojaABC(tokenPrincipal, omitidos)
 
       if (!enHoja.length) {
         return respond({ error: 'La hoja no devolvió ningún asesor con KW ID. No se cambió nada.' }, 400)
@@ -641,6 +671,10 @@ Deno.serve(async (req: Request) => {
         nuevos: nuevos.map((p) => ({ kwid: p.kwid, nombre: p.nombre })),
         reactivados: reactivados.map((p) => ({ kwid: p.kwid, nombre: p.nombre })),
         bajas,
+        // Gente con nombre en la hoja pero sin KW ID capturado: antes
+        // desaparecía de la sincronización sin dejar rastro. Ahora se
+        // reporta por nombre y fila para poder ir a corregirlo.
+        omitidos,
       }
 
       if (!aplicar) return respond({ aplicado: false, ...resumen })
@@ -674,7 +708,8 @@ Deno.serve(async (req: Request) => {
 
     // ── Listar: lo que hay en la hoja + lo que ya se procesó ──
     if (accion === 'listar') {
-      const personas = await leerHoja(tokenPrincipal)
+      const omitidos: { fila: number; nombre: string; motivo: string }[] = []
+      const personas = await leerHoja(tokenPrincipal, omitidos)
 
       const { data: yaHechas } = await admin
         .from('altas_procesadas')
@@ -689,6 +724,9 @@ Deno.serve(async (req: Request) => {
 
       return respond({
         personas: personas.map((p) => ({ ...p, alta: porCorreo.get(p.correo.toLowerCase()) || null })),
+        // Gente con nombre en la hoja pero sin correo capturado: antes
+        // desaparecía de esta lista sin dejar rastro.
+        omitidos,
       })
     }
 

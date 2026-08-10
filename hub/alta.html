@@ -223,6 +223,7 @@
     </div>
 
     <div class="msg" id="marcar-msg"></div>
+    <div class="msg" id="omitidos-msg"></div>
 
     <div id="lista">
       <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
@@ -399,11 +400,24 @@
       const data = await llamar({ accion: 'listar' });
       personas = data.personas || [];
       pintarLista();
+      pintarOmitidos(data.omitidos || []);
     } catch (err) {
       cont.innerHTML = '<div class="kw-vacio">' + escapeHtml(err.message || 'No se pudo leer la hoja.') + '</div>';
     } finally {
       btn.disabled = false;
     }
+  }
+
+  // Antes, alguien nuevo en la hoja sin correo capturado todavía
+  // simplemente no aparecía en esta lista y nadie se enteraba de por
+  // qué. El backend ahora reporta esos casos por nombre y fila.
+  function pintarOmitidos(omitidos) {
+    const el = document.getElementById('omitidos-msg');
+    if (!omitidos.length) { el.className = 'msg'; el.textContent = ''; return; }
+    el.className = 'msg error';
+    el.textContent = omitidos.length + ' persona(s) en la hoja no se pudieron leer por falta de correo: ' +
+      omitidos.map(function (o) { return o.nombre + ' (fila ' + o.fila + ')'; }).join(', ') +
+      '. Captúrales el correo en la hoja y vuelve a leerla.';
   }
 
   // A quienes ya se les dio de alta a mano antes de que existiera esta
@@ -669,6 +683,7 @@
       const data = await llamar({ accion: 'listar' });
       personas = data.personas || [];
       pintarLista();
+      pintarOmitidos(data.omitidos || []);
     } catch (err) {
       if (/solo para el equipo|permiso|403/i.test(err.message || '')) {
         mostrarDenegado(err);
