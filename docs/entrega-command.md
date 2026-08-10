@@ -6,7 +6,7 @@ lo que se prepara **antes** de contactarlo (interno) y lo que se le
 
 ---
 
-## Parte 1 — Antes de escribirle (interno)
+## Parte 1 - Antes de escribirle (interno)
 
 Nada de esto lo puede hacer el DT: son requisitos de nuestro lado. Si se
 le escribe sin esto listo, va a intentar conectarse y le va a fallar.
@@ -15,8 +15,8 @@ le escribe sin esto listo, va a intentar conectarse y le va a fallar.
 
 En **Supabase → SQL Editor**, correr (si no se han corrido ya):
 
-- `supabase/sql/023_propiedades.sql` — el catálogo de propiedades
-- `supabase/sql/024_api_llaves.sql` — llaves de API y bitácora
+- `supabase/sql/023_propiedades.sql` - el catálogo de propiedades
+- `supabase/sql/024_api_llaves.sql` - llaves de API y bitácora
 
 Para verificar: en **Table Editor** deben aparecer `propiedades`,
 `api_llaves` y `api_bitacora`.
@@ -54,7 +54,7 @@ const r = await fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/api
     'Content-Type': 'application/json',
     Authorization: 'Bearer ' + data.session.access_token,
   },
-  body: JSON.stringify({ nombre: 'Command — KW México (DT)' }),
+  body: JSON.stringify({ nombre: 'Command - KW México (DT)' }),
 });
 console.log(await r.json());
 ```
@@ -63,7 +63,7 @@ La respuesta trae la llave completa (`kwp_live_…`). **Se muestra una sola
 vez**: de la base solo se guarda su hash, así que ni nosotros podemos
 recuperarla después. Cópiala antes de cerrar la consola.
 
-Si se pierde o se filtra, se revoca y se genera otra — no afecta lo ya
+Si se pierde o se filtra, se revoca y se genera otra - no afecta lo ya
 publicado.
 
 ### 4. Mandarle la llave por un canal aparte
@@ -73,7 +73,7 @@ correo con las instrucciones, y la llave por WhatsApp o por otro medio.
 
 ---
 
-## Parte 2 — Lo que se le manda al DT
+## Parte 2 - Lo que se le manda al DT
 
 ### Documentación
 
@@ -85,14 +85,14 @@ Ya está publicada y escrita para él, no hace falta preparar nada más:
 
 ### Las dos vías, y cuál conviene proponerle primero
 
-**Vía A — Feed (recomendada: cero desarrollo de su parte).**
+**Vía A - Feed (recomendada: cero desarrollo de su parte).**
 Command ya publica un feed de inventario hacia los portales
 (Inmuebles24, Lamudi, etc.). Si puede agregar nuestro sitio como un
 destino más, no tiene que programar nada: nosotros leemos ese feed igual
 que lo hace cualquier portal. Solo necesitamos que nos pase **la URL del
 feed** (y usuario/contraseña si está protegido). Acepta XML o JSON.
 
-**Vía B — API REST (si Command no deja agregar destinos).**
+**Vía B - API REST (si Command no deja agregar destinos).**
 Manda las propiedades con un `POST /properties` en JSON, con la llave en
 el header `x-api-key`. Todo está documentado en el enlace de arriba.
 
@@ -152,7 +152,7 @@ integración.
 
 ## Cuando ya esté conectado
 
-- **Ver qué llegó:** tabla `api_bitacora` en Supabase — guarda cada
+- **Ver qué llegó:** tabla `api_bitacora` en Supabase - guarda cada
   petición, cuántas propiedades traía y qué se rechazó. Es lo primero que
   hay que revisar si el DT dice "ya lo mandé" y no aparece nada.
 - **Ver el inventario:** tabla `propiedades`. La columna `datos_origen`

@@ -41,10 +41,10 @@
 // ─────────────────────────────────────────────────────────────
 // VARIABLES DE ENTORNO (Project Settings > Edge Functions > Secrets)
 // ─────────────────────────────────────────────────────────────
-//   SERVICE_ROLE_KEY  — ya la usan las otras funciones del proyecto
-//   SYNC_SECRET       — clave propia para dispararla desde el cron
-//   FEED_URL          — URL del feed (solo para el modo 1)
-//   FEED_USER/FEED_PASS — opcionales, si el feed pide autenticación básica
+//   SERVICE_ROLE_KEY  - ya la usan las otras funciones del proyecto
+//   SYNC_SECRET       - clave propia para dispararla desde el cron
+//   FEED_URL          - URL del feed (solo para el modo 1)
+//   FEED_USER/FEED_PASS - opcionales, si el feed pide autenticación básica
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 

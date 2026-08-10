@@ -1,4 +1,4 @@
--- Fase 1: autenticación base — tabla de perfiles y roles.
+-- Fase 1: autenticación base - tabla de perfiles y roles.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
 
 create table if not exists public.profiles (

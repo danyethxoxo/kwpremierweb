@@ -77,7 +77,7 @@ create policy "delete_staff" on public.plantillas_documento
 -- Documentos llenados a partir de una plantilla
 -- ─────────────────────────────────────────────────────────────
 -- Se guarda copia de los bloques tal como estaban al finalizar. Si
--- después alguien edita la plantilla, lo ya firmado no cambia — que es
+-- después alguien edita la plantilla, lo ya firmado no cambia - que es
 -- lo mínimo que se le pide a un documento con folio.
 create table if not exists public.documentos_plantilla (
   id uuid primary key default gen_random_uuid(),

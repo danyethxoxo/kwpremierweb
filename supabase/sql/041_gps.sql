@@ -1,4 +1,4 @@
--- Fase 24: GPS — Programa trimestral de seguimiento
+-- Fase 24: GPS - Programa trimestral de seguimiento
 --
 -- Guarda los GPS que llena el liderazgo (el formato que antes vivía en
 -- un Word suelto). A diferencia de acuerdos y contratos, aquí no hay

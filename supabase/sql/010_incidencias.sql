@@ -1,4 +1,4 @@
--- Fase 11: botón "Reporta una Incidencia" — tickets de soporte.
+-- Fase 11: botón "Reporta una Incidencia" - tickets de soporte.
 -- Cualquier rol puede reportar; solo Master/Admin ven todas y cambian
 -- su estatus. Ejecutar completo en Supabase Dashboard > SQL Editor.
 

@@ -237,7 +237,7 @@
         // lo copiamos y abrimos Instagram para pegarlo en la historia o
         // en la biografía.
         return copiar(url).then(function () {
-          aviso('Enlace copiado — pégalo en tu historia o bio');
+          aviso('Enlace copiado - pégalo en tu historia o bio');
           setTimeout(function () { window.open('https://www.instagram.com/', '_blank', 'noopener'); }, 700);
         }).catch(function () { aviso('No se pudo copiar'); });
       }

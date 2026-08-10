@@ -3,7 +3,7 @@
 // El "link de catálogo" de cada asesor (propiedades.html?asesor=<id>,
 // visto desde perfil.html): quien entra por ahí navega el mismo
 // catálogo, pero mientras dure la marca, cualquier propiedad que abra
-// le muestra a ESE asesor como contacto — así lo haga otro, o venga sin
+// le muestra a ESE asesor como contacto - así lo haga otro, o venga sin
 // dueño porque llegó de otra oficina por Command.
 //
 // Es lo mismo que hacen los sitios tipo "nombre.kw.com": el link no

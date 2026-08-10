@@ -1,6 +1,6 @@
 -- Fase 17: página pública de inicio (portal.html reemplaza a index.html
 -- como Hub). Se agrega una vista segura y de solo lectura para listar
--- Asesores y Staff sin necesidad de haber iniciado sesión — expone
+-- Asesores y Staff sin necesidad de haber iniciado sesión - expone
 -- únicamente nombre, apellido y rol; nunca email ni ningún otro dato.
 --
 -- "oculto" permite que Master/Admin escondan un perfil individual del

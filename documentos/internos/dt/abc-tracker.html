@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ABC de la Tecnología — Seguimiento</title>
+<title>ABC de la Tecnología Tracker</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
@@ -18,10 +18,11 @@
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260810">
 <style>
   /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
-     cascada al [hidden] del navegador — una regla de autor siempre
+     cascada al [hidden] del navegador - una regla de autor siempre
      gana sobre la hoja del user-agent, sin importar qué tan específico
      sea el atributo. Con !important se garantiza que ocultarlo con el
      atributo `hidden` siempre funcione, sin tener que pelear la
@@ -59,6 +60,11 @@
 
   select.filtro { height: 42px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; color: var(--text); outline: none; cursor: pointer; }
   select.filtro:focus { border-color: var(--red); }
+  /* kw-ui.js envuelve el <select> en un .kw-select que por defecto es
+     width:100%, pensado para formularios de una columna. Aquí va en una
+     barra horizontal junto al buscador y al botón, así que se le quita
+     el ancho completo para que no empuje todo a renglones separados. */
+  .toolbar .kw-select { width: auto; flex: 0 0 auto; min-width: 190px; }
   .btn { height: 42px; padding: 0 16px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s, border-color .15s, color .15s; }
   .btn:hover { background: #f6f6f6; }
   .btn svg { width: 15px; height: 15px; }
@@ -86,7 +92,22 @@
   button.fila-dt:hover { color: var(--text); text-decoration: underline; }
   button.fila-dt .fila-dt-lapiz { width: 10px; height: 10px; opacity: .45; flex-shrink: 0; }
   button.fila-dt:hover .fila-dt-lapiz { opacity: .9; }
-  .fila-dt-select { font: inherit; font-size: 11.5px; border: 1.5px solid var(--red); border-radius: 6px; padding: 2px 4px; background: #fff; color: var(--text); max-width: 220px; }
+  /* Menú para elegir DT, dibujado por nosotros (no el <select> gris del
+     navegador). El contenedor de la fila de datos es position:relative
+     para que se ancle debajo del botón "DT: …". */
+  .fila-meta { position: relative; }
+  .dt-menu { position: absolute; top: 22px; left: 0; z-index: 40; min-width: 210px; max-height: 260px; overflow-y: auto;
+             background: #fff; border: 1px solid var(--border); border-radius: 11px; box-shadow: 0 12px 32px rgba(0,0,0,.16); padding: 5px; }
+  .dt-op { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: none; font-family: inherit;
+           font-size: 13px; color: var(--text); padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left; }
+  .dt-op:hover { background: #f5f5f5; }
+  .dt-op.elegida { color: var(--red); font-weight: 700; background: #fff3f3; }
+  .dt-op i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dt-op-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dt-op-check { width: 14px; height: 14px; flex-shrink: 0; opacity: 0; }
+  .dt-op.elegida .dt-op-check { opacity: 1; }
+  .dt-op-nuevo { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 10px; border-radius: 0 0 8px 8px; color: var(--muted); }
+  .dt-op-nuevo svg { width: 14px; height: 14px; flex-shrink: 0; }
   .fila-prog { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .barra { width: 110px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
   .barra i { display: block; height: 100%; background: var(--red); border-radius: 99px; transition: width .3s; }
@@ -115,7 +136,7 @@
   }
 
   /* Panel del checklist: se despliega hacia abajo del renglón, con las
-     vibras del libro de Sheets — sesiones arriba, temas en columnas
+     vibras del libro de Sheets - sesiones arriba, temas en columnas
      angostas con el nombre en vertical, un solo renglón de casillas.
      El truco de grid-template-rows 0fr→1fr anima el alto sin medirlo
      por JS y sin que se le note un salto cuando el checklist se
@@ -139,7 +160,7 @@
      el <span> tiene alto FIJO (100%), no "max-height".
      Con max-height la caja se encogía al largo de cada texto, y como
      el texto se lee de abajo hacia arriba, el inicio de la lectura
-     quedaba a distinta altura según el largo — "Google Suite"
+     quedaba a distinta altura según el largo - "Google Suite"
      empezaba a 30px del fondo, "Canva" a 63px, y los de varias líneas
      (que sí llenaban el alto) a 5px. Se midió en el navegador: 58.5px
      de dispersión con max-height, 0px con alto fijo.
@@ -154,17 +175,17 @@
   table.chk-tabla .chk-cabeza { display: flex; align-items: flex-start; justify-content: center; height: 100%; padding-top: 8px; }
   /* En vertical-rl el ancho de la celda decide cuántas líneas caben
      lado a lado (eso ya lo resuelve el colgroup); el alto del <span>
-     es lo que dispara el salto de línea — al revés de como se piensa
+     es lo que dispara el salto de línea - al revés de como se piensa
      en texto horizontal. */
   table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); text-align: start; font-size: 10.5px; font-weight: 500; color: #666; white-space: normal; word-break: break-word; line-height: 1.2; height: var(--cab-alto); }
   table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #e5e7eb; }
 
   /* Bandas por sesión: cada sesión trae su propio tono, no solo
-     alternado entre dos — con 11 grupos (Onboarding + S1..S10) y 8
+     alternado entre dos - con 11 grupos (Onboarding + S1..S10) y 8
      tonos que se repiten en ciclo, dos sesiones nunca vecinas
      terminan compartiendo color. Corre de encabezado a casillas, la
      columna completa, y además hay un borde más marcado en el límite
-     entre una sesión y la siguiente — más fuerte que el separador fino
+     entre una sesión y la siguiente - más fuerte que el separador fino
      que ya llevan los temas entre sí dentro de la misma sesión. */
   table.chk-tabla th.banda-0, table.chk-tabla td.banda-0 { background: #EEF1F8; }
   table.chk-tabla th.banda-1, table.chk-tabla td.banda-1 { background: #FBF2E9; }
@@ -209,7 +230,7 @@
 <body>
 
 <header class="kw-header">
-  <span class="kw-header-title">ABC — Seguimiento</span>
+  <span class="kw-header-title">ABC de la Tecnología Tracker</span>
   <a href="../index.html" class="back-btn">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
     <span>Atrás</span>
@@ -222,33 +243,40 @@
   </div>
 
   <div id="contenido">
-    <h1 class="page-title">ABC de la Tecnología</h1>
-    <p class="page-desc">Avance de adopción tecnológica por asesor. Da clic en un asesor para ver y editar su checklist — cada palomeo queda guardado al instante.</p>
+    <h1 class="page-title">ABC de la Tecnología Tracker</h1>
+    <p class="page-desc">Avance de adopción tecnológica por asesor. Da clic en un asesor para ver y editar su checklist; cada palomeo queda guardado al instante.</p>
 
     <div id="avisos"></div>
 
     <div class="stats">
-      <div class="stat"><div class="stat-num" id="s-asesores">—</div><div class="stat-lbl">Asesores activos</div></div>
-      <div class="stat"><div class="stat-num" id="s-adopcion">—</div><div class="stat-lbl">Adopción del MC</div></div>
-      <div class="stat"><div class="stat-num" id="s-completos">—</div><div class="stat-lbl">Al 100%</div></div>
-      <div class="stat"><div class="stat-num" id="s-temas">—</div><div class="stat-lbl">Temas del ABC</div></div>
+      <div class="stat"><div class="stat-num" id="s-asesores">·</div><div class="stat-lbl">Asesores activos</div></div>
+      <div class="stat"><div class="stat-num" id="s-adopcion">·</div><div class="stat-lbl">Adopción del MC</div></div>
+      <div class="stat"><div class="stat-num" id="s-completos">·</div><div class="stat-lbl">Al 100%</div></div>
+      <div class="stat"><div class="stat-num" id="s-temas">·</div><div class="stat-lbl">Temas del ABC</div></div>
+    </div>
+
+    <!-- Pestañas de estado. Los inactivos (dados de baja a mano, o que
+         dejaron de aparecer en la hoja de asesores) no se borran: se
+         mueven aquí y conservan intacto su avance. -->
+    <!-- data-kw-tabs vacío: es lo que kw-ui.js busca para montar la
+         pastilla que se desliza. Se deja sin id de paneles a propósito,
+         porque aquí no hay paneles que intercambiar: las dos pestañas
+         muestran la misma lista, solo que filtrada. -->
+    <div class="kw-tabs" id="abc-tabs" data-kw-tabs="">
+      <button type="button" class="kw-tab activo" data-tab="activos">Activos</button>
+      <button type="button" class="kw-tab" data-tab="inactivos">Inactivos</button>
     </div>
 
     <div class="toolbar">
       <div class="buscador">
         <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="busq" placeholder="Buscar por nombre o KW ID…" autocomplete="off" />
+        <input type="text" id="busq" placeholder="Buscar por nombre o KWID…" autocomplete="off" />
         <button type="button" class="input-clear" id="busq-clear" aria-label="Limpiar búsqueda" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <div class="sugerencias" id="sugerencias" hidden></div>
       </div>
       <select class="filtro" id="f-dt"><option value="">Todos los DT</option></select>
-      <select class="filtro" id="f-estado">
-        <option value="activos">Solo activos</option>
-        <option value="todos">Activos y bajas</option>
-        <option value="bajas">Solo bajas</option>
-      </select>
       <button type="button" class="btn" id="btn-sync">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
         Sincronizar
@@ -270,6 +298,7 @@
   var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
   var dtsConocidos = []; // nombres de DT ya vistos en el padrón, para el filtro y el editor
   var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
+  var pestana = 'activos'; // 'activos' | 'inactivos'
   var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
 
@@ -326,18 +355,17 @@
   }
   function limpiarAviso() { document.getElementById('avisos').innerHTML = ''; }
 
-  // Con nombres fijados (chips), la lista es exactamente esa selección
-  // — ignora buscador, DT y estado a propósito, porque fijar a alguien
+  // Con nombres fijados (chips), la lista es exactamente esa selección:
+  // ignora buscador, DT y pestaña a propósito, porque fijar a alguien
   // es una elección explícita que no debería desaparecer si además
   // está de baja o no coincide con el DT elegido en el otro filtro.
   function filtrados() {
     if (pinned.size) return Array.from(pinned.values());
     var q = norm(document.getElementById('busq').value.trim());
     var dt = document.getElementById('f-dt').value;
-    var estado = document.getElementById('f-estado').value;
     return asesores.filter(function (a) {
-      if (estado === 'activos' && !a.activo) return false;
-      if (estado === 'bajas' && a.activo) return false;
+      if (pestana === 'activos' && !a.activo) return false;
+      if (pestana === 'inactivos' && a.activo) return false;
       if (dt && (a.dt_asignado || '') !== dt) return false;
       if (q) {
         var texto = norm(a.nombre + ' ' + a.kwid);
@@ -353,8 +381,8 @@
     document.getElementById('s-asesores').textContent = activos.length;
     document.getElementById('s-temas').textContent = temas.length;
     if (!activos.length || !temas.length) {
-      document.getElementById('s-adopcion').textContent = '—';
-      document.getElementById('s-completos').textContent = '—';
+      document.getElementById('s-adopcion').textContent = '·';
+      document.getElementById('s-completos').textContent = '·';
       return;
     }
     var suma = 0, completos = 0;
@@ -385,7 +413,9 @@
     var salida = document.getElementById('salida');
     var lista = filtrados();
     filaEls = new Map();
-    menuFilaAbierto = null; // un repintado completo se lleva entre las patas cualquier menú abierto
+    // un repintado completo se lleva entre las patas cualquier menú abierto
+    menuFilaAbierto = null;
+    menuDTAbierto = null;
     if (!lista.length) {
       salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>' +
         (pinned.size ? 'Ninguno de los nombres fijados sigue en el padrón.' : 'Nadie coincide con lo que buscas.') +
@@ -413,7 +443,7 @@
         '<div class="fila-txt">' +
           '<div class="fila-nom">' + esc(a.nombre) + (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</div>' +
           '<div class="fila-meta">' +
-            '<span>KW ' + esc(a.kwid) + '</span>' +
+            '<span>KWID ' + esc(a.kwid) + '</span>' +
             dtHtml +
             (fecha ? '<span>Ingreso ' + fecha + '</span>' : '') +
           '</div>' +
@@ -453,61 +483,66 @@
 
   // ── Asignar/cambiar el DT de un asesor ──
   //
-  // Se abre como un <select> nativo en el lugar del texto "DT: …" — sin
-  // modal ni popover a la medida, para no reinventar algo que el propio
-  // navegador ya resuelve bien (teclado, accesibilidad, cerrar con
-  // Escape). Guarda apenas se elige una opción distinta; si no se
-  // cambia nada y se hace clic fuera, se cierra solo sin guardar nada.
-  function abrirEditorDT(kwid) {
-    var fila = filaEls.get(kwid);
-    if (!fila) return;
-    var btn = fila.querySelector('button.fila-dt');
-    if (!btn) return; // sin permiso, o ya está en edición
+  // Se despliega un menú dibujado por nosotros, con el mismo estilo que
+  // el resto del sitio, en vez del <select> nativo (que se ve como el
+  // desplegable gris del navegador y no combina con nada).
+  var menuDTAbierto = null; // kwid con el menú de DT abierto, o null
 
+  function cerrarMenuDT() {
+    if (!menuDTAbierto) return;
+    var fila = filaEls.get(menuDTAbierto);
+    var m = fila && fila.querySelector('.dt-menu');
+    if (m) m.remove();
+    menuDTAbierto = null;
+  }
+
+  function abrirEditorDT(kwid) {
+    if (menuDTAbierto === kwid) { cerrarMenuDT(); return; }
+    cerrarMenuDT();
+    cerrarMenuFila();
+
+    var fila = filaEls.get(kwid);
     var a = asesores.find(function (x) { return x.kwid === kwid; });
-    if (!a) return;
+    var btn = fila && fila.querySelector('button.fila-dt');
+    if (!btn || !a) return;
 
     var opciones = dtsConocidos.slice();
     if (a.dt_asignado && opciones.indexOf(a.dt_asignado) < 0) opciones.push(a.dt_asignado);
     opciones.sort();
 
-    var sel = document.createElement('select');
-    sel.className = 'fila-dt-select';
-    sel.innerHTML = '<option value="">Sin DT asignado</option>' +
-      opciones.map(function (d) {
-        return '<option value="' + esc(d) + '"' + (d === a.dt_asignado ? ' selected' : '') + '>' + esc(d) + '</option>';
-      }).join('') +
-      '<option value="__nuevo__">+ Agregar nuevo DT…</option>';
+    var check = '<svg class="dt-op-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>';
+    function fila1(valor, etiqueta, color, elegido) {
+      return '<button type="button" class="dt-op' + (elegido ? ' elegida' : '') + '" data-valor="' + esc(valor) + '">' +
+        '<i style="background:' + color + '"></i>' +
+        '<span class="dt-op-txt">' + esc(etiqueta) + '</span>' + check +
+      '</button>';
+    }
 
-    btn.replaceWith(sel);
-    sel.focus();
+    var m = document.createElement('div');
+    m.className = 'dt-menu';
+    m.innerHTML =
+      opciones.map(function (d) { return fila1(d, d, colorDT(d), d === a.dt_asignado); }).join('') +
+      fila1('', 'Sin DT asignado', '#b5b5b5', !a.dt_asignado) +
+      '<button type="button" class="dt-op dt-op-nuevo" data-valor="__nuevo__">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+        '<span class="dt-op-txt">Agregar nuevo DT</span>' +
+      '</button>';
 
-    // `resuelto` evita que "change" y "blur" cierren el editor dos
-    // veces. No basta con revisar si el <select> sigue en el DOM: tanto
-    // el propio prompt() (al abrirse le quita el foco al select) como
-    // el outerHTML de refrescarFilaMain() disparan "blur" DE FORMA
-    // SÍNCRONA, así que cuando el blur handler se ejecuta el select
-    // puede seguir técnicamente conectado a mitad del reemplazo — y
-    // llamar a refrescarFilaMain() otra vez ahí revienta ("node no
-    // longer a child"). Con la bandera, quien llega primero gana y el
-    // otro no hace nada, sin importar el orden exacto en que disparen.
-    var resuelto = false;
-    sel.addEventListener('click', function (e) { e.stopPropagation(); });
-    sel.addEventListener('change', function () {
-      if (resuelto) return;
-      resuelto = true;
-      var valor = sel.value;
+    btn.parentNode.insertBefore(m, btn.nextSibling);
+    menuDTAbierto = kwid;
+
+    m.addEventListener('click', function (e) {
+      var op = e.target.closest('.dt-op');
+      if (!op) return;
+      e.stopPropagation();
+      var valor = op.dataset.valor;
+      cerrarMenuDT();
       if (valor === '__nuevo__') {
         valor = (prompt('Nombre del nuevo DT:') || '').trim();
-        if (!valor) { refrescarFilaMain(kwid); return; }
+        if (!valor) return;
       }
-      guardarDT(kwid, valor);
+      if ((valor || null) !== (a.dt_asignado || null)) guardarDT(kwid, valor);
     });
-    sel.addEventListener('blur', function () {
-      if (resuelto) return;
-      resuelto = true;
-      refrescarFilaMain(kwid);
-    }, { once: true });
   }
 
   async function guardarDT(kwid, nuevoValor) {
@@ -554,7 +589,7 @@
     if (!host || !a) return;
 
     // "Cambiar DT" no va aquí: el propio texto "DT: …" del renglón ya
-    // es un botón que abre ese mismo editor — tenerlo dos veces sería
+    // es un botón que abre ese mismo editor - tenerlo dos veces sería
     // redundante.
     var svgBaja = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
     var svgAlta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
@@ -575,7 +610,7 @@
     });
   }
 
-  // Dar de baja NUNCA borra nada — solo marca activo=false, igual que
+  // Dar de baja NUNCA borra nada - solo marca activo=false, igual que
   // hace la sincronización con la hoja. El avance del asesor se queda
   // intacto por si regresa.
   async function alternarActivo(kwid) {
@@ -591,12 +626,11 @@
         .from('abc_asesores').update({ activo: a.activo }).eq('kwid', kwid);
       if (error) throw error;
       limpiarAviso();
-      // Si el filtro de estado está activo (no en "todos"), esto puede
-      // sacar al asesor de la lista visible o meterlo — a diferencia del
-      // DT, aquí sí hace falta repintar todo para que se refleje. Con
-      // nombres fijados (chips) no aplica: esos se quedan en pantalla
-      // pase lo que pase con su estado.
-      if (!pinned.size && document.getElementById('f-estado').value !== 'todos') pintar();
+      // Dar de baja o reactivar cambia de pestaña a la persona, así que
+      // aquí sí hace falta repintar toda la lista (a diferencia del DT,
+      // que nunca la mueve de lugar). Con nombres fijados (chips) no
+      // aplica: esos se quedan en pantalla pase lo que pase.
+      if (!pinned.size) pintar();
     } catch (err) {
       a.activo = anterior;
       refrescarFilaMain(kwid);
@@ -613,7 +647,7 @@
   }
 
   // El checklist de un asesor: sesiones arriba, temas como columnas
-  // angostas con el nombre en vertical y un solo renglón de casillas —
+  // angostas con el nombre en vertical y un solo renglón de casillas
   // la idea de la cuadrícula del libro, pero para un asesor a la vez.
   function htmlChecklistHorizontal(kwid) {
     // grupos: una entrada por sesión, con cuántos temas trae (para el
@@ -667,7 +701,7 @@
     return h;
   }
 
-  // Abre o cierra el checklist de un renglón in place — el checklist se
+  // Abre o cierra el checklist de un renglón in place - el checklist se
   // construye la primera vez que se abre (no en cada render) para no
   // armar de entrada 100 tablas de 25 casillas que nadie va a ver.
   function alternarFila(kwid) {
@@ -699,7 +733,7 @@
   // Se escribe de inmediato y la pantalla se actualiza sin esperar a la
   // respuesta: en sesión se palomea rápido y esperar el viaje al
   // servidor por cada clic se siente lento. Si la escritura falla, la
-  // casilla se regresa a como estaba y se avisa — nunca se queda
+  // casilla se regresa a como estaba y se avisa - nunca se queda
   // mostrando algo que no se guardó. Solo se actualiza el renglón que
   // cambió (no toda la lista), así que el checklist se queda abierto.
   async function alPalomear(input, kwid, temaId) {
@@ -772,7 +806,7 @@
     cont.innerHTML = candidatos.map(function (a) {
       return '<button type="button" class="sug" data-kwid="' + esc(a.kwid) + '">' +
         '<span class="sug-nom">' + esc(a.nombre) + (a.activo ? '' : ' · Baja') + '</span>' +
-        '<span class="sug-sub">KW ' + esc(a.kwid) + (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : '') + '</span>' +
+        '<span class="sug-sub">KWID ' + esc(a.kwid) + (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : '') + '</span>' +
       '</button>';
     }).join('');
   }
@@ -900,7 +934,7 @@
   //    sola vez sobre el contenedor. ──
   var salidaEl = document.getElementById('salida');
   salidaEl.addEventListener('click', function (e) {
-    // El botón de DT y el de tres puntos viven DENTRO de .fila-main —
+    // El botón de DT y el de tres puntos viven DENTRO de .fila-main
     // hay que resolverlos primero, si no el clic también dispararía
     // abrir/cerrar el checklist.
     var menuBtn = e.target.closest('.fila-menu-btn');
@@ -964,19 +998,30 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.buscador')) ocultarSugerencias();
     if (menuFilaAbierto && !e.target.closest('.fila-opciones')) cerrarMenuFila();
+    if (menuDTAbierto && !e.target.closest('.dt-menu, button.fila-dt')) cerrarMenuDT();
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && menuFilaAbierto) cerrarMenuFila();
+    if (e.key !== 'Escape') return;
+    if (menuFilaAbierto) cerrarMenuFila();
+    if (menuDTAbierto) cerrarMenuDT();
   });
 
   document.getElementById('f-dt').addEventListener('change', pintar);
-  document.getElementById('f-estado').addEventListener('change', pintar);
+  // Las pestañas: kw-ui.js se encarga solo de la pastilla que se
+  // desliza; aquí únicamente se escucha el clic para volver a filtrar.
+  document.getElementById('abc-tabs').addEventListener('click', function (e) {
+    var tab = e.target.closest('.kw-tab');
+    if (!tab || tab.dataset.tab === pestana) return;
+    pestana = tab.dataset.tab;
+    pintar();
+  });
   document.getElementById('btn-sync').addEventListener('click', sincronizar);
 
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
 </script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260810"></script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
 </body>
 </html>

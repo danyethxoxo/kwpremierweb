@@ -19,7 +19,7 @@
 // (hub/drive.html): devuelve el árbol de la carpeta de Drive para que
 // los asesores la consulten desde el sitio. Eso vive aquí, y no en una
 // función aparte, porque ya tiene el token de Google con permiso de
-// Drive y la variable de la carpeta — una función nueva sería otro slug
+// Drive y la variable de la carpeta - una función nueva sería otro slug
 // que configurar sin ganar nada. Ojo: esa acción (`drive_arbol`) la
 // puede llamar cualquiera con sesión, no solo el equipo de altas.
 //
@@ -112,7 +112,7 @@ async function getAccessToken(refreshToken: string): Promise<string> {
 // llena a mano y mover una columna no debe romper esto.
 // La hoja se llena a mano (a veces pegando desde Word o el correo), y
 // eso a veces mete caracteres invisibles (espacios de ancho cero, BOM)
-// que no se ven pero rompen el correo para las APIs de Google — por
+// que no se ven pero rompen el correo para las APIs de Google - por
 // ejemplo "nombre@‌dominio.mx" truena con "invalidSharingRequest"
 // aunque en la hoja se vea perfecto. trim() no los quita porque no
 // están en los extremos, así que se limpian de todo el texto.
@@ -146,10 +146,10 @@ function aFecha(s: string): string | null {
 }
 
 // Lectura de la hoja para el ABC: solo nombre, KW ID y fecha de ingreso
-// — el DT asignado y el avance se administran a mano desde el sitio, no
+// - el DT asignado y el avance se administran a mano desde el sitio, no
 // vienen de aquí. A propósito NO reusa leerHoja(): esa filtra las filas
 // sin correo (la necesita para invitar por email en el alta), y aquí eso
-// sería peligroso — un asesor viejo sin correo capturado desaparecería
+// sería peligroso - un asesor viejo sin correo capturado desaparecería
 // de la lista y la sincronización lo marcaría como baja por error. Aquí
 // lo único que se exige es el KW ID.
 async function leerHojaABC(token: string) {
@@ -307,7 +307,7 @@ async function listarPermisosDrive(token: string): Promise<Set<string>> {
 // también es lo que hace esto seguro: la pantalla nunca puede pedir una
 // carpeta arbitraria, porque aquí solo se camina hacia abajo desde
 // ALTA_DRIVE_FOLDER_ID. Si se aceptara un id desde afuera, cualquiera
-// podría pedir carpetas ajenas — el token de la función ve todo el Drive
+// podría pedir carpetas ajenas - el token de la función ve todo el Drive
 // de la cuenta, no solo esta carpeta.
 type ElementoDrive = {
   id: string
@@ -561,7 +561,7 @@ Deno.serve(async (req: Request) => {
     const ACCIONES_ABIERTAS = ['drive_arbol']
 
     // El ABC lo sincroniza el equipo de liderazgo (Master/Admin/Staff),
-    // que es quien da las sesiones — no solo los correos del alta.
+    // que es quien da las sesiones - no solo los correos del alta.
     const ACCIONES_STAFF = ['abc_sync']
 
     if (ACCIONES_STAFF.includes(accion)) {
@@ -727,7 +727,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Marcar manual: para quienes ya se dieron de alta antes de este
-    // proceso (o por fuera de él). No toca las APIs de Google — solo
+    // proceso (o por fuera de él). No toca las APIs de Google - solo
     // asienta que ya están, para no duplicar el contacto ni reenviarle a
     // alguien que ya tiene acceso los avisos de "se compartió contigo".
     if (accion === 'marcar_manual') {

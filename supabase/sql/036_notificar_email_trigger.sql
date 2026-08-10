@@ -13,7 +13,7 @@
 --   2. Ya debiste haber puesto el secreto WEBHOOK_SECRET en esa función
 --      (Project Settings > Edge Functions > Secrets).
 --   3. Abajo, sustituir PON_AQUI_TU_WEBHOOK_SECRET por ese mismo valor
---      exacto — si no coinciden, la función responde "No autorizado".
+--      exacto - si no coinciden, la función responde "No autorizado".
 --
 -- Requiere 013_notificaciones.sql.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.

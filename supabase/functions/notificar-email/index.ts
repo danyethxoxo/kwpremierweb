@@ -3,8 +3,8 @@
 // Manda un correo cada vez que se guarda una notificación en la
 // plataforma (la de la campanita). No la llama ninguna pantalla: la
 // dispara la base de datos sola, con un Database Webhook sobre la tabla
-// `notificaciones`, así que sirve para todas por igual —usuario nuevo,
-// incidencia, prospecto, lo que se agregue después— sin tener que tocar
+// `notificaciones`, así que sirve para todas por igual -usuario nuevo,
+// incidencia, prospecto, lo que se agregue después- sin tener que tocar
 // nada más.
 //
 // A quién le llega: al dueño de la notificación, al correo con el que
