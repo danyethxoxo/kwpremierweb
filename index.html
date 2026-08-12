@@ -20,12 +20,12 @@
      única forma de entrar al portal desde aquí, y esconderla obligaba a
      subir hasta arriba otra vez. Por eso no lleva la clase .kw-header.
 
-     Se queda en tres cosas a propósito: logo, un botón y la
-     hamburguesa (esa la pone drawer.js). Antes traía además el saludo
-     con el nombre completo y un botón de reseña, y con la hamburguesa
-     eran cinco elementos: la portada se sentía tablero, no portada. La
-     reseña ya se pide abajo, junto a los testimonios, que es donde
-     tiene sentido pedirla. */
+     Antes traía seis cosas (hamburguesa, lupa, logo, saludo con el
+     nombre completo, botón de reseña y botón de portal) y la portada se
+     sentía tablero, no portada. Ahora son cuatro: logo, los dos enlaces
+     que valen desde aquí, y el botón. Lo demás se fue a donde
+     corresponde: la reseña se pide junto a los testimonios, y del
+     saludo queda solo el circulito con las iniciales. */
   .inicio-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; gap: 12px;
@@ -37,6 +37,18 @@
   }
   .inicio-logo { display: flex; align-items: center; flex-shrink: 0; }
   .inicio-logo img { height: 42px; width: auto; display: block; }
+
+  /* Las dos secciones que valen desde la portada, a la mano. Antes
+     vivían nada más dentro del menú de hamburguesa. */
+  .inicio-nav { display: flex; align-items: center; gap: 2px; }
+  .inicio-nav a {
+    padding: 8px 14px; border-radius: 40px;
+    font-size: 14px; font-weight: 600; color: var(--text);
+    text-decoration: none; white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .inicio-nav a:hover { color: var(--red); background: #fff0f0; }
+  .inicio-nav a:active { transform: translateY(1px); }
 
   .inicio-header-der { display: flex; align-items: center; gap: 12px; }
   /* Solo aparece con sesión iniciada (lo prende reflejarSesion). Es
@@ -135,6 +147,9 @@
   }
   .seccion-titulo .rojo { display: block; color: var(--red); }
   .seccion-titulo .negro { display: block; color: var(--text); font-size: 22px; }
+  /* Cuando el título va solo (sin subtítulo debajo) tiene que aportar
+     él mismo el aire que daba el subtítulo, o queda pegado al contenido. */
+  .seccion-titulo.solo { margin-bottom: 26px; }
   .seccion-sub {
     font-size: 14px; color: var(--muted); text-align: center;
     max-width: 620px; margin: 0 auto 26px; line-height: 1.6;
@@ -332,7 +347,10 @@
   }
   @media (max-width: 640px) {
     .inicio-header { padding: 8px 14px; min-height: 60px; gap: 8px; }
-    .inicio-logo img { height: 32px; }
+    /* En celular el logo se va: entre él, los dos enlaces y el botón no
+       cabía nada. La marca ya se ve en la foto del hero, ahí abajito. */
+    .inicio-logo { display: none; }
+    .inicio-nav a { padding: 7px 9px; font-size: 13px; }
     .btn-portal { padding: 9px 16px; font-size: 12.5px; gap: 6px; }
     .btn-portal svg { width: 13px; height: 13px; }
     .inicio-iniciales { width: 30px; height: 30px; font-size: 12px; }
@@ -367,6 +385,10 @@
     <a href="/kwpremierweb/index.html" class="inicio-logo" aria-label="KW Premier">
       <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
+    <nav class="inicio-nav">
+      <a href="asesores.html">Asesores</a>
+      <a href="staff.html">Liderazgo</a>
+    </nav>
     <div class="inicio-header-der">
       <span class="inicio-iniciales" id="bienvenida-iniciales"></span>
       <button type="button" class="btn-portal" id="btn-portal" onclick="irAlPortal(this)">
@@ -391,13 +413,13 @@
           por su trabajo.
         </p>
         <div class="hero-acciones">
-          <a class="btn-hero" href="propiedades.html">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            Ver propiedades
-          </a>
+          <button type="button" class="btn-hero" onclick="abrirModalReclutamiento()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+            Quiero ser parte
+          </button>
           <a class="btn-hero-claro" href="asesores.html">Conoce a los asesores</a>
         </div>
-        <p class="hero-nota">Explora el inventario completo. Sin registro ni costo.</p>
+        <p class="hero-nota">Déjanos tus datos y te contactamos para platicar.</p>
       </div>
       <div class="hero-foto" role="img" aria-label="Equipo de asesores de KW Premier reunido en un evento de Keller Williams"></div>
     </section>
@@ -486,11 +508,9 @@
          limita la política de RLS). Sin ninguna, esa cuadrícula no sale
          pero el botón sí, para invitar a dejar la primera. -->
     <section class="seccion" id="seccion-testimonios" style="display:none;">
-      <h2 class="seccion-titulo">
+      <h2 class="seccion-titulo solo">
         <span class="rojo">Lo que dicen de nosotros</span>
-        <span class="negro">Clientes que ya compraron, vendieron o rentaron</span>
       </h2>
-      <p class="seccion-sub">Personas que hicieron su operación con el acompañamiento de un asesor de KW Premier.</p>
       <div class="testimonios" id="lista-testimonios" style="display:none;"></div>
       <div id="resena-cta" style="display:none; text-align:center; margin-top:22px;">
         <a class="btn-unete" id="resena-link" href="#" target="_blank" rel="noopener" style="background:var(--red); color:#fff;">
@@ -502,11 +522,9 @@
 
     <!-- Oficina y mapa: igual, salen de OFICINA (abajo). -->
     <section class="seccion" id="seccion-oficina" style="display:none;">
-      <h2 class="seccion-titulo">
+      <h2 class="seccion-titulo solo">
         <span class="rojo">Visítanos</span>
-        <span class="negro">Estamos en la Ciudad de México</span>
       </h2>
-      <p class="seccion-sub">Pasa a conocer nuestro Market Center o escríbenos para agendar una cita.</p>
       <div class="oficina">
         <div class="oficina-mapa" id="oficina-mapa"></div>
         <div class="oficina-datos" id="oficina-datos"></div>
@@ -519,7 +537,7 @@
   <div id="modal-reclutamiento" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3>Quiero ser parte</h3>
-      <p class="modal-sub">Déjanos tus datos y te contactamos para platicar. Los campos con <span style="color:var(--red);font-weight:700;">*</span> son obligatorios.</p>
+      <p class="modal-sub">Déjanos tus datos y un miembro del equipo de KW Premier se pondrá en contacto contigo.</p>
       <div class="field requerido">
         <label for="rec-nombre">Nombre</label>
         <input type="text" id="rec-nombre" maxlength="120" autocomplete="name" />
@@ -829,6 +847,11 @@
   pintarTestimonios();
   pintarOficina();
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="publico"></script>
+<!-- Esta página NO carga drawer.js a propósito (el resto del sitio sí).
+     Ese script mete la hamburguesa y la lupa dentro del <header>, y en la
+     portada estorbaban: aquí las dos secciones a las que llevaría el menú
+     ya están en el header (Asesores y Liderazgo) y las demás, en las
+     tarjetas de en medio. -->
+
 </body>
 </html>
