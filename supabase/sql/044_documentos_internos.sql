@@ -143,11 +143,14 @@ create policy "documentos_internos_write" on public.documentos_internos
 -- El ABC (los dos) queda solo en DT, que es de quien es. El GPS sí lo
 -- usan los cuatro puestos.
 -- ─────────────────────────────────────────────────────────────
+-- Los títulos de estas dos filas se renombraron en la 047 ("ABC de la
+-- Tecnología" y "Constancia del ABC para 100%"); se dejan aquí ya
+-- actualizados para que volver a correr este archivo no los regrese.
 insert into public.documentos_internos (id, titulo, descripcion, href, icono, roles, orden) values
-  ('abc-tracker', 'ABC - Seguimiento',
+  ('abc-tracker', 'ABC de la Tecnología',
    'Avance de adopción tecnológica por asesor: palomea los temas de cada sesión y consulta porcentajes',
    'dt/abc-tracker.html', 'check', array['DT'], 1),
-  ('abc', 'ABC del Asesor',
+  ('abc', 'Constancia del ABC para 100%',
    'Guía de procesos, lineamientos y buenas prácticas para asesores de KW Premier',
    'abc.html', 'libro', array['DT'], 2),
   ('gps', 'GPS',
