@@ -18,7 +18,14 @@
   /* ── Header fijo ──
      A diferencia del resto del sitio, este no se esconde al bajar: es la
      única forma de entrar al portal desde aquí, y esconderla obligaba a
-     subir hasta arriba otra vez. Por eso no lleva la clase .kw-header. */
+     subir hasta arriba otra vez. Por eso no lleva la clase .kw-header.
+
+     Se queda en tres cosas a propósito: logo, un botón y la
+     hamburguesa (esa la pone drawer.js). Antes traía además el saludo
+     con el nombre completo y un botón de reseña, y con la hamburguesa
+     eran cinco elementos: la portada se sentía tablero, no portada. La
+     reseña ya se pide abajo, junto a los testimonios, que es donde
+     tiene sentido pedirla. */
   .inicio-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; gap: 12px;
@@ -31,22 +38,19 @@
   .inicio-logo { display: flex; align-items: center; flex-shrink: 0; }
   .inicio-logo img { height: 42px; width: auto; display: block; }
 
-  .inicio-header-der { display: flex; align-items: center; gap: 16px; }
-  /* Solo aparece con sesión iniciada (lo prende reflejarSesion). En
-     escritorio se ve el saludo completo; en celular no hay lugar para
-     "Bienvenido, Fulano" junto al logo y los botones, así que se cambia
-     por solo las iniciales en un circulito. */
-  .inicio-bienvenida { display: none; align-items: center; line-height: 1.25; }
-  .inicio-bienvenida.visible { display: flex; }
-  .inicio-bienvenida .saludo { font-size: 12.5px; color: var(--muted); display: block; }
-  .inicio-bienvenida .nombre { font-size: 14.5px; font-weight: 700; display: block; }
-  .inicio-bienvenida .bienvenida-iniciales {
+  .inicio-header-der { display: flex; align-items: center; gap: 12px; }
+  /* Solo aparece con sesión iniciada (lo prende reflejarSesion). Es
+     nada más el circulito con las iniciales: que el botón de al lado
+     diga "Ir al Portal" ya avisa que la sesión sigue viva, así que el
+     "Bienvenido, Fulano" completo sobraba. */
+  .inicio-iniciales {
     display: none;
     align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
     background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
   }
+  .inicio-iniciales.visible { display: flex; }
 
   .btn-portal {
     display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0;
@@ -61,19 +65,80 @@
   .btn-portal:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset; }
   .btn-portal svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-  .btn-resena {
-    display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
-    padding: 9px 16px; border-radius: 40px;
+  main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 92px 20px 40px; }
+
+  /* ── Portada ──
+     El texto de un lado y la foto del equipo del otro, con el corte
+     diagonal entre los dos. La diagonal es lo que evita que se vea
+     como dos cajas pegadas. */
+  .hero {
+    display: grid; grid-template-columns: 1fr 1.05fr; align-items: center;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 22px; overflow: hidden;
+    box-shadow: var(--sombra-2);
+    margin-bottom: 30px;
+  }
+  .hero-texto { padding: 52px 20px 52px 44px; }
+  .hero h1 {
+    font-size: 40px; line-height: 1.1; letter-spacing: -0.035em;
+    margin-bottom: 16px;
+  }
+  .hero h1 .rojo { display: block; color: var(--red); }
+  .hero h1 .negro { display: block; color: var(--text); }
+  .hero-sub {
+    font-size: 15px; line-height: 1.65; color: #555;
+    max-width: 430px; margin-bottom: 26px;
+  }
+  .hero-acciones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-hero {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
+    color: #fff; border: none; border-radius: 40px;
+    padding: 14px 30px; font-size: 14.5px; font-weight: 700; font-family: inherit;
+    text-decoration: none; cursor: pointer; white-space: nowrap;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px rgba(204,0,0,0.3);
+    transition: filter 0.18s, transform 0.12s;
+  }
+  .btn-hero:hover { filter: brightness(1.08); }
+  .btn-hero:active { transform: translateY(1px) scale(0.98); }
+  .btn-hero svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-hero-claro {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 24px; border-radius: 40px;
     border: 1.5px solid var(--border); background: #fff;
     color: var(--text); text-decoration: none;
-    font-size: 13px; font-weight: 700; white-space: nowrap;
+    font-size: 14px; font-weight: 700; white-space: nowrap;
     transition: border-color 0.15s, color 0.15s, transform 0.12s;
   }
-  .btn-resena:hover { border-color: var(--red); color: var(--red); }
-  .btn-resena:active { transform: translateY(1px) scale(0.97); }
-  .btn-resena svg { width: 15px; height: 15px; color: #f5b301; flex-shrink: 0; }
+  .btn-hero-claro:hover { border-color: var(--red); color: var(--red); }
+  .btn-hero-claro:active { transform: translateY(1px) scale(0.98); }
+  .hero-nota { font-size: 12.5px; color: var(--muted); margin-top: 14px; }
 
-  main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 92px 20px 40px; }
+  .hero-foto {
+    align-self: stretch; min-height: 430px;
+    background-image: url('/kwpremierweb/assets/img/equipo-kw-premier.jpg');
+    /* Cargada un poco hacia abajo: centrada se iba mucha pared de
+       arriba y las caras quedaban chiquitas al fondo. */
+    background-size: cover; background-position: center 62%;
+    /* El corte se lleva la esquina de abajo a la izquierda, así la
+       foto queda más ancha arriba y la diagonal baja hacia el texto. */
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 13% 100%);
+  }
+
+  /* ── Secciones de abajo ── */
+  .seccion { margin-bottom: 52px; scroll-margin-top: 84px; }
+  /* Título en dos renglones: el primero en rojo dice el gancho y el
+     segundo, en negro, lo aterriza. */
+  .seccion-titulo {
+    text-align: center; margin-bottom: 8px;
+    font-size: 27px; line-height: 1.2; letter-spacing: -0.03em;
+  }
+  .seccion-titulo .rojo { display: block; color: var(--red); }
+  .seccion-titulo .negro { display: block; color: var(--text); font-size: 22px; }
+  .seccion-sub {
+    font-size: 14px; color: var(--muted); text-align: center;
+    max-width: 620px; margin: 0 auto 26px; line-height: 1.6;
+  }
 
   /* Trampa para robots: invisible para las personas, así que si viene
      llena es que no la llenó una persona. */
@@ -88,9 +153,14 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
     margin-bottom: 56px;
   }
+  /* Sin foto la tarjeta es compacta y el texto va arriba: cuando el
+     contenido se anclaba abajo con 260px de alto (pensado para una
+     foto de fondo que todavía no existe) quedaba un hueco enorme y la
+     portada se sentía tablero vacío. Con foto vuelve a ser alta y con
+     el texto abajo, que es como se lee bien encima de una imagen. */
   .acceso {
-    position: relative; display: flex; align-items: flex-end;
-    min-height: 260px; padding: 22px;
+    position: relative; display: flex; align-items: flex-start;
+    min-height: 0; padding: 22px;
     border-radius: 18px; overflow: hidden;
     text-decoration: none; color: var(--text);
     background-image: var(--foto, none);
@@ -112,17 +182,20 @@
   }
   .acceso.con-foto {
     color: #fff; border-color: transparent; background-color: #2a2a2a;
+    align-items: flex-end; min-height: 260px; padding-top: 22px;
   }
   .acceso.con-foto::before {
     background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.72) 100%);
   }
+  /* Sin foto va en flujo, junto al texto; con foto se esconde (ahí el
+     trabajo de explicar la tarjeta lo hace la imagen). */
   .acceso-icono {
-    position: absolute; top: 22px; left: 22px;
-    width: 52px; height: 52px; border-radius: 50%;
+    position: relative; flex-shrink: 0;
+    width: 46px; height: 46px; border-radius: 14px; margin-right: 15px;
     background: #fff0f0; color: var(--red);
     display: flex; align-items: center; justify-content: center;
   }
-  .acceso-icono svg { width: 24px; height: 24px; }
+  .acceso-icono svg { width: 22px; height: 22px; }
   .acceso.con-foto .acceso-icono { display: none; }
   /* Sin foto no hace falta caja: el texto va directo sobre la tarjeta
      clara. Con foto sí, porque el vidrio es lo que deja leerlo pase lo
@@ -139,20 +212,10 @@
   }
   /* Son <span> (van dentro de un <a>), así que sin esto el título y su
      descripción salen pegados en el mismo renglón. */
-  .acceso-titulo { display: block; font-size: 21px; font-weight: 800; letter-spacing: -0.4px; }
+  .acceso-titulo { display: block; font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
+  .acceso.con-foto .acceso-titulo { font-size: 21px; font-weight: 800; }
   .acceso-sub { display: block; font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: 4px; }
   .acceso.con-foto .acceso-sub { color: rgba(255,255,255,0.86); }
-
-  /* ── Secciones de abajo ── */
-  .seccion { margin-bottom: 52px; scroll-margin-top: 84px; }
-  .seccion-titulo {
-    font-size: 25px; font-weight: 800; letter-spacing: -0.5px;
-    text-align: center; margin-bottom: 6px;
-  }
-  .seccion-sub {
-    font-size: 14px; color: var(--muted); text-align: center;
-    max-width: 620px; margin: 0 auto 26px; line-height: 1.6;
-  }
 
   /* Reclutamiento */
   .unete {
@@ -251,6 +314,18 @@
   }
 
   @media (max-width: 860px) {
+    /* Apilado: primero la foto y luego el texto. La diagonal se quita
+       porque en vertical cortaría de lado y se vería como un error. */
+    .hero { grid-template-columns: 1fr; }
+    .hero-foto {
+      order: -1; min-height: 0; aspect-ratio: 16 / 10;
+      clip-path: none;
+      background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
+    }
+    .hero-texto { padding: 30px 24px 34px; text-align: center; }
+    .hero h1 { font-size: 30px; }
+    .hero-sub { margin-left: auto; margin-right: auto; }
+    .hero-acciones { justify-content: center; }
     .unete-puntos { grid-template-columns: 1fr; max-width: 420px; }
     .testimonios { grid-template-columns: 1fr; }
     .oficina { grid-template-columns: 1fr; }
@@ -258,24 +333,24 @@
   @media (max-width: 640px) {
     .inicio-header { padding: 8px 14px; min-height: 60px; gap: 8px; }
     .inicio-logo img { height: 32px; }
-    /* En celular no cabe "Bienvenido, Nombre" junto al logo: se cambia
-       por solo las iniciales. */
-    .inicio-bienvenida .bienvenida-texto { display: none; }
-    .inicio-bienvenida .bienvenida-iniciales { display: flex; }
     .btn-portal { padding: 9px 16px; font-size: 12.5px; gap: 6px; }
     .btn-portal svg { width: 13px; height: 13px; }
-    /* En una barra tan angosta el botón de reseña se queda de pura
-       estrella: con su texto ya no cabían los tres elementos. */
-    .btn-resena { padding: 9px 11px; }
-    .btn-resena span { display: none; }
+    .inicio-iniciales { width: 30px; height: 30px; font-size: 12px; }
     .inicio-header-der { gap: 8px; }
     main { padding: 76px 14px 30px; }
+    .hero { border-radius: 16px; margin-bottom: 24px; }
+    .hero h1 { font-size: 25px; }
+    .hero-sub { font-size: 13.5px; }
+    .btn-hero, .btn-hero-claro { padding: 12px 22px; font-size: 13.5px; }
+    .seccion-titulo { font-size: 22px; }
+    .seccion-titulo .negro { font-size: 18px; }
     .accesos { gap: 11px; margin-bottom: 40px; }
-    .acceso { min-height: 165px; padding: 14px; border-radius: 15px; }
-    .acceso-icono { width: 38px; height: 38px; top: 14px; left: 14px; }
-    .acceso-icono svg { width: 18px; height: 18px; }
+    .acceso { padding: 14px; border-radius: 15px; }
+    .acceso.con-foto { min-height: 165px; }
+    .acceso-icono { width: 36px; height: 36px; border-radius: 11px; margin-right: 11px; }
+    .acceso-icono svg { width: 17px; height: 17px; }
     .acceso-caja { padding: 11px 12px; max-width: 100%; border-radius: 11px; }
-    .acceso-titulo { font-size: 15px; }
+    .acceso-titulo, .acceso.con-foto .acceso-titulo { font-size: 15px; }
     .acceso-sub { display: none; }
     .seccion { margin-bottom: 38px; }
     .seccion-titulo { font-size: 21px; }
@@ -292,25 +367,8 @@
     <a href="/kwpremierweb/index.html" class="inicio-logo" aria-label="KW Premier">
       <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
-    <!-- Va aparte del logo (no dentro de inicio-header-der) para que caiga
-         justo después: "header > *:last-child" en kw-base.css es lo que
-         empuja el grupo de la derecha, así que cualquier hijo de en medio
-         se queda pegado al logo sin necesitar más reglas. -->
-    <div class="inicio-bienvenida" id="bienvenida">
-      <span class="bienvenida-texto">
-        <span class="saludo">Bienvenido,</span>
-        <span class="nombre" id="bienvenida-nombre"></span>
-      </span>
-      <span class="bienvenida-iniciales" id="bienvenida-iniciales"></span>
-    </div>
     <div class="inicio-header-der">
-      <!-- Liga aparte a propósito: es la que se manda por WhatsApp o
-           correo a un cliente para pedirle su reseña, así que tiene que
-           poder vivir sola sin pasar por aquí. -->
-      <a class="btn-resena" href="/kwpremierweb/resena.html">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-        <span>Déjanos una reseña</span>
-      </a>
+      <span class="inicio-iniciales" id="bienvenida-iniciales"></span>
       <button type="button" class="btn-portal" id="btn-portal" onclick="irAlPortal(this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span id="btn-portal-texto">Iniciar Sesión</span>
@@ -320,12 +378,42 @@
 
   <main>
 
+    <!-- ── Portada ── -->
+    <section class="hero">
+      <div class="hero-texto">
+        <h1>
+          <span class="rojo">Bienes raíces</span>
+          <span class="negro">con un equipo detrás</span>
+        </h1>
+        <p class="hero-sub">
+          Somos KW Premier, Market Center de Keller Williams en la Ciudad de
+          México. Compra, vende o renta acompañado de un asesor que responde
+          por su trabajo.
+        </p>
+        <div class="hero-acciones">
+          <a class="btn-hero" href="propiedades.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Ver propiedades
+          </a>
+          <a class="btn-hero-claro" href="asesores.html">Conoce a los asesores</a>
+        </div>
+        <p class="hero-nota">Explora el inventario completo. Sin registro ni costo.</p>
+      </div>
+      <div class="hero-foto" role="img" aria-label="Equipo de asesores de KW Premier reunido en un evento de Keller Williams"></div>
+    </section>
+
     <!-- ── Las cuatro puertas del sitio ──
          Para ponerle foto a una tarjeta: se agrega el archivo en
          assets/img/ y se le pone a esa tarjeta la clase "con-foto" más
          style="--foto:url('/kwpremierweb/assets/img/ARCHIVO.jpg')".
          Sin eso se queda el degradado rojo con su icono, que es lo que
          se ve ahorita. -->
+    <h2 class="seccion-titulo">
+      <span class="rojo">Todo en un solo lugar</span>
+      <span class="negro">Propiedades, asesores y quiénes somos</span>
+    </h2>
+    <p class="seccion-sub">Cuatro puertas para lo que vengas buscando.</p>
+
     <section class="accesos">
       <a href="propiedades.html" class="acceso">
         <span class="acceso-icono">
@@ -398,8 +486,11 @@
          limita la política de RLS). Sin ninguna, esa cuadrícula no sale
          pero el botón sí, para invitar a dejar la primera. -->
     <section class="seccion" id="seccion-testimonios" style="display:none;">
-      <h2 class="seccion-titulo">Lo que dicen nuestros clientes</h2>
-      <p class="seccion-sub">Personas que ya compraron, vendieron o rentaron con el acompañamiento de un asesor de KW Premier.</p>
+      <h2 class="seccion-titulo">
+        <span class="rojo">Lo que dicen de nosotros</span>
+        <span class="negro">Clientes que ya compraron, vendieron o rentaron</span>
+      </h2>
+      <p class="seccion-sub">Personas que hicieron su operación con el acompañamiento de un asesor de KW Premier.</p>
       <div class="testimonios" id="lista-testimonios" style="display:none;"></div>
       <div id="resena-cta" style="display:none; text-align:center; margin-top:22px;">
         <a class="btn-unete" id="resena-link" href="#" target="_blank" rel="noopener" style="background:var(--red); color:#fff;">
@@ -411,8 +502,11 @@
 
     <!-- Oficina y mapa: igual, salen de OFICINA (abajo). -->
     <section class="seccion" id="seccion-oficina" style="display:none;">
-      <h2 class="seccion-titulo">Visítanos</h2>
-      <p class="seccion-sub">Nuestro Market Center está en la Ciudad de México. Pasa a conocernos o escríbenos para agendar una cita.</p>
+      <h2 class="seccion-titulo">
+        <span class="rojo">Visítanos</span>
+        <span class="negro">Estamos en la Ciudad de México</span>
+      </h2>
+      <p class="seccion-sub">Pasa a conocer nuestro Market Center o escríbenos para agendar una cita.</p>
       <div class="oficina">
         <div class="oficina-mapa" id="oficina-mapa"></div>
         <div class="oficina-datos" id="oficina-datos"></div>
@@ -522,20 +616,19 @@
   }
 
   // "Iniciar Sesión" a alguien que ya entró lo hacía dudar si su sesión
-  // seguía viva. Con sesión activa el botón cambia y sale su nombre.
+  // seguía viva. Con sesión activa el botón cambia y salen sus iniciales.
   async function reflejarSesion() {
     try {
       var result = await sbPortal.auth.getSession();
       var session = result && result.data && result.data.session;
       if (!session) return;
 
-      var nombre = '', iniciales = '';
+      var iniciales = '';
       try {
         var perfil = await sbPortal.from('profiles').select('nombre, apellido').eq('id', session.user.id).single();
         if (perfil.data) {
           var pNombre = (perfil.data.nombre || '').trim();
           var pApellido = (perfil.data.apellido || '').trim();
-          nombre = (pNombre + ' ' + pApellido).trim();
           // Si no hay apellido, la segunda inicial sale de la siguiente
           // palabra del nombre (para no repetir la misma letra dos veces).
           iniciales = (pNombre.charAt(0) + (pApellido || pNombre.split(' ')[1] || '').charAt(0)).toUpperCase();
@@ -543,10 +636,11 @@
       } catch (e) {}
 
       document.getElementById('btn-portal-texto').textContent = 'Ir al Portal';
-      if (nombre) {
-        document.getElementById('bienvenida-nombre').textContent = nombre;
-        document.getElementById('bienvenida-iniciales').textContent = iniciales;
-        document.getElementById('bienvenida').classList.add('visible');
+      if (iniciales) {
+        var chip = document.getElementById('bienvenida-iniciales');
+        chip.textContent = iniciales;
+        chip.title = 'Tu sesión sigue abierta';
+        chip.classList.add('visible');
       }
     } catch (err) {
       // Sin sesión o sin conexión: se queda el botón como "Iniciar Sesión".
