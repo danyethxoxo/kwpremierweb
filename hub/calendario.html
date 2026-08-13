@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260728">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260813"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -280,6 +281,88 @@
   .day-sin-eventos { padding: 16px 0; color: var(--muted); font-size: 13px; }
   .day-group.is-today .day-sin-eventos { color: rgba(255,255,255,0.85); }
 
+  /* ── Pestañas Agenda / Salas ──
+     .kw-tabpanel trae "display:block" por default (pensado para una
+     página normal que sí puede crecer). Aquí el layout entero es de
+     alto fijo con scroll propio, así que la pestaña activa necesita
+     ser ella misma una columna flex: una franja fija arriba (mes o
+     botón de nueva reserva) y una zona con scroll debajo, igual que ya
+     hacía la agenda antes de que hubiera pestañas. */
+  .kw-tabpanels { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+  .kw-tabpanel.activo { display: flex; flex-direction: column; min-height: 0; }
+  .calendar-top .kw-tabs { margin-top: 14px; }
+  .panel-top { flex-shrink: 0; padding: 0 32px 12px; }
+  .panel-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 60px; }
+
+  /* ── Salas ── */
+  .btn-nueva-reserva {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--red); color: #fff; border: none; border-radius: 30px;
+    padding: 11px 20px; font-size: 13.5px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: filter 0.15s, transform 0.12s;
+  }
+  .btn-nueva-reserva:hover { filter: brightness(1.08); }
+  .btn-nueva-reserva:active { transform: scale(0.96); }
+  .btn-nueva-reserva svg { width: 15px; height: 15px; }
+
+  .salas-seccion-titulo {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin: 20px 0 10px;
+  }
+  .salas-seccion-titulo:first-child { margin-top: 0; }
+
+  .reserva-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px 18px; margin-bottom: 10px;
+  }
+  .reserva-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .reserva-sala { font-size: 15.5px; font-weight: 700; }
+  .reserva-cuando { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .reserva-quien { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .reserva-motivo { font-size: 12.5px; color: #555; margin-top: 8px; line-height: 1.5; }
+  .reserva-nota {
+    font-size: 12px; color: var(--muted); margin-top: 8px; padding: 8px 10px;
+    background: #f7f7f6; border-radius: 9px; line-height: 1.5;
+  }
+
+  .estado-pill {
+    flex-shrink: 0; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 4px 11px; border-radius: 20px; white-space: nowrap;
+  }
+  .estado-pendiente { background: #fff8e1; color: #8a6100; }
+  .estado-aceptada  { background: #eafaf0; color: #1a7f37; }
+  .estado-rechazada { background: #fdeaea; color: #a30000; }
+
+  .reserva-acciones { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-reserva-si, .btn-reserva-no {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px; border-radius: 24px; font-size: 12.5px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; border: 1.5px solid var(--border); background: #fff;
+    transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn-reserva-si { background: #1a7f37; border-color: #1a7f37; color: #fff; }
+  .btn-reserva-si:hover { filter: brightness(1.08); }
+  .btn-reserva-si:disabled, .btn-reserva-no:disabled { opacity: 0.55; cursor: default; }
+  .btn-reserva-no:hover { border-color: #a30000; color: #a30000; }
+
+  .salas-vacio {
+    text-align: center; color: var(--muted); font-size: 13.5px;
+    padding: 30px 16px; border: 1.5px dashed var(--border); border-radius: 14px;
+  }
+
+  /* ── Modales: pedir sala / rechazar ── */
+  .form-reserva .field { margin-bottom: 12px; }
+  .form-reserva .field-fila { display: flex; gap: 10px; }
+  .form-reserva .field-fila .field { flex: 1; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; font-size: 13px; font-weight: 600;
+    padding: 11px 18px; border-radius: 30px; z-index: 200; max-width: 88vw; text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .toast.error { background: #a30000; }
+  .toast.visible { opacity: 1; }
 
   @media (max-width: 900px) {
     .split { grid-template-columns: 1fr; }
@@ -292,6 +375,8 @@
     .page-title, .page-desc { display: none; }
     .month-label { font-size: 14px; }
     .event-time { min-width: 68px; font-size: 15px; }
+    .panel-top { padding: 0 14px 10px; }
+    .panel-scroll { padding: 8px 14px 40px; }
   }
 </style>
 </head>
@@ -324,44 +409,144 @@
         <h1 class="page-title">Calendario de eventos</h1>
         <p class="page-desc">¿Qué hay hoy en la agenda?</p>
 
-        <div class="month-nav">
-          <button class="month-btn" id="btn-prev" aria-label="Semana anterior" onclick="changeWeek(-1)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <div class="month-label" id="month-label">·</div>
-          <div class="month-nav-btns">
-            <button class="month-btn today-btn" onclick="goToday(true)">Hoy</button>
-            <button class="month-btn" id="btn-next" aria-label="Semana siguiente" onclick="changeWeek(1)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          </div>
+        <div class="kw-tabs" data-kw-tabs="cal-panels">
+          <button type="button" class="kw-tab activo" data-tab="agenda">Agenda</button>
+          <button type="button" class="kw-tab" data-tab="salas">Salas</button>
         </div>
       </div>
 
-      <div class="calendar-scroll" id="calendar-scroll">
-        <div id="agenda-container">
-          <div class="state-box">
-            <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
-            Cargando eventos…
+      <div class="kw-tabpanels" id="cal-panels">
+
+        <div class="kw-tabpanel activo" data-panel="agenda">
+          <div class="panel-top">
+            <div class="month-nav">
+              <button class="month-btn" id="btn-prev" aria-label="Semana anterior" onclick="changeWeek(-1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div class="month-label" id="month-label">·</div>
+              <div class="month-nav-btns">
+                <button class="month-btn today-btn" onclick="goToday(true)">Hoy</button>
+                <button class="month-btn" id="btn-next" aria-label="Semana siguiente" onclick="changeWeek(1)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-scroll" id="calendar-scroll">
+            <div id="agenda-container">
+              <div class="state-box">
+                <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+                Cargando eventos…
+              </div>
+            </div>
+            <footer style="margin-top: 8px;">
+        <div style="display:flex;justify-content:center;gap:10px;">
+          <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+          </a>
+          <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" class="footer-social" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="footer-social" aria-label="TikTok">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
+          </a>
+        </div>
+            </footer>
           </div>
         </div>
-        <footer style="margin-top: 8px;">
-    <div style="display:flex;justify-content:center;gap:10px;">
-      <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
-      </a>
-      <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" class="footer-social" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-      </a>
-      <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="footer-social" aria-label="TikTok">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
-      </a>
-    </div>
-        </footer>
+
+        <div class="kw-tabpanel" data-panel="salas">
+          <div class="panel-top">
+            <button type="button" class="btn-nueva-reserva" onclick="abrirModalReserva()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Pedir una sala
+            </button>
+          </div>
+
+          <div class="panel-scroll" id="salas-scroll">
+            <div id="salas-pendientes-wrap" style="display:none;">
+              <div class="salas-seccion-titulo">Pendientes de tu respuesta</div>
+              <div id="salas-pendientes"></div>
+            </div>
+            <div class="salas-seccion-titulo">Tus solicitudes</div>
+            <div id="salas-mias">
+              <div class="state-box">
+                <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+                Cargando…
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
   </div>
+
+  <!-- Modal: pedir una sala -->
+  <div id="modal-reserva" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Pedir una sala</h3>
+      <p class="modal-sub">La solicitud le llega a recepción para que la acepte o la rechace.</p>
+      <div class="form-reserva">
+        <div class="field">
+          <label for="res-sala">Sala</label>
+          <select id="res-sala">
+            <option value="juntas">Sala de juntas</option>
+            <option value="onboarding">Sala de onboarding</option>
+            <option value="entrenamientos">Sala de entrenamientos</option>
+            <option value="petit">Sala Petit</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="res-fecha">Fecha</label>
+          <input type="date" id="res-fecha" />
+        </div>
+        <div class="field-fila">
+          <div class="field">
+            <label for="res-inicio">Hora de inicio</label>
+            <input type="time" id="res-inicio" />
+          </div>
+          <div class="field">
+            <label for="res-fin">Hora de fin</label>
+            <input type="time" id="res-fin" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="res-motivo">Motivo (opcional)</label>
+          <textarea id="res-motivo" rows="2" maxlength="300" placeholder="Para qué es la reunión"></textarea>
+        </div>
+      </div>
+      <div class="msg" id="res-msg"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalReserva()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="res-btn" onclick="enviarReserva()">
+          <span class="kw-btn-cont" id="res-btn-cont">Enviar solicitud</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: rechazar una solicitud -->
+  <div id="modal-rechazar" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>Rechazar solicitud</h3>
+      <p class="modal-sub" id="rechazar-sub"></p>
+      <div class="field">
+        <label for="rechazar-nota">Motivo (opcional, se le manda a quien pidió)</label>
+        <textarea id="rechazar-nota" rows="3" maxlength="300" placeholder="Por ejemplo: esa sala ya está ocupada, prueba otro horario"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalRechazar()">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="rechazar-btn" onclick="confirmarRechazo()">
+          <span class="kw-btn-cont" id="rechazar-btn-cont">Rechazar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
 <script>
   const FUNCTION_URL = "https://iloetojomzqtadkithtv.supabase.co/functions/v1/calendar-events";
@@ -606,7 +791,293 @@
     loadEvents();
   }
 
-  document.addEventListener('DOMContentLoaded', loadEvents);
+  // ═══════════════════════════════════════════════════════════════
+  // SALAS
+  // ═══════════════════════════════════════════════════════════════
+  // Número de WhatsApp de recepción (con lada, solo dígitos: 52 + los
+  // 10 del celular). Mientras esté vacío, mandar una solicitud nueva
+  // no abre WhatsApp solo; se avisa que hay que avisarle a mano.
+  const RECEPCION_WHATSAPP = '';
+
+  let miId = null;
+  let esStaffSalas = false;
+  let reservasCache = [];
+  let reservaARechazar = null;
+
+  function soloDigitos(s) { return String(s || '').replace(/\D/g, ''); }
+
+  function waHref(numero, texto) {
+    const d = soloDigitos(numero);
+    if (!d) return null;
+    const conLada = d.length === 10 ? '52' + d : d;
+    return 'https://wa.me/' + conLada + '?text=' + encodeURIComponent(texto);
+  }
+
+  function toast(msg, tipo) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast visible' + (tipo === 'error' ? ' error' : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('visible'), 3800);
+  }
+
+  // Las fechas de reservas_salas vienen 'AAAA-MM-DD' y las horas
+  // 'HH:MM:SS', tal cual las guarda Postgres - se leen a mano en vez de
+  // pasarlas por Date() para no arrastrar la zona horaria del navegador.
+  function fmtFechaCorta(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} de ${MESES[m - 1]} ${y}`;
+  }
+  function fmtHoraCorta(hms) {
+    const [h, m] = hms.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = (h % 12) || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+
+  async function initSalas() {
+    const { data: ses } = await window.kwSupabase.auth.getSession();
+    if (!ses || !ses.session) return;
+    miId = ses.session.user.id;
+
+    const { data: perfil } = await window.kwSupabase.from('profiles').select('role').eq('id', miId).single();
+    esStaffSalas = !!(perfil && ['master', 'admin', 'staff'].includes(perfil.role));
+    document.getElementById('salas-pendientes-wrap').style.display = esStaffSalas ? '' : 'none';
+
+    await cargarReservas();
+
+    // Se actualiza sola: si alguien más pide, acepta o rechaza mientras
+    // esta pantalla está abierta, no hace falta recargar para verlo.
+    window.kwSupabase
+      .channel('reservas-salas-cambios')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas_salas' }, cargarReservas)
+      .subscribe();
+  }
+
+  async function cargarReservas() {
+    const { data, error } = await window.kwSupabase
+      .from('reservas_salas_con_datos')
+      .select('*')
+      .order('fecha', { ascending: true })
+      .order('hora_inicio', { ascending: true });
+
+    if (error) {
+      document.getElementById('salas-mias').innerHTML =
+        `<div class="salas-vacio">No se pudieron cargar las reservas.<br>${escapeHTML(error.message)}</div>`;
+      return;
+    }
+    reservasCache = data || [];
+    pintarSalas();
+  }
+
+  function pintarSalas() {
+    const hoy = new Date().toISOString().slice(0, 10);
+    // Fuera del calendario ya no importa mostrarla, salvo que siga
+    // pendiente: una solicitud vieja sin responder sigue siendo un
+    // pendiente real, aunque la fecha que pidieron ya haya pasado.
+    const vigentes = reservasCache.filter(r => r.fecha >= hoy || r.estado === 'pendiente');
+
+    if (esStaffSalas) {
+      const pendientesAjenas = vigentes.filter(r => r.estado === 'pendiente' && r.asesor_id !== miId);
+      document.getElementById('salas-pendientes').innerHTML = pendientesAjenas.length
+        ? pendientesAjenas.map(r => tarjetaReserva(r, true)).join('')
+        : '<div class="salas-vacio">No hay solicitudes pendientes.</div>';
+    }
+
+    const mias = vigentes.filter(r => r.asesor_id === miId);
+    document.getElementById('salas-mias').innerHTML = mias.length
+      ? mias.map(r => tarjetaReserva(r, false)).join('')
+      : '<div class="salas-vacio">Todavía no has pedido ninguna sala.</div>';
+  }
+
+  function tarjetaReserva(r, esAjena) {
+    const quien = esAjena
+      ? `<div class="reserva-quien">Pidió: ${escapeHTML([r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ') || 'Alguien')}</div>`
+      : '';
+    const motivo = r.motivo ? `<div class="reserva-motivo">${escapeHTML(r.motivo)}</div>` : '';
+    const nota = (!esAjena && r.estado === 'rechazada' && r.nota_respuesta)
+      ? `<div class="reserva-nota">Motivo: ${escapeHTML(r.nota_respuesta)}</div>` : '';
+    const acciones = (esAjena && r.estado === 'pendiente')
+      ? `<div class="reserva-acciones">
+          <button type="button" class="btn-reserva-si" id="btn-si-${r.id}" onclick="aceptar('${r.id}')">Aceptar</button>
+          <button type="button" class="btn-reserva-no" id="btn-no-${r.id}" onclick="abrirModalRechazar('${r.id}')">Rechazar</button>
+        </div>`
+      : '';
+    const etiquetaEstado = r.estado === 'pendiente' ? 'Pendiente' : r.estado === 'aceptada' ? 'Aceptada' : 'Rechazada';
+
+    return `
+      <div class="reserva-card">
+        <div class="reserva-top">
+          <div>
+            <div class="reserva-sala">${escapeHTML(r.sala_nombre)}</div>
+            <div class="reserva-cuando">${fmtFechaCorta(r.fecha)} · ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)}</div>
+            ${quien}
+          </div>
+          <span class="estado-pill estado-${r.estado}">${etiquetaEstado}</span>
+        </div>
+        ${motivo}${nota}${acciones}
+      </div>`;
+  }
+
+  // ── Pedir una sala ──
+  function abrirModalReserva() {
+    document.getElementById('res-sala').value = 'juntas';
+    document.getElementById('res-fecha').value = '';
+    document.getElementById('res-inicio').value = '';
+    document.getElementById('res-fin').value = '';
+    document.getElementById('res-motivo').value = '';
+    document.getElementById('res-msg').style.display = 'none';
+    if (window.kwUI) window.kwUI.selects(document.getElementById('modal-reserva'));
+    document.getElementById('modal-reserva').style.display = 'flex';
+  }
+  function cerrarModalReserva() { window.kwUI.cerrarModal('modal-reserva'); }
+
+  async function enviarReserva() {
+    const msg = document.getElementById('res-msg');
+    msg.style.display = 'none';
+    const decir = (t) => { msg.textContent = t; msg.className = 'msg error'; msg.style.display = 'block'; };
+
+    const sala = document.getElementById('res-sala');
+    const fecha = document.getElementById('res-fecha').value;
+    const inicio = document.getElementById('res-inicio').value;
+    const fin = document.getElementById('res-fin').value;
+    const motivo = document.getElementById('res-motivo').value.trim();
+
+    if (!fecha) return decir('Elige una fecha.');
+    if (fecha < new Date().toISOString().slice(0, 10)) return decir('Elige una fecha que no haya pasado.');
+    if (!inicio || !fin) return decir('Elige la hora de inicio y de fin.');
+    if (fin <= inicio) return decir('La hora de fin debe ser después de la de inicio.');
+
+    const btn = document.getElementById('res-btn');
+    const cont = document.getElementById('res-btn-cont');
+    btn.disabled = true;
+    cont.innerHTML = '<span class="kw-btn-spinner"></span>Enviando...';
+    try {
+      const { data: ses } = await window.kwSupabase.auth.getSession();
+      const { data: miPerfil } = await window.kwSupabase
+        .from('profiles').select('nombre, apellido').eq('id', ses.session.user.id).single();
+      const miNombre = [miPerfil && miPerfil.nombre, miPerfil && miPerfil.apellido].filter(Boolean).join(' ') || 'Alguien del equipo';
+
+      const res = await window.kwSupabase.from('reservas_salas').insert({
+        sala_id: sala.value, asesor_id: ses.session.user.id,
+        fecha, hora_inicio: inicio, hora_fin: fin, motivo: motivo || null,
+      });
+      if (res.error) throw res.error;
+
+      cerrarModalReserva();
+      await cargarReservas();
+      toast('Solicitud enviada. En cuanto la respondan te avisamos.');
+
+      const salaTexto = sala.selectedOptions[0].textContent;
+      const texto = `Hola! Te llega una solicitud de sala del sitio:\n\n${salaTexto}\n` +
+        `${fmtFechaCorta(fecha)}, de ${fmtHoraCorta(inicio)} a ${fmtHoraCorta(fin)}\n` +
+        `Pidió: ${miNombre}` + (motivo ? `\nMotivo: ${motivo}` : '') +
+        `\n\nEntra a Calendario > Salas en el sitio para aceptarla o rechazarla.`;
+      const href = waHref(RECEPCION_WHATSAPP, texto);
+      if (href) window.open(href, '_blank');
+      else toast('No hay un número de recepción configurado todavía: avísale tú directamente.', 'error');
+    } catch (err) {
+      decir((err && err.message) || 'No se pudo enviar la solicitud.');
+    } finally {
+      btn.disabled = false;
+      cont.textContent = 'Enviar solicitud';
+    }
+  }
+
+  // ── Aceptar / rechazar ──
+  async function aceptar(id) {
+    const btnSi = document.getElementById('btn-si-' + id);
+    const btnNo = document.getElementById('btn-no-' + id);
+    if (btnSi) { btnSi.disabled = true; btnSi.textContent = 'Aceptando...'; }
+    if (btnNo) btnNo.disabled = true;
+    try {
+      const { data: ses } = await window.kwSupabase.auth.getSession();
+      const res = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.session.access_token },
+        body: JSON.stringify({ accion: 'aceptar_reserva', reserva_id: id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'No se pudo aceptar.');
+
+      const r = reservasCache.find(x => x.id === id);
+      await cargarReservas();
+      toast('Sala aceptada y agendada en el calendario.');
+
+      const whatsapp = (data.asesor && data.asesor.whatsapp) || (r && r.asesor_whatsapp);
+      if (whatsapp && r) {
+        const nombreCorto = ((data.asesor && data.asesor.nombre) || r.asesor_nombre || '').split(' ')[0] || '';
+        const texto = `Hola ${nombreCorto}! Tu solicitud de ${data.sala_nombre || r.sala_nombre} ` +
+          `para el ${fmtFechaCorta(r.fecha)} de ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)} ` +
+          `fue ACEPTADA. Ya quedó agendada.`;
+        window.open(waHref(whatsapp, texto), '_blank');
+      } else {
+        toast('Aceptada. No tiene WhatsApp registrado, avísale por otro medio.', 'error');
+      }
+    } catch (err) {
+      toast((err && err.message) || 'No se pudo aceptar.', 'error');
+      if (btnSi) { btnSi.disabled = false; btnSi.textContent = 'Aceptar'; }
+      if (btnNo) btnNo.disabled = false;
+    }
+  }
+
+  function abrirModalRechazar(id) {
+    reservaARechazar = id;
+    const r = reservasCache.find(x => x.id === id);
+    document.getElementById('rechazar-sub').textContent = r
+      ? `${r.sala_nombre} · ${fmtFechaCorta(r.fecha)} · ${[r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ')}`
+      : '';
+    document.getElementById('rechazar-nota').value = '';
+    document.getElementById('modal-rechazar').style.display = 'flex';
+  }
+  function cerrarModalRechazar() { window.kwUI.cerrarModal('modal-rechazar'); }
+
+  async function confirmarRechazo() {
+    if (!reservaARechazar) return;
+    const id = reservaARechazar;
+    const nota = document.getElementById('rechazar-nota').value.trim();
+    const r = reservasCache.find(x => x.id === id);
+
+    const btn = document.getElementById('rechazar-btn');
+    const cont = document.getElementById('rechazar-btn-cont');
+    btn.disabled = true;
+    cont.innerHTML = '<span class="kw-btn-spinner"></span>Rechazando...';
+    try {
+      const { data: ses } = await window.kwSupabase.auth.getSession();
+      const res = await window.kwSupabase.from('reservas_salas').update({
+        estado: 'rechazada', nota_respuesta: nota || null,
+        respondido_por: ses.session.user.id, respondido_en: new Date().toISOString(),
+      }).eq('id', id);
+      if (res.error) throw res.error;
+
+      cerrarModalRechazar();
+      await cargarReservas();
+      toast('Solicitud rechazada.');
+
+      if (r && r.asesor_whatsapp) {
+        const nombreCorto = (r.asesor_nombre || '').split(' ')[0] || '';
+        const texto = `Hola ${nombreCorto}, tu solicitud de ${r.sala_nombre} ` +
+          `para el ${fmtFechaCorta(r.fecha)} de ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)} no se pudo aceptar.` +
+          (nota ? ` Motivo: ${nota}.` : '') + ` Puedes pedir otro horario desde el sitio.`;
+        window.open(waHref(r.asesor_whatsapp, texto), '_blank');
+      } else {
+        toast('Rechazada. No tiene WhatsApp registrado, avísale por otro medio.', 'error');
+      }
+    } catch (err) {
+      toast((err && err.message) || 'No se pudo rechazar.', 'error');
+    } finally {
+      btn.disabled = false;
+      cont.textContent = 'Rechazar';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    loadEvents();
+    initSalas();
+    if (new URLSearchParams(location.search).get('tab') === 'salas' && window.kwUI) {
+      window.kwUI.activarTab('salas');
+    }
+  });
 </script>
 
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260728" data-menu="hub"></script>
