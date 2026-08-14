@@ -216,7 +216,16 @@
   .chk:disabled { opacity: .45; cursor: default; }
   .chk.guardando { opacity: .5; }
 
-  .vacio { text-align: center; padding: 46px 20px; color: var(--muted); font-size: 13.5px; }
+  /* min-height + centrado a propósito: sin esto, al filtrar y no
+     encontrar nada la página entera se desinflaba de golpe (de una
+     lista larga con scroll a una franja angosta sin él), y ese salto
+     de tamaño se sentía como que la pantalla se "encogía" con cada
+     tecleo. Con un alto mínimo generoso, pasar de la lista al estado
+     vacío ya no mueve tanto el resto de la página. */
+  .vacio {
+    text-align: center; padding: 46px 20px; color: var(--muted); font-size: 13.5px;
+    min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
   .vacio strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 5px; }
   .aviso { display: flex; align-items: flex-start; gap: 10px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; color: #7a5c00; margin-bottom: 14px; white-space: pre-line; }
   .aviso.error { background: #fdecea; border-color: #f5c6c2; color: #8b1a10; }
