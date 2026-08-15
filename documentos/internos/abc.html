@@ -91,6 +91,20 @@
     color: var(--text);
     overflow: hidden; /* el scroll vive dentro de cada columna, no en la página */
   }
+  html { background-color: #3d0000; }
+  /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
+     propia capa de fondo. No se usa background-attachment: fixed
+     porque en celular deja franjas blancas al desplazarse. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    pointer-events: none;
+    will-change: transform;
+    transform: translateZ(0);
+  }
 
   .layout {
     display: grid;

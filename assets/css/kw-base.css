@@ -117,24 +117,28 @@ h1, h2, h3, h4 {
    botones de menú y Atrás se quedan flotando; al subir, reaparece.
    El contenido de cada página debe dejar ~54px libres arriba. */
 header.kw-header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 90;
+  position: fixed; top: 10px; left: 12px; right: 12px; z-index: 90;
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; min-height: 54px;
-  background: rgba(255,255,255,0.7);
+  padding: 7px 16px; min-height: 52px;
+  /* Cápsula flotante en vez de una barra pegada de orilla a orilla:
+     las esquinas redondas del todo y el aire alrededor son lo que la
+     hacen leer como una pastilla de vidrio encima del contenido. */
+  border-radius: 999px;
+  background: linear-gradient(150deg, rgba(255,255,255,0.84) 0%, rgba(255,255,255,0.72) 100%);
+  border: 1px solid rgba(255,255,255,0.6);
   backdrop-filter: blur(13px) saturate(140%); -webkit-backdrop-filter: blur(13px) saturate(140%);
-  transition: background 0.25s;
-}
-header.kw-header::after {
-  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 16px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0));
-  pointer-events: none; transition: opacity 0.25s;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.75);
+  transition: background 0.25s, box-shadow 0.25s, border-color 0.25s;
 }
 header.kw-header > * { transition: opacity 0.2s; }
+/* Al bajar, la cápsula se desvanece y solo se quedan flotando sus
+   botones (la hamburguesa, el Atrás y la campanita). */
 header.kw-header.kw-header-oculto {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-header.kw-header.kw-header-oculto::after { opacity: 0; }
 /* La campanita se queda flotando igual que la hamburguesa y el Atrás:
    es un aviso, y desaparecía justo cuando alguien bajaba a leer. Casi
    siempre viene envuelta en un grupo (.header-right, .header-socials),

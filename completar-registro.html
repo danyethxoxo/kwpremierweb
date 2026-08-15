@@ -33,12 +33,33 @@
     background: transparent;
     color: var(--text);
   }
+  html { background-color: #3d0000; }
+  /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
+     propia capa de fondo. No se usa background-attachment: fixed
+     porque en celular deja franjas blancas al desplazarse. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    pointer-events: none;
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  /* Cápsula flotante, igual que el header del resto de la plataforma:
+     no va pegada de orilla a orilla, sino como una pastilla de vidrio
+     centrada con aire alrededor. */
   header {
-    background: rgba(255,255,255,0.7);
-    border-bottom: 1px solid rgba(255,255,255,0.4);
+    width: fit-content;
+    margin: 14px auto 0;
+    background: linear-gradient(150deg, rgba(255,255,255,0.84) 0%, rgba(255,255,255,0.72) 100%);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 999px;
     backdrop-filter: blur(13px) saturate(140%);
     -webkit-backdrop-filter: blur(13px) saturate(140%);
-    padding: 14px 20px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.75);
+    padding: 10px 30px;
     display: flex;
     align-items: center;
     justify-content: center;
