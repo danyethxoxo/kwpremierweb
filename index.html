@@ -23,9 +23,25 @@
     --vino-hondo: #430000;        /* el pie, un escalón más abajo */
     --linea: rgba(255,255,255,0.22);
     --tenue: rgba(255,255,255,0.78);
+
+    /* Tres manchas de luz difuminadas (arriba a la izquierda, a la
+       derecha, y una sombra honda abajo) sobre un degradado base: le
+       dan volumen al vino plano sin salirse de su misma familia de
+       color. Fija al viewport (no al alto de toda la página) para que
+       se vea igual de arriba a abajo sin importar qué tan larga sea. */
+    --vino-fondo:
+      radial-gradient(1100px 750px at 10% -10%, rgba(150,20,20,0.55), transparent 60%),
+      radial-gradient(900px 700px at 108% 18%, rgba(90,10,10,0.5), transparent 55%),
+      radial-gradient(1000px 800px at 45% 115%, rgba(15,0,0,0.65), transparent 60%),
+      linear-gradient(160deg, #6b0000 0%, #560000 45%, #3d0000 100%);
   }
 
-  html, body { background: var(--vino); color: #fff; }
+  html, body {
+    background: var(--vino-fondo);
+    background-color: var(--vino);
+    background-attachment: fixed;
+    color: #fff;
+  }
   /* El menú lleva a secciones de esta misma página: se baja deslizando,
      no de golpe (salvo para quien pidió menos movimiento en su sistema). */
   html { scroll-behavior: smooth; }
@@ -80,7 +96,11 @@
 
   .btn-tapa {
     display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
-    background: #fff; color: var(--vino); border: none; border-radius: 10px;
+    background: rgba(255,255,255,0.92); color: var(--vino); border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 10px;
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.6);
     padding: 15px 30px; font-size: 14.5px; font-weight: 600; font-family: inherit;
     cursor: pointer; white-space: nowrap;
     transition: background 0.15s, color 0.15s, transform 0.12s;
@@ -150,6 +170,8 @@
     aspect-ratio: 4 / 3; margin-bottom: 18px; border-radius: 16px;
     background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
     background-size: cover; background-position: center;
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   }
   .editorial-izq p { font-size: 14px; line-height: 1.6; color: var(--tenue); margin-bottom: 18px; }
   .editorial-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 34px; }
@@ -161,8 +183,11 @@
      se ven, así que caben tres por renglón en vez de cinco. */
   .resenas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   .resena {
-    background: rgba(255,255,255,0.07); border: 1px solid var(--linea);
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
     border-radius: 14px;
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.16);
     padding: 24px; display: flex; flex-direction: column; gap: 13px;
   }
   .resena-estrellas { display: flex; gap: 2px; }
@@ -184,7 +209,8 @@
   .oficina { display: flex; flex-direction: column; gap: 18px; }
   .oficina-mapa {
     position: relative; overflow: hidden; min-height: 420px; border-radius: 16px;
-    border: 1px solid var(--linea); background: #e6e6e6;
+    border: 1px solid rgba(255,255,255,0.18); background: #e6e6e6;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   }
   .oficina-mapa iframe { width: 100%; height: 100%; min-height: 420px; border: 0; display: block; }
   .oficina-datos { display: flex; flex-wrap: wrap; gap: 30px 46px; }
@@ -207,7 +233,9 @@
   .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: var(--vino); opacity: 0.82; }
   .btn-banda {
     display: inline-flex; align-items: center; gap: 10px;
-    background: var(--vino); color: #fff; border: none; border-radius: 10px;
+    background: linear-gradient(160deg, #7a0000 0%, var(--vino) 100%);
+    color: #fff; border: none; border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(92,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
     padding: 17px 38px; font-size: 15.5px; font-weight: 700; font-family: inherit;
     cursor: pointer; transition: transform 0.12s, filter 0.15s;
   }
