@@ -879,11 +879,22 @@ function numeroALetra(num) {
   const CENTENAS = ['','CIEN','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS',
     'SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
 
+  // "CIEN" solo cuando son cien justos; con algo atrás es "CIENTO"
+  // (ciento doce, ciento cincuenta). Y del 21 al 29 se dice de corrido
+  // (veintidos), no "veinte y dos".
+  const VEINTES = ['VEINTE','VEINTIÚN','VEINTIDÓS','VEINTITRÉS','VEINTICUATRO',
+    'VEINTICINCO','VEINTISÉIS','VEINTISIETE','VEINTIOCHO','VEINTINUEVE'];
+
   function menos1000(n) {
     if (n === 0) return '';
     if (n === 100) return 'CIEN';
     let r = '';
-    if (n >= 100) { r += CENTENAS[Math.floor(n/100)] + ' '; n %= 100; }
+    if (n >= 100) {
+      const c = Math.floor(n/100);
+      r += (c === 1 ? 'CIENTO' : CENTENAS[c]) + ' ';
+      n %= 100;
+    }
+    if (n >= 20 && n <= 29) { r += VEINTES[n - 20] + ' '; n = 0; }
     if (n >= 20)  { r += DECENAS[Math.floor(n/10)]; n %= 10; if (n) r += ' Y '; }
     if (n > 0)    { r += UNIDADES[n] + ' '; }
     return r.trim();
