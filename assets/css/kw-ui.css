@@ -91,6 +91,35 @@
   --placeholder: #b9b9b9;
 }
 
+/* ── El fondo de la página va en su propia capa fija ──
+   Vive aquí y no en kw-base.css porque las hojas de los acuerdos y
+   contratos enlazan solo este archivo, y también necesitan el fondo.
+   Quien carga kw-base.css lo recibe igual, porque esa hoja importa
+   esta.
+
+   No se usa background-attachment: fixed: en los navegadores de celular
+   esa propiedad deja franjas blancas al desplazarse, porque repintan mal
+   mientras la barra de direcciones se encoge. Una capa con position
+   fixed se compone aparte y no tiene ese problema.
+
+   Va en z-index -1 para quedar debajo de todo el contenido; por eso el
+   body se deja transparente, si no la taparía con su propio fondo. */
+html { background-color: #3d0000; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg);
+  pointer-events: none;
+}
+/* Al imprimir un acuerdo o contrato solo va la hoja: una capa fija se
+   repetiría en todas las páginas del documento. */
+@media print {
+  html { background-color: #fff; }
+  body::before { display: none; }
+}
+
 /* Quien prefiera menos movimiento en su sistema, no lo ve. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
