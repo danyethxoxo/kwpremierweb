@@ -5,306 +5,187 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>KW Premier · Bienes Raíces</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
-<meta name="description" content="KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, venta y renta de propiedades con acompañamiento profesional." />
+<meta name="description" content="KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, venta y renta de propiedades con acompañamiento de un asesor certificado." />
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260729">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260729"></script>
 <style>
-  html, body { background: var(--bg); color: var(--text); }
-  /* Antes la página cabía exacta en la pantalla (height:100%) y no se
-     podía bajar. Ahora crece con su contenido para que quepan las
-     secciones de abajo. */
+  /* ═══════════════════════════════════════════════════════════════
+     Portada de KW Premier
+
+     Toda la página va sobre un mismo fondo vino (el rojo de KW
+     oscurecido) y el contenido encima en blanco, como una revista.
+     El rojo de la marca se guarda para lo que se pica: los botones y
+     la banda de "quiero ser parte" de hasta abajo. Así el rojo llama
+     la atención donde importa en vez de competir consigo mismo.
+     ═══════════════════════════════════════════════════════════════ */
+  :root {
+    --vino: #5C0000;              /* el fondo de toda la portada */
+    --vino-hondo: #430000;        /* el pie, un escalón más abajo */
+    --linea: rgba(255,255,255,0.22);
+    --tenue: rgba(255,255,255,0.78);
+  }
+
+  html, body { background: var(--vino); color: #fff; }
+  /* El menú lleva a secciones de esta misma página: se baja deslizando,
+     no de golpe (salvo para quien pidió menos movimiento en su sistema). */
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  /* ── Header fijo ──
-     A diferencia del resto del sitio, este no se esconde al bajar: es la
-     única forma de entrar al portal desde aquí, y esconderla obligaba a
-     subir hasta arriba otra vez. Por eso no lleva la clase .kw-header.
+  ::selection { background: #fff; color: var(--vino); }
 
-     Antes traía seis cosas (hamburguesa, lupa, logo, saludo con el
-     nombre completo, botón de reseña y botón de portal) y la portada se
-     sentía tablero, no portada. Ahora son cuatro: logo, los dos enlaces
-     que valen desde aquí, y el botón. Lo demás se fue a donde
-     corresponde: la reseña se pide junto a los testimonios, y del
-     saludo queda solo el circulito con las iniciales. */
-  .inicio-header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 20px; min-height: 68px;
-    background: rgba(255,255,255,0.82);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-    border-bottom: 1px solid var(--border);
-  }
-  .inicio-logo { display: flex; align-items: center; flex-shrink: 0; }
-  .inicio-logo img { height: 42px; width: auto; display: block; }
+  /* Toda la portada escribe en blanco, pero el modal es una tarjeta
+     blanca: adentro de él manda el color de siempre. */
+  .modal-box { color: var(--text); }
 
-  /* Las dos secciones que valen desde la portada, a la mano. Antes
-     vivían nada más dentro del menú de hamburguesa. */
-  .inicio-nav { display: flex; align-items: center; gap: 2px; }
-  .inicio-nav a {
-    padding: 8px 14px; border-radius: 40px;
-    font-size: 14px; font-weight: 600; color: var(--text);
-    text-decoration: none; white-space: nowrap;
-    transition: background 0.15s, color 0.15s;
+  /* ── Tapa ──
+     Tres zonas: las redes a la izquierda, el logo con su menú al
+     centro y el botón del portal a la derecha. No va fija: en una
+     portada estorba, y el botón vuelve a quedar a la mano en el pie. */
+  .tapa {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    gap: 16px; padding: 26px 32px 22px;
   }
-  .inicio-nav a:hover { color: var(--red); background: #fff0f0; }
-  .inicio-nav a:active { transform: translateY(1px); }
+  .tapa-social { display: flex; align-items: center; gap: 14px; padding-top: 6px; }
+  .tapa-social a { color: rgba(255,255,255,0.8); display: flex; transition: color 0.15s, transform 0.12s; }
+  .tapa-social a:hover { color: #fff; transform: translateY(-2px); }
+  .tapa-social svg { width: 18px; height: 18px; display: block; }
 
-  .inicio-header-der { display: flex; align-items: center; gap: 12px; }
-  /* Solo aparece con sesión iniciada (lo prende reflejarSesion). Es
-     nada más el circulito con las iniciales: que el botón de al lado
-     diga "Ir al Portal" ya avisa que la sesión sigue viva, así que el
-     "Bienvenido, Fulano" completo sobraba. */
-  .inicio-iniciales {
-    display: none;
-    align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
-  }
-  .inicio-iniciales.visible { display: flex; }
+  .tapa-centro { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .tapa-logo { display: block; }
+  .tapa-logo img { height: 46px; width: auto; display: block; }
 
-  .btn-portal {
-    display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0;
-    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; border: none; border-radius: 40px;
-    padding: 11px 24px; font-size: 13.5px; font-weight: 700; font-family: inherit;
-    cursor: pointer; white-space: nowrap;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 16px rgba(204,0,0,0.28);
-    transition: filter 0.18s, box-shadow 0.12s, transform 0.12s;
-  }
-  .btn-portal:hover { filter: brightness(1.08); }
-  .btn-portal:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 6px rgba(204,0,0,0.3) inset; }
-  .btn-portal svg { width: 15px; height: 15px; flex-shrink: 0; }
-
-  main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 92px 20px 40px; }
-
-  /* ── Portada ──
-     El texto de un lado y la foto del equipo del otro, con el corte
-     diagonal entre los dos. La diagonal es lo que evita que se vea
-     como dos cajas pegadas. */
-  .hero {
-    display: grid; grid-template-columns: 1fr 1.05fr; align-items: center;
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 22px; overflow: hidden;
-    box-shadow: var(--sombra-2);
-    margin-bottom: 30px;
-  }
-  .hero-texto { padding: 52px 20px 52px 44px; }
-  .hero h1 {
-    font-size: 40px; line-height: 1.1; letter-spacing: -0.035em;
-    margin-bottom: 16px;
-  }
-  .hero h1 .rojo { display: block; color: var(--red); }
-  .hero h1 .negro { display: block; color: var(--text); }
-  .hero-sub {
-    font-size: 15px; line-height: 1.65; color: #555;
-    max-width: 430px; margin-bottom: 26px;
-  }
-  .hero-acciones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .btn-hero {
-    display: inline-flex; align-items: center; gap: 9px;
-    background: linear-gradient(180deg, #e81010 0%, var(--red) 100%);
-    color: #fff; border: none; border-radius: 40px;
-    padding: 14px 30px; font-size: 14.5px; font-weight: 700; font-family: inherit;
-    text-decoration: none; cursor: pointer; white-space: nowrap;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px rgba(204,0,0,0.3);
-    transition: filter 0.18s, transform 0.12s;
-  }
-  .btn-hero:hover { filter: brightness(1.08); }
-  .btn-hero:active { transform: translateY(1px) scale(0.98); }
-  .btn-hero svg { width: 16px; height: 16px; flex-shrink: 0; }
-  .btn-hero-claro {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 24px; border-radius: 40px;
-    border: 1.5px solid var(--border); background: #fff;
-    color: var(--text); text-decoration: none;
-    font-size: 14px; font-weight: 700; white-space: nowrap;
-    transition: border-color 0.15s, color 0.15s, transform 0.12s;
-  }
-  .btn-hero-claro:hover { border-color: var(--red); color: var(--red); }
-  .btn-hero-claro:active { transform: translateY(1px) scale(0.98); }
-  .hero-nota { font-size: 12.5px; color: var(--muted); margin-top: 14px; }
-
-  .hero-foto {
-    align-self: stretch; min-height: 430px;
-    background-image: url('/kwpremierweb/assets/img/equipo-kw-premier.jpg');
-    /* Cargada un poco hacia abajo: centrada se iba mucha pared de
-       arriba y las caras quedaban chiquitas al fondo. */
-    background-size: cover; background-position: center 62%;
-    /* El corte se lleva la esquina de abajo a la izquierda, así la
-       foto queda más ancha arriba y la diagonal baja hacia el texto. */
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 13% 100%);
-  }
-
-  /* ── Secciones de abajo ── */
-  .seccion { margin-bottom: 52px; scroll-margin-top: 84px; }
-  /* Título en dos renglones: el primero en rojo dice el gancho y el
-     segundo, en negro, lo aterriza. */
-  .seccion-titulo {
-    text-align: center; margin-bottom: 8px;
-    font-size: 27px; line-height: 1.2; letter-spacing: -0.03em;
-  }
-  .seccion-titulo .rojo { display: block; color: var(--red); }
-  .seccion-titulo .negro { display: block; color: var(--text); font-size: 22px; }
-  /* Cuando el título va solo (sin subtítulo debajo) tiene que aportar
-     él mismo el aire que daba el subtítulo, o queda pegado al contenido. */
-  .seccion-titulo.solo { margin-bottom: 26px; }
-  .seccion-sub {
-    font-size: 14px; color: var(--muted); text-align: center;
-    max-width: 620px; margin: 0 auto 26px; line-height: 1.6;
-  }
-
-  /* Trampa para robots: invisible para las personas, así que si viene
-     llena es que no la llenó una persona. */
-  .trampa { position: absolute; left: -9999px; opacity: 0; }
-
-  /* ── Las cuatro puertas del sitio ──
-     Tarjetas grandes con foto: la foto hace el trabajo de explicar a
-     dónde lleva cada una mejor que un iconito.
-     Mientras no haya foto real se pinta un degradado y el icono; para
-     ponerla, basta agregar --foto: url(...) en la tarjeta de abajo. */
-  .accesos {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-    margin-bottom: 56px;
-  }
-  /* Sin foto la tarjeta es compacta y el texto va arriba: cuando el
-     contenido se anclaba abajo con 260px de alto (pensado para una
-     foto de fondo que todavía no existe) quedaba un hueco enorme y la
-     portada se sentía tablero vacío. Con foto vuelve a ser alta y con
-     el texto abajo, que es como se lee bien encima de una imagen. */
-  .acceso {
-    position: relative; display: flex; align-items: flex-start;
-    min-height: 0; padding: 22px;
-    border-radius: 18px; overflow: hidden;
-    text-decoration: none; color: var(--text);
-    background-image: var(--foto, none);
-    background-color: var(--card);
-    background-size: cover; background-position: center;
-    border: 1px solid var(--border);
-    box-shadow: var(--sombra-1);
-    transition: transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
-  }
-  .acceso:hover { transform: translateY(-3px); box-shadow: var(--sombra-3); }
-  .acceso:active { transform: translateY(0) scale(0.99); }
-  /* Mientras no hay foto, la tarjeta se queda clara para ir a juego con
-     el resto del sitio (fondo gris, tarjetas blancas, rojo de acento).
-     En cuanto se le pone foto, .con-foto la voltea a texto blanco sobre
-     un velo oscuro, que es lo que necesita una imagen para leerse. */
-  .acceso::before {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(120% 90% at 85% 0%, #fff5f5 0%, #fafafa 55%, #f2f2f0 100%);
-  }
-  .acceso.con-foto {
-    color: #fff; border-color: transparent; background-color: #2a2a2a;
-    align-items: flex-end; min-height: 260px; padding-top: 22px;
-  }
-  .acceso.con-foto::before {
-    background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.72) 100%);
-  }
-  /* Sin foto va en flujo, junto al texto; con foto se esconde (ahí el
-     trabajo de explicar la tarjeta lo hace la imagen). */
-  .acceso-icono {
-    position: relative; flex-shrink: 0;
-    width: 46px; height: 46px; border-radius: 14px; margin-right: 15px;
-    background: #fff0f0; color: var(--red);
+  .tapa-nav {
     display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 4px 6px;
   }
-  .acceso-icono svg { width: 22px; height: 22px; }
-  .acceso.con-foto .acceso-icono { display: none; }
-  /* Sin foto no hace falta caja: el texto va directo sobre la tarjeta
-     clara. Con foto sí, porque el vidrio es lo que deja leerlo pase lo
-     que pase con la imagen de atrás. */
-  .acceso-caja {
+  .tapa-nav a {
     position: relative;
-    border-radius: 14px;
-    max-width: 88%;
+    padding: 6px 11px; border-radius: 30px;
+    font-size: 14.5px; font-weight: 400; color: #fff;
+    text-decoration: none; white-space: nowrap;
+    transition: background 0.15s;
   }
-  .acceso.con-foto .acceso-caja {
-    background: rgba(20,20,20,0.55);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    padding: 15px 18px;
-  }
-  /* Son <span> (van dentro de un <a>), así que sin esto el título y su
-     descripción salen pegados en el mismo renglón. */
-  .acceso-titulo { display: block; font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
-  .acceso.con-foto .acceso-titulo { font-size: 21px; font-weight: 800; }
-  .acceso-sub { display: block; font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: 4px; }
-  .acceso.con-foto .acceso-sub { color: rgba(255,255,255,0.86); }
+  .tapa-nav a:hover { background: rgba(255,255,255,0.13); }
 
-  /* Reclutamiento */
-  .unete {
-    background: linear-gradient(150deg, #8f0000 0%, #4a0000 60%, #1f1f1f 100%);
-    border-radius: 20px; padding: 44px 34px; text-align: center; color: #fff;
-    box-shadow: var(--sombra-2);
+  .tapa-der { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 2px; }
+  /* Solo sale con sesión abierta (lo prende reflejarSesion). */
+  .tapa-iniciales {
+    display: none; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(255,255,255,0.16); border: 1px solid var(--linea);
+    color: #fff; font-size: 13px; font-weight: 700;
   }
-  .unete h2 { font-size: 27px; font-weight: 800; letter-spacing: -0.6px; margin-bottom: 10px; }
-  .unete p {
-    font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,0.88);
-    max-width: 640px; margin: 0 auto 12px;
-  }
-  .unete-puntos {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
-    max-width: 760px; margin: 26px auto 30px; text-align: left;
-  }
-  .unete-punto {
-    background: rgba(255,255,255,0.1); border-radius: 13px; padding: 16px 17px;
-  }
-  .unete-punto strong { display: block; font-size: 14.5px; margin-bottom: 4px; }
-  .unete-punto span { font-size: 12.5px; color: rgba(255,255,255,0.8); line-height: 1.5; }
-  .btn-unete {
-    display: inline-flex; align-items: center; gap: 9px;
-    background: #fff; color: var(--red); border: none; border-radius: 40px;
-    padding: 13px 30px; font-size: 14.5px; font-weight: 700; font-family: inherit;
-    text-decoration: none; cursor: pointer;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
-    transition: transform 0.12s, filter 0.15s;
-  }
-  .btn-unete:hover { filter: brightness(0.97); transform: translateY(-1px); }
-  .btn-unete:active { transform: translateY(1px) scale(0.97); }
-  .btn-unete svg { width: 16px; height: 16px; }
+  .tapa-iniciales.visible { display: flex; }
 
-  /* Testimonios */
-  .testimonios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .testimonio {
-    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    padding: 22px; box-shadow: var(--sombra-1);
-    display: flex; flex-direction: column; gap: 12px;
+  .btn-tapa {
+    display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+    background: #fff; color: var(--vino); border: none;
+    padding: 15px 30px; font-size: 14.5px; font-weight: 600; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, color 0.15s, transform 0.12s;
   }
-  .testimonio-estrellas { display: flex; gap: 2px; }
-  .testimonio-estrellas svg { width: 16px; height: 16px; }
-  .testimonio-estrellas .llena { color: #f5b301; }
-  .testimonio-estrellas .vacia { color: #ddd; }
-  .testimonio-texto { font-size: 14px; line-height: 1.65; color: #444; flex: 1; }
-  .testimonio-quien { display: flex; align-items: center; gap: 11px; }
-  .testimonio-avatar {
+  .btn-tapa:hover { background: var(--red); color: #fff; }
+  .btn-tapa:active { transform: translateY(1px); }
+
+  /* ── Portada ── */
+  .portada { text-align: center; padding: 62px 24px 74px; }
+  .portada-antes {
+    font-size: 21px; font-weight: 600; margin-bottom: 12px;
+  }
+  .portada-titulo {
+    font-size: 74px; line-height: 1.02; letter-spacing: -0.035em;
+    max-width: 15ch; margin: 0 auto;
+  }
+
+  .portada-foto {
+    height: 62vh; min-height: 380px;
+    background-image: url('/kwpremierweb/assets/img/equipo-kw-premier.jpg');
+    background-size: cover; background-position: center 58%;
+  }
+
+  /* ── Cuerpo ── */
+  main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+
+  .bloque { padding: 74px 0; border-top: 1px solid var(--linea); }
+  .bloque:first-child { border-top: 0; }
+
+  /* El título grande y centrado de una sección (el de "Trabaja con
+     KW Premier"). El chico y subrayado de la izquierda es .bloque-rotulo. */
+  .bloque-titulo {
+    text-align: center; font-size: 62px; line-height: 1.05;
+    letter-spacing: -0.035em; text-transform: uppercase;
+    margin-bottom: 46px;
+  }
+  .bloque-rotulo {
+    font-size: 25px; letter-spacing: -0.02em; margin-bottom: 22px;
+  }
+
+  /* Enlace de texto, subrayado, como el "Learn more" del ejemplo. */
+  .mas {
+    display: inline-block;
+    color: #fff; font-size: 14.5px; text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.55);
+    padding-bottom: 2px; background: none; border-left: 0; border-right: 0; border-top: 0;
+    font-family: inherit; cursor: pointer;
+    transition: border-color 0.15s, opacity 0.15s;
+  }
+  .mas:hover { border-color: #fff; opacity: 0.85; }
+
+  /* ── Tres columnas: cómo se trabaja con nosotros ── */
+  .tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; }
+  .tres-col { text-align: center; }
+  .tres-col h3 { font-size: 27px; letter-spacing: -0.025em; margin-bottom: 16px; }
+  .tres-col p {
+    font-size: 14px; line-height: 1.6; color: var(--tenue);
+    max-width: 34ch; margin: 0 auto 18px;
+  }
+
+  /* ── Bloque editorial: el Market Center de un lado, por qué crecer
+        aquí del otro ── */
+  .editorial { display: grid; grid-template-columns: 1fr 1.35fr; gap: 46px; align-items: start; }
+  .editorial-titulo { font-size: 27px; line-height: 1.15; letter-spacing: -0.025em; margin-bottom: 20px; }
+  .editorial-grande { font-size: 33px; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 26px; }
+  .editorial-foto {
+    aspect-ratio: 4 / 3; margin-bottom: 18px;
+    background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
+    background-size: cover; background-position: center;
+  }
+  .editorial-izq p { font-size: 14px; line-height: 1.6; color: var(--tenue); margin-bottom: 18px; }
+  .editorial-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 34px; }
+  .editorial-cols h4 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .editorial-cols p { font-size: 14px; line-height: 1.6; color: var(--tenue); margin-bottom: 12px; }
+
+  /* ── Reseñas ──
+     En el lugar donde el ejemplo pone su fila de recetas. Se leen, no
+     se ven, así que caben tres por renglón en vez de cinco. */
+  .resenas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .resena {
+    background: rgba(255,255,255,0.07); border: 1px solid var(--linea);
+    padding: 24px; display: flex; flex-direction: column; gap: 13px;
+  }
+  .resena-estrellas { display: flex; gap: 2px; }
+  .resena-estrellas svg { width: 16px; height: 16px; }
+  .resena-estrellas .llena { color: #FFC94A; }
+  .resena-estrellas .vacia { color: rgba(255,255,255,0.28); }
+  .resena-texto { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.92); flex: 1; }
+  .resena-quien { display: flex; align-items: center; gap: 11px; }
+  .resena-avatar {
     width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    background: #fff3f3; color: var(--red);
+    background: #fff; color: var(--vino);
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700;
   }
-  .testimonio-nombre { font-size: 13.5px; font-weight: 700; }
-  .testimonio-rol { font-size: 12px; color: var(--muted); }
+  .resena-nombre { font-size: 13.5px; font-weight: 700; }
+  .resena-rol { font-size: 12px; color: rgba(255,255,255,0.65); }
 
-  /* Oficina y mapa: el mapa a todo lo ancho y los datos debajo. */
-  .oficina { display: flex; flex-direction: column; gap: 16px; }
-  .oficina-datos {
-    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    padding: 22px 26px; box-shadow: var(--sombra-1);
-    display: flex; flex-wrap: wrap; gap: 26px;
-  }
-  .oficina-dato { display: flex; gap: 13px; align-items: flex-start; }
-  .oficina-dato > svg { width: 19px; height: 19px; color: var(--red); flex-shrink: 0; margin-top: 2px; }
-  .oficina-dato-titulo { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .oficina-dato-valor { font-size: 14px; line-height: 1.55; margin-top: 3px; }
-  .oficina-dato-valor a { color: var(--text); text-decoration: none; }
-  .oficina-dato-valor a:hover { color: var(--red); }
+  /* ── Oficina y mapa ── */
+  .oficina { display: flex; flex-direction: column; gap: 18px; }
   .oficina-mapa {
-    position: relative;
-    border-radius: 16px; overflow: hidden; min-height: 400px;
-    border: 1px solid var(--border); box-shadow: var(--sombra-1); background: #e6e6e6;
+    position: relative; overflow: hidden; min-height: 420px;
+    border: 1px solid var(--linea); background: #e6e6e6;
   }
-  .oficina-mapa iframe { width: 100%; height: 100%; min-height: 400px; border: 0; display: block; }
+  .oficina-mapa iframe { width: 100%; height: 100%; min-height: 420px; border: 0; display: block; }
   /* Pin propio encima del mapa. Google no deja cambiar el suyo en un
      mapa embebido (eso pide la API de pago), así que va este encima,
      centrado justo donde el mapa pone el suyo y más grande para
@@ -327,204 +208,221 @@
     border-left: 11px solid transparent; border-right: 11px solid transparent;
     border-top: 16px solid #fff;
   }
-
-  @media (max-width: 860px) {
-    /* Apilado: primero la foto y luego el texto. La diagonal se quita
-       porque en vertical cortaría de lado y se vería como un error. */
-    .hero { grid-template-columns: 1fr; }
-    .hero-foto {
-      order: -1; min-height: 0; aspect-ratio: 16 / 10;
-      clip-path: none;
-      background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
-    }
-    .hero-texto { padding: 30px 24px 34px; text-align: center; }
-    .hero h1 { font-size: 30px; }
-    .hero-sub { margin-left: auto; margin-right: auto; }
-    .hero-acciones { justify-content: center; }
-    .unete-puntos { grid-template-columns: 1fr; max-width: 420px; }
-    .testimonios { grid-template-columns: 1fr; }
-    .oficina { grid-template-columns: 1fr; }
+  .oficina-datos { display: flex; flex-wrap: wrap; gap: 30px 46px; }
+  .oficina-dato { display: flex; gap: 13px; align-items: flex-start; }
+  .oficina-dato > svg { width: 19px; height: 19px; color: #fff; flex-shrink: 0; margin-top: 2px; }
+  .oficina-dato-titulo {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: rgba(255,255,255,0.6);
   }
-  @media (max-width: 640px) {
-    .inicio-header { padding: 8px 14px; min-height: 60px; gap: 8px; }
-    /* En celular el logo se va: entre él, los dos enlaces y el botón no
-       cabía nada. La marca ya se ve en la foto del hero, ahí abajito. */
-    .inicio-logo { display: none; }
-    .inicio-nav a { padding: 7px 9px; font-size: 13px; }
-    .btn-portal { padding: 9px 16px; font-size: 12.5px; gap: 6px; }
-    .btn-portal svg { width: 13px; height: 13px; }
-    .inicio-iniciales { width: 30px; height: 30px; font-size: 12px; }
-    .inicio-header-der { gap: 8px; }
-    main { padding: 76px 14px 30px; }
-    .hero { border-radius: 16px; margin-bottom: 24px; }
-    .hero h1 { font-size: 25px; }
-    .hero-sub { font-size: 13.5px; }
-    .btn-hero, .btn-hero-claro { padding: 12px 22px; font-size: 13.5px; }
-    .seccion-titulo { font-size: 22px; }
-    .seccion-titulo .negro { font-size: 18px; }
-    .accesos { gap: 11px; margin-bottom: 40px; }
-    .acceso { padding: 14px; border-radius: 15px; }
-    .acceso.con-foto { min-height: 165px; }
-    .acceso-icono { width: 36px; height: 36px; border-radius: 11px; margin-right: 11px; }
-    .acceso-icono svg { width: 17px; height: 17px; }
-    .acceso-caja { padding: 11px 12px; max-width: 100%; border-radius: 11px; }
-    .acceso-titulo, .acceso.con-foto .acceso-titulo { font-size: 15px; }
-    .acceso-sub { display: none; }
-    .seccion { margin-bottom: 38px; }
-    .seccion-titulo { font-size: 21px; }
-    .seccion-sub { font-size: 13px; margin-bottom: 20px; }
-    .unete { padding: 32px 20px; border-radius: 16px; }
-    .unete h2 { font-size: 22px; }
-    .unete p { font-size: 13.5px; }
+  .oficina-dato-valor { font-size: 14.5px; line-height: 1.55; margin-top: 4px; max-width: 46ch; }
+  .oficina-dato-valor a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.4); }
+  .oficina-dato-valor a:hover { border-color: #fff; }
+
+  /* ── Banda roja: el llamado a unirse al equipo ── */
+  .banda { background: var(--red); text-align: center; padding: 72px 24px; }
+  .banda h2 {
+    font-size: 46px; line-height: 1.06; letter-spacing: -0.035em;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: rgba(255,255,255,0.92); }
+  .btn-banda {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #fff; color: var(--red); border: none;
+    padding: 17px 38px; font-size: 15.5px; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: transform 0.12s, filter 0.15s;
+  }
+  .btn-banda:hover { filter: brightness(0.95); }
+  .btn-banda:active { transform: translateY(1px); }
+  .btn-banda svg { width: 17px; height: 17px; }
+
+  /* ── Pie ── */
+  .pie {
+    background: var(--vino-hondo);
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+    gap: 24px; padding: 34px 32px;
+  }
+  .pie-logo img { height: 40px; width: auto; display: block; }
+  .pie-dir { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center; }
+  .pie-social { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+  .pie-social a { color: rgba(255,255,255,0.72); display: flex; transition: color 0.15s, transform 0.12s; }
+  .pie-social a:hover { color: #fff; transform: translateY(-2px); }
+  .pie-social svg { width: 20px; height: 20px; display: block; }
+
+  /* ── Pantallas medianas ── */
+  @media (max-width: 1000px) {
+    .portada-titulo { font-size: 54px; }
+    .bloque-titulo { font-size: 44px; }
+    .banda h2 { font-size: 36px; }
+    .tres { grid-template-columns: 1fr; gap: 40px; }
+    .editorial { grid-template-columns: 1fr; gap: 38px; }
+    .resenas { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Celular ──
+     La tapa deja de ser de tres zonas: el logo manda arriba, y las
+     redes y el botón se reparten el renglón de abajo. */
+  @media (max-width: 700px) {
+    .tapa {
+      grid-template-columns: 1fr auto;
+      grid-template-areas: 'logo logo' 'social boton';
+      gap: 18px; padding: 20px 18px 16px;
+    }
+    .tapa-centro { grid-area: logo; }
+    .tapa-social { grid-area: social; padding-top: 0; }
+    .tapa-der { grid-area: boton; padding-top: 0; }
+    .tapa-logo img { height: 38px; }
+    .tapa-nav { gap: 2px 4px; }
+    .tapa-nav a { padding: 6px 9px; font-size: 13.5px; }
+    .btn-tapa { padding: 12px 22px; font-size: 13.5px; }
+
+    .portada { padding: 40px 18px 48px; }
+    .portada-antes { font-size: 16px; }
+    .portada-titulo { font-size: 36px; }
+    .portada-foto { height: 46vh; min-height: 260px; background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg'); }
+
+    main { padding: 0 18px; }
+    .bloque { padding: 48px 0; }
+    .bloque-titulo { font-size: 31px; margin-bottom: 32px; }
+    .bloque-rotulo { font-size: 21px; }
+    .tres-col h3 { font-size: 23px; }
+    .editorial-grande { font-size: 26px; }
+    .editorial-cols { grid-template-columns: 1fr; gap: 26px; }
+    .resenas { grid-template-columns: 1fr; }
+    .oficina-mapa, .oficina-mapa iframe { min-height: 300px; }
+    .mapa-pin-cuerpo { width: 58px; height: 58px; border-width: 3px; }
+    .mapa-pin-cuerpo img { width: 36px; }
+
+    .banda { padding: 52px 18px; }
+    .banda h2 { font-size: 28px; }
+    .banda p { font-size: 14px; }
+    .btn-banda { padding: 15px 28px; font-size: 14.5px; }
+
+    .pie { grid-template-columns: 1fr; justify-items: center; gap: 18px; padding: 30px 18px; }
+    .pie-social { justify-content: center; }
   }
 </style>
 </head>
 <body>
 
-  <header class="inicio-header">
-    <a href="/kwpremierweb/index.html" class="inicio-logo" aria-label="KW Premier">
-      <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
-    </a>
-    <nav class="inicio-nav">
-      <a href="asesores.html">Asesores</a>
-      <a href="staff.html">Liderazgo</a>
-    </nav>
-    <div class="inicio-header-der">
-      <span class="inicio-iniciales" id="bienvenida-iniciales"></span>
-      <button type="button" class="btn-portal" id="btn-portal" onclick="irAlPortal(this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  <!-- ── Tapa ── -->
+  <header class="tapa">
+    <div class="tapa-social">
+      <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+      </a>
+      <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+      </a>
+      <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" aria-label="TikTok">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
+      </a>
+    </div>
+
+    <div class="tapa-centro">
+      <a href="/kwpremierweb/index.html" class="tapa-logo" aria-label="KW Premier">
+        <img src="/kwpremierweb/assets/img/logo-kw-premier-blanco.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
+      </a>
+      <nav class="tapa-nav">
+        <a href="propiedades.html">Propiedades</a>
+        <a href="asesores.html">Asesores</a>
+        <a href="staff.html">Liderazgo</a>
+        <a href="market-center.html">Nuestro MC</a>
+        <a href="#unete">Sé parte</a>
+        <a href="#seccion-resenas">Reseñas</a>
+        <a href="#seccion-oficina">Contacto</a>
+      </nav>
+    </div>
+
+    <div class="tapa-der">
+      <span class="tapa-iniciales" id="bienvenida-iniciales"></span>
+      <button type="button" class="btn-tapa" id="btn-portal" onclick="irAlPortal(this)">
         <span id="btn-portal-texto">Iniciar Sesión</span>
       </button>
     </div>
   </header>
 
+  <!-- ── Portada ── -->
+  <section class="portada">
+    <p class="portada-antes">Market Center de Keller Williams en la Ciudad de México</p>
+    <h1 class="portada-titulo">Bienes raíces con un equipo detrás</h1>
+  </section>
+
+  <div class="portada-foto" role="img" aria-label="Equipo de asesores de KW Premier reunido en un evento de Keller Williams"></div>
+
   <main>
 
-    <!-- ── Portada ── -->
-    <section class="hero">
-      <div class="hero-texto">
-        <h1>
-          <span class="rojo">Bienes raíces</span>
-          <span class="negro">con un equipo detrás</span>
-        </h1>
-        <p class="hero-sub">
-          Somos KW Premier, Market Center de Keller Williams en la Ciudad de
-          México. Compra, vende o renta acompañado de un asesor que responde
-          por su trabajo.
-        </p>
-        <div class="hero-acciones">
-          <button type="button" class="btn-hero" onclick="abrirModalReclutamiento()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-            Quiero ser parte
-          </button>
-          <a class="btn-hero-claro" href="asesores.html">Conoce a los asesores</a>
-        </div>
-        <p class="hero-nota">Déjanos tus datos y te contactamos para platicar.</p>
+    <!-- ── Cómo se trabaja con nosotros ── -->
+    <section class="bloque" id="servicios">
+      <h2 class="bloque-titulo">Trabaja con KW Premier</h2>
+      <div class="tres">
+        <article class="tres-col">
+          <h3>Compra o renta</h3>
+          <p>Explora el inventario de KW Premier y encuentra la propiedad que buscas, con un asesor que te acompaña de la primera visita a la firma.</p>
+          <a class="mas" href="propiedades.html">Ver propiedades</a>
+        </article>
+        <article class="tres-col">
+          <h3>Vende tu propiedad</h3>
+          <p>Un asesor certificado se encarga de la valuación, la promoción y el papeleo, y responde por su trabajo en cada paso.</p>
+          <a class="mas" href="asesores.html">Conoce a los asesores</a>
+        </article>
+        <article class="tres-col">
+          <h3>Sé parte del equipo</h3>
+          <p>Construye tu carrera inmobiliaria con el respaldo de la franquicia más grande del mundo por número de asociados.</p>
+          <button type="button" class="mas" onclick="abrirModalReclutamiento()">Quiero ser parte</button>
+        </article>
       </div>
-      <div class="hero-foto" role="img" aria-label="Equipo de asesores de KW Premier reunido en un evento de Keller Williams"></div>
     </section>
 
-    <!-- ── Las cuatro puertas del sitio ──
-         Para ponerle foto a una tarjeta: se agrega el archivo en
-         assets/img/ y se le pone a esa tarjeta la clase "con-foto" más
-         style="--foto:url('/kwpremierweb/assets/img/ARCHIVO.jpg')".
-         Sin eso se queda el degradado rojo con su icono, que es lo que
-         se ve ahorita. -->
-    <h2 class="seccion-titulo">
-      <span class="rojo">Todo en un solo lugar</span>
-      <span class="negro">Propiedades, asesores y quiénes somos</span>
-    </h2>
-    <p class="seccion-sub">Cuatro puertas para lo que vengas buscando.</p>
+    <!-- ── El Market Center y por qué crecer aquí ── -->
+    <section class="bloque editorial" id="mc">
+      <div class="editorial-izq">
+        <h2 class="editorial-titulo">Nuestro<br>Market Center</h2>
+        <div class="editorial-foto" role="img" aria-label="Asesores de KW Premier en el Market Center"></div>
+        <p>Somos KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, vende o renta acompañado de un asesor que responde por su trabajo.</p>
+        <a class="mas" href="market-center.html">Conoce KW Premier</a>
+      </div>
 
-    <section class="accesos">
-      <a href="propiedades.html" class="acceso">
-        <span class="acceso-icono">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v4"/></svg>
-        </span>
-        <span class="acceso-caja">
-          <span class="acceso-titulo">Propiedades</span>
-          <span class="acceso-sub">Explora el inventario disponible.</span>
-        </span>
-      </a>
-
-      <a href="asesores.html" class="acceso">
-        <span class="acceso-icono">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </span>
-        <span class="acceso-caja">
-          <span class="acceso-titulo">Asesores</span>
-          <span class="acceso-sub">Conoce a nuestro equipo de asesores inmobiliarios.</span>
-        </span>
-      </a>
-
-      <a href="staff.html" class="acceso">
-        <span class="acceso-icono">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </span>
-        <span class="acceso-caja">
-          <span class="acceso-titulo">Liderazgo</span>
-          <span class="acceso-sub">El equipo que da soporte a nuestros asesores.</span>
-        </span>
-      </a>
-
-      <a href="market-center.html" class="acceso">
-        <span class="acceso-icono">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
-        </span>
-        <span class="acceso-caja">
-          <span class="acceso-titulo">Nuestro Market Center</span>
-          <span class="acceso-sub">Conoce qué es KW Premier.</span>
-        </span>
-      </a>
-    </section>
-
-    <!-- Reclutamiento -->
-    <section class="seccion" id="unete">
-      <div class="unete">
-        <h2>Construye tu carrera con nosotros</h2>
-        <p>KW Premier es un Market Center de Keller Williams, la franquicia inmobiliaria más grande del mundo por número de asociados. Si estás empezando o ya llevas años en el sector, aquí encuentras el respaldo para crecer.</p>
-        <div class="unete-puntos">
-          <div class="unete-punto">
-            <strong>Capacitación continua</strong>
-            <span>Formación constante con el modelo probado de Keller Williams.</span>
+      <div class="editorial-der">
+        <h2 class="editorial-grande">Crece con el respaldo de un equipo</h2>
+        <div class="editorial-cols">
+          <div>
+            <h4>Capacitación continua</h4>
+            <p>Formación constante con el modelo probado de Keller Williams, estés empezando o lleves años en el sector.</p>
           </div>
-          <div class="unete-punto">
-            <strong>Tecnología y herramientas</strong>
-            <span>Plataforma propia, inventario compartido y documentos listos para usar.</span>
+          <div>
+            <h4>Tecnología y herramientas</h4>
+            <p>Plataforma propia, inventario compartido y documentos listos para usar desde tu primer día.</p>
           </div>
-          <div class="unete-punto">
-            <strong>Equipo que te acompaña</strong>
-            <span>Un staff dedicado a apoyarte en cada operación, no a dejarte solo.</span>
+          <div>
+            <h4>Equipo que te acompaña</h4>
+            <p>Un staff dedicado a apoyarte en cada operación, no a dejarte solo.</p>
+            <a class="mas" href="staff.html">Conoce al liderazgo</a>
+          </div>
+          <div>
+            <h4>Una comunidad</h4>
+            <p>Asesores que comparten lo que saben, se recomiendan clientes y celebran los cierres de todos.</p>
+            <a class="mas" href="asesores.html">Ver a los asesores</a>
           </div>
         </div>
-        <button type="button" class="btn-unete" onclick="abrirModalReclutamiento()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-          Quiero ser parte
-        </button>
       </div>
     </section>
 
-    <!-- Reseñas: salen de la tabla `resenas`, solo las aprobadas (lo
-         limita la política de RLS). Sin ninguna, esa cuadrícula no sale
-         pero el botón sí, para invitar a dejar la primera. -->
-    <section class="seccion" id="seccion-testimonios" style="display:none;">
-      <h2 class="seccion-titulo solo">
-        <span class="rojo">Lo que dicen de nosotros</span>
-      </h2>
-      <div class="testimonios" id="lista-testimonios" style="display:none;"></div>
-      <div id="resena-cta" style="display:none; text-align:center; margin-top:22px;">
-        <a class="btn-unete" id="resena-link" href="#" target="_blank" rel="noopener" style="background:var(--red); color:#fff;">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-          Danos tu reseña
-        </a>
+    <!-- ── Reseñas ──
+         Salen de la tabla `resenas`, solo las aprobadas (lo limita la
+         política de RLS). Sin ninguna, esa cuadrícula no sale pero el
+         botón sí, para invitar a dejar la primera. -->
+    <section class="bloque" id="seccion-resenas" style="display:none;">
+      <h2 class="bloque-rotulo">Lo que dicen de nosotros</h2>
+      <div class="resenas" id="lista-testimonios" style="display:none;"></div>
+      <div id="resena-cta" style="display:none; margin-top:26px;">
+        <a class="mas" id="resena-link" href="#" target="_blank" rel="noopener">Danos tu reseña</a>
       </div>
     </section>
 
-    <!-- Oficina y mapa: igual, salen de OFICINA (abajo). -->
-    <section class="seccion" id="seccion-oficina" style="display:none;">
-      <h2 class="seccion-titulo solo">
-        <span class="rojo">Visítanos</span>
-      </h2>
+    <!-- ── Oficina y mapa: salen de OFICINA (abajo). ── -->
+    <section class="bloque" id="seccion-oficina" style="display:none;">
+      <h2 class="bloque-rotulo">Visítanos</h2>
       <div class="oficina">
         <div class="oficina-mapa" id="oficina-mapa"></div>
         <div class="oficina-datos" id="oficina-datos"></div>
@@ -532,6 +430,16 @@
     </section>
 
   </main>
+
+  <!-- ── Banda roja: reclutamiento ── -->
+  <section class="banda" id="unete">
+    <h2>¿Quieres ser parte del equipo?</h2>
+    <p>Déjanos tus datos y un miembro del equipo de KW Premier se pondrá en contacto contigo para platicar.</p>
+    <button type="button" class="btn-banda" onclick="abrirModalReclutamiento()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+      Quiero ser parte
+    </button>
+  </section>
 
   <!-- Modal: quiero ser parte (reclutamiento) -->
   <div id="modal-reclutamiento" class="modal-overlay" style="display:none;">
@@ -573,16 +481,22 @@
     </div>
   </div>
 
-  <footer>
-    <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+  <footer class="pie">
+    <a href="/kwpremierweb/index.html" class="pie-logo" aria-label="KW Premier">
+      <img src="/kwpremierweb/assets/img/logo-kw-premier-blanco.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
-    <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" class="footer-social" aria-label="Instagram">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-    </a>
-    <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="footer-social" aria-label="TikTok">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
-    </a>
+    <div class="pie-dir" id="pie-dir"></div>
+    <div class="pie-social">
+      <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+      </a>
+      <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" aria-label="TikTok">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
+      </a>
+    </div>
   </footer>
 
 
@@ -671,7 +585,7 @@
       out += '<svg viewBox="0 0 24 24" class="' + (i <= n ? 'llena' : 'vacia') + '" fill="currentColor">' +
         '<path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
     }
-    return '<div class="testimonio-estrellas" aria-label="' + n + ' de 5 estrellas">' + out + '</div>';
+    return '<div class="resena-estrellas" aria-label="' + n + ' de 5 estrellas">' + out + '</div>';
   }
 
   async function pintarTestimonios() {
@@ -693,14 +607,14 @@
 
     if (resenas.length) {
       document.getElementById('lista-testimonios').innerHTML = resenas.map(function (t) {
-        return '<figure class="testimonio">' +
+        return '<figure class="resena">' +
           estrellasHtml(t.estrellas) +
-          '<blockquote class="testimonio-texto">“' + escapeHtml(t.texto) + '”</blockquote>' +
-          '<figcaption class="testimonio-quien">' +
-            '<span class="testimonio-avatar">' + escapeHtml(iniciales(t.nombre)) + '</span>' +
+          '<blockquote class="resena-texto">“' + escapeHtml(t.texto) + '”</blockquote>' +
+          '<figcaption class="resena-quien">' +
+            '<span class="resena-avatar">' + escapeHtml(iniciales(t.nombre)) + '</span>' +
             '<span>' +
-              '<span class="testimonio-nombre">' + escapeHtml(t.nombre) + '</span>' +
-              (t.rol ? '<span class="testimonio-rol" style="display:block;">' + escapeHtml(t.rol) + '</span>' : '') +
+              '<span class="resena-nombre">' + escapeHtml(t.nombre) + '</span>' +
+              (t.rol ? '<span class="resena-rol" style="display:block;">' + escapeHtml(t.rol) + '</span>' : '') +
             '</span>' +
           '</figcaption>' +
         '</figure>';
@@ -714,7 +628,7 @@
     // La sección solo tiene caso mostrarla si hay algo que enseñar: ya
     // sea reseñas aprobadas o al menos la invitación a dejar la primera.
     if (resenas.length || RESENA_URL) {
-      document.getElementById('seccion-testimonios').style.display = '';
+      document.getElementById('seccion-resenas').style.display = '';
     }
   }
 
@@ -722,7 +636,7 @@
     if (!OFICINA.direccion) return;
 
     var pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-    var tel = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+    var tel = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0 1 22 16.92z"/></svg>';
     var sobre = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>';
 
     var comoLlegar = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(OFICINA.direccion);
@@ -760,6 +674,10 @@
       mapa.style.display = 'none';
     }
 
+    // La dirección también va en el pie, que es donde se busca cuando
+    // ya se leyó toda la página.
+    document.getElementById('pie-dir').textContent = OFICINA.direccion;
+
     document.getElementById('seccion-oficina').style.display = '';
   }
 
@@ -786,7 +704,7 @@
     } else if (estado === 'enviado') {
       btn.disabled = true;
       btn.classList.add('enviado');
-      cont.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>¡Listo! Te contactamos';
+      cont.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Enviado';
     } else {
       btn.disabled = !recCompleto();
       cont.textContent = 'Enviar mis datos';
@@ -849,9 +767,7 @@
 </script>
 <!-- Esta página NO carga drawer.js a propósito (el resto del sitio sí).
      Ese script mete la hamburguesa y la lupa dentro del <header>, y en la
-     portada estorbaban: aquí las dos secciones a las que llevaría el menú
-     ya están en el header (Asesores y Liderazgo) y las demás, en las
-     tarjetas de en medio. -->
+     portada estorbaban: aquí el menú completo ya vive debajo del logo. -->
 
 </body>
 </html>
