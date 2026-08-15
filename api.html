@@ -41,11 +41,22 @@
     --naranja: #D97706;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+  html { scroll-behavior: smooth; scroll-padding-top: 20px; background-color: #3d0000; }
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
-    background: var(--bg); background-attachment: fixed; color: var(--text);
+    background: transparent; color: var(--text);
     line-height: 1.6;
+  }
+  /* Esta página no carga kw-base.css, así que trae su propia capa de
+     fondo. No se usa background-attachment: fixed porque en celular
+     deja franjas blancas al desplazarse. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    pointer-events: none;
   }
   code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
