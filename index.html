@@ -80,7 +80,7 @@
 
   .btn-tapa {
     display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
-    background: #fff; color: var(--vino); border: none;
+    background: #fff; color: var(--vino); border: none; border-radius: 10px;
     padding: 15px 30px; font-size: 14.5px; font-weight: 600; font-family: inherit;
     cursor: pointer; white-space: nowrap;
     transition: background 0.15s, color 0.15s, transform 0.12s;
@@ -147,7 +147,7 @@
   .editorial-titulo { font-size: 27px; line-height: 1.15; letter-spacing: -0.025em; margin-bottom: 20px; }
   .editorial-grande { font-size: 33px; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 26px; }
   .editorial-foto {
-    aspect-ratio: 4 / 3; margin-bottom: 18px;
+    aspect-ratio: 4 / 3; margin-bottom: 18px; border-radius: 16px;
     background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
     background-size: cover; background-position: center;
   }
@@ -162,6 +162,7 @@
   .resenas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   .resena {
     background: rgba(255,255,255,0.07); border: 1px solid var(--linea);
+    border-radius: 14px;
     padding: 24px; display: flex; flex-direction: column; gap: 13px;
   }
   .resena-estrellas { display: flex; gap: 2px; }
@@ -182,32 +183,10 @@
   /* ── Oficina y mapa ── */
   .oficina { display: flex; flex-direction: column; gap: 18px; }
   .oficina-mapa {
-    position: relative; overflow: hidden; min-height: 420px;
+    position: relative; overflow: hidden; min-height: 420px; border-radius: 16px;
     border: 1px solid var(--linea); background: #e6e6e6;
   }
   .oficina-mapa iframe { width: 100%; height: 100%; min-height: 420px; border: 0; display: block; }
-  /* Pin propio encima del mapa. Google no deja cambiar el suyo en un
-     mapa embebido (eso pide la API de pago), así que va este encima,
-     centrado justo donde el mapa pone el suyo y más grande para
-     taparlo. pointer-events:none para no estorbar el arrastre. */
-  .mapa-pin {
-    position: absolute; left: 50%; top: 50%;
-    transform: translate(-50%, -100%);
-    pointer-events: none; z-index: 2;
-    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
-  }
-  .mapa-pin-cuerpo {
-    width: 74px; height: 74px; border-radius: 50%;
-    background: var(--red); border: 4px solid #fff;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .mapa-pin-cuerpo img { width: 46px; height: auto; display: block; filter: brightness(0) invert(1); }
-  /* La puntita del pin, hecha con un triángulo CSS. */
-  .mapa-pin-punta {
-    width: 0; height: 0; margin: -6px auto 0;
-    border-left: 11px solid transparent; border-right: 11px solid transparent;
-    border-top: 16px solid #fff;
-  }
   .oficina-datos { display: flex; flex-wrap: wrap; gap: 30px 46px; }
   .oficina-dato { display: flex; gap: 13px; align-items: flex-start; }
   .oficina-dato > svg { width: 19px; height: 19px; color: #fff; flex-shrink: 0; margin-top: 2px; }
@@ -219,20 +198,20 @@
   .oficina-dato-valor a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.4); }
   .oficina-dato-valor a:hover { border-color: #fff; }
 
-  /* ── Banda roja: el llamado a unirse al equipo ── */
-  .banda { background: var(--red); text-align: center; padding: 72px 24px; }
+  /* ── Banda: el llamado a unirse al equipo ── */
+  .banda { background: #fff; text-align: center; padding: 72px 24px; }
   .banda h2 {
     font-size: 46px; line-height: 1.06; letter-spacing: -0.035em;
-    text-transform: uppercase; margin-bottom: 14px;
+    text-transform: uppercase; margin-bottom: 14px; color: var(--vino);
   }
-  .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: rgba(255,255,255,0.92); }
+  .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: var(--vino); opacity: 0.82; }
   .btn-banda {
     display: inline-flex; align-items: center; gap: 10px;
-    background: #fff; color: var(--red); border: none;
+    background: var(--vino); color: #fff; border: none; border-radius: 10px;
     padding: 17px 38px; font-size: 15.5px; font-weight: 700; font-family: inherit;
     cursor: pointer; transition: transform 0.12s, filter 0.15s;
   }
-  .btn-banda:hover { filter: brightness(0.95); }
+  .btn-banda:hover { filter: brightness(1.2); }
   .btn-banda:active { transform: translateY(1px); }
   .btn-banda svg { width: 17px; height: 17px; }
 
@@ -290,8 +269,6 @@
     .editorial-cols { grid-template-columns: 1fr; gap: 26px; }
     .resenas { grid-template-columns: 1fr; }
     .oficina-mapa, .oficina-mapa iframe { min-height: 300px; }
-    .mapa-pin-cuerpo { width: 58px; height: 58px; border-width: 3px; }
-    .mapa-pin-cuerpo img { width: 36px; }
 
     .banda { padding: 52px 18px; }
     .banda h2 { font-size: 28px; }
@@ -663,13 +640,7 @@
     if (OFICINA.mapaEmbed) {
       mapa.innerHTML = '<iframe src="' + escapeHtml(OFICINA.mapaEmbed) + '" loading="lazy" ' +
         'referrerpolicy="no-referrer-when-downgrade" title="Ubicación de KW Premier" ' +
-        'allowfullscreen></iframe>' +
-        '<div class="mapa-pin" aria-hidden="true">' +
-          '<div class="mapa-pin-cuerpo">' +
-            '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="" />' +
-          '</div>' +
-          '<div class="mapa-pin-punta"></div>' +
-        '</div>';
+        'allowfullscreen></iframe>';
     } else {
       mapa.style.display = 'none';
     }
