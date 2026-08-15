@@ -168,7 +168,7 @@
 
   .page-eyebrow {
     font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #C2255C; margin-bottom: 8px;
+    text-transform: uppercase; color: var(--red); margin-bottom: 8px;
   }
   .page-title { font-size: 24px; font-weight: 700; color: #fff; letter-spacing: -0.5px; margin-bottom: 0; }
   .page-desc { font-size: 13px; color: rgba(255,255,255,0.72); margin-top: 2px; margin-bottom: 12px; }
@@ -176,7 +176,7 @@
   /* ── Navegador de mes ── */
   .month-nav {
     display: flex; align-items: center; justify-content: space-between;
-    background: linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.82) 45%, rgba(255,255,255,0.76) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
@@ -204,14 +204,14 @@
   /* ── Estados ── */
   .state-box {
     text-align: center; padding: 48px 20px; color: var(--muted);
-    background: linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.82) 45%, rgba(255,255,255,0.76) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
   }
   .state-box .spinner {
     width: 26px; height: 26px; border-radius: 50%;
-    border: 3px solid rgba(194,37,92,0.15); border-top-color: #C2255C;
+    border: 3px solid rgba(138,0,0,0.15); border-top-color: var(--red);
     margin: 0 auto 14px; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -231,16 +231,19 @@
   /* ── Agenda ── */
   .day-group {
     margin-bottom: 18px; scroll-margin-top: 8px;
-    background: linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.82) 45%, rgba(255,255,255,0.76) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 18px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 18px;
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
     padding: 18px 20px 8px;
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   }
+  /* El día de hoy no se pinta de color: es el vidrio casi sólido, que
+     resalta contra los demás días, más transparentes. */
   .day-group.is-today {
-    border: 2px solid var(--red);
-    background: var(--red);
+    border: 1px solid rgba(255,255,255,0.9);
+    background: linear-gradient(150deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.98) 45%, rgba(255,255,255,0.96) 100%);
+    box-shadow: 0 16px 38px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9);
   }
   @keyframes day-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(138,0,0,0); }
@@ -259,9 +262,7 @@
     font-size: 10.5px; font-weight: 700; color: var(--red); background: #ffe5e5;
     padding: 3px 10px; border-radius: 20px; text-transform: uppercase; margin-left: 2px;
   }
-  .day-group.is-today .day-heading .day-weekday-word { color: #fff; }
-  .day-group.is-today .day-heading .day-date-rest { color: rgba(255,255,255,0.85); }
-  .day-group.is-today .day-heading .today-pill { background: rgba(255,255,255,0.22); color: #fff; }
+  .day-group.is-today .day-heading .today-pill { background: #FFF0F0; color: var(--red); }
 
   .event-card {
     display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border);
@@ -280,21 +281,12 @@
     font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5;
     max-width: 100%; overflow-wrap: break-word;
   }
-  .event-desc a { color: #3B5BDB; }
+  .event-desc a { color: var(--red); }
   .meeting-link {
     display: inline-flex; align-items: center; gap: 5px; margin-top: 3px;
-    font-weight: 600; color: #3B5BDB !important; text-decoration: none;
+    font-weight: 600; color: var(--red) !important; text-decoration: none;
   }
   .meeting-link:hover { text-decoration: underline; }
-  .day-group.is-today .event-card { border-top-color: rgba(255,255,255,0.25); }
-  .day-group.is-today .event-time { color: #fff; }
-  .day-group.is-today .event-time .end-time { color: rgba(255,255,255,0.75); }
-  .day-group.is-today .event-time.all-day { color: rgba(255,255,255,0.85); }
-  .day-group.is-today .event-title { color: #fff; }
-  .day-group.is-today .event-location { color: rgba(255,255,255,0.8); }
-  .day-group.is-today .event-desc { color: rgba(255,255,255,0.8); }
-  .day-group.is-today .event-desc a { color: #fff; text-decoration: underline; }
-  .day-group.is-today .meeting-link { color: #fff !important; }
 
   .event-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .event-btn {
@@ -307,10 +299,8 @@
   .event-btn:hover { background: #ececec; }
   .event-btn:active { transform: scale(0.9); }
   .event-btn svg { width: 15px; height: 15px; }
-  .event-btn-join { border-color: #3B5BDB; color: #3B5BDB; }
+  .event-btn-join { border-color: var(--red); color: var(--red); }
   .event-btn-details { color: var(--text); }
-  .day-group.is-today .event-btn { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.45); color: #fff; }
-  .day-group.is-today .event-btn:hover { background: rgba(255,255,255,0.32); }
   .day-group.is-today .event-btn-join { border-color: rgba(255,255,255,0.45); color: #fff; }
   .day-group.is-today .event-btn-details { color: #fff; }
 
@@ -331,6 +321,7 @@
      de siempre) se aclaran solo en esta página. */
   .calendar-top .kw-tabs { margin-top: 14px; background: rgba(255,255,255,0.12); }
   .calendar-top .kw-tab { color: rgba(255,255,255,0.72); }
+  .calendar-top .kw-tab.activo { color: var(--red); }
   .calendar-top .kw-tab:hover { color: #fff; }
   .panel-top { flex-shrink: 0; padding: 0 32px 12px; }
   .panel-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 60px; }
