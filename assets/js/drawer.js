@@ -377,12 +377,12 @@
     }
   }
 
-  // La barra del header se esconde al bajar y reaparece al subir; los
-  // botones (menú y Atrás) se quedan siempre visibles. Se escucha en
+  // La cápsula del header se esconde al bajar y reaparece al subir,
+  // completa: se va con todo y sus botones dentro. Aquí solo se pone o
+  // se quita la marca; que eso pase únicamente en celular lo decide el
+  // CSS (kw-base.css), que mete la regla en un @media. Se escucha en
   // fase de captura para cubrir también los contenedores con scroll
   // interno (por ejemplo la agenda del calendario), no solo la ventana.
-  // Cualquier <header> participa (los kw-header se difuminan; los
-  // demás simplemente se deslizan hacia arriba - CSS de cada uno).
   const kwHeader = document.querySelector('header');
   if (kwHeader) {
     let lastY = 0;

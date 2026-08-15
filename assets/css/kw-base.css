@@ -113,9 +113,9 @@ h1, h2, h3, h4 {
 /* ── Header compartido (páginas migradas: <header class="kw-header">) ──
    Barra fija translúcida con blur; en lugar de un borde duro, un
    degradado la funde con el contenido. Al hacer scroll hacia abajo,
-   drawer.js le pone .kw-header-oculto: la barra desaparece pero los
-   botones de menú y Atrás se quedan flotando; al subir, reaparece.
-   El contenido de cada página debe dejar ~54px libres arriba. */
+   drawer.js le pone .kw-header-oculto: en celular la cápsula entera se
+   va hacia arriba y vuelve al subir; en escritorio se queda fija.
+   El contenido de cada página debe dejar ~72px libres arriba. */
 header.kw-header {
   position: fixed; top: 10px; left: 12px; right: 12px; z-index: 90;
   display: flex; align-items: center; gap: 8px;
@@ -130,26 +130,26 @@ header.kw-header {
   box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.75);
   transition: background 0.25s, box-shadow 0.25s, border-color 0.25s;
 }
-header.kw-header > * { transition: opacity 0.2s; }
-/* Al bajar, la cápsula se desvanece y solo se quedan flotando sus
-   botones (la hamburguesa, el Atrás y la campanita). */
-header.kw-header.kw-header-oculto {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
-}
-/* La campanita se queda flotando igual que la hamburguesa y el Atrás:
-   es un aviso, y desaparecía justo cuando alguien bajaba a leer. Casi
-   siempre viene envuelta en un grupo (.header-right, .header-socials),
-   así que se salva también ese grupo - pero solo la campanita, no sus
-   hermanos, que sí se van con el resto de la barra. */
-header.kw-header.kw-header-oculto > *:not(.hamburger-btn):not(.back-btn):not(#notif-bell-slot):not(:has(#notif-bell-slot)) {
-  opacity: 0; pointer-events: none;
-}
-header.kw-header > *:has(#notif-bell-slot) > * { transition: opacity 0.2s; }
-header.kw-header.kw-header-oculto > *:has(#notif-bell-slot) > *:not(#notif-bell-slot) {
-  opacity: 0; pointer-events: none;
+/* ── Esconderse al bajar: solo en celular ──
+   La cápsula entera se va hacia arriba (con sus botones adentro, no
+   nada más el fondo) y vuelve completa al subir. Se mueve con
+   transform y no con top, porque transform lo resuelve la GPU y no
+   obliga a recalcular el acomodo de la página en cada cuadro.
+
+   En escritorio no se esconde: ahí sobra alto de pantalla y perder el
+   Atrás y el menú mientras se lee estorba más de lo que ayuda. Como el
+   ocultarse vive dentro de este @media, en pantalla grande la clase
+   que pone drawer.js simplemente no hace nada. */
+@media (max-width: 900px) {
+  header.kw-header {
+    transition: transform 0.28s var(--curva-salida), opacity 0.22s var(--curva),
+                background 0.25s, box-shadow 0.25s, border-color 0.25s;
+  }
+  header.kw-header.kw-header-oculto {
+    transform: translateY(-150%);
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .btn-volver {
