@@ -167,6 +167,90 @@
   .estatus-abierto { background: #fdd8d8; color: #961414; }
   .estatus-en_revision { background: #ffeec9; color: #93600a; }
   .estatus-resuelto { background: #d9f5e3; color: #10713a; }
+
+  /* ── Lista de gestión: tarjetas que se abren, no una tabla ──
+     En celular una tabla de cuatro columnas obliga a partir el texto en
+     dos renglones y a leer de lado. Aquí cada incidencia es un renglón
+     con lo mínimo (fecha, título y un punto de color), y al picarle se
+     abre hacia abajo con el resto. */
+  .inc-lista { display: flex; flex-direction: column; gap: 8px; }
+  .inc-fila {
+    border-radius: 16px; overflow: hidden;
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
+    border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+    transition: box-shadow 0.18s;
+  }
+  .inc-fila.abierta { box-shadow: 0 12px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9); }
+
+  .inc-cabeza {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; padding: 15px 16px;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; text-align: left;
+  }
+  /* El punto de color lleva solo el estatus: el texto de la etiqueta se
+     guarda para cuando se abre, que es donde hay lugar para leerlo. */
+  .inc-punto { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .inc-punto.estatus-abierto { background: #d13b3b; }
+  .inc-punto.estatus-en_revision { background: #e0a218; }
+  .inc-punto.estatus-resuelto { background: #1f9d55; }
+
+  .inc-cabeza-texto { flex: 1; min-width: 0; }
+  /* En bloque a fuerza: como spans en línea el recorte con puntos
+     suspensivos no aplica y un título largo se sale de la tarjeta. */
+  .inc-titulo {
+    display: block;
+    font-size: 14.5px; font-weight: 700; color: var(--text); line-height: 1.35;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .inc-fecha { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .inc-flecha {
+    width: 17px; height: 17px; flex-shrink: 0; color: var(--muted);
+    transition: transform 0.22s;
+  }
+  .inc-fila.abierta .inc-flecha { transform: rotate(180deg); }
+
+  /* Se abre midiendo el contenido, no con un alto fijo: así sirve igual
+     para un título de un renglón que para uno de tres. */
+  .inc-cuerpo {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.26s var(--curva-salida);
+  }
+  .inc-fila.abierta .inc-cuerpo { grid-template-rows: 1fr; }
+  /* Cerrado el contenido mide cero, pero eso no basta: sin ocultarlo de
+     verdad el botón de adentro sigue recibiendo el tabulador y el lector
+     de pantalla lo sigue leyendo. La visibilidad vuelve al abrir y se
+     apaga hasta que termina de cerrarse. */
+  .inc-cuerpo > div {
+    overflow: hidden;
+    visibility: hidden;
+    transition: visibility 0.26s var(--curva-salida);
+  }
+  .inc-fila.abierta .inc-cuerpo > div { visibility: visible; }
+  .inc-cuerpo-dentro { padding: 0 16px 16px; }
+  .inc-dato { display: flex; gap: 10px; font-size: 13px; margin-bottom: 8px; }
+  .inc-dato-etiqueta {
+    flex-shrink: 0; width: 62px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); padding-top: 2px;
+  }
+  .inc-dato-valor { flex: 1; min-width: 0; color: var(--text); line-height: 1.45; }
+  .inc-abrir {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 4px;
+    padding: 10px 18px; border-radius: var(--r-pastilla);
+    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+    border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 4px 14px rgba(0,0,0,0.14);
+    color: var(--red); font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer;
+  }
+  .inc-abrir:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.2); }
+  .inc-abrir svg { width: 15px; height: 15px; }
   .incidencia-desc { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; }
   .incidencia-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   .incidencia-img-wrap { position: relative; width: 92px; height: 92px; cursor: pointer; }
@@ -374,16 +458,14 @@
           Reportar incidencia
         </button>
       </div>
-      <div class="card-box">
-        <div id="todas-incidencias-cont">
-          <div class="kw-tabla-marco"><table class="kw-tabla">
-            <thead><tr><th>Fecha</th><th>Título</th><th>Asesor</th><th>Estatus</th></tr></thead>
-            <tbody>
-              <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
-              <tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>
-              <tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>
-            </tbody>
-          </table></div>
+      <!-- Sin tarjeta que envuelva: cada incidencia ya es su propia
+           tarjeta, y meterlas todas dentro de otra se veía como una caja
+           dentro de otra caja. -->
+      <div id="todas-incidencias-cont">
+        <div class="inc-lista">
+          <div class="inc-fila"><div class="inc-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="inc-cabeza-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+          <div class="inc-fila"><div class="inc-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="inc-cabeza-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+          <div class="inc-fila"><div class="inc-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="inc-cabeza-texto"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
         </div>
       </div>
     </div>
@@ -768,11 +850,11 @@
   // ── Vista gestión (Master/Admin): todas las incidencias ──
   async function cargarTodasIncidencias() {
     const cont = document.getElementById('todas-incidencias-cont');
-    cont.innerHTML = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr><th>Fecha</th><th>Título</th><th>Asesor</th><th>Estatus</th></tr></thead><tbody>'
-      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w80"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
-      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30"></div></td></tr>'
-      + '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td><td><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40"></div></td></tr>'
-      + '</tbody></table></div>';
+    const esqueleto = '<div class="inc-fila"><div class="inc-cabeza">'
+      + '<div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div>'
+      + '<div class="inc-cabeza-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div>'
+      + '<div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div></div></div>';
+    cont.innerHTML = '<div class="inc-lista">' + esqueleto.repeat(3) + '</div>';
     try {
       const { data, error } = await window.kwSupabase
         .from('incidencias_con_reportante')
@@ -786,21 +868,58 @@
         return;
       }
 
-      let html = '<div class="kw-tabla-marco"><table class="kw-tabla"><thead><tr><th>Fecha</th><th>Título</th><th>Asesor</th><th>Estatus</th></tr></thead><tbody>';
+      // El renglón cerrado lleva lo mínimo (título, fecha y el punto del
+      // estatus); el resto aparece al abrirlo. Así en celular cada
+      // incidencia ocupa un renglón y no cuatro columnas apretadas.
+      let html = '<div class="inc-lista">';
       todasIncidenciasCache.forEach((inc, i) => {
         const nombreAsesor = [inc.reportante_nombre, inc.reportante_apellido].filter(Boolean).join(' ') || inc.reportante_email || 'Sin nombre';
-        html += `<tr class="fila-incidencia kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
-          <td class="col-junta">${fmtFechaCorta(inc.created_at)}</td>
-          <td class="kw-tabla-principal">${escapeHtml(inc.titulo)}</td>
-          <td>${escapeHtml(nombreAsesor)}</td>
-          <td><span class="estatus-badge estatus-${inc.estatus}">${ESTATUS_LABELS[inc.estatus] || inc.estatus}</span></td>
-        </tr>`;
+        const etiqueta = ESTATUS_LABELS[inc.estatus] || inc.estatus;
+        html += `<div class="inc-fila kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
+          <button type="button" class="inc-cabeza" aria-expanded="false">
+            <span class="inc-punto estatus-${inc.estatus}" title="${escapeHtml(etiqueta)}"></span>
+            <span class="inc-cabeza-texto">
+              <span class="inc-titulo">${escapeHtml(inc.titulo)}</span>
+              <span class="inc-fecha">${fmtFechaCorta(inc.created_at)}</span>
+            </span>
+            <svg class="inc-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="inc-cuerpo"><div><div class="inc-cuerpo-dentro">
+            <div class="inc-dato"><span class="inc-dato-etiqueta">Título</span><span class="inc-dato-valor">${escapeHtml(inc.titulo)}</span></div>
+            <div class="inc-dato"><span class="inc-dato-etiqueta">Fecha</span><span class="inc-dato-valor">${fmtFechaCorta(inc.created_at)}</span></div>
+            <div class="inc-dato"><span class="inc-dato-etiqueta">Asesor</span><span class="inc-dato-valor">${escapeHtml(nombreAsesor)}</span></div>
+            <div class="inc-dato"><span class="inc-dato-etiqueta">Estatus</span><span class="inc-dato-valor"><span class="estatus-badge estatus-${inc.estatus}">${etiqueta}</span></span></div>
+            <button type="button" class="inc-abrir" data-abrir="${i}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v7H3V3h7"/></svg>
+              Ver completa
+            </button>
+          </div></div></div>
+        </div>`;
       });
-      html += '</tbody></table></div>';
+      html += '</div>';
       cont.innerHTML = html;
 
-      Array.from(cont.querySelectorAll('.fila-incidencia')).forEach(tr => {
-        tr.addEventListener('click', () => abrirModalDetalle(Number(tr.dataset.idx)));
+      // Picar el renglón abre o cierra; solo uno abierto a la vez, para
+      // que la lista no se estire de golpe.
+      Array.from(cont.querySelectorAll('.inc-cabeza')).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fila = btn.closest('.inc-fila');
+          const seAbre = !fila.classList.contains('abierta');
+          cont.querySelectorAll('.inc-fila.abierta').forEach(f => {
+            f.classList.remove('abierta');
+            f.querySelector('.inc-cabeza').setAttribute('aria-expanded', 'false');
+          });
+          fila.classList.toggle('abierta', seAbre);
+          btn.setAttribute('aria-expanded', seAbre ? 'true' : 'false');
+        });
+      });
+      // "Ver completa" abre el detalle de siempre (con la foto, la
+      // respuesta y el cambio de estatus).
+      Array.from(cont.querySelectorAll('[data-abrir]')).forEach(b => {
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          abrirModalDetalle(Number(b.dataset.abrir));
+        });
       });
     } catch (err) {
       cont.innerHTML = `<div class="estado-vacio">${escapeHtml(err.message || 'Ocurrió un error al cargar las incidencias.')}</div>`;
