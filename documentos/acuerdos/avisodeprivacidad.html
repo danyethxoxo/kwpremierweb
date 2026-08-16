@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260816">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260816b">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816b"></script>
 <title>Aviso de Privacidad</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -61,6 +61,12 @@
       var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
       sessionStorage.removeItem('kwPendingDirection');
       event.viewTransition.types.add(direction);
+      // Al llegar por una transición, la entrada ya la hizo la propia
+      // transición. Si además corre la aparición escalonada del CSS, el
+      // contenido se ve aparecer, irse y volver: ese es el parpadeo.
+      if (event.type === 'pagereveal') {
+        document.documentElement.classList.add('kw-vino-de-transicion');
+      }
     }
 
     window.addEventListener('pageswap', markDirection);

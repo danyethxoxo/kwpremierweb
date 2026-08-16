@@ -16,8 +16,8 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816b">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816b"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -61,6 +61,12 @@
       var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
       sessionStorage.removeItem('kwPendingDirection');
       event.viewTransition.types.add(direction);
+      // Al llegar por una transición, la entrada ya la hizo la propia
+      // transición. Si además corre la aparición escalonada del CSS, el
+      // contenido se ve aparecer, irse y volver: ese es el parpadeo.
+      if (event.type === 'pagereveal') {
+        document.documentElement.classList.add('kw-vino-de-transicion');
+      }
     }
 
     window.addEventListener('pageswap', markDirection);
@@ -212,7 +218,7 @@
   }
   .state-box .spinner {
     width: 26px; height: 26px; border-radius: 50%;
-    border: 3px solid rgba(138,0,0,0.15); border-top-color: var(--red);
+    border: 3px solid rgba(138,0,0,0.15); border-top-color: #fff;
     margin: 0 auto 14px; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -1213,6 +1219,6 @@
   });
 </script>
 
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260816" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260816b" data-menu="hub"></script>
 </body>
 </html>

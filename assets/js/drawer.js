@@ -177,10 +177,11 @@
         .catch(() => { calendarItems = []; });
 
       return Promise.all([pDrive, pCalendario]).then(() => {
-        // Si el panel se sigue viendo, se repinta con lo que ya se tenía
-        // escrito para que los resultados nuevos aparezcan sin que la
-        // persona tenga que volver a teclear.
-        if (buscarOverlay.classList.contains('open')) pintarResultados(buscarInput.value);
+        // Si la búsqueda se sigue viendo, se repinta con lo que ya se
+        // tenía escrito para que los resultados nuevos aparezcan sin que
+        // la persona tenga que volver a teclear.
+        const h = document.querySelector('header.kw-header');
+        if (h && h.classList.contains('kw-buscando')) pintarResultados(buscarInput.value);
       });
     }).catch(() => {});
   }
@@ -225,16 +226,6 @@
       </div>
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
-    </div>
-    <div class="kw-buscar-overlay" id="kw-buscar-overlay">
-      <div class="kw-buscar-panel" id="kw-buscar-panel">
-        <div class="kw-buscar-campo">
-          ${ICONS.search}
-          <input type="text" id="kw-buscar-input" placeholder="Buscar en el sitio… (ej. acuerdo de renta, calendario)" autocomplete="off" />
-          <button type="button" class="kw-buscar-cerrar" id="kw-buscar-cerrar" aria-label="Cerrar búsqueda">${ICONS.close}</button>
-        </div>
-        <div class="kw-buscar-resultados" id="kw-buscar-resultados"></div>
-      </div>
     </div>
   `;
   while (contenedor.firstChild) document.body.appendChild(contenedor.firstChild);
@@ -308,24 +299,80 @@
   }
 
   // ── Buscador ──
-  const buscarOverlay = document.getElementById('kw-buscar-overlay');
-  const buscarInput = document.getElementById('kw-buscar-input');
-  const buscarResultados = document.getElementById('kw-buscar-resultados');
+  // No abre un panel aparte: la propia cápsula del header se convierte en
+  // el campo. Y si la página YA tiene su buscador (Drive, el ABC Tracker,
+  // la lista de documentos...), esa lupa se vuelve la de esa página: se
+  // esconde el campo propio y lo que se escriba aquí se le pasa tal cual,
+  // para que su filtrado de siempre siga funcionando sin tocarlo.
+  const BUSCADORES_LOCALES = [
+    '#busq',              // Drive, ABC Tracker
+    '#buscador-nombre',   // Alta de asesores
+    '#buscador-input',    // Listas de acuerdos y contratos
+  ];
+
+  const campoLocal = document.querySelector(BUSCADORES_LOCALES.join(','));
+  const contenedorLocal = campoLocal
+    ? campoLocal.closest('.buscador, .lista-buscador') || campoLocal.parentElement
+    : null;
+  if (contenedorLocal) contenedorLocal.classList.add('kw-buscador-local-oculto');
+
+  const capsula = header
+    ? (header.querySelector('.kw-header-capsula') || header)
+    : null;
+
+  const buscarInput = document.createElement('input');
+  buscarInput.type = 'text';
+  buscarInput.id = 'kw-buscar-input';
+  buscarInput.className = 'kw-buscar-campo-inline';
+  buscarInput.autocomplete = 'off';
+  buscarInput.placeholder = campoLocal
+    ? (campoLocal.placeholder || 'Buscar en esta página…')
+    : (esPublico ? 'Buscar en el sitio…' : 'Buscar en el sitio, Drive y calendario…');
+
+  const buscarCerrar = document.createElement('button');
+  buscarCerrar.type = 'button';
+  buscarCerrar.className = 'kw-buscar-cerrar-inline';
+  buscarCerrar.setAttribute('aria-label', 'Cerrar búsqueda');
+  buscarCerrar.innerHTML = ICONS.close;
+
+  // Los resultados cuelgan de la cápsula, no de un panel a pantalla
+  // completa. En las páginas con buscador propio no hay lista: los
+  // resultados los pinta la página misma.
+  const buscarResultados = document.createElement('div');
+  buscarResultados.className = 'kw-buscar-resultados-inline';
+  buscarResultados.id = 'kw-buscar-resultados';
+  buscarResultados.hidden = true;
+
+  if (capsula) {
+    capsula.appendChild(buscarInput);
+    capsula.appendChild(buscarCerrar);
+    (header || capsula).appendChild(buscarResultados);
+  }
 
   function abrirBuscar() {
-    buscarOverlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    pintarResultados('');
-    cargarExtras();
-    // El foco espera al siguiente cuadro: si se pide en el mismo tick en
-    // que el panel todavía tiene la transición de entrada, algunos
-    // navegadores lo ignoran.
+    if (!capsula) return;
+    header.classList.add('kw-buscando');
+    if (!campoLocal) {
+      buscarResultados.hidden = false;
+      pintarResultados('');
+      cargarExtras();
+    }
+    // El foco espera al siguiente cuadro: pedirlo en el mismo tick en que
+    // la cápsula todavía se está estirando hace que algunos navegadores
+    // lo ignoren.
     requestAnimationFrame(() => buscarInput.focus());
   }
   function cerrarBuscar() {
-    buscarOverlay.classList.remove('open');
-    document.body.style.overflow = '';
+    if (!capsula) return;
+    header.classList.remove('kw-buscando');
+    buscarResultados.hidden = true;
     buscarInput.value = '';
+    // Al cerrar se limpia también el filtro de la página, para no dejarla
+    // filtrada por algo que ya no se ve escrito en ningún lado.
+    if (campoLocal && campoLocal.value) {
+      campoLocal.value = '';
+      campoLocal.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }
 
   function pintarResultados(termino) {
@@ -352,19 +399,40 @@
     `).join('');
   }
 
-  searchBtn.addEventListener('click', abrirBuscar);
-  document.getElementById('kw-buscar-cerrar').addEventListener('click', cerrarBuscar);
-  buscarOverlay.addEventListener('click', (e) => { if (e.target === buscarOverlay) cerrarBuscar(); });
-  buscarInput.addEventListener('input', () => pintarResultados(buscarInput.value));
+  searchBtn.addEventListener('click', () => {
+    if (header && header.classList.contains('kw-buscando')) cerrarBuscar();
+    else abrirBuscar();
+  });
+  buscarCerrar.addEventListener('click', cerrarBuscar);
+
+  buscarInput.addEventListener('input', () => {
+    if (campoLocal) {
+      // Se le pasa a la página su propio evento, para que su filtrado de
+      // siempre corra sin enterarse de que el texto vino de otro campo.
+      campoLocal.value = buscarInput.value;
+      campoLocal.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    pintarResultados(buscarInput.value);
+  });
   buscarInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { cerrarBuscar(); return; }
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !campoLocal) {
       const primero = buscarResultados.querySelector('.kw-buscar-item');
       if (primero) location.href = primero.getAttribute('href');
     }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && buscarOverlay.classList.contains('open')) cerrarBuscar();
+    if (e.key === 'Escape' && header && header.classList.contains('kw-buscando')) cerrarBuscar();
+  });
+  // Picar fuera cierra la búsqueda, salvo que se haya escrito algo: en
+  // las páginas con buscador propio la lista de abajo ES el resultado, y
+  // cerrarla al tocarla borraría el filtro que se acaba de escribir.
+  document.addEventListener('click', (e) => {
+    if (!header || !header.classList.contains('kw-buscando')) return;
+    if (header.contains(e.target)) return;
+    if (buscarInput.value.trim()) return;
+    cerrarBuscar();
   });
 
   function abrir() {
