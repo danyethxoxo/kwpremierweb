@@ -391,7 +391,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 }
 .kw-btn-spinner {
   width: 14px; height: 14px; flex-shrink: 0;
-  border: 2px solid rgba(138,0,0,0.25); border-top-color: var(--red);
+  border: 2px solid rgba(138,0,0,0.25); border-top-color: #fff;
   border-radius: 50%;
   animation: kw-girar 0.6s linear infinite;
 }
@@ -473,7 +473,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .kw-loader .circle {
   position: absolute; top: 50%; left: 50%;
   border: 2.5px solid transparent;
-  border-top-color: var(--red);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: kw-rotar linear infinite;
 }
@@ -545,6 +545,21 @@ main > :not(.cards-grid):not(.grid):nth-child(4), .page > :not(.cards-grid):not(
 main > :not(.cards-grid):not(.grid):nth-child(5), .page > :not(.cards-grid):not(.grid):nth-child(5), .split > *:nth-child(5), .calendar-col > *:nth-child(5), .cards-grid > *:nth-child(5), .grid > *:nth-child(5), #agenda-container > *:nth-child(5) { animation-delay: 360ms; }
 main > :not(.cards-grid):not(.grid):nth-child(6), .page > :not(.cards-grid):not(.grid):nth-child(6), .split > *:nth-child(6), .calendar-col > *:nth-child(6), .cards-grid > *:nth-child(6), .grid > *:nth-child(6), #agenda-container > *:nth-child(6) { animation-delay: 450ms; }
 main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):not(.grid):nth-child(n+7), .split > *:nth-child(n+7), .calendar-col > *:nth-child(n+7), .cards-grid > *:nth-child(n+7), .grid > *:nth-child(n+7), #agenda-container > *:nth-child(n+7) { animation-delay: 500ms; }
+
+/* Si se llegó navegando de otra página del sitio, la entrada ya la hizo
+   la transición (el deslizamiento de lado). Repetir aquí la aparición
+   escalonada hacía que el contenido se viera aparecer, irse y volver:
+   ese era el parpadeo al abrir los acuerdos. La marca la pone el script
+   de transiciones de cada página, en pagereveal. */
+.kw-vino-de-transicion main > *,
+.kw-vino-de-transicion .page > *,
+.kw-vino-de-transicion .split > *,
+.kw-vino-de-transicion .calendar-col > *,
+.kw-vino-de-transicion .cards-grid > *,
+.kw-vino-de-transicion .grid > *,
+.kw-vino-de-transicion #agenda-container > * {
+  animation: none;
+}
 
 /* ── Mensajes de estado (éxito / error) ── */
 .msg {
@@ -658,67 +673,68 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .hamburger-btn.fijo-buscar { left: 54px; }
 
 /* ── Buscador del sitio (lupa junto al menú) ──
-   Inyectado por drawer.js. Panel flotante centrado que se desliza desde
-   arriba, no un desplegable pegado al header: los headers cambian mucho
-   de forma entre páginas (con o sin título, con o sin Atrás, con o sin
-   campanita), y anclarlo a cada uno habría significado una regla
-   distinta por página. Así funciona igual en todas. */
-.kw-buscar-overlay {
-  position: fixed; inset: 0; z-index: 210;
-  background: rgba(15,15,15,0.4);
-  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-  opacity: 0; pointer-events: none;
-  display: flex; justify-content: center;
-  padding: 90px 16px 16px;
-  transition: opacity 0.22s;
-}
-.kw-buscar-overlay.open { opacity: 1; pointer-events: auto; }
-.kw-buscar-panel {
-  width: 100%; max-width: 560px; max-height: calc(100vh - 120px);
-  background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.65);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.85);
-  display: flex; flex-direction: column; overflow: hidden;
-  transform: translateY(-16px); opacity: 0;
-  transition: transform 0.24s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
-}
-.kw-buscar-overlay.open .kw-buscar-panel { transform: translateY(0); opacity: 1; }
-.kw-buscar-campo {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.kw-buscar-campo > svg:first-child { width: 19px; height: 19px; color: var(--muted); flex-shrink: 0; }
-.kw-buscar-campo input {
-  flex: 1; min-width: 0; border: none; outline: none; background: none;
+   Ya no abre un panel aparte: al picar la lupa, la propia cápsula del
+   header se estira y se escribe ahí mismo. Lo que estorba (el título,
+   el Atrás) se hace a un lado mientras dura la búsqueda.
+
+   En las páginas que ya traen su propio buscador (Drive, el ABC
+   Tracker, las listas de documentos), drawer.js esconde ese campo y le
+   pasa a la página lo que se escriba aquí: así hay una sola lupa en
+   pantalla y sigue filtrando lo mismo que antes. */
+.kw-buscar-campo-inline {
+  flex: 1; min-width: 0;
+  display: none;
+  border: none; outline: none; background: none;
   font-family: inherit; font-size: 15px; color: var(--text);
 }
-.kw-buscar-cerrar {
-  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: none;
-  background: #f4f4f3; color: var(--muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+.kw-buscar-cerrar-inline {
+  display: none;
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.06); color: var(--muted); cursor: pointer;
+  align-items: center; justify-content: center;
 }
-.kw-buscar-cerrar:hover { background: #ececec; color: var(--text); }
-.kw-buscar-cerrar svg { width: 13px; height: 13px; }
-.kw-buscar-resultados { overflow-y: auto; padding: 8px; }
-.kw-buscar-vacio { padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.kw-buscar-cerrar-inline:hover { background: rgba(0,0,0,0.12); color: var(--text); }
+.kw-buscar-cerrar-inline svg { width: 13px; height: 13px; }
+
+/* Mientras se busca: sale el campo y se esconde todo lo demás de la
+   cápsula, menos la lupa (que ahora cierra) y el propio campo. */
+header.kw-buscando .kw-buscar-campo-inline { display: block; }
+header.kw-buscando .kw-buscar-cerrar-inline { display: flex; }
+header.kw-buscando .kw-header-title,
+header.kw-buscando .back-btn,
+header.kw-buscando .kw-header-sueltos,
+header.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
+
+/* Los resultados cuelgan de la cápsula. */
+.kw-buscar-resultados-inline {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+  max-height: min(60vh, 420px); overflow-y: auto;
+  padding: 8px; z-index: 95;
+  border-radius: 20px;
+  background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.9) 100%);
+  border: 1px solid rgba(255,255,255,0.65);
+  backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.kw-buscar-resultados-inline[hidden] { display: none; }
+
+.kw-buscar-vacio { padding: 26px 16px; text-align: center; color: var(--muted); font-size: 13.5px; }
 .kw-buscar-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 11px 12px; border-radius: 10px;
+  padding: 11px 12px; border-radius: 13px;
   text-decoration: none; color: var(--text);
   transition: background 0.15s;
 }
-.kw-buscar-item:hover { background: #f5f5f5; }
+.kw-buscar-item:hover { background: rgba(138,0,0,0.07); }
 .kw-buscar-item-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .kw-buscar-item-label { font-size: 14px; font-weight: 600; }
 .kw-buscar-item-cat { font-size: 11.5px; color: var(--muted); }
 .kw-buscar-item > svg { width: 15px; height: 15px; color: #c9c9c9; flex-shrink: 0; }
 .kw-buscar-item:hover > svg { color: var(--red); }
 
-@media (max-width: 640px) {
-  .kw-buscar-overlay { padding: 76px 10px 10px; }
-}
+/* El buscador propio de la página se esconde: su trabajo lo hace ahora
+   la lupa del header, y tener dos lupas en pantalla confundía. */
+.kw-buscador-local-oculto { display: none !important; }
 
 /* Con el botón insertado como primer hijo del header, el último hijo
    (back-btn, grupo de la derecha, etc.) se recorre al extremo derecho. */

@@ -60,6 +60,12 @@
       var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
       sessionStorage.removeItem('kwPendingDirection');
       event.viewTransition.types.add(direction);
+      // Al llegar por una transición, la entrada ya la hizo la propia
+      // transición. Si además corre la aparición escalonada del CSS, el
+      // contenido se ve aparecer, irse y volver: ese es el parpadeo.
+      if (event.type === 'pagereveal') {
+        document.documentElement.classList.add('kw-vino-de-transicion');
+      }
     }
 
     window.addEventListener('pageswap', markDirection);
