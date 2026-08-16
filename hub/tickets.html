@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260815e">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260815e"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -117,29 +117,32 @@
   .top-actions { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .btn-reportar {
     display: inline-flex; align-items: center; gap: 8px;
-    background: linear-gradient(180deg, #a30000 0%, var(--red) 100%);
-    color: #fff; border: none; border-radius: 30px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+    color: var(--red);
+    border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%); border: none; border-radius: 30px;
     padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer;
     box-shadow: 0 4px 18px rgba(138,0,0,0.3);
     font-family: 'DM Sans', sans-serif;
   }
-  .btn-reportar:hover { filter: brightness(1.08); }
+  .btn-reportar:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
   .btn-reportar svg { width: 15px; height: 15px; }
 
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: #fff; }
   .card-box {
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: var(--r-tarjeta);
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
-    padding: var(--sp-4); box-shadow: var(--sombra-1), inset 0 1px 0 rgba(255,255,255,0.6);
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: var(--r-tarjeta);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    padding: var(--sp-4); box-shadow: var(--sombra-1), inset 0 1px 0 rgba(255,255,255,0.85);
   }
 
   .incidencias-lista { display: flex; flex-direction: column; gap: 12px; }
   .incidencia-item {
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: 14px;
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
     padding: 16px 18px; transition: box-shadow 0.15s, border-color 0.15s;
   }
   .incidencia-item:hover { border-color: #ddd; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
@@ -195,11 +198,11 @@
      repite igual que el central para que no se vea distinto. */
   .modal-box {
     background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border-radius: 14px; padding: 24px;
-    border: 1px solid rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.65);
     backdrop-filter: blur(16px) saturate(140%);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
     width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.85);
     text-align: left;
   }
   .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
@@ -225,7 +228,11 @@
     font-family: 'DM Sans', sans-serif; cursor: pointer; border: none;
   }
   .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
-  .btn-modal-confirmar { background: var(--red); color: #fff; }
+  .btn-modal-confirmar {
+    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%); color: var(--red);
+    border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
   .btn-modal-confirmar:disabled { opacity: 0.6; cursor: default; }
   .msg {
     font-size: 13px; padding: 10px 12px; border-radius: 10px;
@@ -890,6 +897,6 @@
     window.addEventListener('kw-auth-ready', initIncidencias, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260815e" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260816" data-menu="hub"></script>
 </body>
 </html>

@@ -16,8 +16,8 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260815e">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260815e"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816"></script>
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -123,8 +123,8 @@
     padding-top: 54px;
     border-right: 1px solid rgba(255,255,255,0.4);
     background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
     overflow-y: auto;
   }
   .banner-placeholder {
@@ -151,6 +151,13 @@
     padding: 66px 32px 12px;
     background: transparent;
   }
+  /* El relleno de arriba existe nada más para dejarle lugar al header.
+     Cuando el header se va (solo pasa en celular), ese lugar sobra y
+     quedaba un hueco vacío: aquí se recoge junto con él. */
+  @media (max-width: 900px) {
+    .calendar-top { transition: padding-top 0.28s var(--curva-salida); }
+    .kw-header-fuera .calendar-top { padding-top: 10px; }
+  }
 
   .breadcrumb {
     display: flex; align-items: center; gap: 6px;
@@ -170,16 +177,16 @@
   /* ── Navegador de mes ── */
   .month-nav {
     display: flex; align-items: center; justify-content: space-between;
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: 14px;
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
     padding: 10px 10px 10px 20px;
   }
   .month-label { font-size: 16px; font-weight: 700; text-transform: capitalize; }
   .month-nav-btns { display: flex; gap: 6px; }
   .month-btn {
-    width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.5);
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.65);
     background: rgba(255,255,255,0.6); color: var(--text); display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: background 0.15s, border-color 0.15s;
   }
@@ -198,10 +205,10 @@
   /* ── Estados ── */
   .state-box {
     text-align: center; padding: 48px 20px; color: var(--muted);
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 14px;
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: 14px;
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
   }
   .state-box .spinner {
     width: 26px; height: 26px; border-radius: 50%;
@@ -213,7 +220,9 @@
   .state-box .retry-btn {
     margin-top: 14px; display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 16px; border-radius: 30px; border: none; cursor: pointer;
-    background: var(--red); color: #fff; font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+    font-family: 'DM Sans', sans-serif;
     font-size: 13px; font-weight: 700;
   }
   .state-box .retry-btn:active { transform: scale(0.96); }
@@ -225,10 +234,10 @@
   /* ── Agenda ── */
   .day-group {
     margin-bottom: 18px; scroll-margin-top: 8px;
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.5); border-radius: 18px;
-    backdrop-filter: blur(9px) saturate(140%);
-    -webkit-backdrop-filter: blur(9px) saturate(140%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: 18px;
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
     padding: 18px 20px 8px;
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   }
@@ -309,7 +318,46 @@
   /* .kw-tabs (kw-ui.css) vive aquí directo sobre el fondo guinda, no
      dentro de una tarjeta: sus colores (pensados para el fondo claro
      de siempre) se aclaran solo en esta página. */
-  .calendar-top .kw-tabs { margin-top: 14px; background: rgba(255,255,255,0.12); }
+  /* La barra de pestañas se reemplazó por el selector del header: se
+     queda en el HTML porque es la que de verdad cambia de panel (la
+     mueve kwUI.activarTab), pero ya no se ve. */
+  .calendar-top .kw-tabs { display: none; }
+
+  /* ── Selector de vista, en el título del header ── */
+  .cal-selector {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 14.5px; font-weight: 700;
+    color: var(--text); padding: 6px 10px; border-radius: 999px;
+    transition: background 0.15s;
+  }
+  /* .kw-header-title se esconde en pantalla grande (kw-base.css), pero
+     aquí no es un título: es el control para cambiar de vista, así que
+     tiene que verse siempre. */
+  header.kw-header .cal-selector { display: flex; }
+  .cal-selector:hover { background: rgba(138,0,0,0.07); }
+  .cal-selector-flecha { width: 15px; height: 15px; flex-shrink: 0; transition: transform 0.2s; }
+  .cal-selector[aria-expanded="true"] .cal-selector-flecha { transform: rotate(180deg); }
+
+  .cal-menu {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    min-width: 180px; padding: 6px; z-index: 95;
+    border-radius: 18px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.85);
+  }
+  .cal-menu[hidden] { display: none; }
+  .cal-menu button {
+    display: flex; align-items: center; width: 100%;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    color: var(--text); padding: 11px 14px; border-radius: 13px; text-align: left;
+    transition: background 0.15s;
+  }
+  .cal-menu button:hover { background: rgba(138,0,0,0.07); }
+  .cal-menu button.elegido { color: var(--red); font-weight: 700; }
   .calendar-top .kw-tab { color: rgba(255,255,255,0.72); }
   .calendar-top .kw-tab:hover { color: #fff; }
   .calendar-top .kw-tab.activo, .calendar-top .kw-tab.activo:hover { color: var(--red); }
@@ -319,11 +367,12 @@
   /* ── Salas ── */
   .btn-nueva-reserva {
     display: inline-flex; align-items: center; gap: 8px;
-    background: var(--red); color: #fff; border: none; border-radius: 30px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.65); border-radius: 30px;
+    backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
     padding: 11px 20px; font-size: 13.5px; font-weight: 700; font-family: 'DM Sans', sans-serif;
     cursor: pointer; transition: filter 0.15s, transform 0.12s;
   }
-  .btn-nueva-reserva:hover { filter: brightness(1.08); }
+  .btn-nueva-reserva:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
   .btn-nueva-reserva:active { transform: scale(0.96); }
   .btn-nueva-reserva svg { width: 15px; height: 15px; }
 
@@ -363,7 +412,7 @@
     transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
   }
   .btn-reserva-si { background: #1a7f37; border-color: #1a7f37; color: #fff; }
-  .btn-reserva-si:hover { filter: brightness(1.08); }
+  .btn-reserva-si:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
   .btn-reserva-si:disabled, .btn-reserva-no:disabled { opacity: 0.55; cursor: default; }
   .btn-reserva-no:hover { border-color: #a30000; color: #a30000; }
 
@@ -405,7 +454,21 @@
 <body>
 
   <header class="kw-header">
-    <span class="kw-header-title">Calendario</span>
+    <!-- El título es también el selector de vista: al picarle se
+         despliega Agenda / Salas. Sustituye a la barra de pestañas, que
+         ocupaba un renglón entero para dos opciones. -->
+    <button type="button" class="kw-header-title cal-selector" id="cal-selector"
+            aria-haspopup="true" aria-expanded="false">
+      <span id="cal-selector-texto">Agenda</span>
+      <svg class="cal-selector-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m6 9 6 6 6-6"/>
+      </svg>
+    </button>
+    <div class="cal-menu" id="cal-menu" role="menu" hidden>
+      <button type="button" role="menuitem" data-ir="agenda">Agenda</button>
+      <button type="button" role="menuitem" data-ir="salas">Salas</button>
+    </div>
     <a href="../portal.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -1093,15 +1156,63 @@
     }
   }
 
+  // ── Selector de vista del header (Agenda / Salas) ──
+  // Manda sobre las pestañas de siempre, que siguen ahí pero escondidas:
+  // ellas son las que de verdad cambian de panel, así que aquí solo se
+  // les pide el cambio y se refleja en el título.
+  function armarSelectorVista() {
+    var boton = document.getElementById('cal-selector');
+    var menu = document.getElementById('cal-menu');
+    var texto = document.getElementById('cal-selector-texto');
+    if (!boton || !menu) return;
+
+    function abrir(si) {
+      menu.hidden = !si;
+      boton.setAttribute('aria-expanded', si ? 'true' : 'false');
+    }
+
+    function elegir(nombre) {
+      if (window.kwUI) window.kwUI.activarTab(nombre);
+      var op = menu.querySelector('[data-ir="' + nombre + '"]');
+      texto.textContent = op ? op.textContent : nombre;
+      menu.querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('elegido', b.dataset.ir === nombre);
+      });
+      abrir(false);
+    }
+
+    boton.addEventListener('click', function (e) {
+      e.stopPropagation();
+      abrir(menu.hidden);
+    });
+    menu.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { elegir(b.dataset.ir); });
+    });
+    // Se cierra al picar fuera o con Escape, como cualquier desplegable.
+    document.addEventListener('click', function (e) {
+      if (!menu.hidden && !menu.contains(e.target)) abrir(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') abrir(false);
+    });
+
+    // Arranca reflejando la pestaña que esté activa.
+    var activa = document.querySelector('.kw-tab.activo');
+    elegir(activa ? activa.dataset.tab : 'agenda');
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     loadEvents();
     initSalas();
+    armarSelectorVista();
     if (new URLSearchParams(location.search).get('tab') === 'salas' && window.kwUI) {
       window.kwUI.activarTab('salas');
+      var t = document.getElementById('cal-selector-texto');
+      if (t) t.textContent = 'Salas';
     }
   });
 </script>
 
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260815e" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260816" data-menu="hub"></script>
 </body>
 </html>
