@@ -270,6 +270,43 @@
     document.body.insertBefore(toggleBtn, document.body.firstChild);
   }
 
+  // ── Los botones de acción salen de la cápsula ──
+  // Perfil, la campanita y Panel no son parte de navegar por la página:
+  // son atajos a otro lado. Se sacan de la cápsula y se ponen a su lado,
+  // cada uno en su propia pastilla, igual que el botón de buscar en la
+  // barra de Música de iOS. Se hace aquí y no en el HTML de cada página
+  // porque la hamburguesa y la lupa también se insertan desde aquí.
+  if (header && header.classList.contains('kw-header')) {
+    const sueltos = Array.from(
+      header.querySelectorAll('#btn-perfil-header, #notif-bell-slot, #btn-admin'));
+
+    if (sueltos.length) {
+      const capsula = document.createElement('div');
+      capsula.className = 'kw-header-capsula';
+      while (header.firstChild) capsula.appendChild(header.firstChild);
+      header.appendChild(capsula);
+
+      const grupo = document.createElement('div');
+      grupo.className = 'kw-header-sueltos';
+      sueltos.forEach((el) => {
+        // Traía márgenes pensados para acomodarse DENTRO de la barra;
+        // fuera de ella sobran y descuadran el renglón.
+        el.style.marginRight = '';
+        el.style.marginLeft = '';
+        grupo.appendChild(el);
+      });
+      header.appendChild(grupo);
+
+      // Los envoltorios que quedaron vacíos al sacarles sus botones
+      // seguirían ocupando lugar en la cápsula.
+      capsula.querySelectorAll('.header-socials, .header-right').forEach((w) => {
+        if (!w.children.length) w.remove();
+      });
+
+      header.classList.add('kw-header-partido');
+    }
+  }
+
   // ── Buscador ──
   const buscarOverlay = document.getElementById('kw-buscar-overlay');
   const buscarInput = document.getElementById('kw-buscar-input');
@@ -402,6 +439,12 @@
         : (t.scrollTop || 0);
       if (y > lastY + 4 && y > 40) kwHeader.classList.add('kw-header-oculto');
       else if (y < lastY - 4) kwHeader.classList.remove('kw-header-oculto');
+      // La misma marca en el <html>, para que el resto de la página
+      // también se entere. La usa el Calendario: su barra de arriba
+      // reserva el alto del header, y sin esto quedaba ese hueco vacío
+      // cuando el header se iba.
+      document.documentElement.classList.toggle(
+        'kw-header-fuera', kwHeader.classList.contains('kw-header-oculto'));
       lastY = y;
     }, { capture: true, passive: true });
   }
