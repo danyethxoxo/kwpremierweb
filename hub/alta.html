@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816b">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816b"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817a">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817a"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -374,26 +374,41 @@
       return;
     }
 
-    let html = '<div class="kw-tabla-marco"><table class="kw-tabla ancha">' +
-      '<thead><tr><th>Nombre</th><th>Celular</th><th>KWID</th><th>Fecha de ingreso</th>' +
-      '<th>Correo</th><th>Estado</th><th class="col-acciones"></th></tr></thead><tbody>';
-    visibles.forEach(function (p) {
+    // Cada persona de la hoja es su propia tarjeta: cerrada trae el
+    // nombre, el correo y un punto con el estado, y al picarle se abre
+    // con celular, KWID, fecha de ingreso y el botón de dar de alta.
+    const I = window.kwUI.iconos;
+    let html = '<div class="kw-lista">';
+    visibles.forEach(function (p, i) {
       // Se busca por correo (único) en vez de por índice: con el
       // buscador filtrando, la posición en la lista visible ya no
       // coincide con la posición en el arreglo completo.
-      html += '<tr>' +
-        '<td class="kw-tabla-principal">' + escapeHtml(p.nombre || '·') + '</td>' +
-        '<td class="col-junta">' + escapeHtml(p.telefono || '·') + '</td>' +
-        '<td class="col-junta">' + escapeHtml(p.kwid || '·') + '</td>' +
-        '<td class="col-junta">' + escapeHtml(p.fechaIngreso || '·') + '</td>' +
-        '<td>' + escapeHtml(p.correo) + '</td>' +
-        '<td>' + estadoHtml(p.alta) + '</td>' +
-        '<td class="col-acciones"><button type="button" class="btn btn-rojo" data-correo="' + escapeHtml(p.correo) + '">' +
-          (p.alta ? 'Volver a intentar' : 'Dar de alta') + '</button></td>' +
-      '</tr>';
+      var punto = !p.alta ? 'gris' : (p.alta.completo ? 'verde' : 'ambar');
+      html += '<div class="kw-fila kw-aparece-fila" style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
+        '<button type="button" class="kw-fila-cabeza">' +
+          '<span class="kw-fila-punto ' + punto + '"></span>' +
+          '<span class="kw-fila-texto">' +
+            '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '</span>' +
+            '<span class="kw-fila-sub">' + escapeHtml(p.correo) + '</span>' +
+          '</span>' + I.flecha +
+        '</button>' +
+        '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
+          '<div class="kw-datos">' +
+            (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
+            '<div class="kw-dato">' + I.etiqueta + '<span class="kw-dato-txt">KWID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
+            '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Ingreso: ' + escapeHtml(p.fechaIngreso || 'sin fecha') + '</span></div>' +
+            '<div class="kw-dato">' + I.reloj + '<span class="kw-dato-txt">' + estadoHtml(p.alta) + '</span></div>' +
+          '</div>' +
+          '<div class="kw-fila-acciones">' +
+            '<button type="button" class="kw-fila-btn" data-correo="' + escapeHtml(p.correo) + '">' +
+              (p.alta ? 'Volver a intentar' : 'Dar de alta') + '</button>' +
+          '</div>' +
+        '</div></div></div>' +
+      '</div>';
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     cont.innerHTML = html;
+    window.kwUI.acordeon(cont);
 
     Array.from(cont.querySelectorAll('button[data-correo]')).forEach(function (b) {
       b.addEventListener('click', function () {
@@ -407,11 +422,14 @@
     const cont = document.getElementById('lista');
     const btn = document.getElementById('btn-recargar');
     btn.disabled = true;
-    cont.innerHTML = '<div class="kw-tabla-marco"><table class="kw-tabla"><tbody>' +
-      '<tr><td><div class="kw-skel kw-skel-line kw-skel-w60"></div></td></tr>' +
-      '<tr><td><div class="kw-skel kw-skel-line kw-skel-w70"></div></td></tr>' +
-      '<tr><td><div class="kw-skel kw-skel-line kw-skel-w50"></div></td></tr>' +
-      '</tbody></table></div>';
+    var hueco = function (ancho) {
+      return '<div class="kw-fila"><div class="kw-fila-cabeza">' +
+        '<div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div>' +
+        '<div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-' + ancho + '"></div>' +
+        '<div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div>' +
+      '</div></div>';
+    };
+    cont.innerHTML = '<div class="kw-lista">' + hueco('w60') + hueco('w70') + hueco('w50') + '</div>';
     try {
       const data = await llamar({ accion: 'listar' });
       personas = data.personas || [];
@@ -729,6 +747,6 @@
     }, { rootMargin: '-54px 0px 0px 0px' }).observe(titulo);
   })();
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260816b" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817a" data-menu="hub"></script>
 </body>
 </html>

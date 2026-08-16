@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817a">
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -108,6 +108,13 @@
   @media (max-width: 640px) {
     .page-title, .page-desc { display: none; }
     .page { padding-top: 84px; }
+    /* "Marcar atendido" en celular se come el renglón y empuja a
+       WhatsApp y Correo a la línea de abajo. Ahí queda solo la
+       palomita: el texto se va al title y al aria-label, que es lo que
+       lee quien no ve el icono. */
+    .pr-btn.hecho .pr-btn-txt { display: none; }
+    .pr-btn.hecho { padding: 8px; width: 34px; justify-content: center; }
+    .pr-btn.hecho svg { width: 16px; height: 16px; }
   }
 </style>
 </head>
@@ -190,8 +197,10 @@
       '<div class="pr-acciones">' +
         (wa ? '<a class="pr-btn wa" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener">' + ICONOS.whatsapp + 'WhatsApp</a>' : '') +
         (p.correo ? '<a class="pr-btn" href="mailto:' + escapeHtml(p.correo) + '">' + ICONOS.correo + 'Correo</a>' : '') +
-        '<button type="button" class="pr-btn hecho' + (p.atendido ? ' si' : '') + '" data-marcar="' + p.id + '">' +
-          ICONOS.palomita + (p.atendido ? 'Atendido' : 'Marcar atendido') + '</button>' +
+        '<button type="button" class="pr-btn hecho' + (p.atendido ? ' si' : '') + '" data-marcar="' + p.id + '"' +
+          ' title="' + (p.atendido ? 'Atendido' : 'Marcar atendido') + '"' +
+          ' aria-label="' + (p.atendido ? 'Atendido' : 'Marcar atendido') + '">' +
+          ICONOS.palomita + '<span class="pr-btn-txt">' + (p.atendido ? 'Atendido' : 'Marcar atendido') + '</span></button>' +
       '</div>' +
     '</article>';
   }
@@ -254,6 +263,6 @@
   if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260816b" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817a" data-menu="hub"></script>
 </body>
 </html>
