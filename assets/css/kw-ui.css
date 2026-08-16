@@ -433,83 +433,153 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
   .kw-filtros > .kw-campo-filtro.ancho { flex: 1 1 100%; }
 }
 
-/* ── Tablas ─────────────────────────────────────────────────────
-   La tabla va dentro de su propio marco con borde y esquinas
-   redondeadas, y el encabezado sobre una franja gris. Así se lee como
-   un bloque y no como renglones sueltos flotando en la tarjeta.
-
-   Los renglones son altos a propósito: apretados se ven como una hoja
-   de cálculo, y esto lo consulta gente que solo quiere encontrar un
-   documento.
-
-   En pantalla angosta la tabla se desliza de lado dentro del marco,
-   en vez de desbordar la página. */
-.kw-tabla-marco {
-  width: 100%;
-  border: 1px solid rgba(255,255,255,0.65);
-  border-radius: 12px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.kw-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-
-.kw-tabla thead th {
-  position: sticky; top: 0; z-index: 1;
-  background: #f4f4f6;
-  text-align: left;
-  font-size: 12.5px; font-weight: 700; color: var(--text);
-  letter-spacing: -0.01em;
-  padding: var(--sp-3) var(--sp-4);
-  white-space: nowrap;
-}
-.kw-tabla thead th:first-child { border-top-left-radius: 11px; }
-.kw-tabla thead th:last-child { border-top-right-radius: 11px; }
-
-.kw-tabla td {
-  padding: var(--sp-3) var(--sp-4);
-  border-top: 1px solid var(--border);
-  vertical-align: middle;
-  color: #444;
-}
-.kw-tabla tbody tr { transition: background var(--t-rapido); }
-.kw-tabla tbody tr:hover { background: #fafafb; }
-
-/* La columna de acciones se queda del ancho de sus botones y no los
-   deja apilarse: dos botones uno encima del otro estiran el renglón y
-   descuadran toda la tabla. */
-.kw-tabla .col-acciones { text-align: right; white-space: nowrap; width: 1%; }
-/* Para folios y fechas: son cortos y partidos en dos renglones se leen
-   fatal ("AR" arriba y "0003" abajo). */
-.kw-tabla .col-junta { white-space: nowrap; width: 1%; }
-.kw-tabla-principal { font-weight: 700; color: var(--text); }
-.kw-tabla-secundario { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-/* Foto (o iniciales) junto al nombre, como en la lista de usuarios. */
-.kw-tabla-persona { display: flex; align-items: center; gap: var(--sp-2); }
-.kw-tabla-avatar {
-  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-  background: #fff3f3; color: var(--red);
-  font-size: 11.5px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-}
-.kw-tabla-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
+/* Las tablas se fueron: en su lugar va la lista de tarjetas de aquí
+   abajo. Solo queda esto, que las tablas compartían con las listas. */
 @media (max-width: 700px) {
-  /* Solo las tablas de muchas columnas piden desplazarse de lado; una
-     de tres cabe en el celular y forzarla a 720px la sacaba de la
-     pantalla sin necesidad. */
-  .kw-tabla.ancha { min-width: 720px; }
-  .kw-tabla thead th, .kw-tabla td { padding: var(--sp-3) var(--sp-2); }
-  .kw-tabla { font-size: 12.5px; }
   /* La insignia deja de medir todas lo mismo: en un renglón angosto se
      comía el espacio del nombre del documento. */
   .kw-pill { min-width: 0; padding: 5px 11px; font-size: 11.5px; }
 }
+
+/* ── Lista de tarjetas (lo que antes era una tabla) ─────────────
+   Una tabla de seis o siete columnas metida dentro de una tarjeta
+   obliga a leer de lado en el celular y se ve como hoja de cálculo.
+   Aquí cada renglón es su propia tarjeta: cerrada enseña lo mínimo
+   (un punto de color, el título y un dato debajo) y al picarle se abre
+   hacia abajo con el resto, con la misma pinta que las tarjetas de
+   prospectos.
+
+   Uso:
+     <div class="kw-lista">
+       <div class="kw-fila">
+         <button class="kw-fila-cabeza">
+           <span class="kw-fila-punto verde"></span>
+           <span class="kw-fila-texto">
+             <span class="kw-fila-titulo">…</span>
+             <span class="kw-fila-sub">…</span>
+           </span>
+           <svg class="kw-fila-flecha">…</svg>
+         </button>
+         <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
+           <div class="kw-datos">…</div>
+           <div class="kw-fila-acciones">…</div>
+         </div></div></div>
+       </div>
+     </div>
+
+   El comportamiento de abrir y cerrar lo pone kwUI.acordeon(). */
+.kw-lista { display: flex; flex-direction: column; gap: 8px; }
+.kw-fila {
+  border-radius: 16px; overflow: hidden;
+  background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
+  border: 1px solid rgba(255,255,255,0.65);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+  transition: box-shadow 0.18s;
+}
+.kw-fila.abierta { box-shadow: 0 12px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9); }
+.kw-fila.apagada { opacity: 0.62; }
+
+.kw-fila-cabeza {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 14px 16px;
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; text-align: left; color: inherit;
+}
+/* El punto de color lleva solo el estado: la etiqueta con el texto se
+   guarda para cuando se abre, que es donde hay lugar para leerla. */
+.kw-fila-punto { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
+.kw-fila-punto.verde { background: #1f9d55; }
+.kw-fila-punto.ambar { background: #e0a218; }
+.kw-fila-punto.rojo { background: #d13b3b; }
+.kw-fila-punto.gris { background: #b3b3b3; }
+
+/* Foto (o iniciales) en lugar del punto, para listas de personas. */
+.kw-fila-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: #fff3f3; color: var(--red);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.kw-fila-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.kw-fila-texto { flex: 1; min-width: 0; }
+/* En bloque a fuerza: como spans en línea el recorte con puntos
+   suspensivos no aplica y un título largo se sale de la tarjeta. */
+.kw-fila-titulo {
+  display: block;
+  font-size: 14.5px; font-weight: 700; color: var(--text); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kw-fila-sub {
+  display: block; margin-top: 2px;
+  font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kw-fila-flecha {
+  width: 17px; height: 17px; flex-shrink: 0; color: var(--muted);
+  transition: transform 0.22s;
+}
+.kw-fila.abierta .kw-fila-flecha { transform: rotate(180deg); }
+
+/* Se abre midiendo el contenido, no con un alto fijo: así sirve igual
+   para un renglón de una línea que para uno de tres. */
+.kw-fila-cuerpo {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s var(--curva-salida);
+}
+.kw-fila.abierta .kw-fila-cuerpo { grid-template-rows: 1fr; }
+/* Cerrado el contenido mide cero, pero eso no basta: sin ocultarlo de
+   verdad los botones de adentro siguen recibiendo el tabulador y el
+   lector de pantalla los sigue leyendo. */
+.kw-fila-cuerpo > div {
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0.26s var(--curva-salida);
+}
+.kw-fila.abierta .kw-fila-cuerpo > div { visibility: visible; }
+.kw-fila-dentro { padding: 2px 16px 16px; }
+
+/* Los datos de adentro, con su iconito, igual que en prospectos. */
+.kw-datos { display: flex; flex-direction: column; gap: 7px; }
+.kw-dato {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 13.5px; color: #444; line-height: 1.45;
+  text-decoration: none; width: fit-content; max-width: 100%;
+}
+a.kw-dato:hover { color: var(--red); }
+.kw-dato > svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--muted); }
+.kw-dato-txt { min-width: 0; overflow-wrap: anywhere; }
+
+/* Bloque de texto largo (un mensaje, una descripción). */
+.kw-nota {
+  font-size: 13.5px; color: #444; line-height: 1.6;
+  background: rgba(255,255,255,0.55); border-radius: 10px;
+  padding: 11px 13px; margin-top: 11px; white-space: pre-line;
+}
+
+.kw-fila-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 13px; }
+.kw-fila-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border-radius: var(--r-pastilla); padding: 9px 16px;
+  font-size: 12.5px; font-weight: 700; font-family: inherit;
+  text-decoration: none; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.65);
+  background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 4px 14px rgba(0,0,0,0.14);
+  color: var(--red);
+  transition: transform 0.12s, box-shadow 0.18s;
+}
+.kw-fila-btn:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 6px 18px rgba(0,0,0,0.18); }
+.kw-fila-btn:active { transform: scale(0.96); }
+.kw-fila-btn[disabled] { opacity: 0.55; cursor: default; }
+.kw-fila-btn svg { width: 14px; height: 14px; }
+/* Sin color de marca: es una acción de las neutras (cancelar, ocultar). */
+.kw-fila-btn.neutro { color: var(--text); }
 
 /* ── Botón chico de acción (dentro de listas y tablas) ── */
 .kw-btn-mini {
@@ -677,12 +747,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 .kw-vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 5px; }
 .kw-vacio svg { width: 34px; height: 34px; color: #ccc; margin-bottom: var(--sp-3); }
 
-/* ── Filas fantasma mientras carga ──
-   Ocupan el mismo lugar que las filas de verdad, así que cuando llega
-   el contenido nada se recorre. */
-.kw-skel-fila {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-2);
-  border-bottom: 1px solid var(--border);
-}
-.kw-skel-fila:last-child { border-bottom: none; }
+/* ── Piezas fantasma mientras carga ──
+   Ocupan el mismo lugar que el contenido de verdad, así que cuando
+   llega nada se recorre. La forma del renglón la pone quien las usa,
+   con .kw-fila / .kw-fila-cabeza. */

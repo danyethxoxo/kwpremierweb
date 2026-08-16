@@ -16,10 +16,10 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260816b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817a">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260816b"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817a"></script>
 <style>
   /* Lo de esta pantalla nada más. Colores, tipografía, tarjetas,
      pestañas, filtros, tablas, modales y campos vienen de kw-base.css:
@@ -125,6 +125,17 @@
      el lugar del botón. Sin borde ni relleno: al voltearse giraría con
      él y la línea aparecería abajo. */
   #modal-editar-usuario .kw-confirmar { margin-top: var(--sp-5); }
+
+  /* Las listas salieron de su tarjeta (cada renglón ya es una), así que
+     necesitan su propia separación y su estado vacío se lee sobre el
+     fondo guinda, no sobre blanco. */
+  #usuarios-cont, #documentos-cont, #creados-cont { margin-top: var(--sp-4); }
+  #usuarios-cont .kw-vacio,
+  #documentos-cont .kw-vacio,
+  #creados-cont .kw-vacio { color: rgba(255,255,255,0.72); }
+  #usuarios-cont .kw-vacio strong,
+  #documentos-cont .kw-vacio strong,
+  #creados-cont .kw-vacio strong { color: #fff; }
 </style>
 </head>
 <body>
@@ -194,8 +205,12 @@
             <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div><h2>Usuarios</h2><div class="kw-card-sub">Todo el equipo registrado en la plataforma.</div></div>
           </div>
-          <div id="usuarios-cont"></div>
         </div>
+
+        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
+             tarjeta y meterlas todas dentro de otra se ve como una caja
+             dentro de otra caja. -->
+        <div id="usuarios-cont"></div>
       </section>
 
       <section class="kw-tabpanel" data-panel="documentos">
@@ -237,8 +252,12 @@
               <input type="date" class="kw-input" id="doc-filtro-hasta" onchange="filtrarDocumentosPanel()" />
             </div>
           </div>
-          <div id="documentos-cont"></div>
         </div>
+
+        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
+             tarjeta y meterlas todas dentro de otra se ve como una caja
+             dentro de otra caja. -->
+        <div id="documentos-cont"></div>
       </section>
 
       <section class="kw-tabpanel" data-panel="creados">
@@ -280,8 +299,12 @@
               <input type="date" class="kw-input" id="creado-filtro-hasta" onchange="filtrarDocumentosCreadosPanel()" />
             </div>
           </div>
-          <div id="creados-cont"></div>
         </div>
+
+        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
+             tarjeta y meterlas todas dentro de otra se ve como una caja
+             dentro de otra caja. -->
+        <div id="creados-cont"></div>
       </section>
       </div>
     </div>
@@ -410,19 +433,20 @@
 
   // Filas fantasma mientras llega la respuesta: ocupan el mismo lugar
   // que las de verdad, así que al llegar los datos nada se recorre.
+  // El esqueleto tiene la forma de la tarjeta cerrada, no de un renglón
+  // de tabla: si no, al llegar los datos la lista brinca.
   function esqueleto(filas, conAvatar) {
-    let html = '';
+    let html = '<div class="kw-lista">';
     for (let i = 0; i < filas; i++) {
-      html += '<div class="kw-skel-fila">' +
-        (conAvatar ? '<div class="kw-skel kw-skel-circle" style="width:42px;height:42px;"></div>' : '') +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="kw-skel kw-skel-line kw-skel-w40" style="margin-bottom:7px;"></div>' +
-          '<div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w60"></div>' +
+      html += '<div class="kw-fila"><div class="kw-fila-cabeza">' +
+        '<div class="kw-skel kw-skel-circle" style="width:' + (conAvatar ? '34px;height:34px' : '11px;height:11px') + ';"></div>' +
+        '<div class="kw-fila-texto">' +
+          '<div class="kw-skel kw-skel-line kw-skel-w40"></div>' +
+          '<div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w60" style="margin-top:7px;"></div>' +
         '</div>' +
-        '<div class="kw-skel kw-skel-line kw-skel-w30" style="max-width:120px;"></div>' +
-      '</div>';
+      '</div></div>';
     }
-    return html;
+    return html + '</div>';
   }
 
   async function llamarFuncion(url, payload) {
@@ -453,7 +477,7 @@
   // ── Usuarios ──
   async function cargarUsuarios() {
     const cont = document.getElementById('usuarios-cont');
-    if (!cont.innerHTML.trim()) cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(5, true) + '</div>';
+    if (!cont.innerHTML.trim()) cont.innerHTML = esqueleto(5, true);
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
@@ -468,9 +492,11 @@
         return;
       }
 
-      let html = '<div class="kw-tabla-marco"><table class="kw-tabla ancha"><thead><tr>' +
-        '<th>Usuario</th><th>Correo</th><th>Puesto</th><th>Rol</th><th>Alta</th><th>Visibilidad</th>' +
-        '<th class="col-acciones"></th></tr></thead><tbody>';
+      // Cada usuario es su propia tarjeta: cerrada trae foto, nombre y
+      // correo, y al picarle se abre con puesto, rol, fecha de alta,
+      // visibilidad y los botones.
+      const I = window.kwUI.iconos;
+      let html = '<div class="kw-lista">';
       usuariosCache.forEach((u, i) => {
         const nombreCompleto = [u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)';
         const puedoEditar = miRol === 'master' || (miRol === 'admin' && (u.role === 'staff' || u.role === 'asociado'));
@@ -478,26 +504,32 @@
         const avatar = u.foto_url
           ? `<img src="${escapeHtml(u.foto_url)}" alt="" />`
           : escapeHtml(((u.nombre || '').trim().charAt(0) + (u.apellido || '').trim().charAt(0)).toUpperCase() || '?');
-        html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 30, 300)}ms">
-          <td>
-            <div class="kw-tabla-persona">
-              <div class="kw-tabla-avatar">${avatar}</div>
-              <span class="kw-tabla-principal">${escapeHtml(nombreCompleto)}</span>
+        html += `<div class="kw-fila kw-aparece-fila${oculto ? ' apagada' : ''}" style="animation-delay:${Math.min(i * 30, 300)}ms">
+          <button type="button" class="kw-fila-cabeza">
+            <span class="kw-fila-avatar">${avatar}</span>
+            <span class="kw-fila-texto">
+              <span class="kw-fila-titulo">${escapeHtml(nombreCompleto)}</span>
+              <span class="kw-fila-sub">${escapeHtml(u.puesto || ROLE_LABELS[u.role] || u.role)}</span>
+            </span>
+            ${I.flecha}
+          </button>
+          <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
+            <div class="kw-datos">
+              <a class="kw-dato" href="mailto:${escapeHtml(u.email || '')}">${I.correo}<span class="kw-dato-txt">${escapeHtml(u.email || 'Sin correo')}</span></a>
+              <div class="kw-dato">${I.escudo}<span class="kw-dato-txt"><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span></div>
+              <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Alta: ${fmtFechaCorta(u.created_at)}</span></div>
+              <div class="kw-dato">${I.ojo}<span class="kw-dato-txt"><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></span></div>
             </div>
-          </td>
-          <td>${escapeHtml(u.email || '·')}</td>
-          <td>${escapeHtml(u.puesto || '·')}</td>
-          <td><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></td>
-          <td class="col-junta">${fmtFechaCorta(u.created_at)}</td>
-          <td><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></td>
-          <td class="col-acciones">${puedoEditar ? `<div class="kw-acciones">
-            <button type="button" class="kw-btn-mini btn-editar-usuario" data-idx="${i}">Editar</button>
-            <button type="button" class="kw-btn-mini btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
-          </div>` : ''}</td>
-        </tr>`;
+            ${puedoEditar ? `<div class="kw-fila-acciones">
+              <button type="button" class="kw-fila-btn btn-editar-usuario" data-idx="${i}">Editar</button>
+              <button type="button" class="kw-fila-btn neutro btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
+            </div>` : ''}
+          </div></div></div>
+        </div>`;
       });
-      html += '</tbody></table></div>';
+      html += '</div>';
       cont.innerHTML = html;
+      window.kwUI.acordeon(cont);
 
       Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
@@ -642,7 +674,7 @@
   // ── Documentos de todo el equipo ──
   async function cargarDocumentosPanel() {
     const cont = document.getElementById('documentos-cont');
-    cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(6, false) + '</div>';
+    cont.innerHTML = esqueleto(6, false);
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_con_asesor')
@@ -704,30 +736,42 @@
       return;
     }
 
-    let html = '<div class="kw-tabla-marco"><table class="kw-tabla ancha"><thead><tr>' +
-      '<th>Documento</th><th>Asesor</th><th>Tipo</th><th>Folio</th><th>Estatus</th><th>Actualizado</th>' +
-      '<th class="col-acciones"></th></tr></thead><tbody>';
+    const I = window.kwUI.iconos;
+    let html = '<div class="kw-lista">';
     filtrados.forEach((d, i) => {
       const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
       const urlBase = TIPO_URLS[d.tipo_documento];
-      const acciones = (d.estado === 'finalizado' && urlBase)
-        ? `<div class="kw-acciones">
-            <a class="kw-btn-mini" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
-            <button type="button" class="kw-btn-mini" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
+      const listo = d.estado === 'finalizado';
+      const acciones = (listo && urlBase)
+        ? `<div class="kw-fila-acciones">
+            <a class="kw-fila-btn" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
+            <button type="button" class="kw-fila-btn neutro" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
           </div>`
         : '';
-      html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
-        <td class="kw-tabla-principal">${escapeHtml(d.nombre_archivo || 'Sin nombre')}</td>
-        <td>${escapeHtml(nombreAsesor)}</td>
-        <td>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</td>
-        <td class="col-junta">${escapeHtml(d.folio || '·')}</td>
-        <td><span class="kw-pill ${d.estado === 'finalizado' ? 'kw-pill-ok' : 'kw-pill-espera'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
-        <td class="col-junta">${fmtFechaCorta(d.updated_at)}</td>
-        <td class="col-acciones">${acciones}</td>
-      </tr>`;
+      html += `<div class="kw-fila kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
+        <button type="button" class="kw-fila-cabeza">
+          <span class="kw-fila-punto ${listo ? 'verde' : 'ambar'}" title="${listo ? 'Finalizado' : 'Borrador'}"></span>
+          <span class="kw-fila-texto">
+            <span class="kw-fila-titulo">${escapeHtml(d.nombre_archivo || 'Sin nombre')}</span>
+            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
+          </span>
+          ${I.flecha}
+        </button>
+        <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
+          <div class="kw-datos">
+            <div class="kw-dato">${I.persona}<span class="kw-dato-txt">${escapeHtml(nombreAsesor)}</span></div>
+            <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></div>
+            <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
+            <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Actualizado: ${fmtFechaCorta(d.updated_at)}</span></div>
+            <div class="kw-dato">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span></div>
+          </div>
+          ${acciones}
+        </div></div></div>
+      </div>`;
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     cont.innerHTML = html;
+    window.kwUI.acordeon(cont);
   }
 
   // ── Documentos hechos con el creador de formatos ──
@@ -735,7 +779,7 @@
 
   async function cargarDocumentosCreadosPanel() {
     const cont = document.getElementById('creados-cont');
-    cont.innerHTML = '<div class="kw-tabla-marco">' + esqueleto(6, false) + '</div>';
+    cont.innerHTML = esqueleto(6, false);
     try {
       const { data, error } = await window.kwSupabase
         .from('documentos_plantilla_con_asesor')
@@ -798,26 +842,40 @@
       return;
     }
 
-    let html = '<div class="kw-tabla-marco"><table class="kw-tabla ancha"><thead><tr>' +
-      '<th>Documento</th><th>Asesor</th><th>Formato</th><th>Folio</th><th>Estatus</th><th>Actualizado</th>' +
-      '<th class="col-acciones"></th></tr></thead><tbody>';
+    const I = window.kwUI.iconos;
+    let html = '<div class="kw-lista">';
     filtrados.forEach((d, i) => {
       const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
+      const listo = d.estado === 'finalizado';
       const acciones = d.plantilla_id
-        ? `<a class="kw-btn-mini" href="../documentos/plantilla.html?id=${d.plantilla_id}&doc=${d.id}" target="_blank" rel="noopener">Ver</a>`
+        ? `<div class="kw-fila-acciones">
+            <a class="kw-fila-btn" href="../documentos/plantilla.html?id=${d.plantilla_id}&doc=${d.id}" target="_blank" rel="noopener">Ver</a>
+          </div>`
         : '';
-      html += `<tr class="kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
-        <td class="kw-tabla-principal">${escapeHtml(d.titulo || 'Sin nombre')}</td>
-        <td>${escapeHtml(nombreAsesor)}</td>
-        <td>${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</td>
-        <td class="col-junta">${escapeHtml(d.folio || '·')}</td>
-        <td><span class="kw-pill ${d.estado === 'finalizado' ? 'kw-pill-ok' : 'kw-pill-espera'}">${d.estado === 'finalizado' ? 'Finalizado' : 'Borrador'}</span></td>
-        <td class="col-junta">${fmtFechaCorta(d.updated_at)}</td>
-        <td class="col-acciones">${acciones}</td>
-      </tr>`;
+      html += `<div class="kw-fila kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
+        <button type="button" class="kw-fila-cabeza">
+          <span class="kw-fila-punto ${listo ? 'verde' : 'ambar'}" title="${listo ? 'Finalizado' : 'Borrador'}"></span>
+          <span class="kw-fila-texto">
+            <span class="kw-fila-titulo">${escapeHtml(d.titulo || 'Sin nombre')}</span>
+            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
+          </span>
+          ${I.flecha}
+        </button>
+        <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
+          <div class="kw-datos">
+            <div class="kw-dato">${I.persona}<span class="kw-dato-txt">${escapeHtml(nombreAsesor)}</span></div>
+            <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></div>
+            <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
+            <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Actualizado: ${fmtFechaCorta(d.updated_at)}</span></div>
+            <div class="kw-dato">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span></div>
+          </div>
+          ${acciones}
+        </div></div></div>
+      </div>`;
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     cont.innerHTML = html;
+    window.kwUI.acordeon(cont);
   }
 
   const MODAL_COPIA_CONFIRM_HTML = `
@@ -947,6 +1005,6 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260816b" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817a" data-menu="hub"></script>
 </body>
 </html>

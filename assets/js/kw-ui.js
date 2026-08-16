@@ -475,6 +475,54 @@
     setTimeout(unaVez, 400);
   }
 
+  // Los iconitos que acompañan a cada dato dentro de una tarjeta.
+  // Van aquí y no en cada página porque son los mismos en todas.
+  var TRAZO = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"';
+  var ICONOS = {
+    persona: '<svg ' + TRAZO + '><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    correo: '<svg ' + TRAZO + '><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+    telefono: '<svg ' + TRAZO + '><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+    calendario: '<svg ' + TRAZO + '><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    reloj: '<svg ' + TRAZO + '><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    etiqueta: '<svg ' + TRAZO + '><path d="M20.59 13.41 12 22l-9-9V3h10l7.59 7.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/></svg>',
+    documento: '<svg ' + TRAZO + '><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+    escudo: '<svg ' + TRAZO + '><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    ojo: '<svg ' + TRAZO + '><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+    maletin: '<svg ' + TRAZO + '><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+    palomita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    flecha: '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+  };
+
+  // ── Lista de tarjetas que se abren ─────────────────────────────
+  // Picar el renglón lo abre o lo cierra, y solo queda uno abierto a
+  // la vez: si se abren todos la lista se estira de golpe y se pierde
+  // el lugar donde uno iba leyendo.
+  function acordeon(raiz) {
+    var cont = raiz || document;
+    var cabezas = cont.querySelectorAll('.kw-fila-cabeza');
+    for (var i = 0; i < cabezas.length; i++) {
+      (function (btn) {
+        if (btn.dataset.kwAcordeon) return;
+        btn.dataset.kwAcordeon = '1';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.addEventListener('click', function () {
+          var fila = btn.closest('.kw-fila');
+          if (!fila) return;
+          var seAbre = !fila.classList.contains('abierta');
+          var abiertas = cont.querySelectorAll('.kw-fila.abierta');
+          for (var j = 0; j < abiertas.length; j++) {
+            abiertas[j].classList.remove('abierta');
+            var c = abiertas[j].querySelector('.kw-fila-cabeza');
+            if (c) c.setAttribute('aria-expanded', 'false');
+          }
+          fila.classList.toggle('abierta', seAbre);
+          btn.setAttribute('aria-expanded', seAbre ? 'true' : 'false');
+        });
+      })(cabezas[i]);
+    }
+  }
+
   // ═════════════════════════════════════════════════════════════
 
   function iniciar(raiz) {
@@ -492,6 +540,8 @@
     tabs: armarTodasLasTabs,
     confirmaciones: armarConfirmaciones,
     chips: pintarChips,
+    acordeon: acordeon,
+    iconos: ICONOS,
     cerrarModal: cerrarModal,
     activarTab: function (nombre, tabs) {
       var t = tabs || document.querySelector('[data-kw-tabs]');
