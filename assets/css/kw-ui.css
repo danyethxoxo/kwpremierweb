@@ -441,6 +441,57 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
   .kw-pill { min-width: 0; padding: 5px 11px; font-size: 11.5px; }
 }
 
+/* ── Pantalla de "abriendo…" ────────────────────────────────────
+   Crear o abrir un documento cambiaba de vista de golpe: se picaba y
+   ya estabas en otra pantalla, sin nada que dijera que algo pasó. Con
+   esto se ve un velo con los aros girando mientras se arma el
+   documento, y al quitarse la vista nueva entra desde abajo.
+
+   Uso: var cerrar = kwUI.cargando('Abriendo documento…'); … cerrar();
+
+   Trae sus propios aros y no depende de kw-base.css: las páginas de
+   los formatos solo cargan esta hoja. */
+.kw-cargando-pantalla {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px;
+  background: rgba(50,0,0,0.55);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  color: #fff;
+  animation: kw-cargando-entra 0.16s ease both;
+}
+.kw-cargando-pantalla.saliendo { animation: kw-cargando-sale 0.26s ease both; }
+.kw-cargando-aros { position: relative; width: 56px; height: 56px; }
+.kw-cargando-aros span {
+  position: absolute; top: 50%; left: 50%;
+  border: 2.5px solid transparent; border-top-color: #fff; border-radius: 50%;
+  animation: kw-cargando-gira linear infinite;
+}
+.kw-cargando-aros span:nth-child(1) { width: 28px; height: 28px; margin: -14px 0 0 -14px; animation-duration: 0.85s; }
+.kw-cargando-aros span:nth-child(2) { width: 42px; height: 42px; margin: -21px 0 0 -21px; animation-duration: 0.95s; }
+.kw-cargando-aros span:nth-child(3) { width: 56px; height: 56px; margin: -28px 0 0 -28px; animation-duration: 1.05s; }
+.kw-cargando-texto { font-size: 13.5px; font-weight: 700; }
+@keyframes kw-cargando-gira { from { transform: rotateZ(360deg); } to { transform: rotateZ(0deg); } }
+@keyframes kw-cargando-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kw-cargando-sale { to { opacity: 0; } }
+
+/* Lo que estaba detrás del velo entra desde abajo cuando el velo se va. */
+.kw-entra-abajo { animation: kw-entra-abajo 0.34s var(--curva-salida) both; }
+@keyframes kw-entra-abajo {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kw-cargando-pantalla, .kw-cargando-pantalla.saliendo, .kw-entra-abajo { animation: none; }
+  .kw-cargando-aros span { animation-duration: 0s; }
+}
+
+/* Si a alguien le da por imprimir justo mientras carga, el velo no sale
+   en la hoja. */
+@media print { .kw-cargando-pantalla { display: none !important; } }
+
 /* ── Lista de tarjetas (lo que antes era una tabla) ─────────────
    Una tabla de seis o siete columnas metida dentro de una tarjeta
    obliga a leer de lado en el celular y se ve como hoja de cálculo.
@@ -696,6 +747,11 @@ a.kw-dato:hover { color: var(--red); }
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center; gap: 7px;
   padding: 0 10px;
+  /* Cerrado el reverso mide lo que el frente, pero su texto va en una
+     sola línea y se salía por los lados sin verse: eso le sumaba ancho
+     a la página y en celular todo aparecía recorrido de lado. Abierto
+     no recorta nada, porque para entonces el envoltorio ya creció. */
+  overflow: hidden;
   border: 1.5px solid var(--red); border-radius: var(--r-pastilla);
   background: #fff3f3;
   white-space: nowrap;

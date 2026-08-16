@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817a">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817a"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817b">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817b"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -181,7 +181,52 @@
 
   @media (max-width: 640px) {
     .page { padding: 82px 16px 40px; }
+    /* El título ya lo trae la cápsula de arriba; repetirlo aquí solo
+       gastaba pantalla. */
     .page-title, .page-desc { display: none; }
+
+    /* Sin el título al lado, el contador se quedaba colgado solo a la
+       derecha. Aquí baja a la izquierda, hecho pastilla, y la
+       explicación va debajo pegada a él. */
+    .encabezado { justify-content: flex-start; margin-bottom: 12px; }
+    .resumen-activos {
+      align-items: center; gap: 7px;
+      padding: 7px 15px 7px 13px; border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(13px) saturate(140%);
+      -webkit-backdrop-filter: blur(13px) saturate(140%);
+    }
+    .resumen-activos .num { font-size: 19px; }
+    .resumen-activos .etiqueta { font-size: 12px; }
+    .alta-explica { font-size: 12.5px; margin-bottom: 14px; }
+
+    /* Los tres botones en un mismo renglón, del mismo ancho, con la
+       etiqueta recortada a lo que se entiende sin leer completo. El de
+       marcar todos va dentro de su envoltorio de confirmar, así que el
+       reparto del renglón se le pide a ese, no al botón. */
+    .barra { flex-wrap: nowrap; gap: 7px; }
+    .barra .crece { display: none; }
+    .barra > .btn, .barra > .kw-confirmar { flex: 1 1 0; min-width: 0; }
+    .barra .btn {
+      width: 100%; justify-content: center;
+      gap: 6px; padding: 9px 6px; font-size: 12px;
+    }
+    .barra .btn svg { width: 14px; height: 14px; }
+    .btn-txt {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-txt-largo { display: none; }
+
+    /* En el tercio de renglón que le toca no cabe la pregunta de
+       confirmar, así que al abrirse se monta sobre toda la barra. El
+       ancho lo pisa el !important a propósito: kw-ui.js le pone uno
+       medido para cuando va en línea, y aquí manda el renglón completo. */
+    .barra { position: relative; }
+    .barra > .kw-confirmar.abierto {
+      position: absolute; left: 0; right: 0; top: 0;
+      width: auto !important; flex: none; z-index: 2;
+    }
   }
 </style>
 </head>
@@ -224,17 +269,17 @@
       <span class="crece"></span>
       <button type="button" class="btn" id="btn-verificar" onclick="abrirVerificacion()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        Comprobar en Google
+        <span class="btn-txt">Comprobar<span class="btn-txt-largo"> en Google</span></span>
       </button>
       <button type="button" class="btn" id="btn-marcar-todos"
-        data-kw-confirmar="¿Marcar a todos los pendientes como ya dados de alta, sin repetir los pasos en Google?"
+        data-kw-confirmar="¿Marcar a todos como dados de alta?"
         onclick="marcarTodosManual()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        Marcar todos como dados de alta
+        <span class="btn-txt">Marcar todos<span class="btn-txt-largo"> como dados de alta</span></span>
       </button>
       <button type="button" class="btn" id="btn-recargar" onclick="cargarLista()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Volver a leer la hoja
+        <span class="btn-txt">Recargar<span class="btn-txt-largo"> la hoja</span></span>
       </button>
     </div>
 
@@ -274,7 +319,7 @@
       <div class="modal-actions verif-acciones-arriba">
         <button type="button" class="btn-modal-cancelar" onclick="window.kwUI.cerrarModal('modal-verificar')">Cerrar</button>
         <button type="button" class="btn-modal-confirmar" id="btn-corregir-todos" style="display:none;"
-          data-kw-confirmar="¿Corregir el acceso faltante de todos los pendientes?"
+          data-kw-confirmar="¿Corregir a todos los pendientes?"
           onclick="corregirTodos()">
           Corregir todos los accesos
         </button>
@@ -747,6 +792,6 @@
     }, { rootMargin: '-54px 0px 0px 0px' }).observe(titulo);
   })();
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817a" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817b" data-menu="hub"></script>
 </body>
 </html>
