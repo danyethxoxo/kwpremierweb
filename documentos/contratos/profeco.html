@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260817a">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817a"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260817b">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817b"></script>
 <title>Contrato de Compraventa PROFECO</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -358,7 +358,9 @@
   .acuerdos-preview-col {
     overflow: auto;
     height: 100%;
-    background: #430000;
+    /* Gris casi blanco, como el de la previa del creador de formatos:
+       la hoja se ve como hoja y el guinda no le pelea al documento. */
+    background: #e9e9e8;
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -470,7 +472,7 @@
   .mobile-tab:active { transform: scale(0.95); }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
-    .acuerdos-preview-col { height: auto; overflow: visible; padding: 16px; min-width: 0; }
+    .acuerdos-preview-col { height: auto; min-height: 100vh; overflow: visible; padding: 16px; min-width: 0; }
   }
   .page-scale-wrap {
     overflow: hidden;
@@ -2331,6 +2333,26 @@ function mostrarVista(vista, marcar) {
   if (marcar !== false) history.pushState({ kwVista: vista }, '', location.href);
 }
 
+// Entrar al documento con su pantallita de "abriendo": antes se picaba
+// y de golpe ya estabas en otra vista, sin nada que avisara que algo
+// pasó. El velo tapa mientras se llena el formulario y se arma la vista
+// previa (que es lo que de verdad tarda), y al quitarse el documento
+// entra desde abajo.
+function abrirConAnimacion(texto, armar) {
+  var cerrar = (window.kwUI && window.kwUI.cargando)
+    ? window.kwUI.cargando(texto)
+    : function () {};
+  requestAnimationFrame(function () {
+    armar();
+    requestAnimationFrame(function () {
+      if (window.kwUI && window.kwUI.entraDesdeAbajo) {
+        window.kwUI.entraDesdeAbajo(document.getElementById('vista-formulario'));
+      }
+      cerrar();
+    });
+  });
+}
+
 window.addEventListener('popstate', function (ev) {
   var vista = (ev.state && ev.state.kwVista) || 'lista';
   mostrarVista(vista, false);
@@ -2481,44 +2503,48 @@ function limpiarFormulario() {
 }
 
 function crearNuevoDocumento() {
-  documentoActualId = null;
-  folioActual = null;
-  estadoActual = 'borrador';
-  limpiarFormulario();
-  bloquearFormulario(false);
-  actualizarVisibilidadBotones();
-  setGuardarMsg('');
-  mostrarVista('formulario');
+  abrirConAnimacion('Preparando el documento…', function () {
+    documentoActualId = null;
+    folioActual = null;
+    estadoActual = 'borrador';
+    limpiarFormulario();
+    bloquearFormulario(false);
+    actualizarVisibilidadBotones();
+    setGuardarMsg('');
+    mostrarVista('formulario');
+  });
 }
 
 function abrirDocumentoGuardado(row) {
-  documentoActualId = row.id;
-  folioActual = row.folio || null;
-  estadoActual = row.estado || 'borrador';
-  const datos = row.datos || {};
-  enBloque(() => {
-    CAMPOS_GUARDABLES.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = Object.prototype.hasOwnProperty.call(datos, id) ? (datos[id] || '') : '';
-    });
-    refrescarSelects();
-    renderClientesFields();
-    (datos.clientes || []).forEach((cli, i) => {
-      SUFIJOS_CLIENTE.forEach(s => {
-        const el = document.getElementById('f-cli' + i + '-' + s);
-        if (el && cli && cli[s] != null) {
-          el.value = cli[s];
-          if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+  abrirConAnimacion('Abriendo documento…', function () {
+    documentoActualId = row.id;
+    folioActual = row.folio || null;
+    estadoActual = row.estado || 'borrador';
+    const datos = row.datos || {};
+    enBloque(() => {
+      CAMPOS_GUARDABLES.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = Object.prototype.hasOwnProperty.call(datos, id) ? (datos[id] || '') : '';
       });
+      refrescarSelects();
+      renderClientesFields();
+      (datos.clientes || []).forEach((cli, i) => {
+        SUFIJOS_CLIENTE.forEach(s => {
+          const el = document.getElementById('f-cli' + i + '-' + s);
+          if (el && cli && cli[s] != null) {
+            el.value = cli[s];
+            if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      });
+      refrescarCamposFecha();
+      updatePrecioLetra();
     });
-    refrescarCamposFecha();
-    updatePrecioLetra();
+    bloquearFormulario(estadoActual === 'finalizado');
+    actualizarVisibilidadBotones();
+    setGuardarMsg('');
+    mostrarVista('formulario');
   });
-  bloquearFormulario(estadoActual === 'finalizado');
-  actualizarVisibilidadBotones();
-  setGuardarMsg('');
-  mostrarVista('formulario');
 }
 
 function volverALista() {

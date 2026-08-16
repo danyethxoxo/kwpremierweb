@@ -404,8 +404,11 @@
       var necesita = atras.offsetWidth + 2;
       atras.style.width = '';
       atras.style.right = '';
+      // Nunca más ancho que donde vive: en celular una pregunta larga
+      // se salía de la pantalla y empujaba la página de lado.
+      var tope = caja.parentNode ? caja.parentNode.clientWidth : necesita;
       requestAnimationFrame(function () {
-        caja.style.width = Math.max(ancho, necesita) + 'px';
+        caja.style.width = Math.min(Math.max(ancho, necesita), tope) + 'px';
         caja.classList.add('abierto');
       });
     });
@@ -523,6 +526,44 @@
     }
   }
 
+  // ── Pantalla de "abriendo…" ────────────────────────────────────
+  // Devuelve la función que la quita. El velo se queda un mínimo de
+  // tiempo aunque lo de atrás ya esté listo: si aparece y desaparece en
+  // 20 ms se ve como un parpadeo, que molesta más que no ponerlo.
+  var MINIMO_VISIBLE = 420;
+
+  function cargando(texto) {
+    var velo = document.createElement('div');
+    velo.className = 'kw-cargando-pantalla';
+    velo.setAttribute('role', 'status');
+    velo.setAttribute('aria-live', 'polite');
+    velo.innerHTML = '<div class="kw-cargando-aros"><span></span><span></span><span></span></div>' +
+      '<div class="kw-cargando-texto">' + esc(texto || 'Cargando…') + '</div>';
+    document.body.appendChild(velo);
+
+    var desde = Date.now();
+    var cerrado = false;
+    return function cerrar() {
+      if (cerrado) return;
+      cerrado = true;
+      var falta = Math.max(0, MINIMO_VISIBLE - (Date.now() - desde));
+      setTimeout(function () {
+        velo.classList.add('saliendo');
+        setTimeout(function () { if (velo.parentNode) velo.parentNode.removeChild(velo); }, 260);
+      }, falta);
+    };
+  }
+
+  // Vuelve a disparar la animación de entrada de un elemento (quitar y
+  // poner la clase a secas no basta: el navegador junta los dos cambios
+  // en el mismo cuadro y no la ve reiniciarse).
+  function entraDesdeAbajo(el) {
+    if (!el) return;
+    el.classList.remove('kw-entra-abajo');
+    void el.offsetWidth;
+    el.classList.add('kw-entra-abajo');
+  }
+
   // ═════════════════════════════════════════════════════════════
 
   function iniciar(raiz) {
@@ -541,6 +582,8 @@
     confirmaciones: armarConfirmaciones,
     chips: pintarChips,
     acordeon: acordeon,
+    cargando: cargando,
+    entraDesdeAbajo: entraDesdeAbajo,
     iconos: ICONOS,
     cerrarModal: cerrarModal,
     activarTab: function (nombre, tabs) {
