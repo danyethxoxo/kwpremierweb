@@ -142,10 +142,12 @@
       margin-bottom: 48px;
     }
 
-    /* ═══════════ GRID ═══════════ */
+    /* ═══════════ GRID ═══════════
+       Dos tarjetas nada más: Internos se fue al hub, con el resto de
+       los accesos según el rol (Prospectos, Propiedades, etc.). */
     .grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
     }
 
@@ -160,9 +162,6 @@
        colores de fondo de cada ícono en reposo, propios de esta página. */
     .icon-acuerdos { background: #FFF0F0; }
     .icon-acuerdos svg { color: var(--red); }
-
-    .icon-internos { background: #FFF0F0; }
-    .icon-internos svg { color: var(--red); }
 
     .icon-contratos { background: #FFF7E6; }
     .icon-contratos svg { color: var(--red); }
@@ -228,26 +227,6 @@
         </div>
       </a>
 
-      <!-- Internos -->
-      <a href="internos/index.html" class="hover-card" id="card-internos" style="--card-color: var(--red);">
-        <div class="hover-card-icon icon-internos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <div class="hover-card-title">Internos (Liderazgo)</div>
-        <div class="hover-card-desc">Documentación exclusiva para Liderazgo.</div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </div>
-      </a>
-
       <!-- Contratos -->
       <a href="contratos/index.html" class="hover-card" style="--card-color: var(--red);">
         <div class="hover-card-icon icon-contratos">
@@ -282,27 +261,6 @@
 
   </main>
 
-<script>
-  async function ocultarInternosSiAsociado() {
-    const { data: userData } = await window.kwSupabase.auth.getUser();
-    if (!userData || !userData.user) return;
-    const { data: perfil, error } = await window.kwSupabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userData.user.id)
-      .single();
-    if (error || !perfil) return;
-    if (perfil.role === 'asociado') {
-      const card = document.getElementById('card-internos');
-      if (card) card.remove();
-    }
-  }
-  if (document.documentElement.classList.contains('kw-auth-ok')) {
-    ocultarInternosSiAsociado();
-  } else {
-    window.addEventListener('kw-auth-ready', ocultarInternosSiAsociado, { once: true });
-  }
-</script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260817b" data-menu="hub"></script>
 </body>
 </html>
