@@ -169,8 +169,19 @@
       .page-title { font-size: 24px; }
     }
 
+    /* El color del puesto ya no va en un rectángulo sólido: entra como
+       un degradado que sale de la orilla izquierda y se apaga antes de
+       la mitad de la tarjeta. Así se distingue de qué carpeta es sin que
+       el color le gane al texto. El tono lo pone el JS en --rol-rgb (de
+       roles_kw); si falta, se queda el guinda de siempre. */
     .card {
-      background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
+      --rol-rgb: 138, 0, 0;
+      background:
+        radial-gradient(115% 135% at 0% 50%,
+          rgba(var(--rol-rgb), 0.40) 0%,
+          rgba(var(--rol-rgb), 0.13) 34%,
+          rgba(var(--rol-rgb), 0) 62%),
+        linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
       border-radius: 14px;
       border: 1px solid rgba(255,255,255,0.65);
       backdrop-filter: blur(14px) saturate(150%);
@@ -184,7 +195,12 @@
       transition: background 0.25s, box-shadow 0.18s, transform 0.18s, border-color 0.25s;
     }
     .card:hover {
-      background: linear-gradient(150deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.98) 45%, rgba(255,255,255,0.96) 100%);
+      background:
+        radial-gradient(115% 135% at 0% 50%,
+          rgba(var(--rol-rgb), 0.50) 0%,
+          rgba(var(--rol-rgb), 0.17) 34%,
+          rgba(var(--rol-rgb), 0) 62%),
+        linear-gradient(150deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.98) 45%, rgba(255,255,255,0.96) 100%);
       border-color: rgba(255,255,255,0.85);
       box-shadow: 0 16px 38px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9);
       transform: translateY(-3px);
@@ -237,7 +253,7 @@
       gap: 4px;
       font-size: 12px;
       font-weight: 600;
-      color: var(--red);
+      color: rgb(var(--rol-rgb));
       transition: color 0.2s;
     }
     .card-cta svg { width: 12px; height: 12px; }
@@ -247,17 +263,25 @@
        esto a dejar todo desplegado en una sola pantalla porque con más
        documentos la lista se vuelve inmanejable, y porque quien entra
        casi siempre va por lo de UN rol, no por todo. */
+    /* La sigla se queda clara y es la letra la que lleva el color del
+       puesto, para que haga juego con el degradado de atrás en vez de
+       competir con él. */
     .card-sigla {
+      /* Sin esto la tarjeta (flex en columna) la estira de orilla a
+         orilla y vuelve a verse como la barra de color de antes. */
+      align-self: flex-start;
       display: inline-flex; align-items: center; justify-content: center;
       min-width: 40px; height: 40px; padding: 0 9px;
       border-radius: 10px; margin-bottom: 14px;
       font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
-      color: var(--red); background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
-      border: 1px solid rgba(255,255,255,0.65);
+      color: rgb(var(--rol-rgb));
+      background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+      border: 1px solid rgba(var(--rol-rgb), 0.22);
+      box-shadow: 0 3px 12px rgba(var(--rol-rgb), 0.2), inset 0 1px 0 rgba(255,255,255,0.9);
       backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
-      transition: background 0.2s, color 0.2s;
+      transition: box-shadow 0.2s;
     }
-    .card:hover .card-sigla { background: rgba(255,255,255,0.22); color: #fff; }
+    .card:hover .card-sigla { box-shadow: 0 5px 16px rgba(var(--rol-rgb), 0.28), inset 0 1px 0 rgba(255,255,255,0.95); }
 
     .cargando, .vacio-msg {
       grid-column: 1 / -1;
@@ -342,6 +366,23 @@
     });
   }
 
+  // El color del puesto llega de la base como hexadecimal (#4F46E5),
+  // pero el degradado de la tarjeta lo necesita partido en canales para
+  // poder darle transparencia. Lo que no se entienda se va al guinda de
+  // siempre, para no dejar la tarjeta sin color.
+  var ROL_RGB_RESPALDO = '138, 0, 0';
+  function rgbDeHex(hex) {
+    var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return ROL_RGB_RESPALDO;
+    var h = m[1];
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+    ].join(', ');
+  }
+
   // Una carpeta por puesto, con cuántos documentos tiene adentro. El
   // conteo se saca en el navegador (son pocos documentos) para no pedir
   // una consulta por carpeta.
@@ -363,8 +404,9 @@
 
       caja.innerHTML = roles.map(function (rol) {
         var n = docs.filter(function (d) { return (d.roles || []).indexOf(rol.id) >= 0; }).length;
-        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '" class="card">' +
-          '<span class="card-sigla" style="background:' + escapar(rol.color || 'var(--red)') + '">' + escapar(rol.id) + '</span>' +
+        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '" class="card"' +
+            ' style="--rol-rgb: ' + rgbDeHex(rol.color) + ';">' +
+          '<span class="card-sigla">' + escapar(rol.id) + '</span>' +
           '<div class="card-title">' + escapar(rol.nombre) + '</div>' +
           '<div class="card-desc">' + escapar(rol.descripcion || '') + '</div>' +
           '<div class="card-cta">' + n + (n === 1 ? ' documento' : ' documentos') +
