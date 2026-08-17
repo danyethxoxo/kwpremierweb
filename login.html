@@ -57,7 +57,15 @@
   body::before {
     content: '';
     position: fixed;
-    inset: 0;
+    left: 0; right: 0; top: 0;
+    /* El alto se ancla al viewport GRANDE (lvh), no al de ahora. En
+       celular, al esconderse la barra de direcciones el viewport crece,
+       la capa crecia con el y, como el dibujo se mide en porcentaje de
+       la capa, los filos se reacomodaban: se veia como si el fondo se
+       moviera al hacer scroll. Con lvh la capa nunca cambia de tamano.
+       El 100vh de arriba es el respaldo para quien no entienda lvh. */
+    height: 100vh;
+    height: 100lvh;
     z-index: -1;
     background: var(--bg);
     pointer-events: none;
@@ -70,7 +78,7 @@
   header {
     width: fit-content;
     margin: 14px auto 0;
-    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
     border: 1px solid rgba(255,255,255,0.6);
     border-radius: 999px;
     backdrop-filter: blur(13px) saturate(140%);
@@ -89,13 +97,13 @@
     padding: 48px 20px 60px;
   }
   .card {
-    background: linear-gradient(150deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.78) 45%, rgba(255,255,255,0.72) 100%);
-    border: 1px solid rgba(255,255,255,0.65);
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
     border-radius: 14px;
     padding: 28px 24px;
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.85);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
   }
   .card h1 {
     font-size: 19px;
@@ -139,11 +147,11 @@
 
   .btn-submit {
     width: 100%;
-    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
     color: var(--red);
-    border: 1px solid rgba(255,255,255,0.65);
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%); border: none; border-radius: 40px;
+    border: 1px solid rgba(255,255,255,0.82);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%); border: none; border-radius: 40px;
     padding: 12px 20px; font-size: 14px; font-weight: 700;
     font-family: Arial, sans-serif; cursor: pointer;
     margin-top: 6px;

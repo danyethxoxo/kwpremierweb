@@ -62,7 +62,15 @@
   body::before {
     content: '';
     position: fixed;
-    inset: 0;
+    left: 0; right: 0; top: 0;
+    /* El alto se ancla al viewport GRANDE (lvh), no al de ahora. En
+       celular, al esconderse la barra de direcciones el viewport crece,
+       la capa crecia con el y, como el dibujo se mide en porcentaje de
+       la capa, los filos se reacomodaban: se veia como si el fondo se
+       moviera al hacer scroll. Con lvh la capa nunca cambia de tamano.
+       El 100vh de arriba es el respaldo para quien no entienda lvh. */
+    height: 100vh;
+    height: 100lvh;
     z-index: -1;
     background: var(--bg);
     pointer-events: none;

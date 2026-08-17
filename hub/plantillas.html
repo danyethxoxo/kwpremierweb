@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/kw-hoja.js?v=20260729"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817c">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817c"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817d">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817d"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -42,23 +42,23 @@
   .btn:active { transform: translateY(1px) scale(0.98); }
   .btn:disabled { opacity: 0.55; cursor: default; }
   .btn-rojo {
-    background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%);
+    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
     color: var(--red);
-    border: 1px solid rgba(255,255,255,0.65);
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%); border: none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 5px 16px rgba(0,0,0,0.16);
+    border: 1px solid rgba(255,255,255,0.82);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%); border: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38), 0 5px 16px rgba(0,0,0,0.16);
   }
-  .btn-rojo:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); background: linear-gradient(150deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 100%); color: var(--red); }
+  .btn-rojo:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
   .btn svg { width: 15px; height: 15px; }
 
   /* ── Lista de formatos ── */
   .lista-plantillas { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
   .tarjeta-plantilla {
-    background: linear-gradient(150deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.78) 45%, rgba(255,255,255,0.72) 100%); border: 1px solid rgba(255,255,255,0.65); border-radius: 14px;
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     padding: 16px 17px; display: flex; flex-direction: column; gap: 6px;
   }
   .tp-nombre { font-size: 15.5px; font-weight: 700; letter-spacing: -0.2px; }
@@ -76,10 +76,10 @@
   /* ── Armador ── */
   .armador { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: start; }
   .panel {
-    background: linear-gradient(150deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.78) 45%, rgba(255,255,255,0.72) 100%); border: 1px solid rgba(255,255,255,0.65);
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     border-radius: 14px; padding: 18px;
   }
   .panel h2 { font-size: 14px; margin-bottom: 14px; }
@@ -664,6 +664,6 @@
     document.head.appendChild(s);
   })();
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817c" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817d" data-menu="hub"></script>
 </body>
 </html>
