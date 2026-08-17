@@ -565,9 +565,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 /* Las tablas se fueron: en su lugar va la lista de tarjetas de aquí
    abajo. Solo queda esto, que las tablas compartían con las listas. */
 @media (max-width: 700px) {
-  /* La insignia deja de medir todas lo mismo: en un renglón angosto se
-     comía el espacio del nombre del documento. */
-  .kw-pill { min-width: 0; padding: 5px 11px; font-size: 11.5px; }
+  .kw-pill { font-size: 11.5px; }
 }
 
 /* ── Pantalla de "abriendo…" ────────────────────────────────────
@@ -698,6 +696,44 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
   font-size: 12px; color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* ── Datos a la vista, sin abrir la tarjeta ────────────────────
+   En el celular la fila cerrada apenas da para el título y su renglón
+   de abajo: por eso lo demás se guarda hasta que se despliega. En
+   escritorio sobra ancho y esconderlo es desperdiciarlo, así que los
+   datos que valen se ven de una vez, alineados a la derecha, y adentro
+   se ocultan los que ya salieron aquí (marcados .kw-solo-movil) para no
+   leer dos veces lo mismo.
+
+   Uso: dentro de .kw-fila-cabeza, después de .kw-fila-texto,
+     <span class="kw-fila-extra">
+       <span class="kw-extra">…icono…<span>Texto</span></span>
+     </span> */
+.kw-fila-extra { display: none; }
+@media (min-width: 901px) {
+  .kw-fila-extra {
+    display: flex; align-items: center; gap: 20px;
+    flex-shrink: 0; margin-left: auto; padding-left: 12px;
+  }
+  .kw-extra {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12.5px; color: #4a4a4a; white-space: nowrap;
+    max-width: 240px;
+  }
+  .kw-extra > svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--muted); }
+  .kw-extra > span {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* El segundo selector no sobra: .kw-dato viene más abajo en esta misma
+     hoja con su display:flex, y a igual peso gana el último. */
+  .kw-solo-movil,
+  .kw-dato.kw-solo-movil { display: none; }
+  /* El renglón que comparte lugar con los botones no se puede esconder
+     entero, porque se irían los botones con él: se le quita nada más el
+     texto, que es lo que ya salió arriba. */
+  .kw-dato.texto-solo-movil > svg,
+  .kw-dato.texto-solo-movil > .kw-dato-txt { display: none; }
+}
+
 .kw-fila-flecha {
   width: 17px; height: 17px; flex-shrink: 0; color: var(--muted);
   transition: transform 0.22s;
@@ -753,15 +789,22 @@ a.kw-dato:hover { color: var(--red); }
   border-radius: var(--r-pastilla); padding: 9px 16px;
   font-size: 12.5px; font-weight: 700; font-family: inherit;
   text-decoration: none; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.82);
-  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
+  /* Van sobre la tarjeta, que ya es vidrio: si el botón también fuera
+     casi blanco se perdería contra ella. Queda más transparente y se
+     despega con la sombra de abajo; al pasar el mouse se rellena. */
+  border: 1px solid rgba(255,255,255,0.72);
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.42) 100%);
   backdrop-filter: blur(18px) saturate(165%);
   -webkit-backdrop-filter: blur(18px) saturate(165%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38), 0 4px 14px rgba(0,0,0,0.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(255,255,255,0.28), 0 4px 14px rgba(0,0,0,0.20);
   color: var(--red);
-  transition: transform 0.12s, box-shadow 0.18s;
+  transition: transform 0.12s, box-shadow 0.18s, background 0.18s, border-color 0.18s;
 }
-.kw-fila-btn:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 6px 18px rgba(0,0,0,0.18); }
+.kw-fila-btn:hover {
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.82) 100%);
+  border-color: rgba(255,255,255,0.92);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 22px rgba(0,0,0,0.26);
+}
 .kw-fila-btn:active { transform: scale(0.96); }
 .kw-fila-btn[disabled] { opacity: 0.55; cursor: default; }
 .kw-fila-btn svg { width: 14px; height: 14px; }
@@ -772,31 +815,40 @@ a.kw-dato:hover { color: var(--red); }
 .kw-btn-mini {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 7px 13px; border-radius: var(--r-pastilla);
-  border: 1.5px solid var(--border); background: #fff;
+  border: 1px solid rgba(255,255,255,0.72);
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.42) 100%);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(255,255,255,0.28), 0 4px 14px rgba(0,0,0,0.20);
   font-family: inherit; font-size: 12px; font-weight: 700; color: var(--text);
   text-decoration: none; cursor: pointer; white-space: nowrap;
-  transition: border-color var(--t-rapido), color var(--t-rapido), background var(--t-rapido), transform 0.12s;
+  transition: border-color var(--t-rapido), color var(--t-rapido), background var(--t-rapido), box-shadow 0.18s, transform 0.12s;
 }
-.kw-btn-mini:hover { border-color: var(--red); color: var(--red); background: #fff8f8; }
+.kw-btn-mini:hover {
+  color: var(--red); border-color: rgba(255,255,255,0.92);
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.82) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 22px rgba(0,0,0,0.26);
+}
 .kw-btn-mini:active { transform: scale(0.95); }
 .kw-btn-mini svg { width: 13px; height: 13px; }
 .kw-acciones { display: inline-flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
 
-/* ── Insignias de estado ──
-   Del ancho de su texto no: todas miden lo mismo dentro de una tabla,
-   para que la columna se lea como columna y no como parches de
-   distinto tamaño. */
+/* ── Estados ──
+   Antes iban en pastilla de color. Sobre el vidrio se veían como
+   parches pegados encima, y además compiten con los botones, que sí
+   son pastilla porque sí se pican. Un estado no se pica: se lee. Así
+   que queda solo el texto, con su color, que es lo que de todos modos
+   distinguía uno de otro. */
 .kw-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 92px; padding: 6px 14px;
-  border-radius: var(--r-pastilla);
+  display: inline-flex; align-items: center;
   font-size: 12px; font-weight: 700; white-space: nowrap;
+  letter-spacing: 0.01em;
 }
-.kw-pill-ok { background: #d9f5e3; color: #10713a; }
-.kw-pill-espera { background: #ffeec9; color: #93600a; }
-.kw-pill-neutro { background: #e8eaed; color: #41474e; }
-.kw-pill-alerta { background: #fdd8d8; color: #961414; }
-.kw-pill-info { background: #d4ebfd; color: #10558f; }
+.kw-pill-ok { color: #0d5c2f; }
+.kw-pill-espera { color: #8a5808; }
+.kw-pill-neutro { color: #41474e; }
+.kw-pill-alerta { color: #8a1212; }
+.kw-pill-info { color: #0d4a7d; }
 
 /* ── Chips de opción (radio y casilla) ──────────────────────────
    En vez del puntito gris del navegador, una pastilla que se pinta
