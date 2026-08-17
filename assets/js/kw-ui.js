@@ -564,9 +564,56 @@
     el.classList.add('kw-entra-abajo');
   }
 
+  // ── Tarjetas que se pliegan ────────────────────────────────────
+  // Solo hacen algo en celular: en escritorio el CSS las deja siempre
+  // abiertas, así que aquí ni se escucha el clic para que la marca de
+  // "abierta" no quede diciendo una cosa distinta a lo que se ve.
+  var ANCHO_PLEGABLE = '(max-width: 700px)';
+
+  function plegables(raiz) {
+    var cont = raiz || document;
+    var tarjetas = cont.querySelectorAll('.kw-card-plegable');
+    for (var i = 0; i < tarjetas.length; i++) {
+      (function (tarjeta) {
+        if (tarjeta.dataset.kwPlegable) return;
+        tarjeta.dataset.kwPlegable = '1';
+        var btn = tarjeta.querySelector('.kw-card-head-btn');
+        var cuerpo = tarjeta.querySelector('.kw-card-cuerpo > div');
+        if (!btn) return;
+
+        function pintar() {
+          var enCelular = window.matchMedia(ANCHO_PLEGABLE).matches;
+          btn.setAttribute('aria-expanded',
+            (!enCelular || tarjeta.classList.contains('abierta')) ? 'true' : 'false');
+        }
+
+        btn.addEventListener('click', function () {
+          if (!window.matchMedia(ANCHO_PLEGABLE).matches) return;
+          var seAbre = !tarjeta.classList.contains('abierta');
+          tarjeta.classList.toggle('abierta', seAbre);
+          if (cuerpo && !seAbre) cuerpo.classList.remove('termino');
+          pintar();
+        });
+
+        // Al acabar de abrirse se suelta el recorte, para que el menú de
+        // un desplegable de adentro no salga cortado.
+        if (cuerpo) {
+          cuerpo.parentNode.addEventListener('transitionend', function (e) {
+            if (e.propertyName !== 'grid-template-rows') return;
+            cuerpo.classList.toggle('termino', tarjeta.classList.contains('abierta'));
+          });
+        }
+
+        window.addEventListener('resize', pintar);
+        pintar();
+      })(tarjetas[i]);
+    }
+  }
+
   // ═════════════════════════════════════════════════════════════
 
   function iniciar(raiz) {
+    plegables(raiz);
     armarSelects(raiz);
     armarFechas(raiz);
     armarTodasLasTabs(raiz);
@@ -582,6 +629,7 @@
     confirmaciones: armarConfirmaciones,
     chips: pintarChips,
     acordeon: acordeon,
+    plegables: plegables,
     cargando: cargando,
     entraDesdeAbajo: entraDesdeAbajo,
     iconos: ICONOS,

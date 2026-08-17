@@ -16,10 +16,10 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817e">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817f">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817e"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817f"></script>
 <style>
   /* Lo de esta pantalla nada más. Colores, tipografía, tarjetas,
      pestañas, filtros, tablas, modales y campos vienen de kw-base.css:
@@ -177,11 +177,13 @@
 
       <div class="kw-tabpanels" id="panel-paneles">
       <section class="kw-tabpanel activo" data-panel="usuarios">
-        <div class="kw-card">
-          <div class="kw-card-head">
+        <div class="kw-card kw-card-plegable">
+          <button type="button" class="kw-card-head kw-card-head-btn">
             <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
             <div><h2>Agregar nuevo usuario</h2><div class="kw-card-sub">Se le enviará un correo para completar su registro.</div></div>
-          </div>
+            <svg class="kw-card-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="kw-card-cuerpo"><div>
           <form id="invite-form" class="invite-row">
             <div class="field">
               <label for="invite-email">Correo</label>
@@ -198,19 +200,23 @@
             <button type="submit" class="btn-invite" id="invite-btn">Agregar</button>
           </form>
           <div class="msg" id="invite-msg"></div>
+          </div></div>
         </div>
 
-        <div class="kw-card">
-          <div class="kw-card-head">
+        <!-- La lista cuelga del encabezado, no dentro de una tarjeta con
+             fondo: cada renglón ya es su propia tarjeta y meterlas todas
+             dentro de otra se ve como una caja dentro de otra caja. En
+             celular el encabezado se pliega para no gastar pantalla. -->
+        <div class="kw-card kw-card-plegable kw-card-solo-cabeza">
+          <button type="button" class="kw-card-head kw-card-head-btn">
             <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div><h2>Usuarios</h2><div class="kw-card-sub">Todo el equipo registrado en la plataforma.</div></div>
-          </div>
+            <svg class="kw-card-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="kw-card-cuerpo"><div>
+            <div id="usuarios-cont"></div>
+          </div></div>
         </div>
-
-        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
-             tarjeta y meterlas todas dentro de otra se ve como una caja
-             dentro de otra caja. -->
-        <div id="usuarios-cont"></div>
       </section>
 
       <section class="kw-tabpanel" data-panel="documentos">
@@ -518,12 +524,11 @@
               <a class="kw-dato" href="mailto:${escapeHtml(u.email || '')}">${I.correo}<span class="kw-dato-txt">${escapeHtml(u.email || 'Sin correo')}</span></a>
               <div class="kw-dato">${I.escudo}<span class="kw-dato-txt"><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span></div>
               <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Alta: ${fmtFechaCorta(u.created_at)}</span></div>
-              <div class="kw-dato">${I.ojo}<span class="kw-dato-txt"><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></span></div>
+              <div class="kw-dato con-acciones">${I.ojo}<span class="kw-dato-txt"><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></span>${puedoEditar ? `<div class="kw-fila-acciones">
+                <button type="button" class="kw-fila-btn btn-editar-usuario" data-idx="${i}">Editar</button>
+                <button type="button" class="kw-fila-btn neutro btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
+              </div>` : ''}</div>
             </div>
-            ${puedoEditar ? `<div class="kw-fila-acciones">
-              <button type="button" class="kw-fila-btn btn-editar-usuario" data-idx="${i}">Editar</button>
-              <button type="button" class="kw-fila-btn neutro btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
-            </div>` : ''}
           </div></div></div>
         </div>`;
       });
@@ -759,13 +764,10 @@
         </button>
         <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
           <div class="kw-datos">
-            <div class="kw-dato">${I.persona}<span class="kw-dato-txt">${escapeHtml(nombreAsesor)}</span></div>
             <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></div>
             <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
-            <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Actualizado: ${fmtFechaCorta(d.updated_at)}</span></div>
-            <div class="kw-dato">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span></div>
+            <div class="kw-dato con-acciones">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
           </div>
-          ${acciones}
         </div></div></div>
       </div>`;
     });
@@ -863,13 +865,10 @@
         </button>
         <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
           <div class="kw-datos">
-            <div class="kw-dato">${I.persona}<span class="kw-dato-txt">${escapeHtml(nombreAsesor)}</span></div>
             <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></div>
             <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
-            <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Actualizado: ${fmtFechaCorta(d.updated_at)}</span></div>
-            <div class="kw-dato">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span></div>
+            <div class="kw-dato con-acciones">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
           </div>
-          ${acciones}
         </div></div></div>
       </div>`;
     });
@@ -1005,6 +1004,6 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817e" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817f" data-menu="hub"></script>
 </body>
 </html>

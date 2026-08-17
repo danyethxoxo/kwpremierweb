@@ -451,6 +451,40 @@
   document.getElementById('drawer-close').addEventListener('click', cerrar);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrar(); });
 
+  // ── Gestos: arrastrar de izquierda a derecha abre el menú ──
+  // Solo cuenta si el dedo arranca pegado a la orilla izquierda: si se
+  // escuchara en toda la pantalla, cualquier deslizada horizontal (un
+  // carrusel, arrastrar para ver una tabla de lado) abriría el menú sin
+  // querer. Estando abierto, el gesto contrario lo cierra.
+  const ORILLA = 28;      // desde dónde cuenta el arranque, en pixeles
+  const RECORRIDO = 55;   // cuánto hay que arrastrar para que dispare
+  let x0 = null, y0 = null, sirve = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { sirve = false; return; }
+    const t = e.touches[0];
+    x0 = t.clientX; y0 = t.clientY;
+    const abierto = document.getElementById('drawer').classList.contains('open');
+    // Abierto se puede arrastrar desde cualquier lado para cerrar;
+    // cerrado, solo desde la orilla.
+    sirve = abierto || x0 <= ORILLA;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!sirve || x0 === null || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - x0;
+    const dy = t.clientY - y0;
+    // Que el movimiento sea claramente horizontal: si va más de lado que
+    // hacia abajo, es el gesto del menú; si no, es scroll y no se toca.
+    if (Math.abs(dx) < Math.abs(dy)) { sirve = false; return; }
+    const abierto = document.getElementById('drawer').classList.contains('open');
+    if (!abierto && dx > RECORRIDO) { abrir(); sirve = false; }
+    else if (abierto && dx < -RECORRIDO) { cerrar(); sirve = false; }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => { sirve = false; x0 = null; }, { passive: true });
+
   if (esPublico) {
     const cta = document.getElementById('drawer-cta');
     cta.addEventListener('click', (e) => {
@@ -512,11 +546,16 @@
         return;
       }
       const t = e.target;
-      // El scroll de la lista del menú lateral (drawer-nav) no tiene
-      // nada que ver con el de la página: sin este freno, subir o bajar
-      // la lista de enlaces escondía o traía de vuelta la cápsula del
-      // header que quedó detrás.
-      if (t instanceof Element && t.closest('.drawer-nav')) return;
+      // Nada de lo que va ENCIMA de la página mueve el header: el menú
+      // lateral, cualquier modal (por ejemplo la lista de "Comprobar en
+      // Google" del Proceso de Alta), el panel de notificaciones y los
+      // resultados del buscador tienen su propio scroll, y ese scroll no
+      // es el de la página. Sin este freno, bajar cualquiera de esas
+      // listas escondía o traía de vuelta la cápsula que quedó detrás.
+      // Se listan los envoltorios completos, no solo la zona con scroll,
+      // para que valga igual si mañana el scroll cambia de elemento.
+      if (t instanceof Element &&
+          t.closest('.drawer, .modal-overlay, .notif-dropdown, .kw-buscar-resultados-inline')) return;
       const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
       const y = esVentana
         ? (window.scrollY || document.documentElement.scrollTop || 0)

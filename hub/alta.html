@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817e">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817e"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817f">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817f"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -132,7 +132,9 @@
   }
   .verif-acciones-arriba { margin: 2px 0 12px; flex-shrink: 0; }
   #verificar-msg { flex-shrink: 0; }
-  .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* Al final de la lista el scroll no se encadena a la pagina de
+     atras, que era lo que movia el header estando en el modal. */
+  .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 
   /* Tarjetas apiladas en vez de tabla: con tantos datos por persona,
      una tabla no cabe sin scroll lateral en pantallas angostas.
@@ -442,11 +444,12 @@
             (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
             '<div class="kw-dato">' + I.etiqueta + '<span class="kw-dato-txt">KWID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
             '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Ingreso: ' + escapeHtml(p.fechaIngreso || 'sin fecha') + '</span></div>' +
-            '<div class="kw-dato">' + I.reloj + '<span class="kw-dato-txt">' + estadoHtml(p.alta) + '</span></div>' +
-          '</div>' +
-          '<div class="kw-fila-acciones">' +
-            '<button type="button" class="kw-fila-btn" data-correo="' + escapeHtml(p.correo) + '">' +
-              (p.alta ? 'Volver a intentar' : 'Dar de alta') + '</button>' +
+            '<div class="kw-dato con-acciones">' + I.reloj + '<span class="kw-dato-txt">' + estadoHtml(p.alta) + '</span>' +
+              '<div class="kw-fila-acciones">' +
+                '<button type="button" class="kw-fila-btn" data-correo="' + escapeHtml(p.correo) + '">' +
+                  (p.alta ? 'Volver a intentar' : 'Dar de alta') + '</button>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
         '</div></div></div>' +
       '</div>';
@@ -792,6 +795,6 @@
     }, { rootMargin: '-54px 0px 0px 0px' }).observe(titulo);
   })();
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817e" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817f" data-menu="hub"></script>
 </body>
 </html>
