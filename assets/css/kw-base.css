@@ -143,10 +143,12 @@ header.kw-header {
      las esquinas redondas del todo y el aire alrededor son lo que la
      hacen leer como una pastilla de vidrio encima del contenido. */
   border-radius: 999px;
-  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-  border: 1px solid rgba(255,255,255,0.6);
-  backdrop-filter: blur(13px) saturate(140%); -webkit-backdrop-filter: blur(13px) saturate(140%);
-  box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.75);
+  /* El mismo vidrio que las tarjetas: antes iba mas solido y se veia
+     como una barra blanca encima, no como vidrio. */
+  background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+  border: 1px solid rgba(255,255,255,0.82);
+  backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
   transition: background 0.25s, box-shadow 0.25s, border-color 0.25s;
 }
 /* ── Cuando hay botones de acción, el header se parte en dos ──
@@ -169,9 +171,9 @@ header.kw-header-partido {
 header.kw-header .kw-header-capsula,
 header.kw-header .kw-header-sueltos > * {
   border-radius: 999px;
-  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
+  background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
   border: 1px solid rgba(255,255,255,0.82);
-  backdrop-filter: blur(13px) saturate(140%); -webkit-backdrop-filter: blur(13px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
   box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
 }
 header.kw-header .kw-header-capsula {
@@ -538,7 +540,13 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.kw-aparece { animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* backwards y no both: el estado final de la animación es exactamente el
+   natural (opacity 1, sin desplazar), así que "both" no aportaba nada y
+   en cambio dejaba un transform pegado para siempre. Un transform, aunque
+   sea el de identidad, convierte al elemento en el marco de referencia de
+   todo lo que tenga dentro con position:fixed - y ahí un botón flotante
+   deja de estar fijo a la pantalla y se va con el scroll. */
+.kw-aparece { animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 @keyframes kw-aparece-fade { from { opacity: 0; } to { opacity: 1; } }
 .kw-aparece-fila { animation: kw-aparece-fade 0.4s ease both; }
 
@@ -556,7 +564,10 @@ main > :not(.cards-grid):not(.grid),
 .cards-grid > *,
 .grid > *,
 #agenda-container > * {
-  animation: kw-aparece 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* backwards, no both: ver la nota de .kw-aparece. Con "both" cada
+     bloque de la página se quedaba con un transform puesto y cualquier
+     botón flotante de adentro dejaba de estar fijo a la pantalla. */
+  animation: kw-aparece 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 main > :not(.cards-grid):not(.grid):nth-child(2), .page > :not(.cards-grid):not(.grid):nth-child(2), .split > *:nth-child(2), .calendar-col > *:nth-child(2), .cards-grid > *:nth-child(2), .grid > *:nth-child(2), #agenda-container > *:nth-child(2) { animation-delay: 90ms; }
 main > :not(.cards-grid):not(.grid):nth-child(3), .page > :not(.cards-grid):not(.grid):nth-child(3), .split > *:nth-child(3), .calendar-col > *:nth-child(3), .cards-grid > *:nth-child(3), .grid > *:nth-child(3), #agenda-container > *:nth-child(3) { animation-delay: 180ms; }
@@ -588,18 +599,22 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .msg.error { display: block; background: #fdeaea; color: #a30000; }
 .msg.ok { display: block; background: #eaf7ea; color: #1a7a1a; }
 
-/* ── Insignias de rol ── */
+/* ── Rol ──
+   Sin pastilla: el rol es un dato, no algo que se pique, y encima del
+   vidrio la pastilla se veía como un parche. Queda el puro texto con
+   su color. */
 .rol-badge {
-  display: inline-block; padding: 2px 9px; border-radius: 20px;
-  font-size: 11px; font-weight: 700; text-transform: capitalize;
+  display: inline-block;
+  font-size: 12px; font-weight: 700; text-transform: capitalize;
+  letter-spacing: 0.01em;
 }
 /* Los cuatro roles se distinguen por qué tan hondo va el vino, no por
    colores distintos: así no aparecen morados y azules sueltos en medio
    de una plataforma que es toda de un color. */
-.rol-master { background: #f7dede; color: #6b0000; }
-.rol-admin { background: #fbe8e8; color: #8a0000; }
-.rol-staff { background: #fdf0f0; color: #a83232; }
-.rol-asociado { background: #f1f3f5; color: #495057; }
+.rol-master { color: #6b0000; }
+.rol-admin { color: #8a0000; }
+.rol-staff { color: #a83232; }
+.rol-asociado { color: #495057; }
 
 /* ── Tarjetas con relleno de color al pasar el cursor ──
    Uso: <a class="hover-card" style="--card-color: var(--red);">

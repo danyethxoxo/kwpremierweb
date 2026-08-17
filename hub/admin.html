@@ -16,10 +16,10 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817i">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817j">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817i"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817j"></script>
 <style>
   /* Lo de esta pantalla nada más. Colores, tipografía, tarjetas,
      pestañas, filtros, tablas, modales y campos vienen de kw-base.css:
@@ -517,12 +517,16 @@
               <span class="kw-fila-titulo">${escapeHtml(nombreCompleto)}</span>
               <span class="kw-fila-sub">${escapeHtml(u.puesto || ROLE_LABELS[u.role] || u.role)}</span>
             </span>
+            <span class="kw-fila-extra">
+              <span class="kw-extra">${I.correo}<span>${escapeHtml(u.email || 'Sin correo')}</span></span>
+              <span class="kw-extra">${I.escudo}<span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span>
+            </span>
             ${I.flecha}
           </button>
           <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
             <div class="kw-datos">
-              <a class="kw-dato" href="mailto:${escapeHtml(u.email || '')}">${I.correo}<span class="kw-dato-txt">${escapeHtml(u.email || 'Sin correo')}</span></a>
-              <div class="kw-dato">${I.escudo}<span class="kw-dato-txt"><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span></div>
+              <a class="kw-dato kw-solo-movil" href="mailto:${escapeHtml(u.email || '')}">${I.correo}<span class="kw-dato-txt">${escapeHtml(u.email || 'Sin correo')}</span></a>
+              <div class="kw-dato kw-solo-movil">${I.escudo}<span class="kw-dato-txt"><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span></div>
               <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Alta: ${fmtFechaCorta(u.created_at)}</span></div>
               <div class="kw-dato con-acciones">${I.ojo}<span class="kw-dato-txt"><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></span>${puedoEditar ? `<div class="kw-fila-acciones">
                 <button type="button" class="kw-fila-btn btn-editar-usuario" data-idx="${i}">Editar</button>
@@ -760,13 +764,18 @@
             <span class="kw-fila-titulo">${escapeHtml(d.nombre_archivo || 'Sin nombre')}</span>
             <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
           </span>
+          <span class="kw-fila-extra">
+            <span class="kw-extra">${I.documento}<span>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></span>
+            <span class="kw-extra">${I.etiqueta}<span>${escapeHtml(d.folio || 'Sin folio')}</span></span>
+            <span class="kw-extra"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>
+          </span>
           ${I.flecha}
         </button>
         <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
           <div class="kw-datos">
-            <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></div>
-            <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
-            <div class="kw-dato con-acciones">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
+            <div class="kw-dato kw-solo-movil">${I.documento}<span class="kw-dato-txt">${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></div>
+            <div class="kw-dato kw-solo-movil">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
+            <div class="kw-dato con-acciones texto-solo-movil">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
           </div>
         </div></div></div>
       </div>`;
@@ -861,13 +870,18 @@
             <span class="kw-fila-titulo">${escapeHtml(d.titulo || 'Sin nombre')}</span>
             <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
           </span>
+          <span class="kw-fila-extra">
+            <span class="kw-extra">${I.documento}<span>${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></span>
+            <span class="kw-extra">${I.etiqueta}<span>${escapeHtml(d.folio || 'Sin folio')}</span></span>
+            <span class="kw-extra"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>
+          </span>
           ${I.flecha}
         </button>
         <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
           <div class="kw-datos">
-            <div class="kw-dato">${I.documento}<span class="kw-dato-txt">${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></div>
-            <div class="kw-dato">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
-            <div class="kw-dato con-acciones">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
+            <div class="kw-dato kw-solo-movil">${I.documento}<span class="kw-dato-txt">${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></div>
+            <div class="kw-dato kw-solo-movil">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
+            <div class="kw-dato con-acciones texto-solo-movil">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
           </div>
         </div></div></div>
       </div>`;
@@ -1004,6 +1018,6 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817i" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817j" data-menu="hub"></script>
 </body>
 </html>
