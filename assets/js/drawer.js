@@ -31,6 +31,10 @@
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    estrella: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+    carpeta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+    mas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    basura: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
   };
 
   const NAV_PUBLICO = [
@@ -227,6 +231,17 @@
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
+    ${esPublico ? '' : `
+    <div class="drawer drawer-der" id="drawer-accesos">
+      <div class="drawer-header">
+        <div class="drawer-titulo">${ICONS.estrella}<span>Mis accesos</span></div>
+        <button type="button" class="drawer-close" id="drawer-accesos-close" aria-label="Cerrar accesos">${ICONS.close}</button>
+      </div>
+      <nav class="drawer-nav" id="accesos-lista"></nav>
+      <div class="drawer-footer">
+        <button type="button" class="drawer-link drawer-agregar" id="accesos-agregar">${ICONS.mas}<span>Guardar esta página</span></button>
+      </div>
+    </div>`}
   `;
   while (contenedor.firstChild) document.body.appendChild(contenedor.firstChild);
 
@@ -435,55 +450,265 @@
     cerrarBuscar();
   });
 
-  function abrir() {
-    document.getElementById('drawer').classList.add('open');
-    document.getElementById('drawer-overlay').classList.add('open');
+  const drawerIzq = document.getElementById('drawer');
+  const drawerDer = document.getElementById('drawer-accesos');
+  const velo = document.getElementById('drawer-overlay');
+
+  // Los dos paneles se manejan igual, solo cambia de qué lado entran.
+  // "signo" es hacia dónde se sale de la pantalla: -1 el de la izquierda,
+  // +1 el de la derecha.
+  const PANELES = [
+    { el: drawerIzq, signo: -1 },
+    { el: drawerDer, signo: 1 },
+  ].filter((p) => p.el);
+
+  function abrirPanel(panel) {
+    if (!panel || !panel.el) return;
+    PANELES.forEach((otro) => { if (otro !== panel) otro.el.classList.remove('open'); });
+    panel.el.classList.add('open');
+    velo.classList.add('open');
     document.body.style.overflow = 'hidden';
+    if (panel.el === drawerDer && typeof cargarAccesos === 'function') cargarAccesos();
   }
-  function cerrar() {
-    document.getElementById('drawer').classList.remove('open');
-    document.getElementById('drawer-overlay').classList.remove('open');
+  function cerrarPaneles() {
+    PANELES.forEach((p) => p.el.classList.remove('open'));
+    velo.classList.remove('open');
     document.body.style.overflow = '';
   }
+  // Nombres de siempre, para no tocar lo que ya los usaba.
+  function abrir() { abrirPanel(PANELES[0]); }
+  function cerrar() { cerrarPaneles(); }
 
   document.getElementById('kw-drawer-toggle').addEventListener('click', abrir);
-  document.getElementById('drawer-overlay').addEventListener('click', cerrar);
+  velo.addEventListener('click', cerrar);
   document.getElementById('drawer-close').addEventListener('click', cerrar);
+  const cerrarDer = document.getElementById('drawer-accesos-close');
+  if (cerrarDer) cerrarDer.addEventListener('click', cerrar);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrar(); });
 
-  // ── Gestos: arrastrar de izquierda a derecha abre el menú ──
-  // Solo cuenta si el dedo arranca pegado a la orilla izquierda: si se
-  // escuchara en toda la pantalla, cualquier deslizada horizontal (un
-  // carrusel, arrastrar para ver una tabla de lado) abriría el menú sin
-  // querer. Estando abierto, el gesto contrario lo cierra.
-  const ORILLA = 28;      // desde dónde cuenta el arranque, en pixeles
-  const RECORRIDO = 55;   // cuánto hay que arrastrar para que dispare
-  let x0 = null, y0 = null, sirve = false;
+  // ── Gestos: el panel sigue al dedo ──────────────────────────────
+  // Arrastrar hacia la derecha trae el menú de la izquierda; hacia la
+  // izquierda, el de accesos. No hace falta arrancar pegado a la
+  // orilla: se puede empezar desde donde sea, y el panel va apareciendo
+  // conforme uno arrastra, en vez de saltar de golpe al pasar un
+  // umbral. Al soltar, se va al lado más cercano.
+  const DESVIO = 12;      // cuánto hay que moverse para decidir si es horizontal
+  const PARA_QUEDARSE = 0.4; // qué tanto hay que abrirlo para que se quede
+
+  let toque = null;
+
+  // Un arrastre horizontal encima de algo que se desplaza de lado (una
+  // tabla ancha, un carrusel) es de ESE elemento, no del menú.
+  function hayScrollLateral(el) {
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 4) {
+        const o = getComputedStyle(n).overflowX;
+        if (o === 'auto' || o === 'scroll') return true;
+      }
+    }
+    return false;
+  }
+
+  function anchoFuera(panel) {
+    // Lo que mide el panel más el aire que le queda a los lados: es lo
+    // que tiene que recorrer para desaparecer del todo.
+    return panel.el.offsetWidth + 16;
+  }
+
+  function pintarArrastre(panel, abiertoPx) {
+    const fuera = anchoFuera(panel);
+    const avance = Math.max(0, Math.min(1, abiertoPx / fuera));
+    panel.el.style.transition = 'none';
+    panel.el.style.transform = 'translateX(' + (panel.signo * (fuera - abiertoPx)) + 'px)';
+    velo.style.transition = 'none';
+    velo.style.opacity = String(avance);
+  }
+
+  function soltarArrastre(panel, avance, deQuedarse) {
+    panel.el.style.transition = '';
+    panel.el.style.transform = '';
+    velo.style.transition = '';
+    velo.style.opacity = '';
+    if (deQuedarse) abrirPanel(panel);
+    else cerrarPaneles();
+  }
 
   document.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) { sirve = false; return; }
+    if (e.touches.length !== 1) { toque = null; return; }
     const t = e.touches[0];
-    x0 = t.clientX; y0 = t.clientY;
-    const abierto = document.getElementById('drawer').classList.contains('open');
-    // Abierto se puede arrastrar desde cualquier lado para cerrar;
-    // cerrado, solo desde la orilla.
-    sirve = abierto || x0 <= ORILLA;
+    // Dentro del propio panel no se arrastra: ahí se hace scroll de la
+    // lista. Para cerrarlo está el velo, la equis o el gesto de fuera.
+    if (t.target instanceof Element && t.target.closest('.drawer')) { toque = null; return; }
+    if (t.target instanceof Element && hayScrollLateral(t.target)) { toque = null; return; }
+    toque = { x0: t.clientX, y0: t.clientY, panel: null, decidido: false };
   }, { passive: true });
 
+  // Este va sin `passive` a proposito: en cuanto se decide que el
+  // arrastre es del panel hay que frenar el gesto del navegador, que
+  // con una deslizada horizontal se va para atras en el historial. Solo
+  // se frena una vez decidido, asi que el scroll normal ni se entera.
   document.addEventListener('touchmove', (e) => {
-    if (!sirve || x0 === null || e.touches.length !== 1) return;
+    if (!toque || e.touches.length !== 1) return;
     const t = e.touches[0];
-    const dx = t.clientX - x0;
-    const dy = t.clientY - y0;
-    // Que el movimiento sea claramente horizontal: si va más de lado que
-    // hacia abajo, es el gesto del menú; si no, es scroll y no se toca.
-    if (Math.abs(dx) < Math.abs(dy)) { sirve = false; return; }
-    const abierto = document.getElementById('drawer').classList.contains('open');
-    if (!abierto && dx > RECORRIDO) { abrir(); sirve = false; }
-    else if (abierto && dx < -RECORRIDO) { cerrar(); sirve = false; }
+    const dx = t.clientX - toque.x0;
+    const dy = t.clientY - toque.y0;
+
+    if (!toque.decidido) {
+      if (Math.abs(dx) < DESVIO && Math.abs(dy) < DESVIO) return;
+      // Más vertical que horizontal: es scroll, no es lo nuestro.
+      if (Math.abs(dx) <= Math.abs(dy)) { toque = null; return; }
+      const yaAbierto = PANELES.find((p) => p.el.classList.contains('open'));
+      if (yaAbierto) {
+        // Arrastrar hacia donde se guarda ese panel lo cierra.
+        toque.panel = (dx * yaAbierto.signo > 0) ? yaAbierto : null;
+        toque.desde = anchoFuera(yaAbierto);
+      } else {
+        toque.panel = PANELES.find((p) => (dx > 0 ? p.signo === -1 : p.signo === 1)) || null;
+        toque.desde = 0;
+      }
+      if (!toque.panel) { toque = null; return; }
+      toque.decidido = true;
+    }
+
+    if (e.cancelable) e.preventDefault();
+
+    // Cuánto del panel se ve, en pixeles, siguiendo al dedo.
+    const abiertoPx = toque.desde + dx * -toque.panel.signo;
+    pintarArrastre(toque.panel, abiertoPx);
+    toque.ultimo = abiertoPx;
+  }, { passive: false });
+
+  // Al levantar el dedo, el navegador manda además un clic donde uno lo
+  // soltó. Sin frenarlo, cerrar el panel deslizando terminaba picándole
+  // a la tarjeta que quedaba debajo y cambiando de página.
+  let tragarClic = false;
+  document.addEventListener('click', (e) => {
+    if (!tragarClic) return;
+    tragarClic = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+
+  document.addEventListener('touchend', () => {
+    if (toque && toque.decidido && toque.panel) {
+      const fuera = anchoFuera(toque.panel);
+      const avance = Math.max(0, Math.min(1, (toque.ultimo || 0) / fuera));
+      soltarArrastre(toque.panel, avance, avance >= PARA_QUEDARSE);
+      tragarClic = true;
+      setTimeout(() => { tragarClic = false; }, 400);
+    }
+    toque = null;
   }, { passive: true });
 
-  document.addEventListener('touchend', () => { sirve = false; x0 = null; }, { passive: true });
+  // ── Accesos guardados (la barra de la derecha) ─────────────────
+  // Viven en Supabase, uno por persona (tabla accesos_rapidos, fase 50).
+  // Si la tabla todavía no existe, o no hay sesión, el panel se queda
+  // con su mensaje de vacío en vez de tronar: es un extra, no puede
+  // tumbar el resto de la página.
+  let cargados = false;
+
+  function iconoDe(clave) { return ICONS[clave] || ICONS.doc; }
+
+  // De qué es la página en la que uno está, para ponerle su dibujito.
+  function adivinarIcono(ruta) {
+    if (/drive/.test(ruta)) return 'carpeta';
+    if (/calendario/.test(ruta)) return 'calendar';
+    if (/micrositio|perfil/.test(ruta)) return 'user';
+    if (/propiedad/.test(ruta)) return 'llave';
+    if (/prospecto/.test(ruta)) return 'prospecto';
+    if (/ticket|incidencia/.test(ruta)) return 'alert';
+    return 'doc';
+  }
+
+  function tituloDeEstaPagina() {
+    const enCapsula = document.querySelector('.kw-header-title');
+    const desdeCapsula = enCapsula && enCapsula.textContent.trim();
+    if (desdeCapsula) return desdeCapsula;
+    const h1 = document.querySelector('h1');
+    if (h1 && h1.textContent.trim()) return h1.textContent.trim();
+    return (document.title || 'Página').replace(/\s*[|-].*$/, '').trim();
+  }
+
+  function pintarAccesos(filas) {
+    const lista = document.getElementById('accesos-lista');
+    if (!lista) return;
+    if (!filas.length) {
+      lista.innerHTML = '<div class="drawer-vacio">Todavía no guardas ningún acceso.' +
+        '<span>Entra a donde quieras y dale a "Guardar esta página".</span></div>';
+      return;
+    }
+    lista.innerHTML = filas.map((f) => {
+      const t = document.createElement('div');
+      t.textContent = f.titulo;
+      return `<div class="drawer-acceso">
+        <a class="drawer-link" href="${encodeURI(f.url)}">${iconoDe(f.icono)}<span>${t.innerHTML}</span></a>
+        <button type="button" class="drawer-quitar" data-quitar="${f.id}" title="Quitar" aria-label="Quitar ${t.innerHTML}">${ICONS.basura}</button>
+      </div>`;
+    }).join('');
+    lista.querySelectorAll('[data-quitar]').forEach((btn) => {
+      btn.addEventListener('click', () => quitarAcceso(btn.dataset.quitar));
+    });
+  }
+
+  async function cargarAccesos(forzar) {
+    const lista = document.getElementById('accesos-lista');
+    if (!lista || (cargados && !forzar)) return;
+    if (!window.kwSupabase) { pintarAccesos([]); return; }
+    try {
+      const { data: u } = await window.kwSupabase.auth.getUser();
+      if (!u || !u.user) { pintarAccesos([]); return; }
+      const { data, error } = await window.kwSupabase
+        .from('accesos_rapidos')
+        .select('id, titulo, url, icono, orden')
+        .eq('user_id', u.user.id)
+        .order('orden')
+        .order('created_at');
+      if (error) throw error;
+      cargados = true;
+      pintarAccesos(data || []);
+    } catch (err) {
+      pintarAccesos([]);
+    }
+  }
+
+  async function quitarAcceso(id) {
+    if (!window.kwSupabase) return;
+    try {
+      await window.kwSupabase.from('accesos_rapidos').delete().eq('id', id);
+      await cargarAccesos(true);
+    } catch (err) { /* si falla, la lista se queda como estaba */ }
+  }
+
+  async function guardarEstaPagina() {
+    const btn = document.getElementById('accesos-agregar');
+    if (!btn || !window.kwSupabase) return;
+    const textoAntes = btn.innerHTML;
+    btn.disabled = true;
+    try {
+      const { data: u } = await window.kwSupabase.auth.getUser();
+      if (!u || !u.user) throw new Error('sin sesión');
+      const url = location.pathname + location.search;
+      const { error } = await window.kwSupabase.from('accesos_rapidos').insert({
+        user_id: u.user.id,
+        titulo: tituloDeEstaPagina().slice(0, 80),
+        url: url,
+        icono: adivinarIcono(url),
+      });
+      // El índice único hace que guardar dos veces la misma página no
+      // sea un error de verdad: ya estaba, y con eso basta.
+      if (error && !/duplicate|unique/i.test(error.message || '')) throw error;
+      btn.innerHTML = ICONS.estrella + '<span>Guardada</span>';
+      await cargarAccesos(true);
+    } catch (err) {
+      btn.innerHTML = ICONS.mas + '<span>No se pudo guardar</span>';
+    }
+    setTimeout(() => { btn.innerHTML = textoAntes; btn.disabled = false; }, 1600);
+  }
+
+  if (!esPublico) {
+    const btnAgregar = document.getElementById('accesos-agregar');
+    if (btnAgregar) btnAgregar.addEventListener('click', guardarEstaPagina);
+  }
 
   if (esPublico) {
     const cta = document.getElementById('drawer-cta');

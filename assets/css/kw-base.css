@@ -75,6 +75,9 @@
    nada. */
 html {
   scrollbar-gutter: stable;
+  /* El deslizón horizontal es para abrir los paneles laterales, no para
+     irse de la página: sin esto el navegador lo toma como "atrás". */
+  overscroll-behavior-x: contain;
 }
 
 html, body {
@@ -835,6 +838,54 @@ header > *:last-child { margin-left: auto; }
 .drawer-link svg { width: 18px; height: 18px; flex-shrink: 0; }
 .drawer-footer { padding: 14px 20px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
 .drawer-footer .drawer-link { color: #a30000; }
+
+/* ── Panel de la derecha: los accesos que cada quien se guarda ──
+   Mismo vidrio y mismo comportamiento que el de la izquierda; solo
+   entra del otro lado. */
+.drawer-der {
+  left: auto; right: 12px;
+  transform: translateX(calc(100% + 16px));
+}
+.drawer-der.open { transform: translateX(0); }
+
+.drawer-titulo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14.5px; font-weight: 700; color: var(--text);
+}
+.drawer-titulo svg { width: 17px; height: 17px; color: var(--red); }
+
+/* El enlace y el bote de basura comparten renglón: el bote solo se
+   asoma al pasar el mouse (en celular se ve siempre, que ahí no hay
+   mouse que lo despierte). */
+.drawer-acceso { display: flex; align-items: center; gap: 4px; }
+.drawer-acceso .drawer-link { flex: 1; min-width: 0; }
+.drawer-acceso .drawer-link span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.drawer-quitar {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: none; color: var(--muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.drawer-quitar svg { width: 14px; height: 14px; }
+.drawer-acceso:hover .drawer-quitar, .drawer-quitar:focus-visible { opacity: 1; }
+.drawer-quitar:hover { background: rgba(163,0,0,0.1); color: #a30000; }
+@media (hover: none) {
+  .drawer-quitar { opacity: 0.55; }
+}
+
+.drawer-vacio {
+  padding: 22px 12px; font-size: 13px; color: var(--muted); line-height: 1.6;
+}
+.drawer-vacio span { display: block; margin-top: 6px; font-size: 12.5px; opacity: 0.85; }
+
+.drawer-agregar {
+  width: 100%; border: none; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--red); background: rgba(255,255,255,0.55);
+}
+.drawer-agregar:disabled { opacity: 0.6; cursor: default; }
 
 /* ── Desplegable de notificaciones (campanita) ───────────────────────
    Vivía duplicado en portal.html y en hub/tickets.html, y las dos copias
