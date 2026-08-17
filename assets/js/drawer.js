@@ -667,7 +667,11 @@
       cargados = true;
       pintarAccesos(data || []);
     } catch (err) {
-      pintarAccesos([]);
+      console.error('No se pudieron cargar los accesos:', err);
+      const div = document.createElement('div');
+      div.textContent = porQueFallo(err);
+      lista.innerHTML = '<div class="drawer-vacio">No se pudo cargar la lista.' +
+        '<span>' + div.innerHTML + '</span></div>';
     }
   }
 
@@ -679,11 +683,28 @@
     } catch (err) { /* si falla, la lista se queda como estaba */ }
   }
 
+  // Un "no se pudo" a secas no dice qué arreglar. Los dos motivos que de
+  // verdad pasan se nombran; de lo demás se muestra lo que dijo el
+  // servidor, y el detalle completo queda en la consola.
+  function porQueFallo(err) {
+    const msg = (err && (err.message || err.error_description)) || '';
+    const code = (err && err.code) || '';
+    if (code === '42P01' || /does not exist|no existe/i.test(msg)) {
+      return 'Falta crear la tabla (migración 050)';
+    }
+    if (code === '42501' || /row-level security|permission denied/i.test(msg)) {
+      return 'Sin permiso para guardar';
+    }
+    if (/sin sesión/i.test(msg)) return 'Necesitas iniciar sesión';
+    return msg ? msg.slice(0, 44) : 'No se pudo guardar';
+  }
+
   async function guardarEstaPagina() {
     const btn = document.getElementById('accesos-agregar');
     if (!btn || !window.kwSupabase) return;
     const textoAntes = btn.innerHTML;
     btn.disabled = true;
+    let cuantoDura = 1600;
     try {
       const { data: u } = await window.kwSupabase.auth.getUser();
       if (!u || !u.user) throw new Error('sin sesión');
@@ -700,9 +721,14 @@
       btn.innerHTML = ICONS.estrella + '<span>Guardada</span>';
       await cargarAccesos(true);
     } catch (err) {
-      btn.innerHTML = ICONS.mas + '<span>No se pudo guardar</span>';
+      console.error('No se pudo guardar el acceso:', err);
+      const div = document.createElement('div');
+      div.textContent = porQueFallo(err);
+      btn.innerHTML = ICONS.mas + '<span>' + div.innerHTML + '</span>';
+      // El motivo se queda más tiempo, que hay que alcanzar a leerlo.
+      cuantoDura = 4000;
     }
-    setTimeout(() => { btn.innerHTML = textoAntes; btn.disabled = false; }, 1600);
+    setTimeout(() => { btn.innerHTML = textoAntes; btn.disabled = false; }, cuantoDura);
   }
 
   if (!esPublico) {
