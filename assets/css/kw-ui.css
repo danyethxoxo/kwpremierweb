@@ -235,6 +235,111 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder { color: v
   .kw-card { padding: var(--sp-3); }
 }
 
+/* ── Tarjeta que se pliega ──────────────────────────────────────
+   En celular la pantalla es corta y una tarjeta abierta con todo su
+   contenido empuja lo demás muy abajo, así que arranca cerrada y se
+   abre al picarle. En escritorio sobra el espacio: ahí se queda
+   siempre abierta y la flecha ni aparece.
+
+   Lleva el color de la marca como degradado que sale de la orilla
+   izquierda, igual que las carpetas por puesto de Documentos internos,
+   para que se distinga de las tarjetas normales.
+
+   Uso:
+     <div class="kw-card kw-card-plegable">
+       <button type="button" class="kw-card-head kw-card-head-btn">
+         <div class="kw-card-head-icono">…</div>
+         <div><h2>…</h2><div class="kw-card-sub">…</div></div>
+         <svg class="kw-card-flecha">…</svg>
+       </button>
+       <div class="kw-card-cuerpo"><div>…</div></div>
+     </div>
+
+   Lo de abrir y cerrar lo pone kwUI.plegables(). */
+.kw-card-plegable {
+  --tono-rgb: 138, 0, 0;
+  background:
+    radial-gradient(115% 135% at 0% 50%,
+      rgba(var(--tono-rgb), 0.34) 0%,
+      rgba(var(--tono-rgb), 0.11) 34%,
+      rgba(var(--tono-rgb), 0) 62%),
+    radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),
+    radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%),
+    linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+}
+.kw-card-head-btn {
+  width: 100%; border: none; background: none; padding: 0;
+  font-family: inherit; text-align: left; color: inherit; cursor: pointer;
+  align-items: center;
+}
+.kw-card-head-btn > div:nth-child(2) { flex: 1; min-width: 0; }
+.kw-card-flecha {
+  width: 18px; height: 18px; flex-shrink: 0; color: var(--muted);
+  transition: transform 0.22s;
+}
+.kw-card-plegable.abierta .kw-card-flecha { transform: rotate(180deg); }
+
+/* Cerrada, el encabezado es lo único que se ve, así que no debe cargar
+   con el margen que lo separaba del contenido. */
+.kw-card-plegable:not(.abierta) .kw-card-head { margin-bottom: 0; }
+
+.kw-card-cuerpo {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s var(--curva-salida);
+}
+.kw-card-plegable.abierta .kw-card-cuerpo { grid-template-rows: 1fr; }
+/* Cerrado el contenido mide cero, pero eso no basta: sin ocultarlo de
+   verdad los campos de adentro siguen recibiendo el tabulador. */
+.kw-card-cuerpo > div {
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0.28s var(--curva-salida);
+}
+.kw-card-plegable.abierta .kw-card-cuerpo > div { visibility: visible; }
+/* Ya terminada la apertura se suelta el recorte, si no el menú del
+   desplegable de Rol se cortaría al abrirse dentro de la tarjeta. La
+   marca la pone kwUI.plegables() al acabar la transición. */
+.kw-card-plegable.abierta .kw-card-cuerpo > div.termino { overflow: visible; }
+
+/* Variante: la tarjeta es NADA MÁS el encabezado, y lo que cuelga
+   debajo va sin caja ni fondo. Es para listas que ya traen sus propias
+   tarjetas: encajonarlas dentro de otra se ve como caja dentro de caja.
+   El encabezado se queda con el vidrio y el degradado; el cuerpo, no. */
+.kw-card-solo-cabeza {
+  background: none; border: none; box-shadow: none; padding: 0;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.kw-card-solo-cabeza > .kw-card-head-btn {
+  padding: var(--sp-4);
+  border-radius: var(--r-tarjeta);
+  background:
+    radial-gradient(115% 135% at 0% 50%,
+      rgba(var(--tono-rgb), 0.34) 0%,
+      rgba(var(--tono-rgb), 0.11) 34%,
+      rgba(var(--tono-rgb), 0) 62%),
+    radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),
+    radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%),
+    linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+  border: 1px solid rgba(255,255,255,0.82);
+  backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
+}
+/* La separación con la lista la pone la lista misma, no el encabezado. */
+.kw-card-solo-cabeza .kw-card-head { margin-bottom: 0; }
+@media (max-width: 640px) {
+  .kw-card-solo-cabeza > .kw-card-head-btn { padding: var(--sp-3); }
+}
+
+/* En escritorio sobra el espacio: siempre abierta y sin flecha. */
+@media (min-width: 701px) {
+  .kw-card-plegable .kw-card-cuerpo { grid-template-rows: 1fr; }
+  .kw-card-plegable .kw-card-cuerpo > div { visibility: visible; overflow: visible; }
+  .kw-card-plegable .kw-card-head { margin-bottom: var(--sp-4); }
+  .kw-card-solo-cabeza .kw-card-head { margin-bottom: 0; }
+  .kw-card-flecha { display: none; }
+  .kw-card-head-btn { cursor: default; }
+}
+
 /* ── Pestañas ──────────────────────────────────────────────────
    Control deslizante: el fondo rojo es UN solo elemento que se
    mueve de una pestaña a otra, en vez de prenderse y apagarse en
@@ -636,6 +741,13 @@ a.kw-dato:hover { color: var(--red); }
 }
 
 .kw-fila-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 13px; }
+/* Los botones comparten renglón con el último dato (el estatus) y se van
+   hasta la derecha, en vez de gastarse un renglón entero ellos solos.
+   Si no caben, el flex-wrap los baja. */
+.kw-dato.con-acciones {
+  width: 100%; align-items: center; flex-wrap: wrap; row-gap: 10px;
+}
+.kw-dato.con-acciones .kw-fila-acciones { margin: 0 0 0 auto; }
 .kw-fila-btn {
   display: inline-flex; align-items: center; gap: 7px;
   border-radius: var(--r-pastilla); padding: 9px 16px;
