@@ -11,18 +11,34 @@
     --red: #8a0000;
     --text: #1a1a1a;
     --muted: #6b6b6b;
-    --bg: radial-gradient(ellipse 235px 180px at 12% 17%, rgba(255,105,160,0.3) 0%, rgba(255,105,160,0.216) 52%, rgba(255,105,160,0) 100%),
-      radial-gradient(ellipse 160px 215px at 19% 23%, rgba(255,105,160,0.28) 0%, rgba(255,105,160,0.2) 52%, rgba(255,105,160,0) 100%),
-      radial-gradient(ellipse 335px 250px at 86% 7%, rgba(232,60,125,0.28) 0%, rgba(232,60,125,0.202) 52%, rgba(232,60,125,0) 100%),
-      radial-gradient(ellipse 240px 325px at 92% 14%, rgba(232,60,125,0.26) 0%, rgba(232,60,125,0.187) 52%, rgba(232,60,125,0) 100%),
-      radial-gradient(ellipse 190px 145px at 70% 38%, rgba(186,85,220,0.26) 0%, rgba(186,85,220,0.187) 52%, rgba(186,85,220,0) 100%),
-      radial-gradient(ellipse 270px 200px at 0% 70%, rgba(214,45,105,0.27) 0%, rgba(214,45,105,0.194) 52%, rgba(214,45,105,0) 100%),
-      radial-gradient(ellipse 190px 255px at 7% 77%, rgba(214,45,105,0.25) 0%, rgba(214,45,105,0.18) 52%, rgba(214,45,105,0) 100%),
-      radial-gradient(ellipse 230px 175px at 60% 95%, rgba(140,55,195,0.25) 0%, rgba(140,55,195,0.18) 52%, rgba(140,55,195,0) 100%),
-      radial-gradient(ellipse 140px 105px at 41% 58%, rgba(255,140,175,0.22) 0%, rgba(255,140,175,0.158) 52%, rgba(255,140,175,0) 100%),
-      radial-gradient(1100px 750px at 10% -10%, rgba(150,20,20,0.5), transparent 60%),
-      radial-gradient(1000px 800px at 45% 115%, rgba(15,0,0,0.6), transparent 60%),
-      linear-gradient(160deg, #6b0000 0%, #560000 45%, #3d0000 100%);
+    --bg: /* Formas oscuras encima: tapan tramos de los filos, y ese tapado es
+         lo que hace que una onda se vea pasando por delante de otra. */
+      radial-gradient(68% 96% at 13% 26%, rgba(8,0,3,0.94) 0%, rgba(8,0,3,0.55) 44%, transparent 72%),
+      radial-gradient(58% 85% at 94% 64%, rgba(8,0,3,0.90) 0%, rgba(8,0,3,0.45) 42%, transparent 70%),
+      /* Filos luminosos: de cada elipse enorme solo se asoma un tramo del
+         borde, y ese arco es el que dibuja el pliegue. El hilo claro va
+         angosto y el resplandor ancho, para que se lea como luz pegandole
+         al canto de la onda y no como una linea pintada.
+         Los tamanos van en porcentaje del propio recuadro y no en vmax:
+         asi la composicion se ve igual de proporcionada en la pantalla
+         ancha del escritorio que en la alta del celular; con vmax los
+         arcos se salian por abajo en vertical. */
+      radial-gradient(170% 178% at 62% -72%,
+        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 46%,
+        rgba(255,95,120,0) 57.4%, rgba(255,150,170,0.52) 59.5%,
+        rgba(255,105,135,0.26) 60.3%, rgba(255,60,95,0.09) 63%, transparent 73%),
+      radial-gradient(106% 171% at 72% 126%,
+        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 45%,
+        rgba(255,95,120,0) 56.8%, rgba(255,145,165,0.48) 58.9%,
+        rgba(255,100,130,0.24) 59.7%, rgba(255,55,90,0.09) 62.5%, transparent 72%),
+      radial-gradient(96% 128% at -22% 76%,
+        rgba(110,9,32,0.17) 0%, rgba(65,4,20,0.08) 44%,
+        rgba(255,95,120,0) 56.2%, rgba(255,140,160,0.40) 58.4%,
+        rgba(255,95,125,0.20) 59.2%, rgba(255,50,85,0.08) 62%, transparent 71%),
+      /* Resplandor de ambiente, para que los filos no floten en negro seco */
+      radial-gradient(95% 133% at 30% 4%, rgba(140,10,38,0.28), transparent 64%),
+      radial-gradient(88% 139% at 80% 98%, rgba(95,0,26,0.36), transparent 62%),
+      linear-gradient(165deg, #1c0209 0%, #120106 46%, #080003 100%);
     --card: #ffffff;
     --border: rgba(0,0,0,0.07);
   }
@@ -34,7 +50,7 @@
   }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
-  html { background-color: #3d0000; }
+  html { background-color: #080003; }
   /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
      propia capa de fondo. No se usa background-attachment: fixed
      porque en celular deja franjas blancas al desplazarse. */
@@ -73,7 +89,7 @@
     padding: 48px 20px 60px;
   }
   .card {
-    background: linear-gradient(150deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.68) 45%, rgba(255,255,255,0.62) 100%);
+    background: linear-gradient(150deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.78) 45%, rgba(255,255,255,0.72) 100%);
     border: 1px solid rgba(255,255,255,0.65);
     border-radius: 14px;
     padding: 28px 24px;
