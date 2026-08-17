@@ -490,7 +490,18 @@
   // interno (por ejemplo la agenda del calendario), no solo la ventana.
   const kwHeader = document.querySelector('header');
   if (kwHeader) {
-    let lastY = 0;
+    // La última posición se guarda POR contenedor, no en una sola
+    // variable compartida: con una sola variable, el scrollTop en reposo
+    // de un contenedor (por ejemplo 0) se comparaba contra el último
+    // scroll de otro completamente distinto (por ejemplo 375, de saltar
+    // a "hoy" en el Calendario), y esa mezcla se leía como "subiste
+    // 375px" - eso es lo que hacía temblar el header: el salto
+    // automático a "hoy" lo escondía, y de inmediato un evento de scroll
+    // de otro contenedor sin relación (o de la propia página
+    // acomodándose mientras el hueco de arriba se encoge) lo mostraba
+    // de vuelta, una y otra vez en unos cuantos cuadros.
+    const posPrevia = new WeakMap();
+    const marcaVentana = {}; // clave compartida: document/window/documentElement/body son la misma posición
     document.addEventListener('scroll', (e) => {
       // Con algo abierto encima (las notificaciones), la barra se queda
       // quieta: escuchamos en captura, así que hasta el scroll DENTRO de
@@ -510,6 +521,8 @@
       const y = esVentana
         ? (window.scrollY || document.documentElement.scrollTop || 0)
         : (t.scrollTop || 0);
+      const clave = esVentana ? marcaVentana : t;
+      const lastY = posPrevia.get(clave) || 0;
       if (y > lastY + 4 && y > 40) kwHeader.classList.add('kw-header-oculto');
       else if (y < lastY - 4) kwHeader.classList.remove('kw-header-oculto');
       // La misma marca en el <html>, para que el resto de la página
@@ -518,7 +531,7 @@
       // cuando el header se iba.
       document.documentElement.classList.toggle(
         'kw-header-fuera', kwHeader.classList.contains('kw-header-oculto'));
-      lastY = y;
+      posPrevia.set(clave, y);
     }, { capture: true, passive: true });
   }
 })();

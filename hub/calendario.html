@@ -216,7 +216,10 @@
   .month-btn:active { transform: scale(0.93); }
   .month-btn.today-btn { width: auto; padding: 0 14px; font-size: 12.5px; font-weight: 600; }
 
-  /* ── Zona con scroll propio: solo la agenda se mueve ── */
+  /* ── Zona con scroll propio: solo la agenda se mueve ──
+     Nota: esta clase ya no la lleva ningún elemento del marcado (el
+     panel real usa .panel-scroll, ver esa regla más abajo); se deja tal
+     cual para no tocar de más. */
   .calendar-scroll {
     flex: 1;
     min-height: 0;
@@ -384,7 +387,17 @@
   .calendar-top .kw-tab:hover { color: #fff; }
   .calendar-top .kw-tab.activo, .calendar-top .kw-tab.activo:hover { color: var(--red); }
   .panel-top { flex-shrink: 0; padding: 0 32px 12px; }
-  .panel-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 60px; }
+  .panel-scroll {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 60px;
+    /* Al saltar a "hoy" y esconderse el header, el hueco de arriba
+       (.calendar-top) se encoge; sin esto, el navegador "corrige" solo
+       la posición del scroll para que el contenido no brinque bajo el
+       usuario, aunque aquí nada brincó de verdad. Esa corrección
+       dispara varios eventos de scroll con valores que suben y bajan,
+       y cada uno esconde o muestra el header otra vez: eso era el
+       temblor al entrar. */
+    overflow-anchor: none;
+  }
 
   /* ── Salas ── */
   .btn-nueva-reserva {
