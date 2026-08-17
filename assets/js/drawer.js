@@ -501,6 +501,11 @@
         return;
       }
       const t = e.target;
+      // El scroll de la lista del menú lateral (drawer-nav) no tiene
+      // nada que ver con el de la página: sin este freno, subir o bajar
+      // la lista de enlaces escondía o traía de vuelta la cápsula del
+      // header que quedó detrás.
+      if (t instanceof Element && t.closest('.drawer-nav')) return;
       const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
       const y = esVentana
         ? (window.scrollY || document.documentElement.scrollTop || 0)
