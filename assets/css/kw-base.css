@@ -758,30 +758,52 @@ header > *:last-child { margin-left: auto; }
 
 .drawer-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
+  /* Un desenfoque leve detrás del velo: es lo que hace que el panel se
+     lea como vidrio y no como una hoja blanca encima de la página. */
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   opacity: 0; pointer-events: none; transition: opacity 0.25s;
 }
 .drawer-overlay.open { opacity: 1; pointer-events: auto; }
 
+/* El mismo vidrio que las tarjetas y la cápsula del header: flota con
+   aire alrededor (no pegado de orilla a orilla) para que el canto se
+   alcance a ver, que es la mitad del efecto. */
 .drawer {
-  position: fixed; top: 0; left: 0; height: 100%; width: 280px; max-width: 82vw;
-  background: rgba(255,255,255,0.82); z-index: 201;
+  position: fixed; top: 10px; left: 12px; bottom: 10px;
+  width: 280px; max-width: 82vw;
+  z-index: 201; border-radius: 22px; overflow: hidden;
+  background:
+    radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),
+    radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%),
+    linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+  border: 1px solid rgba(255,255,255,0.82);
   backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
-  transform: translateX(-100%);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.34),
+              inset 0 1px 0 rgba(255,255,255,0.95),
+              inset 0 -1px 0 rgba(255,255,255,0.30),
+              inset 1px 0 0 rgba(255,255,255,0.38);
+  /* Se sale un poco de mas que su ancho, porque ya no arranca pegado a
+     la orilla: con -100% se quedaba asomando la franja del margen. */
+  transform: translateX(calc(-100% - 16px));
   transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
   display: flex; flex-direction: column;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
 }
 .drawer.open { transform: translateX(0); }
 .drawer-header {
-  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  padding: 18px 20px; border-bottom: 1px solid rgba(0,0,0,0.06);
   display: flex; align-items: center; justify-content: space-between;
 }
 .drawer-header img { height: 32px; width: auto; display: block; }
 .drawer-close {
-  width: 32px; height: 32px; border-radius: 50%; border: none; background: #f4f4f3;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.82);
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%),
+              linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 8px rgba(0,0,0,0.12);
   color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: color var(--t-rapido), box-shadow var(--t-rapido);
 }
-.drawer-close:hover { background: #ececec; color: var(--text); }
+.drawer-close:hover { color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 4px 12px rgba(0,0,0,0.18); }
 .drawer-nav {
   flex: 1; overflow-y: auto; padding: 14px 12px;
   display: flex; flex-direction: column; gap: 2px;
@@ -797,10 +819,17 @@ header > *:last-child { margin-left: auto; }
   color: var(--text); text-decoration: none; font-weight: 600; font-size: 13.5px;
   transition: background 0.15s;
 }
-.drawer-link:hover { background: #f5f5f5; }
-.drawer-link.activo { background: #fff3f3; color: var(--red); }
+/* Sobre vidrio, un gris sólido se ve como un parche pegado; el realce
+   va con blanco translúcido, que es luz y no pintura. */
+.drawer-link:hover { background: rgba(255,255,255,0.55); }
+.drawer-link.activo {
+  color: var(--red);
+  background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%),
+              linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 3px 12px rgba(138,0,0,0.14);
+}
 .drawer-link svg { width: 18px; height: 18px; flex-shrink: 0; }
-.drawer-footer { padding: 14px 20px 18px; border-top: 1px solid var(--border); }
+.drawer-footer { padding: 14px 20px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
 .drawer-footer .drawer-link { color: #a30000; }
 
 /* ── Desplegable de notificaciones (campanita) ───────────────────────
