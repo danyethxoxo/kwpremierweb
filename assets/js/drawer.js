@@ -689,7 +689,11 @@
   function porQueFallo(err) {
     const msg = (err && (err.message || err.error_description)) || '';
     const code = (err && err.code) || '';
-    if (code === '42P01' || /does not exist|no existe/i.test(msg)) {
+    // Dos redacciones para lo mismo: 42P01 es como lo dice Postgres y
+    // PGRST205 ("Could not find the table") como lo dice PostgREST, que
+    // es la que llega desde el navegador.
+    if (code === '42P01' || code === 'PGRST205' ||
+        /does not exist|no existe|could not find the table/i.test(msg)) {
       return 'Falta crear la tabla (migración 050)';
     }
     if (code === '42501' || /row-level security|permission denied/i.test(msg)) {
