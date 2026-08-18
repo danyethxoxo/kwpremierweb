@@ -144,6 +144,43 @@
   .firma-frecuente:disabled { opacity: 0.45; cursor: default; }
   .firma-frecuente:disabled:hover { border-color: rgba(0,0,0,0.12); color: var(--text); }
 
+  /* ── Historial ──────────────────────────────────────────────
+     Es lo primero que se ve: casi siempre uno entra a consultar cómo va
+     algo, no a mandar uno nuevo. */
+  .hist-barra {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4);
+  }
+  .hist-filtros { display: flex; gap: 7px; flex-wrap: wrap; }
+  .hist-filtro {
+    padding: 6px 13px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.1);
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    color: rgba(255,255,255,0.85); cursor: pointer;
+    transition: background var(--t-medio), color var(--t-medio);
+  }
+  .hist-filtro:hover { background: rgba(255,255,255,0.2); }
+  .hist-filtro.activo { background: #fff; color: var(--red); border-color: #fff; }
+
+  .btn-nuevo-doc {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: 999px;
+    border: none; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    transition: transform var(--t-medio);
+  }
+  .btn-nuevo-doc:hover { transform: translateY(-1px); }
+
+  /* De quién es el envío. Solo se pinta cuando quien mira es liderazgo:
+     al asesor decirle que el documento es suyo no le aporta nada. */
+  .hist-autor {
+    display: inline-block; margin-left: 7px; padding: 1px 8px;
+    border-radius: 999px; background: rgba(0,0,0,0.07);
+    font-size: 10.5px; font-weight: 700; color: var(--muted);
+  }
+
   /* ── Paso 1: la lista de archivos ───────────────────────────
      El orden importa: normalmente va el contrato y luego los anexos, y
      así es como se van a unir. Por eso cada renglón trae su número y
@@ -154,6 +191,19 @@
     padding: 9px 11px; border-radius: 11px;
     border: 1px solid rgba(0,0,0,0.09);
     background: rgba(255,255,255,0.65);
+    cursor: grab;
+    transition: opacity var(--t-medio), border-color var(--t-medio), transform var(--t-medio);
+  }
+  .archivo-fila:active { cursor: grabbing; }
+  /* El que se está arrastrando se atenúa para que se note cuál se mueve. */
+  .archivo-fila.arrastrando { opacity: 0.4; }
+  /* Y el hueco donde va a caer se marca con una línea arriba o abajo,
+     que es más claro que mover las filas de lugar en vivo. */
+  .archivo-fila.encima-arriba { box-shadow: 0 -3px 0 var(--red); }
+  .archivo-fila.encima-abajo { box-shadow: 0 3px 0 var(--red); }
+  .archivo-agarre {
+    flex: 0 0 auto; color: rgba(0,0,0,0.25);
+    display: flex; align-items: center;
   }
   .archivo-num {
     flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
@@ -231,21 +281,69 @@
   /* Mientras se está colocando una firma, la hoja invita a picarle. */
   .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(255,255,255,0.06); }
 
+  /* El recuadro de firma. Va translúcido a propósito: se coloca encima
+     de la rayita donde toca firmar, y si tapara el texto habría que
+     moverlo para comprobar que quedó en su lugar. El color de cada
+     firmante se pone como variable para que el borde, el relleno y el
+     rótulo salgan del mismo tono sin repetirlo tres veces. */
   .marca-firma {
     position: absolute; box-sizing: border-box;
-    border: 2px solid rgba(0,0,0,0.55); border-radius: 3px;
+    border: 1.5px solid var(--marca-color, #FFD247);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--marca-color, #FFD247) 26%, transparent);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.5);
+    backdrop-filter: saturate(115%);
+    -webkit-backdrop-filter: saturate(115%);
     display: flex; align-items: center; justify-content: center;
-    font-size: 9.5px; font-weight: 700; color: rgba(0,0,0,0.75);
-    text-align: center; line-height: 1.15; overflow: hidden;
-    cursor: grab; user-select: none; padding: 2px;
+    cursor: grab; user-select: none;
+    transition: box-shadow var(--t-medio), border-color var(--t-medio);
   }
+  /* Los navegadores sin color-mix se quedarían con el recuadro
+     transparente y no se vería nada; este respaldo va antes en la
+     cascada y solo aplica donde color-mix no existe. */
+  @supports not (background: color-mix(in srgb, red 50%, transparent)) {
+    .marca-firma { background: rgba(255,210,71,0.3); }
+  }
+  .marca-firma:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.7); }
   .marca-firma:active { cursor: grabbing; }
+
+  /* El rótulo se recorta con puntos suspensivos en vez de partirse en
+     varias líneas: un recuadro chico con el nombre cortado a la mitad se
+     veía como un error de dibujo. */
+  .marca-rotulo {
+    max-width: 100%; padding: 0 16px 0 6px;
+    font-size: 10px; font-weight: 700; line-height: 1.1;
+    color: rgba(0,0,0,0.78);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    pointer-events: none;
+  }
+
   .marca-quitar {
-    position: absolute; top: -8px; right: -8px;
-    width: 18px; height: 18px; border-radius: 50%;
+    position: absolute; top: -9px; right: -9px;
+    width: 20px; height: 20px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    border: none; background: #c62027; color: #fff;
-    font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+    border: 1.5px solid #fff; background: #c62027; color: #fff;
+    cursor: pointer; padding: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    opacity: 0; transition: opacity var(--t-medio);
+  }
+  /* El tache aparece al acercarse o al enfocar con el teclado. Siempre
+     visible ensuciaba el documento cuando hay varias firmas juntas. */
+  .marca-firma:hover .marca-quitar,
+  .marca-quitar:focus-visible { opacity: 1; }
+  @media (hover: none) { .marca-quitar { opacity: 1; } }
+
+  /* La agarradera para redimensionar, en la esquina de abajo a la
+     derecha, que es donde la busca todo el mundo. */
+  .marca-tirador {
+    position: absolute; right: -1px; bottom: -1px;
+    width: 15px; height: 15px;
+    border-right: 2.5px solid var(--marca-color, #FFD247);
+    border-bottom: 2.5px solid var(--marca-color, #FFD247);
+    border-bottom-right-radius: 7px;
+    cursor: nwse-resize;
+    filter: drop-shadow(0 0 1px rgba(0,0,0,0.35));
   }
 
   /* El botón de fijar firma, dentro del renglón de cada firmante. */
@@ -331,28 +429,45 @@
   </header>
 
   <main class="kw-page">
-    <div class="kw-page-encabezado">
-      <h1 class="kw-page-titulo">Firmas Digitales</h1>
-      <p class="kw-page-desc">Manda documentos a firma electrónica y sigue aquí quién ya firmó.</p>
+
+    <!-- ── Tres vistas, una a la vez ──
+         El historial es lo primero que se ve: la mayoría de las veces
+         uno entra a consultar cómo va algo, no a mandar uno nuevo. De
+         ahí se pasa a elegir archivos y luego al editor.
+
+         El título de la pantalla vive en el header y no aquí: repetirlo
+         se comía el espacio de arriba sin decir nada nuevo. -->
+
+    <!-- Vista 1: el historial -->
+    <div id="vista-historial">
+      <div class="hist-barra">
+        <div class="hist-filtros" id="hist-filtros"></div>
+        <button type="button" class="btn-nuevo-doc" id="btn-nuevo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Nuevo documento</span>
+        </button>
+      </div>
+
+      <div id="cupo" class="firma-cupo" style="display:none;"></div>
+
+      <div class="kw-lista" id="lista-envios">
+        <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+        <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+      </div>
     </div>
 
-    <div class="kw-tabs" data-kw-tabs>
-      <button class="kw-tab activo" data-tab="mandar">Mandar a firma</button>
-      <button class="kw-tab" data-tab="envios">Mis envíos</button>
-    </div>
+    <!-- Vista 2: elegir y ordenar los archivos.
+         Existe aparte porque un contrato casi nunca es un solo archivo:
+         es el contrato más sus anexos, y el orden importa. -->
+    <div id="vista-archivos" style="display:none;">
+      <div class="editor-barra">
+        <button type="button" class="btn-volver-paso" id="btn-volver-historial">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Historial
+        </button>
+      </div>
 
-    <div class="kw-tabpanels">
-
-      <!-- ── Mandar a firma ──
-           Dos pasos: primero se juntan y ordenan los archivos, luego se
-           abre el editor con la vista previa a la izquierda y los
-           firmantes a la derecha. El paso 1 existe porque un contrato
-           casi nunca es un solo archivo: es el contrato más sus anexos,
-           y el orden importa. -->
-      <section class="kw-tabpanel" data-panel="mandar">
-
-        <!-- Paso 1: los archivos -->
-        <div class="kw-card" id="paso-archivos">
+      <div class="kw-card" id="paso-archivos">
           <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
           <input type="file" id="archivo" class="firma-input-real" multiple
@@ -374,8 +489,10 @@
           </button>
         </div>
 
-        <!-- Paso 2: el editor -->
-        <div id="paso-editor" style="display:none;">
+    </div>
+
+    <!-- Vista 3: el editor -->
+    <div id="vista-editor" style="display:none;">
           <div class="editor-barra">
             <button type="button" class="btn-volver-paso" id="btn-volver-archivos">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -430,18 +547,8 @@
             </div>
 
           </div>
-        </div>
-      </section>
-
-      <!-- ── Mis envíos ── -->
-      <section class="kw-tabpanel" data-panel="envios">
-        <div class="kw-lista" id="lista-envios">
-          <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
-          <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
-        </div>
-      </section>
-
     </div>
+
   </main>
 
 <script>
@@ -466,6 +573,13 @@
   let marcas = [];
   // El renglón de firmante que está esperando que le piquen a la hoja.
   let filaArmada = null;
+  // Índice del archivo que se está arrastrando en la lista del paso 1.
+  let arrastrando = null;
+  // Si quien mira es liderazgo, el historial trae los envíos de todos y
+  // hay que decir de quién es cada uno.
+  let veTodo = false;
+  // Qué estado se está mostrando en el historial.
+  let filtro = 'todos';
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
@@ -561,7 +675,14 @@
   function pintarArchivos() {
     const cont = $('lista-archivos');
     cont.innerHTML = archivos.map((a, i) =>
-      '<div class="archivo-fila">' +
+      '<div class="archivo-fila" draggable="true" data-i="' + i + '">' +
+        '<span class="archivo-agarre" aria-hidden="true">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">' +
+            '<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>' +
+            '<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>' +
+            '<circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>' +
+          '</svg>' +
+        '</span>' +
         '<span class="archivo-num">' + (i + 1) + '</span>' +
         '<span class="archivo-nom">' + escapar(a.name) + '</span>' +
         '<span class="archivo-peso">' + (a.size / 1024 / 1024).toFixed(1) + ' MB</span>' +
@@ -590,6 +711,54 @@
       archivos.splice(Number(b.dataset.quita), 1);
       pintarArchivos();
     }));
+
+    // ── Reordenar arrastrando ──
+    // Las flechas se quedan: en celular arrastrar es incómodo y con
+    // teclado no se puede, así que conviven las dos formas.
+    cont.querySelectorAll('.archivo-fila').forEach((fila) => {
+      fila.addEventListener('dragstart', (e) => {
+        arrastrando = Number(fila.dataset.i);
+        fila.classList.add('arrastrando');
+        e.dataTransfer.effectAllowed = 'move';
+        // Firefox no arranca el arrastre si no se escribe algo aquí.
+        e.dataTransfer.setData('text/plain', String(arrastrando));
+      });
+
+      fila.addEventListener('dragend', () => {
+        arrastrando = null;
+        cont.querySelectorAll('.archivo-fila').forEach((f) =>
+          f.classList.remove('arrastrando', 'encima-arriba', 'encima-abajo'));
+      });
+
+      fila.addEventListener('dragover', (e) => {
+        if (arrastrando === null) return;
+        e.preventDefault();
+        const i = Number(fila.dataset.i);
+        if (i === arrastrando) return;
+        // Se marca arriba o abajo según de qué lado venga, para que se
+        // vea dónde va a caer antes de soltarlo.
+        fila.classList.toggle('encima-arriba', i < arrastrando);
+        fila.classList.toggle('encima-abajo', i > arrastrando);
+      });
+
+      fila.addEventListener('dragleave', () => {
+        fila.classList.remove('encima-arriba', 'encima-abajo');
+      });
+
+      fila.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (arrastrando === null) return;
+        const hasta = Number(fila.dataset.i);
+        if (hasta === arrastrando) return;
+        // Se saca de donde estaba y se mete en su nuevo lugar, en vez de
+        // intercambiarlos: intercambiar mueve dos archivos cuando la
+        // persona solo quiso mover uno.
+        const [movido] = archivos.splice(arrastrando, 1);
+        archivos.splice(hasta, 0, movido);
+        arrastrando = null;
+        pintarArchivos();
+      });
+    });
 
     $('btn-continuar').style.display = archivos.length ? 'block' : 'none';
     $('drop-txt').textContent = archivos.length
@@ -719,6 +888,27 @@
     return limpiarNombre(archivos[0].name.replace(/\.pdf$/i, '')) + '-y-anexos.pdf';
   }
 
+  // Las tres vistas se prenden y apagan desde un solo lugar: repartir
+  // los display por cada manejador es como se acaba con dos vistas
+  // encendidas a la vez.
+  function mostrarVista(cual) {
+    ['historial', 'archivos', 'editor'].forEach((v) => {
+      $('vista-' + v).style.display = v === cual ? 'block' : 'none';
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  $('btn-nuevo').addEventListener('click', () => {
+    mostrarVista('archivos');
+  });
+
+  $('btn-volver-historial').addEventListener('click', () => {
+    archivos = [];
+    pintarArchivos();
+    avisoArchivos('', '');
+    mostrarVista('historial');
+  });
+
   $('btn-continuar').addEventListener('click', async () => {
     if (!archivos.length) return;
 
@@ -730,8 +920,7 @@
     try {
       pdfUnido = await unirArchivos();
 
-      $('paso-archivos').style.display = 'none';
-      $('paso-editor').style.display = 'block';
+      mostrarVista('editor');
       $('editor-cargando').style.display = 'flex';
       $('editor-nombre').textContent = archivos.length > 1
         ? archivos.length + ' documentos unidos'
@@ -749,8 +938,7 @@
       pintarMarcas();
     } catch (e) {
       avisoArchivos(e.message || 'No se pudo abrir el documento.', 'error');
-      $('paso-archivos').style.display = 'block';
-      $('paso-editor').style.display = 'none';
+      mostrarVista('archivos');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Continuar';
@@ -763,8 +951,7 @@
     // no significa nada en el nuevo.
     marcas = [];
     desarmar();
-    $('paso-editor').style.display = 'none';
-    $('paso-archivos').style.display = 'block';
+    mostrarVista('archivos');
   });
 
   // ── Colocar las firmas sobre el documento ───────────────────
@@ -851,19 +1038,26 @@
       el.style.top = m.y + '%';
       el.style.width = m.anchoPct + '%';
       el.style.height = m.altoPct + '%';
-      el.style.background = m.color;
+      // El color va como variable para que el borde, el relleno
+      // translúcido y el tirador salgan del mismo tono desde el CSS.
+      el.style.setProperty('--marca-color', m.color);
+
       // El rótulo se toma del renglón cada vez que se redibuja, para que
       // corregir el nombre se refleje en el recuadro sin tener que
       // volver a colocarlo.
-      el.textContent = m.fila.querySelector('.firmante-nom').value.trim()
+      const rotulo = document.createElement('span');
+      rotulo.className = 'marca-rotulo';
+      rotulo.textContent = m.fila.querySelector('.firmante-nom').value.trim()
         || m.fila.querySelector('.firmante-mail').value.trim()
         || 'Firma';
+      el.appendChild(rotulo);
 
       const quitar = document.createElement('button');
       quitar.type = 'button';
       quitar.className = 'marca-quitar';
-      quitar.textContent = '×';
+      quitar.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
       quitar.setAttribute('aria-label', 'Quitar esta firma');
+      quitar.addEventListener('pointerdown', (e) => e.stopPropagation());
       quitar.addEventListener('click', (e) => {
         e.stopPropagation();
         marcas = marcas.filter((x) => x.id !== m.id);
@@ -871,11 +1065,52 @@
       });
       el.appendChild(quitar);
 
+      // ── Redimensionar ──
+      // Se agarra la esquina de abajo a la derecha, así que solo cambian
+      // el ancho y el alto: la esquina de arriba a la izquierda se queda
+      // clavada, que es lo que uno espera al estirar una caja.
+      const tirador = document.createElement('div');
+      tirador.className = 'marca-tirador';
+      tirador.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tirador.setPointerCapture(ev.pointerId);
+
+        const r = pag.capa.getBoundingClientRect();
+        const desdeX = ev.clientX;
+        const desdeY = ev.clientY;
+        const anchoIni = m.anchoPct;
+        const altoIni = m.altoPct;
+
+        // Un recuadro más chico que esto ya no se puede agarrar para
+        // moverlo, y la firma tampoco se alcanzaría a ver.
+        const minAncho = (40 / pag.anchoPt) * 100;
+        const minAlto = (20 / pag.altoPt) * 100;
+
+        const mover = (e2) => {
+          const dAncho = ((e2.clientX - desdeX) / r.width) * 100;
+          const dAlto = ((e2.clientY - desdeY) / r.height) * 100;
+          m.anchoPct = Math.max(minAncho, Math.min(anchoIni + dAncho, 100 - m.x));
+          m.altoPct = Math.max(minAlto, Math.min(altoIni + dAlto, 100 - m.y));
+          el.style.width = m.anchoPct + '%';
+          el.style.height = m.altoPct + '%';
+        };
+        const soltar = () => {
+          tirador.removeEventListener('pointermove', mover);
+          tirador.removeEventListener('pointerup', soltar);
+          tirador.removeEventListener('pointercancel', soltar);
+        };
+        tirador.addEventListener('pointermove', mover);
+        tirador.addEventListener('pointerup', soltar);
+        tirador.addEventListener('pointercancel', soltar);
+      });
+      el.appendChild(tirador);
+
       // Arrastrar con puntero, que cubre ratón y dedo con el mismo
       // código. Se captura el puntero para que el arrastre no se corte
       // si el dedo se sale del recuadro a media maniobra.
       el.addEventListener('pointerdown', (ev) => {
-        if (ev.target === quitar) return;
+        if (ev.target === quitar || ev.target === tirador) return;
         ev.preventDefault();
         ev.stopPropagation();
         el.setPointerCapture(ev.pointerId);
@@ -1179,17 +1414,17 @@
       // Se limpia todo para que no se mande dos veces sin querer.
       $('form-firma').reset();
 
-      // Se regresa al paso 1 en limpio. Dejar el editor abierto con el
-      // documento que se acaba de mandar invita a mandarlo dos veces.
+      // Se regresa al historial en limpio, que es donde el envío recién
+      // hecho ya aparece. Dejar el editor abierto con el documento que
+      // se acaba de mandar invita a mandarlo dos veces.
       archivos = [];
       pdfUnido = null;
       marcas = [];
       paginas = [];
       desarmar();
       $('paginas').innerHTML = '';
-      $('paso-editor').style.display = 'none';
-      $('paso-archivos').style.display = 'block';
       pintarArchivos();
+      mostrarVista('historial');
 
       $('firmantes').innerHTML = '';
       // Se vuelve a proponer al asesor, igual que al abrir la pantalla:
@@ -1199,7 +1434,6 @@
       marcarFrecuentesPuestos();
 
       await cargarEnvios();
-      if (window.kwUI) window.kwUI.activarTab('envios');
     } catch (err) {
       aviso(err.message || 'No se pudo mandar a firma.', 'error');
     } finally {
@@ -1250,7 +1484,15 @@
     const cont = $('lista-envios');
 
     if (!filas.length) {
-      cont.innerHTML = '<div class="kw-vacio">Todavía no has mandado nada a firma.</div>';
+      // El texto cambia según por qué está vacío: no es lo mismo no
+      // haber mandado nunca nada que estar mirando un filtro sin
+      // resultados, y con un solo mensaje uno cree que perdió sus
+      // documentos.
+      cont.innerHTML = '<div class="kw-vacio">' + (
+        filtro !== 'todos'
+          ? 'No hay documentos en este estado.'
+          : (veTodo ? 'Todavía nadie ha mandado nada a firma.' : 'Todavía no has mandado nada a firma.')
+      ) + '</div>';
       return;
     }
 
@@ -1262,6 +1504,12 @@
       const sub = f.estado === 'error'
         ? 'No se pudo enviar'
         : yaFirmaron + ' de ' + firmantes.length + ' firmaron · ' + fecha(f.created_at);
+
+      // De quién es. Solo cuando quien mira es liderazgo y el envío es de
+      // alguien más: decirle al asesor que su documento es suyo sobra.
+      const autor = (veTodo && f.user_id !== miUserId && f.autor && f.autor.nombre)
+        ? '<span class="hist-autor">' + escapar(f.autor.nombre) + '</span>'
+        : '';
 
       const quienes = firmantes.map((x) => {
         // La liga solo sirve mientras esa persona no haya firmado. Si ya
@@ -1309,7 +1557,7 @@
           '<button class="kw-fila-cabeza">' +
             '<span class="kw-fila-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
             '<span class="kw-fila-texto">' +
-              '<span class="kw-fila-titulo">' + escapar(f.titulo) + '</span>' +
+              '<span class="kw-fila-titulo">' + escapar(f.titulo) + autor + '</span>' +
               '<span class="kw-fila-sub">' + escapar(sub) + '</span>' +
             '</span>' +
             '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
@@ -1370,16 +1618,50 @@
     });
   }
 
+  // Los filtros del historial. 'todos' primero porque es lo que uno
+  // quiere ver al entrar; los demás sirven para buscar algo concreto.
+  const FILTROS = [
+    ['todos', 'Todos'],
+    ['pendiente', 'Esperando firmas'],
+    ['completado', 'Firmados'],
+    ['cancelado', 'Cancelados'],
+  ];
+
+  function pintarFiltros() {
+    const cont = $('hist-filtros');
+    cont.innerHTML = FILTROS.map(([id, txt]) =>
+      '<button type="button" class="hist-filtro' + (filtro === id ? ' activo' : '') + '"' +
+        ' data-filtro="' + id + '">' + txt + '</button>').join('');
+
+    cont.querySelectorAll('[data-filtro]').forEach((b) => {
+      b.addEventListener('click', () => {
+        filtro = b.dataset.filtro;
+        pintarFiltros();
+        cargarEnvios();
+      });
+    });
+  }
+
   async function cargarEnvios() {
-    const { data, error } = await window.kwSupabase
+    // Quien es Staff o más ve los envíos de todo el equipo, así que en su
+    // caso hay que traer también de quién es cada uno. Para el asesor esa
+    // consulta extra no aporta nada: todos son suyos.
+    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, user_id'
+      + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
+
+    let q = window.kwSupabase
       .from('firmas_documentos')
-      .select('id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at')
+      .select(campos)
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(200);
+
+    if (filtro !== 'todos') q = q.eq('estado', filtro);
+
+    const { data, error } = await q;
 
     if (error) {
       $('lista-envios').innerHTML =
-        '<div class="kw-vacio">No se pudieron cargar tus envíos: ' + escapar(error.message) + '</div>';
+        '<div class="kw-vacio">No se pudieron cargar los envíos: ' + escapar(error.message) + '</div>';
       return;
     }
     pintarEnvios(data || []);
@@ -1461,9 +1743,14 @@
     // y volver a teclear su nombre y correo cada vez no aporta nada. Si
     // no firma, lo borra y ya.
     const { data: perfil } = await window.kwSupabase
-      .from('profiles').select('nombre, email').eq('id', miUserId).single();
+      .from('profiles').select('nombre, email, role').eq('id', miUserId).single();
     miPerfil = { nombre: perfil?.nombre || '', correo: perfil?.email || '' };
     agregarFirmante(miPerfil.nombre, miPerfil.correo);
+
+    // El liderazgo ve el historial de todo el equipo. Esto solo decide
+    // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
+    // políticas de la base, que es donde no se puede hacer trampa.
+    veTodo = ['master', 'admin', 'staff'].includes(String(perfil?.role));
 
     // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)
     // con un frecuente, así que los botones se revisan al vuelo.
@@ -1474,6 +1761,7 @@
       if (marcas.length) pintarMarcas();
     });
 
+    pintarFiltros();
     await Promise.all([cargarFrecuentes(), cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
   }
@@ -1485,6 +1773,11 @@
   }
 })();
 </script>
+
+<!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
+     arma el menú lateral. Faltaba: por eso el header de esta pantalla
+     solo tenía el botón de Atrás. -->
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260817j" data-menu="hub"></script>
 
 </body>
 </html>
