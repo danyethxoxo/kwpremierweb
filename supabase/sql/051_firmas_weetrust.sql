@@ -17,19 +17,43 @@ create extension if not exists pgcrypto;
 create table if not exists public.firmas_documentos (
   id uuid primary key default gen_random_uuid(),
 
-  -- El documento de aquí. Son dos tablas distintas (los formatos fijos
-  -- de acuerdos/contratos y los del creador de plantillas), así que van
-  -- dos columnas y un check que obliga a que venga exactamente una. Es
-  -- más aparatoso que una sola columna suelta, pero así la llave foránea
-  -- existe de verdad: si el documento se borra, su firma se va con él.
-  documento_guardado_id uuid references public.documentos_guardados(id) on delete cascade,
-  documento_plantilla_id uuid references public.documentos_plantilla(id) on delete cascade,
-  constraint firmas_documentos_un_solo_origen
-    check (num_nonnulls(documento_guardado_id, documento_plantilla_id) = 1),
+  -- De dónde salió el PDF. Son tres casos y no dos: además de los
+  -- documentos hechos aquí (los formatos fijos de acuerdos/contratos y
+  -- los del creador de plantillas), se puede subir un PDF de la
+  -- computadora que no corresponde a nada de la plataforma.
+  origen text not null check (origen in ('subido', 'guardado', 'plantilla')),
+
+  documento_guardado_id uuid references public.documentos_guardados(id) on delete set null,
+  documento_plantilla_id uuid references public.documentos_plantilla(id) on delete set null,
+
+  -- Ruta del PDF original dentro del bucket 'firmas'. Siempre se llena,
+  -- venga de donde venga: para los documentos de la plataforma es el PDF
+  -- que se generó al momento de mandarlo, que hay que conservar porque
+  -- es exactamente el que la gente firmó. Si después alguien edita la
+  -- plantilla o se corrige el formato, lo firmado no cambia.
+  archivo_ruta text not null,
+  nombre_archivo text not null,
+
+  -- Cada origen exige lo suyo: un documento de la plataforma tiene que
+  -- apuntar a su fila, y uno subido no puede apuntar a ninguna. Sin este
+  -- check se podría guardar un envío "de plantilla" huérfano, que en la
+  -- pantalla saldría como un renglón sin nombre y sin manera de saber
+  -- qué era.
+  constraint firmas_documentos_origen_coherente check (
+    case origen
+      when 'subido' then documento_guardado_id is null and documento_plantilla_id is null
+      when 'guardado' then documento_guardado_id is not null and documento_plantilla_id is null
+      when 'plantilla' then documento_plantilla_id is not null and documento_guardado_id is null
+    end
+  ),
 
   -- Quién lo mandó a firmar. No se deduce del documento a propósito: el
   -- dueño del documento y quien pide la firma pueden ser distintos.
   user_id uuid not null references auth.users(id) on delete cascade,
+
+  -- Título con el que se ve en la lista. Se captura al enviar, porque el
+  -- nombre del archivo subido suele ser inservible ("scan_0012.pdf").
+  titulo text not null,
 
   -- El identificador del expediente en weetrust (su "documentID").
   -- Se llena hasta que ellos contestan; antes de eso la fila ya existe
@@ -69,11 +93,18 @@ create table if not exists public.firmas_documentos (
   updated_at timestamptz not null default now()
 );
 
--- Para pintar el estado de firma junto a cada documento en las listas.
+-- La lista de "mis firmas", que es la pantalla principal.
+create index if not exists idx_firmas_user
+  on public.firmas_documentos(user_id, created_at desc);
+
+-- Para pintar el estado de firma junto a cada documento en las listas
+-- de Documentos y del Creador de formatos.
 create index if not exists idx_firmas_doc_guardado
-  on public.firmas_documentos(documento_guardado_id, created_at desc);
+  on public.firmas_documentos(documento_guardado_id, created_at desc)
+  where documento_guardado_id is not null;
 create index if not exists idx_firmas_doc_plantilla
-  on public.firmas_documentos(documento_plantilla_id, created_at desc);
+  on public.firmas_documentos(documento_plantilla_id, created_at desc)
+  where documento_plantilla_id is not null;
 
 -- El webhook llega con el documentID de weetrust y nada más: esa
 -- búsqueda tiene que ser directa. Único porque su documentID identifica
@@ -84,9 +115,9 @@ create unique index if not exists idx_firmas_weetrust_id
 
 alter table public.firmas_documentos enable row level security;
 
--- ── Permisos ──
--- Leer: el que la pidió, el dueño del documento, y el liderazgo (que ya
--- ve todos los documentos del equipo desde el Panel).
+-- ── Permisos de la tabla ──
+-- Leer: quien la mandó, el dueño del documento de origen, y el
+-- liderazgo (que ya ve todos los documentos del equipo desde el Panel).
 drop policy if exists "firmas_select" on public.firmas_documentos;
 create policy "firmas_select" on public.firmas_documentos
   for select using (
@@ -113,3 +144,57 @@ drop trigger if exists set_firmas_updated_at on public.firmas_documentos;
 create trigger set_firmas_updated_at
   before update on public.firmas_documentos
   for each row execute function public.set_updated_at();
+
+-- ── Bucket de los PDF ──
+-- Privado, a diferencia de 'perfiles': aquí viven contratos con datos de
+-- clientes, y una URL pública adivinable sería una fuga. Se leen con
+-- URLs firmadas de duración corta, que Storage genera para quien ya pasó
+-- las políticas de abajo.
+--
+-- Límite de 20 MB: un contrato escaneado con fotos llega a pesar, pero
+-- más que eso casi siempre es un escaneo mal configurado, y weetrust
+-- tampoco necesita esa resolución.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('firmas', 'firmas', false, 20971520, array[
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Cada quien sube y lee dentro de su propia carpeta (firmas/<user_id>/).
+-- El liderazgo lee todo, para poder auditar lo que se mandó a firmar.
+drop policy if exists "firmas_storage_insert_own" on storage.objects;
+create policy "firmas_storage_insert_own" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'firmas'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "firmas_storage_select_own" on storage.objects;
+create policy "firmas_storage_select_own" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'firmas'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
+  );
+
+-- Borrar sí, pero solo lo propio y solo mientras no se haya mandado:
+-- el PDF que la gente ya firmó es la prueba de lo que firmaron, así que
+-- no se puede quitar. Como Storage no sabe de la tabla de arriba, el
+-- candado se pone consultándola.
+drop policy if exists "firmas_storage_delete_own" on storage.objects;
+create policy "firmas_storage_delete_own" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'firmas'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and not exists (
+      select 1 from public.firmas_documentos f
+      where f.archivo_ruta = storage.objects.name
+        and f.estado in ('pendiente', 'completado')
+    )
+  );
