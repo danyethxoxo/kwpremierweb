@@ -107,6 +107,101 @@ function posiblesIdentificadores(crudo: string): string[] {
   return [...new Set(hallados)]
 }
 
+// Le pregunta a weetrust cómo está un documento. Devuelve null si no lo
+// reconoce, que es lo normal cuando el identificador salió del aviso por
+// casualidad y no corresponde a nada.
+async function consultarDocumento(token: string, documentID: string) {
+  const res = await fetch(
+    `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
+    { headers: { 'user-id': WEETRUST_USER_ID!, token } },
+  )
+  const json = await res.json().catch(() => null)
+  if (!res.ok || json?.success === false) return null
+
+  const datos = json?.responseData
+  const doc = Array.isArray(datos) ? datos[0] : datos
+  return doc?.documentID ? doc : null
+}
+
+const ESTADOS: Record<string, string> = {
+  DRAFT: 'borrador',
+  PENDING: 'pendiente',
+  COMPLETED: 'completado',
+}
+
+function firmantesDe(doc: Record<string, any>) {
+  return (Array.isArray(doc?.signatory) ? doc.signatory : []).map((s: Record<string, any>) => ({
+    nombre: String(s?.name || s?.emailID || ''),
+    correo: String(s?.emailID || '').toLowerCase(),
+    // isSigned viene a veces como número y a veces como texto, según el
+    // endpoint; se normaliza aquí.
+    firmado: Number(s?.isSigned) === 1,
+    signatoryID: s?.signatoryID ?? null,
+    url_firma: s?.signing?.url ?? null,
+    url_expira: s?.signing?.expiry ?? null,
+  }))
+}
+
+// Crea el renglón de un documento que se mandó desde el panel de
+// weetrust y que el sitio todavía no conocía.
+async function crearDesdeWeetrust(
+  admin: ReturnType<typeof createClient>,
+  documentID: string,
+  doc: Record<string, any>,
+) {
+  const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+  const nombre = String(
+    doc?.documentName || doc?.name || doc?.title
+    || archivo.name || `Documento ${documentID.slice(-6)}`,
+  )
+
+  // Quién lo mandó, si weetrust lo dice. Se intenta casar con una cuenta
+  // del sitio por el correo: así el documento le aparece a esa persona
+  // en su historial y no solo al liderazgo. Si no hay con quién casarlo,
+  // se queda sin dueño, que es honesto: lo mandó alguien de fuera.
+  const correoCreador = String(doc?.createdBy || doc?.owner || '').toLowerCase() || null
+  let dueño: string | null = null
+  if (correoCreador) {
+    const { data: perfil } = await admin
+      .from('profiles').select('id').eq('email', correoCreador).maybeSingle()
+    dueño = perfil?.id ?? null
+  }
+
+  const estado = ESTADOS[String(doc?.status)] || 'pendiente'
+  const cuando = doc?.addedOn
+    ? new Date(Number(doc.addedOn)).toISOString()
+    : new Date().toISOString()
+
+  const { data, error } = await admin
+    .from('firmas_documentos')
+    .insert({
+      origen: 'importado',
+      weetrust_document_id: documentID,
+      titulo: nombre,
+      nombre_archivo: nombre,
+      archivo_ruta: null,
+      user_id: dueño,
+      creado_por: correoCreador,
+      estado,
+      firmantes: firmantesDe(doc),
+      ambiente: WEETRUST_AMBIENTE,
+      pdf_firmado_url: (archivo.url ?? null) as string | null,
+      created_at: cuando,
+      enviado_at: cuando,
+    })
+    .select('id, user_id, titulo, estado, firmantes, weetrust_document_id')
+    .single()
+
+  if (error) {
+    // Puede ser una carrera: dos avisos del mismo documento casi al
+    // mismo tiempo, y el segundo choca con el índice único. No es un
+    // problema, el renglón ya quedó.
+    console.warn(`No se pudo crear ${documentID}: ${error.message}`)
+    return null
+  }
+  return data
+}
+
 Deno.serve(async (req: Request) => {
   // Sin CORS a propósito: esto no lo llama un navegador, lo llama el
   // servidor de weetrust. Un navegador no tiene nada que hacer aquí.
@@ -149,14 +244,33 @@ Deno.serve(async (req: Request) => {
       .select('id, user_id, titulo, estado, firmantes, weetrust_document_id')
       .in('weetrust_document_id', candidatos)
 
-    if (!filas?.length) {
-      // Puede ser legítimo: un documento firmado desde el panel de
-      // weetrust, sin pasar por el sitio, no tiene renglón aquí.
-      console.warn('Aviso de un documento que no es del sitio:', candidatos.join(', '))
-      return new Response('ok', { status: 200 })
+    const token = await obtenerToken()
+
+    // ── Los que todavía no existen aquí ──
+    // Un documento mandado desde el panel de weetrust no tiene renglón
+    // en el sitio. Antes el aviso se descartaba y ese documento solo
+    // aparecía si alguien corría la importación a mano; ahora se crea al
+    // vuelo, que es lo que hace que el historial se mantenga solo.
+    //
+    // Se crea a partir de lo que conteste weetrust, no de lo que traiga
+    // el aviso: es la misma regla que para los cambios de estado, y por
+    // la misma razón, que esta URL es pública.
+    const conocidos = new Set(
+      (filas || []).map((f: { weetrust_document_id: string }) => f.weetrust_document_id))
+    const nuevos = candidatos.filter((id) => !conocidos.has(id))
+
+    for (const documentID of nuevos) {
+      const doc = await consultarDocumento(token, documentID)
+      // Si weetrust no lo reconoce, el identificador venía en el aviso
+      // por casualidad (cualquier cadena de 24 caracteres hexadecimales
+      // entra en el filtro) y no hay nada que crear.
+      if (!doc) continue
+
+      const creada = await crearDesdeWeetrust(admin, documentID, doc)
+      if (creada) filas!.push(creada)
     }
 
-    const token = await obtenerToken()
+    if (!filas?.length) return new Response('ok', { status: 200 })
 
     for (const fila of filas) {
       // ── Segunda barrera, la de verdad: preguntarle a weetrust ──
@@ -194,12 +308,7 @@ Deno.serve(async (req: Request) => {
         }
       })
 
-      const estados: Record<string, string> = {
-        DRAFT: 'borrador',
-        PENDING: 'pendiente',
-        COMPLETED: 'completado',
-      }
-      const estado = estados[String(doc.status)] || fila.estado
+      const estado = ESTADOS[String(doc.status)] || fila.estado
 
       await admin.from('firmas_documentos')
         .update({
