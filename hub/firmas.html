@@ -72,35 +72,63 @@
   /* ── Firmantes ──────────────────────────────────────────────
      Cada renglón es nombre + correo + quitar. En celular se apilan,
      porque los dos campos lado a lado quedan impracticables. */
-  .firmante-fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
-  .firmante-fila .kw-input { margin: 0; }
-  /* El nombre completo de una persona no cabe en un tercio del renglón:
-     se queda con la misma mitad que el correo. */
-  .firmante-nom { flex: 1 1 240px; min-width: 0; }
-  .firmante-mail { flex: 1 1 240px; min-width: 0; }
-  .firmante-quitar {
-    flex: 0 0 auto; width: 38px; height: 38px;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
-    background: rgba(255,255,255,0.6); color: var(--muted);
-    cursor: pointer; transition: color var(--t-medio), border-color var(--t-medio);
+  /* Cada firmante es su propia tarjeta. Con los renglones sueltos, en un
+     contrato de cuatro firmantes no se veía dónde acababa uno y empezaba
+     el siguiente, y los iconos de verificación parecían de todos. */
+  .firmante-fila {
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.72);
+    padding: 12px 12px 11px;
+    margin-bottom: 10px;
   }
-  .firmante-quitar:hover { color: var(--red); border-color: rgba(198,32,39,0.35); }
+  .firmante-fila .kw-input { margin: 0; }
+  .firmante-nom { width: 100%; margin-bottom: 8px !important; padding-right: 34px; }
+  .firmante-cola { display: flex; gap: 8px; align-items: center; }
+  .firmante-mail { flex: 1 1 auto; min-width: 0; }
+
+  .firmante-quitar {
+    position: absolute; top: 10px; right: 10px;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 8px;
+    background: transparent; color: var(--muted);
+    cursor: pointer; transition: color var(--t-medio), background var(--t-medio);
+  }
+  .firmante-quitar:hover { color: var(--red); background: rgba(198,32,39,0.08); }
   /* Con un solo firmante no hay nada que quitar: el botón se va, en vez
      de quedarse apagado dando a entender que algo falta. */
   .firmante-fila.unico .firmante-quitar { display: none; }
-  /* En celular los dos campos se apilan y el botón de quitar se va a la
-     esquina, porque lado a lado quedan impracticables. Los iconos de
-     verificación sí caben en su propio renglón. */
+
   @media (max-width: 560px) {
-    .firmante-nom, .firmante-mail { flex: 1 1 100%; }
-    .firmante-quitar { position: absolute; right: 0; top: 0; }
-    .firmante-fila {
-      position: relative; padding-right: 46px;
-      padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.07);
-    }
-    .firmante-fila:last-child { border-bottom: none; }
+    .firmante-cola { flex-wrap: wrap; }
+    .firmante-mail { flex: 1 1 100%; }
   }
+
+  /* ── ¿Yo también firmo? ──
+     Se pregunta antes que nada porque es lo que cambia el resto: si el
+     asesor firma, su tarjeta ya sale llena y no tiene que capturarse a
+     sí mismo. */
+  .firmo-yo {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-3); flex-wrap: wrap;
+    padding: 11px 13px; border-radius: 12px;
+    background: rgba(198,32,39,0.06);
+    border: 1px solid rgba(198,32,39,0.18);
+    margin-bottom: 12px;
+  }
+  .firmo-yo-txt { font-size: 13px; font-weight: 700; }
+  .firmo-yo-btns { display: flex; gap: 7px; }
+  .firmo-yo-btn {
+    padding: 6px 18px; border-radius: 999px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    color: var(--text); cursor: pointer;
+    transition: border-color var(--t-medio), background var(--t-medio), color var(--t-medio);
+  }
+  .firmo-yo-btn:hover { border-color: var(--red); color: var(--red); }
+  .firmo-yo-btn.si:hover { background: var(--red); color: #fff; }
 
   .firma-agregar {
     display: inline-flex; align-items: center; gap: 6px;
@@ -368,7 +396,7 @@
   .btn-volver-paso:hover { background: rgba(255,255,255,0.2); }
   .editor-nombre { font-size: 12.5px; color: rgba(255,255,255,0.75); }
 
-  .editor-split { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
+  .editor-split { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
   @media (max-width: 900px) { .editor-split { grid-template-columns: 1fr; } }
 
   .editor-doc {
@@ -377,8 +405,19 @@
     border: 1px solid rgba(255,255,255,0.18);
     border-radius: var(--r-tarjeta);
     padding: var(--sp-3);
-    max-height: 78vh; overflow-y: auto;
+    /* Se lleva casi todo el alto de la ventana: mientras más hoja se
+       vea de una vez, menos hay que subir y bajar para colocar firmas.
+       Solo se desplaza en vertical; el ancho se calcula para que la hoja
+       quepa siempre, así que una barra horizontal solo aparecería por un
+       error de cálculo. */
+    height: calc(100vh - 170px);
+    min-height: 420px;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
+  /* La hoja nunca es más ancha que su columna, pase lo que pase con el
+     cálculo de la escala. */
+  .editor-doc canvas, .editor-doc .pagina-caja { max-width: 100%; }
   .editor-cargando {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 40px 0; color: rgba(255,255,255,0.8); font-size: 13px;
@@ -517,15 +556,25 @@
      Cuatro iconos en vez de un desplegable largo: el desplegable se
      comía el renglón entero para algo que casi siempre va apagado.
      Qué es cada uno se dice en su title, al pasar el cursor. */
-  .firmante-verif { display: flex; gap: 5px; flex: 0 0 auto; }
+  /* Las verificaciones, con su nombre dentro del recuadro. Solo con el
+     icono había que adivinar o pasar el cursor por cada uno, y son
+     opciones que cuestan dinero: quien las prende tiene que saber cuál
+     está prendiendo sin tener que investigarlo. */
+  .firmante-verif {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px; margin-top: 9px;
+  }
   .verif-btn {
-    width: 34px; height: 34px; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    border: 1.5px solid var(--border); border-radius: 9px;
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 9px; min-height: 40px;
+    border: 1.5px solid var(--border); border-radius: 10px;
     background: #fff; color: var(--muted); cursor: pointer;
+    font-family: inherit; font-size: 11px; font-weight: 700;
+    line-height: 1.15; text-align: left;
     transition: border-color var(--t-medio), color var(--t-medio), background var(--t-medio);
   }
-  .verif-btn svg { width: 17px; height: 17px; }
+  .verif-btn svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .verif-btn .verif-txt { min-width: 0; }
   .verif-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
   .verif-btn.activo { border-color: var(--red); background: var(--red); color: #fff; }
   /* Background Check sin la facial prendida: weetrust no lo hace, así
@@ -641,12 +690,19 @@
                   <input type="text" id="titulo" class="kw-input" placeholder="Ej. Contrato de arrendamiento, Av. Reforma 100" maxlength="120">
                 </div>
 
-                <div class="field">
-                  <label for="mensaje">Mensaje <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
-                  <input type="text" id="mensaje" class="kw-input" placeholder="Se le solicita la firma del siguiente documento." maxlength="200">
+                <h2 class="section-title" style="margin-top:var(--sp-4);">Quién firma</h2>
+
+                <!-- Se pregunta antes de nada porque es lo que cambia el
+                     resto: si el asesor firma, su tarjeta ya sale llena y
+                     no tiene que capturarse a sí mismo. -->
+                <div class="firmo-yo" id="pregunta-firmo">
+                  <span class="firmo-yo-txt">¿Tú también firmas este documento?</span>
+                  <span class="firmo-yo-btns">
+                    <button type="button" class="firmo-yo-btn si" id="firmo-si">Sí</button>
+                    <button type="button" class="firmo-yo-btn" id="firmo-no">No</button>
+                  </span>
                 </div>
 
-                <h2 class="section-title" style="margin-top:var(--sp-4);">Quién firma</h2>
                 <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
                 <div id="firmantes"></div>
                 <button type="button" class="firma-agregar" id="btn-agregar">
@@ -968,7 +1024,15 @@
       // puntos se guarda aparte: es el que weetrust necesita, y no
       // cambia aunque la pantalla sea chica.
       const natural = pag.getViewport({ scale: 1 });
-      const ancho = Math.min(cont.clientWidth || 560, 760);
+      // El ancho se mide sobre el contenedor que hace scroll, restándole
+      // su relleno. Antes se medía sobre #paginas, que no descuenta el
+      // padding ni la barra de desplazamiento: la hoja salía unos
+      // pixeles más ancha que su hueco y eso era la barra horizontal.
+      const marco = $('editor-doc');
+      const relleno = getComputedStyle(marco);
+      const disponible = marco.clientWidth
+        - parseFloat(relleno.paddingLeft) - parseFloat(relleno.paddingRight);
+      const ancho = Math.max(240, Math.min(disponible || 560, 900));
       const escala = ancho / natural.width;
       const vista = pag.getViewport({ scale: escala });
 
@@ -1057,6 +1121,7 @@
       pdfUnido = await unirArchivos();
 
       mostrarVista('editor');
+      prepararFirmantes();
       $('editor-cargando').style.display = 'flex';
       $('editor-nombre').textContent = archivos.length > 1
         ? archivos.length + ' documentos unidos'
@@ -1342,25 +1407,25 @@
   // el mismo campo de weetrust, que solo admite un valor.
   const VERIFICACIONES = [
     {
-      id: 'id', grupo: 'ident', titulo: 'Verificación de identificación (costo extra)',
+      id: 'id', grupo: 'ident', rotulo: 'Identificación', titulo: 'Verificación de identificación (costo extra)',
       icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
         + '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/>'
         + '<path d="M5.5 16a3.5 3.5 0 0 1 7 0"/><line x1="15" y1="9" x2="19" y2="9"/><line x1="15" y1="13" x2="19" y2="13"/></svg>',
     },
     {
-      id: 'face', grupo: 'ident', titulo: 'Foto ID / reconocimiento facial (costo extra)',
+      id: 'face', grupo: 'ident', rotulo: 'Foto ID', titulo: 'Foto ID / reconocimiento facial (costo extra)',
       icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
         + '<path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>'
         + '<circle cx="12" cy="11" r="2.2"/><path d="M8.5 16.5a4 4 0 0 1 7 0"/></svg>',
     },
     {
-      id: 'ocr', grupo: 'ident', titulo: 'Lectura automática de la identificación, OCR (costo extra)',
+      id: 'ocr', grupo: 'ident', rotulo: 'Lectura OCR', titulo: 'Lectura automática de la identificación, OCR (costo extra)',
       icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
         + '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
         + '<line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>',
     },
     {
-      id: 'check', grupo: 'extra', titulo: 'Background Check (requiere Foto ID, costo extra)',
+      id: 'check', grupo: 'extra', rotulo: 'Background Check', titulo: 'Background Check (requiere Foto ID, costo extra)',
       icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
         + '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
         + '<polyline points="9 13 11 15 15 11"/></svg>',
@@ -1372,12 +1437,14 @@
     fila.className = 'firmante-fila';
     fila.innerHTML =
       '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
-      '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '<div class="firmante-cola">' +
+        '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
       '<button type="button" class="firmante-fijar">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M3 17c3.5 0 3.5-10 7-10s3.5 10 7 10"/><line x1="3" y1="21" x2="21" y2="21"/>' +
         '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
       '</button>' +
+      '</div>' +
       '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
@@ -1391,7 +1458,7 @@
       '<div class="firmante-verif">' + VERIFICACIONES.map((v) =>
         '<button type="button" class="verif-btn" data-verif="' + v.id + '"' +
           ' data-grupo="' + v.grupo + '" title="' + v.titulo + '" aria-label="' + v.titulo + '">' +
-          v.icono +
+          v.icono + '<span class="verif-txt">' + v.rotulo + '</span>' +
         '</button>').join('') +
       '</div>';
     fila.querySelector('.firmante-fijar').addEventListener('click', () => armarColocacion(fila));
@@ -1448,6 +1515,32 @@
     $('firmantes').appendChild(filaFirmante(nombre, correo));
     marcarUnico();
   }
+
+  // ── ¿Yo también firmo? ──
+  // Se pregunta cada vez que se arma un documento, no una sola vez: que
+  // el asesor firme uno no quiere decir que firme el que sigue. Mientras
+  // no conteste no hay ninguna tarjeta, para que la pregunta no compita
+  // con un campo vacío que ya invita a escribir.
+  function prepararFirmantes() {
+    $('firmantes').innerHTML = '';
+    $('pregunta-firmo').style.display = 'flex';
+    marcarFrecuentesPuestos();
+  }
+
+  function responderFirmo(firmaYo) {
+    $('pregunta-firmo').style.display = 'none';
+    // En los dos casos queda una tarjeta: con "sí" viene con los datos
+    // del asesor, con "no" viene vacía para el primer cliente. Dejarlo
+    // sin ninguna obligaría a picarle a "agregar" antes de poder
+    // escribir nada.
+    agregarFirmante(firmaYo ? miPerfil.nombre : '', firmaYo ? miPerfil.correo : '');
+    marcarFrecuentesPuestos();
+    const primero = $('firmantes').querySelector(firmaYo ? '.firmante-mail' : '.firmante-nom');
+    if (primero) primero.focus();
+  }
+
+  $('firmo-si').addEventListener('click', () => responderFirmo(true));
+  $('firmo-no').addEventListener('click', () => responderFirmo(false));
 
   $('btn-agregar').addEventListener('click', () => {
     agregarFirmante('', '');
@@ -1541,7 +1634,6 @@
         archivoRuta: ruta,
         nombreArchivo: nombreFinal,
         titulo: titulo,
-        mensaje: $('mensaje').value.trim(),
         firmantes: firmantes,
         enOrden: $('en-orden').checked,
         posiciones: posicionesParaEnviar(),
@@ -1562,12 +1654,11 @@
       pintarArchivos();
       mostrarVista('historial');
 
+      // Los firmantes se vacían y la pregunta vuelve a salir en el
+      // siguiente documento: que el asesor firme uno no quiere decir que
+      // firme el que sigue.
       $('firmantes').innerHTML = '';
-      // Se vuelve a proponer al asesor, igual que al abrir la pantalla:
-      // quien mandó uno casi siempre va a mandar el siguiente en las
-      // mismas condiciones.
-      agregarFirmante(miPerfil.nombre, miPerfil.correo);
-      marcarFrecuentesPuestos();
+      prepararFirmantes();
 
       await cargarEnvios();
     } catch (err) {
@@ -1947,14 +2038,9 @@
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
-    // El primer renglón se propone con los datos de quien está usando
-    // la pantalla: el asesor casi siempre firma sus propios documentos,
-    // y volver a teclear su nombre y correo cada vez no aporta nada. Si
-    // no firma, lo borra y ya.
     const { data: perfil } = await window.kwSupabase
       .from('profiles').select('nombre, email, role').eq('id', miUserId).single();
     miPerfil = { nombre: perfil?.nombre || '', correo: perfil?.email || '' };
-    agregarFirmante(miPerfil.nombre, miPerfil.correo);
 
     // El liderazgo ve el historial de todo el equipo. Esto solo decide
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
