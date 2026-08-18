@@ -712,6 +712,129 @@ Deno.serve(async (req: Request) => {
     // la función o el secreto. Vive aquí y no en un curl a mano porque
     // registrar exige un token que dura 5 minutos, y porque el secreto
     // no debe andar dando vueltas en la terminal de nadie.
+    // ── Traer el historial que ya existe en weetrust ──
+    // El Market Center llevaba tiempo mandando documentos desde el panel
+    // de weetrust, antes de que existiera esta pantalla. Esto los copia
+    // para que el historial del sitio no arranque a medias.
+    //
+    // Es idempotente: se puede volver a correr cuantas veces se quiera.
+    // Los que ya están se actualizan y los que no, se crean; nunca se
+    // duplican, porque el identificador de weetrust es único en la tabla.
+    if (accion === 'importar') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      if (!['master', 'admin'].includes(String(perfil?.role))) {
+        return respond({ error: 'Esto solo lo puede hacer el equipo de liderazgo.' }, 403)
+      }
+
+      const token = await obtenerToken()
+      const traidos: Record<string, unknown>[] = []
+
+      // Se pide por tandas porque no se sabe cuántos hay. El tope de
+      // vueltas evita que un parámetro mal entendido por su parte nos
+      // deje pidiendo páginas para siempre.
+      const POR_TANDA = 100
+      for (let vuelta = 0; vuelta < 20; vuelta++) {
+        const url = `${WEETRUST_URL}/documents?status=ALL`
+          + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
+        const res = await fetch(url, { headers: encabezados(token) })
+        const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
+
+        const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
+        traidos.push(...tanda)
+        if (tanda.length < POR_TANDA) break
+      }
+
+      const estados: Record<string, string> = {
+        DRAFT: 'borrador',
+        PENDING: 'pendiente',
+        COMPLETED: 'completado',
+      }
+
+      let nuevos = 0
+      let actualizados = 0
+      const problemas: string[] = []
+
+      for (const doc of traidos) {
+        const documentID = String(doc?.documentID || '')
+        if (!documentID) continue
+
+        const firmantes = (Array.isArray(doc?.signatory) ? doc.signatory : [])
+          .map((s: Record<string, any>) => ({
+            nombre: String(s?.name || s?.emailID || ''),
+            correo: String(s?.emailID || '').toLowerCase(),
+            firmado: Number(s?.isSigned) === 1,
+            signatoryID: s?.signatoryID ?? null,
+            url_firma: s?.signing?.url ?? null,
+            url_expira: s?.signing?.expiry ?? null,
+          }))
+
+        // El archivo viene anidado y su forma no está documentada del
+        // todo, así que se saca a una variable con tipo suelto en vez de
+        // ir encadenando accesos sobre algo que TypeScript no conoce.
+        const archivoDoc = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+
+        // El nombre viene en distintos campos según el documento, así que
+        // se prueban varios antes de rendirse: un renglón sin nombre en
+        // el historial no se puede identificar de un vistazo.
+        const nombre = String(
+          doc?.documentName || doc?.name || doc?.title
+          || archivoDoc.name || `Documento ${documentID.slice(-6)}`,
+        )
+
+        const estado = estados[String(doc?.status)] || 'pendiente'
+        const fila = {
+          origen: 'importado',
+          weetrust_document_id: documentID,
+          titulo: nombre,
+          nombre_archivo: nombre,
+          archivo_ruta: null,
+          user_id: userId,
+          creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+          estado,
+          firmantes,
+          ambiente: WEETRUST_AMBIENTE,
+          pdf_firmado_url: archivoDoc.url ?? null,
+          // La fecha que importa es la de allá, no la de ahora: si se
+          // guardara la de la importación, todo el historial aparecería
+          // creado el mismo día y se perdería el orden real.
+          created_at: doc?.addedOn ? new Date(Number(doc.addedOn)).toISOString() : new Date().toISOString(),
+          ...(estado === 'completado' && doc?.addedOn
+            ? { completado_at: new Date(Number(doc.addedOn)).toISOString() }
+            : {}),
+        }
+
+        const { data: yaEsta } = await admin
+          .from('firmas_documentos')
+          .select('id')
+          .eq('weetrust_document_id', documentID)
+          .maybeSingle()
+
+        if (yaEsta) {
+          // Solo se refresca lo que cambia con el tiempo. El título y la
+          // fecha no se pisan: si alguien ya los corrigió a mano aquí,
+          // volver a importar no debe deshacerlo.
+          const { error } = await admin.from('firmas_documentos')
+            .update({ estado, firmantes, pdf_firmado_url: fila.pdf_firmado_url })
+            .eq('id', yaEsta.id)
+          if (error) problemas.push(`${nombre}: ${error.message}`)
+          else actualizados++
+        } else {
+          const { error } = await admin.from('firmas_documentos').insert(fila)
+          if (error) problemas.push(`${nombre}: ${error.message}`)
+          else nuevos++
+        }
+      }
+
+      return respond({
+        ok: true,
+        encontrados: traidos.length,
+        nuevos,
+        actualizados,
+        problemas: problemas.slice(0, 10),
+      })
+    }
+
     if (accion === 'registrar_webhooks') {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', userId).single()
