@@ -88,9 +88,9 @@
     color: var(--red); cursor: pointer;
   }
 
-  /* El aviso de que cada envío cuesta. Va en la pantalla y no solo en
-     la cabeza de quien lo configuró: quien manda el documento es quien
-     tiene que saber que eso consume del plan. */
+  /* El aviso de que un documento firmado cuesta. Va en la pantalla y no
+     solo en la cabeza de quien lo configuró: quien manda el documento es
+     quien tiene que saber que eso consume del plan. */
   .firma-costo {
     display: flex; gap: 9px; align-items: flex-start;
     padding: 11px 13px; border-radius: 12px;
@@ -100,6 +100,22 @@
     margin-bottom: var(--sp-4);
   }
   .firma-costo svg { flex: 0 0 auto; margin-top: 1px; color: #a16207; }
+
+  /* Cuánto le queda del mes. Se enseña antes del formulario, no al
+     apretar enviar: enterarte de que ya no te quedan después de llenar
+     todo y subir el archivo es la peor manera de saberlo. */
+  .firma-cupo {
+    font-size: 12.5px; color: var(--muted);
+    padding: 9px 12px; border-radius: 10px;
+    background: rgba(0,0,0,0.03);
+    margin-bottom: var(--sp-4);
+  }
+  .firma-cupo strong { color: var(--text); }
+  .firma-cupo.agotado {
+    background: rgba(198,32,39,0.07);
+    border: 1px solid rgba(198,32,39,0.22);
+    color: var(--text);
+  }
 
   /* Los firmantes dentro de un envío ya mandado. */
   .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
@@ -144,8 +160,10 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span>Cada envío consume un documento de tu plan, y se cobra al mandarlo, no al firmarse. Revisa los correos antes de enviar: si te equivocas en uno, cancelar y volver a mandar cuenta como dos.</span>
+          <span>Un documento se cobra cuando queda firmado por todas las partes. Los que se quedan a medias o se cancelan no cuentan, pero de todos modos revisa los correos antes de enviar: cada reenvío le vuelve a llegar a la gente.</span>
         </div>
+
+        <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
         <form id="form-firma" autocomplete="off">
           <input type="file" id="archivo" accept=".pdf,.docx" style="display:none;">
@@ -395,8 +413,14 @@
       aviso(err.message || 'No se pudo mandar a firma.', 'error');
     } finally {
       enviando = false;
-      btn.disabled = false;
       btn.textContent = 'Mandar a firma';
+      btn.disabled = false;
+      // Va al final y no dentro del try: aquí se acaba de reactivar el
+      // botón, y si con este envío se agotó el tope hay que volver a
+      // apagarlo. Puesto antes, esta línea de arriba lo desharía.
+      // También corre cuando algo falló, que es justo cuando el envío
+      // se rechazó por tope y el contador tiene que decirlo.
+      await cargarCupo();
     }
   });
 
@@ -493,7 +517,9 @@
         b.textContent = accion === 'cancelar' ? 'Cancelando...' : 'Consultando...';
         try {
           await llamarFuncion({ accion: accion, id: b.dataset.id });
-          await cargarEnvios();
+          // Cancelar libera un lugar del tope, así que el contador
+          // también se vuelve a calcular.
+          await Promise.all([cargarEnvios(), cargarCupo()]);
         } catch (err) {
           alert(err.message || 'No se pudo completar la acción.');
           b.disabled = false;
@@ -520,13 +546,32 @@
 
   // ── Arranque ────────────────────────────────────────────────
 
+  // Enseña cuánto le queda del mes y, si ya se acabó, apaga el botón.
+  // El freno de verdad está en la Edge Function; esto es para que nadie
+  // llene el formulario completo para enterarse hasta el final.
+  async function cargarCupo() {
+    const caja = $('cupo');
+    const { data, error } = await window.kwSupabase.rpc('firmas_disponibles', { p_user: miUserId });
+    if (error || !data || data.sin_tope) { caja.style.display = 'none'; return; }
+
+    const quedan = Number(data.restantes);
+    caja.classList.toggle('agotado', quedan <= 0);
+    caja.innerHTML = quedan > 0
+      ? 'Te quedan <strong>' + quedan + '</strong> de ' + data.limite + ' documentos este mes.'
+      : 'Ya usaste tus <strong>' + data.limite + '</strong> documentos de este mes. '
+        + 'Pídele al equipo de liderazgo que te suba el tope si necesitas más.';
+    caja.style.display = 'block';
+
+    $('btn-enviar').disabled = quedan <= 0;
+  }
+
   async function iniciar() {
     const { data: userData } = await window.kwSupabase.auth.getUser();
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
     agregarFirmante('', '');
-    await cargarEnvios();
+    await Promise.all([cargarCupo(), cargarEnvios()]);
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {

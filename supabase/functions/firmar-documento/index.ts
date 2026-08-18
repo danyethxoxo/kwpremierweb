@@ -294,6 +294,24 @@ Deno.serve(async (req: Request) => {
       const mensaje = String(body.mensaje || '').trim()
         || 'Se le solicita la firma del siguiente documento.'
 
+      // ── El tope del mes ──
+      // El candado va aquí y no en la pantalla: esconder el botón no
+      // impide que alguien llame a la función por su cuenta. Se consulta
+      // con la llave de servicio pasando el usuario explícito, porque
+      // auth.uid() no existe en esta conexión.
+      const { data: cupo, error: errCupo } = await admin
+        .rpc('firmas_disponibles', { p_user: userId })
+      if (errCupo) {
+        return respond({ error: `No se pudo revisar tu tope: ${errCupo.message}` }, 500)
+      }
+      if (cupo && !cupo.sin_tope && Number(cupo.restantes) <= 0) {
+        return respond({
+          error: `Ya usaste tus ${cupo.limite} documentos de este mes.`
+            + ' Pídele al equipo de liderazgo que te suba el tope si necesitas más.',
+          cupo,
+        }, 429)
+      }
+
       // El renglón se crea ANTES de hablar con weetrust, en 'preparando'.
       // Así, si la subida falla a medias, queda rastro de que se intentó
       // y por qué no se pudo, en vez de que el envío desaparezca sin
