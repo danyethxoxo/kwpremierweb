@@ -392,6 +392,60 @@ Deno.serve(async (req: Request) => {
       return respond({ ok: true, estado, firmantes })
     }
 
+    // ── Registrar los webhooks en weetrust ──
+    // Se hace una sola vez por ambiente, y de nuevo si cambia la URL de
+    // la función o el secreto. Vive aquí y no en un curl a mano porque
+    // registrar exige un token que dura 5 minutos, y porque el secreto
+    // no debe andar dando vueltas en la terminal de nadie.
+    if (accion === 'registrar_webhooks') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      if (String(perfil?.role) !== 'master') {
+        return respond({ error: 'Esto solo lo puede hacer el usuario master.' }, 403)
+      }
+
+      const secreto = Deno.env.get('WEETRUST_WEBHOOK_SECRET')
+      if (!secreto) {
+        return respond({
+          error: 'Falta WEETRUST_WEBHOOK_SECRET en los secrets del proyecto.',
+        }, 500)
+      }
+
+      const urlWebhook = `${SUPABASE_URL}/functions/v1/weetrust-webhook`
+      const token = await obtenerToken()
+
+      // Un registro por evento: weetrust no permite suscribirse a varios
+      // de una vez. 'sendDocument' se incluye para confirmar que las
+      // invitaciones salieron; sin él, un envío que weetrust acepta pero
+      // nunca despacha se vería igual que uno que sí salió.
+      const eventos = ['sendDocument', 'signDocument', 'completedDocument']
+      const resultados: Record<string, string> = {}
+
+      for (const tipo of eventos) {
+        try {
+          const url = `${WEETRUST_URL}/webhooks`
+            + `?url=${encodeURIComponent(urlWebhook)}&type=${tipo}`
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: encabezados(token, { 'Content-Type': 'application/json' }),
+            // Así es como el aviso se vuelve verificable: weetrust manda
+            // estos encabezados en cada llamada, y la función del webhook
+            // rechaza lo que no traiga el secreto.
+            body: JSON.stringify({ options: [{ key: 'x-kw-secreto', value: secreto }] }),
+          })
+          const datos = await leerRespuesta(res, `Registrar el webhook de ${tipo}`)
+          resultados[tipo] = datos?.webhookID ? `ok (${datos.webhookID})` : 'ok'
+        } catch (e) {
+          // Se sigue con los demás en vez de abortar: que falle uno no
+          // es razón para quedarse sin los otros dos, y así el reporte
+          // dice exactamente cuál se atoró.
+          resultados[tipo] = `falló: ${(e as Error).message}`
+        }
+      }
+
+      return respond({ ok: true, url: urlWebhook, ambiente: WEETRUST_AMBIENTE, resultados })
+    }
+
     return respond({ error: `Acción no reconocida: ${accion}` }, 400)
   } catch (e) {
     return respond({ error: (e as Error).message || 'Error inesperado' }, 500)
