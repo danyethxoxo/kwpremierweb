@@ -180,6 +180,7 @@
     gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4);
   }
   .hist-filtros { display: flex; gap: 7px; flex-wrap: wrap; }
+  .hist-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .hist-filtro {
     padding: 6px 13px; border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.28);
@@ -190,6 +191,20 @@
   }
   .hist-filtro:hover { background: rgba(255,255,255,0.2); }
   .hist-filtro.activo { background: #fff; color: var(--red); border-color: #fff; }
+
+  /* Traer el historial de weetrust. Va apagado de color: es una acción
+     de mantenimiento que se corre de vez en cuando, no algo del día a
+     día, y no debe competir con el botón de crear. */
+  .btn-importar {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 15px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.12); color: #fff;
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-importar:hover { background: rgba(255,255,255,0.22); }
+  .btn-importar:disabled { opacity: 0.5; cursor: default; }
 
   .btn-nuevo-doc {
     display: inline-flex; align-items: center; gap: 7px;
@@ -612,10 +627,18 @@
     <div id="vista-historial">
       <div class="hist-barra">
         <div class="hist-filtros" id="hist-filtros"></div>
+        <div class="hist-acciones">
+        <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Traer de weetrust</span>
+        </button>
         <button type="button" class="btn-nuevo-doc" id="btn-nuevo">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nuevo documento</span>
         </button>
+        </div>
       </div>
 
       <div id="cupo" class="firma-cupo" style="display:none;"></div>
@@ -1097,6 +1120,34 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  // Traer el historial de weetrust. Solo liderazgo, y con confirmación:
+  // recorre toda la cuenta y en una con muchos documentos se tarda.
+  $('btn-importar').addEventListener('click', async () => {
+    if (!confirm('Se van a traer al sitio los documentos que ya existen en weetrust.\n\n'
+      + 'Se puede correr las veces que haga falta: los que ya están se actualizan, no se duplican.')) return;
+
+    const btn = $('btn-importar');
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.textContent = 'Trayendo...';
+
+    try {
+      const r = await llamarFuncion({ accion: 'importar' });
+      let msg = 'Se encontraron ' + r.encontrados + ' documentos en weetrust.\n'
+        + r.nuevos + ' nuevos, ' + r.actualizados + ' actualizados.';
+      if (r.problemas && r.problemas.length) {
+        msg += '\n\nNo se pudieron traer:\n' + r.problemas.join('\n');
+      }
+      alert(msg);
+      await cargarEnvios();
+    } catch (e) {
+      alert(e.message || 'No se pudo traer el historial.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  });
 
   $('btn-nuevo').addEventListener('click', () => {
     mostrarVista('archivos');
@@ -2046,6 +2097,11 @@
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
     // políticas de la base, que es donde no se puede hacer trampa.
     veTodo = ['master', 'admin', 'staff'].includes(String(perfil?.role));
+    // Importar toca documentos de todo el equipo, así que se queda en
+    // Master y Admin; Staff ve el historial pero no lo modifica.
+    if (['master', 'admin'].includes(String(perfil?.role))) {
+      $('btn-importar').style.display = 'inline-flex';
+    }
 
     // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)
     // con un frecuente, así que los botones se revisan al vuelo.
