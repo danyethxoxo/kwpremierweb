@@ -140,8 +140,40 @@
   .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
   .firma-quien-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--muted); }
   .firma-quien-punto.ok { background: #16a34a; }
+  .firma-quien-datos { flex: 1; min-width: 0; }
   .firma-quien-nom { font-weight: 700; }
   .firma-quien-mail { color: var(--muted); font-size: 12px; }
+  .firma-quien-verif {
+    display: inline-block; margin-left: 6px; padding: 1px 7px;
+    border-radius: 999px; background: rgba(0,0,0,0.06);
+    font-size: 10.5px; font-weight: 700; color: var(--muted);
+  }
+
+  /* La liga personal de firma. weetrust cobra su propio envío por
+     WhatsApp; copiarla y mandarla uno mismo hace lo mismo sin costo. */
+  .firma-liga {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.7);
+    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    color: var(--text); cursor: pointer; white-space: nowrap;
+    transition: border-color var(--t-medio), color var(--t-medio);
+  }
+  .firma-liga:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Verificación de identidad ──────────────────────────────
+     Se cobra por firmante y más caro que el documento mismo, así que
+     arranca apagada y el aviso del precio va pegado al control, no
+     escondido en otra pantalla. */
+  .firmante-verif { flex: 1 1 100%; margin-top: 2px; }
+  .firmante-verif select {
+    width: 100%; padding: 7px 10px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 12.5px; font-family: inherit; color: var(--text);
+    background: #fff; outline: none;
+  }
 </style>
 </head>
 <body>
@@ -342,7 +374,17 @@
       '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
       '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>';
+      '</button>' +
+      // Arranca en "sin verificación" a propósito: se cobra por firmante
+      // y sale más caro que el documento. Que cueste tiene que decirlo
+      // el control mismo, no un instructivo aparte.
+      '<div class="firmante-verif"><select class="firmante-ident">' +
+        '<option value="">Sin verificación de identidad (sin costo extra)</option>' +
+        '<option value="id">Identificación oficial (costo extra)</option>' +
+        '<option value="face">Reconocimiento facial (costo extra)</option>' +
+        '<option value="ocr">Lectura de identificación / OCR (costo extra)</option>' +
+        '<option value="face_login">Facial con registro previo (costo extra)</option>' +
+      '</select></div>';
     fila.querySelector('.firmante-quitar').addEventListener('click', () => {
       fila.remove();
       marcarUnico();
@@ -370,6 +412,7 @@
     return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => ({
       nombre: f.querySelector('.firmante-nom').value.trim(),
       correo: f.querySelector('.firmante-mail').value.trim(),
+      identificacion: f.querySelector('.firmante-ident').value,
     })).filter((f) => f.nombre || f.correo);
   }
 
@@ -521,12 +564,30 @@
         ? 'No se pudo enviar'
         : yaFirmaron + ' de ' + firmantes.length + ' firmaron · ' + fecha(f.created_at);
 
-      const quienes = firmantes.map((x) =>
-        '<div class="firma-quien">' +
+      const quienes = firmantes.map((x) => {
+        // La liga solo sirve mientras esa persona no haya firmado. Si ya
+        // firmó, enseñarla invita a mandársela a alguien que se va a
+        // topar con un documento que ya no puede hacer nada.
+        const caducada = x.url_expira && Number(x.url_expira) < Date.now();
+        const liga = (!x.firmado && x.url_firma && !caducada)
+          ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
+                '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
+              '</svg>Copiar liga</button>'
+          : (!x.firmado && caducada
+              ? '<span class="firma-quien-mail">liga vencida</span>'
+              : '');
+
+        return '<div class="firma-quien">' +
           '<span class="firma-quien-punto' + (x.firmado ? ' ok' : '') + '"></span>' +
-          '<span><span class="firma-quien-nom">' + escapar(x.nombre) + '</span> ' +
-          '<span class="firma-quien-mail">' + escapar(x.correo) + '</span></span>' +
-        '</div>').join('');
+          '<span class="firma-quien-datos">' +
+            '<span class="firma-quien-nom">' + escapar(x.nombre) + '</span> ' +
+            '<span class="firma-quien-mail">' + escapar(x.correo) + '</span>' +
+            (x.identificacion ? '<span class="firma-quien-verif">con verificación</span>' : '') +
+          '</span>' + liga +
+        '</div>';
+      }).join('');
 
       // Solo se puede cancelar lo que todavía no se firma del todo: los
       // completados weetrust los sella y ya no se tocan.
@@ -564,6 +625,28 @@
     }).join('');
 
     if (window.kwUI) window.kwUI.acordeon(cont);
+
+    // Copiar la liga personal de cada firmante, para pasarla por
+    // WhatsApp a mano. weetrust cobra su propio envío por WhatsApp;
+    // mandar la liga uno mismo hace lo mismo sin costo.
+    cont.querySelectorAll('[data-liga]').forEach((b) => {
+      b.addEventListener('click', async (e) => {
+        // Sin esto el clic sube hasta la cabecera de la fila y la cierra
+        // justo cuando la persona iba a usar lo que acaba de copiar.
+        e.stopPropagation();
+        const original = b.innerHTML;
+        try {
+          await navigator.clipboard.writeText(b.dataset.liga);
+          b.textContent = 'Copiada';
+        } catch {
+          // navigator.clipboard no existe fuera de https ni en algunos
+          // navegadores viejos. Ahí se enseña para copiar a mano, que es
+          // peor pero deja seguir.
+          window.prompt('Copia la liga de firma:', b.dataset.liga);
+        }
+        setTimeout(() => { b.innerHTML = original; }, 1600);
+      });
+    });
 
     cont.querySelectorAll('[data-accion]').forEach((b) => {
       b.addEventListener('click', async () => {

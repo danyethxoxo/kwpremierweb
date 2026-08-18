@@ -130,7 +130,7 @@ async function enviarAFirma(
   documentID: string,
   titulo: string,
   mensaje: string,
-  firmantes: Array<{ nombre: string; correo: string; orden?: number }>,
+  firmantes: Array<{ nombre: string; correo: string; identificacion?: string; orden?: number }>,
   enOrden: boolean,
 ) {
   const res = await fetch(`${WEETRUST_URL}/documents/signatory`, {
@@ -144,6 +144,9 @@ async function enviarAFirma(
       signatory: firmantes.map((f, i) => ({
         emailID: f.correo,
         name: f.nombre,
+        // Solo se manda si se pidió: mandarlo vacío no es lo mismo que
+        // no mandarlo, y esto se cobra por firmante.
+        ...(f.identificacion ? { identification: f.identificacion } : {}),
         ...(enOrden ? { order: f.orden ?? i + 1 } : {}),
       })),
     }),
@@ -206,7 +209,15 @@ function pdfDePrueba(): Blob {
 // es un detalle cosmético.
 const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
-function limpiarFirmantes(crudo: unknown): Array<{ nombre: string; correo: string }> {
+// Las verificaciones de identidad que acepta weetrust. Se cobran aparte
+// y bastante más caro que el documento mismo, así que la lista se
+// valida contra estos valores en vez de reenviar lo que llegue: un
+// valor inventado no se rechazaría, se cobraría.
+const VERIFICACIONES = ['id', 'face', 'ocr', 'face_login']
+
+type Firmante = { nombre: string; correo: string; identificacion?: string }
+
+function limpiarFirmantes(crudo: unknown): Firmante[] {
   if (!Array.isArray(crudo)) throw new Error('Falta la lista de firmantes.')
 
   const firmantes = crudo.map((f, i) => {
@@ -218,7 +229,13 @@ function limpiarFirmantes(crudo: unknown): Array<{ nombre: string; correo: strin
 
     if (!nombre) throw new Error(`Al firmante ${i + 1} le falta el nombre.`)
     if (!RE_CORREO.test(correo)) throw new Error(`El correo de ${nombre} no es válido: "${correo}"`)
-    return { nombre, correo }
+
+    const identificacion = String(f?.identificacion || '').trim()
+    if (identificacion && !VERIFICACIONES.includes(identificacion)) {
+      throw new Error(`Verificación de identidad desconocida para ${nombre}: "${identificacion}"`)
+    }
+
+    return identificacion ? { nombre, correo, identificacion } : { nombre, correo }
   })
 
   if (!firmantes.length) throw new Error('Hay que indicar al menos un firmante.')
@@ -371,6 +388,10 @@ Deno.serve(async (req: Request) => {
             firmado: false,
             signatoryID: par?.signatoryID ?? null,
             url_firma: par?.signing?.url ?? null,
+            // weetrust manda cuándo deja de servir la liga. Se guarda
+            // para poder avisar que caducó, en vez de que alguien se la
+            // pase a un cliente y el cliente se tope con un error.
+            url_expira: par?.signing?.expiry ?? null,
           }
         })
 
