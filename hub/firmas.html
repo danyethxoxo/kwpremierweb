@@ -117,6 +117,25 @@
     color: var(--text);
   }
 
+  /* Los que firman casi todos los contratos: se agregan de un clic en
+     vez de volver a teclear nombre y correo cada vez, que es donde se
+     cuelan las direcciones mal escritas. */
+  .firma-frecuentes { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  .firma-frecuente {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px; border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.7);
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    color: var(--text); cursor: pointer;
+    transition: border-color var(--t-medio), background var(--t-medio), color var(--t-medio);
+  }
+  .firma-frecuente:hover { border-color: var(--red); color: var(--red); }
+  /* Ya agregado: se queda visible pero apagado, para que se entienda
+     que esa persona ya está en la lista y no que el botón se perdió. */
+  .firma-frecuente:disabled { opacity: 0.45; cursor: default; }
+  .firma-frecuente:disabled:hover { border-color: rgba(0,0,0,0.12); color: var(--text); }
+
   /* Los firmantes dentro de un envío ya mandado. */
   .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
   .firma-quien-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--muted); }
@@ -186,6 +205,7 @@
           </div>
 
           <h2 class="section-title" style="margin-top:var(--sp-5);">Quién firma</h2>
+          <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
           <div id="firmantes"></div>
           <button type="button" class="firma-agregar" id="btn-agregar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -226,6 +246,7 @@
   const MAX_BYTES = 20 * 1024 * 1024;
 
   let miUserId = null;
+  let miPerfil = { nombre: '', correo: '' };
   let archivoElegido = null;
   let enviando = false;
 
@@ -247,6 +268,28 @@
   }
 
   // ── Elegir el archivo ───────────────────────────────────────
+
+  const TIPOS = {
+    pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+
+  function tipoDe(nombre) {
+    const ext = String(nombre).split('.').pop().toLowerCase();
+    return TIPOS[ext] || 'application/pdf';
+  }
+
+  // Storage solo admite letras, números, guiones, puntos y diagonales en
+  // la ruta. Un nombre con acentos o espacios truena la subida, y como
+  // el nombre de verdad se guarda aparte en la base, aquí se puede
+  // aplastar sin perder nada.
+  function limpiarNombre(nombre) {
+    return String(nombre)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(-80);
+  }
 
   function tomarArchivo(archivo) {
     if (!archivo) return;
@@ -380,9 +423,20 @@
       // Function. No se manda dentro de la petición porque un PDF
       // escaneado pasa de lo que aguanta un cuerpo JSON, y porque así
       // queda copia del original exactamente como se firmó.
-      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + archivoElegido.name;
+      // El nombre se limpia antes de armar la ruta: Storage rechaza
+      // acentos, espacios y signos, y los documentos suelen llamarse
+      // "Contrato Depto. #3 (final).pdf".
+      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + limpiarNombre(archivoElegido.name);
+
+      // El tipo se declara a mano en vez de dejar que lo adivine el
+      // navegador. Cuando no reconoce el archivo manda
+      // application/octet-stream, y el bucket solo acepta PDF y Word:
+      // el archivo correcto acababa rechazado por cómo lo etiquetó el
+      // sistema operativo, no por lo que era.
       const { error: errSubida } = await window.kwSupabase
-        .storage.from('firmas').upload(ruta, archivoElegido);
+        .storage.from('firmas').upload(ruta, archivoElegido, {
+          contentType: tipoDe(archivoElegido.name),
+        });
       if (errSubida) throw new Error('No se pudo subir el archivo: ' + errSubida.message);
 
       btn.textContent = 'Mandando a firma...';
@@ -405,7 +459,11 @@
       $('drop-txt').textContent = 'Elige el documento o arrástralo aquí';
       $('drop-sub').textContent = 'PDF o Word, hasta 20 MB';
       $('firmantes').innerHTML = '';
-      agregarFirmante('', '');
+      // Se vuelve a proponer al asesor, igual que al abrir la pantalla:
+      // quien mandó uno casi siempre va a mandar el siguiente en las
+      // mismas condiciones.
+      agregarFirmante(miPerfil.nombre, miPerfil.correo);
+      marcarFrecuentesPuestos();
 
       await cargarEnvios();
       if (window.kwUI) window.kwUI.activarTab('envios');
@@ -565,13 +623,71 @@
     $('btn-enviar').disabled = quedan <= 0;
   }
 
+  // Los que firman casi siempre, de un clic. Se apaga el botón del que
+  // ya está puesto en vez de esconderlo, para que se vea que esa persona
+  // ya quedó y no que la opción desapareció.
+  function marcarFrecuentesPuestos() {
+    const puestos = leerFirmantes().map((f) => f.correo.toLowerCase());
+    $('frecuentes').querySelectorAll('.firma-frecuente').forEach((b) => {
+      b.disabled = puestos.includes(b.dataset.correo);
+    });
+  }
+
+  async function cargarFrecuentes() {
+    const { data, error } = await window.kwSupabase
+      .from('firmas_frecuentes')
+      .select('nombre, correo, puesto')
+      .eq('activo', true)
+      .order('orden');
+
+    if (error || !data || !data.length) return;
+
+    const caja = $('frecuentes');
+    caja.innerHTML = data.map((f) =>
+      '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
+        ' data-nombre="' + escapar(f.nombre) + '">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+        escapar(f.nombre) + (f.puesto ? ' (' + escapar(f.puesto) + ')' : '') +
+      '</button>').join('');
+    caja.style.display = 'flex';
+
+    caja.querySelectorAll('.firma-frecuente').forEach((b) => {
+      b.addEventListener('click', () => {
+        // Si el primer renglón está vacío se aprovecha en vez de dejar
+        // un hueco arriba del que se acaba de agregar.
+        const vacia = Array.from($('firmantes').querySelectorAll('.firmante-fila')).find((f) =>
+          !f.querySelector('.firmante-nom').value.trim() && !f.querySelector('.firmante-mail').value.trim());
+        if (vacia) {
+          vacia.querySelector('.firmante-nom').value = b.dataset.nombre;
+          vacia.querySelector('.firmante-mail').value = b.dataset.correo;
+        } else {
+          agregarFirmante(b.dataset.nombre, b.dataset.correo);
+        }
+        marcarFrecuentesPuestos();
+      });
+    });
+  }
+
   async function iniciar() {
     const { data: userData } = await window.kwSupabase.auth.getUser();
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
-    agregarFirmante('', '');
-    await Promise.all([cargarCupo(), cargarEnvios()]);
+    // El primer renglón se propone con los datos de quien está usando
+    // la pantalla: el asesor casi siempre firma sus propios documentos,
+    // y volver a teclear su nombre y correo cada vez no aporta nada. Si
+    // no firma, lo borra y ya.
+    const { data: perfil } = await window.kwSupabase
+      .from('profiles').select('nombre, email').eq('id', miUserId).single();
+    miPerfil = { nombre: perfil?.nombre || '', correo: perfil?.email || '' };
+    agregarFirmante(miPerfil.nombre, miPerfil.correo);
+
+    // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)
+    // con un frecuente, así que los botones se revisan al vuelo.
+    $('firmantes').addEventListener('input', marcarFrecuentesPuestos);
+
+    await Promise.all([cargarFrecuentes(), cargarCupo(), cargarEnvios()]);
+    marcarFrecuentesPuestos();
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
