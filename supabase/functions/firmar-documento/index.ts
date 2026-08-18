@@ -130,7 +130,7 @@ async function enviarAFirma(
   documentID: string,
   titulo: string,
   mensaje: string,
-  firmantes: Array<{ nombre: string; correo: string; identificacion?: string; orden?: number }>,
+  firmantes: Array<{ nombre: string; correo: string; identificacion?: string; check?: boolean; orden?: number }>,
   enOrden: boolean,
 ) {
   const res = await fetch(`${WEETRUST_URL}/documents/signatory`, {
@@ -147,6 +147,7 @@ async function enviarAFirma(
         // Solo se manda si se pidió: mandarlo vacío no es lo mismo que
         // no mandarlo, y esto se cobra por firmante.
         ...(f.identificacion ? { identification: f.identificacion } : {}),
+        ...(f.check ? { check: true } : {}),
         ...(enOrden ? { order: f.orden ?? i + 1 } : {}),
       })),
     }),
@@ -215,7 +216,7 @@ const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 // valor inventado no se rechazaría, se cobraría.
 const VERIFICACIONES = ['id', 'face', 'ocr', 'face_login']
 
-type Firmante = { nombre: string; correo: string; identificacion?: string }
+type Firmante = { nombre: string; correo: string; identificacion?: string; check?: boolean }
 
 function limpiarFirmantes(crudo: unknown): Firmante[] {
   if (!Array.isArray(crudo)) throw new Error('Falta la lista de firmantes.')
@@ -235,7 +236,17 @@ function limpiarFirmantes(crudo: unknown): Firmante[] {
       throw new Error(`Verificación de identidad desconocida para ${nombre}: "${identificacion}"`)
     }
 
-    return identificacion ? { nombre, correo, identificacion } : { nombre, correo }
+    // weetrust solo hace el Background Check junto con la verificación
+    // facial. Pedirlo suelto no falla de forma visible: se acepta el
+    // envío y el check simplemente no ocurre, así que se cobraría algo
+    // que no se hizo. Mejor rechazarlo aquí.
+    const check = f?.check === true
+    if (check && identificacion !== 'face') {
+      throw new Error(`El Background Check de ${nombre} necesita también la verificación facial.`)
+    }
+
+    if (!identificacion) return { nombre, correo }
+    return check ? { nombre, correo, identificacion, check } : { nombre, correo, identificacion }
   })
 
   if (!firmantes.length) throw new Error('Hay que indicar al menos un firmante.')

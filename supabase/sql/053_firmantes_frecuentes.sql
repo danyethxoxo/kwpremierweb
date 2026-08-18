@@ -48,6 +48,14 @@ create policy "frecuentes_write" on public.firmas_frecuentes
 -- el conflicto para que volver a correr esto no los duplique ni pise un
 -- nombre que ya se haya corregido a mano.
 insert into public.firmas_frecuentes (nombre, correo, puesto, orden) values
-  ('Gustavo Solares Campos', 'gustavo.solares@kwmexico.mx', 'Broker', 1),
-  ('Maria Fernanda Pacheco Banos', 'fernanda.pacheco@kwmexico.mx', 'Gerente', 2)
+  ('Gustavo Solares Campos', 'gustavo.solares@kwmexico.mx', 'OP', 1),
+  ('María Fernanda Pacheco Baños', 'fernanda.pacheco@kwmexico.mx', 'MCA', 2)
 on conflict (correo) do nothing;
+
+-- Si ya se había corrido esta migración con el nombre o el puesto mal
+-- (sin ñ, u OP/MCA todavía no decididos), esto lo corrige sin duplicar
+-- la fila: el on conflict de arriba solo entra la primera vez.
+update public.firmas_frecuentes set nombre = 'Gustavo Solares Campos', puesto = 'OP'
+  where correo = 'gustavo.solares@kwmexico.mx';
+update public.firmas_frecuentes set nombre = 'María Fernanda Pacheco Baños', puesto = 'MCA'
+  where correo = 'fernanda.pacheco@kwmexico.mx';

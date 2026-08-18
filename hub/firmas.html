@@ -40,7 +40,20 @@
      El <input type="file"> del navegador se ve mal y no se puede
      maquillar, así que se esconde y se dibuja esta zona en su lugar.
      Sigue siendo un <label>, o sea que arrastrar y soltar, el teclado
-     y los lectores de pantalla funcionan igual que siempre. */
+     y los lectores de pantalla funcionan igual que siempre.
+
+     "Esconder" no es display:none: varios navegadores móviles (el de
+     WhatsApp/Instagram entre otros, y ciertas versiones de Safari)
+     tratan un input con display:none como si no existiera y bloquean el
+     diálogo de elegir archivo aunque el clic venga de su <label>. Esta
+     es la técnica estándar para esconder visualmente sin quitarlo del
+     todo: sigue "presente" para el navegador, solo que en un pixel. */
+  .firma-input-real {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
   .firma-drop {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 8px; padding: 26px 18px; text-align: center;
@@ -59,10 +72,12 @@
   /* ── Firmantes ──────────────────────────────────────────────
      Cada renglón es nombre + correo + quitar. En celular se apilan,
      porque los dos campos lado a lado quedan impracticables. */
-  .firmante-fila { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .firmante-fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
   .firmante-fila .kw-input { margin: 0; }
-  .firmante-nom { flex: 1 1 38%; min-width: 0; }
-  .firmante-mail { flex: 1 1 62%; min-width: 0; }
+  /* El nombre completo de una persona no cabe en un tercio del renglón:
+     se queda con la misma mitad que el correo. */
+  .firmante-nom { flex: 1 1 240px; min-width: 0; }
+  .firmante-mail { flex: 1 1 240px; min-width: 0; }
   .firmante-quitar {
     flex: 0 0 auto; width: 38px; height: 38px;
     display: flex; align-items: center; justify-content: center;
@@ -74,11 +89,17 @@
   /* Con un solo firmante no hay nada que quitar: el botón se va, en vez
      de quedarse apagado dando a entender que algo falta. */
   .firmante-fila.unico .firmante-quitar { display: none; }
+  /* En celular los dos campos se apilan y el botón de quitar se va a la
+     esquina, porque lado a lado quedan impracticables. Los iconos de
+     verificación sí caben en su propio renglón. */
   @media (max-width: 560px) {
-    .firmante-fila { flex-wrap: wrap; }
     .firmante-nom, .firmante-mail { flex: 1 1 100%; }
     .firmante-quitar { position: absolute; right: 0; top: 0; }
-    .firmante-fila { position: relative; padding-right: 46px; }
+    .firmante-fila {
+      position: relative; padding-right: 46px;
+      padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.07);
+    }
+    .firmante-fila:last-child { border-bottom: none; }
   }
 
   .firma-agregar {
@@ -87,19 +108,6 @@
     font-family: inherit; font-size: 13px; font-weight: 700;
     color: var(--red); cursor: pointer;
   }
-
-  /* El aviso de que un documento firmado cuesta. Va en la pantalla y no
-     solo en la cabeza de quien lo configuró: quien manda el documento es
-     quien tiene que saber que eso consume del plan. */
-  .firma-costo {
-    display: flex; gap: 9px; align-items: flex-start;
-    padding: 11px 13px; border-radius: 12px;
-    background: rgba(234,179,8,0.10);
-    border: 1px solid rgba(234,179,8,0.28);
-    font-size: 12.5px; line-height: 1.45; color: var(--text);
-    margin-bottom: var(--sp-4);
-  }
-  .firma-costo svg { flex: 0 0 auto; margin-top: 1px; color: #a16207; }
 
   /* Cuánto le queda del mes. Se enseña antes del formulario, no al
      apretar enviar: enterarte de que ya no te quedan después de llenar
@@ -164,16 +172,24 @@
   .firma-liga:hover { border-color: var(--red); color: var(--red); }
 
   /* ── Verificación de identidad ──────────────────────────────
-     Se cobra por firmante y más caro que el documento mismo, así que
-     arranca apagada y el aviso del precio va pegado al control, no
-     escondido en otra pantalla. */
-  .firmante-verif { flex: 1 1 100%; margin-top: 2px; }
-  .firmante-verif select {
-    width: 100%; padding: 7px 10px;
-    border: 1.5px solid var(--border); border-radius: 10px;
-    font-size: 12.5px; font-family: inherit; color: var(--text);
-    background: #fff; outline: none;
+     Cuatro iconos en vez de un desplegable largo: el desplegable se
+     comía el renglón entero para algo que casi siempre va apagado.
+     Qué es cada uno se dice en su title, al pasar el cursor. */
+  .firmante-verif { display: flex; gap: 5px; flex: 0 0 auto; }
+  .verif-btn {
+    width: 34px; height: 34px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--border); border-radius: 9px;
+    background: #fff; color: var(--muted); cursor: pointer;
+    transition: border-color var(--t-medio), color var(--t-medio), background var(--t-medio);
   }
+  .verif-btn svg { width: 17px; height: 17px; }
+  .verif-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .verif-btn.activo { border-color: var(--red); background: var(--red); color: #fff; }
+  /* Background Check sin la facial prendida: weetrust no lo hace, así
+     que se ve claramente fuera de alcance en vez de dejar prenderlo y
+     que el envío truene cuando ya se llenó todo. */
+  .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -207,17 +223,11 @@
       <!-- ── Mandar a firma ── -->
       <section class="kw-tabpanel" data-panel="mandar">
         <div class="kw-card">
-        <div class="firma-costo">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span>Un documento se cobra cuando queda firmado por todas las partes. Los que se quedan a medias o se cancelan no cuentan, pero de todos modos revisa los correos antes de enviar: cada reenvío le vuelve a llegar a la gente.</span>
-        </div>
-
         <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
         <form id="form-firma" autocomplete="off">
-          <input type="file" id="archivo" accept=".pdf,.docx" style="display:none;">
+          <input type="file" id="archivo" class="firma-input-real"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
           <label for="archivo" class="firma-drop" id="drop">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -366,6 +376,41 @@
 
   // ── Firmantes ───────────────────────────────────────────────
 
+  // Las verificaciones que weetrust documenta para el endpoint de
+  // firmantes. Falta la de One Time Password, que sí aparece en la
+  // factura (WT26) pero no en la documentación de este endpoint: no se
+  // pone hasta saber cómo se manda, porque adivinarlo se cobra igual
+  // aunque no funcione.
+  //
+  // El "grupo" dice cuáles se pelean entre sí: las de grupo 'ident' son
+  // el mismo campo de weetrust, que solo admite un valor.
+  const VERIFICACIONES = [
+    {
+      id: 'id', grupo: 'ident', titulo: 'Verificación de identificación (costo extra)',
+      icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+        + '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/>'
+        + '<path d="M5.5 16a3.5 3.5 0 0 1 7 0"/><line x1="15" y1="9" x2="19" y2="9"/><line x1="15" y1="13" x2="19" y2="13"/></svg>',
+    },
+    {
+      id: 'face', grupo: 'ident', titulo: 'Foto ID / reconocimiento facial (costo extra)',
+      icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>'
+        + '<circle cx="12" cy="11" r="2.2"/><path d="M8.5 16.5a4 4 0 0 1 7 0"/></svg>',
+    },
+    {
+      id: 'ocr', grupo: 'ident', titulo: 'Lectura automática de la identificación, OCR (costo extra)',
+      icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+        + '<line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>',
+    },
+    {
+      id: 'check', grupo: 'extra', titulo: 'Background Check (requiere Foto ID, costo extra)',
+      icono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+        + '<polyline points="9 13 11 15 15 11"/></svg>',
+    },
+  ];
+
   function filaFirmante(nombre, correo) {
     const fila = document.createElement('div');
     fila.className = 'firmante-fila';
@@ -375,21 +420,58 @@
       '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
-      // Arranca en "sin verificación" a propósito: se cobra por firmante
-      // y sale más caro que el documento. Que cueste tiene que decirlo
-      // el control mismo, no un instructivo aparte.
-      '<div class="firmante-verif"><select class="firmante-ident">' +
-        '<option value="">Sin verificación de identidad (sin costo extra)</option>' +
-        '<option value="id">Identificación oficial (costo extra)</option>' +
-        '<option value="face">Reconocimiento facial (costo extra)</option>' +
-        '<option value="ocr">Lectura de identificación / OCR (costo extra)</option>' +
-        '<option value="face_login">Facial con registro previo (costo extra)</option>' +
-      '</select></div>';
+      // Las verificaciones, como iconos que se prenden y apagan. Todas
+      // arrancan apagadas: cada una se cobra aparte y por firmante.
+      //
+      // Las tres primeras son el mismo campo de weetrust (identification),
+      // que solo admite un valor, así que prender una apaga las otras.
+      // Background Check es aparte y solo tiene sentido junto a la
+      // facial, que es lo que weetrust exige.
+      '<div class="firmante-verif">' + VERIFICACIONES.map((v) =>
+        '<button type="button" class="verif-btn" data-verif="' + v.id + '"' +
+          ' data-grupo="' + v.grupo + '" title="' + v.titulo + '" aria-label="' + v.titulo + '">' +
+          v.icono +
+        '</button>').join('') +
+      '</div>';
     fila.querySelector('.firmante-quitar').addEventListener('click', () => {
       fila.remove();
       marcarUnico();
+      // Quitar un renglón no dispara ningún evento 'input', así que sin
+      // esto el botón del frecuente que se acaba de borrar se quedaba
+      // apagado para siempre y ya no se podía volver a agregar.
+      marcarFrecuentesPuestos();
     });
+
+    fila.querySelectorAll('.verif-btn').forEach((b) => {
+      b.addEventListener('click', () => {
+        const prendido = b.classList.toggle('activo');
+
+        // Las tres de identificación son el mismo campo en weetrust y
+        // solo cabe un valor, así que prender una apaga a sus hermanas.
+        if (prendido && b.dataset.grupo === 'ident') {
+          fila.querySelectorAll('.verif-btn[data-grupo="ident"]').forEach((otro) => {
+            if (otro !== b) otro.classList.remove('activo');
+          });
+        }
+        ajustarBackgroundCheck(fila);
+      });
+    });
+
+    ajustarBackgroundCheck(fila);
     return fila;
+  }
+
+  // weetrust solo hace el Background Check cuando la verificación es la
+  // facial. Se apaga el botón en vez de dejar prenderlo y que el envío
+  // truene después: el error llegaría cuando la persona ya llenó todo.
+  function ajustarBackgroundCheck(fila) {
+    const facial = fila.querySelector('.verif-btn[data-verif="face"]');
+    const check = fila.querySelector('.verif-btn[data-verif="check"]');
+    if (!facial || !check) return;
+
+    const hayFacial = facial.classList.contains('activo');
+    check.disabled = !hayFacial;
+    if (!hayFacial) check.classList.remove('activo');
   }
 
   function marcarUnico() {
@@ -409,11 +491,16 @@
   });
 
   function leerFirmantes() {
-    return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => ({
-      nombre: f.querySelector('.firmante-nom').value.trim(),
-      correo: f.querySelector('.firmante-mail').value.trim(),
-      identificacion: f.querySelector('.firmante-ident').value,
-    })).filter((f) => f.nombre || f.correo);
+    return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => {
+      const ident = f.querySelector('.verif-btn[data-grupo="ident"].activo');
+      const check = f.querySelector('.verif-btn[data-verif="check"].activo');
+      return {
+        nombre: f.querySelector('.firmante-nom').value.trim(),
+        correo: f.querySelector('.firmante-mail').value.trim(),
+        identificacion: ident ? ident.dataset.verif : '',
+        check: !!check,
+      };
+    }).filter((f) => f.nombre || f.correo);
   }
 
   // ── Mandar ──────────────────────────────────────────────────
@@ -527,6 +614,15 @@
 
   // ── Mis envíos ──────────────────────────────────────────────
 
+  // Los valores que guarda weetrust son sus nombres internos; en la
+  // lista se enseña algo que se pueda leer.
+  const NOMBRE_VERIF = {
+    id: 'identificación',
+    face: 'foto ID',
+    ocr: 'OCR',
+    face_login: 'facial con registro',
+  };
+
   const PILL = {
     preparando: ['kw-pill-neutro', 'Preparando'],
     borrador: ['kw-pill-neutro', 'Sin enviar'],
@@ -584,7 +680,8 @@
           '<span class="firma-quien-datos">' +
             '<span class="firma-quien-nom">' + escapar(x.nombre) + '</span> ' +
             '<span class="firma-quien-mail">' + escapar(x.correo) + '</span>' +
-            (x.identificacion ? '<span class="firma-quien-verif">con verificación</span>' : '') +
+            (x.identificacion ? '<span class="firma-quien-verif">' + escapar(NOMBRE_VERIF[x.identificacion] || x.identificacion) + '</span>' : '') +
+            (x.check ? '<span class="firma-quien-verif">background check</span>' : '') +
           '</span>' + liga +
         '</div>';
       }).join('');
