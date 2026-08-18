@@ -720,6 +720,14 @@ Deno.serve(async (req: Request) => {
     // Es idempotente: se puede volver a correr cuantas veces se quiera.
     // Los que ya están se actualizan y los que no, se crean; nunca se
     // duplican, porque el identificador de weetrust es único en la tabla.
+    // ── Traer el historial que ya existe en weetrust ──
+    // El Market Center llevaba tiempo mandando documentos desde el panel
+    // de weetrust, antes de que existiera esta pantalla. Esto los copia
+    // para que el historial del sitio no arranque a medias.
+    //
+    // Es idempotente: se puede volver a correr cuantas veces se quiera.
+    // Los que ya están se actualizan y los que no, se crean; nunca se
+    // duplican, porque el identificador de weetrust es único en la tabla.
     if (accion === 'importar') {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', userId).single()
@@ -728,21 +736,36 @@ Deno.serve(async (req: Request) => {
       }
 
       const token = await obtenerToken()
-      const traidos: Record<string, unknown>[] = []
 
-      // Se pide por tandas porque no se sabe cuántos hay. El tope de
-      // vueltas evita que un parámetro mal entendido por su parte nos
-      // deje pidiendo páginas para siempre.
+      // ── Pedir el historial, por tandas ──
+      // Se guarda por identificador y no en una lista para que un
+      // documento repetido no se procese dos veces.
+      const porId = new Map<string, Record<string, unknown>>()
       const POR_TANDA = 100
+      let vueltas = 0
+
       for (let vuelta = 0; vuelta < 20; vuelta++) {
+        vueltas++
         const url = `${WEETRUST_URL}/documents?status=ALL`
           + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
         const res = await fetch(url, { headers: encabezados(token) })
         const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
 
         const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
-        traidos.push(...tanda)
-        if (tanda.length < POR_TANDA) break
+        if (!tanda.length) break
+
+        // Si esta tanda no trae ni un identificador que no tuviéramos, es
+        // que weetrust está ignorando el "skip" y nos devuelve siempre lo
+        // mismo. Sin esta salida, el ciclo daba sus 20 vueltas juntando
+        // los mismos documentos una y otra vez.
+        let novedades = 0
+        for (const doc of tanda) {
+          const id = String((doc as Record<string, unknown>)?.documentID || '')
+          if (!id || porId.has(id)) continue
+          porId.set(id, doc as Record<string, unknown>)
+          novedades++
+        }
+        if (!novedades || tanda.length < POR_TANDA) break
       }
 
       const estados: Record<string, string> = {
@@ -751,14 +774,8 @@ Deno.serve(async (req: Request) => {
         COMPLETED: 'completado',
       }
 
-      let nuevos = 0
-      let actualizados = 0
-      const problemas: string[] = []
-
-      for (const doc of traidos) {
-        const documentID = String(doc?.documentID || '')
-        if (!documentID) continue
-
+      // ── Armar los renglones ──
+      const armados = [...porId.entries()].map(([documentID, doc]) => {
         const firmantes = (Array.isArray(doc?.signatory) ? doc.signatory : [])
           .map((s: Record<string, any>) => ({
             nombre: String(s?.name || s?.emailID || ''),
@@ -783,57 +800,102 @@ Deno.serve(async (req: Request) => {
         )
 
         const estado = estados[String(doc?.status)] || 'pendiente'
-        const fila = {
-          origen: 'importado',
-          weetrust_document_id: documentID,
-          titulo: nombre,
-          nombre_archivo: nombre,
-          archivo_ruta: null,
-          user_id: userId,
-          creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+        // La fecha que importa es la de allá, no la de ahora: si se
+        // guardara la de la importación, todo el historial aparecería
+        // creado el mismo día y se perdería el orden real.
+        const cuando = doc?.addedOn
+          ? new Date(Number(doc.addedOn)).toISOString()
+          : new Date().toISOString()
+
+        return {
+          documentID,
           estado,
           firmantes,
-          ambiente: WEETRUST_AMBIENTE,
-          pdf_firmado_url: archivoDoc.url ?? null,
-          // La fecha que importa es la de allá, no la de ahora: si se
-          // guardara la de la importación, todo el historial aparecería
-          // creado el mismo día y se perdería el orden real.
-          created_at: doc?.addedOn ? new Date(Number(doc.addedOn)).toISOString() : new Date().toISOString(),
-          ...(estado === 'completado' && doc?.addedOn
-            ? { completado_at: new Date(Number(doc.addedOn)).toISOString() }
-            : {}),
+          pdfUrl: (archivoDoc.url ?? null) as string | null,
+          fila: {
+            origen: 'importado',
+            weetrust_document_id: documentID,
+            titulo: nombre,
+            nombre_archivo: nombre,
+            archivo_ruta: null,
+            user_id: userId,
+            creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+            estado,
+            firmantes,
+            ambiente: WEETRUST_AMBIENTE,
+            pdf_firmado_url: (archivoDoc.url ?? null) as string | null,
+            created_at: cuando,
+            ...(estado === 'completado' ? { completado_at: cuando } : {}),
+          },
         }
+      })
 
-        const { data: yaEsta } = await admin
-          .from('firmas_documentos')
-          .select('id')
-          .eq('weetrust_document_id', documentID)
-          .maybeSingle()
+      if (!armados.length) {
+        return respond({ ok: true, encontrados: 0, nuevos: 0, actualizados: 0, problemas: [] })
+      }
 
-        if (yaEsta) {
-          // Solo se refresca lo que cambia con el tiempo. El título y la
-          // fecha no se pisan: si alguien ya los corrigió a mano aquí,
-          // volver a importar no debe deshacerlo.
-          const { error } = await admin.from('firmas_documentos')
-            .update({ estado, firmantes, pdf_firmado_url: fila.pdf_firmado_url })
-            .eq('id', yaEsta.id)
-          if (error) problemas.push(`${nombre}: ${error.message}`)
+      // ── Qué ya teníamos ──
+      // Una sola consulta para todos. Antes se preguntaba documento por
+      // documento, y con un historial grande eran cientos de idas y
+      // vueltas seguidas: la función se quedaba colgada hasta que se le
+      // acababa el tiempo.
+      const { data: existentes, error: errBusca } = await admin
+        .from('firmas_documentos')
+        .select('id, weetrust_document_id')
+        .in('weetrust_document_id', armados.map((a) => a.documentID))
+
+      if (errBusca) {
+        return respond({ error: `No se pudo revisar lo que ya estaba: ${errBusca.message}` }, 500)
+      }
+
+      const yaEstaban = new Map(
+        (existentes || []).map((e: { weetrust_document_id: string; id: string }) =>
+          [e.weetrust_document_id, e.id] as [string, string]))
+      const problemas: string[] = []
+
+      // ── Los nuevos, de un golpe ──
+      const paraInsertar = armados.filter((a) => !yaEstaban.has(a.documentID))
+      let nuevos = 0
+      // De 200 en 200: un insert con miles de renglones puede pasarse
+      // del tamaño que aguanta la petición.
+      for (let i = 0; i < paraInsertar.length; i += 200) {
+        const trozo = paraInsertar.slice(i, i + 200).map((a) => a.fila)
+        const { error } = await admin.from('firmas_documentos').insert(trozo)
+        if (error) problemas.push(`Al guardar ${trozo.length} documentos: ${error.message}`)
+        else nuevos += trozo.length
+      }
+
+      // ── Los que ya estaban ──
+      // Solo se refresca lo que cambia con el tiempo. El título y la
+      // fecha no se pisan: si alguien ya los corrigió a mano aquí,
+      // volver a importar no debe deshacerlo.
+      //
+      // Van de 10 en 10 en paralelo: uno por uno, con un historial
+      // grande, es justo lo que hacía que esto no terminara nunca.
+      const paraActualizar = armados.filter((a) => yaEstaban.has(a.documentID))
+      let actualizados = 0
+      for (let i = 0; i < paraActualizar.length; i += 10) {
+        const trozo = paraActualizar.slice(i, i + 10)
+        const results = await Promise.all(trozo.map((a) =>
+          admin.from('firmas_documentos')
+            .update({ estado: a.estado, firmantes: a.firmantes, pdf_firmado_url: a.pdfUrl })
+            .eq('id', yaEstaban.get(a.documentID)!)))
+        results.forEach((r: { error: { message: string } | null }, j: number) => {
+          if (r.error) problemas.push(`${trozo[j].fila.titulo}: ${r.error.message}`)
           else actualizados++
-        } else {
-          const { error } = await admin.from('firmas_documentos').insert(fila)
-          if (error) problemas.push(`${nombre}: ${error.message}`)
-          else nuevos++
-        }
+        })
       }
 
       return respond({
         ok: true,
-        encontrados: traidos.length,
+        encontrados: armados.length,
+        vueltas,
         nuevos,
         actualizados,
         problemas: problemas.slice(0, 10),
       })
     }
+
 
     if (accion === 'registrar_webhooks') {
       const { data: perfil } = await admin

@@ -1618,14 +1618,31 @@
     const { data: { session } } = await window.kwSupabase.auth.getSession();
     if (!session) throw new Error('Se cerró tu sesión. Vuelve a entrar.');
 
-    const res = await fetch(FN_FIRMAR, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + session.access_token,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(cuerpo),
-    });
+    // Un corte de dos minutos. Sin esto, si la función se queda pensando
+    // el botón se queda en "Trayendo..." para siempre y no hay manera de
+    // saber si sigue trabajando o ya se murió.
+    const corte = new AbortController();
+    const reloj = setTimeout(() => corte.abort(), 120000);
+
+    let res;
+    try {
+      res = await fetch(FN_FIRMAR, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + session.access_token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cuerpo),
+        signal: corte.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        throw new Error('La operación tardó demasiado y se cortó. Vuelve a intentarlo.');
+      }
+      throw e;
+    } finally {
+      clearTimeout(reloj);
+    }
     const json = await res.json().catch(() => null);
     if (!res.ok) throw new Error((json && json.error) || ('Falló la operación (' + res.status + ')'));
     return json;
