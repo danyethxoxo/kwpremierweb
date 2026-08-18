@@ -151,6 +151,54 @@ async function enviarAFirma(
   return await leerRespuesta(res, 'Enviar a firma')
 }
 
+// Borra un documento en weetrust. Solo funciona mientras esté en
+// borrador o pendiente: los completados quedan sellados en su blockchain
+// y ya no se pueden quitar, ni por ellos ni por nosotros.
+async function borrarDocumento(token: string, documentID: string) {
+  const res = await fetch(
+    `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
+    { method: 'DELETE', headers: encabezados(token) },
+  )
+  return await leerRespuesta(res, 'Borrar el documento')
+}
+
+// Un PDF mínimo, armado a mano, para la prueba de conexión. Se genera
+// aquí en vez de traer una librería porque lo único que tiene que hacer
+// es ser un PDF válido que weetrust acepte; nadie lo va a leer.
+//
+// Los desplazamientos de la tabla xref se calculan sobre la marcha: un
+// PDF con offsets mal puestos lo abren algunos lectores por indulgencia,
+// pero un validador estricto lo rechaza, y entonces la prueba fallaría
+// por culpa del archivo y no por lo que queremos medir.
+function pdfDePrueba(): Blob {
+  const objetos = [
+    '<</Type/Catalog/Pages 2 0 R>>',
+    '<</Type/Pages/Kids[3 0 R]/Count 1>>',
+    '<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]'
+      + '/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>',
+    '<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>',
+  ]
+  // Sin acentos a propósito: todo el archivo se mide en caracteres, y
+  // eso solo coincide con los bytes reales mientras sea ASCII.
+  const texto = 'BT /F1 12 Tf 72 720 Td (Prueba de conexion KW Premier) Tj ET'
+  objetos.push(`<</Length ${texto.length}>>stream\n${texto}\nendstream`)
+
+  let cuerpo = '%PDF-1.4\n'
+  const offsets: number[] = []
+  objetos.forEach((o, i) => {
+    offsets.push(cuerpo.length)
+    cuerpo += `${i + 1} 0 obj${o}endobj\n`
+  })
+
+  const inicioXref = cuerpo.length
+  cuerpo += `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n`
+  for (const off of offsets) cuerpo += `${String(off).padStart(10, '0')} 00000 n \n`
+  cuerpo += `trailer<</Size ${objetos.length + 1}/Root 1 0 R>>\n`
+    + `startxref\n${inicioXref}\n%%EOF\n`
+
+  return new Blob([cuerpo], { type: 'application/pdf' })
+}
+
 // ── Validación de lo que manda el navegador ─────────────────
 
 // Nunca se confía en lo que llega: el correo se usa para que weetrust
@@ -390,6 +438,109 @@ Deno.serve(async (req: Request) => {
         .eq('id', id)
 
       return respond({ ok: true, estado, firmantes })
+    }
+
+    // ── Prueba de conexión, sin mandar nada a firma ──
+    // Comprueba credenciales, token, subida y borrado, que es toda la
+    // plomería salvo la invitación. Se para justo antes de invitar a
+    // nadie a propósito: ese es el paso que manda correos y, con toda
+    // probabilidad, el que consume del plan. Lo que sube lo borra en
+    // seguida, así que no deja basura en la cuenta.
+    if (accion === 'prueba') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      if (String(perfil?.role) !== 'master') {
+        return respond({ error: 'Esto solo lo puede hacer el usuario master.' }, 403)
+      }
+
+      const pasos: Array<{ paso: string; ok: boolean; detalle?: string }> = []
+      let token = ''
+      let documentID = ''
+
+      try {
+        token = await obtenerToken()
+        pasos.push({ paso: 'Pedir el token de acceso', ok: true })
+      } catch (e) {
+        pasos.push({ paso: 'Pedir el token de acceso', ok: false, detalle: (e as Error).message })
+        return respond({ ok: false, ambiente: WEETRUST_AMBIENTE, pasos })
+      }
+
+      try {
+        const subido = await subirDocumento(token, pdfDePrueba(), 'prueba-kw.pdf')
+        documentID = String(subido?.documentID || '')
+        if (!documentID) throw new Error('No devolvieron documentID.')
+        pasos.push({ paso: 'Subir un PDF', ok: true, detalle: documentID })
+      } catch (e) {
+        pasos.push({ paso: 'Subir un PDF', ok: false, detalle: (e as Error).message })
+        return respond({ ok: false, ambiente: WEETRUST_AMBIENTE, pasos })
+      }
+
+      try {
+        await borrarDocumento(token, documentID)
+        pasos.push({ paso: 'Borrar el PDF de prueba', ok: true })
+      } catch (e) {
+        // Que no se pueda borrar no invalida la prueba, pero hay que
+        // decirlo con el identificador para poder quitarlo a mano desde
+        // el panel de weetrust y que no quede colgado.
+        pasos.push({
+          paso: 'Borrar el PDF de prueba',
+          ok: false,
+          detalle: `${(e as Error).message}. Bórralo a mano: ${documentID}`,
+        })
+      }
+
+      return respond({
+        ok: pasos.every((p) => p.ok),
+        ambiente: WEETRUST_AMBIENTE,
+        aviso: 'No se envió nada a firma, así que no se invitó a nadie.',
+        pasos,
+      })
+    }
+
+    // ── Cancelar un envío ──
+    // weetrust solo deja borrar documentos en borrador o pendiente. Los
+    // completados quedan sellados en su blockchain y ya no se tocan, ni
+    // desde aquí ni desde su panel.
+    if (accion === 'cancelar') {
+      const id = String(body.id || '')
+      if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+
+      const { data: fila } = await admin
+        .from('firmas_documentos')
+        .select('id, user_id, estado, weetrust_document_id')
+        .eq('id', id)
+        .single()
+
+      if (!fila) return respond({ error: 'Ese envío no existe.' }, 404)
+
+      if (fila.user_id !== userId) {
+        const { data: perfil } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        if (!['master', 'admin'].includes(String(perfil?.role))) {
+          return respond({ error: 'Ese envío no es tuyo.' }, 403)
+        }
+      }
+
+      if (fila.estado === 'completado') {
+        return respond({
+          error: 'Ese documento ya se firmó por completo y no se puede cancelar.',
+        }, 409)
+      }
+
+      if (fila.weetrust_document_id) {
+        const token = await obtenerToken()
+        try {
+          await borrarDocumento(token, fila.weetrust_document_id)
+        } catch (e) {
+          return respond({ error: `weetrust no lo dejó borrar: ${(e as Error).message}` }, 502)
+        }
+      }
+
+      await admin.from('firmas_documentos')
+        .update({ estado: 'cancelado' })
+        .eq('id', id)
+
+      return respond({ ok: true })
     }
 
     // ── Registrar los webhooks en weetrust ──
