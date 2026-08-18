@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Firmas Digitales</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260817j">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817j"></script>
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* El título y la descripción van directo sobre el fondo guinda, no
+     dentro de una tarjeta, así que necesitan su propio color claro:
+     kw-page-titulo/kw-page-desc de kw-ui.css traen el oscuro de
+     siempre, pensado para fondo gris. Igual que en el Panel de Admin. */
+  .kw-page-titulo { color: #fff; }
+  .kw-page-desc { color: rgba(255,255,255,0.72); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  /* Este va DENTRO de la tarjeta blanca, así que se queda oscuro (en
+     otras pantallas el mismo nombre de clase va en blanco porque ahí
+     el título cuelga sobre el fondo). */
+  .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
+
+  /* ── Cargar el archivo ──────────────────────────────────────
+     El <input type="file"> del navegador se ve mal y no se puede
+     maquillar, así que se esconde y se dibuja esta zona en su lugar.
+     Sigue siendo un <label>, o sea que arrastrar y soltar, el teclado
+     y los lectores de pantalla funcionan igual que siempre. */
+  .firma-drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 26px 18px; text-align: center;
+    border: 1.5px dashed rgba(0,0,0,0.16);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.02);
+    cursor: pointer;
+    transition: border-color var(--t-medio), background var(--t-medio);
+  }
+  .firma-drop:hover, .firma-drop.encima { border-color: var(--red); background: rgba(198,32,39,0.04); }
+  .firma-drop svg { color: var(--muted); }
+  .firma-drop-txt { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .firma-drop-sub { font-size: 12px; color: var(--muted); }
+  .firma-drop.con-archivo { border-style: solid; border-color: rgba(0,0,0,0.14); }
+
+  /* ── Firmantes ──────────────────────────────────────────────
+     Cada renglón es nombre + correo + quitar. En celular se apilan,
+     porque los dos campos lado a lado quedan impracticables. */
+  .firmante-fila { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .firmante-fila .kw-input { margin: 0; }
+  .firmante-nom { flex: 1 1 38%; min-width: 0; }
+  .firmante-mail { flex: 1 1 62%; min-width: 0; }
+  .firmante-quitar {
+    flex: 0 0 auto; width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
+    background: rgba(255,255,255,0.6); color: var(--muted);
+    cursor: pointer; transition: color var(--t-medio), border-color var(--t-medio);
+  }
+  .firmante-quitar:hover { color: var(--red); border-color: rgba(198,32,39,0.35); }
+  /* Con un solo firmante no hay nada que quitar: el botón se va, en vez
+     de quedarse apagado dando a entender que algo falta. */
+  .firmante-fila.unico .firmante-quitar { display: none; }
+  @media (max-width: 560px) {
+    .firmante-fila { flex-wrap: wrap; }
+    .firmante-nom, .firmante-mail { flex: 1 1 100%; }
+    .firmante-quitar { position: absolute; right: 0; top: 0; }
+    .firmante-fila { position: relative; padding-right: 46px; }
+  }
+
+  .firma-agregar {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: none; background: none; padding: 4px 0;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--red); cursor: pointer;
+  }
+
+  /* El aviso de que un documento firmado cuesta. Va en la pantalla y no
+     solo en la cabeza de quien lo configuró: quien manda el documento es
+     quien tiene que saber que eso consume del plan. */
+  .firma-costo {
+    display: flex; gap: 9px; align-items: flex-start;
+    padding: 11px 13px; border-radius: 12px;
+    background: rgba(234,179,8,0.10);
+    border: 1px solid rgba(234,179,8,0.28);
+    font-size: 12.5px; line-height: 1.45; color: var(--text);
+    margin-bottom: var(--sp-4);
+  }
+  .firma-costo svg { flex: 0 0 auto; margin-top: 1px; color: #a16207; }
+
+  /* Cuánto le queda del mes. Se enseña antes del formulario, no al
+     apretar enviar: enterarte de que ya no te quedan después de llenar
+     todo y subir el archivo es la peor manera de saberlo. */
+  .firma-cupo {
+    font-size: 12.5px; color: var(--muted);
+    padding: 9px 12px; border-radius: 10px;
+    background: rgba(0,0,0,0.03);
+    margin-bottom: var(--sp-4);
+  }
+  .firma-cupo strong { color: var(--text); }
+  .firma-cupo.agotado {
+    background: rgba(198,32,39,0.07);
+    border: 1px solid rgba(198,32,39,0.22);
+    color: var(--text);
+  }
+
+  /* Los firmantes dentro de un envío ya mandado. */
+  .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
+  .firma-quien-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--muted); }
+  .firma-quien-punto.ok { background: #16a34a; }
+  .firma-quien-nom { font-weight: 700; }
+  .firma-quien-mail { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">Firmas Digitales</span>
+    <div class="header-right">
+      <div id="notif-bell-slot"></div>
+      <a href="../portal.html" class="back-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        <span>Atrás</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="kw-page">
+    <div class="kw-page-encabezado">
+      <h1 class="kw-page-titulo">Firmas Digitales</h1>
+      <p class="kw-page-desc">Manda documentos a firma electrónica y sigue aquí quién ya firmó.</p>
+    </div>
+
+    <div class="kw-tabs" data-kw-tabs>
+      <button class="kw-tab activo" data-tab="mandar">Mandar a firma</button>
+      <button class="kw-tab" data-tab="envios">Mis envíos</button>
+    </div>
+
+    <div class="kw-tabpanels">
+
+      <!-- ── Mandar a firma ── -->
+      <section class="kw-tabpanel" data-panel="mandar">
+        <div class="kw-card">
+        <div class="firma-costo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Un documento se cobra cuando queda firmado por todas las partes. Los que se quedan a medias o se cancelan no cuentan, pero de todos modos revisa los correos antes de enviar: cada reenvío le vuelve a llegar a la gente.</span>
+        </div>
+
+        <div id="cupo" class="firma-cupo" style="display:none;"></div>
+
+        <form id="form-firma" autocomplete="off">
+          <input type="file" id="archivo" accept=".pdf,.docx" style="display:none;">
+          <label for="archivo" class="firma-drop" id="drop">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span class="firma-drop-txt" id="drop-txt">Elige el documento o arrástralo aquí</span>
+            <span class="firma-drop-sub" id="drop-sub">PDF o Word, hasta 20 MB</span>
+          </label>
+
+          <div class="field" style="margin-top:var(--sp-4);">
+            <label for="titulo">Título</label>
+            <input type="text" id="titulo" class="kw-input" placeholder="Ej. Contrato de arrendamiento, Av. Reforma 100" maxlength="120">
+          </div>
+
+          <div class="field">
+            <label for="mensaje">Mensaje para los firmantes <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <input type="text" id="mensaje" class="kw-input" placeholder="Se le solicita la firma del siguiente documento." maxlength="200">
+          </div>
+
+          <h2 class="section-title" style="margin-top:var(--sp-5);">Quién firma</h2>
+          <div id="firmantes"></div>
+          <button type="button" class="firma-agregar" id="btn-agregar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar otro firmante
+          </button>
+
+          <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="en-orden">
+            <span>Firmar en orden (cada quien recibe su turno cuando el anterior firma)</span>
+          </label>
+
+          <div id="msg-firma" class="msg" style="display:none;"></div>
+
+          <button type="submit" class="btn-guardar" id="btn-enviar" style="margin-top:var(--sp-4);">
+            Mandar a firma
+          </button>
+        </form>
+        </div>
+      </section>
+
+      <!-- ── Mis envíos ── -->
+      <section class="kw-tabpanel" data-panel="envios">
+        <div class="kw-lista" id="lista-envios">
+          <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+          <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  const BASE = '/kwpremierweb';
+  const FN_FIRMAR = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/firmar-documento';
+  const MAX_BYTES = 20 * 1024 * 1024;
+
+  let miUserId = null;
+  let archivoElegido = null;
+  let enviando = false;
+
+  const $ = (id) => document.getElementById(id);
+
+  function aviso(texto, tipo) {
+    const caja = $('msg-firma');
+    if (!texto) { caja.style.display = 'none'; return; }
+    caja.textContent = texto;
+    caja.className = 'msg ' + (tipo || '');
+    caja.style.display = 'block';
+    caja.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function escapar(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  // ── Elegir el archivo ───────────────────────────────────────
+
+  function tomarArchivo(archivo) {
+    if (!archivo) return;
+
+    // El bucket también lo limita, pero avisar aquí evita que alguien
+    // espere a que suban 40 MB para enterarse de que no cabían.
+    if (archivo.size > MAX_BYTES) {
+      aviso('Ese archivo pesa más de 20 MB. Si es un escaneo, vuelve a generarlo con menos resolución.', 'error');
+      return;
+    }
+    const nombre = archivo.name.toLowerCase();
+    if (!nombre.endsWith('.pdf') && !nombre.endsWith('.docx')) {
+      aviso('Solo se puede mandar a firma un PDF o un Word (.docx).', 'error');
+      return;
+    }
+
+    archivoElegido = archivo;
+    aviso('', '');
+    $('drop').classList.add('con-archivo');
+    $('drop-txt').textContent = archivo.name;
+    $('drop-sub').textContent = (archivo.size / 1024 / 1024).toFixed(1) + ' MB. Pícale para cambiarlo.';
+
+    // El título casi siempre es el nombre del archivo sin la extensión;
+    // se propone, pero sin pisar lo que la persona ya haya escrito.
+    if (!$('titulo').value.trim()) {
+      $('titulo').value = archivo.name.replace(/\.(pdf|docx)$/i, '').replace(/[_-]+/g, ' ').trim();
+    }
+  }
+
+  $('archivo').addEventListener('change', (e) => tomarArchivo(e.target.files[0]));
+
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.add('encima');
+  }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.remove('encima');
+  }));
+  drop.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) tomarArchivo(e.dataTransfer.files[0]);
+  });
+
+  // ── Firmantes ───────────────────────────────────────────────
+
+  function filaFirmante(nombre, correo) {
+    const fila = document.createElement('div');
+    fila.className = 'firmante-fila';
+    fila.innerHTML =
+      '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
+      '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>';
+    fila.querySelector('.firmante-quitar').addEventListener('click', () => {
+      fila.remove();
+      marcarUnico();
+    });
+    return fila;
+  }
+
+  function marcarUnico() {
+    const filas = $('firmantes').querySelectorAll('.firmante-fila');
+    filas.forEach((f) => f.classList.toggle('unico', filas.length === 1));
+  }
+
+  function agregarFirmante(nombre, correo) {
+    $('firmantes').appendChild(filaFirmante(nombre, correo));
+    marcarUnico();
+  }
+
+  $('btn-agregar').addEventListener('click', () => {
+    agregarFirmante('', '');
+    const filas = $('firmantes').querySelectorAll('.firmante-nom');
+    filas[filas.length - 1].focus();
+  });
+
+  function leerFirmantes() {
+    return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => ({
+      nombre: f.querySelector('.firmante-nom').value.trim(),
+      correo: f.querySelector('.firmante-mail').value.trim(),
+    })).filter((f) => f.nombre || f.correo);
+  }
+
+  // ── Mandar ──────────────────────────────────────────────────
+
+  async function llamarFuncion(cuerpo) {
+    const { data: { session } } = await window.kwSupabase.auth.getSession();
+    if (!session) throw new Error('Se cerró tu sesión. Vuelve a entrar.');
+
+    const res = await fetch(FN_FIRMAR, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cuerpo),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((json && json.error) || ('Falló la operación (' + res.status + ')'));
+    return json;
+  }
+
+  $('form-firma').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (enviando) return;
+
+    const titulo = $('titulo').value.trim();
+    const firmantes = leerFirmantes();
+
+    if (!archivoElegido) return aviso('Falta elegir el documento.', 'error');
+    if (!titulo) return aviso('Ponle un título al documento.', 'error');
+    if (!firmantes.length) return aviso('Falta indicar quién firma.', 'error');
+
+    // La validación de fondo (correo bien formado, sin repetidos) vive en
+    // la Edge Function, porque es la que tiene que aguantar aunque alguien
+    // se salte esta pantalla. Aquí solo se atajan los descuidos obvios
+    // para no gastar una subida en balde.
+    for (const f of firmantes) {
+      if (!f.nombre) return aviso('A uno de los firmantes le falta el nombre.', 'error');
+      if (!f.correo) return aviso('A ' + f.nombre + ' le falta el correo.', 'error');
+    }
+
+    enviando = true;
+    const btn = $('btn-enviar');
+    btn.disabled = true;
+    btn.textContent = 'Subiendo el documento...';
+    aviso('', '');
+
+    try {
+      // El archivo va primero al bucket y de ahí lo recoge la Edge
+      // Function. No se manda dentro de la petición porque un PDF
+      // escaneado pasa de lo que aguanta un cuerpo JSON, y porque así
+      // queda copia del original exactamente como se firmó.
+      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + archivoElegido.name;
+      const { error: errSubida } = await window.kwSupabase
+        .storage.from('firmas').upload(ruta, archivoElegido);
+      if (errSubida) throw new Error('No se pudo subir el archivo: ' + errSubida.message);
+
+      btn.textContent = 'Mandando a firma...';
+
+      await llamarFuncion({
+        accion: 'enviar',
+        origen: 'subido',
+        archivoRuta: ruta,
+        nombreArchivo: archivoElegido.name,
+        titulo: titulo,
+        mensaje: $('mensaje').value.trim(),
+        firmantes: firmantes,
+        enOrden: $('en-orden').checked,
+      });
+
+      // Se limpia todo para que no se mande dos veces sin querer.
+      $('form-firma').reset();
+      archivoElegido = null;
+      $('drop').classList.remove('con-archivo');
+      $('drop-txt').textContent = 'Elige el documento o arrástralo aquí';
+      $('drop-sub').textContent = 'PDF o Word, hasta 20 MB';
+      $('firmantes').innerHTML = '';
+      agregarFirmante('', '');
+
+      await cargarEnvios();
+      if (window.kwUI) window.kwUI.activarTab('envios');
+    } catch (err) {
+      aviso(err.message || 'No se pudo mandar a firma.', 'error');
+    } finally {
+      enviando = false;
+      btn.textContent = 'Mandar a firma';
+      btn.disabled = false;
+      // Va al final y no dentro del try: aquí se acaba de reactivar el
+      // botón, y si con este envío se agotó el tope hay que volver a
+      // apagarlo. Puesto antes, esta línea de arriba lo desharía.
+      // También corre cuando algo falló, que es justo cuando el envío
+      // se rechazó por tope y el contador tiene que decirlo.
+      await cargarCupo();
+    }
+  });
+
+  // ── Mis envíos ──────────────────────────────────────────────
+
+  const PILL = {
+    preparando: ['kw-pill-neutro', 'Preparando'],
+    borrador: ['kw-pill-neutro', 'Sin enviar'],
+    pendiente: ['kw-pill-espera', 'Esperando firmas'],
+    completado: ['kw-pill-ok', 'Firmado'],
+    cancelado: ['kw-pill-neutro', 'Cancelado'],
+    error: ['kw-pill-alerta', 'Falló'],
+  };
+  const PUNTO = {
+    preparando: 'gris', borrador: 'gris', pendiente: 'ambar',
+    completado: 'verde', cancelado: 'gris', error: 'rojo',
+  };
+
+  function fecha(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('es-MX', {
+      day: 'numeric', month: 'short', year: 'numeric',
+    });
+  }
+
+  function pintarEnvios(filas) {
+    const cont = $('lista-envios');
+
+    if (!filas.length) {
+      cont.innerHTML = '<div class="kw-vacio">Todavía no has mandado nada a firma.</div>';
+      return;
+    }
+
+    cont.innerHTML = filas.map((f) => {
+      const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+      const yaFirmaron = firmantes.filter((x) => x.firmado).length;
+      const pill = PILL[f.estado] || PILL.pendiente;
+
+      const sub = f.estado === 'error'
+        ? 'No se pudo enviar'
+        : yaFirmaron + ' de ' + firmantes.length + ' firmaron · ' + fecha(f.created_at);
+
+      const quienes = firmantes.map((x) =>
+        '<div class="firma-quien">' +
+          '<span class="firma-quien-punto' + (x.firmado ? ' ok' : '') + '"></span>' +
+          '<span><span class="firma-quien-nom">' + escapar(x.nombre) + '</span> ' +
+          '<span class="firma-quien-mail">' + escapar(x.correo) + '</span></span>' +
+        '</div>').join('');
+
+      // Solo se puede cancelar lo que todavía no se firma del todo: los
+      // completados weetrust los sella y ya no se tocan.
+      const puedeCancelar = ['preparando', 'borrador', 'pendiente'].includes(f.estado);
+
+      const acciones =
+        (f.estado === 'completado' && f.pdf_firmado_url
+          ? '<a class="kw-fila-btn" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
+          : '') +
+        (f.estado === 'pendiente'
+          ? '<button type="button" class="kw-fila-btn" data-accion="consultar" data-id="' + f.id + '">Actualizar</button>'
+          : '') +
+        (puedeCancelar
+          ? '<button type="button" class="kw-fila-btn" data-accion="cancelar" data-id="' + f.id + '">Cancelar</button>'
+          : '');
+
+      return '' +
+        '<div class="kw-fila">' +
+          '<button class="kw-fila-cabeza">' +
+            '<span class="kw-fila-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
+            '<span class="kw-fila-texto">' +
+              '<span class="kw-fila-titulo">' + escapar(f.titulo) + '</span>' +
+              '<span class="kw-fila-sub">' + escapar(sub) + '</span>' +
+            '</span>' +
+            '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
+            '<svg class="kw-fila-flecha" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+          '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
+            '<div class="kw-datos">' + quienes +
+              (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
+            '</div>' +
+            (acciones ? '<div class="kw-fila-acciones">' + acciones + '</div>' : '') +
+          '</div></div></div>' +
+        '</div>';
+    }).join('');
+
+    if (window.kwUI) window.kwUI.acordeon(cont);
+
+    cont.querySelectorAll('[data-accion]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const accion = b.dataset.accion;
+        if (accion === 'cancelar' && !confirm('¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.')) return;
+
+        const textoOriginal = b.textContent;
+        b.disabled = true;
+        b.textContent = accion === 'cancelar' ? 'Cancelando...' : 'Consultando...';
+        try {
+          await llamarFuncion({ accion: accion, id: b.dataset.id });
+          // Cancelar libera un lugar del tope, así que el contador
+          // también se vuelve a calcular.
+          await Promise.all([cargarEnvios(), cargarCupo()]);
+        } catch (err) {
+          alert(err.message || 'No se pudo completar la acción.');
+          b.disabled = false;
+          b.textContent = textoOriginal;
+        }
+      });
+    });
+  }
+
+  async function cargarEnvios() {
+    const { data, error } = await window.kwSupabase
+      .from('firmas_documentos')
+      .select('id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      $('lista-envios').innerHTML =
+        '<div class="kw-vacio">No se pudieron cargar tus envíos: ' + escapar(error.message) + '</div>';
+      return;
+    }
+    pintarEnvios(data || []);
+  }
+
+  // ── Arranque ────────────────────────────────────────────────
+
+  // Enseña cuánto le queda del mes y, si ya se acabó, apaga el botón.
+  // El freno de verdad está en la Edge Function; esto es para que nadie
+  // llene el formulario completo para enterarse hasta el final.
+  async function cargarCupo() {
+    const caja = $('cupo');
+    const { data, error } = await window.kwSupabase.rpc('firmas_disponibles', { p_user: miUserId });
+    if (error || !data || data.sin_tope) { caja.style.display = 'none'; return; }
+
+    const quedan = Number(data.restantes);
+    caja.classList.toggle('agotado', quedan <= 0);
+    caja.innerHTML = quedan > 0
+      ? 'Te quedan <strong>' + quedan + '</strong> de ' + data.limite + ' documentos este mes.'
+      : 'Ya usaste tus <strong>' + data.limite + '</strong> documentos de este mes. '
+        + 'Pídele al equipo de liderazgo que te suba el tope si necesitas más.';
+    caja.style.display = 'block';
+
+    $('btn-enviar').disabled = quedan <= 0;
+  }
+
+  async function iniciar() {
+    const { data: userData } = await window.kwSupabase.auth.getUser();
+    if (!userData || !userData.user) return;
+    miUserId = userData.user.id;
+
+    agregarFirmante('', '');
+    await Promise.all([cargarCupo(), cargarEnvios()]);
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    iniciar();
+  } else {
+    window.addEventListener('kw-auth-ready', iniciar, { once: true });
+  }
+})();
+</script>
+
+</body>
+</html>
