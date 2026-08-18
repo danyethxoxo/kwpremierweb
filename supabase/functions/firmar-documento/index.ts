@@ -155,6 +155,42 @@ async function enviarAFirma(
   return await leerRespuesta(res, 'Enviar a firma')
 }
 
+// Clava cada firma en su lugar del documento.
+//
+// El sistema de coordenadas de weetrust es el del PDF: puntos a 72 por
+// pulgada, con el origen arriba a la izquierda de cada página (una hoja
+// carta mide 612 x 792). La pantalla manda justo eso, ya convertido,
+// para que aquí no haya que adivinar a qué escala se estaba viendo.
+async function fijarFirmas(
+  token: string,
+  documentID: string,
+  posiciones: PosicionFirma[],
+) {
+  const res = await fetch(`${WEETRUST_URL}/documents/fixed-signatory`, {
+    method: 'PUT',
+    headers: encabezados(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      documentID,
+      staticSignPositions: posiciones.map((p) => ({
+        user: { email: p.correo },
+        coordinates: { x: Math.round(p.x), y: Math.round(p.y) },
+        page: p.pagina,
+        // weetrust pide la misma Y en tres campos distintos. Su ejemplo
+        // los manda iguales y no documenta en qué se diferencian, así
+        // que van iguales: inventar una diferencia sería peor que
+        // repetir lo único que sí sabemos que funciona.
+        pageY: Math.round(p.y),
+        pageYv2: Math.round(p.y),
+        color: p.color,
+        imageSize: { width: Math.round(p.ancho), height: Math.round(p.alto) },
+        parentImageSize: { width: Math.round(p.pagAncho), height: Math.round(p.pagAlto) },
+        viewport: { width: Math.round(p.pagAncho), height: Math.round(p.pagAlto) },
+      })),
+    }),
+  })
+  return await leerRespuesta(res, 'Fijar las firmas en el documento')
+}
+
 // Borra un documento en weetrust. Solo funciona mientras esté en
 // borrador o pendiente: los completados quedan sellados en su blockchain
 // y ya no se pueden quitar, ni por ellos ni por nosotros.
@@ -204,6 +240,67 @@ function pdfDePrueba(): Blob {
 }
 
 // ── Validación de lo que manda el navegador ─────────────────
+
+type PosicionFirma = {
+  correo: string
+  pagina: number
+  x: number
+  y: number
+  ancho: number
+  alto: number
+  pagAncho: number
+  pagAlto: number
+  color: string
+}
+
+// Las coordenadas las calcula la pantalla, así que aquí se revisan antes
+// de reenviarlas. Una coordenada disparatada no truena de forma visible:
+// weetrust acepta el documento y la firma acaba fuera de la hoja, que se
+// descubre hasta que el cliente abre el correo y no encuentra dónde
+// firmar.
+function limpiarPosiciones(crudo: unknown, correosValidos: string[]): PosicionFirma[] {
+  if (!crudo) return []
+  if (!Array.isArray(crudo)) throw new Error('Las posiciones de firma vienen mal armadas.')
+
+  return crudo.map((p, i) => {
+    const num = (v: unknown, campo: string) => {
+      const n = Number(v)
+      if (!Number.isFinite(n)) throw new Error(`La firma ${i + 1} trae un ${campo} que no es un número.`)
+      return n
+    }
+
+    const correo = String(p?.correo || '').trim().toLowerCase()
+    if (!correosValidos.includes(correo)) {
+      throw new Error(`Hay una firma colocada para "${correo}", que no está entre los firmantes.`)
+    }
+
+    const pagAncho = num(p?.pagAncho, 'ancho de página')
+    const pagAlto = num(p?.pagAlto, 'alto de página')
+    if (pagAncho <= 0 || pagAlto <= 0) {
+      throw new Error(`La firma ${i + 1} dice que su página mide cero.`)
+    }
+
+    const pagina = Math.trunc(num(p?.pagina, 'número de página'))
+    if (pagina < 1) throw new Error(`La firma ${i + 1} apunta a una página que no existe.`)
+
+    const x = num(p?.x, 'posición horizontal')
+    const y = num(p?.y, 'posición vertical')
+    const ancho = num(p?.ancho, 'ancho')
+    const alto = num(p?.alto, 'alto')
+
+    // Que quepa dentro de la hoja. Sin esto, arrastrar el cuadro un poco
+    // de más deja la firma en un lugar donde nadie la va a encontrar.
+    if (x < 0 || y < 0 || x + ancho > pagAncho + 1 || y + alto > pagAlto + 1) {
+      throw new Error(`La firma ${i + 1} quedó fuera de la hoja. Muévela hacia adentro.`)
+    }
+
+    // El color solo se usa para pintar el recuadro; se filtra de todos
+    // modos porque va directo a la respuesta de weetrust.
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(p?.color)) ? String(p.color) : '#FFD247'
+
+    return { correo, pagina, x, y, ancho, alto, pagAncho, pagAlto, color }
+  })
+}
 
 // Nunca se confía en lo que llega: el correo se usa para que weetrust
 // mande una invitación a firmar un contrato, así que uno mal formado no
@@ -318,6 +415,15 @@ Deno.serve(async (req: Request) => {
         return respond({ error: (e as Error).message }, 400)
       }
 
+      let posiciones: PosicionFirma[]
+      try {
+        // Se validan contra los firmantes ya limpios, para que no se
+        // pueda colar una firma a nombre de alguien que no está invitado.
+        posiciones = limpiarPosiciones(body.posiciones, firmantes.map((f) => f.correo))
+      } catch (e) {
+        return respond({ error: (e as Error).message }, 400)
+      }
+
       const enOrden = body.enOrden === true
       const mensaje = String(body.mensaje || '').trim()
         || 'Se le solicita la firma del siguiente documento.'
@@ -383,6 +489,14 @@ Deno.serve(async (req: Request) => {
         await admin.from('firmas_documentos')
           .update({ weetrust_document_id: documentID, estado: 'borrador' })
           .eq('id', fila.id)
+
+        // Las firmas fijas van ANTES de invitar: weetrust solo las acepta
+        // mientras el documento sigue en borrador. Si se manda primero la
+        // invitación, las coordenadas ya no se pueden poner y cada quien
+        // firmaría donde se le ocurriera.
+        if (posiciones.length) {
+          await fijarFirmas(token, documentID, posiciones)
+        }
 
         const enviado = await enviarAFirma(token, documentID, titulo, mensaje, firmantes, enOrden)
 

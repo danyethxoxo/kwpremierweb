@@ -144,6 +144,129 @@
   .firma-frecuente:disabled { opacity: 0.45; cursor: default; }
   .firma-frecuente:disabled:hover { border-color: rgba(0,0,0,0.12); color: var(--text); }
 
+  /* ── Paso 1: la lista de archivos ───────────────────────────
+     El orden importa: normalmente va el contrato y luego los anexos, y
+     así es como se van a unir. Por eso cada renglón trae su número y
+     los botones para subirlo o bajarlo. */
+  .archivos-lista { display: flex; flex-direction: column; gap: 7px; margin-top: var(--sp-4); }
+  .archivo-fila {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 11px; border-radius: 11px;
+    border: 1px solid rgba(0,0,0,0.09);
+    background: rgba(255,255,255,0.65);
+  }
+  .archivo-num {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--red); color: #fff;
+    font-size: 11px; font-weight: 700;
+  }
+  .archivo-nom { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .archivo-peso { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); }
+  .archivo-btn {
+    flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 7px;
+    background: #fff; color: var(--muted); cursor: pointer;
+  }
+  .archivo-btn:hover:not(:disabled) { color: var(--red); border-color: var(--red); }
+  .archivo-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* ── Paso 2: el editor ──────────────────────────────────────
+     Documento a la izquierda, campos a la derecha. En pantallas
+     angostas se apilan, con el documento arriba: la firma se coloca
+     mirando la hoja, así que la hoja va primero. */
+  .editor-barra {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: var(--sp-3);
+  }
+  .btn-volver-paso {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.12);
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    color: #fff; cursor: pointer;
+  }
+  .btn-volver-paso:hover { background: rgba(255,255,255,0.2); }
+  .editor-nombre { font-size: 12.5px; color: rgba(255,255,255,0.75); }
+
+  .editor-split { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
+  @media (max-width: 900px) { .editor-split { grid-template-columns: 1fr; } }
+
+  .editor-doc {
+    position: relative;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: var(--r-tarjeta);
+    padding: var(--sp-3);
+    max-height: 78vh; overflow-y: auto;
+  }
+  .editor-cargando {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 40px 0; color: rgba(255,255,255,0.8); font-size: 13px;
+  }
+
+  .editor-campos {
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
+    border-radius: var(--r-tarjeta);
+    padding: var(--sp-4);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: var(--sombra-1), inset 0 1px 0 rgba(255,255,255,0.95);
+  }
+
+  /* Cada página del PDF, con su capa para los recuadros de firma
+     encima. La capa se mide en porcentaje de la página y no en pixeles,
+     así el recuadro se queda en su lugar aunque cambie el zoom o el
+     ancho de la ventana. */
+  .pagina-caja { position: relative; margin: 0 auto var(--sp-3); width: fit-content; }
+  .pagina-caja canvas { display: block; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
+  .pagina-capa { position: absolute; inset: 0; }
+  .pagina-num {
+    text-align: center; font-size: 11px; color: rgba(255,255,255,0.6);
+    margin-top: 4px; margin-bottom: var(--sp-3);
+  }
+  /* Mientras se está colocando una firma, la hoja invita a picarle. */
+  .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(255,255,255,0.06); }
+
+  .marca-firma {
+    position: absolute; box-sizing: border-box;
+    border: 2px solid rgba(0,0,0,0.55); border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9.5px; font-weight: 700; color: rgba(0,0,0,0.75);
+    text-align: center; line-height: 1.15; overflow: hidden;
+    cursor: grab; user-select: none; padding: 2px;
+  }
+  .marca-firma:active { cursor: grabbing; }
+  .marca-quitar {
+    position: absolute; top: -8px; right: -8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: #c62027; color: #fff;
+    font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+  }
+
+  /* El botón de fijar firma, dentro del renglón de cada firmante. */
+  .firmante-fijar {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 0 11px; height: 34px; border-radius: 9px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    color: var(--text); cursor: pointer; white-space: nowrap;
+  }
+  .firmante-fijar:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .firmante-fijar:disabled { opacity: 0.4; cursor: not-allowed; }
+  .firmante-fijar.armado { border-color: var(--red); background: var(--red); color: #fff; }
+  .firmante-fijar .cuenta {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: rgba(0,0,0,0.12); font-size: 10px;
+  }
+  .firmante-fijar.armado .cuenta { background: rgba(255,255,255,0.3); }
+
   /* Los firmantes dentro de un envío ya mandado. */
   .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
   .firma-quien-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--muted); }
@@ -220,51 +343,93 @@
 
     <div class="kw-tabpanels">
 
-      <!-- ── Mandar a firma ── -->
+      <!-- ── Mandar a firma ──
+           Dos pasos: primero se juntan y ordenan los archivos, luego se
+           abre el editor con la vista previa a la izquierda y los
+           firmantes a la derecha. El paso 1 existe porque un contrato
+           casi nunca es un solo archivo: es el contrato más sus anexos,
+           y el orden importa. -->
       <section class="kw-tabpanel" data-panel="mandar">
-        <div class="kw-card">
-        <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
-        <form id="form-firma" autocomplete="off">
-          <input type="file" id="archivo" class="firma-input-real"
-            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <!-- Paso 1: los archivos -->
+        <div class="kw-card" id="paso-archivos">
+          <div id="cupo" class="firma-cupo" style="display:none;"></div>
+
+          <input type="file" id="archivo" class="firma-input-real" multiple
+            accept=".pdf,application/pdf">
           <label for="archivo" class="firma-drop" id="drop">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <span class="firma-drop-txt" id="drop-txt">Elige el documento o arrástralo aquí</span>
-            <span class="firma-drop-sub" id="drop-sub">PDF o Word, hasta 20 MB</span>
+            <span class="firma-drop-txt" id="drop-txt">Elige los documentos o arrástralos aquí</span>
+            <span class="firma-drop-sub" id="drop-sub">Puedes elegir varios PDF y se unen en uno solo</span>
           </label>
 
-          <div class="field" style="margin-top:var(--sp-4);">
-            <label for="titulo">Título</label>
-            <input type="text" id="titulo" class="kw-input" placeholder="Ej. Contrato de arrendamiento, Av. Reforma 100" maxlength="120">
+          <div id="lista-archivos" class="archivos-lista"></div>
+
+          <div id="msg-archivos" class="msg" style="display:none;"></div>
+
+          <button type="button" class="btn-guardar" id="btn-continuar" style="margin-top:var(--sp-4);display:none;">
+            Continuar
+          </button>
+        </div>
+
+        <!-- Paso 2: el editor -->
+        <div id="paso-editor" style="display:none;">
+          <div class="editor-barra">
+            <button type="button" class="btn-volver-paso" id="btn-volver-archivos">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+              Cambiar documentos
+            </button>
+            <span class="editor-nombre" id="editor-nombre"></span>
           </div>
 
-          <div class="field">
-            <label for="mensaje">Mensaje para los firmantes <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
-            <input type="text" id="mensaje" class="kw-input" placeholder="Se le solicita la firma del siguiente documento." maxlength="200">
+          <div class="editor-split">
+
+            <!-- Vista previa -->
+            <div class="editor-doc" id="editor-doc">
+              <div class="editor-cargando" id="editor-cargando">
+                <div class="kw-loader"></div>
+                <span>Preparando el documento...</span>
+              </div>
+              <div id="paginas"></div>
+            </div>
+
+            <!-- Campos -->
+            <div class="editor-campos">
+              <form id="form-firma" autocomplete="off">
+                <div class="field">
+                  <label for="titulo">Título</label>
+                  <input type="text" id="titulo" class="kw-input" placeholder="Ej. Contrato de arrendamiento, Av. Reforma 100" maxlength="120">
+                </div>
+
+                <div class="field">
+                  <label for="mensaje">Mensaje <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+                  <input type="text" id="mensaje" class="kw-input" placeholder="Se le solicita la firma del siguiente documento." maxlength="200">
+                </div>
+
+                <h2 class="section-title" style="margin-top:var(--sp-4);">Quién firma</h2>
+                <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
+                <div id="firmantes"></div>
+                <button type="button" class="firma-agregar" id="btn-agregar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Agregar otro firmante
+                </button>
+
+                <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
+                  <input type="checkbox" id="en-orden">
+                  <span>Firmar en orden</span>
+                </label>
+
+                <div id="msg-firma" class="msg" style="display:none;"></div>
+
+                <button type="submit" class="btn-guardar" id="btn-enviar" style="margin-top:var(--sp-4);">
+                  Mandar a firma
+                </button>
+              </form>
+            </div>
+
           </div>
-
-          <h2 class="section-title" style="margin-top:var(--sp-5);">Quién firma</h2>
-          <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
-          <div id="firmantes"></div>
-          <button type="button" class="firma-agregar" id="btn-agregar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Agregar otro firmante
-          </button>
-
-          <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
-            <input type="checkbox" id="en-orden">
-            <span>Firmar en orden (cada quien recibe su turno cuando el anterior firma)</span>
-          </label>
-
-          <div id="msg-firma" class="msg" style="display:none;"></div>
-
-          <button type="submit" class="btn-guardar" id="btn-enviar" style="margin-top:var(--sp-4);">
-            Mandar a firma
-          </button>
-        </form>
         </div>
       </section>
 
@@ -289,7 +454,18 @@
 
   let miUserId = null;
   let miPerfil = { nombre: '', correo: '' };
-  let archivoElegido = null;
+  // Los archivos elegidos, en el orden en que se van a unir.
+  let archivos = [];
+  // El PDF ya unido, que es el que se sube y sobre el que se colocan las
+  // firmas. Se guarda porque unir cuesta y no hay por qué repetirlo cada
+  // vez que se mueve un recuadro.
+  let pdfUnido = null;
+  // Las páginas dibujadas, con su tamaño real en puntos.
+  let paginas = [];
+  // Los recuadros de firma colocados.
+  let marcas = [];
+  // El renglón de firmante que está esperando que le piquen a la hoja.
+  let filaArmada = null;
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
@@ -311,16 +487,6 @@
 
   // ── Elegir el archivo ───────────────────────────────────────
 
-  const TIPOS = {
-    pdf: 'application/pdf',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  };
-
-  function tipoDe(nombre) {
-    const ext = String(nombre).split('.').pop().toLowerCase();
-    return TIPOS[ext] || 'application/pdf';
-  }
-
   // Storage solo admite letras, números, guiones, puntos y diagonales en
   // la ruta. Un nombre con acentos o espacios truena la subida, y como
   // el nombre de verdad se guarda aparte en la base, aquí se puede
@@ -333,35 +499,113 @@
       .slice(-80);
   }
 
-  function tomarArchivo(archivo) {
-    if (!archivo) return;
-
-    // El bucket también lo limita, pero avisar aquí evita que alguien
-    // espere a que suban 40 MB para enterarse de que no cabían.
-    if (archivo.size > MAX_BYTES) {
-      aviso('Ese archivo pesa más de 20 MB. Si es un escaneo, vuelve a generarlo con menos resolución.', 'error');
-      return;
-    }
-    const nombre = archivo.name.toLowerCase();
-    if (!nombre.endsWith('.pdf') && !nombre.endsWith('.docx')) {
-      aviso('Solo se puede mandar a firma un PDF o un Word (.docx).', 'error');
-      return;
-    }
-
-    archivoElegido = archivo;
-    aviso('', '');
-    $('drop').classList.add('con-archivo');
-    $('drop-txt').textContent = archivo.name;
-    $('drop-sub').textContent = (archivo.size / 1024 / 1024).toFixed(1) + ' MB. Pícale para cambiarlo.';
-
-    // El título casi siempre es el nombre del archivo sin la extensión;
-    // se propone, pero sin pisar lo que la persona ya haya escrito.
-    if (!$('titulo').value.trim()) {
-      $('titulo').value = archivo.name.replace(/\.(pdf|docx)$/i, '').replace(/[_-]+/g, ' ').trim();
-    }
+  // Las dos librerías se cargan hasta que hacen falta, no al abrir la
+  // pantalla: entre las dos pesan cerca de un mega, y quien solo viene a
+  // ver cómo va un envío no tiene por qué esperarlas.
+  function cargarScript(src) {
+    return new Promise((listo, falla) => {
+      if (document.querySelector('script[data-lib="' + src + '"]')) return listo();
+      const s = document.createElement('script');
+      s.src = src;
+      s.dataset.lib = src;
+      s.onload = listo;
+      s.onerror = () => falla(new Error('No se pudo cargar una librería necesaria. Revisa tu conexión.'));
+      document.head.appendChild(s);
+    });
   }
 
-  $('archivo').addEventListener('change', (e) => tomarArchivo(e.target.files[0]));
+  let libsListas = null;
+  function cargarLibs() {
+    if (!libsListas) {
+      libsListas = Promise.all([
+        cargarScript('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'),
+        cargarScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'),
+      ]).then(() => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      }).catch((e) => {
+        // Si falló, se olvida para que el siguiente intento lo vuelva a
+        // probar en vez de quedarse pegado en el error de la primera vez.
+        libsListas = null;
+        throw e;
+      });
+    }
+    return libsListas;
+  }
+
+  // ── Paso 1: juntar y ordenar los archivos ───────────────────
+
+  function agregarArchivos(lista) {
+    const nuevos = Array.from(lista || []);
+    if (!nuevos.length) return;
+
+    for (const a of nuevos) {
+      if (!a.name.toLowerCase().endsWith('.pdf')) {
+        avisoArchivos('Por ahora solo se pueden unir PDF. "' + a.name + '" no lo es.', 'error');
+        continue;
+      }
+      // Se comparan nombre y tamaño porque elegir dos veces el mismo
+      // archivo es un descuido común y el duplicado no se nota hasta
+      // que el documento unido sale con las hojas repetidas.
+      if (archivos.some((x) => x.name === a.name && x.size === a.size)) continue;
+      archivos.push(a);
+    }
+
+    const total = archivos.reduce((s, a) => s + a.size, 0);
+    if (total > MAX_BYTES) {
+      avisoArchivos('Entre todos pasan de 20 MB. Quita alguno o vuelve a generarlos con menos resolución.', 'error');
+    }
+    pintarArchivos();
+  }
+
+  function pintarArchivos() {
+    const cont = $('lista-archivos');
+    cont.innerHTML = archivos.map((a, i) =>
+      '<div class="archivo-fila">' +
+        '<span class="archivo-num">' + (i + 1) + '</span>' +
+        '<span class="archivo-nom">' + escapar(a.name) + '</span>' +
+        '<span class="archivo-peso">' + (a.size / 1024 / 1024).toFixed(1) + ' MB</span>' +
+        '<button type="button" class="archivo-btn" data-sube="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>' +
+        '</button>' +
+        '<button type="button" class="archivo-btn" data-baja="' + i + '"' + (i === archivos.length - 1 ? ' disabled' : '') + ' aria-label="Bajar">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>' +
+        '<button type="button" class="archivo-btn" data-quita="' + i + '" aria-label="Quitar">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>').join('');
+
+    cont.querySelectorAll('[data-sube]').forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.dataset.sube);
+      [archivos[i - 1], archivos[i]] = [archivos[i], archivos[i - 1]];
+      pintarArchivos();
+    }));
+    cont.querySelectorAll('[data-baja]').forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.dataset.baja);
+      [archivos[i + 1], archivos[i]] = [archivos[i], archivos[i + 1]];
+      pintarArchivos();
+    }));
+    cont.querySelectorAll('[data-quita]').forEach((b) => b.addEventListener('click', () => {
+      archivos.splice(Number(b.dataset.quita), 1);
+      pintarArchivos();
+    }));
+
+    $('btn-continuar').style.display = archivos.length ? 'block' : 'none';
+    $('drop-txt').textContent = archivos.length
+      ? 'Agregar más documentos'
+      : 'Elige los documentos o arrástralos aquí';
+    $('drop-sub').textContent = archivos.length
+      ? 'Se unen en el orden de la lista'
+      : 'Puedes elegir varios PDF y se unen en uno solo';
+  }
+
+  $('archivo').addEventListener('change', (e) => {
+    agregarArchivos(e.target.files);
+    // Se limpia para que volver a elegir el mismo archivo dispare otro
+    // 'change'; si no, quitarlo de la lista y reelegirlo no hace nada.
+    e.target.value = '';
+  });
 
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => {
@@ -370,9 +614,350 @@
   ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => {
     e.preventDefault(); drop.classList.remove('encima');
   }));
-  drop.addEventListener('drop', (e) => {
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) tomarArchivo(e.dataTransfer.files[0]);
+  drop.addEventListener('drop', (e) => agregarArchivos(e.dataTransfer.files));
+
+  // ── Unir los PDF en uno solo ────────────────────────────────
+
+  async function unirArchivos() {
+    await cargarLibs();
+
+    // Con un solo archivo no hay nada que unir. Se devuelve tal cual en
+    // vez de pasarlo por la librería: reescribirlo puede romper campos
+    // de formulario o firmas previas que el original sí traía bien.
+    if (archivos.length === 1) {
+      return new Uint8Array(await archivos[0].arrayBuffer());
+    }
+
+    const unido = await window.PDFLib.PDFDocument.create();
+    for (const a of archivos) {
+      let doc;
+      try {
+        doc = await window.PDFLib.PDFDocument.load(await a.arrayBuffer());
+      } catch {
+        // Un PDF con contraseña o dañado truena aquí. Decir cuál es
+        // ahorra tener que ir probándolos de uno en uno.
+        throw new Error('No se pudo leer "' + a.name + '". Puede estar protegido con contraseña o dañado.');
+      }
+      const hojas = await unido.copyPages(doc, doc.getPageIndices());
+      hojas.forEach((h) => unido.addPage(h));
+    }
+    return await unido.save();
+  }
+
+  // ── Dibujar el documento ────────────────────────────────────
+
+  async function pintarDocumento(bytes) {
+    // pdf.js se queda con el arreglo que recibe y lo deja inservible
+    // para lo que venga después; se le pasa una copia para poder seguir
+    // usando el original al subirlo.
+    const doc = await window.pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+    paginas = [];
+    const cont = $('paginas');
+    cont.innerHTML = '';
+
+    for (let n = 1; n <= doc.numPages; n++) {
+      const pag = await doc.getPage(n);
+
+      // La escala se calcula sobre el ancho disponible para que la hoja
+      // se vea completa sin tener que hacer zoom. El tamaño real en
+      // puntos se guarda aparte: es el que weetrust necesita, y no
+      // cambia aunque la pantalla sea chica.
+      const natural = pag.getViewport({ scale: 1 });
+      const ancho = Math.min(cont.clientWidth || 560, 760);
+      const escala = ancho / natural.width;
+      const vista = pag.getViewport({ scale: escala });
+
+      const caja = document.createElement('div');
+      caja.className = 'pagina-caja';
+
+      const lienzo = document.createElement('canvas');
+      // El dibujo se hace al doble de resolución en pantallas que lo
+      // aprovechan; si no, el texto del contrato se ve borroso justo
+      // cuando hay que leerlo para saber dónde va la firma.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      lienzo.width = Math.floor(vista.width * dpr);
+      lienzo.height = Math.floor(vista.height * dpr);
+      lienzo.style.width = vista.width + 'px';
+      lienzo.style.height = vista.height + 'px';
+
+      const capa = document.createElement('div');
+      capa.className = 'pagina-capa';
+      capa.dataset.pagina = String(n);
+
+      caja.appendChild(lienzo);
+      caja.appendChild(capa);
+      cont.appendChild(caja);
+
+      const num = document.createElement('div');
+      num.className = 'pagina-num';
+      num.textContent = 'Página ' + n + ' de ' + doc.numPages;
+      cont.appendChild(num);
+
+      await pag.render({
+        canvasContext: lienzo.getContext('2d'),
+        viewport: vista,
+        transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+      }).promise;
+
+      paginas.push({ numero: n, capa: capa, anchoPt: natural.width, altoPt: natural.height });
+      capa.addEventListener('click', (e) => colocarEnPagina(e, paginas[n - 1]));
+    }
+  }
+
+  // ── Pasar del paso 1 al paso 2 ──────────────────────────────
+
+  function avisoArchivos(texto, tipo) {
+    const caja = $('msg-archivos');
+    if (!texto) { caja.style.display = 'none'; return; }
+    caja.textContent = texto;
+    caja.className = 'msg ' + (tipo || '');
+    caja.style.display = 'block';
+  }
+
+  function nombreDelUnido() {
+    if (archivos.length === 1) return limpiarNombre(archivos[0].name);
+    return limpiarNombre(archivos[0].name.replace(/\.pdf$/i, '')) + '-y-anexos.pdf';
+  }
+
+  $('btn-continuar').addEventListener('click', async () => {
+    if (!archivos.length) return;
+
+    const btn = $('btn-continuar');
+    btn.disabled = true;
+    btn.textContent = archivos.length > 1 ? 'Uniendo los documentos...' : 'Abriendo el documento...';
+    avisoArchivos('', '');
+
+    try {
+      pdfUnido = await unirArchivos();
+
+      $('paso-archivos').style.display = 'none';
+      $('paso-editor').style.display = 'block';
+      $('editor-cargando').style.display = 'flex';
+      $('editor-nombre').textContent = archivos.length > 1
+        ? archivos.length + ' documentos unidos'
+        : archivos[0].name;
+
+      // El título se propone con el nombre del primer archivo, que es el
+      // contrato; los anexos van después y no lo nombran.
+      if (!$('titulo').value.trim()) {
+        $('titulo').value = archivos[0].name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+      }
+
+      await pintarDocumento(pdfUnido);
+      $('editor-cargando').style.display = 'none';
+      // Las marcas se redibujan porque las capas de página son nuevas.
+      pintarMarcas();
+    } catch (e) {
+      avisoArchivos(e.message || 'No se pudo abrir el documento.', 'error');
+      $('paso-archivos').style.display = 'block';
+      $('paso-editor').style.display = 'none';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Continuar';
+    }
   });
+
+  $('btn-volver-archivos').addEventListener('click', () => {
+    // Las marcas se tiran a propósito: si cambian los documentos, cambia
+    // la paginación, y una firma en la página 4 del documento anterior
+    // no significa nada en el nuevo.
+    marcas = [];
+    desarmar();
+    $('paso-editor').style.display = 'none';
+    $('paso-archivos').style.display = 'block';
+  });
+
+  // ── Colocar las firmas sobre el documento ───────────────────
+  //
+  // Cada marca se guarda en porcentaje de la página, no en pixeles. Así
+  // sobrevive a que cambie el zoom o el ancho de la ventana, y al final
+  // se convierte a puntos del PDF, que es lo que weetrust entiende.
+
+  // Tamaño del recuadro de firma, en puntos del PDF. Es el mismo que
+  // usa weetrust en su ejemplo.
+  const FIRMA_ANCHO = 101;
+  const FIRMA_ALTO = 51;
+
+  const COLORES = ['#FFD247', '#7FD1FF', '#FFA8C5', '#9BE59B', '#C7B3FF', '#FFB68A'];
+
+  function colorDe(fila) {
+    const filas = Array.from($('firmantes').querySelectorAll('.firmante-fila'));
+    return COLORES[filas.indexOf(fila) % COLORES.length];
+  }
+
+  function armarColocacion(fila) {
+    // Picarle otra vez al mismo botón desarma, para poder arrepentirse
+    // sin tener que colocar una firma de más y luego borrarla.
+    if (filaArmada === fila) return desarmar();
+    filaArmada = fila;
+    $('editor-doc').classList.add('colocando');
+    refrescarBotonesFijar();
+    $('editor-doc').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function desarmar() {
+    filaArmada = null;
+    $('editor-doc').classList.remove('colocando');
+    refrescarBotonesFijar();
+  }
+
+  function colocarEnPagina(e, pagina) {
+    if (!filaArmada) return;
+
+    const nombre = filaArmada.querySelector('.firmante-nom').value.trim();
+    const correo = filaArmada.querySelector('.firmante-mail').value.trim().toLowerCase();
+    if (!correo) {
+      aviso('Escribe primero el correo de esa persona: la firma se fija a su correo.', 'error');
+      return desarmar();
+    }
+
+    const r = pagina.capa.getBoundingClientRect();
+    // El clic marca el centro del recuadro, no su esquina: uno apunta a
+    // donde quiere la firma, no a dónde empieza su caja.
+    const anchoPct = (FIRMA_ANCHO / pagina.anchoPt) * 100;
+    const altoPct = (FIRMA_ALTO / pagina.altoPt) * 100;
+    const xPct = ((e.clientX - r.left) / r.width) * 100 - anchoPct / 2;
+    const yPct = ((e.clientY - r.top) / r.height) * 100 - altoPct / 2;
+
+    marcas.push({
+      id: crypto.randomUUID(),
+      fila: filaArmada,
+      nombre: nombre || correo,
+      correo: correo,
+      pagina: pagina.numero,
+      // Se recorta para que nunca nazca fuera de la hoja, aunque el clic
+      // haya caído pegado a la orilla.
+      x: Math.max(0, Math.min(xPct, 100 - anchoPct)),
+      y: Math.max(0, Math.min(yPct, 100 - altoPct)),
+      anchoPct: anchoPct,
+      altoPct: altoPct,
+      color: colorDe(filaArmada),
+    });
+
+    desarmar();
+    pintarMarcas();
+  }
+
+  function pintarMarcas() {
+    paginas.forEach((p) => { p.capa.innerHTML = ''; });
+
+    marcas.forEach((m) => {
+      const pag = paginas[m.pagina - 1];
+      if (!pag) return;
+
+      const el = document.createElement('div');
+      el.className = 'marca-firma';
+      el.style.left = m.x + '%';
+      el.style.top = m.y + '%';
+      el.style.width = m.anchoPct + '%';
+      el.style.height = m.altoPct + '%';
+      el.style.background = m.color;
+      // El rótulo se toma del renglón cada vez que se redibuja, para que
+      // corregir el nombre se refleje en el recuadro sin tener que
+      // volver a colocarlo.
+      el.textContent = m.fila.querySelector('.firmante-nom').value.trim()
+        || m.fila.querySelector('.firmante-mail').value.trim()
+        || 'Firma';
+
+      const quitar = document.createElement('button');
+      quitar.type = 'button';
+      quitar.className = 'marca-quitar';
+      quitar.textContent = '×';
+      quitar.setAttribute('aria-label', 'Quitar esta firma');
+      quitar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        marcas = marcas.filter((x) => x.id !== m.id);
+        pintarMarcas();
+      });
+      el.appendChild(quitar);
+
+      // Arrastrar con puntero, que cubre ratón y dedo con el mismo
+      // código. Se captura el puntero para que el arrastre no se corte
+      // si el dedo se sale del recuadro a media maniobra.
+      el.addEventListener('pointerdown', (ev) => {
+        if (ev.target === quitar) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        el.setPointerCapture(ev.pointerId);
+
+        const r = pag.capa.getBoundingClientRect();
+        const desdeX = ev.clientX - (m.x / 100) * r.width;
+        const desdeY = ev.clientY - (m.y / 100) * r.height;
+
+        const mover = (e2) => {
+          const nx = ((e2.clientX - desdeX) / r.width) * 100;
+          const ny = ((e2.clientY - desdeY) / r.height) * 100;
+          m.x = Math.max(0, Math.min(nx, 100 - m.anchoPct));
+          m.y = Math.max(0, Math.min(ny, 100 - m.altoPct));
+          el.style.left = m.x + '%';
+          el.style.top = m.y + '%';
+        };
+        const soltar = () => {
+          el.removeEventListener('pointermove', mover);
+          el.removeEventListener('pointerup', soltar);
+          el.removeEventListener('pointercancel', soltar);
+        };
+        el.addEventListener('pointermove', mover);
+        el.addEventListener('pointerup', soltar);
+        el.addEventListener('pointercancel', soltar);
+      });
+
+      pag.capa.appendChild(el);
+    });
+
+    refrescarBotonesFijar();
+  }
+
+  // Cuántas firmas lleva colocadas cada quien, para que se vea en su
+  // botón sin tener que ir contando recuadros por el documento.
+  function refrescarBotonesFijar() {
+    $('firmantes').querySelectorAll('.firmante-fila').forEach((fila) => {
+      const btn = fila.querySelector('.firmante-fijar');
+      if (!btn) return;
+      const cuantas = marcas.filter((m) => m.fila === fila).length;
+      btn.classList.toggle('armado', filaArmada === fila);
+      btn.querySelector('.cuenta').textContent = String(cuantas);
+      btn.querySelector('.rotulo').textContent =
+        filaArmada === fila ? 'Pica en la hoja' : 'Fijar firma';
+    });
+  }
+
+  // Las marcas guardan una referencia al renglón del firmante. Si ese
+  // renglón se borra, sus firmas se van con él: dejarlas colgadas haría
+  // que el envío se rechazara por apuntar a alguien que ya no está.
+  function limpiarMarcasHuerfanas() {
+    const vivas = Array.from($('firmantes').querySelectorAll('.firmante-fila'));
+    const antes = marcas.length;
+    marcas = marcas.filter((m) => vivas.includes(m.fila));
+    if (marcas.length !== antes) pintarMarcas();
+  }
+
+  // Pasa las marcas de porcentaje de pantalla a puntos del PDF, que es
+  // lo que weetrust entiende: origen arriba a la izquierda de cada
+  // página, 72 puntos por pulgada. La conversión se hace aquí y no en el
+  // servidor porque aquí es donde se conoce el tamaño real de cada
+  // página, que no tiene por qué ser el mismo en todas (un anexo puede
+  // venir en horizontal).
+  function posicionesParaEnviar() {
+    return marcas.map((m) => {
+      const pag = paginas[m.pagina - 1];
+      return {
+        // El correo se lee del renglón ahora, no el que tenía cuando se
+        // colocó: si alguien corrige una letra después de fijar la
+        // firma, la marca seguiría apuntando al correo viejo y el envío
+        // se rechazaría por un firmante que ya no existe.
+        correo: m.fila.querySelector('.firmante-mail').value.trim().toLowerCase(),
+        pagina: m.pagina,
+        x: (m.x / 100) * pag.anchoPt,
+        y: (m.y / 100) * pag.altoPt,
+        ancho: (m.anchoPct / 100) * pag.anchoPt,
+        alto: (m.altoPct / 100) * pag.altoPt,
+        pagAncho: pag.anchoPt,
+        pagAlto: pag.altoPt,
+        color: m.color,
+      };
+    });
+  }
 
   // ── Firmantes ───────────────────────────────────────────────
 
@@ -417,6 +1002,11 @@
     fila.innerHTML =
       '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
       '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '<button type="button" class="firmante-fijar">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M3 17c3.5 0 3.5-10 7-10s3.5 10 7 10"/><line x1="3" y1="21" x2="21" y2="21"/>' +
+        '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
+      '</button>' +
       '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
@@ -433,9 +1023,13 @@
           v.icono +
         '</button>').join('') +
       '</div>';
+    fila.querySelector('.firmante-fijar').addEventListener('click', () => armarColocacion(fila));
+
     fila.querySelector('.firmante-quitar').addEventListener('click', () => {
       fila.remove();
       marcarUnico();
+      // Sus firmas colocadas se van con él.
+      limpiarMarcasHuerfanas();
       // Quitar un renglón no dispara ningún evento 'input', así que sin
       // esto el botón del frecuente que se acaba de borrar se quedaba
       // apagado para siempre y ya no se podía volver a agregar.
@@ -529,7 +1123,7 @@
     const titulo = $('titulo').value.trim();
     const firmantes = leerFirmantes();
 
-    if (!archivoElegido) return aviso('Falta elegir el documento.', 'error');
+    if (!pdfUnido) return aviso('Falta elegir el documento.', 'error');
     if (!titulo) return aviso('Ponle un título al documento.', 'error');
     if (!firmantes.length) return aviso('Falta indicar quién firma.', 'error');
 
@@ -556,16 +1150,15 @@
       // El nombre se limpia antes de armar la ruta: Storage rechaza
       // acentos, espacios y signos, y los documentos suelen llamarse
       // "Contrato Depto. #3 (final).pdf".
-      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + limpiarNombre(archivoElegido.name);
+      const nombreFinal = nombreDelUnido();
+      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + nombreFinal;
 
-      // El tipo se declara a mano en vez de dejar que lo adivine el
-      // navegador. Cuando no reconoce el archivo manda
-      // application/octet-stream, y el bucket solo acepta PDF y Word:
-      // el archivo correcto acababa rechazado por cómo lo etiquetó el
-      // sistema operativo, no por lo que era.
+      // Se sube el PDF ya unido, no los originales: es exactamente el
+      // que la gente va a firmar, y las coordenadas de firma solo tienen
+      // sentido contra esa paginación.
       const { error: errSubida } = await window.kwSupabase
-        .storage.from('firmas').upload(ruta, archivoElegido, {
-          contentType: tipoDe(archivoElegido.name),
+        .storage.from('firmas').upload(ruta, new Blob([pdfUnido], { type: 'application/pdf' }), {
+          contentType: 'application/pdf',
         });
       if (errSubida) throw new Error('No se pudo subir el archivo: ' + errSubida.message);
 
@@ -575,19 +1168,29 @@
         accion: 'enviar',
         origen: 'subido',
         archivoRuta: ruta,
-        nombreArchivo: archivoElegido.name,
+        nombreArchivo: nombreFinal,
         titulo: titulo,
         mensaje: $('mensaje').value.trim(),
         firmantes: firmantes,
         enOrden: $('en-orden').checked,
+        posiciones: posicionesParaEnviar(),
       });
 
       // Se limpia todo para que no se mande dos veces sin querer.
       $('form-firma').reset();
-      archivoElegido = null;
-      $('drop').classList.remove('con-archivo');
-      $('drop-txt').textContent = 'Elige el documento o arrástralo aquí';
-      $('drop-sub').textContent = 'PDF o Word, hasta 20 MB';
+
+      // Se regresa al paso 1 en limpio. Dejar el editor abierto con el
+      // documento que se acaba de mandar invita a mandarlo dos veces.
+      archivos = [];
+      pdfUnido = null;
+      marcas = [];
+      paginas = [];
+      desarmar();
+      $('paginas').innerHTML = '';
+      $('paso-editor').style.display = 'none';
+      $('paso-archivos').style.display = 'block';
+      pintarArchivos();
+
       $('firmantes').innerHTML = '';
       // Se vuelve a proponer al asesor, igual que al abrir la pantalla:
       // quien mandó uno casi siempre va a mandar el siguiente en las
@@ -864,7 +1467,12 @@
 
     // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)
     // con un frecuente, así que los botones se revisan al vuelo.
-    $('firmantes').addEventListener('input', marcarFrecuentesPuestos);
+    $('firmantes').addEventListener('input', () => {
+      marcarFrecuentesPuestos();
+      // Los recuadros ya colocados llevan el nombre del firmante escrito
+      // encima, así que se redibujan al corregirlo.
+      if (marcas.length) pintarMarcas();
+    });
 
     await Promise.all([cargarFrecuentes(), cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
