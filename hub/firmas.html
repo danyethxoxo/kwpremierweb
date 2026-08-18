@@ -2101,6 +2101,32 @@
     });
   }
 
+  // ── Que la tabla se mantenga al día sola ────────────────────
+  // Dos mecanismos, a propósito. Realtime avisa al instante cuando algo
+  // cambia en la base (que es cuando llega un webhook de weetrust), pero
+  // depende de una conexión abierta que se puede caer sin avisar: el
+  // portátil se durmió, cambió el wifi, el navegador congeló la pestaña.
+  // Por eso además se recarga al volver a la pestaña, que es justo
+  // cuando la persona va a mirar y cuando más importa que esté al día.
+  function escucharCambios() {
+    window.kwSupabase
+      .channel('firmas-en-vivo')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'firmas_documentos' },
+        () => {
+          // Solo se repinta si el historial está a la vista. Recargar
+          // mientras alguien arma un envío no sirve de nada y le mueve
+          // la pantalla debajo de las manos.
+          if ($('vista-historial').style.display !== 'none') cargarEnvios();
+        })
+      .subscribe();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible'
+        && $('vista-historial').style.display !== 'none') cargarEnvios();
+    });
+  }
+
   async function iniciar() {
     const { data: userData } = await window.kwSupabase.auth.getUser();
     if (!userData || !userData.user) return;
@@ -2130,6 +2156,7 @@
     });
 
     pintarFiltros();
+    escucharCambios();
     await Promise.all([cargarFrecuentes(), cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
   }
