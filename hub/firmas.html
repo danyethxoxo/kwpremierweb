@@ -173,12 +173,139 @@
   }
   .btn-nuevo-doc:hover { transform: translateY(-1px); }
 
-  /* De quién es el envío. Solo se pinta cuando quien mira es liderazgo:
-     al asesor decirle que el documento es suyo no le aporta nada. */
-  .hist-autor {
-    display: inline-block; margin-left: 7px; padding: 1px 8px;
-    border-radius: 999px; background: rgba(0,0,0,0.07);
-    font-size: 10.5px; font-weight: 700; color: var(--muted);
+
+  /* ── La tabla del historial ─────────────────────────────────
+     Mismas columnas que la pantalla de weetrust, para que a quien ya la
+     usa no le cambie el terreno. En pantalla angosta la tabla no cabe,
+     así que cada renglón se convierte en tarjeta: una tabla de seis
+     columnas con scroll horizontal en el celular es inservible. */
+  .tabla-envios {
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.86) 0%, rgba(255,255,255,0.76) 45%, rgba(255,255,255,0.7) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
+    border-radius: var(--r-tarjeta);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: var(--sombra-1);
+    overflow: hidden;
+  }
+  .tabla-cabeza, .tabla-fila {
+    display: grid;
+    grid-template-columns: minmax(0,2.1fr) minmax(0,1.1fr) minmax(0,1.7fr) minmax(0,1fr) 92px 118px;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 11px var(--sp-4);
+  }
+  .tabla-cabeza {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+  }
+  .tabla-fila {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 13px; cursor: pointer;
+    transition: background var(--t-medio);
+  }
+  .tabla-fila:last-child { border-bottom: none; }
+  .tabla-fila:hover { background: rgba(0,0,0,0.03); }
+
+  .env-nombre { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .env-etiqueta {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    background: rgba(198,32,39,0.09); color: var(--red);
+    font-size: 11px; font-weight: 700;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  .env-vacio { color: var(--muted); font-size: 12px; }
+
+  .env-firmantes { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .env-correo {
+    font-size: 11.5px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Quien ya firmó se ve en verde desde la tabla, sin abrir el detalle. */
+  .env-correo.firmado { color: #16a34a; font-weight: 700; }
+  .env-mas { font-style: italic; }
+
+  .env-estado { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .env-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: #b3b3b3; }
+  .env-punto.verde { background: #1f9d55; }
+  .env-punto.ambar { background: #e0a218; }
+  .env-punto.rojo { background: #d13b3b; }
+  .env-estado-txt { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .env-fecha { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .env-mas-info {
+    border: none; background: none; padding: 0;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    color: var(--red); cursor: pointer; text-align: left;
+  }
+  .env-mas-info:hover { text-decoration: underline; }
+
+  @media (max-width: 860px) {
+    .tabla-cabeza { display: none; }
+    .tabla-fila {
+      grid-template-columns: 1fr auto;
+      gap: 5px var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+    }
+    .env-nombre { grid-column: 1; }
+    .env-estado { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+    .env-firmantes { grid-column: 1 / -1; }
+    .env-fecha { grid-column: 1; }
+    .env-mas-info { grid-column: 2; text-align: right; }
+    /* La etiqueta del asesor se va: en la tarjeta el nombre y el estado
+       ya dicen lo importante, y con ella el renglón crecía de más. */
+    .tabla-fila > span:nth-child(2) { display: none; }
+  }
+
+  /* ── El detalle de un envío ─────────────────────────────────── */
+  .det-caja { max-width: 560px; width: 100%; position: relative; text-align: left; }
+  .det-cerrar {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: rgba(0,0,0,0.05); color: var(--text);
+    cursor: pointer; padding: 0;
+  }
+  .det-cerrar:hover { background: rgba(0,0,0,0.1); }
+
+  .det-encabezado {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--sp-3); margin-bottom: var(--sp-3);
+  }
+  .det-meta { font-size: 12.5px; line-height: 1.7; color: var(--text); min-width: 0; }
+  .det-meta b { color: var(--muted); font-weight: 700; }
+  /* El identificador de weetrust es largo y no se parte solo; sin esto
+     estira el cuadro y se sale de la pantalla. */
+  .det-id { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; word-break: break-all; }
+
+  .det-firmantes { border-top: 1px solid rgba(0,0,0,0.08); }
+  .det-firmante {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .det-punto {
+    flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.08); color: #fff; margin-top: 1px;
+  }
+  .det-punto.ok { background: #16a34a; }
+  .det-datos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .det-nom { font-size: 13px; font-weight: 700; }
+  .det-mail { font-size: 11.5px; color: var(--muted); word-break: break-all; }
+  .det-derecha {
+    flex: 0 0 auto; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 3px;
+  }
+  .det-firmo { font-size: 12px; font-weight: 700; color: #16a34a; text-align: right; }
+  .det-firmo-fecha { display: block; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+  .det-expira { font-size: 10.5px; color: var(--muted); }
+  .det-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-4); }
+
+  @media (max-width: 560px) {
+    .det-firmante { flex-wrap: wrap; }
+    .det-derecha { align-items: flex-start; width: 100%; padding-left: 28px; }
+    .det-firmo, .det-firmo-fecha { text-align: left; }
   }
 
   /* ── Paso 1: la lista de archivos ───────────────────────────
@@ -365,13 +492,7 @@
   }
   .firmante-fijar.armado .cuenta { background: rgba(255,255,255,0.3); }
 
-  /* Los firmantes dentro de un envío ya mandado. */
-  .firma-quien { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; }
-  .firma-quien-punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--muted); }
-  .firma-quien-punto.ok { background: #16a34a; }
-  .firma-quien-datos { flex: 1; min-width: 0; }
-  .firma-quien-nom { font-weight: 700; }
-  .firma-quien-mail { color: var(--muted); font-size: 12px; }
+  /* Qué verificación de identidad se le pidió a ese firmante. */
   .firma-quien-verif {
     display: inline-block; margin-left: 6px; padding: 1px 7px;
     border-radius: 999px; background: rgba(0,0,0,0.06);
@@ -551,6 +672,18 @@
 
   </main>
 
+  <!-- El detalle de un envío. Va aquí y no dentro del historial para que
+       quede por encima de todo sin depender de dónde estaba el renglón. -->
+  <div id="modal-detalle" class="modal-overlay" style="display:none;">
+    <div class="modal-box det-caja">
+      <button type="button" class="det-cerrar" id="det-cerrar" aria-label="Cerrar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h3>Estatus</h3>
+      <div id="det-cuerpo"></div>
+    </div>
+  </div>
+
 <script>
 (function () {
   'use strict';
@@ -580,6 +713,9 @@
   let veTodo = false;
   // Qué estado se está mostrando en el historial.
   let filtro = 'todos';
+  // Los envíos ya cargados. El detalle los lee de aquí en vez de volver
+  // a consultarlos: son los mismos datos que se acaban de pintar.
+  let envios = [];
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
@@ -1480,8 +1616,16 @@
     });
   }
 
+  // ── El historial, en tabla ──────────────────────────────────
+  // Mismas columnas que la pantalla de weetrust (nombre, quién firma,
+  // estado, fecha) para que a quien ya la usa no le cambie el terreno.
+  // El detalle completo se abre aparte, igual que su "Más información":
+  // meterlo todo en el renglón haría la tabla ilegible con cuatro
+  // firmantes, que es lo normal en un contrato.
+
   function pintarEnvios(filas) {
     const cont = $('lista-envios');
+    envios = filas;
 
     if (!filas.length) {
       // El texto cambia según por qué está vacío: no es lo mismo no
@@ -1496,92 +1640,156 @@
       return;
     }
 
-    cont.innerHTML = filas.map((f) => {
-      const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
-      const yaFirmaron = firmantes.filter((x) => x.firmado).length;
-      const pill = PILL[f.estado] || PILL.pendiente;
+    cont.innerHTML =
+      '<div class="tabla-envios">' +
+        '<div class="tabla-cabeza">' +
+          '<span>Nombre</span>' +
+          '<span>' + (veTodo ? 'Asesor' : 'Documento') + '</span>' +
+          '<span>Firmantes</span>' +
+          '<span>Estado</span>' +
+          '<span>Fecha</span>' +
+          '<span></span>' +
+        '</div>' +
+        filas.map((f, i) => {
+          const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+          const pill = PILL[f.estado] || PILL.pendiente;
 
-      const sub = f.estado === 'error'
-        ? 'No se pudo enviar'
-        : yaFirmaron + ' de ' + firmantes.length + ' firmaron · ' + fecha(f.created_at);
+          // Solo los dos primeros correos, y el resto contado. Con
+          // cuatro firmantes la columna se comía el renglón entero.
+          const correos = firmantes.slice(0, 2).map((x) =>
+            '<span class="env-correo' + (x.firmado ? ' firmado' : '') + '">' +
+              escapar(x.correo) + '</span>').join('');
+          const masCorreos = firmantes.length > 2
+            ? '<span class="env-correo env-mas">y ' + (firmantes.length - 2) + ' más</span>'
+            : '';
 
-      // De quién es. Solo cuando quien mira es liderazgo y el envío es de
-      // alguien más: decirle al asesor que su documento es suyo sobra.
-      const autor = (veTodo && f.user_id !== miUserId && f.autor && f.autor.nombre)
-        ? '<span class="hist-autor">' + escapar(f.autor.nombre) + '</span>'
-        : '';
+          const etiqueta = (veTodo && f.autor && f.autor.nombre)
+            ? '<span class="env-etiqueta">' + escapar(f.autor.nombre) + '</span>'
+            : '<span class="env-vacio">' + (firmantes.length ? firmantes.length + ' firmantes' : 'sin firmantes') + '</span>';
 
-      const quienes = firmantes.map((x) => {
-        // La liga solo sirve mientras esa persona no haya firmado. Si ya
-        // firmó, enseñarla invita a mandársela a alguien que se va a
-        // topar con un documento que ya no puede hacer nada.
-        const caducada = x.url_expira && Number(x.url_expira) < Date.now();
-        const liga = (!x.firmado && x.url_firma && !caducada)
-          ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-                '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
-                '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
-              '</svg>Copiar liga</button>'
-          : (!x.firmado && caducada
-              ? '<span class="firma-quien-mail">liga vencida</span>'
-              : '');
-
-        return '<div class="firma-quien">' +
-          '<span class="firma-quien-punto' + (x.firmado ? ' ok' : '') + '"></span>' +
-          '<span class="firma-quien-datos">' +
-            '<span class="firma-quien-nom">' + escapar(x.nombre) + '</span> ' +
-            '<span class="firma-quien-mail">' + escapar(x.correo) + '</span>' +
-            (x.identificacion ? '<span class="firma-quien-verif">' + escapar(NOMBRE_VERIF[x.identificacion] || x.identificacion) + '</span>' : '') +
-            (x.check ? '<span class="firma-quien-verif">background check</span>' : '') +
-          '</span>' + liga +
-        '</div>';
-      }).join('');
-
-      // Solo se puede cancelar lo que todavía no se firma del todo: los
-      // completados weetrust los sella y ya no se tocan.
-      const puedeCancelar = ['preparando', 'borrador', 'pendiente'].includes(f.estado);
-
-      const acciones =
-        (f.estado === 'completado' && f.pdf_firmado_url
-          ? '<a class="kw-fila-btn" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
-          : '') +
-        (f.estado === 'pendiente'
-          ? '<button type="button" class="kw-fila-btn" data-accion="consultar" data-id="' + f.id + '">Actualizar</button>'
-          : '') +
-        (puedeCancelar
-          ? '<button type="button" class="kw-fila-btn" data-accion="cancelar" data-id="' + f.id + '">Cancelar</button>'
-          : '');
-
-      return '' +
-        '<div class="kw-fila">' +
-          '<button class="kw-fila-cabeza">' +
-            '<span class="kw-fila-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
-            '<span class="kw-fila-texto">' +
-              '<span class="kw-fila-titulo">' + escapar(f.titulo) + autor + '</span>' +
-              '<span class="kw-fila-sub">' + escapar(sub) + '</span>' +
+          return '<div class="tabla-fila" data-i="' + i + '">' +
+            '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
+            '<span>' + etiqueta + '</span>' +
+            '<span class="env-firmantes">' + (correos || '<span class="env-vacio">sin firmantes</span>') + masCorreos + '</span>' +
+            '<span class="env-estado">' +
+              '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
+              '<span class="env-estado-txt">' + pill[1] + '</span>' +
             '</span>' +
-            '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
-            '<svg class="kw-fila-flecha" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
-          '</button>' +
-          '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
-            '<div class="kw-datos">' + quienes +
-              (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
-            '</div>' +
-            (acciones ? '<div class="kw-fila-acciones">' + acciones + '</div>' : '') +
-          '</div></div></div>' +
-        '</div>';
+            '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
+            '<button type="button" class="env-mas-info" data-detalle="' + i + '">Más información</button>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+
+    cont.querySelectorAll('[data-detalle]').forEach((b) => {
+      b.addEventListener('click', () => abrirDetalle(Number(b.dataset.detalle)));
+    });
+    // El renglón completo abre el detalle: en la tabla de weetrust uno
+    // le pica al renglón sin buscar el enlace, y aquí igual.
+    cont.querySelectorAll('.tabla-fila').forEach((fila) => {
+      fila.addEventListener('click', (e) => {
+        if (e.target.closest('[data-detalle]')) return;
+        abrirDetalle(Number(fila.dataset.i));
+      });
+    });
+  }
+
+  // ── El detalle de un envío ──────────────────────────────────
+
+  function abrirDetalle(i) {
+    const f = envios[i];
+    if (!f) return;
+
+    const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+    const pill = PILL[f.estado] || PILL.pendiente;
+
+    const quienes = firmantes.map((x) => {
+      // La liga solo sirve mientras esa persona no haya firmado. Si ya
+      // firmó, enseñarla invita a mandársela a alguien que se va a topar
+      // con un documento donde ya no puede hacer nada.
+      const caducada = x.url_expira && Number(x.url_expira) < Date.now();
+      const derecha = x.firmado
+        ? '<span class="det-firmo">Ya firmó' +
+            (x.firmado_at ? '<span class="det-firmo-fecha">' + fecha(x.firmado_at) + '</span>' : '') +
+          '</span>'
+        : (x.url_firma && !caducada
+            ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
+                  '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
+                '</svg>Copiar liga</button>' +
+              (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
+            : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
+
+      return '<div class="det-firmante">' +
+        '<span class="det-punto' + (x.firmado ? ' ok' : '') + '">' +
+          (x.firmado
+            ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '') +
+        '</span>' +
+        '<span class="det-datos">' +
+          '<span class="det-nom">' + escapar(x.nombre) + '</span>' +
+          '<span class="det-mail">' + escapar(x.correo) + '</span>' +
+          (x.identificacion ? '<span class="firma-quien-verif">' + escapar(NOMBRE_VERIF[x.identificacion] || x.identificacion) + '</span>' : '') +
+          (x.check ? '<span class="firma-quien-verif">background check</span>' : '') +
+        '</span>' +
+        '<span class="det-derecha">' + derecha + '</span>' +
+      '</div>';
     }).join('');
 
-    if (window.kwUI) window.kwUI.acordeon(cont);
+    // Solo se puede cancelar lo que todavía no se firma del todo: los
+    // completados weetrust los sella y ya no se tocan.
+    const puedeCancelar = ['preparando', 'borrador', 'pendiente'].includes(f.estado);
+    const acciones =
+      (f.estado === 'completado' && f.pdf_firmado_url
+        ? '<a class="kw-fila-btn" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
+        : '') +
+      (f.estado === 'pendiente'
+        ? '<button type="button" class="kw-fila-btn" data-accion="consultar" data-id="' + f.id + '">Actualizar</button>'
+        : '') +
+      (puedeCancelar
+        ? '<button type="button" class="kw-fila-btn" data-accion="cancelar" data-id="' + f.id + '">Cancelar</button>'
+        : '');
 
-    // Copiar la liga personal de cada firmante, para pasarla por
-    // WhatsApp a mano. weetrust cobra su propio envío por WhatsApp;
-    // mandar la liga uno mismo hace lo mismo sin costo.
-    cont.querySelectorAll('[data-liga]').forEach((b) => {
-      b.addEventListener('click', async (e) => {
-        // Sin esto el clic sube hasta la cabecera de la fila y la cierra
-        // justo cuando la persona iba a usar lo que acaba de copiar.
-        e.stopPropagation();
+    $('det-cuerpo').innerHTML =
+      '<div class="det-encabezado">' +
+        '<div class="det-meta">' +
+          (veTodo && f.autor && f.autor.nombre
+            ? '<div><b>Creado por:</b> ' + escapar(f.autor.nombre) + '</div>' : '') +
+          '<div><b>Documento:</b> ' + escapar(f.titulo) + '</div>' +
+          (f.weetrust_document_id
+            ? '<div><b>ID:</b> <span class="det-id">' + escapar(f.weetrust_document_id) + '</span></div>' : '') +
+          '<div><b>Fecha de envío:</b> ' + fecha(f.enviado_at || f.created_at) + '</div>' +
+        '</div>' +
+        '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
+      '</div>' +
+      (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
+      '<div class="det-firmantes">' + (quienes || '<div class="env-vacio">Este documento no llegó a tener firmantes.</div>') + '</div>' +
+      (acciones ? '<div class="det-acciones">' + acciones + '</div>' : '');
+
+    cablearAcciones($('det-cuerpo'));
+    $('modal-detalle').style.display = 'flex';
+  }
+
+  function cerrarDetalle() {
+    $('modal-detalle').style.display = 'none';
+  }
+
+  $('det-cerrar').addEventListener('click', cerrarDetalle);
+  $('modal-detalle').addEventListener('click', (e) => {
+    // Solo cuando se pica el fondo, no cuando el clic viene de la
+    // tarjeta: si no, arrastrar para seleccionar texto lo cierra.
+    if (e.target === $('modal-detalle')) cerrarDetalle();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $('modal-detalle').style.display === 'flex') cerrarDetalle();
+  });
+
+  // Copiar liga, actualizar y cancelar. Vive aparte porque ahora estos
+  // botones nacen dentro del modal y no en la lista.
+  function cablearAcciones(raiz) {
+    raiz.querySelectorAll('[data-liga]').forEach((b) => {
+      b.addEventListener('click', async () => {
         const original = b.innerHTML;
         try {
           await navigator.clipboard.writeText(b.dataset.liga);
@@ -1596,7 +1804,7 @@
       });
     });
 
-    cont.querySelectorAll('[data-accion]').forEach((b) => {
+    raiz.querySelectorAll('[data-accion]').forEach((b) => {
       b.addEventListener('click', async () => {
         const accion = b.dataset.accion;
         if (accion === 'cancelar' && !confirm('¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.')) return;
@@ -1606,6 +1814,7 @@
         b.textContent = accion === 'cancelar' ? 'Cancelando...' : 'Consultando...';
         try {
           await llamarFuncion({ accion: accion, id: b.dataset.id });
+          cerrarDetalle();
           // Cancelar libera un lugar del tope, así que el contador
           // también se vuelve a calcular.
           await Promise.all([cargarEnvios(), cargarCupo()]);
@@ -1646,7 +1855,7 @@
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
-    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, user_id'
+    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
     let q = window.kwSupabase
