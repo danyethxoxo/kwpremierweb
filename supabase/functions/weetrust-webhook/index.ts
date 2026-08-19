@@ -149,6 +149,10 @@ function firmantesDe(doc: Record<string, any>) {
     signatoryID: s?.signatoryID ?? null,
     url_firma: s?.signing?.url ?? null,
     url_expira: s?.signing?.expiry ?? null,
+    // El trazo de la firma, que weetrust guarda como imagen aparte. El
+    // PDF que ellos entregan NO la trae dibujada: su pantalla la
+    // superpone encima, y aquí hace falta para poder hacer lo mismo.
+    imagen: s?.imageURL || null,
   }))
 }
 

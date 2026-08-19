@@ -701,6 +701,18 @@
      mover un recuadro no cambiaría nada. */
   .marca-firma.vista { cursor: default; }
   .marca-firma.vista .marca-rotulo { padding: 0 6px; }
+  /* Firmó pero no tenemos su trazo: se ve como hecho, no como pendiente. */
+  .marca-firma.vista.firmada {
+    --marca-color: #16a34a;
+    background: rgba(22,163,74,0.14);
+  }
+  .marca-firma.vista.firmada .marca-rotulo { color: #15803d; }
+
+  /* El trazo de la firma, encima del documento. Sin recuadro ni fondo:
+     lo que se quiere ver es la firma sobre la línea, como quedaría
+     impresa. */
+  .firma-trazo { display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .firma-trazo img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
   /* El rótulo se recorta con puntos suspensivos en vez de partirse en
      varias líneas: un recuadro chico con el nombre cortado a la mitad se
@@ -2422,6 +2434,18 @@
     //
     // Se pide al momento en vez de usar la guardada porque su URL viene
     // firmada y con caducidad: una de ayer ya no abre.
+    // El cuadro se abre de inmediato, antes de cualquier espera. Todo lo
+    // que sigue tarda (preguntarle a weetrust, bajar el PDF, dibujarlo),
+    // y hasta ahora la pantalla se quedaba muerta sin decir nada: uno le
+    // picaba al renglón y no pasaba nada durante varios segundos.
+    $('doc-titulo').textContent = f.titulo;
+    $('doc-lado').innerHTML = '';
+    $('doc-acciones').innerHTML = '';
+    $('doc-cuerpo').innerHTML =
+      '<div class="editor-cargando"><div class="kw-loader"></div>' +
+      '<span>Abriendo el documento...</span></div>';
+    $('modal-doc').style.display = 'flex';
+
     // Tres intentos, en orden de qué tan buena es cada copia:
     //
     //   1. La que weetrust tiene ahora. Va cambiando conforme la gente
@@ -2459,8 +2483,6 @@
         .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
       url = data?.signedUrl || null;
     }
-
-    $('doc-titulo').textContent = f.titulo;
 
     // Al lado del documento, quién ya firmó. Es lo que uno quiere saber
     // al abrir un contrato a medias, y ahorra tener que cerrar y abrir
@@ -2548,8 +2570,6 @@
       cablearAcciones($('doc-lado'));
     }
 
-    $('modal-doc').style.display = 'flex';
-
     if (!url) {
       $('doc-cuerpo').innerHTML = '<div class="kw-vacio">No se pudo traer el archivo de weetrust en este momento. '
         + 'Vuelve a intentarlo en un rato.</div>';
@@ -2562,7 +2582,7 @@
     // la primera página aparece en cuanto está lista, que en un contrato
     // de catorce hojas es la diferencia entre esperar y no esperar.
     $('doc-cuerpo').innerHTML =
-      '<div class="editor-cargando"><div class="kw-loader"></div><span>Abriendo el documento...</span></div>' +
+      '<div class="editor-cargando"><div class="kw-loader"></div><span>Preparando las hojas...</span></div>' +
       '<div id="doc-paginas"></div>';
 
     try {
@@ -2579,26 +2599,43 @@
       //
       // Se marcan las que faltan; las que ya se firmaron vienen dibujadas
       // en el propio PDF de weetrust y volver a taparlas las escondería.
+      // Encima del documento va lo que falta y lo que ya se hizo.
+      //
+      // El PDF que entrega weetrust NO trae las firmas dibujadas: su
+      // propia pantalla las superpone, y cada firma vive como una imagen
+      // aparte (el "imageURL" de cada firmante). Por eso aquí se hace lo
+      // mismo: si esa persona ya firmó y tenemos su trazo, se dibuja el
+      // trazo; si no, el recuadro de color que dice dónde le toca.
       (f.posiciones || []).forEach((pz) => {
         const pag = hojas[pz.pagina - 1];
         if (!pag) return;
         const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
           .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
-        // Si el PDF viene de weetrust, las firmas hechas ya están
-        // dibujadas ahí y taparlas las escondería. Si es el nuestro, no
-        // trae ninguna, así que se marcan todas para que al menos se vea
-        // dónde le toca a cada quien.
-        if (conFirmas && quien && quien.firmado) return;
 
         const el = document.createElement('div');
-        el.className = 'marca-firma vista';
+        el.style.position = 'absolute';
         el.style.left = ((pz.x / pz.pagAncho) * 100) + '%';
         el.style.top = ((pz.y / pz.pagAlto) * 100) + '%';
         el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
         el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
-        el.style.setProperty('--marca-color', pz.color || '#FFD247');
-        el.innerHTML = '<span class="marca-rotulo">' +
-          escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
+
+        if (quien && quien.firmado && quien.imagen) {
+          el.className = 'firma-trazo';
+          el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
+            escapar(quien.nombre || quien.correo) + '">';
+        } else if (quien && quien.firmado) {
+          // Firmó, pero no tenemos su trazo (documentos de antes de que
+          // se guardara, o firmas que weetrust no expone). Se marca como
+          // firmada en vez de dejar el hueco, que se leería como que
+          // falta.
+          el.className = 'marca-firma vista firmada';
+          el.innerHTML = '<span class="marca-rotulo">Firmado</span>';
+        } else {
+          el.className = 'marca-firma vista';
+          el.style.setProperty('--marca-color', pz.color || '#FFD247');
+          el.innerHTML = '<span class="marca-rotulo">' +
+            escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
+        }
         pag.capa.appendChild(el);
       });
     } catch {

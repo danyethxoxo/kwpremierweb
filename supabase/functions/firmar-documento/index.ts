@@ -559,6 +559,7 @@ Deno.serve(async (req: Request) => {
             firmado: false,
             signatoryID: par?.signatoryID ?? null,
             url_firma: par?.signing?.url ?? null,
+            imagen: null,
             // weetrust manda cuándo deja de servir la liga. Se guarda
             // para poder avisar que caducó, en vez de que alguien se la
             // pase a un cliente y el cliente se tope con un error.
@@ -704,7 +705,15 @@ Deno.serve(async (req: Request) => {
       const firmantes = (fila.firmantes as Array<Record<string, unknown>>).map((f) => {
         const par = suyos.find((s: Record<string, unknown>) =>
           String(s?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
-        return par ? { ...f, firmado: Number(par.isSigned) === 1 } : f
+        if (!par) return f
+        return {
+          ...f,
+          firmado: Number(par.isSigned) === 1,
+          // El trazo de la firma. El PDF que entrega weetrust no la trae
+          // dibujada: su pantalla la superpone, y aquí hace falta para
+          // poder hacer lo mismo en la vista previa.
+          imagen: par.imageURL || f.imagen || null,
+        }
       })
 
       const estados: Record<string, string> = {
@@ -1156,6 +1165,7 @@ Deno.serve(async (req: Request) => {
             signatoryID: s?.signatoryID ?? null,
             url_firma: s?.signing?.url ?? null,
             url_expira: s?.signing?.expiry ?? null,
+            imagen: s?.imageURL || null,
           }))
 
         // El archivo viene anidado y su forma no está documentada del
