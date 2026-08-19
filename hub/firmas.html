@@ -2291,6 +2291,101 @@
 
 
 
+  // ── Retomar un borrador ─────────────────────────────────────
+  // Reconstruye el editor tal como se dejó: el PDF que se había subido,
+  // los firmantes capturados y los recuadros de firma en su lugar.
+  async function retomarBorrador(f) {
+    mostrarVista('editor');
+    $('editor-cargando').style.display = 'flex';
+    $('paginas').innerHTML = '';
+    aviso('', '');
+
+    borradorId = f.id;
+    rutaSubida = f.archivo_ruta;
+    // No se juntaron archivos: se está retomando uno ya unido. La lista
+    // se deja vacía y el nombre del guardado es el que manda.
+    archivos = [];
+    marcas = [];
+    paginas = [];
+    desarmar();
+
+    $('titulo').value = f.titulo || '';
+    $('editor-nombre').textContent = f.nombre_archivo || 'Borrador guardado';
+
+    // Los firmantes, como se dejaron. La pregunta de "¿yo también
+    // firmo?" no aplica: eso ya se contestó cuando se armó.
+    $('firmantes').innerHTML = '';
+    $('pregunta-firmo').style.display = 'none';
+    const guardados = Array.isArray(f.firmantes) ? f.firmantes : [];
+    if (guardados.length) {
+      guardados.forEach((x) => agregarFirmante(x.nombre || '', x.correo || ''));
+      // Las verificaciones que traía cada uno.
+      const filas = $('firmantes').querySelectorAll('.firmante-fila');
+      guardados.forEach((x, n) => {
+        const fila = filas[n];
+        if (!fila) return;
+        if (x.identificacion) {
+          const b = fila.querySelector('[data-verif="' + x.identificacion + '"]');
+          if (b) b.classList.add('activo');
+        }
+        if (x.check) {
+          const b = fila.querySelector('[data-verif="check"]');
+          if (b) b.classList.add('activo');
+        }
+      });
+    } else {
+      agregarFirmante('', '');
+    }
+    marcarUnico();
+    marcarFrecuentesPuestos();
+
+    try {
+      // El PDF se baja del bucket. Es el mismo que se subió al guardar,
+      // así que la paginación coincide con las coordenadas guardadas.
+      const { data: firmada, error } = await window.kwSupabase
+        .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
+      if (error || !firmada?.signedUrl) throw new Error('No se pudo leer el archivo guardado.');
+
+      const res = await fetch(firmada.signedUrl);
+      if (!res.ok) throw new Error('No se pudo bajar el archivo guardado.');
+      pdfUnido = new Uint8Array(await res.arrayBuffer());
+
+      await cargarLibs();
+      await pintarDocumento(pdfUnido);
+      $('editor-cargando').style.display = 'none';
+
+      // Y de vuelta los recuadros. Se guardaron en puntos del PDF; aquí
+      // se convierten otra vez a porcentaje de la página, que es como
+      // los maneja el editor para que aguanten el zoom.
+      const filas = Array.from($('firmantes').querySelectorAll('.firmante-fila'));
+      marcas = (f.posiciones || []).map((p) => {
+        const pag = paginas[p.pagina - 1];
+        if (!pag) return null;
+        // Se vuelve a casar con su renglón por correo: es lo único que
+        // no cambia entre guardar y retomar.
+        const fila = filas.find((x) =>
+          x.querySelector('.firmante-mail').value.trim().toLowerCase() === String(p.correo).toLowerCase());
+        if (!fila) return null;
+        return {
+          id: crypto.randomUUID(),
+          fila,
+          nombre: fila.querySelector('.firmante-nom').value.trim() || p.correo,
+          correo: String(p.correo).toLowerCase(),
+          pagina: p.pagina,
+          x: (p.x / p.pagAncho) * 100,
+          y: (p.y / p.pagAlto) * 100,
+          anchoPct: (p.ancho / p.pagAncho) * 100,
+          altoPct: (p.alto / p.pagAlto) * 100,
+          color: p.color || COLORES[0],
+        };
+      }).filter(Boolean);
+      pintarMarcas();
+    } catch (e) {
+      $('editor-cargando').style.display = 'none';
+      aviso(e.message || 'No se pudo abrir el borrador.', 'error');
+    }
+  }
+
   // ── Los dos menús de cada renglón ───────────────────────────
   // Están separados a propósito. El de los tres puntos hace cosas que
   // salen del sitio (le vuelve a llegar un correo a un cliente, se
