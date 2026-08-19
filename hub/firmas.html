@@ -245,7 +245,7 @@
   }
   .tabla-cabeza, .tabla-fila {
     display: grid;
-    grid-template-columns: minmax(0,2.6fr) minmax(0,1.2fr) minmax(0,1.3fr) 92px 150px;
+    grid-template-columns: minmax(0,2.2fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.2fr) 92px 145px 32px;
     gap: var(--sp-3);
     align-items: center;
     padding: 11px var(--sp-4);
@@ -253,7 +253,7 @@
   /* Al asesor no se le enseña la columna de asesor: todos son suyos. */
   .tabla-fila.sin-asesor,
   .tabla-envios:has(.sin-asesor) .tabla-cabeza {
-    grid-template-columns: minmax(0,2.6fr) minmax(0,1.3fr) 92px 150px;
+    grid-template-columns: minmax(0,2.4fr) minmax(0,1fr) minmax(0,1.2fr) 92px 145px 32px;
   }
   .tabla-cabeza {
     font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
@@ -320,6 +320,62 @@
     /* La etiqueta del asesor se va: en la tarjeta el nombre y el estado
        ya dicen lo importante, y con ella el renglón crecía de más. */
     .tabla-fila > span:nth-child(2) { display: none; }
+  }
+
+  /* ── El menú de los tres puntos ─────────────────────────────
+     Mismo look que el de asignar DT en el ABC Tracker: tarjeta blanca,
+     borde suave, esquinas redondeadas y sombra. */
+  .env-menu-btn {
+    border: none; background: none; padding: 4px 6px; border-radius: 7px;
+    color: var(--muted); cursor: pointer; line-height: 0;
+  }
+  .env-menu-btn:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+
+  .env-menu {
+    position: fixed; z-index: 60; width: 260px;
+    max-height: 380px; overflow-y: auto;
+    background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 45%, rgba(255,255,255,0.88) 100%);
+    border: 1px solid rgba(255,255,255,0.82); border-radius: 12px;
+    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95);
+    padding: 6px;
+  }
+  .env-menu-titulo {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 8px 10px 5px;
+  }
+  .env-menu-op {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    border: none; background: none; font-family: inherit;
+    font-size: 13px; color: var(--text); padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; text-align: left;
+  }
+  .env-menu-op:hover { background: #f5f5f5; }
+  .env-menu-op.elegida { color: var(--red); font-weight: 700; background: #fff3f3; }
+  .env-menu-op.peligro { color: var(--red); }
+  .env-menu-op.peligro:hover { background: #fff3f3; }
+  .env-menu-op i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .env-menu-op span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .env-menu-sep { height: 1px; background: rgba(0,0,0,0.08); margin: 5px 8px; }
+  .env-menu-nueva {
+    display: flex; gap: 5px; padding: 5px 8px 8px;
+  }
+  .env-menu-nueva input {
+    flex: 1; min-width: 0; padding: 6px 9px; font-size: 12.5px; font-family: inherit;
+    border: 1.5px solid var(--border); border-radius: 8px; outline: none;
+  }
+  .env-menu-nueva input:focus { border-color: var(--red); }
+  .env-menu-nueva button {
+    border: none; background: var(--red); color: #fff; border-radius: 8px;
+    padding: 0 11px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Las etiquetas puestas, en su columna de la tabla. */
+  .env-tags { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
+  .env-tag {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; color: #fff; white-space: nowrap;
   }
 
   /* ── El detalle de un envío ─────────────────────────────────── */
@@ -826,6 +882,9 @@
   let faltaFirma = null;
   // Los firmantes frecuentes, para los botones de "falta la firma de".
   let frecuentes = [];
+  // El catálogo de etiquetas y la lista de asesores, para el menú.
+  let etiquetas = [];
+  let asesores = [];
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
@@ -1839,8 +1898,10 @@
         '<div class="tabla-cabeza">' +
           '<span>Nombre del documento</span>' +
           (veTodo ? '<span>Asesor</span>' : '') +
+          '<span>Etiquetas</span>' +
           '<span>Estado</span>' +
           '<span>Fecha</span>' +
+          '<span></span>' +
           '<span></span>' +
         '</div>' +
         filas.map((f, i) => {
@@ -1854,9 +1915,16 @@
             ? '<span class="env-etiqueta">' + escapar(f.autor.nombre) + '</span>'
             : '<span class="env-etiqueta sin">Sin identificar</span>';
 
+          const tags = (f.etiquetas || []).map((id) => {
+            const e = etiquetas.find((x) => x.id === id);
+            return e ? '<span class="env-tag" style="background:' + escapar(e.color) + '">'
+              + escapar(e.nombre) + '</span>' : '';
+          }).join('');
+
           return '<div class="tabla-fila' + (veTodo ? '' : ' sin-asesor') + '" data-i="' + i + '">' +
             '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
             (veTodo ? '<span>' + etiqueta + '</span>' : '') +
+            '<span class="env-tags">' + tags + '</span>' +
             '<span class="env-estado">' +
               '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
               '<span class="env-estado-txt">' + pill[1] +
@@ -1865,6 +1933,11 @@
             '</span>' +
             '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
             '<button type="button" class="env-mas-info" data-detalle="' + i + '">Ver todos los detalles</button>' +
+            '<button type="button" class="env-menu-btn" data-menu="' + i + '" aria-label="Más acciones">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">' +
+                '<circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>' +
+              '</svg>' +
+            '</button>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -1872,15 +1945,164 @@
     cont.querySelectorAll('[data-detalle]').forEach((b) => {
       b.addEventListener('click', () => abrirDetalle(Number(b.dataset.detalle)));
     });
+
+    cont.querySelectorAll('[data-menu]').forEach((b) => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirMenu(b, Number(b.dataset.menu));
+      });
+    });
     // El renglón completo abre el detalle: en la tabla de weetrust uno
     // le pica al renglón sin buscar el enlace, y aquí igual.
     cont.querySelectorAll('.tabla-fila').forEach((fila) => {
       fila.addEventListener('click', (e) => {
-        if (e.target.closest('[data-detalle]')) return;
+        if (e.target.closest('[data-detalle]') || e.target.closest('[data-menu]')) return;
         abrirDetalle(Number(fila.dataset.i));
       });
     });
   }
+
+  // ── El menú de los tres puntos ──────────────────────────────
+  // Corregir el asesor, poner etiquetas y borrar. Va aquí y no dentro
+  // del detalle porque son cosas que se hacen recorriendo la lista, no
+  // mirando un documento en particular.
+
+  let menuAbierto = null;
+
+  function cerrarMenu() {
+    if (menuAbierto) { menuAbierto.remove(); menuAbierto = null; }
+  }
+
+  function abrirMenu(boton, i) {
+    cerrarMenu();
+    const f = visibles[i];
+    if (!f) return;
+
+    const m = document.createElement('div');
+    m.className = 'env-menu';
+
+    const puestas = new Set(f.etiquetas || []);
+    const puedeBorrar = f.estado !== 'completado';
+
+    m.innerHTML =
+      // Cambiar de asesor cambia quién ve el documento, así que solo se
+      // ofrece al liderazgo. La base lo vuelve a revisar de todas formas.
+      (veTodo
+        ? '<div class="env-menu-titulo">Asesor</div>' +
+          '<button type="button" class="env-menu-op' + (!f.user_id ? ' elegida' : '') + '" data-asesor="">' +
+            '<span>Sin identificar</span></button>' +
+          asesores.map((a) =>
+            '<button type="button" class="env-menu-op' + (f.user_id === a.id ? ' elegida' : '') + '"' +
+              ' data-asesor="' + a.id + '"><span>' + escapar(a.nombre || a.email) + '</span></button>').join('') +
+          '<div class="env-menu-sep"></div>'
+        : '') +
+
+      '<div class="env-menu-titulo">Etiquetas</div>' +
+      etiquetas.map((e) =>
+        '<button type="button" class="env-menu-op' + (puestas.has(e.id) ? ' elegida' : '') + '"' +
+          ' data-etiqueta="' + e.id + '">' +
+          '<i style="background:' + escapar(e.color) + '"></i><span>' + escapar(e.nombre) + '</span>' +
+        '</button>').join('') +
+      '<div class="env-menu-nueva">' +
+        '<input type="text" placeholder="Nueva etiqueta" maxlength="40" id="nueva-etiqueta">' +
+        '<button type="button" id="crear-etiqueta">Crear</button>' +
+      '</div>' +
+
+      (puedeBorrar
+        ? '<div class="env-menu-sep"></div>' +
+          '<button type="button" class="env-menu-op peligro" data-borrar="1">' +
+            '<span>Borrar del historial</span></button>'
+        : '');
+
+    document.body.appendChild(m);
+    menuAbierto = m;
+
+    // Se coloca pegado al botón, y si no cabe hacia abajo se sube: en un
+    // renglón del final de la lista el menú se saldría de la pantalla.
+    const r = boton.getBoundingClientRect();
+    const alto = m.offsetHeight;
+    const arriba = r.bottom + alto > window.innerHeight - 8;
+    m.style.top = (arriba ? Math.max(8, r.top - alto - 4) : r.bottom + 4) + 'px';
+    m.style.left = Math.max(8, Math.min(r.right - 260, window.innerWidth - 268)) + 'px';
+
+    m.addEventListener('click', (e) => e.stopPropagation());
+
+    m.querySelectorAll('[data-asesor]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        cerrarMenu();
+        const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
+          p_documento: f.id,
+          p_asesor: b.dataset.asesor || null,
+        });
+        if (error) return alert('No se pudo cambiar el asesor: ' + error.message);
+        await cargarEnvios();
+      });
+    });
+
+    m.querySelectorAll('[data-etiqueta]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const id = b.dataset.etiqueta;
+        // Se manda la lista completa como debe quedar, no "agrega esta":
+        // así dos clics seguidos no dejan el documento con la etiqueta
+        // repetida ni dependen de en qué orden llegaron.
+        const nuevas = puestas.has(id)
+          ? [...puestas].filter((x) => x !== id)
+          : [...puestas, id];
+        cerrarMenu();
+        const { error } = await window.kwSupabase.rpc('firmas_etiquetar', {
+          p_documento: f.id, p_etiquetas: nuevas,
+        });
+        if (error) return alert('No se pudo etiquetar: ' + error.message);
+        await cargarEnvios();
+      });
+    });
+
+    const crear = async () => {
+      const nombre = $('nueva-etiqueta').value.trim();
+      if (!nombre) return;
+      const { data, error } = await window.kwSupabase.rpc('firmas_crear_etiqueta', {
+        p_nombre: nombre, p_color: null,
+      });
+      if (error) return alert('No se pudo crear la etiqueta: ' + error.message);
+      cerrarMenu();
+      await cargarEtiquetas();
+      // Se le pone de una vez al documento desde el que se creó: quien
+      // la crea ahí es porque la quiere en ese documento.
+      await window.kwSupabase.rpc('firmas_etiquetar', {
+        p_documento: f.id, p_etiquetas: [...puestas, data.id],
+      });
+      await cargarEnvios();
+    };
+    $('crear-etiqueta').addEventListener('click', crear);
+    $('nueva-etiqueta').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); crear(); }
+    });
+
+    const borrar = m.querySelector('[data-borrar]');
+    if (borrar) {
+      borrar.addEventListener('click', async () => {
+        cerrarMenu();
+        if (!confirm('¿Borrar "' + f.titulo + '" del historial?\n\n'
+          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.')) return;
+        try {
+          const r = await llamarFuncion({ accion: 'borrar', id: f.id });
+          if (r.aviso) {
+            alert('Se borró del historial, pero weetrust no lo dejó quitar de su lado:\n\n'
+              + r.aviso + '\n\nAllá sigue existiendo.');
+          }
+          await Promise.all([cargarEnvios(), cargarCupo()]);
+        } catch (e) {
+          alert(e.message || 'No se pudo borrar.');
+        }
+      });
+    }
+  }
+
+  document.addEventListener('click', cerrarMenu);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu(); });
+  // El menú va pegado a la pantalla, no al renglón: si algo se mueve
+  // debajo, se quedaría flotando en el lugar equivocado.
+  window.addEventListener('scroll', cerrarMenu, true);
 
   // ── El detalle de un envío ──────────────────────────────────
 
@@ -2123,11 +2345,27 @@
     });
   }
 
+  async function cargarEtiquetas() {
+    const { data } = await window.kwSupabase
+      .from('firmas_etiquetas').select('id, nombre, color').order('nombre');
+    etiquetas = data || [];
+  }
+
+  // Solo para el liderazgo: es el único que puede reasignar, y traerse
+  // la lista completa de usuarios para quien no la va a usar es gastar
+  // una consulta en balde.
+  async function cargarAsesores() {
+    if (!veTodo) return;
+    const { data } = await window.kwSupabase
+      .from('profiles').select('id, nombre, email').order('nombre');
+    asesores = data || [];
+  }
+
   async function cargarEnvios() {
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
-    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id'
+    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
     // Del más nuevo al más viejo, que es como se busca un contrato: uno
@@ -2278,6 +2516,10 @@
     // esa mitad.
     await cargarFrecuentes();
     pintarFiltros();
+    // Las etiquetas y los asesores antes de pintar la tabla: los
+    // renglones enseñan los nombres y colores de las etiquetas, y sin el
+    // catálogo saldrían en blanco hasta la siguiente recarga.
+    await Promise.all([cargarEtiquetas(), cargarAsesores()]);
     await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
   }

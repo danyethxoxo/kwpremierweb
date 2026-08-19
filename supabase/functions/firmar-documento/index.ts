@@ -691,12 +691,22 @@ Deno.serve(async (req: Request) => {
         }, 409)
       }
 
+      // Se intenta retirar de weetrust, pero que ellos no dejen no
+      // impide marcarlo como cancelado aquí.
+      //
+      // El caso que lo hace necesario: los documentos que se trajeron de
+      // su panel los creó otra cuenta de weetrust, y su API no siempre
+      // deja borrar lo que creó alguien más. Antes eso abortaba todo y
+      // el documento se quedaba igual, sin que se pudiera hacer nada
+      // desde el sitio. Ahora al menos se saca del camino aquí, y el
+      // aviso dice con todas sus letras que allá sigue vivo.
+      let avisoWeetrust: string | null = null
       if (fila.weetrust_document_id) {
-        const token = await obtenerToken()
         try {
+          const token = await obtenerToken()
           await borrarDocumento(token, fila.weetrust_document_id)
         } catch (e) {
-          return respond({ error: `weetrust no lo dejó borrar: ${(e as Error).message}` }, 502)
+          avisoWeetrust = (e as Error).message
         }
       }
 
@@ -704,7 +714,64 @@ Deno.serve(async (req: Request) => {
         .update({ estado: 'cancelado' })
         .eq('id', id)
 
-      return respond({ ok: true })
+      return respond({ ok: true, aviso: avisoWeetrust })
+    }
+
+    // ── Borrar un envío del historial ──
+    // Distinto de cancelar: cancelar lo retira de firma y deja el
+    // renglón como constancia; borrar lo quita del historial.
+    if (accion === 'borrar') {
+      const id = String(body.id || '')
+      if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+
+      const { data: fila } = await admin
+        .from('firmas_documentos')
+        .select('id, user_id, estado, weetrust_document_id, archivo_ruta')
+        .eq('id', id)
+        .single()
+
+      if (!fila) return respond({ error: 'Ese envío no existe.' }, 404)
+
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      const esLiderazgo = ['master', 'admin', 'staff'].includes(String(perfil?.role))
+      if (fila.user_id !== userId && !esLiderazgo) {
+        return respond({ error: 'Ese envío no es tuyo.' }, 403)
+      }
+
+      // Un documento firmado por todas las partes es la constancia de lo
+      // que se firmó. weetrust lo sella en su blockchain justamente para
+      // que no se pueda borrar, y borrar nuestro renglón dejaría al
+      // Market Center sin rastro de un contrato que sí existe.
+      if (fila.estado === 'completado') {
+        return respond({
+          error: 'Un documento ya firmado no se puede borrar: es la constancia de la firma.',
+        }, 409)
+      }
+
+      let avisoWeetrust: string | null = null
+      if (fila.weetrust_document_id) {
+        try {
+          const token = await obtenerToken()
+          await borrarDocumento(token, fila.weetrust_document_id)
+        } catch (e) {
+          // Si allá sigue vivo, su webhook lo volvería a crear aquí en
+          // cuanto alguien firme. Se avisa para que no parezca que el
+          // borrado no sirvió.
+          avisoWeetrust = (e as Error).message
+        }
+      }
+
+      // El PDF original se va con él: sin renglón que lo apunte, ese
+      // archivo no lo podría abrir nadie nunca más.
+      if (fila.archivo_ruta) {
+        await admin.storage.from('firmas').remove([fila.archivo_ruta])
+      }
+
+      const { error } = await admin.from('firmas_documentos').delete().eq('id', id)
+      if (error) return respond({ error: `No se pudo borrar: ${error.message}` }, 500)
+
+      return respond({ ok: true, aviso: avisoWeetrust })
     }
 
     // ── Registrar los webhooks en weetrust ──
