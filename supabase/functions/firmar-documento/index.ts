@@ -739,6 +739,76 @@ Deno.serve(async (req: Request) => {
       return respond({ ok: true, estado, firmantes })
     }
 
+    // ── Ver crudo lo que manda weetrust de un documento ──
+    // Dos veces se dio por hecho dónde venía el trazo de la firma y dos
+    // veces salió mal: primero se supuso que el PDF ya lo traía dibujado,
+    // luego que estaba en 'imageURL'. En vez de una tercera suposición,
+    // esto devuelve tal cual el JSON de un documento para ver qué campos
+    // trae de verdad cuando alguien ya firmó.
+    //
+    // Solo master, y solo para leer: no toca ni guarda nada. Las llaves
+    // largas (el PDF en base64, si viniera) se recortan para que la
+    // respuesta se pueda leer en la consola.
+    if (accion === 'espiar') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      if (String(perfil?.role) !== 'master') {
+        return respond({ error: 'Esto solo lo puede hacer el usuario master.' }, 403)
+      }
+
+      let documentID = String(body.weetrust_document_id || '')
+      if (!documentID) {
+        const id = String(body.id || '')
+        if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+        const { data: fila } = await admin
+          .from('firmas_documentos')
+          .select('weetrust_document_id')
+          .eq('id', id)
+          .single()
+        documentID = String(fila?.weetrust_document_id || '')
+      }
+      if (!documentID) return respond({ error: 'Ese envío nunca llegó a weetrust.' }, 409)
+
+      const token = await obtenerToken()
+      const doc = await pedirDocumento(token, documentID)
+      if (!doc) return respond({ error: 'weetrust ya no reconoce ese documento.' }, 404)
+
+      // Un valor de texto larguísimo casi siempre es un archivo metido
+      // en el propio JSON. Se deja el principio, que es lo que dice de
+      // qué se trata, y se anota cuánto medía.
+      const recortar = (valor: unknown): unknown => {
+        if (typeof valor === 'string' && valor.length > 300) {
+          return `${valor.slice(0, 300)}… [${valor.length} caracteres]`
+        }
+        if (Array.isArray(valor)) return valor.map(recortar)
+        if (valor && typeof valor === 'object') {
+          const salida: Record<string, unknown> = {}
+          for (const [k, v] of Object.entries(valor as Record<string, unknown>)) {
+            salida[k] = recortar(v)
+          }
+          return salida
+        }
+        return valor
+      }
+
+      const firmantesCrudos = Array.isArray(doc?.signatory) ? doc.signatory : []
+      return respond({
+        ok: true,
+        documentID,
+        status: doc?.status ?? null,
+        // La lista de campos de cada firmante, aparte del contenido, para
+        // poder comparar de un vistazo cuáles aparecen solo en los que ya
+        // firmaron.
+        campos_por_firmante: firmantesCrudos.map((s: Record<string, unknown>) => ({
+          correo: s?.emailID ?? null,
+          isSigned: s?.isSigned ?? null,
+          llaves: Object.keys(s || {}).sort(),
+        })),
+        firmantes: recortar(firmantesCrudos),
+        documento: recortar(doc),
+      })
+    }
+
     // ── Prueba de conexión, sin mandar nada a firma ──
     // Comprueba credenciales, token, subida y borrado, que es toda la
     // plomería salvo la invitación. Se para justo antes de invitar a

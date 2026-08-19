@@ -701,12 +701,17 @@
      mover un recuadro no cambiaría nada. */
   .marca-firma.vista { cursor: default; }
   .marca-firma.vista .marca-rotulo { padding: 0 6px; }
-  /* Firmó pero no tenemos su trazo: se ve como hecho, no como pendiente. */
-  .marca-firma.vista.firmada {
-    --marca-color: #16a34a;
-    background: rgba(22,163,74,0.14);
+  /* Firmó pero no tenemos su trazo. Solo la palomita en la esquina: el
+     centro se deja libre porque ahí puede estar la firma dibujada en el
+     propio PDF, y taparla es peor que no marcar nada. */
+  .firma-hecha { pointer-events: none; }
+  .firma-hecha-check {
+    position: absolute; top: -7px; right: -7px;
+    width: 17px; height: 17px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #16a34a; color: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
   }
-  .marca-firma.vista.firmada .marca-rotulo { color: #15803d; }
 
   /* El trazo de la firma, encima del documento. Sin recuadro ni fondo:
      lo que se quiere ver es la firma sobre la línea, como quedaría
@@ -2626,15 +2631,11 @@
       // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
       // que es justo lo que uno viene a revisar.
       //
-      // Se marcan las que faltan; las que ya se firmaron vienen dibujadas
-      // en el propio PDF de weetrust y volver a taparlas las escondería.
-      // Encima del documento va lo que falta y lo que ya se hizo.
-      //
-      // El PDF que entrega weetrust NO trae las firmas dibujadas: su
-      // propia pantalla las superpone, y cada firma vive como una imagen
-      // aparte (el "imageURL" de cada firmante). Por eso aquí se hace lo
-      // mismo: si esa persona ya firmó y tenemos su trazo, se dibuja el
-      // trazo; si no, el recuadro de color que dice dónde le toca.
+      // Las que faltan llevan su recuadro de color. Las que ya se
+      // firmaron van sin nada encima: no está confirmado de dónde saca
+      // weetrust el trazo, y mientras no se sepa, lo seguro es no tapar
+      // el área por si el PDF ya lo trae dibujado. Si sí tenemos el
+      // trazo, se dibuja; si no, solo una palomita en la esquina.
       (f.posiciones || []).forEach((pz) => {
         const pag = hojas[pz.pagina - 1];
         if (!pag) return;
@@ -2653,12 +2654,15 @@
           el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
             escapar(quien.nombre || quien.correo) + '">';
         } else if (quien && quien.firmado) {
-          // Firmó, pero no tenemos su trazo (documentos de antes de que
-          // se guardara, o firmas que weetrust no expone). Se marca como
-          // firmada en vez de dejar el hueco, que se leería como que
-          // falta.
-          el.className = 'marca-firma vista firmada';
-          el.innerHTML = '<span class="marca-rotulo">Firmado</span>';
+          // Firmó, pero no tenemos su trazo. Se marca con una palomita
+          // en la esquina y NADA en medio, a propósito: si el PDF que
+          // dio weetrust ya trae la firma dibujada, cualquier recuadro
+          // encima la taparía, que es lo que estaba pasando.
+          el.className = 'firma-hecha';
+          el.innerHTML = '<span class="firma-hecha-check" title="Firmado por ' +
+            escapar(quien.nombre || quien.correo) + '">' +
+            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+            '</span>';
         } else {
           el.className = 'marca-firma vista';
           el.style.setProperty('--marca-color', pz.color || '#FFD247');
