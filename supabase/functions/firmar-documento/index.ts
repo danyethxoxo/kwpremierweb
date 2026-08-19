@@ -997,9 +997,15 @@ Deno.serve(async (req: Request) => {
     // existía y se tomaba el primero. De un solo envío salían diez o
     // quince copias.
     //
-    // Esto recorre los importados y borra los que weetrust ya no
-    // reconoce con ese identificador exacto. Es seguro: si el documento
-    // existe de verdad, se queda.
+    // La primera versión de esta limpieza preguntaba por cada documento
+    // uno por uno y trataba cualquier fallo como "no existe". Eso borró
+    // documentos buenos: el token de weetrust dura 5 minutos, así que a
+    // media revisión de cientos de renglones se vencía y todo lo que
+    // venía después se daba por fantasma.
+    //
+    // Ahora se pide la lista completa de una vez y se borra solo lo que
+    // NO esté en ella. Si la lista no se puede traer, no se borra nada:
+    // no poder comprobar algo no es lo mismo que comprobar que no está.
     if (accion === 'limpiar_fantasmas') {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', userId).single()
@@ -1012,47 +1018,80 @@ Deno.serve(async (req: Request) => {
         .select('id, titulo, weetrust_document_id')
         .eq('origen', 'importado')
         .not('weetrust_document_id', 'is', null)
-        .limit(500)
 
-      if (!filas?.length) return respond({ ok: true, revisados: 0, borrados: 0 })
+      if (!filas?.length) return respond({ ok: true, revisados: 0, sobran: 0, borrados: 0 })
 
+      // Los identificadores que weetrust reconoce hoy.
       const token = await obtenerToken()
-      const fantasmas: string[] = []
-      const nombres: string[] = []
+      const reales = new Set<string>()
+      const POR_TANDA = 100
 
-      // De diez en diez: uno por uno con cientos de renglones se pasa del
-      // tiempo que aguanta la función.
-      for (let i = 0; i < filas.length; i += 10) {
-        const trozo = filas.slice(i, i + 10)
-        const vistos = await Promise.all(trozo.map(
-          (f: { weetrust_document_id: string | null }) =>
-            pedirDocumento(token, f.weetrust_document_id!).catch(() => null)))
-        vistos.forEach((doc: unknown, j: number) => {
-          if (!doc) { fantasmas.push(trozo[j].id); nombres.push(trozo[j].titulo) }
+      try {
+        for (let vuelta = 0; vuelta < 20; vuelta++) {
+          const url = `${WEETRUST_URL}/documents?status=ALL`
+            + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
+          const res = await fetch(url, { headers: encabezados(token) })
+          const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
+          const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
+          if (!tanda.length) break
+
+          let novedades = 0
+          for (const d of tanda) {
+            const id = String((d as Record<string, unknown>)?.documentID || '')
+            if (!id || reales.has(id)) continue
+            reales.add(id)
+            novedades++
+          }
+          if (!novedades || tanda.length < POR_TANDA) break
+        }
+      } catch (e) {
+        return respond({
+          error: `No se pudo pedir la lista a weetrust, así que no se borró nada: ${(e as Error).message}`,
+        }, 502)
+      }
+
+      // Si la lista vino vacía es que algo anda mal de su lado: borrar
+      // todo el historial porque no contestaron sería el peor resultado
+      // posible.
+      if (!reales.size) {
+        return respond({
+          error: 'weetrust no devolvió ningún documento. No se borró nada, por si acaso.',
+        }, 502)
+      }
+
+      const sobran = filas.filter((f: { weetrust_document_id: string }) =>
+        !reales.has(f.weetrust_document_id))
+
+      // Por defecto solo se informa. Borrar de verdad exige una segunda
+      // llamada con el visto bueno, para que quien la corre vea primero
+      // cuántos se van a ir.
+      if (body.confirmado !== true) {
+        return respond({
+          ok: true,
+          revisados: filas.length,
+          enWeetrust: reales.size,
+          sobran: sobran.length,
+          borrados: 0,
+          nombres: sobran.slice(0, 20).map((f: { titulo: string }) => f.titulo),
         })
       }
 
-      if (fantasmas.length) {
-        const { error } = await admin.from('firmas_documentos').delete().in('id', fantasmas)
+      if (sobran.length) {
+        const { error } = await admin.from('firmas_documentos')
+          .delete().in('id', sobran.map((f: { id: string }) => f.id))
         if (error) return respond({ error: `No se pudieron borrar: ${error.message}` }, 500)
       }
 
       return respond({
         ok: true,
         revisados: filas.length,
-        borrados: fantasmas.length,
-        nombres: nombres.slice(0, 20),
+        enWeetrust: reales.size,
+        sobran: sobran.length,
+        borrados: sobran.length,
       })
     }
 
-    // ── Traer el historial que ya existe en weetrust ──
-    // El Market Center llevaba tiempo mandando documentos desde el panel
-    // de weetrust, antes de que existiera esta pantalla. Esto los copia
-    // para que el historial del sitio no arranque a medias.
-    //
-    // Es idempotente: se puede volver a correr cuantas veces se quiera.
-    // Los que ya están se actualizan y los que no, se crean; nunca se
-    // duplican, porque el identificador de weetrust es único en la tabla.
+
     // ── Traer el historial que ya existe en weetrust ──
     // El Market Center llevaba tiempo mandando documentos desde el panel
     // de weetrust, antes de que existiera esta pantalla. Esto los copia

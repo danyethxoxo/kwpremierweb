@@ -1418,19 +1418,36 @@
   // Quita los renglones que quedaron de cuando el webhook creaba una
   // copia por cada cadena de 24 caracteres del aviso.
   $('btn-limpiar').addEventListener('click', async () => {
-    if (!confirm('Se van a revisar los documentos traídos de weetrust y a borrar '
-      + 'los que allá ya no existen con ese identificador.\n\n'
-      + 'Los que sí existen se quedan.')) return;
-
     const btn = $('btn-limpiar');
     btn.disabled = true;
     const original = btn.innerHTML;
     btn.textContent = 'Revisando...';
 
     try {
+      // Primero solo se pregunta, sin borrar: así se ve cuántos se
+      // irían antes de decidir. Borrar a ciegas ya salió caro una vez.
       const r = await llamarFuncion({ accion: 'limpiar_fantasmas' });
-      alert('Se revisaron ' + r.revisados + ' documentos.\n'
-        + 'Se borraron ' + r.borrados + ' que weetrust ya no reconoce.');
+
+      if (!r.sobran) {
+        alert('Se revisaron ' + r.revisados + ' documentos y todos existen en weetrust.\n'
+          + 'No hay nada que limpiar.');
+        return;
+      }
+
+      const lista = (r.nombres || []).join('\n');
+      const ok = confirm(
+        'En el sitio hay ' + r.revisados + ' documentos traídos de weetrust.\n'
+        + 'En weetrust existen ' + r.enWeetrust + '.\n\n'
+        + 'Sobran ' + r.sobran + ', que allá ya no están:\n\n' + lista
+        + (r.sobran > 20 ? '\n(y ' + (r.sobran - 20) + ' más)' : '')
+        + '\n\n¿Borrarlos? Esto no se puede deshacer, aunque se pueden volver '
+        + 'a traer con "Traer de weetrust" si existieran.');
+
+      if (!ok) return;
+
+      btn.textContent = 'Borrando...';
+      const r2 = await llamarFuncion({ accion: 'limpiar_fantasmas', confirmado: true });
+      alert('Se borraron ' + r2.borrados + ' renglones.');
       await cargarEnvios();
     } catch (e) {
       alert(e.message || 'No se pudo limpiar.');
