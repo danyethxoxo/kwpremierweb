@@ -179,7 +179,28 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4);
   }
-  .hist-filtros { display: flex; gap: 7px; flex-wrap: wrap; }
+  /* Los desplegables usan el componente propio del sitio, que es de
+     ancho completo por defecto. En la barra de filtros eso los apila uno
+     debajo de otro y se come media pantalla, así que aquí se les da su
+     ancho justo y caben los cinco en un renglón. */
+  .hist-filtros { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 0; }
+  .hist-filtros .kw-select { width: auto; min-width: 0; }
+  .hist-filtros .kw-select-btn {
+    height: 32px; padding: 0 10px; font-size: 12px; border-radius: 999px;
+  }
+  .hist-filtros .kw-select-valor { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .hist-buscar {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 11px; border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.85);
+    color: var(--muted);
+  }
+  .hist-buscar input {
+    width: 118px; border: none; background: none; outline: none;
+    font-family: inherit; font-size: 12px; color: var(--text);
+  }
   .hist-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
   /* Traer el historial de weetrust. Va apagado de color: es una acción
@@ -196,16 +217,6 @@
   .btn-importar:hover { background: rgba(255,255,255,0.22); }
   .btn-importar:disabled { opacity: 0.5; cursor: default; }
 
-  .hist-select {
-    padding: 7px 11px; border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.28);
-    background: rgba(255,255,255,0.1); color: #fff;
-    font-family: inherit; font-size: 12.5px; font-weight: 700;
-    cursor: pointer; outline: none;
-  }
-  /* Las opciones las dibuja el sistema operativo con su propio fondo, y
-     sobre blanco el texto claro no se lee. */
-  .hist-select option { color: #1a1a1a; background: #fff; }
 
   .btn-nuevo-doc {
     display: inline-flex; align-items: center; gap: 7px;
@@ -404,6 +415,14 @@
 
   .env-menu-op.crear { color: var(--red); font-weight: 700; }
 
+  /* El panel de cada etiqueta se abre debajo de su renglón, dentro del
+     mismo menú: así aparece donde se le picó y no en otra esquina. */
+  .tag-panel {
+    margin: 0 4px 6px; padding: 4px 0 2px;
+    border-radius: 9px; background: rgba(0,0,0,0.035);
+  }
+  .tag-menu-btn.abierto { background: rgba(0,0,0,0.1); color: var(--text); }
+
   .env-menu-colores {
     display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px 9px;
   }
@@ -414,13 +433,30 @@
   }
   .tag-color.elegido { border-color: var(--text); }
 
-  /* ── La vista previa del documento ── */
-  .doc-caja { max-width: 860px; width: 100%; position: relative; text-align: left; }
+  /* ── La vista previa del documento ──
+     El documento a la izquierda y quién ya firmó a la derecha, que es lo
+     que uno quiere saber al abrir un contrato a medias. */
+  .doc-caja { max-width: 1000px; width: 100%; position: relative; text-align: left; }
+  .doc-split { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: var(--sp-4); align-items: start; }
+  @media (max-width: 780px) { .doc-split { grid-template-columns: 1fr; } }
+
+  .doc-marco {
+    background: rgba(0,0,0,0.06); border-radius: 10px; padding: var(--sp-3);
+    max-height: min(72vh, 760px); overflow-y: auto; overflow-x: hidden;
+  }
+  .doc-marco .pagina-num { color: var(--muted); }
+  .doc-marco canvas, .doc-marco .pagina-caja { max-width: 100%; }
   .doc-visor {
     width: 100%; height: min(70vh, 720px);
     border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
     background: #f4f4f4;
   }
+
+  .doc-lado { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .doc-lado-tit { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .doc-firmante { display: flex; align-items: flex-start; gap: 9px; padding: 6px 0; }
+  .doc-lado .det-acciones { margin-top: 0; flex-direction: column; }
+  .doc-lado .kw-fila-btn { width: 100%; justify-content: center; }
 
   /* Las etiquetas puestas, en su columna de la tabla. */
   .env-tags { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
@@ -755,7 +791,7 @@
     <div id="vista-historial">
       <div class="hist-barra">
         <div class="hist-filtros">
-          <select class="hist-select" id="f-estado">
+          <select id="f-estado">
             <option value="todos">Todos los estados</option>
             <option value="pendiente">Esperando firmas</option>
             <option value="borrador">Borradores</option>
@@ -770,11 +806,10 @@
             <input type="text" id="f-asesor" placeholder="Buscar asesor" autocomplete="off">
           </label>
 
-          <select class="hist-select" id="f-falta"></select>
+          <div id="w-falta" style="display:none;"><select id="f-falta"></select></div>
+          <div id="w-etiqueta" style="display:none;"><select id="f-etiqueta"></select></div>
 
-          <select class="hist-select" id="f-etiqueta"></select>
-
-          <select class="hist-select" id="f-orden">
+          <select id="f-orden">
             <option value="fecha-desc">Más nuevos primero</option>
             <option value="fecha-asc">Más antiguos primero</option>
             <option value="asesor">Por asesor</option>
@@ -917,8 +952,13 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       <h3 id="doc-titulo">Documento</h3>
-      <div id="doc-cuerpo"></div>
-      <div class="det-acciones" id="doc-acciones"></div>
+      <div class="doc-split">
+        <div id="doc-cuerpo" class="doc-marco"></div>
+        <div class="doc-lado">
+          <div id="doc-lado"></div>
+          <div class="det-acciones" id="doc-acciones"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1212,34 +1252,33 @@
 
   // ── Dibujar el documento ────────────────────────────────────
 
-  async function pintarDocumento(bytes) {
+  // Dibuja un PDF dentro de un contenedor. Lo usan el editor (donde
+  // encima se colocan las firmas) y la vista previa del historial, para
+  // que el documento se vea igual en los dos lados.
+  //
+  // Devuelve el tamaño real de cada página en puntos, que es lo que
+  // weetrust necesita y no cambia aunque la pantalla sea chica.
+  async function dibujarEn(bytes, cont, marco) {
     // pdf.js se queda con el arreglo que recibe y lo deja inservible
     // para lo que venga después; se le pasa una copia para poder seguir
     // usando el original al subirlo.
     const doc = await window.pdfjsLib.getDocument({ data: bytes.slice() }).promise;
-    paginas = [];
-    const cont = $('paginas');
     cont.innerHTML = '';
+    const hojas = [];
+
+    // El ancho se mide sobre el contenedor que hace scroll, restándole
+    // su relleno. Medido sobre el de adentro no se descuenta el padding
+    // ni la barra de desplazamiento, y la hoja sale unos pixeles más
+    // ancha que su hueco: eso es la barra horizontal que sobra.
+    const relleno = getComputedStyle(marco);
+    const disponible = marco.clientWidth
+      - parseFloat(relleno.paddingLeft) - parseFloat(relleno.paddingRight);
+    const ancho = Math.max(240, Math.min(disponible || 560, 900));
 
     for (let n = 1; n <= doc.numPages; n++) {
       const pag = await doc.getPage(n);
-
-      // La escala se calcula sobre el ancho disponible para que la hoja
-      // se vea completa sin tener que hacer zoom. El tamaño real en
-      // puntos se guarda aparte: es el que weetrust necesita, y no
-      // cambia aunque la pantalla sea chica.
       const natural = pag.getViewport({ scale: 1 });
-      // El ancho se mide sobre el contenedor que hace scroll, restándole
-      // su relleno. Antes se medía sobre #paginas, que no descuenta el
-      // padding ni la barra de desplazamiento: la hoja salía unos
-      // pixeles más ancha que su hueco y eso era la barra horizontal.
-      const marco = $('editor-doc');
-      const relleno = getComputedStyle(marco);
-      const disponible = marco.clientWidth
-        - parseFloat(relleno.paddingLeft) - parseFloat(relleno.paddingRight);
-      const ancho = Math.max(240, Math.min(disponible || 560, 900));
-      const escala = ancho / natural.width;
-      const vista = pag.getViewport({ scale: escala });
+      const vista = pag.getViewport({ scale: ancho / natural.width });
 
       const caja = document.createElement('div');
       caja.className = 'pagina-caja';
@@ -1247,7 +1286,7 @@
       const lienzo = document.createElement('canvas');
       // El dibujo se hace al doble de resolución en pantallas que lo
       // aprovechan; si no, el texto del contrato se ve borroso justo
-      // cuando hay que leerlo para saber dónde va la firma.
+      // cuando hay que leerlo.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       lienzo.width = Math.floor(vista.width * dpr);
       lienzo.height = Math.floor(vista.height * dpr);
@@ -1273,10 +1312,20 @@
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
       }).promise;
 
-      paginas.push({ numero: n, capa: capa, anchoPt: natural.width, altoPt: natural.height });
-      capa.addEventListener('click', (e) => colocarEnPagina(e, paginas[n - 1]));
+      hojas.push({ numero: n, capa: capa, anchoPt: natural.width, altoPt: natural.height });
     }
+    return hojas;
   }
+
+  async function pintarDocumento(bytes) {
+    paginas = await dibujarEn(bytes, $('paginas'), $('editor-doc'));
+    // Solo en el editor las hojas reciben clics: en la vista previa del
+    // historial el documento se mira, no se toca.
+    paginas.forEach((p) => {
+      p.capa.addEventListener('click', (e) => colocarEnPagina(e, p));
+    });
+  }
+
 
   // ── Pasar del paso 1 al paso 2 ──────────────────────────────
 
@@ -2088,10 +2137,27 @@
     }
 
     $('doc-titulo').textContent = f.titulo;
-    $('doc-cuerpo').innerHTML = url
-      ? '<iframe class="doc-visor" src="' + escapar(url) + '"></iframe>'
-      : '<div class="kw-vacio">Este documento se mandó desde el panel de weetrust y todavía no está firmado, '
-        + 'así que su archivo solo vive allá. Cuando se complete, el firmado aparecerá aquí.</div>';
+
+    // Al lado del documento, quién ya firmó. Es lo que uno quiere saber
+    // al abrir un contrato a medias, y ahorra tener que cerrar y abrir
+    // el estatus por separado.
+    const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+    const yaFirmaron = firmantes.filter((x) => x.firmado).length;
+    $('doc-lado').innerHTML = firmantes.length
+      ? '<div class="doc-lado-tit">Firmas ' + yaFirmaron + '/' + firmantes.length + '</div>' +
+        firmantes.map((x) =>
+          '<div class="doc-firmante">' +
+            '<span class="det-punto' + (x.firmado ? ' ok' : '') + '">' +
+              (x.firmado
+                ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '') +
+            '</span>' +
+            '<span class="det-datos">' +
+              '<span class="det-nom">' + escapar(x.nombre) + '</span>' +
+              '<span class="det-mail">' + escapar(x.correo) + '</span>' +
+            '</span>' +
+          '</div>').join('')
+      : '';
 
     $('doc-acciones').innerHTML = url
       ? '<a class="kw-fila-btn" href="' + escapar(url) + '" target="_blank" rel="noopener">Abrir en otra pestaña</a>' +
@@ -2100,6 +2166,35 @@
       : '';
 
     $('modal-doc').style.display = 'flex';
+
+    if (!url) {
+      $('doc-cuerpo').innerHTML = '<div class="kw-vacio">Este documento se mandó desde el panel de weetrust '
+        + 'y todavía no está firmado, así que su archivo solo vive allá. Cuando se complete, aparecerá aquí.</div>';
+      return;
+    }
+
+    // Se dibuja con pdf.js, no con un <iframe>. El iframe abre el visor
+    // del navegador, que trae su propia barra de herramientas encima y
+    // no enseña nada hasta que termina de bajar el archivo entero. Aquí
+    // la primera página aparece en cuanto está lista, que en un contrato
+    // de catorce hojas es la diferencia entre esperar y no esperar.
+    $('doc-cuerpo').innerHTML =
+      '<div class="editor-cargando"><div class="kw-loader"></div><span>Abriendo el documento...</span></div>' +
+      '<div id="doc-paginas"></div>';
+
+    try {
+      await cargarLibs();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('no se pudo bajar');
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
+      $('doc-cuerpo').querySelector('.editor-cargando')?.remove();
+    } catch {
+      // Si el archivo vive en weetrust, su servidor puede no dejar que
+      // lo leamos desde aquí. Ahí se cae al visor del navegador, que sí
+      // puede abrirlo aunque se vea peor.
+      $('doc-cuerpo').innerHTML = '<iframe class="doc-visor" src="' + escapar(url) + '"></iframe>';
+    }
   }
 
 
@@ -2113,9 +2208,13 @@
   // picarle al que no era.
 
   let flotante = null;
+  // Qué etiqueta tiene abierto su panel de color y borrado. Vive fuera
+  // del menú para que sobreviva a que la lista se vuelva a pintar.
+  let tagAbierta = null;
 
   function cerrarFlotante() {
     if (flotante) { flotante.remove(); flotante = null; }
+    tagAbierta = null;
   }
 
   // Lo coloca pegado al botón, y si no cabe hacia abajo lo sube: en un
@@ -2145,7 +2244,13 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarFlotante(); });
   // Van pegados a la pantalla y no al renglón: si algo se mueve debajo
   // se quedarían flotando en el lugar equivocado.
-  window.addEventListener('scroll', cerrarFlotante, true);
+  // Solo cuando se mueve algo de FUERA del menú. Con la captura pelada,
+  // rodar la rueda dentro del propio menú lo cerraba, así que la lista
+  // de asesores y la de etiquetas no se podían recorrer.
+  window.addEventListener('scroll', (e) => {
+    if (flotante && e.target instanceof Node && flotante.contains(e.target)) return;
+    cerrarFlotante();
+  }, true);
 
   // ── Tres puntos: acciones sobre el envío ──
   function abrirMenu(boton, i) {
@@ -2157,20 +2262,18 @@
     const enCurso = f.estado === 'pendiente';
     const puedeBorrar = f.estado !== 'completado';
 
-    const caja = abrirFlotante(boton, 240,
+    const caja = abrirFlotante(boton, 220,
       (enCurso
         ? '<button type="button" class="env-menu-op" data-accion="reenviar">' +
-            '<span>Reenviar el correo</span></button>' +
-          '<button type="button" class="env-menu-op" data-accion="recordatorio">' +
-            '<span>Mandar recordatorio</span></button>' +
-          '<div class="env-menu-sep"></div>'
+            '<span>Reenviar el correo</span></button>'
         : '') +
-      '<button type="button" class="env-menu-op" data-accion="consultar">' +
-        '<span>Actualizar estado</span></button>' +
+      (enCurso && puedeBorrar ? '<div class="env-menu-sep"></div>' : '') +
       (puedeBorrar
-        ? '<div class="env-menu-sep"></div>' +
-          '<button type="button" class="env-menu-op peligro" data-accion="borrar">' +
+        ? '<button type="button" class="env-menu-op peligro" data-accion="borrar">' +
             '<span>Eliminar</span></button>'
+        : '') +
+      (!enCurso && !puedeBorrar
+        ? '<div class="env-menu-nada">Un documento ya firmado no se puede cambiar.</div>'
         : ''));
 
     caja.querySelectorAll('[data-accion]').forEach((b) => {
@@ -2286,12 +2389,24 @@
             ' data-etiqueta="' + e.id + '">' +
             '<i style="background:' + escapar(e.color) + '"></i><span>' + escapar(e.nombre) + '</span>' +
           '</button>' +
-          '<button type="button" class="tag-menu-btn" data-tagmenu="' + e.id + '" aria-label="Opciones de la etiqueta">' +
+          '<button type="button" class="tag-menu-btn' + (tagAbierta === e.id ? ' abierto' : '') + '"' +
+            ' data-tagmenu="' + e.id + '" aria-label="Opciones de la etiqueta">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">' +
               '<circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/>' +
             '</svg>' +
           '</button>' +
-        '</div>').join('') +
+        '</div>' +
+        (tagAbierta === e.id
+          ? '<div class="tag-panel">' +
+              '<div class="env-menu-colores">' +
+                COLORES_TAG.map((c) =>
+                  '<button type="button" class="tag-color' + (c === e.color ? ' elegido' : '') + '"' +
+                    ' data-recolor="' + e.id + '" data-color="' + c + '" style="background:' + c + '"></button>').join('') +
+              '</div>' +
+              '<button type="button" class="env-menu-op peligro" data-borrar-tag="' + e.id + '">' +
+                '<span>Borrar etiqueta</span></button>' +
+            '</div>'
+          : '')).join('') +
         (!hallados.length && !q ? '<div class="env-menu-nada">Todavía no hay etiquetas. Escribe una para crearla.</div>' : '');
 
       // Poner o quitar. Se manda la lista completa como debe quedar y no
@@ -2319,6 +2434,40 @@
         });
       }
 
+      $('lista-etiquetas').querySelectorAll('[data-recolor]').forEach((b) => {
+        b.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const { error } = await window.kwSupabase.rpc('firmas_actualizar_etiqueta', {
+            p_etiqueta: b.dataset.recolor, p_nombre: null, p_color: b.dataset.color,
+          });
+          if (error) return alert('No se pudo cambiar el color: ' + error.message);
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          // El panel se queda abierto: casi siempre se prueban dos o
+          // tres colores antes de quedarse con uno.
+          pintarEtiquetas($('bus-etiqueta').value);
+          pintarEnvios();
+        });
+      });
+
+      $('lista-etiquetas').querySelectorAll('[data-borrar-tag]').forEach((b) => {
+        b.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const et = etiquetas.find((x) => x.id === b.dataset.borrarTag);
+          if (!confirm('¿Borrar la etiqueta "' + (et ? et.nombre : '') + '"?\n\n'
+            + 'Se quita de todos los documentos que la tuvieran.')) return;
+          const { error } = await window.kwSupabase.rpc('firmas_borrar_etiqueta', {
+            p_etiqueta: b.dataset.borrarTag,
+          });
+          if (error) return alert('No se pudo borrar: ' + error.message);
+          tagAbierta = null;
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          pintarEtiquetas($('bus-etiqueta').value);
+          await cargarEnvios();
+        });
+      });
+
       const btnCrear = $('lista-etiquetas').querySelector('[data-crear]');
       if (btnCrear) {
         btnCrear.addEventListener('click', async () => {
@@ -2336,11 +2485,16 @@
         });
       }
 
-      // Cambiar color o borrar, por etiqueta.
+      // Cambiar color o borrar. Se despliega dentro del mismo panel, no
+      // como otro menú flotante: el anterior se posicionaba desde el
+      // botón que lo abrió, y como ese botón desaparecía al cerrar el
+      // panel padre, acababa siempre en la esquina de arriba.
       $('lista-etiquetas').querySelectorAll('[data-tagmenu]').forEach((b) => {
         b.addEventListener('click', (e) => {
           e.stopPropagation();
-          abrirMenuEtiqueta(b, etiquetas.find((x) => x.id === b.dataset.tagmenu));
+          const id = b.dataset.tagmenu;
+          tagAbierta = tagAbierta === id ? null : id;
+          pintarEtiquetas($('bus-etiqueta').value);
         });
       });
     }
@@ -2350,45 +2504,6 @@
   }
 
   const COLORES_TAG = ['#6b7280', '#16a34a', '#2563eb', '#e0a218', '#c62027', '#7c3aed', '#0891b2', '#db2777'];
-
-  function abrirMenuEtiqueta(boton, et) {
-    if (!et) return;
-    const caja = abrirFlotante(boton, 200,
-      '<div class="env-menu-titulo">' + escapar(et.nombre) + '</div>' +
-      '<div class="env-menu-colores">' +
-        COLORES_TAG.map((c) =>
-          '<button type="button" class="tag-color' + (c === et.color ? ' elegido' : '') + '"' +
-            ' data-color="' + c + '" style="background:' + c + '"></button>').join('') +
-      '</div>' +
-      '<div class="env-menu-sep"></div>' +
-      '<button type="button" class="env-menu-op peligro" data-borrar-tag="1">' +
-        '<span>Borrar etiqueta</span></button>');
-
-    caja.querySelectorAll('[data-color]').forEach((b) => {
-      b.addEventListener('click', async () => {
-        cerrarFlotante();
-        const { error } = await window.kwSupabase.rpc('firmas_actualizar_etiqueta', {
-          p_etiqueta: et.id, p_nombre: null, p_color: b.dataset.color,
-        });
-        if (error) return alert('No se pudo cambiar el color: ' + error.message);
-        await cargarEtiquetas();
-        pintarOpcionesFiltros();
-        await cargarEnvios();
-      });
-    });
-
-    caja.querySelector('[data-borrar-tag]').addEventListener('click', async () => {
-      cerrarFlotante();
-      if (!confirm('¿Borrar la etiqueta "' + et.nombre + '"?\n\n'
-        + 'Se quita de todos los documentos que la tuvieran.')) return;
-      const { error } = await window.kwSupabase.rpc('firmas_borrar_etiqueta', { p_etiqueta: et.id });
-      if (error) return alert('No se pudo borrar: ' + error.message);
-      await cargarEtiquetas();
-      pintarOpcionesFiltros();
-      await cargarEnvios();
-    });
-  }
-
 
   // ── El detalle de un envío ──────────────────────────────────
 
@@ -2556,34 +2671,50 @@
       || new Date(b.created_at) - new Date(a.created_at),
   };
 
+  // kw-ui convierte cada <select> en su propio componente y lo marca
+  // como listo, así que cambiarle las opciones después no se refleja: el
+  // menú que se ve lo armó con las de antes. Para cambiarlas hay que
+  // deshacer el envoltorio, quitarle la marca y dejar que lo vuelva a
+  // armar.
+  function rehacerSelect(id, html, valor) {
+    const sel = $(id);
+    const caja = sel.closest('.kw-select');
+    sel.innerHTML = html;
+    if (valor != null) sel.value = valor;
+    if (caja) {
+      caja.parentNode.insertBefore(sel, caja);
+      caja.remove();
+    }
+    delete sel.dataset.kwListo;
+    if (window.kwUI) window.kwUI.selects(sel.parentNode);
+  }
+
   function pintarOpcionesFiltros() {
     // Quién falta de firmar, armado con los firmantes frecuentes: son
     // los que se repiten en todos los contratos y por eso vale la pena
     // preguntarlo con un clic.
-    const op = $('f-falta');
     if (frecuentes.length >= 2) {
       const a = frecuentes[0], b = frecuentes[1];
-      op.innerHTML =
+      rehacerSelect('f-falta',
         '<option value="">Firmas de cualquiera</option>' +
         '<option value="' + escapar(a.correo) + '">Sin firma de ' + escapar(a.puesto || a.nombre.split(' ')[0]) + '</option>' +
         '<option value="' + escapar(b.correo) + '">Sin firma de ' + escapar(b.puesto || b.nombre.split(' ')[0]) + '</option>' +
-        '<option value="__ambos__">Falta firma de ambos</option>';
-      op.style.display = '';
+        '<option value="__ambos__">Falta firma de ambos</option>', faltaFirma || '');
+      $('w-falta').style.display = '';
     } else {
-      op.style.display = 'none';
+      $('w-falta').style.display = 'none';
     }
 
     // Las etiquetas que de verdad existen. Sin ninguna creada el
     // desplegable se esconde en vez de quedarse vacío.
-    const et = $('f-etiqueta');
     if (etiquetas.length) {
-      et.innerHTML = '<option value="">Todas las etiquetas</option>' +
+      rehacerSelect('f-etiqueta',
+        '<option value="">Todas las etiquetas</option>' +
         etiquetas.map((e) =>
-          '<option value="' + e.id + '">' + escapar(e.nombre) + '</option>').join('');
-      et.value = etiqueta || '';
-      et.style.display = '';
+          '<option value="' + e.id + '">' + escapar(e.nombre) + '</option>').join(''), etiqueta || '');
+      $('w-etiqueta').style.display = '';
     } else {
-      et.style.display = 'none';
+      $('w-etiqueta').style.display = 'none';
     }
   }
 
