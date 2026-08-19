@@ -602,6 +602,19 @@
     padding: 40px 0; color: rgba(255,255,255,0.8); font-size: 13px;
   }
 
+  /* Guardar y mandar, juntos al final del formulario. Guardar va en
+     secundario: es lo que se hace de paso, no el objetivo. */
+  .editor-botones { display: flex; gap: 8px; margin-top: var(--sp-4); }
+  .editor-botones .btn-guardar { flex: 1; margin-top: 0; }
+  .btn-borrador {
+    flex: 0 0 auto; padding: 0 16px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--text); cursor: pointer;
+  }
+  .btn-borrador:hover { border-color: var(--red); color: var(--red); }
+  .btn-borrador:disabled { opacity: 0.5; cursor: default; }
+
   .editor-campos {
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
     border: 1px solid rgba(255,255,255,0.82);
@@ -930,9 +943,14 @@
 
                 <div id="msg-firma" class="msg" style="display:none;"></div>
 
-                <button type="submit" class="btn-guardar" id="btn-enviar" style="margin-top:var(--sp-4);">
-                  Mandar a firma
-                </button>
+                <div class="editor-botones">
+                  <button type="button" class="btn-borrador" id="btn-borrador">
+                    Guardar borrador
+                  </button>
+                  <button type="submit" class="btn-guardar" id="btn-enviar">
+                    Mandar a firma
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -994,6 +1012,13 @@
   let marcas = [];
   // El renglón de firmante que está esperando que le piquen a la hoja.
   let filaArmada = null;
+  // El borrador que se está editando, si se llegó al editor reabriendo
+  // uno. Sirve para reusar su renglón al guardar o al mandar, en vez de
+  // dejarlo tirado y crear otro.
+  let borradorId = null;
+  // La ruta del PDF que ya está subido, cuando se reabre un borrador: no
+  // hay que volver a subirlo si no se cambiaron los documentos.
+  let rutaSubida = null;
   // Índice del archivo que se está arrastrando en la lista del paso 1.
   let arrastrando = null;
   // Si quien mira es liderazgo, el historial trae los envíos de todos y
@@ -1381,6 +1406,16 @@
   });
 
   $('btn-nuevo').addEventListener('click', () => {
+    // Se limpia todo: si se venía de retomar un borrador, seguir con su
+    // identificador haría que el documento nuevo lo sobrescribiera.
+    archivos = [];
+    pdfUnido = null;
+    marcas = [];
+    paginas = [];
+    borradorId = null;
+    rutaSubida = null;
+    pintarArchivos();
+    avisoArchivos('', '');
     mostrarVista('archivos');
   });
 
@@ -1433,6 +1468,8 @@
     // la paginación, y una firma en la página 4 del documento anterior
     // no significa nada en el nuevo.
     marcas = [];
+    // El PDF que estaba subido correspondía a los documentos anteriores.
+    rutaSubida = null;
     desarmar();
     mostrarVista('archivos');
   });
@@ -1879,6 +1916,57 @@
     return json;
   }
 
+  // Sube el PDF unido al bucket, o reusa el que ya estaba si se reabrió
+  // un borrador sin cambiar los documentos.
+  async function asegurarSubido() {
+    if (rutaSubida) return { ruta: rutaSubida, nombre: nombreDelUnido() };
+
+    const nombreFinal = nombreDelUnido();
+    const ruta = miUserId + '/' + crypto.randomUUID() + '-' + nombreFinal;
+    const { error } = await window.kwSupabase
+      .storage.from('firmas').upload(ruta, new Blob([pdfUnido], { type: 'application/pdf' }), {
+        contentType: 'application/pdf',
+      });
+    if (error) throw new Error('No se pudo subir el archivo: ' + error.message);
+    rutaSubida = ruta;
+    return { ruta, nombre: nombreFinal };
+  }
+
+  $('btn-borrador').addEventListener('click', async () => {
+    const titulo = $('titulo').value.trim();
+    if (!pdfUnido) return aviso('Falta elegir el documento.', 'error');
+    if (!titulo) return aviso('Ponle un título para poder guardarlo.', 'error');
+
+    const btn = $('btn-borrador');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    aviso('', '');
+
+    try {
+      const { ruta, nombre } = await asegurarSubido();
+      const r = await llamarFuncion({
+        accion: 'guardar_borrador',
+        borradorId: borradorId,
+        archivoRuta: ruta,
+        nombreArchivo: nombre,
+        titulo: titulo,
+        // A medias está bien: se guarda justamente porque falta algo.
+        firmantes: leerFirmantes(),
+        posiciones: posicionesParaEnviar(),
+      });
+      // Se recuerda cuál es, para que guardar otra vez actualice este
+      // mismo borrador y no vaya dejando copias.
+      borradorId = r.id;
+      aviso('Guardado. Lo puedes retomar desde el historial.', 'ok');
+      await cargarEnvios();
+    } catch (err) {
+      aviso(err.message || 'No se pudo guardar el borrador.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar borrador';
+    }
+  });
+
   $('form-firma').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (enviando) return;
@@ -1913,23 +2001,18 @@
       // El nombre se limpia antes de armar la ruta: Storage rechaza
       // acentos, espacios y signos, y los documentos suelen llamarse
       // "Contrato Depto. #3 (final).pdf".
-      const nombreFinal = nombreDelUnido();
-      const ruta = miUserId + '/' + crypto.randomUUID() + '-' + nombreFinal;
-
       // Se sube el PDF ya unido, no los originales: es exactamente el
       // que la gente va a firmar, y las coordenadas de firma solo tienen
-      // sentido contra esa paginación.
-      const { error: errSubida } = await window.kwSupabase
-        .storage.from('firmas').upload(ruta, new Blob([pdfUnido], { type: 'application/pdf' }), {
-          contentType: 'application/pdf',
-        });
-      if (errSubida) throw new Error('No se pudo subir el archivo: ' + errSubida.message);
+      // sentido contra esa paginación. Si viene de un borrador ya subido
+      // se reusa, para no dejar dos copias del mismo archivo.
+      const { ruta, nombre: nombreFinal } = await asegurarSubido();
 
       btn.textContent = 'Mandando a firma...';
 
       await llamarFuncion({
         accion: 'enviar',
         origen: 'subido',
+        borradorId: borradorId,
         archivoRuta: ruta,
         nombreArchivo: nombreFinal,
         titulo: titulo,
@@ -1948,6 +2031,8 @@
       pdfUnido = null;
       marcas = [];
       paginas = [];
+      borradorId = null;
+      rutaSubida = null;
       desarmar();
       $('paginas').innerHTML = '';
       pintarArchivos();
@@ -1988,7 +2073,7 @@
 
   const PILL = {
     preparando: ['kw-pill-neutro', 'Preparando'],
-    borrador: ['kw-pill-neutro', 'Sin enviar'],
+    borrador: ['kw-pill-neutro', 'Borrador'],
     pendiente: ['kw-pill-espera', 'Esperando firmas'],
     completado: ['kw-pill-ok', 'Firmado'],
     cancelado: ['kw-pill-neutro', 'Cancelado'],
@@ -2069,7 +2154,8 @@
 
           return '<div class="tabla-fila">' +
             // Zona izquierda: abre el documento.
-            '<button type="button" class="zona-doc" data-doc="' + i + '" title="Ver el documento">' +
+            '<button type="button" class="zona-doc" data-doc="' + i + '" title="' +
+              (f.estado === 'borrador' && f.archivo_ruta ? 'Continuar armándolo' : 'Ver el documento') + '">' +
               '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
               (quien ? '<span class="env-quien">' + quien + '</span>' : '') +
             '</button>' +
@@ -2124,6 +2210,12 @@
   async function abrirDocumento(i) {
     const f = visibles[i];
     if (!f) return;
+
+    // Un borrador no se mira, se termina: picarle abre el editor donde
+    // se quedó, con sus firmantes y sus firmas ya colocadas. Solo los
+    // nuestros: uno traído del panel de weetrust no tiene archivo aquí
+    // ni sabemos dónde puso las firmas.
+    if (f.estado === 'borrador' && f.archivo_ruta) return retomarBorrador(f);
 
     let url = f.pdf_firmado_url || null;
     let firmado = !!f.pdf_firmado_url;
@@ -2787,7 +2879,7 @@
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
-    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
+    const campos = 'id, titulo, estado, firmantes, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
     const { data, error } = await window.kwSupabase

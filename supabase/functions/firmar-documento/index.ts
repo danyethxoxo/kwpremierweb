@@ -446,27 +446,56 @@ Deno.serve(async (req: Request) => {
         }, 429)
       }
 
-      // El renglón se crea ANTES de hablar con weetrust, en 'preparando'.
-      // Así, si la subida falla a medias, queda rastro de que se intentó
-      // y por qué no se pudo, en vez de que el envío desaparezca sin
-      // dejar nada que consultar.
-      const { data: fila, error: errAlta } = await admin
-        .from('firmas_documentos')
-        .insert({
-          origen,
-          documento_guardado_id: origen === 'guardado' ? body.documentoId : null,
-          documento_plantilla_id: origen === 'plantilla' ? body.documentoId : null,
-          archivo_ruta: rutaArchivo,
-          nombre_archivo: String(body.nombreArchivo || 'documento.pdf'),
-          user_id: userId,
-          titulo,
-          ambiente: WEETRUST_AMBIENTE,
-          firmantes: firmantes.map((f) => ({ ...f, firmado: false })),
-        })
-        .select('id')
-        .single()
+      const datosFila = {
+        origen,
+        documento_guardado_id: origen === 'guardado' ? body.documentoId : null,
+        documento_plantilla_id: origen === 'plantilla' ? body.documentoId : null,
+        archivo_ruta: rutaArchivo,
+        nombre_archivo: String(body.nombreArchivo || 'documento.pdf'),
+        user_id: userId,
+        titulo,
+        ambiente: WEETRUST_AMBIENTE,
+        firmantes: firmantes.map((f) => ({ ...f, firmado: false })),
+        posiciones,
+      }
 
-      if (errAlta) return respond({ error: `No se pudo registrar el envío: ${errAlta.message}` }, 500)
+      // Si viene de un borrador se reusa su renglón en vez de crear otro:
+      // si no, el borrador se quedaría ahí para siempre y el mismo
+      // documento aparecería dos veces en el historial.
+      const borradorId = String(body.borradorId || '')
+      let fila: { id: string } | null = null
+
+      if (borradorId) {
+        const { data: previo } = await admin
+          .from('firmas_documentos')
+          .select('id, user_id, estado')
+          .eq('id', borradorId)
+          .single()
+
+        if (!previo) return respond({ error: 'Ese borrador ya no existe.' }, 404)
+        if (previo.user_id !== userId) return respond({ error: 'Ese borrador no es tuyo.' }, 403)
+        if (previo.estado !== 'borrador') {
+          return respond({ error: 'Ese documento ya se había mandado a firma.' }, 409)
+        }
+
+        const { error } = await admin.from('firmas_documentos')
+          .update({ ...datosFila, estado: 'preparando' })
+          .eq('id', borradorId)
+        if (error) return respond({ error: `No se pudo retomar el borrador: ${error.message}` }, 500)
+        fila = { id: borradorId }
+      } else {
+        // El renglón se crea ANTES de hablar con weetrust, en
+        // 'preparando'. Así, si la subida falla a medias, queda rastro de
+        // que se intentó y por qué no se pudo, en vez de que el envío
+        // desaparezca sin dejar nada que consultar.
+        const { data, error } = await admin
+          .from('firmas_documentos')
+          .insert(datosFila)
+          .select('id')
+          .single()
+        if (error) return respond({ error: `No se pudo registrar el envío: ${error.message}` }, 500)
+        fila = data
+      }
 
       try {
         // El PDF se baja del bucket con la llave de servicio. El bucket
@@ -488,7 +517,7 @@ Deno.serve(async (req: Request) => {
         // borrarlo, y seguiría contando contra el plan.
         await admin.from('firmas_documentos')
           .update({ weetrust_document_id: documentID, estado: 'borrador' })
-          .eq('id', fila.id)
+          .eq('id', fila!.id)
 
         // Las firmas fijas van ANTES de invitar: weetrust solo las acepta
         // mientras el documento sigue en borrador. Si se manda primero la
@@ -526,16 +555,100 @@ Deno.serve(async (req: Request) => {
             firmantes: conDatos,
             enviado_at: new Date().toISOString(),
           })
-          .eq('id', fila.id)
+          .eq('id', fila!.id)
 
-        return respond({ ok: true, id: fila.id, documentID, firmantes: conDatos })
+        return respond({ ok: true, id: fila!.id, documentID, firmantes: conDatos })
       } catch (e) {
         const mensajeError = (e as Error).message || String(e)
         await admin.from('firmas_documentos')
           .update({ estado: 'error', error_mensaje: mensajeError })
-          .eq('id', fila.id)
-        return respond({ error: mensajeError, id: fila.id }, 502)
+          .eq('id', fila!.id)
+        return respond({ error: mensajeError, id: fila!.id }, 502)
       }
+    }
+
+    // ── Guardar un envío a medias ──
+    // No toca weetrust: no manda correos, no crea nada de su lado y no
+    // hay nada que se pueda cobrar. Solo guarda lo que se lleva armado
+    // para poder retomarlo.
+    //
+    // Por lo mismo aquí NO se revisa el tope del mes: un borrador no
+    // gasta. El tope se revisa al mandarlo, que es cuando cuenta.
+    if (accion === 'guardar_borrador') {
+      const rutaArchivo = String(body.archivoRuta || '').trim()
+      if (!rutaArchivo) return respond({ error: 'Falta el archivo.' }, 400)
+
+      // La ruta la manda el navegador, así que hay que comprobar que sea
+      // suya y no la de otro.
+      if (!rutaArchivo.startsWith(`${userId}/`)) {
+        return respond({ error: 'Ese archivo no es tuyo.' }, 403)
+      }
+
+      const titulo = String(body.titulo || '').trim()
+      if (!titulo) return respond({ error: 'Ponle un título antes de guardarlo.' }, 400)
+
+      // A diferencia del envío, aquí los firmantes pueden ir a medias:
+      // se está guardando justamente porque falta algo. Solo se limpia
+      // lo que sí venga completo, y lo demás se guarda tal cual para que
+      // al reabrirlo esté como se dejó.
+      const crudos = Array.isArray(body.firmantes) ? body.firmantes : []
+      const firmantes = crudos.map((f: Record<string, unknown>) => ({
+        nombre: String(f?.nombre || '').trim(),
+        correo: String(f?.correo || '').trim().toLowerCase(),
+        identificacion: String(f?.identificacion || '') || undefined,
+        check: f?.check === true ? true : undefined,
+        firmado: false,
+      }))
+
+      // Las posiciones se guardan sin validar contra los firmantes: en un
+      // borrador es normal tener una firma colocada para alguien cuyo
+      // correo todavía no se escribe. La validación de verdad ocurre al
+      // mandarlo.
+      const posicionesCrudas = Array.isArray(body.posiciones) ? body.posiciones : []
+
+      const datos = {
+        origen: 'subido',
+        archivo_ruta: rutaArchivo,
+        nombre_archivo: String(body.nombreArchivo || 'documento.pdf'),
+        user_id: userId,
+        titulo,
+        estado: 'borrador',
+        ambiente: WEETRUST_AMBIENTE,
+        firmantes,
+        posiciones: posicionesCrudas,
+      }
+
+      const borradorId = String(body.borradorId || '')
+      if (borradorId) {
+        const { data: previo } = await admin
+          .from('firmas_documentos')
+          .select('id, user_id, estado, archivo_ruta')
+          .eq('id', borradorId)
+          .single()
+
+        if (!previo) return respond({ error: 'Ese borrador ya no existe.' }, 404)
+        if (previo.user_id !== userId) return respond({ error: 'Ese borrador no es tuyo.' }, 403)
+        if (previo.estado !== 'borrador') {
+          return respond({ error: 'Ese documento ya se mandó a firma.' }, 409)
+        }
+
+        // Si se cambiaron los documentos, el PDF anterior ya no le sirve
+        // a nadie: sin renglón que lo apunte no lo podría abrir nadie
+        // nunca más, así que se va con el cambio.
+        if (previo.archivo_ruta && previo.archivo_ruta !== rutaArchivo) {
+          await admin.storage.from('firmas').remove([previo.archivo_ruta])
+        }
+
+        const { error } = await admin.from('firmas_documentos')
+          .update(datos).eq('id', borradorId)
+        if (error) return respond({ error: `No se pudo guardar: ${error.message}` }, 500)
+        return respond({ ok: true, id: borradorId })
+      }
+
+      const { data, error } = await admin
+        .from('firmas_documentos').insert(datos).select('id').single()
+      if (error) return respond({ error: `No se pudo guardar: ${error.message}` }, 500)
+      return respond({ ok: true, id: data.id })
     }
 
     // ── Consultar cómo va ──
