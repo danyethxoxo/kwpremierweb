@@ -966,6 +966,123 @@ Deno.serve(async (req: Request) => {
     // la función o el secreto. Vive aquí y no en un curl a mano porque
     // registrar exige un token que dura 5 minutos, y porque el secreto
     // no debe andar dando vueltas en la terminal de nadie.
+    // ── Poner al día todos los envíos de una pasada ──
+    // Normalmente el estado lo mantiene el webhook solo. Esto es para
+    // cuando hace falta alcanzar lo que se quedó atrás: avisos que no
+    // llegaron, o datos que antes no se guardaban (el trazo de la firma,
+    // sin ir más lejos).
+    //
+    // Se pide la lista completa de una vez en vez de preguntar documento
+    // por documento. Con cientos de renglones lo segundo se pasa del
+    // tiempo de la función y del token, que dura 5 minutos: ese mismo
+    // patrón ya causó un problema con la limpieza.
+    if (accion === 'actualizar_todos') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      const esLiderazgo = ['master', 'admin', 'staff'].includes(String(perfil?.role))
+
+      // El asesor pone al día los suyos; el liderazgo, los de todos.
+      let q = admin
+        .from('firmas_documentos')
+        .select('id, user_id, estado, firmantes, weetrust_document_id')
+        .not('weetrust_document_id', 'is', null)
+      if (!esLiderazgo) q = q.eq('user_id', userId)
+
+      const { data: filas } = await q
+      if (!filas?.length) return respond({ ok: true, revisados: 0, actualizados: 0 })
+
+      const token = await obtenerToken()
+      const porId = new Map<string, Record<string, any>>()
+      const POR_TANDA = 100
+
+      try {
+        for (let vuelta = 0; vuelta < 20; vuelta++) {
+          const url = `${WEETRUST_URL}/documents?status=ALL`
+            + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
+          const res = await fetch(url, { headers: encabezados(token) })
+          const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
+          const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
+          if (!tanda.length) break
+
+          let novedades = 0
+          for (const d of tanda) {
+            const id = String((d as Record<string, unknown>)?.documentID || '')
+            if (!id || porId.has(id)) continue
+            porId.set(id, d as Record<string, any>)
+            novedades++
+          }
+          if (!novedades || tanda.length < POR_TANDA) break
+        }
+      } catch (e) {
+        return respond({ error: `weetrust no contestó: ${(e as Error).message}` }, 502)
+      }
+
+      const estados: Record<string, string> = {
+        DRAFT: 'borrador',
+        PENDING: 'pendiente',
+        COMPLETED: 'completado',
+      }
+
+      const cambios: Array<{ id: string; datos: Record<string, unknown> }> = []
+
+      for (const fila of filas) {
+        const doc = porId.get(fila.weetrust_document_id!)
+        if (!doc) continue
+
+        const suyos = Array.isArray(doc.signatory) ? doc.signatory : []
+        const previos = (fila.firmantes || []) as Array<Record<string, any>>
+
+        const firmantes = previos.map((f) => {
+          const par = suyos.find((sg: Record<string, any>) =>
+            String(sg?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
+          if (!par) return f
+          const firmado = Number(par.isSigned) === 1
+          return {
+            ...f,
+            firmado,
+            // La fecha se pone la primera vez que se ve firmado y ya no
+            // se toca, para no recorrerla en cada actualización.
+            firmado_at: firmado ? (f.firmado_at ?? new Date().toISOString()) : null,
+            // El trazo. Es lo que faltaba en los documentos de antes de
+            // que se empezara a guardar.
+            imagen: par.imageURL || f.imagen || null,
+            url_firma: par.signing?.url ?? f.url_firma ?? null,
+            url_expira: par.signing?.expiry ?? f.url_expira ?? null,
+          }
+        })
+
+        const estado = estados[String(doc.status)] || fila.estado
+        const archivo = (doc.documentFileObj ?? {}) as Record<string, unknown>
+
+        cambios.push({
+          id: fila.id,
+          datos: {
+            estado,
+            firmantes,
+            pdf_firmado_url: (archivo.url as string) ?? null,
+            ...(estado === 'completado' ? { completado_at: new Date().toISOString() } : {}),
+          },
+        })
+      }
+
+      let actualizados = 0
+      // De diez en diez en paralelo: uno por uno con cientos de renglones
+      // se hace eterno.
+      for (let i = 0; i < cambios.length; i += 10) {
+        const trozo = cambios.slice(i, i + 10)
+        const res = await Promise.all(trozo.map((c) =>
+          admin.from('firmas_documentos').update(c.datos).eq('id', c.id)))
+        res.forEach((r: { error: unknown }) => { if (!r.error) actualizados++ })
+      }
+
+      return respond({
+        ok: true,
+        revisados: filas.length,
+        enWeetrust: porId.size,
+        actualizados,
+      })
+    }
+
     // ── La versión de weetrust del documento ──
     // Su copia va cambiando: al firmar alguien, la firma queda dibujada
     // en el PDF. La nuestra es la que se subió y nunca cambia, así que
