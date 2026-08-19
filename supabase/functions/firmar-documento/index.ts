@@ -717,6 +717,70 @@ Deno.serve(async (req: Request) => {
       return respond({ ok: true, aviso: avisoWeetrust })
     }
 
+    // ── Volver a picarle a los firmantes ──
+    // Dos cosas distintas que weetrust separa: 'reenviar' manda otra vez
+    // el mismo correo de invitación (sirve cuando se fue a spam o lo
+    // borraron), y 'recordatorio' repite la solicitud de firma (sirve
+    // cuando lo recibieron y no lo han hecho).
+    //
+    // OJO: las rutas de estos dos endpoints son una suposición. Su
+    // documentación los lista pero no llegué a ver la página con la ruta
+    // exacta ni el cuerpo que esperan. Si contestan 404, es eso: hay que
+    // corregir la ruta con su documentación en la mano. Todo lo demás de
+    // esta función sí está verificado contra su API.
+    if (accion === 'reenviar' || accion === 'recordatorio') {
+      const id = String(body.id || '')
+      if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+
+      const { data: fila } = await admin
+        .from('firmas_documentos')
+        .select('id, user_id, estado, weetrust_document_id')
+        .eq('id', id)
+        .single()
+
+      if (!fila) return respond({ error: 'Ese envío no existe.' }, 404)
+
+      if (fila.user_id !== userId) {
+        const { data: perfil } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        if (!['master', 'admin', 'staff'].includes(String(perfil?.role))) {
+          return respond({ error: 'Ese envío no es tuyo.' }, 403)
+        }
+      }
+
+      if (!fila.weetrust_document_id) {
+        return respond({ error: 'Ese envío nunca llegó a weetrust.' }, 409)
+      }
+      if (fila.estado !== 'pendiente') {
+        return respond({
+          error: 'Solo se le puede insistir a un documento que sigue esperando firmas.',
+        }, 409)
+      }
+
+      const ruta = accion === 'reenviar'
+        ? '/documents/resend-mail'
+        : '/documents/repeat-signature'
+
+      const token = await obtenerToken()
+      try {
+        const res = await fetch(`${WEETRUST_URL}${ruta}`, {
+          method: 'PUT',
+          headers: encabezados(token, { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ documentID: fila.weetrust_document_id }),
+        })
+        await leerRespuesta(res, accion === 'reenviar' ? 'Reenviar el correo' : 'Mandar el recordatorio')
+      } catch (e) {
+        return respond({ error: (e as Error).message }, 502)
+      }
+
+      return respond({
+        ok: true,
+        aviso: accion === 'reenviar'
+          ? 'Se volvió a mandar el correo a quienes faltan de firmar.'
+          : 'Se mandó el recordatorio a quienes faltan de firmar.',
+      })
+    }
+
     // ── Borrar un envío del historial ──
     // Distinto de cancelar: cancelar lo retira de firma y deja el
     // renglón como constancia; borrar lo quita del historial.
