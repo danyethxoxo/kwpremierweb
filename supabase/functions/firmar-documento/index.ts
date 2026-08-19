@@ -717,18 +717,10 @@ Deno.serve(async (req: Request) => {
       return respond({ ok: true, aviso: avisoWeetrust })
     }
 
-    // ── Volver a picarle a los firmantes ──
-    // Dos cosas distintas que weetrust separa: 'reenviar' manda otra vez
-    // el mismo correo de invitación (sirve cuando se fue a spam o lo
-    // borraron), y 'recordatorio' repite la solicitud de firma (sirve
-    // cuando lo recibieron y no lo han hecho).
-    //
-    // OJO: las rutas de estos dos endpoints son una suposición. Su
-    // documentación los lista pero no llegué a ver la página con la ruta
-    // exacta ni el cuerpo que esperan. Si contestan 404, es eso: hay que
-    // corregir la ruta con su documentación en la mano. Todo lo demás de
-    // esta función sí está verificado contra su API.
-    if (accion === 'reenviar' || accion === 'recordatorio') {
+    // ── Volver a mandarles el correo ──
+    // weetrust se lo manda solo a quienes falten de firmar, así que a
+    // quien ya firmó no le llega nada.
+    if (accion === 'reenviar') {
       const id = String(body.id || '')
       if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
 
@@ -757,27 +749,23 @@ Deno.serve(async (req: Request) => {
         }, 409)
       }
 
-      const ruta = accion === 'reenviar'
-        ? '/documents/resend-mail'
-        : '/documents/repeat-signature'
-
+      // El documento va en la query y no en el cuerpo: así lo pide su
+      // documentación para este endpoint, a diferencia de los demás.
       const token = await obtenerToken()
       try {
-        const res = await fetch(`${WEETRUST_URL}${ruta}`, {
-          method: 'PUT',
-          headers: encabezados(token, { 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ documentID: fila.weetrust_document_id }),
-        })
-        await leerRespuesta(res, accion === 'reenviar' ? 'Reenviar el correo' : 'Mandar el recordatorio')
+        const res = await fetch(
+          `${WEETRUST_URL}/documents/resend-email`
+            + `?documentID=${encodeURIComponent(fila.weetrust_document_id)}`,
+          { method: 'PUT', headers: encabezados(token) },
+        )
+        await leerRespuesta(res, 'Reenviar el correo')
       } catch (e) {
         return respond({ error: (e as Error).message }, 502)
       }
 
       return respond({
         ok: true,
-        aviso: accion === 'reenviar'
-          ? 'Se volvió a mandar el correo a quienes faltan de firmar.'
-          : 'Se mandó el recordatorio a quienes faltan de firmar.',
+        aviso: 'Se volvió a mandar el correo a quienes faltan de firmar.',
       })
     }
 
