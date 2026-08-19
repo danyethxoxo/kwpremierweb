@@ -167,6 +167,18 @@ async function crearDesdeWeetrust(
     dueño = perfil?.id ?? null
   }
 
+  const firmantes = firmantesDe(doc)
+
+  // Si weetrust no dijo quién lo creó, o dijo un correo que no es de
+  // nadie del sitio, se deduce por los firmantes: el correo del equipo
+  // que aparece y que no es de los frecuentes. Es la misma función que
+  // usa la importación, para que no haya dos criterios distintos según
+  // por dónde entró el documento.
+  if (!dueño) {
+    const { data } = await admin.rpc('firmas_adivinar_asesor', { p_firmantes: firmantes })
+    dueño = (data as string | null) ?? null
+  }
+
   const estado = ESTADOS[String(doc?.status)] || 'pendiente'
   const cuando = doc?.addedOn
     ? new Date(Number(doc.addedOn)).toISOString()
@@ -183,7 +195,7 @@ async function crearDesdeWeetrust(
       user_id: dueño,
       creado_por: correoCreador,
       estado,
-      firmantes: firmantesDe(doc),
+      firmantes,
       ambiente: WEETRUST_AMBIENTE,
       pdf_firmado_url: (archivo.url ?? null) as string | null,
       created_at: cuando,

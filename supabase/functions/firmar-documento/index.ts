@@ -818,7 +818,11 @@ Deno.serve(async (req: Request) => {
             titulo: nombre,
             nombre_archivo: nombre,
             archivo_ruta: null,
-            user_id: userId,
+            // Se deja sin dueño y más abajo se deduce por los
+            // firmantes: ponerle el de quien corre la importación haría
+            // que todo el historial apareciera a su nombre, que es
+            // justo lo que no sirve para nada.
+            user_id: null as string | null,
             creado_por: String(doc?.createdBy || doc?.owner || '') || null,
             estado,
             firmantes,
@@ -852,6 +856,18 @@ Deno.serve(async (req: Request) => {
         (existentes || []).map((e: { weetrust_document_id: string; id: string }) =>
           [e.weetrust_document_id, e.id] as [string, string]))
       const problemas: string[] = []
+
+      // ── De quién es cada uno ──
+      // weetrust no dice quién creó el documento en su listado, así que
+      // se deduce por los firmantes: el correo del equipo que aparece y
+      // que no es de los frecuentes. Se hace en la base, con la misma
+      // función que corrigió los que ya estaban, para que no haya dos
+      // criterios distintos según por dónde entró el documento.
+      await Promise.all(armados.map(async (a) => {
+        const { data } = await admin
+          .rpc('firmas_adivinar_asesor', { p_firmantes: a.fila.firmantes })
+        a.fila.user_id = (data as string | null) ?? null
+      }))
 
       // ── Los nuevos, de un golpe ──
       const paraInsertar = armados.filter((a) => !yaEstaban.has(a.documentID))
