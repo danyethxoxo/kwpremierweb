@@ -178,9 +178,6 @@ $$;
 
 grant execute on function public.firmas_borrar_etiqueta(uuid) to authenticated;
 
--- Unas cuantas para arrancar, de las que se usan en el Market Center.
-insert into public.firmas_etiquetas (nombre, color) values
-  ('Revisado', '#16a34a'),
-  ('Falta anexo', '#e0a218'),
-  ('Todo OK', '#2563eb')
-on conflict do nothing;
+-- Sin etiquetas de arranque a propósito: las que sirven las sabe el
+-- Market Center, no yo, y una lista inventada estorba más de lo que
+-- ayuda porque hay que borrarla antes de poder usar la propia.

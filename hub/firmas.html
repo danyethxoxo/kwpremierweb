@@ -181,16 +181,6 @@
   }
   .hist-filtros { display: flex; gap: 7px; flex-wrap: wrap; }
   .hist-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .hist-filtro {
-    padding: 6px 13px; border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.28);
-    background: rgba(255,255,255,0.1);
-    font-family: inherit; font-size: 12.5px; font-weight: 700;
-    color: rgba(255,255,255,0.85); cursor: pointer;
-    transition: background var(--t-medio), color var(--t-medio);
-  }
-  .hist-filtro:hover { background: rgba(255,255,255,0.2); }
-  .hist-filtro.activo { background: #fff; color: var(--red); border-color: #fff; }
 
   /* Traer el historial de weetrust. Va apagado de color: es una acción
      de mantenimiento que se corre de vez en cuando, no algo del día a
@@ -206,7 +196,6 @@
   .btn-importar:hover { background: rgba(255,255,255,0.22); }
   .btn-importar:disabled { opacity: 0.5; cursor: default; }
 
-  .hist-falta { display: flex; gap: 7px; flex-wrap: wrap; }
   .hist-select {
     padding: 7px 11px; border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.28);
@@ -243,17 +232,30 @@
     box-shadow: var(--sombra-1);
     overflow: hidden;
   }
+  /* El renglón son tres piezas: la zona del documento, la del estatus y
+     los dos botones. Cada zona reparte por dentro sus propias columnas,
+     así la cabecera y los renglones cuadran sin repetir la medida. */
   .tabla-cabeza, .tabla-fila {
     display: grid;
-    grid-template-columns: minmax(0,2.2fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.2fr) 92px 145px 32px;
-    gap: var(--sp-3);
+    grid-template-columns: minmax(0,1.5fr) minmax(0,2fr) 76px;
     align-items: center;
-    padding: 11px var(--sp-4);
   }
-  /* Al asesor no se le enseña la columna de asesor: todos son suyos. */
-  .tabla-fila.sin-asesor,
-  .tabla-envios:has(.sin-asesor) .tabla-cabeza {
-    grid-template-columns: minmax(0,2.4fr) minmax(0,1fr) minmax(0,1.2fr) 92px 145px 32px;
+  .tabla-cabeza { padding: 11px var(--sp-4); gap: var(--sp-3); }
+  .tabla-cabeza .cab-info {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr) 92px;
+    gap: var(--sp-3);
+  }
+  .tabla-fila { padding: 0 var(--sp-3) 0 var(--sp-4); }
+
+  @media (max-width: 860px) {
+    .tabla-cabeza { display: none; }
+    .tabla-fila {
+      grid-template-columns: minmax(0,1fr) 76px;
+      padding: var(--sp-2) var(--sp-3);
+    }
+    .zona-doc { grid-column: 1; }
+    .zona-info { grid-column: 1 / -1; }
+    .fila-botones { grid-column: 2; grid-row: 1; justify-content: flex-end; }
   }
   .tabla-cabeza {
     font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
@@ -322,7 +324,31 @@
     .tabla-fila > span:nth-child(2) { display: none; }
   }
 
-  /* ── El menú de los tres puntos ─────────────────────────────
+  /* ── Las dos zonas de cada renglón ──────────────────────────
+     La izquierda abre el documento, la derecha abre el estatus. Se
+     separan con una línea para que se vea que son dos cosas, y cada una
+     se ilumina sola al pasar el cursor. */
+  .zona-doc, .zona-info {
+    display: grid; align-items: center; gap: var(--sp-3);
+    border: none; background: none; padding: 11px var(--sp-3);
+    font-family: inherit; text-align: left; cursor: pointer;
+    min-width: 0; border-radius: 9px;
+    transition: background var(--t-medio);
+  }
+  .zona-doc { grid-template-columns: minmax(0,1fr) auto; }
+  .zona-info { grid-template-columns: minmax(0,1fr) minmax(0,1.1fr) 92px; }
+  .zona-doc:hover, .zona-info:hover { background: rgba(0,0,0,0.05); }
+  .zona-info { border-left: 1px solid rgba(0,0,0,0.08); border-radius: 0; }
+  .env-quien { flex: 0 0 auto; min-width: 0; }
+
+  .fila-botones { display: flex; gap: 2px; align-items: center; padding-right: 6px; }
+
+  @media (max-width: 860px) {
+    .zona-doc, .zona-info { grid-template-columns: 1fr; gap: 5px; }
+    .zona-info { border-left: none; border-top: 1px solid rgba(0,0,0,0.08); }
+  }
+
+  /* ── Los menús flotantes ────────────────────────────────────
      Mismo look que el de asignar DT en el ABC Tracker: tarjeta blanca,
      borde suave, esquinas redondeadas y sombra. */
   .env-menu-btn {
@@ -358,17 +384,42 @@
   .env-menu-op i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .env-menu-op span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .env-menu-sep { height: 1px; background: rgba(0,0,0,0.08); margin: 5px 8px; }
-  .env-menu-nueva {
-    display: flex; gap: 5px; padding: 5px 8px 8px;
-  }
-  .env-menu-nueva input {
-    flex: 1; min-width: 0; padding: 6px 9px; font-size: 12.5px; font-family: inherit;
+  .env-menu-busca { padding: 2px 8px 6px; }
+  .env-menu-busca input {
+    width: 100%; padding: 7px 10px; font-size: 12.5px; font-family: inherit;
     border: 1.5px solid var(--border); border-radius: 8px; outline: none;
   }
-  .env-menu-nueva input:focus { border-color: var(--red); }
-  .env-menu-nueva button {
-    border: none; background: var(--red); color: #fff; border-radius: 8px;
-    padding: 0 11px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  .env-menu-busca input:focus { border-color: var(--red); }
+  .env-menu-nada { padding: 8px 10px; font-size: 12px; color: var(--muted); }
+
+  /* Cada etiqueta trae sus propios tres puntos para cambiarle el color
+     o borrarla, así que el renglón es la etiqueta más su botón. */
+  .env-menu-fila { display: flex; align-items: center; gap: 2px; }
+  .env-menu-fila .env-menu-op { flex: 1; min-width: 0; }
+  .tag-menu-btn {
+    flex: 0 0 auto; border: none; background: none; padding: 5px;
+    border-radius: 6px; color: var(--muted); cursor: pointer; line-height: 0;
+  }
+  .tag-menu-btn:hover { background: rgba(0,0,0,0.07); color: var(--text); }
+
+  .env-menu-op.crear { color: var(--red); font-weight: 700; }
+
+  .env-menu-colores {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px 9px;
+  }
+  .tag-color {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer; padding: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+  }
+  .tag-color.elegido { border-color: var(--text); }
+
+  /* ── La vista previa del documento ── */
+  .doc-caja { max-width: 860px; width: 100%; position: relative; text-align: left; }
+  .doc-visor {
+    width: 100%; height: min(70vh, 720px);
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
+    background: #f4f4f4;
   }
 
   /* Las etiquetas puestas, en su columna de la tabla. */
@@ -703,10 +754,35 @@
     <!-- Vista 1: el historial -->
     <div id="vista-historial">
       <div class="hist-barra">
-        <div class="hist-filtros" id="hist-filtros"></div>
+        <div class="hist-filtros">
+          <select class="hist-select" id="f-estado">
+            <option value="todos">Todos los estados</option>
+            <option value="pendiente">Esperando firmas</option>
+            <option value="borrador">Borradores</option>
+            <option value="completado">Completados</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+
+          <label class="hist-buscar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
+            </svg>
+            <input type="text" id="f-asesor" placeholder="Buscar asesor" autocomplete="off">
+          </label>
+
+          <select class="hist-select" id="f-falta"></select>
+
+          <select class="hist-select" id="f-etiqueta"></select>
+
+          <select class="hist-select" id="f-orden">
+            <option value="fecha-desc">Más nuevos primero</option>
+            <option value="fecha-asc">Más antiguos primero</option>
+            <option value="asesor">Por asesor</option>
+            <option value="pendientes">Pendientes de firma primero</option>
+            <option value="completados">Completados primero</option>
+          </select>
+        </div>
         <div class="hist-acciones">
-          <div class="hist-falta" id="hist-falta"></div>
-          <div id="hist-asesor"></div>
         <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -832,6 +908,20 @@
 
   <!-- El detalle de un envío. Va aquí y no dentro del historial para que
        quede por encima de todo sin depender de dónde estaba el renglón. -->
+  <!-- La vista previa del documento, que abre la zona izquierda del
+       renglón. Va aparte del estatus porque son dos preguntas
+       distintas: qué dice el documento, y quién lo ha firmado. -->
+  <div id="modal-doc" class="modal-overlay" style="display:none;">
+    <div class="modal-box doc-caja">
+      <button type="button" class="det-cerrar" id="doc-cerrar" aria-label="Cerrar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h3 id="doc-titulo">Documento</h3>
+      <div id="doc-cuerpo"></div>
+      <div class="det-acciones" id="doc-acciones"></div>
+    </div>
+  </div>
+
   <div id="modal-detalle" class="modal-overlay" style="display:none;">
     <div class="modal-box det-caja">
       <button type="button" class="det-cerrar" id="det-cerrar" aria-label="Cerrar">
@@ -878,8 +968,10 @@
   // por posición dentro de esta lista, no de la completa.
   let visibles = [];
   // Filtros activos.
-  let asesor = null;
+  let buscaAsesor = '';
   let faltaFirma = null;
+  let etiqueta = null;
+  let orden = 'fecha-desc';
   // Los firmantes frecuentes, para los botones de "falta la firma de".
   let frecuentes = [];
   // El catálogo de etiquetas y la lista de asesores, para el menú.
@@ -1872,6 +1964,13 @@
   // meterlo todo en el renglón haría la tabla ilegible con cuatro
   // firmantes, que es lo normal en un contrato.
 
+  // ── La tabla ────────────────────────────────────────────────
+  // Cada renglón se parte en dos zonas que abren cosas distintas: la
+  // izquierda (nombre y asesor) abre el documento, la derecha (etiquetas,
+  // estado y fecha) abre el estatus. Antes todo el renglón hacía lo
+  // mismo y hacía falta un enlace de "ver todos los detalles" para
+  // distinguirlo; partiéndolo, el enlace sobra.
+
   function pintarEnvios() {
     const cont = $('lista-envios');
     const filas = envíosFiltrados();
@@ -1884,7 +1983,7 @@
       // haber mandado nunca nada que estar mirando un filtro sin
       // resultados, y con un solo mensaje uno cree que perdió sus
       // documentos.
-      const hayFiltro = filtro !== 'todos' || asesor || faltaFirma;
+      const hayFiltro = filtro !== 'todos' || buscaAsesor || faltaFirma || etiqueta;
       cont.innerHTML = '<div class="kw-vacio">' + (
         hayFiltro
           ? 'No hay documentos que cumplan con lo que estás filtrando.'
@@ -1896,12 +1995,8 @@
     cont.innerHTML =
       '<div class="tabla-envios">' +
         '<div class="tabla-cabeza">' +
-          '<span>Nombre del documento</span>' +
-          (veTodo ? '<span>Asesor</span>' : '') +
-          '<span>Etiquetas</span>' +
-          '<span>Estado</span>' +
-          '<span>Fecha</span>' +
-          '<span></span>' +
+          '<span>Documento</span>' +
+          '<span class="cab-info"><span>Etiquetas</span><span>Estado</span><span>Fecha</span></span>' +
           '<span></span>' +
         '</div>' +
         filas.map((f, i) => {
@@ -1911,9 +2006,11 @@
 
           // Los que no se pudieron atribuir a nadie se marcan, en vez de
           // dejar el hueco en blanco: así se ve cuáles hay que revisar.
-          const etiqueta = (f.autor && f.autor.nombre)
-            ? '<span class="env-etiqueta">' + escapar(f.autor.nombre) + '</span>'
-            : '<span class="env-etiqueta sin">Sin identificar</span>';
+          const quien = veTodo
+            ? ((f.autor && f.autor.nombre)
+                ? '<span class="env-etiqueta">' + escapar(f.autor.nombre) + '</span>'
+                : '<span class="env-etiqueta sin">Sin identificar</span>')
+            : '';
 
           const tags = (f.etiquetas || []).map((id) => {
             const e = etiquetas.find((x) => x.id === id);
@@ -1921,188 +2018,377 @@
               + escapar(e.nombre) + '</span>' : '';
           }).join('');
 
-          return '<div class="tabla-fila' + (veTodo ? '' : ' sin-asesor') + '" data-i="' + i + '">' +
-            '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
-            (veTodo ? '<span>' + etiqueta + '</span>' : '') +
-            '<span class="env-tags">' + tags + '</span>' +
-            '<span class="env-estado">' +
-              '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
-              '<span class="env-estado-txt">' + pill[1] +
-                (firmantes.length ? ' <span class="env-cuantos">' + yaFirmaron + '/' + firmantes.length + '</span>' : '') +
-              '</span>' +
-            '</span>' +
-            '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
-            '<button type="button" class="env-mas-info" data-detalle="' + i + '">Ver todos los detalles</button>' +
-            '<button type="button" class="env-menu-btn" data-menu="' + i + '" aria-label="Más acciones">' +
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">' +
-                '<circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>' +
-              '</svg>' +
+          return '<div class="tabla-fila">' +
+            // Zona izquierda: abre el documento.
+            '<button type="button" class="zona-doc" data-doc="' + i + '" title="Ver el documento">' +
+              '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
+              (quien ? '<span class="env-quien">' + quien + '</span>' : '') +
             '</button>' +
+
+            // Zona derecha: abre el estatus.
+            '<button type="button" class="zona-info" data-detalle="' + i + '" title="Ver el estatus">' +
+              '<span class="env-tags">' + tags + '</span>' +
+              '<span class="env-estado">' +
+                '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
+                '<span class="env-estado-txt">' + pill[1] +
+                  (firmantes.length ? ' <span class="env-cuantos">' + yaFirmaron + '/' + firmantes.length + '</span>' : '') +
+                '</span>' +
+              '</span>' +
+              '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
+            '</button>' +
+
+            '<span class="fila-botones">' +
+              '<button type="button" class="env-menu-btn" data-editar="' + i + '" aria-label="Editar asesor y etiquetas">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>' +
+                '</svg>' +
+              '</button>' +
+              '<button type="button" class="env-menu-btn" data-menu="' + i + '" aria-label="Más acciones">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">' +
+                  '<circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>' +
+                '</svg>' +
+              '</button>' +
+            '</span>' +
           '</div>';
         }).join('') +
       '</div>';
 
+    cont.querySelectorAll('[data-doc]').forEach((b) => {
+      b.addEventListener('click', () => abrirDocumento(Number(b.dataset.doc)));
+    });
     cont.querySelectorAll('[data-detalle]').forEach((b) => {
       b.addEventListener('click', () => abrirDetalle(Number(b.dataset.detalle)));
     });
-
+    cont.querySelectorAll('[data-editar]').forEach((b) => {
+      b.addEventListener('click', (e) => { e.stopPropagation(); abrirEditar(b, Number(b.dataset.editar)); });
+    });
     cont.querySelectorAll('[data-menu]').forEach((b) => {
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        abrirMenu(b, Number(b.dataset.menu));
-      });
-    });
-    // El renglón completo abre el detalle: en la tabla de weetrust uno
-    // le pica al renglón sin buscar el enlace, y aquí igual.
-    cont.querySelectorAll('.tabla-fila').forEach((fila) => {
-      fila.addEventListener('click', (e) => {
-        if (e.target.closest('[data-detalle]') || e.target.closest('[data-menu]')) return;
-        abrirDetalle(Number(fila.dataset.i));
-      });
+      b.addEventListener('click', (e) => { e.stopPropagation(); abrirMenu(b, Number(b.dataset.menu)); });
     });
   }
 
-  // ── El menú de los tres puntos ──────────────────────────────
-  // Corregir el asesor, poner etiquetas y borrar. Va aquí y no dentro
-  // del detalle porque son cosas que se hacen recorriendo la lista, no
-  // mirando un documento en particular.
-
-  let menuAbierto = null;
-
-  function cerrarMenu() {
-    if (menuAbierto) { menuAbierto.remove(); menuAbierto = null; }
-  }
-
-  function abrirMenu(boton, i) {
-    cerrarMenu();
+  // ── Ver el documento ────────────────────────────────────────
+  // De dónde sale el PDF depende de por dónde entró el documento:
+  //   - completado: el firmado, que weetrust deja en su URL
+  //   - mandado desde el sitio: el original, en nuestro bucket
+  //   - traído de su panel y sin terminar: no tenemos archivo
+  async function abrirDocumento(i) {
     const f = visibles[i];
     if (!f) return;
 
-    const m = document.createElement('div');
-    m.className = 'env-menu';
+    let url = f.pdf_firmado_url || null;
+    let firmado = !!f.pdf_firmado_url;
 
-    const puestas = new Set(f.etiquetas || []);
-    const puedeBorrar = f.estado !== 'completado';
-
-    m.innerHTML =
-      // Cambiar de asesor cambia quién ve el documento, así que solo se
-      // ofrece al liderazgo. La base lo vuelve a revisar de todas formas.
-      (veTodo
-        ? '<div class="env-menu-titulo">Asesor</div>' +
-          '<button type="button" class="env-menu-op' + (!f.user_id ? ' elegida' : '') + '" data-asesor="">' +
-            '<span>Sin identificar</span></button>' +
-          asesores.map((a) =>
-            '<button type="button" class="env-menu-op' + (f.user_id === a.id ? ' elegida' : '') + '"' +
-              ' data-asesor="' + a.id + '"><span>' + escapar(a.nombre || a.email) + '</span></button>').join('') +
-          '<div class="env-menu-sep"></div>'
-        : '') +
-
-      '<div class="env-menu-titulo">Etiquetas</div>' +
-      etiquetas.map((e) =>
-        '<button type="button" class="env-menu-op' + (puestas.has(e.id) ? ' elegida' : '') + '"' +
-          ' data-etiqueta="' + e.id + '">' +
-          '<i style="background:' + escapar(e.color) + '"></i><span>' + escapar(e.nombre) + '</span>' +
-        '</button>').join('') +
-      '<div class="env-menu-nueva">' +
-        '<input type="text" placeholder="Nueva etiqueta" maxlength="40" id="nueva-etiqueta">' +
-        '<button type="button" id="crear-etiqueta">Crear</button>' +
-      '</div>' +
-
-      (puedeBorrar
-        ? '<div class="env-menu-sep"></div>' +
-          '<button type="button" class="env-menu-op peligro" data-borrar="1">' +
-            '<span>Borrar del historial</span></button>'
-        : '');
-
-    document.body.appendChild(m);
-    menuAbierto = m;
-
-    // Se coloca pegado al botón, y si no cabe hacia abajo se sube: en un
-    // renglón del final de la lista el menú se saldría de la pantalla.
-    const r = boton.getBoundingClientRect();
-    const alto = m.offsetHeight;
-    const arriba = r.bottom + alto > window.innerHeight - 8;
-    m.style.top = (arriba ? Math.max(8, r.top - alto - 4) : r.bottom + 4) + 'px';
-    m.style.left = Math.max(8, Math.min(r.right - 260, window.innerWidth - 268)) + 'px';
-
-    m.addEventListener('click', (e) => e.stopPropagation());
-
-    m.querySelectorAll('[data-asesor]').forEach((b) => {
-      b.addEventListener('click', async () => {
-        cerrarMenu();
-        const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
-          p_documento: f.id,
-          p_asesor: b.dataset.asesor || null,
-        });
-        if (error) return alert('No se pudo cambiar el asesor: ' + error.message);
-        await cargarEnvios();
-      });
-    });
-
-    m.querySelectorAll('[data-etiqueta]').forEach((b) => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.etiqueta;
-        // Se manda la lista completa como debe quedar, no "agrega esta":
-        // así dos clics seguidos no dejan el documento con la etiqueta
-        // repetida ni dependen de en qué orden llegaron.
-        const nuevas = puestas.has(id)
-          ? [...puestas].filter((x) => x !== id)
-          : [...puestas, id];
-        cerrarMenu();
-        const { error } = await window.kwSupabase.rpc('firmas_etiquetar', {
-          p_documento: f.id, p_etiquetas: nuevas,
-        });
-        if (error) return alert('No se pudo etiquetar: ' + error.message);
-        await cargarEnvios();
-      });
-    });
-
-    const crear = async () => {
-      const nombre = $('nueva-etiqueta').value.trim();
-      if (!nombre) return;
-      const { data, error } = await window.kwSupabase.rpc('firmas_crear_etiqueta', {
-        p_nombre: nombre, p_color: null,
-      });
-      if (error) return alert('No se pudo crear la etiqueta: ' + error.message);
-      cerrarMenu();
-      await cargarEtiquetas();
-      // Se le pone de una vez al documento desde el que se creó: quien
-      // la crea ahí es porque la quiere en ese documento.
-      await window.kwSupabase.rpc('firmas_etiquetar', {
-        p_documento: f.id, p_etiquetas: [...puestas, data.id],
-      });
-      await cargarEnvios();
-    };
-    $('crear-etiqueta').addEventListener('click', crear);
-    $('nueva-etiqueta').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); crear(); }
-    });
-
-    const borrar = m.querySelector('[data-borrar]');
-    if (borrar) {
-      borrar.addEventListener('click', async () => {
-        cerrarMenu();
-        if (!confirm('¿Borrar "' + f.titulo + '" del historial?\n\n'
-          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.')) return;
-        try {
-          const r = await llamarFuncion({ accion: 'borrar', id: f.id });
-          if (r.aviso) {
-            alert('Se borró del historial, pero weetrust no lo dejó quitar de su lado:\n\n'
-              + r.aviso + '\n\nAllá sigue existiendo.');
-          }
-          await Promise.all([cargarEnvios(), cargarCupo()]);
-        } catch (e) {
-          alert(e.message || 'No se pudo borrar.');
-        }
-      });
+    if (!url && f.archivo_ruta) {
+      // Una URL firmada de una hora: el bucket es privado y no se puede
+      // enseñar de otra forma sin abrirlo a todo el mundo.
+      const { data } = await window.kwSupabase
+        .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
+      url = data?.signedUrl || null;
     }
+
+    $('doc-titulo').textContent = f.titulo;
+    $('doc-cuerpo').innerHTML = url
+      ? '<iframe class="doc-visor" src="' + escapar(url) + '"></iframe>'
+      : '<div class="kw-vacio">Este documento se mandó desde el panel de weetrust y todavía no está firmado, '
+        + 'así que su archivo solo vive allá. Cuando se complete, el firmado aparecerá aquí.</div>';
+
+    $('doc-acciones').innerHTML = url
+      ? '<a class="kw-fila-btn" href="' + escapar(url) + '" target="_blank" rel="noopener">Abrir en otra pestaña</a>' +
+        '<a class="kw-fila-btn" href="' + escapar(url) + '" download>' +
+          (firmado ? 'Descargar firmado' : 'Descargar') + '</a>'
+      : '';
+
+    $('modal-doc').style.display = 'flex';
   }
 
-  document.addEventListener('click', cerrarMenu);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu(); });
-  // El menú va pegado a la pantalla, no al renglón: si algo se mueve
-  // debajo, se quedaría flotando en el lugar equivocado.
-  window.addEventListener('scroll', cerrarMenu, true);
+
+
+  // ── Los dos menús de cada renglón ───────────────────────────
+  // Están separados a propósito. El de los tres puntos hace cosas que
+  // salen del sitio (le vuelve a llegar un correo a un cliente, se
+  // retira un documento); el del lápiz solo ordena lo nuestro (de quién
+  // es, cómo está etiquetado). Mezclarlos deja "reenviar a los
+  // firmantes" pegado a "cambiar color de etiqueta", y ahí es fácil
+  // picarle al que no era.
+
+  let flotante = null;
+
+  function cerrarFlotante() {
+    if (flotante) { flotante.remove(); flotante = null; }
+  }
+
+  // Lo coloca pegado al botón, y si no cabe hacia abajo lo sube: en un
+  // renglón del final de la lista se saldría de la pantalla.
+  function colocar(caja, boton, ancho) {
+    const r = boton.getBoundingClientRect();
+    const alto = caja.offsetHeight;
+    const arriba = r.bottom + alto > window.innerHeight - 8;
+    caja.style.top = (arriba ? Math.max(8, r.top - alto - 4) : r.bottom + 4) + 'px';
+    caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
+  }
+
+  function abrirFlotante(boton, ancho, html) {
+    cerrarFlotante();
+    const caja = document.createElement('div');
+    caja.className = 'env-menu';
+    caja.style.width = ancho + 'px';
+    caja.innerHTML = html;
+    document.body.appendChild(caja);
+    flotante = caja;
+    colocar(caja, boton, ancho);
+    caja.addEventListener('click', (e) => e.stopPropagation());
+    return caja;
+  }
+
+  document.addEventListener('click', cerrarFlotante);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarFlotante(); });
+  // Van pegados a la pantalla y no al renglón: si algo se mueve debajo
+  // se quedarían flotando en el lugar equivocado.
+  window.addEventListener('scroll', cerrarFlotante, true);
+
+  // ── Tres puntos: acciones sobre el envío ──
+  function abrirMenu(boton, i) {
+    const f = visibles[i];
+    if (!f) return;
+
+    // Reenviar y recordar solo tienen sentido mientras alguien deba
+    // firmar. En un completado no hay a quién insistirle.
+    const enCurso = f.estado === 'pendiente';
+    const puedeBorrar = f.estado !== 'completado';
+
+    const caja = abrirFlotante(boton, 240,
+      (enCurso
+        ? '<button type="button" class="env-menu-op" data-accion="reenviar">' +
+            '<span>Reenviar el correo</span></button>' +
+          '<button type="button" class="env-menu-op" data-accion="recordatorio">' +
+            '<span>Mandar recordatorio</span></button>' +
+          '<div class="env-menu-sep"></div>'
+        : '') +
+      '<button type="button" class="env-menu-op" data-accion="consultar">' +
+        '<span>Actualizar estado</span></button>' +
+      (puedeBorrar
+        ? '<div class="env-menu-sep"></div>' +
+          '<button type="button" class="env-menu-op peligro" data-accion="borrar">' +
+            '<span>Eliminar</span></button>'
+        : ''));
+
+    caja.querySelectorAll('[data-accion]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const accion = b.dataset.accion;
+        cerrarFlotante();
+
+        if (accion === 'borrar' && !confirm('¿Eliminar "' + f.titulo + '" del historial?\n\n'
+          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.')) return;
+
+        try {
+          const r = await llamarFuncion({ accion, id: f.id });
+          if (r.aviso) alert(r.aviso);
+          await Promise.all([cargarEnvios(), cargarCupo()]);
+        } catch (e) {
+          alert(e.message || 'No se pudo completar la acción.');
+        }
+      });
+    });
+  }
+
+  // ── Lápiz: asesor y etiquetas ──
+  function abrirEditar(boton, i) {
+    const f = visibles[i];
+    if (!f) return;
+
+    const caja = abrirFlotante(boton, 290,
+      (veTodo
+        ? '<div class="env-menu-titulo">Asesor</div>' +
+          '<div class="env-menu-busca">' +
+            '<input type="text" id="bus-asesor" placeholder="Buscar asesor" autocomplete="off">' +
+          '</div>' +
+          '<div id="lista-asesores"></div>' +
+          '<div class="env-menu-sep"></div>'
+        : '') +
+      '<div class="env-menu-titulo">Etiquetas</div>' +
+      '<div class="env-menu-busca">' +
+        '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
+      '</div>' +
+      '<div id="lista-etiquetas"></div>');
+
+    // ── Asesores ──
+    // Solo cuatro a la vez: la lista completa dentro de un menú flotante
+    // obliga a recorrerla y tapa media pantalla. Para llegar al que no
+    // se ve, se escribe.
+    function pintarAsesores(busca) {
+      const q = (busca || '').trim().toLowerCase();
+      const hallados = asesores
+        .filter((a) => !q || String(a.nombre || a.email).toLowerCase().includes(q))
+        .slice(0, 4);
+
+      $('lista-asesores').innerHTML =
+        '<button type="button" class="env-menu-op' + (!f.user_id ? ' elegida' : '') + '" data-asesor="">' +
+          '<span>Sin identificar</span></button>' +
+        hallados.map((a) =>
+          '<button type="button" class="env-menu-op' + (f.user_id === a.id ? ' elegida' : '') + '"' +
+            ' data-asesor="' + a.id + '"><span>' + escapar(a.nombre || a.email) + '</span></button>').join('') +
+        (!hallados.length && q ? '<div class="env-menu-nada">Nadie con ese nombre</div>' : '');
+
+      $('lista-asesores').querySelectorAll('[data-asesor]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          cerrarFlotante();
+          const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
+            p_documento: f.id, p_asesor: b.dataset.asesor || null,
+          });
+          if (error) return alert('No se pudo cambiar el asesor: ' + error.message);
+          await cargarEnvios();
+        });
+      });
+    }
+
+    if (veTodo) {
+      pintarAsesores('');
+      $('bus-asesor').addEventListener('input', (e) => pintarAsesores(e.target.value));
+    }
+
+    // ── Etiquetas ──
+    const puestas = new Set(f.etiquetas || []);
+
+    async function ponerEtiquetas(ids) {
+      const { error } = await window.kwSupabase.rpc('firmas_etiquetar', {
+        p_documento: f.id, p_etiquetas: ids,
+      });
+      if (error) { alert('No se pudo etiquetar: ' + error.message); return false; }
+      return true;
+    }
+
+    function pintarEtiquetas(busca) {
+      const q = (busca || '').trim();
+      const ql = q.toLowerCase();
+      const hallados = etiquetas
+        .filter((e) => !ql || e.nombre.toLowerCase().includes(ql))
+        .slice(0, 4);
+
+      // Si lo que se escribió no existe todavía, se ofrece crearlo desde
+      // ahí mismo: es el momento en que uno se da cuenta de que le falta
+      // una etiqueta, y mandarlo a otra pantalla a crearla rompe el hilo.
+      const exacta = etiquetas.some((e) => e.nombre.toLowerCase() === ql);
+      const crear = (q && !exacta)
+        ? '<button type="button" class="env-menu-op crear" data-crear="1">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+            '<span>Crear "' + escapar(q) + '"</span></button>' +
+          '<div class="env-menu-colores" id="colores-nueva">' +
+            COLORES_TAG.map((c, n) =>
+              '<button type="button" class="tag-color' + (n === 0 ? ' elegido' : '') + '"' +
+                ' data-color="' + c + '" style="background:' + c + '"></button>').join('') +
+          '</div>'
+        : '';
+
+      $('lista-etiquetas').innerHTML = crear + hallados.map((e) =>
+        '<div class="env-menu-fila">' +
+          '<button type="button" class="env-menu-op' + (puestas.has(e.id) ? ' elegida' : '') + '"' +
+            ' data-etiqueta="' + e.id + '">' +
+            '<i style="background:' + escapar(e.color) + '"></i><span>' + escapar(e.nombre) + '</span>' +
+          '</button>' +
+          '<button type="button" class="tag-menu-btn" data-tagmenu="' + e.id + '" aria-label="Opciones de la etiqueta">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">' +
+              '<circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>').join('') +
+        (!hallados.length && !q ? '<div class="env-menu-nada">Todavía no hay etiquetas. Escribe una para crearla.</div>' : '');
+
+      // Poner o quitar. Se manda la lista completa como debe quedar y no
+      // "agrega esta": así dos clics seguidos no dejan la etiqueta
+      // repetida ni dependen del orden en que lleguen.
+      $('lista-etiquetas').querySelectorAll('[data-etiqueta]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.etiqueta;
+          const nuevas = puestas.has(id)
+            ? [...puestas].filter((x) => x !== id)
+            : [...puestas, id];
+          cerrarFlotante();
+          if (await ponerEtiquetas(nuevas)) await cargarEnvios();
+        });
+      });
+
+      // El color elegido para la etiqueta nueva.
+      const paleta = $('colores-nueva');
+      if (paleta) {
+        paleta.querySelectorAll('[data-color]').forEach((b) => {
+          b.addEventListener('click', () => {
+            paleta.querySelectorAll('[data-color]').forEach((x) => x.classList.remove('elegido'));
+            b.classList.add('elegido');
+          });
+        });
+      }
+
+      const btnCrear = $('lista-etiquetas').querySelector('[data-crear]');
+      if (btnCrear) {
+        btnCrear.addEventListener('click', async () => {
+          const color = paleta?.querySelector('.elegido')?.dataset.color || COLORES_TAG[0];
+          const { data, error } = await window.kwSupabase.rpc('firmas_crear_etiqueta', {
+            p_nombre: q, p_color: color,
+          });
+          if (error) return alert('No se pudo crear la etiqueta: ' + error.message);
+          cerrarFlotante();
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          // Se le pone de una vez al documento desde el que se creó:
+          // quien la crea ahí es porque la quiere en ese documento.
+          if (await ponerEtiquetas([...puestas, data.id])) await cargarEnvios();
+        });
+      }
+
+      // Cambiar color o borrar, por etiqueta.
+      $('lista-etiquetas').querySelectorAll('[data-tagmenu]').forEach((b) => {
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          abrirMenuEtiqueta(b, etiquetas.find((x) => x.id === b.dataset.tagmenu));
+        });
+      });
+    }
+
+    pintarEtiquetas('');
+    $('bus-etiqueta').addEventListener('input', (e) => pintarEtiquetas(e.target.value));
+  }
+
+  const COLORES_TAG = ['#6b7280', '#16a34a', '#2563eb', '#e0a218', '#c62027', '#7c3aed', '#0891b2', '#db2777'];
+
+  function abrirMenuEtiqueta(boton, et) {
+    if (!et) return;
+    const caja = abrirFlotante(boton, 200,
+      '<div class="env-menu-titulo">' + escapar(et.nombre) + '</div>' +
+      '<div class="env-menu-colores">' +
+        COLORES_TAG.map((c) =>
+          '<button type="button" class="tag-color' + (c === et.color ? ' elegido' : '') + '"' +
+            ' data-color="' + c + '" style="background:' + c + '"></button>').join('') +
+      '</div>' +
+      '<div class="env-menu-sep"></div>' +
+      '<button type="button" class="env-menu-op peligro" data-borrar-tag="1">' +
+        '<span>Borrar etiqueta</span></button>');
+
+    caja.querySelectorAll('[data-color]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        cerrarFlotante();
+        const { error } = await window.kwSupabase.rpc('firmas_actualizar_etiqueta', {
+          p_etiqueta: et.id, p_nombre: null, p_color: b.dataset.color,
+        });
+        if (error) return alert('No se pudo cambiar el color: ' + error.message);
+        await cargarEtiquetas();
+        pintarOpcionesFiltros();
+        await cargarEnvios();
+      });
+    });
+
+    caja.querySelector('[data-borrar-tag]').addEventListener('click', async () => {
+      cerrarFlotante();
+      if (!confirm('¿Borrar la etiqueta "' + et.nombre + '"?\n\n'
+        + 'Se quita de todos los documentos que la tuvieran.')) return;
+      const { error } = await window.kwSupabase.rpc('firmas_borrar_etiqueta', { p_etiqueta: et.id });
+      if (error) return alert('No se pudo borrar: ' + error.message);
+      await cargarEtiquetas();
+      pintarOpcionesFiltros();
+      await cargarEnvios();
+    });
+  }
+
 
   // ── El detalle de un envío ──────────────────────────────────
 
@@ -2185,6 +2471,10 @@
     $('modal-detalle').style.display = 'none';
   }
 
+  function cerrarDoc() { $('modal-doc').style.display = 'none'; $('doc-cuerpo').innerHTML = ''; }
+  $('doc-cerrar').addEventListener('click', cerrarDoc);
+  $('modal-doc').addEventListener('click', (e) => { if (e.target === $('modal-doc')) cerrarDoc(); });
+
   $('det-cerrar').addEventListener('click', cerrarDetalle);
   $('modal-detalle').addEventListener('click', (e) => {
     // Solo cuando se pica el fondo, no cuando el clic viene de la
@@ -2192,7 +2482,9 @@
     if (e.target === $('modal-detalle')) cerrarDetalle();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && $('modal-detalle').style.display === 'flex') cerrarDetalle();
+    if (e.key !== 'Escape') return;
+    if ($('modal-detalle').style.display === 'flex') cerrarDetalle();
+    if ($('modal-doc').style.display === 'flex') cerrarDoc();
   });
 
   // Copiar liga, actualizar y cancelar. Vive aparte porque ahora estos
@@ -2240,109 +2532,108 @@
   // Los filtros del historial. 'todos' primero porque es lo que uno
   // quiere ver al entrar; los demás sirven para buscar algo concreto.
   // ── Filtros ─────────────────────────────────────────────────
-  // Se traen todos los envíos de una sola vez y el filtrado se hace
-  // aquí. Así combinar dos filtros es instantáneo y no hay que volver a
-  // preguntarle a la base por cada clic. Con el tope de 300 renglones
-  // que se piden, el navegador lo hace sin despeinarse.
+  // Se traen todos los envíos de una sola vez y el filtrado y el orden
+  // se hacen aquí. Así combinar cuatro filtros es instantáneo y no hay
+  // que volver a preguntarle a la base por cada cambio.
 
-  const FILTROS_ESTADO = [
-    ['todos', 'Todos'],
-    ['pendiente', 'Esperando firmas'],
-    ['completado', 'Firmados'],
-    ['borrador', 'Borradores'],
-    ['cancelado', 'Cancelados'],
-  ];
+  // Cómo ordenar. "Pendientes primero" y "completados primero" existen
+  // porque son dos formas distintas de trabajar: una es perseguir lo que
+  // falta, la otra es revisar lo que ya cerró.
+  const ORDENES = {
+    'fecha-desc': (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    'fecha-asc': (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    'asesor': (a, b) => {
+      const na = (a.autor && a.autor.nombre) || 'zzz';
+      const nb = (b.autor && b.autor.nombre) || 'zzz';
+      // Dentro de cada asesor, lo más nuevo arriba.
+      return na.localeCompare(nb) || new Date(b.created_at) - new Date(a.created_at);
+    },
+    'pendientes': (a, b) =>
+      (a.estado === 'pendiente' ? 0 : 1) - (b.estado === 'pendiente' ? 0 : 1)
+      || new Date(b.created_at) - new Date(a.created_at),
+    'completados': (a, b) =>
+      (a.estado === 'completado' ? 0 : 1) - (b.estado === 'completado' ? 0 : 1)
+      || new Date(b.created_at) - new Date(a.created_at),
+  };
 
-  function pintarFiltros() {
-    // Estado
-    $('hist-filtros').innerHTML = FILTROS_ESTADO.map(([id, txt]) =>
-      '<button type="button" class="hist-filtro' + (filtro === id ? ' activo' : '') + '"' +
-        ' data-filtro="' + id + '">' + txt + '</button>').join('');
+  function pintarOpcionesFiltros() {
+    // Quién falta de firmar, armado con los firmantes frecuentes: son
+    // los que se repiten en todos los contratos y por eso vale la pena
+    // preguntarlo con un clic.
+    const op = $('f-falta');
+    if (frecuentes.length >= 2) {
+      const a = frecuentes[0], b = frecuentes[1];
+      op.innerHTML =
+        '<option value="">Firmas de cualquiera</option>' +
+        '<option value="' + escapar(a.correo) + '">Sin firma de ' + escapar(a.puesto || a.nombre.split(' ')[0]) + '</option>' +
+        '<option value="' + escapar(b.correo) + '">Sin firma de ' + escapar(b.puesto || b.nombre.split(' ')[0]) + '</option>' +
+        '<option value="__ambos__">Falta firma de ambos</option>';
+      op.style.display = '';
+    } else {
+      op.style.display = 'none';
+    }
 
-    $('hist-filtros').querySelectorAll('[data-filtro]').forEach((b) => {
-      b.addEventListener('click', () => {
-        filtro = b.dataset.filtro;
-        pintarFiltros();
-        pintarEnvios();
-      });
-    });
-
-    // Falta la firma de alguno de los frecuentes. Es la pregunta que más
-    // se hace con un contrato parado: no "en qué va", sino "a quién le
-    // toca". Solo se ofrecen los frecuentes porque son los que se
-    // repiten; para los demás no tendría sentido un botón fijo.
-    const cont = $('hist-falta');
-    if (!frecuentes.length) { cont.innerHTML = ''; return; }
-
-    cont.innerHTML = frecuentes.map((f) => {
-      const corto = f.nombre.split(' ')[0];
-      return '<button type="button" class="hist-filtro' + (faltaFirma === f.correo ? ' activo' : '') + '"' +
-        ' data-falta="' + escapar(f.correo) + '">Falta ' + escapar(corto) + '</button>';
-    }).join('');
-
-    cont.querySelectorAll('[data-falta]').forEach((b) => {
-      b.addEventListener('click', () => {
-        // Volver a picarle al mismo lo apaga, para poder quitarlo sin
-        // tener que buscar un botón de "quitar filtro".
-        faltaFirma = faltaFirma === b.dataset.falta ? null : b.dataset.falta;
-        pintarFiltros();
-        pintarEnvios();
-      });
-    });
+    // Las etiquetas que de verdad existen. Sin ninguna creada el
+    // desplegable se esconde en vez de quedarse vacío.
+    const et = $('f-etiqueta');
+    if (etiquetas.length) {
+      et.innerHTML = '<option value="">Todas las etiquetas</option>' +
+        etiquetas.map((e) =>
+          '<option value="' + e.id + '">' + escapar(e.nombre) + '</option>').join('');
+      et.value = etiqueta || '';
+      et.style.display = '';
+    } else {
+      et.style.display = 'none';
+    }
   }
 
-  // El desplegable de asesores se arma con quienes de verdad tienen
-  // documentos, no con toda la lista de usuarios: una lista de cien
-  // nombres donde noventa no tienen nada no ayuda a filtrar.
-  function pintarFiltroAsesor() {
-    if (!veTodo) return;
+  function armarFiltros() {
+    $('f-estado').addEventListener('change', (e) => { filtro = e.target.value; pintarEnvios(); });
+    $('f-falta').addEventListener('change', (e) => { faltaFirma = e.target.value || null; pintarEnvios(); });
+    $('f-etiqueta').addEventListener('change', (e) => { etiqueta = e.target.value || null; pintarEnvios(); });
+    $('f-orden').addEventListener('change', (e) => { orden = e.target.value; pintarEnvios(); });
 
-    const vistos = new Map();
-    envios.forEach((e) => {
-      if (e.autor && e.autor.nombre) vistos.set(e.user_id, e.autor.nombre);
-    });
-    const sinDueño = envios.some((e) => !e.user_id);
-
-    const cont = $('hist-asesor');
-    if (!vistos.size && !sinDueño) { cont.innerHTML = ''; return; }
-
-    const opciones = [...vistos.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    cont.innerHTML =
-      '<select class="hist-select" id="sel-asesor">' +
-        '<option value="">Todos los asesores</option>' +
-        opciones.map(([id, nom]) =>
-          '<option value="' + id + '"' + (asesor === id ? ' selected' : '') + '>' +
-          escapar(nom) + '</option>').join('') +
-        // Los que no se pudieron atribuir a nadie. Vale la pena poder
-        // aislarlos: son los que hay que revisar a mano.
-        (sinDueño
-          ? '<option value="__sin__"' + (asesor === '__sin__' ? ' selected' : '') + '>Sin identificar</option>'
-          : '') +
-      '</select>';
-
-    $('sel-asesor').addEventListener('change', (e) => {
-      asesor = e.target.value || null;
+    // La búsqueda por asesor es un campo de texto y no un desplegable
+    // porque con cien asesores el desplegable no se puede recorrer. Se
+    // filtra mientras se escribe.
+    $('f-asesor').addEventListener('input', (e) => {
+      buscaAsesor = e.target.value.trim().toLowerCase();
       pintarEnvios();
     });
   }
 
   function envíosFiltrados() {
-    return envios.filter((e) => {
+    const lista = envios.filter((e) => {
       if (filtro !== 'todos' && e.estado !== filtro) return false;
 
-      if (asesor === '__sin__') { if (e.user_id) return false; }
-      else if (asesor && e.user_id !== asesor) return false;
+      if (buscaAsesor) {
+        const nombre = ((e.autor && e.autor.nombre) || '').toLowerCase();
+        // "sin" encuentra los que no se pudieron atribuir a nadie, que
+        // son justo los que hay que repartir.
+        if (!nombre && !'sin identificar'.includes(buscaAsesor)) return false;
+        if (nombre && !nombre.includes(buscaAsesor)) return false;
+      }
+
+      if (etiqueta && !(e.etiquetas || []).includes(etiqueta)) return false;
 
       if (faltaFirma) {
-        const lista = Array.isArray(e.firmantes) ? e.firmantes : [];
-        // Tiene que estar invitado Y no haber firmado. Un documento donde
-        // esa persona ni siquiera participa no es un documento al que le
-        // "falte" su firma.
-        const suyo = lista.find((x) => String(x.correo).toLowerCase() === faltaFirma);
-        if (!suyo || suyo.firmado) return false;
+        const firmantes = Array.isArray(e.firmantes) ? e.firmantes : [];
+        const faltaDe = (correo) => {
+          const suyo = firmantes.find((x) => String(x.correo).toLowerCase() === correo);
+          // Tiene que estar invitado Y no haber firmado: un documento
+          // donde esa persona ni participa no es uno al que le "falte"
+          // su firma.
+          return !!suyo && !suyo.firmado;
+        };
+        if (faltaFirma === '__ambos__') {
+          if (frecuentes.length < 2) return false;
+          if (!faltaDe(frecuentes[0].correo) || !faltaDe(frecuentes[1].correo)) return false;
+        } else if (!faltaDe(faltaFirma)) return false;
       }
       return true;
     });
+
+    return lista.sort(ORDENES[orden] || ORDENES['fecha-desc']);
   }
 
   async function cargarEtiquetas() {
@@ -2365,11 +2656,9 @@
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
-    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
+    const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
-    // Del más nuevo al más viejo, que es como se busca un contrato: uno
-    // se acuerda del de la semana pasada, no del de hace ocho meses.
     const { data, error } = await window.kwSupabase
       .from('firmas_documentos')
       .select(campos)
@@ -2382,9 +2671,9 @@
       return;
     }
     envios = data || [];
-    pintarFiltroAsesor();
     pintarEnvios();
   }
+
 
   // ── Arranque ────────────────────────────────────────────────
 
@@ -2515,11 +2804,12 @@
     // arman con ellos, así que pintar los filtros antes los dejaría sin
     // esa mitad.
     await cargarFrecuentes();
-    pintarFiltros();
+    armarFiltros();
     // Las etiquetas y los asesores antes de pintar la tabla: los
     // renglones enseñan los nombres y colores de las etiquetas, y sin el
     // catálogo saldrían en blanco hasta la siguiente recarga.
     await Promise.all([cargarEtiquetas(), cargarAsesores()]);
+    pintarOpcionesFiltros();
     await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
   }
