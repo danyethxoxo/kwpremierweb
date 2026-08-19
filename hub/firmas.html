@@ -880,6 +880,12 @@
           </select>
         </div>
         <div class="hist-acciones">
+        <button type="button" class="btn-importar" id="btn-actualizar" title="Traer de weetrust el estado y las firmas más recientes">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/>
+          </svg>
+          <span>Actualizar</span>
+        </button>
         <button type="button" class="btn-importar" id="btn-limpiar" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
@@ -1508,6 +1514,29 @@
       await cargarEnvios();
     } catch (e) {
       alert(e.message || 'No se pudo limpiar.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  });
+
+  // Pone al día todo el historial. El webhook lo mantiene solo, pero
+  // esto alcanza lo que se quedó atrás: avisos que no llegaron, o datos
+  // que antes no se guardaban, como el trazo de cada firma.
+  $('btn-actualizar').addEventListener('click', async () => {
+    const btn = $('btn-actualizar');
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.textContent = 'Actualizando...';
+
+    try {
+      const r = await llamarFuncion({ accion: 'actualizar_todos' });
+      await cargarEnvios();
+      if (!r.actualizados) {
+        alert('Todo estaba al día. No hubo nada que cambiar.');
+      }
+    } catch (e) {
+      alert(e.message || 'No se pudo actualizar.');
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
