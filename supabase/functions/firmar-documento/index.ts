@@ -191,6 +191,23 @@ async function fijarFirmas(
   return await leerRespuesta(res, 'Fijar las firmas en el documento')
 }
 
+// Pide UN documento y comprueba que sea ese.
+//
+// El endpoint de documentos sirve también de listado: si se le pasa un
+// identificador que no existe, ignora el filtro y devuelve la lista
+// completa. Tomar el primero y darlo por bueno es lo que llenó el
+// historial de copias fantasma, así que aquí se exige que el que vuelve
+// sea el que se pidió.
+async function pedirDocumento(token: string, documentID: string) {
+  const res = await fetch(
+    `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
+    { headers: encabezados(token) },
+  )
+  const datos = await leerRespuesta(res, 'Consultar el documento')
+  const lista = Array.isArray(datos) ? datos : (datos ? [datos] : [])
+  return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID) || null
+}
+
 // Borra un documento en weetrust. Solo funciona mientras esté en
 // borrador o pendiente: los completados quedan sellados en su blockchain
 // y ya no se pueden quitar, ni por ellos ni por nosotros.
@@ -677,12 +694,8 @@ Deno.serve(async (req: Request) => {
       if (!fila.weetrust_document_id) return respond({ error: 'Ese envío nunca llegó a weetrust.' }, 409)
 
       const token = await obtenerToken()
-      const res = await fetch(
-        `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(fila.weetrust_document_id)}`,
-        { headers: encabezados(token) },
-      )
-      const datos = await leerRespuesta(res, 'Consultar el documento')
-      const doc = Array.isArray(datos) ? datos[0] : datos
+      const doc = await pedirDocumento(token, fila.weetrust_document_id)
+      if (!doc) return respond({ error: 'weetrust ya no reconoce ese documento.' }, 404)
 
       // Su "isSigned" viene a veces como número y a veces como texto,
       // según el endpoint; se normaliza aquí para que la pantalla no
@@ -944,6 +957,94 @@ Deno.serve(async (req: Request) => {
     // la función o el secreto. Vive aquí y no en un curl a mano porque
     // registrar exige un token que dura 5 minutos, y porque el secreto
     // no debe andar dando vueltas en la terminal de nadie.
+    // ── La versión de weetrust del documento ──
+    // Su copia va cambiando: al firmar alguien, la firma queda dibujada
+    // en el PDF. La nuestra es la que se subió y nunca cambia, así que
+    // para la vista previa conviene la de ellos.
+    //
+    // La URL se pide al momento y no se guarda: viene firmada y con
+    // caducidad, así que una guardada de ayer no sirve hoy.
+    if (accion === 'url_documento') {
+      const id = String(body.id || '')
+      if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+
+      const { data: fila } = await admin
+        .from('firmas_documentos')
+        .select('id, user_id, weetrust_document_id')
+        .eq('id', id)
+        .single()
+
+      if (!fila) return respond({ error: 'Ese envío no existe.' }, 404)
+      if (fila.user_id !== userId) {
+        const { data: perfil } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        if (!['master', 'admin', 'staff'].includes(String(perfil?.role))) {
+          return respond({ error: 'Ese envío no es tuyo.' }, 403)
+        }
+      }
+      if (!fila.weetrust_document_id) return respond({ ok: true, url: null })
+
+      const token = await obtenerToken()
+      const doc = await pedirDocumento(token, fila.weetrust_document_id)
+      const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+      return respond({ ok: true, url: (archivo.url as string) ?? null })
+    }
+
+    // ── Quitar los renglones fantasma ──
+    // Hubo un momento en que el webhook creaba un documento por cada
+    // cadena de 24 caracteres que viniera en el aviso, porque el endpoint
+    // de weetrust devolvía la lista completa cuando el identificador no
+    // existía y se tomaba el primero. De un solo envío salían diez o
+    // quince copias.
+    //
+    // Esto recorre los importados y borra los que weetrust ya no
+    // reconoce con ese identificador exacto. Es seguro: si el documento
+    // existe de verdad, se queda.
+    if (accion === 'limpiar_fantasmas') {
+      const { data: perfil } = await admin
+        .from('profiles').select('role').eq('id', userId).single()
+      if (!['master', 'admin'].includes(String(perfil?.role))) {
+        return respond({ error: 'Esto solo lo puede hacer el equipo de liderazgo.' }, 403)
+      }
+
+      const { data: filas } = await admin
+        .from('firmas_documentos')
+        .select('id, titulo, weetrust_document_id')
+        .eq('origen', 'importado')
+        .not('weetrust_document_id', 'is', null)
+        .limit(500)
+
+      if (!filas?.length) return respond({ ok: true, revisados: 0, borrados: 0 })
+
+      const token = await obtenerToken()
+      const fantasmas: string[] = []
+      const nombres: string[] = []
+
+      // De diez en diez: uno por uno con cientos de renglones se pasa del
+      // tiempo que aguanta la función.
+      for (let i = 0; i < filas.length; i += 10) {
+        const trozo = filas.slice(i, i + 10)
+        const vistos = await Promise.all(trozo.map(
+          (f: { weetrust_document_id: string | null }) =>
+            pedirDocumento(token, f.weetrust_document_id!).catch(() => null)))
+        vistos.forEach((doc: unknown, j: number) => {
+          if (!doc) { fantasmas.push(trozo[j].id); nombres.push(trozo[j].titulo) }
+        })
+      }
+
+      if (fantasmas.length) {
+        const { error } = await admin.from('firmas_documentos').delete().in('id', fantasmas)
+        if (error) return respond({ error: `No se pudieron borrar: ${error.message}` }, 500)
+      }
+
+      return respond({
+        ok: true,
+        revisados: filas.length,
+        borrados: fantasmas.length,
+        nombres: nombres.slice(0, 20),
+      })
+    }
+
     // ── Traer el historial que ya existe en weetrust ──
     // El Market Center llevaba tiempo mandando documentos desde el panel
     // de weetrust, antes de que existiera esta pantalla. Esto los copia

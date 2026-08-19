@@ -664,6 +664,10 @@
   }
   .marca-firma:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.7); }
   .marca-firma:active { cursor: grabbing; }
+  /* En la vista previa solo se miran: ahí el documento ya se mandó y
+     mover un recuadro no cambiaría nada. */
+  .marca-firma.vista { cursor: default; }
+  .marca-firma.vista .marca-rotulo { padding: 0 6px; }
 
   /* El rótulo se recorta con puntos suspensivos en vez de partirse en
      varias líneas: un recuadro chico con el nombre cortado a la mitad se
@@ -831,6 +835,12 @@
           </select>
         </div>
         <div class="hist-acciones">
+        <button type="button" class="btn-importar" id="btn-limpiar" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
+          </svg>
+          <span>Limpiar fantasmas</span>
+        </button>
         <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -1399,6 +1409,31 @@
       await cargarEnvios();
     } catch (e) {
       alert(e.message || 'No se pudo traer el historial.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  });
+
+  // Quita los renglones que quedaron de cuando el webhook creaba una
+  // copia por cada cadena de 24 caracteres del aviso.
+  $('btn-limpiar').addEventListener('click', async () => {
+    if (!confirm('Se van a revisar los documentos traídos de weetrust y a borrar '
+      + 'los que allá ya no existen con ese identificador.\n\n'
+      + 'Los que sí existen se quedan.')) return;
+
+    const btn = $('btn-limpiar');
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.textContent = 'Revisando...';
+
+    try {
+      const r = await llamarFuncion({ accion: 'limpiar_fantasmas' });
+      alert('Se revisaron ' + r.revisados + ' documentos.\n'
+        + 'Se borraron ' + r.borrados + ' que weetrust ya no reconoce.');
+      await cargarEnvios();
+    } catch (e) {
+      alert(e.message || 'No se pudo limpiar.');
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
@@ -2217,8 +2252,24 @@
     // ni sabemos dónde puso las firmas.
     if (f.estado === 'borrador' && f.archivo_ruta) return retomarBorrador(f);
 
-    let url = f.pdf_firmado_url || null;
-    let firmado = !!f.pdf_firmado_url;
+    // Primero la copia de weetrust: la de ellos va cambiando conforme la
+    // gente firma, así que en un documento a medias ya trae dibujadas las
+    // firmas que llevan. La nuestra es la que se subió y nunca cambia.
+    //
+    // Se pide al momento en vez de usar la guardada porque su URL viene
+    // firmada y con caducidad: una de ayer ya no abre.
+    let url = null;
+    let firmado = f.estado === 'completado';
+    if (f.weetrust_document_id) {
+      try {
+        const r = await llamarFuncion({ accion: 'url_documento', id: f.id });
+        url = r.url || null;
+      } catch {
+        // Si no se pudo preguntar, se sigue con la copia nuestra: es
+        // preferible enseñar el documento sin las firmas que no enseñar
+        // nada.
+      }
+    }
 
     if (!url && f.archivo_ruta) {
       // Una URL firmada de una hora: el bucket es privado y no se puede
@@ -2226,6 +2277,7 @@
       const { data } = await window.kwSupabase
         .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
       url = data?.signedUrl || null;
+      firmado = false;
     }
 
     $('doc-titulo').textContent = f.titulo;
@@ -2279,8 +2331,33 @@
       const res = await fetch(url);
       if (!res.ok) throw new Error('no se pudo bajar');
       const bytes = new Uint8Array(await res.arrayBuffer());
-      await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
+      const hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
       $('doc-cuerpo').querySelector('.editor-cargando')?.remove();
+
+      // Encima, dónde va la firma de cada quien. Sin esto la vista previa
+      // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
+      // que es justo lo que uno viene a revisar.
+      //
+      // Se marcan las que faltan; las que ya se firmaron vienen dibujadas
+      // en el propio PDF de weetrust y volver a taparlas las escondería.
+      (f.posiciones || []).forEach((pz) => {
+        const pag = hojas[pz.pagina - 1];
+        if (!pag) return;
+        const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
+          .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
+        if (quien && quien.firmado) return;
+
+        const el = document.createElement('div');
+        el.className = 'marca-firma vista';
+        el.style.left = ((pz.x / pz.pagAncho) * 100) + '%';
+        el.style.top = ((pz.y / pz.pagAlto) * 100) + '%';
+        el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
+        el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
+        el.style.setProperty('--marca-color', pz.color || '#FFD247');
+        el.innerHTML = '<span class="marca-rotulo">' +
+          escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
+        pag.capa.appendChild(el);
+      });
     } catch {
       // Si el archivo vive en weetrust, su servidor puede no dejar que
       // lo leamos desde aquí. Ahí se cae al visor del navegador, que sí
@@ -3106,6 +3183,7 @@
     const pedido = new URLSearchParams(location.search).get('importar') === '1';
     if (pedido && ['master', 'admin'].includes(String(perfil?.role))) {
       $('btn-importar').style.display = 'inline-flex';
+      $('btn-limpiar').style.display = 'inline-flex';
     }
 
     // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)

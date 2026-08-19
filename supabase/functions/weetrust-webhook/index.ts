@@ -119,8 +119,18 @@ async function consultarDocumento(token: string, documentID: string) {
   if (!res.ok || json?.success === false) return null
 
   const datos = json?.responseData
-  const doc = Array.isArray(datos) ? datos[0] : datos
-  return doc?.documentID ? doc : null
+  const lista = Array.isArray(datos) ? datos : (datos ? [datos] : [])
+
+  // Tiene que ser EL documento que se pidió, no cualquiera.
+  //
+  // Ese mismo endpoint sirve de listado: si se le pasa un identificador
+  // que no existe, ignora el filtro y devuelve la lista completa. Antes
+  // aquí se tomaba el primero y se daba por bueno, así que cada cadena
+  // de 24 caracteres del aviso (identificadores de firmante, de usuario,
+  // lo que fuera) se veía como un documento válido y creaba su propio
+  // renglón. De un solo envío salían diez o quince copias con nombres
+  // distintos.
+  return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID) || null
 }
 
 const ESTADOS: Record<string, string> = {
