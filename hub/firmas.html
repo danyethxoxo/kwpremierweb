@@ -206,6 +206,18 @@
   .btn-importar:hover { background: rgba(255,255,255,0.22); }
   .btn-importar:disabled { opacity: 0.5; cursor: default; }
 
+  .hist-falta { display: flex; gap: 7px; flex-wrap: wrap; }
+  .hist-select {
+    padding: 7px 11px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.1); color: #fff;
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; outline: none;
+  }
+  /* Las opciones las dibuja el sistema operativo con su propio fondo, y
+     sobre blanco el texto claro no se lee. */
+  .hist-select option { color: #1a1a1a; background: #fff; }
+
   .btn-nuevo-doc {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 9px 16px; border-radius: 999px;
@@ -233,10 +245,15 @@
   }
   .tabla-cabeza, .tabla-fila {
     display: grid;
-    grid-template-columns: minmax(0,2.1fr) minmax(0,1.1fr) minmax(0,1.7fr) minmax(0,1fr) 92px 118px;
+    grid-template-columns: minmax(0,2.6fr) minmax(0,1.2fr) minmax(0,1.3fr) 92px 150px;
     gap: var(--sp-3);
     align-items: center;
     padding: 11px var(--sp-4);
+  }
+  /* Al asesor no se le enseña la columna de asesor: todos son suyos. */
+  .tabla-fila.sin-asesor,
+  .tabla-envios:has(.sin-asesor) .tabla-cabeza {
+    grid-template-columns: minmax(0,2.6fr) minmax(0,1.3fr) 92px 150px;
   }
   .tabla-cabeza {
     font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
@@ -259,6 +276,10 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
   }
   .env-vacio { color: var(--muted); font-size: 12px; }
+  /* Los que no se pudieron atribuir a nadie, apagados: se ven, pero no
+     compiten con los que sí tienen asesor. */
+  .env-etiqueta.sin { background: rgba(0,0,0,0.05); color: var(--muted); font-weight: 400; }
+  .env-cuantos { color: var(--muted); font-weight: 400; }
 
   .env-firmantes { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .env-correo {
@@ -628,6 +649,8 @@
       <div class="hist-barra">
         <div class="hist-filtros" id="hist-filtros"></div>
         <div class="hist-acciones">
+          <div class="hist-falta" id="hist-falta"></div>
+          <div id="hist-asesor"></div>
         <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -795,6 +818,14 @@
   // Los envíos ya cargados. El detalle los lee de aquí en vez de volver
   // a consultarlos: son los mismos datos que se acaban de pintar.
   let envios = [];
+  // Lo que se está viendo ahora mismo, ya filtrado. El detalle se abre
+  // por posición dentro de esta lista, no de la completa.
+  let visibles = [];
+  // Filtros activos.
+  let asesor = null;
+  let faltaFirma = null;
+  // Los firmantes frecuentes, para los botones de "falta la firma de".
+  let frecuentes = [];
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
@@ -1782,18 +1813,22 @@
   // meterlo todo en el renglón haría la tabla ilegible con cuatro
   // firmantes, que es lo normal en un contrato.
 
-  function pintarEnvios(filas) {
+  function pintarEnvios() {
     const cont = $('lista-envios');
-    envios = filas;
+    const filas = envíosFiltrados();
+    // El detalle se abre por posición dentro de lo que se está viendo,
+    // así que la lista visible se guarda tal cual quedó filtrada.
+    visibles = filas;
 
     if (!filas.length) {
       // El texto cambia según por qué está vacío: no es lo mismo no
       // haber mandado nunca nada que estar mirando un filtro sin
       // resultados, y con un solo mensaje uno cree que perdió sus
       // documentos.
+      const hayFiltro = filtro !== 'todos' || asesor || faltaFirma;
       cont.innerHTML = '<div class="kw-vacio">' + (
-        filtro !== 'todos'
-          ? 'No hay documentos en este estado.'
+        hayFiltro
+          ? 'No hay documentos que cumplan con lo que estás filtrando.'
           : (veTodo ? 'Todavía nadie ha mandado nada a firma.' : 'Todavía no has mandado nada a firma.')
       ) + '</div>';
       return;
@@ -1802,40 +1837,34 @@
     cont.innerHTML =
       '<div class="tabla-envios">' +
         '<div class="tabla-cabeza">' +
-          '<span>Nombre</span>' +
-          '<span>' + (veTodo ? 'Asesor' : 'Documento') + '</span>' +
-          '<span>Firmantes</span>' +
+          '<span>Nombre del documento</span>' +
+          (veTodo ? '<span>Asesor</span>' : '') +
           '<span>Estado</span>' +
           '<span>Fecha</span>' +
           '<span></span>' +
         '</div>' +
         filas.map((f, i) => {
           const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+          const yaFirmaron = firmantes.filter((x) => x.firmado).length;
           const pill = PILL[f.estado] || PILL.pendiente;
 
-          // Solo los dos primeros correos, y el resto contado. Con
-          // cuatro firmantes la columna se comía el renglón entero.
-          const correos = firmantes.slice(0, 2).map((x) =>
-            '<span class="env-correo' + (x.firmado ? ' firmado' : '') + '">' +
-              escapar(x.correo) + '</span>').join('');
-          const masCorreos = firmantes.length > 2
-            ? '<span class="env-correo env-mas">y ' + (firmantes.length - 2) + ' más</span>'
-            : '';
-
-          const etiqueta = (veTodo && f.autor && f.autor.nombre)
+          // Los que no se pudieron atribuir a nadie se marcan, en vez de
+          // dejar el hueco en blanco: así se ve cuáles hay que revisar.
+          const etiqueta = (f.autor && f.autor.nombre)
             ? '<span class="env-etiqueta">' + escapar(f.autor.nombre) + '</span>'
-            : '<span class="env-vacio">' + (firmantes.length ? firmantes.length + ' firmantes' : 'sin firmantes') + '</span>';
+            : '<span class="env-etiqueta sin">Sin identificar</span>';
 
-          return '<div class="tabla-fila" data-i="' + i + '">' +
+          return '<div class="tabla-fila' + (veTodo ? '' : ' sin-asesor') + '" data-i="' + i + '">' +
             '<span class="env-nombre">' + escapar(f.titulo) + '</span>' +
-            '<span>' + etiqueta + '</span>' +
-            '<span class="env-firmantes">' + (correos || '<span class="env-vacio">sin firmantes</span>') + masCorreos + '</span>' +
+            (veTodo ? '<span>' + etiqueta + '</span>' : '') +
             '<span class="env-estado">' +
               '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
-              '<span class="env-estado-txt">' + pill[1] + '</span>' +
+              '<span class="env-estado-txt">' + pill[1] +
+                (firmantes.length ? ' <span class="env-cuantos">' + yaFirmaron + '/' + firmantes.length + '</span>' : '') +
+              '</span>' +
             '</span>' +
             '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
-            '<button type="button" class="env-mas-info" data-detalle="' + i + '">Más información</button>' +
+            '<button type="button" class="env-mas-info" data-detalle="' + i + '">Ver todos los detalles</button>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -1856,7 +1885,7 @@
   // ── El detalle de un envío ──────────────────────────────────
 
   function abrirDetalle(i) {
-    const f = envios[i];
+    const f = visibles[i];
     if (!f) return;
 
     const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
@@ -1988,25 +2017,109 @@
 
   // Los filtros del historial. 'todos' primero porque es lo que uno
   // quiere ver al entrar; los demás sirven para buscar algo concreto.
-  const FILTROS = [
+  // ── Filtros ─────────────────────────────────────────────────
+  // Se traen todos los envíos de una sola vez y el filtrado se hace
+  // aquí. Así combinar dos filtros es instantáneo y no hay que volver a
+  // preguntarle a la base por cada clic. Con el tope de 300 renglones
+  // que se piden, el navegador lo hace sin despeinarse.
+
+  const FILTROS_ESTADO = [
     ['todos', 'Todos'],
     ['pendiente', 'Esperando firmas'],
     ['completado', 'Firmados'],
+    ['borrador', 'Borradores'],
     ['cancelado', 'Cancelados'],
   ];
 
   function pintarFiltros() {
-    const cont = $('hist-filtros');
-    cont.innerHTML = FILTROS.map(([id, txt]) =>
+    // Estado
+    $('hist-filtros').innerHTML = FILTROS_ESTADO.map(([id, txt]) =>
       '<button type="button" class="hist-filtro' + (filtro === id ? ' activo' : '') + '"' +
         ' data-filtro="' + id + '">' + txt + '</button>').join('');
 
-    cont.querySelectorAll('[data-filtro]').forEach((b) => {
+    $('hist-filtros').querySelectorAll('[data-filtro]').forEach((b) => {
       b.addEventListener('click', () => {
         filtro = b.dataset.filtro;
         pintarFiltros();
-        cargarEnvios();
+        pintarEnvios();
       });
+    });
+
+    // Falta la firma de alguno de los frecuentes. Es la pregunta que más
+    // se hace con un contrato parado: no "en qué va", sino "a quién le
+    // toca". Solo se ofrecen los frecuentes porque son los que se
+    // repiten; para los demás no tendría sentido un botón fijo.
+    const cont = $('hist-falta');
+    if (!frecuentes.length) { cont.innerHTML = ''; return; }
+
+    cont.innerHTML = frecuentes.map((f) => {
+      const corto = f.nombre.split(' ')[0];
+      return '<button type="button" class="hist-filtro' + (faltaFirma === f.correo ? ' activo' : '') + '"' +
+        ' data-falta="' + escapar(f.correo) + '">Falta ' + escapar(corto) + '</button>';
+    }).join('');
+
+    cont.querySelectorAll('[data-falta]').forEach((b) => {
+      b.addEventListener('click', () => {
+        // Volver a picarle al mismo lo apaga, para poder quitarlo sin
+        // tener que buscar un botón de "quitar filtro".
+        faltaFirma = faltaFirma === b.dataset.falta ? null : b.dataset.falta;
+        pintarFiltros();
+        pintarEnvios();
+      });
+    });
+  }
+
+  // El desplegable de asesores se arma con quienes de verdad tienen
+  // documentos, no con toda la lista de usuarios: una lista de cien
+  // nombres donde noventa no tienen nada no ayuda a filtrar.
+  function pintarFiltroAsesor() {
+    if (!veTodo) return;
+
+    const vistos = new Map();
+    envios.forEach((e) => {
+      if (e.autor && e.autor.nombre) vistos.set(e.user_id, e.autor.nombre);
+    });
+    const sinDueño = envios.some((e) => !e.user_id);
+
+    const cont = $('hist-asesor');
+    if (!vistos.size && !sinDueño) { cont.innerHTML = ''; return; }
+
+    const opciones = [...vistos.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    cont.innerHTML =
+      '<select class="hist-select" id="sel-asesor">' +
+        '<option value="">Todos los asesores</option>' +
+        opciones.map(([id, nom]) =>
+          '<option value="' + id + '"' + (asesor === id ? ' selected' : '') + '>' +
+          escapar(nom) + '</option>').join('') +
+        // Los que no se pudieron atribuir a nadie. Vale la pena poder
+        // aislarlos: son los que hay que revisar a mano.
+        (sinDueño
+          ? '<option value="__sin__"' + (asesor === '__sin__' ? ' selected' : '') + '>Sin identificar</option>'
+          : '') +
+      '</select>';
+
+    $('sel-asesor').addEventListener('change', (e) => {
+      asesor = e.target.value || null;
+      pintarEnvios();
+    });
+  }
+
+  function envíosFiltrados() {
+    return envios.filter((e) => {
+      if (filtro !== 'todos' && e.estado !== filtro) return false;
+
+      if (asesor === '__sin__') { if (e.user_id) return false; }
+      else if (asesor && e.user_id !== asesor) return false;
+
+      if (faltaFirma) {
+        const lista = Array.isArray(e.firmantes) ? e.firmantes : [];
+        // Tiene que estar invitado Y no haber firmado. Un documento donde
+        // esa persona ni siquiera participa no es un documento al que le
+        // "falte" su firma.
+        const suyo = lista.find((x) => String(x.correo).toLowerCase() === faltaFirma);
+        if (!suyo || suyo.firmado) return false;
+      }
+      return true;
     });
   }
 
@@ -2017,22 +2130,22 @@
     const campos = 'id, titulo, estado, firmantes, pdf_firmado_url, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
-    let q = window.kwSupabase
+    // Del más nuevo al más viejo, que es como se busca un contrato: uno
+    // se acuerda del de la semana pasada, no del de hace ocho meses.
+    const { data, error } = await window.kwSupabase
       .from('firmas_documentos')
       .select(campos)
       .order('created_at', { ascending: false })
-      .limit(200);
-
-    if (filtro !== 'todos') q = q.eq('estado', filtro);
-
-    const { data, error } = await q;
+      .limit(300);
 
     if (error) {
       $('lista-envios').innerHTML =
         '<div class="kw-vacio">No se pudieron cargar los envíos: ' + escapar(error.message) + '</div>';
       return;
     }
-    pintarEnvios(data || []);
+    envios = data || [];
+    pintarFiltroAsesor();
+    pintarEnvios();
   }
 
   // ── Arranque ────────────────────────────────────────────────
@@ -2074,6 +2187,7 @@
       .order('orden');
 
     if (error || !data || !data.length) return;
+    frecuentes = data;
 
     const caja = $('frecuentes');
     caja.innerHTML = data.map((f) =>
@@ -2140,9 +2254,12 @@
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
     // políticas de la base, que es donde no se puede hacer trampa.
     veTodo = ['master', 'admin', 'staff'].includes(String(perfil?.role));
-    // Importar toca documentos de todo el equipo, así que se queda en
-    // Master y Admin; Staff ve el historial pero no lo modifica.
-    if (['master', 'admin'].includes(String(perfil?.role))) {
+    // El botón de traer de weetrust ya no hace falta en el día a día: el
+    // webhook crea solo los documentos que se mandan desde su panel. Se
+    // queda escondido y solo aparece al abrir la pantalla con
+    // ?importar=1, para cuando haya que forzar una resincronización.
+    const pedido = new URLSearchParams(location.search).get('importar') === '1';
+    if (pedido && ['master', 'admin'].includes(String(perfil?.role))) {
       $('btn-importar').style.display = 'inline-flex';
     }
 
@@ -2155,9 +2272,13 @@
       if (marcas.length) pintarMarcas();
     });
 
-    pintarFiltros();
     escucharCambios();
-    await Promise.all([cargarFrecuentes(), cargarCupo(), cargarEnvios()]);
+    // Los frecuentes primero: los botones de "falta la firma de" se
+    // arman con ellos, así que pintar los filtros antes los dejaría sin
+    // esa mitad.
+    await cargarFrecuentes();
+    pintarFiltros();
+    await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
   }
 
