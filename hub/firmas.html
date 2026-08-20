@@ -280,21 +280,20 @@
   .tabla-fila { padding: 0 var(--sp-3) 0 var(--sp-4); }
 
   /* ── La búsqueda y el encabezado, pegados arriba ──
-     Viven en su propia tarjeta, separada de las filas, para poder
-     quedarse fijos con position:sticky mientras el cuerpo de la tabla
-     se desplaza por debajo. La franja de búsqueda usa la misma rejilla
-     de columnas que el encabezado, para que el cuadro de texto mida
-     justo lo mismo que las columnas de "Documento": desde donde
-     arranca la tabla hasta la división antes de "Etiquetas". */
+     Su propia tarjeta redonda, aparte de las filas, para poder quedarse
+     fija con position:sticky mientras el cuerpo de la tabla se desplaza
+     por debajo. Va separada (no pegada a las filas) y bien redonda,
+     como el header: así se lee como una cápsula flotando encima, en vez
+     de un pedazo de tabla que se corta feo contra lo que hay detrás. La
+     franja de búsqueda usa la misma rejilla de columnas que el
+     encabezado, para que el cuadro de texto mida justo lo mismo que las
+     columnas de "Documento": desde donde arranca la tabla hasta la
+     división antes de "Etiquetas". */
   .tabla-fija {
     position: sticky; top: 78px; z-index: 15;
-    border-radius: var(--r-tarjeta) var(--r-tarjeta) 0 0;
-    border-bottom: none;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-  }
-  .tabla-envios.tabla-cuerpo {
-    border-radius: 0 0 var(--r-tarjeta) var(--r-tarjeta);
-    border-top: none;
+    border-radius: 999px;
+    margin-bottom: var(--sp-3);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14);
   }
   .tabla-buscar-fila {
     display: grid;
@@ -2332,7 +2331,7 @@
       // resultados, y con un solo mensaje uno cree que perdió sus
       // documentos.
       const hayFiltro = filtro !== 'todos' || buscaAsesor || faltaFirma || etiqueta;
-      cont.innerHTML = '<div class="tabla-envios tabla-cuerpo"><div class="kw-vacio">' + (
+      cont.innerHTML = '<div class="tabla-envios"><div class="kw-vacio">' + (
         hayFiltro
           ? 'No hay documentos que cumplan con lo que estás filtrando.'
           : (veTodo ? 'Todavía nadie ha mandado nada a firma.' : 'Todavía no has mandado nada a firma.')
@@ -2341,7 +2340,7 @@
     }
 
     cont.innerHTML =
-      '<div class="tabla-envios tabla-cuerpo">' +
+      '<div class="tabla-envios">' +
         filas.map((f, i) => {
           const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
           const yaFirmaron = firmantes.filter((x) => x.firmado).length;
