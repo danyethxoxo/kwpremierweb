@@ -156,6 +156,44 @@ function firmantesDe(doc: Record<string, any>) {
   }))
 }
 
+// Cómo se llama un documento en el panel de weetrust.
+//
+// Su respuesta no trae ningún campo de nombre: ni documentName, ni name,
+// ni title. El único lugar donde aparece es la URL del archivo, que
+// apunta al PDF tal como quedó guardado, con el nombre original y un par
+// de marcas de tiempo pegadas al final por ellos:
+//
+//   .../Murillo_63_T4_D402_2_1786811485570_1786811485570.pdf?X-Amz-...
+//
+// y en su pantalla ese documento se llama "Murillo_63_T4_D402_2.pdf".
+//
+// Se piden 13 dígitos exactos, que es lo que mide una marca de tiempo en
+// milisegundos: con "diez o más" un archivo que de por sí terminara en
+// un número largo perdería parte de su nombre.
+//
+// Es la misma cuenta que hace firmar-documento al importar, para que un
+// documento no se llame distinto según por dónde entró al sitio.
+function nombreEnWeetrust(doc: Record<string, any>, documentID: string): string {
+  const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+
+  const directo = doc?.documentName || doc?.name || doc?.title || archivo.name
+  if (directo) return String(directo)
+
+  const url = String(archivo.url || '')
+  if (url) {
+    try {
+      const suelto = decodeURIComponent(url.split('?')[0].split('/').pop() || '')
+      const limpio = suelto.replace(/(_\d{13})+(\.[A-Za-z0-9]+)$/, '$2')
+      if (limpio) return limpio
+    } catch {
+      // Una URL que no se puede decodificar no vale un error: se cae al
+      // nombre de respaldo, que al menos identifica el documento.
+    }
+  }
+
+  return `Documento ${documentID.slice(-6)}`
+}
+
 // Crea el renglón de un documento que se mandó desde el panel de
 // weetrust y que el sitio todavía no conocía.
 async function crearDesdeWeetrust(
@@ -164,10 +202,7 @@ async function crearDesdeWeetrust(
   doc: Record<string, any>,
 ) {
   const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
-  const nombre = String(
-    doc?.documentName || doc?.name || doc?.title
-    || archivo.name || `Documento ${documentID.slice(-6)}`,
-  )
+  const nombre = nombreEnWeetrust(doc, documentID)
 
   // Quién lo mandó, si weetrust lo dice. Se intenta casar con una cuenta
   // del sitio por el correo: así el documento le aparece a esa persona

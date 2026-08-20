@@ -272,7 +272,13 @@
     grid-template-columns: 34px minmax(0,1.5fr) minmax(0,2fr) 76px;
     align-items: center;
   }
-  .tabla-cabeza { padding: 11px var(--sp-4); gap: var(--sp-3); }
+  /* El mismo relleno que el renglón de abajo, para que las columnas
+     arranquen en la misma vertical. */
+  .tabla-cabeza { padding: 11px var(--sp-3) 11px var(--sp-4); gap: var(--sp-3); }
+  /* Y cada celda lleva además el relleno que traen por dentro .zona-doc
+     y .zona-info: sin esto los títulos quedan corridos a la izquierda
+     respecto de lo que rotulan, justo el ancho de ese relleno. */
+  .tabla-cabeza > span { padding: 0 var(--sp-3); }
   .tabla-cabeza .cab-info {
     display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr) 92px;
     gap: var(--sp-3);
@@ -280,18 +286,18 @@
   .tabla-fila { padding: 0 var(--sp-3) 0 var(--sp-4); }
 
   /* ── La búsqueda y el encabezado, pegados arriba ──
-     Su propia tarjeta redonda, aparte de las filas, para poder quedarse
-     fija con position:sticky mientras el cuerpo de la tabla se desplaza
-     por debajo. Va separada (no pegada a las filas) y bien redonda,
-     como el header: así se lee como una cápsula flotando encima, en vez
-     de un pedazo de tabla que se corta feo contra lo que hay detrás. La
-     franja de búsqueda usa la misma rejilla de columnas que el
-     encabezado, para que el cuadro de texto mida justo lo mismo que las
-     columnas de "Documento": desde donde arranca la tabla hasta la
-     división antes de "Etiquetas". */
+     Su propia tarjeta, aparte de las filas, para poder quedarse fija con
+     position:sticky mientras el cuerpo de la tabla se desplaza por
+     debajo. Lleva el mismo redondeado que la tabla (no el de pastilla
+     del header) para que se lea como parte de ella, nada más despegada;
+     el blur de atrás es lo que evita que el contenido se vea cortado al
+     pasar por abajo. La franja de búsqueda usa la misma rejilla de
+     columnas que el encabezado, para que el cuadro de texto mida justo
+     lo mismo que las columnas de "Documento": desde donde arranca la
+     tabla hasta la división antes de "Etiquetas". */
   .tabla-fija {
     position: sticky; top: 78px; z-index: 15;
-    border-radius: 999px;
+    border-radius: var(--r-tarjeta);
     margin-bottom: var(--sp-3);
     box-shadow: 0 8px 22px rgba(0,0,0,0.14);
   }
