@@ -358,6 +358,15 @@
           <option value="Team Leader">Team Leader</option>
         </select>
       </div>
+      <!-- Permiso suelto, no un rol: quien dictamina expedientes puede ser
+           de Liderazgo o de Admin, y no toda esa gente dictamina. -->
+      <div class="field">
+        <label>Dictámenes</label>
+        <label class="kw-chip" style="width:100%;">
+          <input type="checkbox" id="edit-dictaminar">
+          Puede levantar dictámenes y darlos por subsanados
+        </label>
+      </div>
       <div class="field"><label>Nueva contraseña (opcional)</label>
         <div class="password-wrap">
           <input type="password" id="edit-password" placeholder="Dejar en blanco para no cambiarla" />
@@ -487,7 +496,7 @@
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
-        .select('id, nombre, apellido, email, role, created_at, oculto, puesto, foto_url')
+        .select('id, nombre, apellido, email, role, created_at, oculto, puesto, foto_url, puede_dictaminar')
         .order('created_at', { ascending: false });
       if (error) throw error;
       usuariosCache = data || [];
@@ -617,6 +626,7 @@
     rolSelect.disabled = (u.id === miUserId);
 
     document.getElementById('edit-puesto').value = u.puesto || '';
+    document.getElementById('edit-dictaminar').checked = u.puede_dictaminar === true;
 
     const btnBorrar = document.getElementById('btn-eliminar-usuario');
     (btnBorrar.closest('.kw-confirmar') || btnBorrar).style.display = (u.id === miUserId) ? 'none' : '';
@@ -656,6 +666,21 @@
       if (nuevaPassword) payload.password = nuevaPassword;
 
       await llamarFuncion(GESTIONAR_URL, payload);
+
+      // El permiso de dictaminar va por su cuenta, con una función de la
+      // base. No entra en el payload de arriba porque esa Edge Function
+      // se despliega a mano desde el dashboard, y un campo nuevo ahí
+      // significaría que nadie puede dar el permiso hasta que alguien se
+      // acuerde de republicarla.
+      const quiereDictaminar = document.getElementById('edit-dictaminar').checked;
+      if (quiereDictaminar !== (usuarioEnEdicion.puede_dictaminar === true)) {
+        const { error: errDic } = await window.kwSupabase.rpc('set_puede_dictaminar', {
+          p_user: usuarioEnEdicion.id,
+          p_valor: quiereDictaminar
+        });
+        if (errDic) throw new Error('Se guardó lo demás, pero el permiso de dictámenes no: ' + errDic.message);
+      }
+
       setEditMsg('Usuario actualizado.', 'ok');
       cargarUsuarios();
       setTimeout(cerrarModalEditar, 900);
@@ -1018,6 +1043,6 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260820b" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260820c" data-menu="hub"></script>
 </body>
 </html>
