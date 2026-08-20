@@ -22,6 +22,18 @@
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
+  /* ── El vidrio de la tabla ──────────────────────────────────
+     Sobre el fondo guinda, lo que va encima no es blanco liso sino un
+     vidrio esmerilado: el degradado da el brillo, el borde claro el
+     canto y el blur deja pasar el color de atrás. Vive en variables
+     porque lo usan la tabla y los filtros de arriba, y copiado a mano en
+     cada lugar se iban separando en cuanto se tocaba uno. */
+  :root {
+    --vidrio: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.86) 0%, rgba(255,255,255,0.76) 45%, rgba(255,255,255,0.7) 100%);
+    --vidrio-borde: rgba(255,255,255,0.82);
+    --vidrio-blur: blur(18px) saturate(165%);
+  }
+
   /* El título y la descripción van directo sobre el fondo guinda, no
      dentro de una tarjeta, así que necesitan su propio color claro:
      kw-page-titulo/kw-page-desc de kw-ui.css traen el oscuro de
@@ -185,8 +197,23 @@
      ancho justo y caben en un renglón. */
   .hist-filtros { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 0; }
   .hist-filtros .kw-select { width: auto; min-width: 0; }
+  /* Del mismo vidrio que la tabla: son la barra de esa tabla, y con el
+     blanco liso que trae el componente por defecto se veían como algo
+     pegado encima del fondo guinda en vez de como parte de ella. */
   .hist-filtros .kw-select-btn {
     height: 32px; padding: 0 10px; font-size: 12px; border-radius: 999px;
+    background: var(--vidrio);
+    border: 1px solid var(--vidrio-borde);
+    backdrop-filter: var(--vidrio-blur);
+    -webkit-backdrop-filter: var(--vidrio-blur);
+    box-shadow: var(--sombra-1);
+  }
+  /* El hover del componente oscurece el borde, que sobre el vidrio se ve
+     como una raya sucia. Aquí se sube el brillo, que es como reaccionan
+     las demás piezas de vidrio del sitio. */
+  .hist-filtros .kw-select-btn:hover {
+    border-color: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.26);
   }
   .hist-filtros .kw-select-valor { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* El botón del desplegable es una pastilla angosta a propósito, pero
@@ -256,11 +283,11 @@
      así que cada renglón se convierte en tarjeta: una tabla de seis
      columnas con scroll horizontal en el celular es inservible. */
   .tabla-envios {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.86) 0%, rgba(255,255,255,0.76) 45%, rgba(255,255,255,0.7) 100%);
-    border: 1px solid rgba(255,255,255,0.82);
+    background: var(--vidrio);
+    border: 1px solid var(--vidrio-borde);
     border-radius: var(--r-tarjeta);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    backdrop-filter: var(--vidrio-blur);
+    -webkit-backdrop-filter: var(--vidrio-blur);
     box-shadow: var(--sombra-1);
     overflow: hidden;
   }
@@ -353,7 +380,11 @@
   .tabla-fila:last-child { border-bottom: none; }
   .tabla-fila:hover { background: rgba(0,0,0,0.03); }
 
-  /* Se corta ocho caracteres antes de donde daría la columna. Los
+  /* En texto normal, no en negritas: son renglones de nombres largos y
+     parecidos entre sí, y en negritas la lista entera pesaba lo mismo, sin
+     nada que resaltara sobre lo demás.
+
+     Y se corta ocho caracteres antes de donde daría la columna. Los
      nombres que vienen de weetrust son larguísimos y llenaban el renglón
      de punta a punta, sin aire antes de la etiqueta del asesor; los que
      caben de sobra no se enteran, porque el tope solo muerde cuando el
@@ -363,7 +394,7 @@
      esté puesta: así siguen siendo ocho caracteres aunque cambie el
      tamaño de letra. */
   .env-nombre {
-    font-weight: 700;
+    font-weight: 400;
     max-width: calc(100% - 8ch);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -2597,13 +2628,37 @@
       conFirmas = true;
     }
 
-    if (!url && f.archivo_ruta) {
-      // Una URL firmada de una hora: el bucket es privado y no se puede
-      // enseñar de otra forma sin abrirlo a todo el mundo.
+    // Nuestra copia, la que se subió. Una URL firmada de una hora: el
+    // bucket es privado y no se puede enseñar de otra forma sin abrirlo a
+    // todo el mundo.
+    let urlNuestra = null;
+    if (f.archivo_ruta) {
       const { data } = await window.kwSupabase
         .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
-      url = data?.signedUrl || null;
+      urlNuestra = data?.signedUrl || null;
     }
+    if (!url) url = urlNuestra;
+
+    // ── Cuál se dibuja y cuál se descarga ──
+    // No tienen por qué ser la misma.
+    //
+    // Para descargar, la de weetrust: es la copia buena, la que trae las
+    // firmas selladas.
+    //
+    // Para dibujar en pantalla, mientras el documento no esté completo,
+    // la nuestra. El archivo de weetrust lo sirve su almacenamiento, que
+    // no nos deja leerlo desde el navegador (no manda los permisos de
+    // origen cruzado que hacen falta), así que al intentar bajarlo para
+    // dibujarlo tronaba y se caía al visor del navegador: un PDF pelón,
+    // sin los recuadros de firma encima. En un documento completado eso
+    // no se notaba, porque ahí las firmas ya vienen dibujadas dentro del
+    // archivo; en uno a medias se notaba justo lo que se venía a ver.
+    //
+    // La nuestra es la misma paginación contra la que se calcularon las
+    // coordenadas, y Supabase sí deja leerla, así que los recuadros
+    // vuelven a poder pintarse encima.
+    const completado = f.estado === 'completado';
+    const urlVista = (!completado && urlNuestra) ? urlNuestra : url;
 
     // Al lado del documento, quién ya firmó. Es lo que uno quiere saber
     // al abrir un contrato a medias, y ahorra tener que cerrar y abrir
@@ -2706,67 +2761,82 @@
       '<div class="editor-cargando"><div class="kw-loader"></div><span>Preparando las hojas...</span></div>' +
       '<div id="doc-paginas"></div>';
 
+    // Bajar y dibujar el PDF va en su propio try: es lo único que puede
+    // fallar por algo de afuera (el archivo no se deja leer, la librería
+    // no cargó), y es lo único que justifica caer al visor del navegador.
+    // Pintar los recuadros, que viene después, es cuenta nuestra: si
+    // estuviera aquí dentro, un descuido pintando una marca tiraría
+    // también el documento ya dibujado y se vería exactamente igual que
+    // no poder abrirlo, sin manera de distinguir un problema del otro.
+    let hojas;
     try {
       await cargarLibs();
-      const res = await fetch(url);
+      const res = await fetch(urlVista);
       if (!res.ok) throw new Error('no se pudo bajar');
       const bytes = new Uint8Array(await res.arrayBuffer());
-      const hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
+      hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
       $('doc-cuerpo').querySelector('.editor-cargando')?.remove();
-
-      // Encima, dónde va la firma de cada quien. Sin esto la vista previa
-      // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
-      // que es justo lo que uno viene a revisar.
-      //
-      // Las que faltan llevan su recuadro de color. Las que ya se
-      // firmaron llevan el mismo recuadro pero en verde, con el nombre y
-      // "Firmado" adentro: weetrust solo entrega el trazo dibujado en el
-      // documento completo (su api regresa vacío el campo de la firma
-      // suelta mientras falte alguien), así que hasta entonces no hay un
-      // trazo real que mostrar y el recuadro verde es lo más honesto.
-      (f.posiciones || []).forEach((pz) => {
-        const pag = hojas[pz.pagina - 1];
-        if (!pag) return;
-        const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
-          .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
-
-        const el = document.createElement('div');
-        el.style.position = 'absolute';
-        el.style.left = ((pz.x / pz.pagAncho) * 100) + '%';
-        el.style.top = ((pz.y / pz.pagAlto) * 100) + '%';
-        el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
-        el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
-
-        if (quien && quien.firmado && quien.imagen) {
-          el.className = 'firma-trazo';
-          el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
-            escapar(quien.nombre || quien.correo) + '">';
-        } else if (quien && quien.firmado) {
-          // Firmó, pero no tenemos su trazo: el mismo recuadro de
-          // siempre, ya no del color que se eligió al colocarlo sino en
-          // verde, con su nombre y la palabra "Firmado" adentro, más la
-          // palomita en la esquina para distinguirlo de un vistazo.
-          el.className = 'marca-firma vista firmada';
-          el.innerHTML = '<span class="marca-rotulo">' +
-            escapar(quien.nombre || quien.correo) + ' · Firmado</span>' +
-            '<span class="firma-hecha-check" title="Firmado por ' +
-            escapar(quien.nombre || quien.correo) + '">' +
-            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
-            '</span>';
-        } else {
-          el.className = 'marca-firma vista';
-          el.style.setProperty('--marca-color', pz.color || '#FFD247');
-          el.innerHTML = '<span class="marca-rotulo">' +
-            escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
-        }
-        pag.capa.appendChild(el);
-      });
     } catch {
-      // Si el archivo vive en weetrust, su servidor puede no dejar que
-      // lo leamos desde aquí. Ahí se cae al visor del navegador, que sí
-      // puede abrirlo aunque se vea peor.
-      $('doc-cuerpo').innerHTML = '<iframe class="doc-visor" src="' + escapar(url) + '"></iframe>';
+      // Si el archivo no se deja leer desde aquí, al menos se abre en el
+      // visor del navegador. Ahí ya no se pueden pintar los recuadros
+      // encima, así que se dice: mejor eso que dejar creer que el
+      // documento no tiene ninguna firma colocada.
+      $('doc-cuerpo').innerHTML =
+        ((f.posiciones || []).length
+          ? '<div class="kw-nota">Este documento se está viendo con el visor del navegador, '
+            + 'así que no se pueden dibujar encima los recuadros de firma.</div>'
+          : '') +
+        '<iframe class="doc-visor" src="' + escapar(urlVista) + '"></iframe>';
+      return;
     }
+
+    // Encima, dónde va la firma de cada quien. Sin esto la vista previa
+    // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
+    // que es justo lo que uno viene a revisar.
+    //
+    // Las que faltan llevan su recuadro de color. Las que ya se firmaron
+    // llevan el mismo recuadro pero en verde, con el nombre y "Firmado"
+    // adentro: weetrust solo entrega el trazo dibujado en el documento
+    // completo (su api regresa vacío el campo de la firma suelta mientras
+    // falte alguien), así que hasta entonces no hay un trazo real que
+    // mostrar y el recuadro verde es lo más honesto.
+    (f.posiciones || []).forEach((pz) => {
+      const pag = hojas[pz.pagina - 1];
+      if (!pag) return;
+      const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
+        .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
+
+      const el = document.createElement('div');
+      el.style.position = 'absolute';
+      el.style.left = ((pz.x / pz.pagAncho) * 100) + '%';
+      el.style.top = ((pz.y / pz.pagAlto) * 100) + '%';
+      el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
+      el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
+
+      if (quien && quien.firmado && quien.imagen) {
+        el.className = 'firma-trazo';
+        el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
+          escapar(quien.nombre || quien.correo) + '">';
+      } else if (quien && quien.firmado) {
+        // Firmó, pero no tenemos su trazo: el mismo recuadro de siempre,
+        // ya no del color que se eligió al colocarlo sino en verde, con
+        // su nombre y la palabra "Firmado" adentro, más la palomita en la
+        // esquina para distinguirlo de un vistazo.
+        el.className = 'marca-firma vista firmada';
+        el.innerHTML = '<span class="marca-rotulo">' +
+          escapar(quien.nombre || quien.correo) + ' · Firmado</span>' +
+          '<span class="firma-hecha-check" title="Firmado por ' +
+          escapar(quien.nombre || quien.correo) + '">' +
+          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+          '</span>';
+      } else {
+        el.className = 'marca-firma vista';
+        el.style.setProperty('--marca-color', pz.color || '#FFD247');
+        el.innerHTML = '<span class="marca-rotulo">' +
+          escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
+      }
+      pag.capa.appendChild(el);
+    });
   }
 
 
