@@ -208,6 +208,44 @@ async function pedirDocumento(token: string, documentID: string) {
   return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID) || null
 }
 
+// Cómo se llama un documento en el panel de weetrust.
+//
+// Su listado no trae ningún campo de nombre: ni documentName, ni name,
+// ni title. El único lugar donde aparece es la URL del archivo, que
+// apunta al PDF tal como quedó guardado, con el nombre original y un
+// par de marcas de tiempo pegadas al final por ellos:
+//
+//   .../Murillo_63_T4_D402_2_1786811485570_1786811485570.pdf?X-Amz-...
+//
+// y en su pantalla ese documento se llama "Murillo_63_T4_D402_2.pdf".
+// Así que se saca de ahí: se corta la firma de la URL, se decodifica y
+// se le quitan las marcas.
+//
+// Se piden 13 dígitos exactos, que es lo que mide una marca de tiempo
+// en milisegundos y lo seguirá midiendo por siglos. Con "diez o más" un
+// archivo que de por sí terminara en un número largo perdería parte de
+// su nombre.
+function nombreEnWeetrust(doc: Record<string, unknown>, documentID: string): string {
+  const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+
+  const directo = doc?.documentName || doc?.name || doc?.title || archivo.name
+  if (directo) return String(directo)
+
+  const url = String(archivo.url || '')
+  if (url) {
+    try {
+      const suelto = decodeURIComponent(url.split('?')[0].split('/').pop() || '')
+      const limpio = suelto.replace(/(_\d{13})+(\.[A-Za-z0-9]+)$/, '$2')
+      if (limpio) return limpio
+    } catch {
+      // Una URL que no se puede decodificar no vale un error: se cae al
+      // nombre de respaldo, que al menos identifica el documento.
+    }
+  }
+
+  return `Documento ${documentID.slice(-6)}`
+}
+
 // Borra un documento en weetrust. Solo funciona mientras esté en
 // borrador o pendiente: los completados quedan sellados en su blockchain
 // y ya no se pueden quitar, ni por ellos ni por nosotros.
@@ -1054,7 +1092,7 @@ Deno.serve(async (req: Request) => {
       // El asesor pone al día los suyos; el liderazgo, los de todos.
       let q = admin
         .from('firmas_documentos')
-        .select('id, user_id, estado, firmantes, weetrust_document_id')
+        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo')
         .not('weetrust_document_id', 'is', null)
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
@@ -1124,12 +1162,28 @@ Deno.serve(async (req: Request) => {
         const estado = estados[String(doc.status)] || fila.estado
         const archivo = (doc.documentFileObj ?? {}) as Record<string, unknown>
 
+        // ── El nombre de weetrust, para los que quedaron con el de
+        //    respaldo ──
+        // La importación no sabía sacarlo y les puso "Documento a1b2c3".
+        // Aquí se corrige, pero SOLO si el guardado sigue siendo ese
+        // respaldo: un nombre que alguien haya escrito o corregido a
+        // mano vale más que el de allá y no se pisa.
+        const deRespaldo = (s: unknown) => /^Documento [0-9a-f]{6}$/i.test(String(s ?? ''))
+        const nombre = nombreEnWeetrust(doc, fila.weetrust_document_id!)
+        const renombrar = !deRespaldo(nombre)
+          ? {
+            ...(deRespaldo(fila.titulo) ? { titulo: nombre } : {}),
+            ...(deRespaldo(fila.nombre_archivo) ? { nombre_archivo: nombre } : {}),
+          }
+          : {}
+
         cambios.push({
           id: fila.id,
           datos: {
             estado,
             firmantes,
             pdf_firmado_url: (archivo.url as string) ?? null,
+            ...renombrar,
             ...(estado === 'completado' ? { completado_at: new Date().toISOString() } : {}),
           },
         })
@@ -1360,13 +1414,9 @@ Deno.serve(async (req: Request) => {
         // ir encadenando accesos sobre algo que TypeScript no conoce.
         const archivoDoc = (doc?.documentFileObj ?? {}) as Record<string, unknown>
 
-        // El nombre viene en distintos campos según el documento, así que
-        // se prueban varios antes de rendirse: un renglón sin nombre en
-        // el historial no se puede identificar de un vistazo.
-        const nombre = String(
-          doc?.documentName || doc?.name || doc?.title
-          || archivoDoc.name || `Documento ${documentID.slice(-6)}`,
-        )
+        // El mismo nombre con el que aparece en el panel de weetrust,
+        // para poder buscar allá lo que se ve aquí.
+        const nombre = nombreEnWeetrust(doc, documentID)
 
         const estado = estados[String(doc?.status)] || 'pendiente'
         // La fecha que importa es la de allá, no la de ahora: si se
