@@ -366,6 +366,9 @@
           <input type="checkbox" id="edit-dictaminar">
           Puede levantar dictámenes y darlos por subsanados
         </label>
+        <p class="nota-dictaminar" style="display:none;margin-top:6px;font-size:12px;color:var(--muted);">
+          Master lo trae siempre y no se le puede quitar.
+        </p>
       </div>
       <div class="field"><label>Nueva contraseña (opcional)</label>
         <div class="password-wrap">
@@ -626,7 +629,15 @@
     rolSelect.disabled = (u.id === miUserId);
 
     document.getElementById('edit-puesto').value = u.puesto || '';
-    document.getElementById('edit-dictaminar').checked = u.puede_dictaminar === true;
+    // Master siempre puede, así que su casilla va prendida y trabada: la
+    // base lo deja pasar de todos modos, y dejarla apagable enseñaría un
+    // permiso quitado que en realidad sigue puesto.
+    const chkDictaminar = document.getElementById('edit-dictaminar');
+    const esMaster = u.role === 'master';
+    chkDictaminar.checked = esMaster || u.puede_dictaminar === true;
+    chkDictaminar.disabled = esMaster;
+    chkDictaminar.closest('.field').querySelector('.nota-dictaminar').style.display =
+      esMaster ? '' : 'none';
 
     const btnBorrar = document.getElementById('btn-eliminar-usuario');
     (btnBorrar.closest('.kw-confirmar') || btnBorrar).style.display = (u.id === miUserId) ? 'none' : '';
