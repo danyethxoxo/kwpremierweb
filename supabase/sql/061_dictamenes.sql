@@ -55,7 +55,14 @@ alter table public.profiles
   add column if not exists puede_dictaminar boolean not null default false;
 
 comment on column public.profiles.puede_dictaminar is
-  'Puede levantar dictámenes y dar por subsanados sus puntos. Lo encienden Master y Admin desde el Panel.';
+  'Puede levantar dictámenes y dar por subsanados sus puntos. Lo encienden Master y Admin desde el Panel. Master lo trae siempre.';
+
+-- Master lo trae encendido de entrada. La función de abajo lo dejaría
+-- pasar de todos modos, pero entonces el Panel enseñaría la casilla
+-- apagada para alguien que sí puede: el dato tiene que decir lo mismo
+-- que el sistema hace.
+update public.profiles set puede_dictaminar = true
+where role = 'master' and puede_dictaminar = false;
 
 -- Master entra siempre, tenga o no el permiso encendido. Es la cuenta
 -- dueña del sistema: si el único perfil con permiso se borra o se apaga
@@ -72,6 +79,23 @@ as $$
 $$;
 
 grant execute on function public.puede_dictaminar() to authenticated;
+
+-- Y quien llegue a Master después también, sin que nadie se acuerde de
+-- prenderle la casilla. El "update" de arriba solo arregla a los de hoy.
+create or replace function public.master_siempre_dictamina()
+returns trigger
+language plpgsql set search_path = public
+as $$
+begin
+  if new.role = 'master' then new.puede_dictaminar := true; end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_master_siempre_dictamina on public.profiles;
+create trigger trg_master_siempre_dictamina
+  before insert or update of role, puede_dictaminar on public.profiles
+  for each row execute function public.master_siempre_dictamina();
 
 -- ─────────────────────────────────────────────────────────────
 -- 2) El dictamen
