@@ -273,8 +273,12 @@
     align-items: center;
   }
   /* El mismo relleno que el renglón de abajo, para que las columnas
-     arranquen en la misma vertical. */
-  .tabla-cabeza { padding: 11px var(--sp-3) 11px var(--sp-4); gap: var(--sp-3); }
+     arranquen en la misma vertical. Y sin gap, por la misma razón: el
+     renglón tampoco lo lleva (sus zonas van pegadas, separadas por la
+     línea divisoria). Con gap aquí, las columnas de en medio quedaban
+     más angostas y corridas a la derecha, así que cada título terminaba
+     rotulando algo que empezaba más a la izquierda. */
+  .tabla-cabeza { padding: 11px var(--sp-3) 11px var(--sp-4); }
   /* Y cada celda lleva además el relleno que traen por dentro .zona-doc
      y .zona-info: sin esto los títulos quedan corridos a la izquierda
      respecto de lo que rotulan, justo el ancho de ese relleno. */
@@ -349,7 +353,20 @@
   .tabla-fila:last-child { border-bottom: none; }
   .tabla-fila:hover { background: rgba(0,0,0,0.03); }
 
-  .env-nombre { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Se corta ocho caracteres antes de donde daría la columna. Los
+     nombres que vienen de weetrust son larguísimos y llenaban el renglón
+     de punta a punta, sin aire antes de la etiqueta del asesor; los que
+     caben de sobra no se enteran, porque el tope solo muerde cuando el
+     texto ya iba a pasarse.
+
+     La medida va en `ch`, que es el ancho de un carácter de la fuente que
+     esté puesta: así siguen siendo ocho caracteres aunque cambie el
+     tamaño de letra. */
+  .env-nombre {
+    font-weight: 700;
+    max-width: calc(100% - 8ch);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .env-etiqueta {
     display: inline-block; padding: 2px 9px; border-radius: 999px;
     background: rgba(198,32,39,0.09); color: var(--red);
@@ -376,7 +393,13 @@
   .env-punto.verde { background: #1f9d55; }
   .env-punto.ambar { background: #e0a218; }
   .env-punto.rojo { background: #d13b3b; }
-  .env-estado-txt { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* En texto normal, no en negritas: el estado ya se distingue por el
+     punto de color de al lado, y en negritas competía con el nombre del
+     documento, que sí es lo que se viene a leer. */
+  .env-estado-txt {
+    font-size: 12.5px; font-weight: 400;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .env-fecha { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
   .env-mas-info {
@@ -425,6 +448,10 @@
   @media (max-width: 860px) {
     .zona-doc, .zona-info { grid-template-columns: 1fr; gap: 5px; }
     .zona-info { border-left: none; border-top: 1px solid rgba(0,0,0,0.08); }
+    /* En la tarjeta del celular el nombre ya tiene el renglón entero para
+       él y no hay nada al lado que necesite aire, así que el tope de
+       arriba solo quitaría letras a cambio de nada. */
+    .env-nombre { max-width: none; }
   }
 
   /* ── Los menús flotantes ────────────────────────────────────
@@ -959,9 +986,16 @@
 
       <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
-      <!-- Búsqueda y encabezado, pegados arriba de la tabla. Van juntos
-           y aparte de las filas para que al hacer scroll se queden fijos
-           mientras el cuerpo de la tabla pasa por debajo. -->
+      <!-- El encabezado de la tabla, pegado arriba: aparte de las filas
+           para que al hacer scroll se quede fijo mientras el cuerpo de la
+           tabla pasa por debajo.
+
+           La búsqueda vive en la lupa del header, no aquí: drawer.js
+           reconoce este campo como el buscador de la página, esconde esta
+           franja y le pasa lo que se escriba allá arriba. Se deja en el
+           HTML de todos modos porque es lo que hace que ese enlace
+           funcione, y porque si drawer.js no cargara, la búsqueda seguiría
+           estando a la mano en vez de desaparecer. -->
       <div class="tabla-envios tabla-fija" id="tabla-fija">
         <div class="tabla-buscar-fila">
           <label class="tabla-buscar">
@@ -3625,7 +3659,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817j" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260820a" data-menu="hub"></script>
 
 </body>
 </html>
