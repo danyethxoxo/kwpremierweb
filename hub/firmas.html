@@ -353,7 +353,20 @@
   .tabla-fila:last-child { border-bottom: none; }
   .tabla-fila:hover { background: rgba(0,0,0,0.03); }
 
-  .env-nombre { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Se corta ocho caracteres antes de donde daría la columna. Los
+     nombres que vienen de weetrust son larguísimos y llenaban el renglón
+     de punta a punta, sin aire antes de la etiqueta del asesor; los que
+     caben de sobra no se enteran, porque el tope solo muerde cuando el
+     texto ya iba a pasarse.
+
+     La medida va en `ch`, que es el ancho de un carácter de la fuente que
+     esté puesta: así siguen siendo ocho caracteres aunque cambie el
+     tamaño de letra. */
+  .env-nombre {
+    font-weight: 700;
+    max-width: calc(100% - 8ch);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .env-etiqueta {
     display: inline-block; padding: 2px 9px; border-radius: 999px;
     background: rgba(198,32,39,0.09); color: var(--red);
@@ -435,6 +448,10 @@
   @media (max-width: 860px) {
     .zona-doc, .zona-info { grid-template-columns: 1fr; gap: 5px; }
     .zona-info { border-left: none; border-top: 1px solid rgba(0,0,0,0.08); }
+    /* En la tarjeta del celular el nombre ya tiene el renglón entero para
+       él y no hay nada al lado que necesite aire, así que el tope de
+       arriba solo quitaría letras a cambio de nada. */
+    .env-nombre { max-width: none; }
   }
 
   /* ── Los menús flotantes ────────────────────────────────────
@@ -2314,12 +2331,6 @@
     completado: 'verde', cancelado: 'gris', error: 'rojo',
   };
 
-  // En la tabla el rótulo va más corto. La columna del estado comparte
-  // renglón con las etiquetas y la fecha, y "Esperando firmas" más el
-  // contador se comía el espacio de las tres. Solo se acorta aquí: en el
-  // detalle, donde sí hay lugar, se sigue leyendo completo.
-  const ESTADO_CORTO = { pendiente: 'Esperando' };
-
   function fecha(iso) {
     if (!iso) return '';
     return new Date(iso).toLocaleDateString('es-MX', {
@@ -2406,7 +2417,7 @@
               '<span class="env-tags">' + tags + '</span>' +
               '<span class="env-estado">' +
                 '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
-                '<span class="env-estado-txt">' + (ESTADO_CORTO[f.estado] || pill[1]) +
+                '<span class="env-estado-txt">' + pill[1] +
                   (firmantes.length ? ' <span class="env-cuantos">' + yaFirmaron + '/' + firmantes.length + '</span>' : '') +
                 '</span>' +
               '</span>' +
