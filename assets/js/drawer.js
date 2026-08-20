@@ -279,25 +279,14 @@
   }
 
   // ── Los botones de acción salen de la cápsula ──
-  // Perfil, la campanita, Panel y Atrás no son parte de navegar por la
-  // página: son atajos a otro lado. Se sacan de la cápsula y se ponen a su lado,
+  // Perfil, la campanita y Panel no son parte de navegar por la página:
+  // son atajos a otro lado. Se sacan de la cápsula y se ponen a su lado,
   // cada uno en su propia pastilla, igual que el botón de buscar en la
   // barra de Música de iOS. Se hace aquí y no en el HTML de cada página
   // porque la hamburguesa y la lupa también se insertan desde aquí.
   if (header && header.classList.contains('kw-header')) {
-    const atajos = Array.from(
+    const sueltos = Array.from(
       header.querySelectorAll('#btn-perfil-header, #notif-bell-slot, #btn-admin'));
-
-    // El botón de Atrás se va con ellos, hasta la derecha: dentro de la
-    // cápsula quedaba en medio de lo de navegar por la página, que es
-    // justo lo que no es. Va al final del grupo, después de la campanita.
-    //
-    // Solo cuando ya hay atajos que sacar: en las páginas donde el Atrás
-    // es lo único suelto no hay cápsula que partir, y ahí ya queda a la
-    // derecha solo, por la regla de header > *:last-child.
-    const sueltos = atajos.length
-      ? atajos.concat(Array.from(header.querySelectorAll('.back-btn')))
-      : [];
 
     if (sueltos.length) {
       const capsula = document.createElement('div');
@@ -324,6 +313,23 @@
 
       header.classList.add('kw-header-partido');
     }
+  }
+
+  // ── El Atrás, en la punta contraria a la hamburguesa ──
+  // Cada página lo trae donde le tocó (suelto, o dentro de un envoltorio
+  // junto a la campanita), y así quedaba pegado a la lupa, en la punta
+  // equivocada. Se lleva al final de la cápsula, y sin envoltorio: dentro
+  // de uno, el margen automático que lo empuja a la derecha no tendría
+  // contra qué empujar.
+  //
+  // Va aquí y no en el HTML de cada página porque el campo de búsqueda se
+  // agrega más abajo y tiene que quedar después de él.
+  const atras = header && header.querySelector('.back-btn');
+  if (atras) {
+    const caja = header.querySelector('.kw-header-capsula') || header;
+    const envoltorio = atras.parentElement;
+    caja.appendChild(atras);
+    if (envoltorio !== caja && !envoltorio.children.length) envoltorio.remove();
   }
 
   // ── Buscador ──
