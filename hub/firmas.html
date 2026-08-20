@@ -273,8 +273,12 @@
     align-items: center;
   }
   /* El mismo relleno que el renglón de abajo, para que las columnas
-     arranquen en la misma vertical. */
-  .tabla-cabeza { padding: 11px var(--sp-3) 11px var(--sp-4); gap: var(--sp-3); }
+     arranquen en la misma vertical. Y sin gap, por la misma razón: el
+     renglón tampoco lo lleva (sus zonas van pegadas, separadas por la
+     línea divisoria). Con gap aquí, las columnas de en medio quedaban
+     más angostas y corridas a la derecha, así que cada título terminaba
+     rotulando algo que empezaba más a la izquierda. */
+  .tabla-cabeza { padding: 11px var(--sp-3) 11px var(--sp-4); }
   /* Y cada celda lleva además el relleno que traen por dentro .zona-doc
      y .zona-info: sin esto los títulos quedan corridos a la izquierda
      respecto de lo que rotulan, justo el ancho de ese relleno. */
@@ -376,7 +380,13 @@
   .env-punto.verde { background: #1f9d55; }
   .env-punto.ambar { background: #e0a218; }
   .env-punto.rojo { background: #d13b3b; }
-  .env-estado-txt { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* En texto normal, no en negritas: el estado ya se distingue por el
+     punto de color de al lado, y en negritas competía con el nombre del
+     documento, que sí es lo que se viene a leer. */
+  .env-estado-txt {
+    font-size: 12.5px; font-weight: 400;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .env-fecha { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
   .env-mas-info {
@@ -959,9 +969,16 @@
 
       <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
-      <!-- Búsqueda y encabezado, pegados arriba de la tabla. Van juntos
-           y aparte de las filas para que al hacer scroll se queden fijos
-           mientras el cuerpo de la tabla pasa por debajo. -->
+      <!-- El encabezado de la tabla, pegado arriba: aparte de las filas
+           para que al hacer scroll se quede fijo mientras el cuerpo de la
+           tabla pasa por debajo.
+
+           La búsqueda vive en la lupa del header, no aquí: drawer.js
+           reconoce este campo como el buscador de la página, esconde esta
+           franja y le pasa lo que se escriba allá arriba. Se deja en el
+           HTML de todos modos porque es lo que hace que ese enlace
+           funcione, y porque si drawer.js no cargara, la búsqueda seguiría
+           estando a la mano en vez de desaparecer. -->
       <div class="tabla-envios tabla-fija" id="tabla-fija">
         <div class="tabla-buscar-fila">
           <label class="tabla-buscar">
@@ -2297,6 +2314,12 @@
     completado: 'verde', cancelado: 'gris', error: 'rojo',
   };
 
+  // En la tabla el rótulo va más corto. La columna del estado comparte
+  // renglón con las etiquetas y la fecha, y "Esperando firmas" más el
+  // contador se comía el espacio de las tres. Solo se acorta aquí: en el
+  // detalle, donde sí hay lugar, se sigue leyendo completo.
+  const ESTADO_CORTO = { pendiente: 'Esperando' };
+
   function fecha(iso) {
     if (!iso) return '';
     return new Date(iso).toLocaleDateString('es-MX', {
@@ -2383,7 +2406,7 @@
               '<span class="env-tags">' + tags + '</span>' +
               '<span class="env-estado">' +
                 '<span class="env-punto ' + (PUNTO[f.estado] || 'gris') + '"></span>' +
-                '<span class="env-estado-txt">' + pill[1] +
+                '<span class="env-estado-txt">' + (ESTADO_CORTO[f.estado] || pill[1]) +
                   (firmantes.length ? ' <span class="env-cuantos">' + yaFirmaron + '/' + firmantes.length + '</span>' : '') +
                 '</span>' +
               '</span>' +
@@ -3625,7 +3648,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260817j" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260820a" data-menu="hub"></script>
 
 </body>
 </html>

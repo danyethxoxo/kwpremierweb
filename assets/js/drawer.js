@@ -279,14 +279,25 @@
   }
 
   // ── Los botones de acción salen de la cápsula ──
-  // Perfil, la campanita y Panel no son parte de navegar por la página:
-  // son atajos a otro lado. Se sacan de la cápsula y se ponen a su lado,
+  // Perfil, la campanita, Panel y Atrás no son parte de navegar por la
+  // página: son atajos a otro lado. Se sacan de la cápsula y se ponen a su lado,
   // cada uno en su propia pastilla, igual que el botón de buscar en la
   // barra de Música de iOS. Se hace aquí y no en el HTML de cada página
   // porque la hamburguesa y la lupa también se insertan desde aquí.
   if (header && header.classList.contains('kw-header')) {
-    const sueltos = Array.from(
+    const atajos = Array.from(
       header.querySelectorAll('#btn-perfil-header, #notif-bell-slot, #btn-admin'));
+
+    // El botón de Atrás se va con ellos, hasta la derecha: dentro de la
+    // cápsula quedaba en medio de lo de navegar por la página, que es
+    // justo lo que no es. Va al final del grupo, después de la campanita.
+    //
+    // Solo cuando ya hay atajos que sacar: en las páginas donde el Atrás
+    // es lo único suelto no hay cápsula que partir, y ahí ya queda a la
+    // derecha solo, por la regla de header > *:last-child.
+    const sueltos = atajos.length
+      ? atajos.concat(Array.from(header.querySelectorAll('.back-btn')))
+      : [];
 
     if (sueltos.length) {
       const capsula = document.createElement('div');
@@ -325,11 +336,17 @@
     '#busq',              // Drive, ABC Tracker
     '#buscador-nombre',   // Alta de asesores
     '#buscador-input',    // Listas de acuerdos y contratos
+    '#f-buscar',          // Firmas digitales
   ];
+
+  // Se esconde el bloque entero, no nada más el campo: si se quita solo
+  // el <input>, su franja sigue ocupando su renglón y su relleno, y queda
+  // una banda vacía arriba de la tabla.
+  const CAJAS_LOCALES = '.buscador, .lista-buscador, .tabla-buscar-fila';
 
   const campoLocal = document.querySelector(BUSCADORES_LOCALES.join(','));
   const contenedorLocal = campoLocal
-    ? campoLocal.closest('.buscador, .lista-buscador') || campoLocal.parentElement
+    ? campoLocal.closest(CAJAS_LOCALES) || campoLocal.parentElement
     : null;
   if (contenedorLocal) contenedorLocal.classList.add('kw-buscador-local-oculto');
 
