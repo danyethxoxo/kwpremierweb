@@ -133,7 +133,11 @@
     font-size: 11.5px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; color: var(--muted);
   }
-  .dic-campo textarea, .dic-campo input[type="date"] {
+  /* El campo de fecha se apunta también por su id: kw-ui.js lo cambia a
+     type="text" mientras está vacío (para poder enseñar un placeholder),
+     y con el selector amarrado a type="date" se quedaba sin estilo justo
+     en ese rato, viéndose como una caja suelta del navegador. */
+  .dic-campo textarea, .dic-campo input[type="date"], .dic-campo input#e-fecha {
     width: 100%; resize: vertical;
     border: 1px solid var(--border); border-radius: var(--r-campo);
     padding: 10px 12px; font-family: inherit; font-size: 13.5px;
@@ -141,6 +145,18 @@
   }
   .dic-campo textarea { min-height: 62px; }
   .dic-campo textarea:focus, .dic-campo input:focus { outline: none; border-color: var(--red); }
+
+  /* Superficies: en el campo se teclea nada más el número y la unidad va
+     pegada a la derecha, puesta por el sitio. Se dibuja encima del campo
+     en vez de escribirse dentro para que no haya forma de borrarla ni de
+     capturarla de tres maneras distintas. El relleno de la derecha le
+     abre el lugar para que el número no se le encime al llegar. */
+  .dic-conunidad { position: relative; }
+  .dic-conunidad input { width: 100%; padding-right: 40px; }
+  .dic-conunidad span {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 13px; font-weight: 700; color: var(--muted); pointer-events: none;
+  }
   .dic-dos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
   .dic-tres { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
   @media (max-width: 700px) {
@@ -439,11 +455,22 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-sup-escritura">Superficie escritura</label>
-            <input type="text" id="e-sup-escritura" class="kw-input" placeholder="92.40 m2" autocomplete="off">
+            <div class="dic-conunidad">
+              <input type="text" id="e-sup-escritura" class="kw-input" inputmode="decimal" placeholder="92.40" autocomplete="off">
+              <span>m²</span>
+            </div>
           </div>
           <div class="dic-campo">
             <label for="e-estado-civil">Estado civil</label>
-            <input type="text" id="e-estado-civil" class="kw-input" placeholder="Casado por sociedad conyugal, soltero..." autocomplete="off">
+            <select id="e-estado-civil">
+              <option value="">Sin especificar</option>
+              <option>Soltero(a)</option>
+              <option>Casado(a) por sociedad conyugal</option>
+              <option>Casado(a) por separación de bienes</option>
+              <option>Divorciado(a)</option>
+              <option>Viudo(a)</option>
+              <option>Concubinato</option>
+            </select>
           </div>
         </div>
 
@@ -457,7 +484,10 @@
           </div>
           <div class="dic-campo">
             <label for="e-sup-predial">Superficie predial</label>
-            <input type="text" id="e-sup-predial" class="kw-input" placeholder="90.15 m2" autocomplete="off">
+            <div class="dic-conunidad">
+              <input type="text" id="e-sup-predial" class="kw-input" inputmode="decimal" placeholder="90.15" autocomplete="off">
+              <span>m²</span>
+            </div>
           </div>
         </div>
 
@@ -747,9 +777,9 @@
       dato('Escrituras y fecha', d.escritura_propiedad) +
       dato('Condominio', d.escritura_condominio) +
       dato('CFDI', d.cfdi) +
-      dato('Superficie escritura', d.superficie_escritura) +
+      dato('Superficie escritura', conUnidad(d.superficie_escritura)) +
       dato('Cuenta predial', d.cuenta_predial) +
-      dato('Superficie predial', d.superficie_predial) +
+      dato('Superficie predial', conUnidad(d.superficie_predial)) +
       dato('Estado civil', d.estado_civil) +
       dato('Folio real', d.folio_real) +
       dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
@@ -1009,6 +1039,38 @@
     ['e-observaciones', 'observaciones'],
   ];
 
+  // Las superficies se guardan como número pelón y la unidad se pone al
+  // enseñarlas. Antes eran texto libre, así que en la base ya hay
+  // "92.40", "92.40 m2" y "92.40 m²" queriendo decir lo mismo: al leer se
+  // le quita la unidad venga como venga, y al pintar se le pone una sola.
+  var SUPERFICIES = ['superficie_escritura', 'superficie_predial'];
+
+  function soloNumero(v) {
+    return String(v == null ? '' : v).replace(/\s*m\s*(2|²)\s*$/i, '').trim();
+  }
+
+  function conUnidad(v) {
+    var n = soloNumero(v);
+    return n ? n + ' m²' : '';
+  }
+
+  // Un dictamen de antes pudo quedar con el estado civil escrito a mano,
+  // de cuando el campo era libre. Si lo que trae no está en la lista se le
+  // agrega su propia opción: dejarlo caer en "Sin especificar" le borraría
+  // un dato al expediente sin avisarle a nadie.
+  function acomodarEstadoCivil(valor) {
+    if (!valor) return;
+    var sel = $('e-estado-civil');
+    var existe = Array.prototype.some.call(sel.options, function (o) {
+      return o.value === valor;
+    });
+    if (existe) return;
+    var op = document.createElement('option');
+    op.value = valor;
+    op.textContent = valor;
+    sel.appendChild(op);
+  }
+
   function abrirEditor(id) {
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
@@ -1038,7 +1100,15 @@
     ['e-operacion', 'e-uso', 'e-tipo'].forEach(function (x) {
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
-    CAMPOS.forEach(function (c) { $(c[0]).value = borrador[c[1]]; });
+    acomodarEstadoCivil(borrador.estado_civil);
+    CAMPOS.forEach(function (c) {
+      $(c[0]).value = SUPERFICIES.indexOf(c[1]) !== -1
+        ? soloNumero(borrador[c[1]])
+        : borrador[c[1]];
+    });
+    // El estado civil se llena arriba junto con los demás, así que su
+    // rótulo se repinta aquí y no en la vuelta de los otros desplegables.
+    $('e-estado-civil').dispatchEvent(new Event('change', { bubbles: true }));
     elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
 
     aviso('editor-msg', '', '');
@@ -1085,7 +1155,10 @@
     borrador.fecha_dictamen = $('e-fecha').value || hoy();
     borrador.operacion = $('e-operacion').value;
     borrador.uso = $('e-uso').value;
-    CAMPOS.forEach(function (c) { borrador[c[1]] = $(c[0]).value.trim(); });
+    CAMPOS.forEach(function (c) {
+      var v = $(c[0]).value.trim();
+      borrador[c[1]] = SUPERFICIES.indexOf(c[1]) !== -1 ? soloNumero(v) : v;
+    });
   }
 
   // Si se escribió un tipo nuevo, se guarda en el catálogo antes que nada
@@ -1105,7 +1178,7 @@
 
     var r = await window.kwSupabase.from('dictamen_tipos_inmueble')
       .insert({ nombre: nombre }).select('id, nombre').single();
-    if (r.error) { aviso('editor-msg', 'No se pudo guardar el tipo: ' + r.error.message, 'error'); return null; }
+    if (r.error) { await fallo('No se pudo guardar el tipo de inmueble: ' + r.error.message); return null; }
     tipos.push(r.data);
     await cargarCatalogos();
     return r.data.id;
@@ -1114,10 +1187,32 @@
   // Guarda el dictamen y sus observaciones. Las observaciones se borran y
   // se vuelven a escribir en vez de andar comparando cuál cambió: el
   // editor es de quien dictamina y nadie más las está tocando mientras.
+  // Por qué no se guardó tiene que llegarle a quien le picó a Guardar. El
+  // mensaje de la tarjeta vive hasta arriba del formulario y el botón está
+  // hasta abajo: con la página abajo, ese renglón queda fuera de la
+  // pantalla y guardar se siente como que no hizo nada. Por eso el error
+  // va también en el aviso de en medio, y el campo que falta se trae a la
+  // vista para poder corregirlo de una vez.
+  async function fallo(texto, campo) {
+    aviso('editor-msg', texto, 'error');
+    await window.kwUI.alert(texto);
+    var el = campo && $(campo);
+    if (el) {
+      el.scrollIntoView({ block: 'center' });
+      try { el.focus(); } catch (e) { /* un desplegable armado no siempre lo acepta */ }
+    }
+    return null;
+  }
+
   async function guardar() {
     leerEditor();
-    if (!borrador.asesor_id) { aviso('editor-msg', 'Falta elegir al asesor.', 'error'); return null; }
-    if (borrador.inmueble.length < 3) { aviso('editor-msg', 'Falta la dirección del inmueble.', 'error'); return null; }
+    if (!borrador.asesor_id) {
+      return await fallo('Falta elegir al asesor. Escribe su nombre y pícale a la opción '
+        + 'que aparece en la lista, para que quede seleccionado.', 'e-asesor-busca');
+    }
+    if (borrador.inmueble.length < 3) {
+      return await fallo('Falta la dirección del inmueble.', 'e-inmueble');
+    }
 
     var fila = {
       asesor_id: borrador.asesor_id,
@@ -1135,12 +1230,12 @@
     var id = borrador.id;
     if (id) {
       var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
-      if (u.error) { aviso('editor-msg', 'No se pudo guardar: ' + u.error.message, 'error'); return null; }
+      if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
       await window.kwSupabase.from('dictamen_puntos').delete().eq('dictamen_id', id);
     } else {
       fila.dictaminado_por = yo.id;
       var c = await window.kwSupabase.from('dictamenes').insert(fila).select('id').single();
-      if (c.error) { aviso('editor-msg', 'No se pudo guardar: ' + c.error.message, 'error'); return null; }
+      if (c.error) return await fallo('No se pudo guardar: ' + c.error.message);
       id = c.data.id;
       borrador.id = id;
     }
@@ -1153,7 +1248,7 @@
             estado: x.estado || 'pendiente', nota: x.nota || null,
           };
         }));
-      if (p.error) { aviso('editor-msg', 'No se pudieron guardar las observaciones: ' + p.error.message, 'error'); return null; }
+      if (p.error) return await fallo('No se pudieron guardar las observaciones: ' + p.error.message);
     }
     return id;
   }
@@ -1224,9 +1319,9 @@
           '</tr>' +
 
           renglon('CFDI', d.cfdi) +
-          renglon('Superficie escritura', d.superficie_escritura) +
+          renglon('Superficie escritura', conUnidad(d.superficie_escritura)) +
           renglon('Cuenta predial', d.cuenta_predial) +
-          renglon('Superficie predial', d.superficie_predial) +
+          renglon('Superficie predial', conUnidad(d.superficie_predial)) +
           renglon('Estado civil', d.estado_civil) +
           renglon('Folio real', d.folio_real) +
 
