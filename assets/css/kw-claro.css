@@ -112,6 +112,21 @@
   --pastel-cielo:   #e8f0fb;  --pastel-cielo-txt:   #17457e;
   --pastel-lavanda: #f0ecf9;  --pastel-lavanda-txt: #4a3781;
   --pastel-crema:   #fbf3e0;  --pastel-crema-txt:   #7a5610;
+
+  /* ── Los tintes ──
+     El pastel es un relleno parejo, para bloques chicos. El tinte es el
+     mismo color pero disuelto, para bañar una tarjeta entera desde una
+     esquina.
+
+     Van en rgba y no en hex porque tienen que dejar pasar el degradado
+     y los puntos que llevan debajo: en opaco los taparían y la tarjeta
+     volvería a verse plana, solo que de color. */
+  --tinte-rojo:    rgba(198,32,39,0.26);
+  --tinte-rosa:    rgba(214,51,108,0.24);
+  --tinte-menta:   rgba(23,150,90,0.24);
+  --tinte-cielo:   rgba(37,110,200,0.24);
+  --tinte-lavanda: rgba(110,80,190,0.24);
+  --tinte-crema:   rgba(200,140,20,0.28);
 }
 
 /* El respaldo de <html> deja de ser negro: es el color que se asoma en
@@ -194,11 +209,54 @@ header.kw-header-partido {
 .kw-fila.abierta { box-shadow: var(--sombra-2); }
 .kw-fila:hover { box-shadow: var(--sombra-2); }
 
-/* Al pasar el cursor la tarjeta se aplana a blanco parejo y se levanta:
-   es lo que la despega del resto de la cuadrícula. */
+/* ══════════════════════════════════════════════════════════
+   El baño de color de cada tarjeta
+   ══════════════════════════════════════════════════════════
+   Una mancha del color de la tarjeta que sale de la esquina de abajo a
+   la izquierda y se disuelve antes de llegar al centro. Es lo que hace
+   que la cuadrícula se lea como un juego de piezas distintas y no como
+   diez rectángulos blancos con texto adentro.
+
+   Sale de abajo y no de arriba a propósito: arriba está el ícono, que ya
+   trae su cuadro de color, y dos manchas del mismo tono juntas se leen
+   como una sola mal recortada.
+
+   ── De dónde sale el color ──
+   Del ícono que la tarjeta ya tiene adentro, con :has(). Podría ponerse
+   una clase más en cada tarjeta, pero entonces el color viviría en dos
+   lugares y tarde o temprano uno cambia y el otro no. Así hay una sola
+   fuente: el ícono manda.
+
+   Un navegador viejo que no entienda :has() ignora estos renglones y
+   deja el tinte rojo de abajo, que es el de la marca. Se ve distinto,
+   no roto. */
+.hover-card { --tinte: var(--tinte-rojo); }
+.hover-card:has(.icon-prospectos)  { --tinte: var(--tinte-rosa); }
+.hover-card:has(.icon-calendario)  { --tinte: var(--tinte-crema); }
+.hover-card:has(.icon-incidencias) { --tinte: var(--tinte-cielo); }
+.hover-card:has(.icon-firmas)      { --tinte: var(--tinte-menta); }
+.hover-card:has(.icon-dictamenes)  { --tinte: var(--tinte-lavanda); }
+
+.hover-card {
+  background-image:
+    var(--puntos-tarjeta),
+    radial-gradient(135% 118% at -6% 106%, var(--tinte) 0%, transparent 72%),
+    var(--card-degradado);
+  background-size:
+    var(--paso-tarjeta) var(--paso-tarjeta),
+    100% 100%,
+    100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat;
+}
+
+/* Al pasar el cursor el baño crece y sube de intensidad, en vez de
+   aplanarse a blanco. Lo que se busca es que la tarjeta se encienda, no
+   que se apague para distinguirse. */
 .hover-card:hover {
-  background-image: none;
-  background-color: #fff;
+  background-image:
+    var(--puntos-tarjeta),
+    radial-gradient(158% 140% at -6% 106%, var(--tinte) 0%, transparent 80%),
+    var(--card-degradado);
   border-color: rgba(23,10,10,0.14);
   box-shadow: var(--sombra-2);
   transform: translateY(-3px);
