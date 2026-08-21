@@ -74,9 +74,33 @@
     background: currentColor; flex-shrink: 0;
   }
   .dic-estado.borrador     { background: rgba(0,0,0,0.05);   color: #5b5b5b; }
-  .dic-estado.devuelta     { background: #ffeede;            color: #b4530b; }
+  .dic-estado.devuelta     { background: #fdeaea;            color: #b02a2a; }
   .dic-estado.condicionada { background: var(--pastel-crema); color: var(--pastel-crema-txt); }
   .dic-estado.autorizada   { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
+
+  /* El estatus del listado. Comparte forma con la del dictamen pero no
+     colores: son dos preguntas distintas y verlas iguales las confunde. */
+  .dic-listado {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; white-space: nowrap;
+    max-width: 190px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dic-listado::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+  .dic-listado.pendiente   { background: rgba(0,0,0,0.05); color: #5b5b5b; }
+  .dic-listado.sin_listado { background: #fdeaea;          color: #b02a2a; }
+  .dic-listado.aprobado    { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
+
+  .dic-menu-op i.pendiente   { background: #5b5b5b; }
+  .dic-menu-op i.sin_listado { background: #b02a2a; }
+  .dic-menu-op i.aprobado    { background: var(--pastel-menta-txt); }
+
+  /* Las dos etiquetas juntas, para el celular. */
+  .dic-etiquetas-movil { display: flex; flex-wrap: wrap; gap: 8px; }
+  @media (min-width: 901px) { .dic-etiquetas-movil { display: none; } }
 
   /* La misma etiqueta, pero se le puede picar para cambiar el estado. Se
      queda del color que tiene puesto: es lo que se viene a mirar de un
@@ -113,8 +137,67 @@
   .dic-menu-op:hover { background: #f5f5f5; }
   .dic-menu-op i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .dic-menu-op.puesto { font-weight: 700; background: #fff3f3; }
+  /* ── Las pestañas de cada tarjeta ──
+     Los paneles de kw-ui traen un alto mínimo pensado para una pantalla
+     completa; aquí van dentro de una tarjeta y ese piso la estiraría con
+     aire vacío. */
+  .dic-tabs { margin-bottom: var(--sp-3); }
+  .dic-tabpanels { --panel-min: 0; }
+
+  /* ── El historial ──
+     Un renglón por movimiento, con su punto de color a la izquierda y la
+     hora a la derecha. Se lee de arriba abajo como una conversación: lo
+     más reciente primero, que es lo que uno viene a ver. */
+  .dic-historia { display: flex; flex-direction: column; }
+  .dic-historia-fila {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .dic-historia-fila:last-child { border-bottom: none; }
+  .dic-historia-punto {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 5px; background: #b3b3b3;
+  }
+  .dic-historia-punto.creado          { background: var(--red); }
+  .dic-historia-punto.estado          { background: #e0a218; }
+  .dic-historia-punto.listado         { background: #6b7fd7; }
+  .dic-historia-punto.punto_corregida { background: #1f9d55; }
+  .dic-historia-punto.punto_nuevo     { background: #e0a218; }
+  .dic-historia-punto.punto_quitado   { background: #d13b3b; }
+  .dic-historia-txt { flex: 1; min-width: 0; font-size: 13px; line-height: 1.5; }
+  .dic-historia-txt b { display: block; color: var(--text); }
+  .dic-historia-txt span { color: var(--muted); }
+  .dic-historia-cuando {
+    flex-shrink: 0; text-align: right;
+    font-size: 11.5px; color: var(--muted); line-height: 1.5;
+  }
+  .dic-historia-cuando span { display: block; font-size: 11px; opacity: 0.85; }
+  @media (max-width: 700px) {
+    .dic-historia-fila { flex-wrap: wrap; }
+    .dic-historia-cuando { width: 100%; text-align: left; padding-left: 18px; }
+    .dic-historia-cuando span { display: inline; }
+  }
+
+  /* Las tres respuestas del aviso de "en qué estatus quedó". Van una
+     debajo de otra y no en hilera: leídas en columna se comparan, que es
+     lo que uno está haciendo justo en ese momento. */
+  .dic-preguntar { display: flex; flex-direction: column; gap: 7px; }
+  .dic-preguntar-op {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    border: 1px solid var(--border); border-radius: 10px; background: #fff;
+    font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--text);
+    padding: 11px 13px; cursor: pointer; text-align: left;
+    transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  }
+  .dic-preguntar-op:hover { background: #fafafa; border-color: #c9c9c9; }
+  .dic-preguntar-op:active { transform: translateY(1px) scale(0.99); }
+  .dic-preguntar-op i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dic-preguntar-op i.devuelta     { background: #b02a2a; }
+  .dic-preguntar-op i.condicionada { background: var(--pastel-crema-txt); }
+  .dic-preguntar-op i.autorizada   { background: var(--pastel-menta-txt); }
+
   .dic-menu-op i.borrador     { background: #5b5b5b; }
-  .dic-menu-op i.devuelta     { background: #b4530b; }
+  .dic-menu-op i.devuelta     { background: #b02a2a; }
   .dic-menu-op i.condicionada { background: var(--pastel-crema-txt); }
   .dic-menu-op i.autorizada   { background: var(--pastel-menta-txt); }
 
@@ -139,7 +222,41 @@
     background: rgba(0,0,0,0.035); font-size: 12.5px; color: #444;
     line-height: 1.5; white-space: pre-line;
   }
-  .dic-punto-acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  /* Todo lo que se le puede hacer a una observación va en un solo
+     renglón. Antes la nota traía su propia hilera de botones encima de
+     la de siempre: quedaban dos filas amontonadas y ninguna decía cuál
+     era la acción principal. */
+  .dic-punto-acciones {
+    display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 10px;
+  }
+  /* Quitar y archivar no son acciones del mismo peso que las de al lado:
+     se van hasta la derecha, separadas, para no picarles de pasada. */
+  .dic-punto-acciones .a-la-derecha,
+  .kw-fila-acciones .a-la-derecha { margin-left: auto; }
+
+  /* Enviar y cancelar solo existen mientras se está escribiendo la nota,
+     y el botón de abrirla desaparece mientras tanto: ya está abierta. */
+  .dic-punto .solo-notando { display: none; }
+  .dic-punto.notando .solo-notando { display: inline-flex; }
+  .dic-punto.notando .oculto-notando { display: none; }
+
+  .kw-btn-mini.verde { border-color: #1f9d55; color: #157a41; }
+  .kw-btn-mini.verde:hover { background: #f0faf3; border-color: #157a41; }
+  .kw-btn-mini.rojo { border-color: #d13b3b; color: #b02a2a; }
+  .kw-btn-mini.rojo:hover { background: #fdf0f0; border-color: #b02a2a; }
+
+  /* Un bote de basura solo, sin texto: se entiende sin leerlo y deja de
+     competir por atención con las acciones que sí se usan a diario. */
+  .dic-punto-tirar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex-shrink: 0;
+    border: 1px solid var(--border); border-radius: 9px;
+    background: #fff; color: var(--muted); cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .dic-punto-tirar:hover { background: #fdf0f0; color: #b02a2a; border-color: #d13b3b; }
+  .dic-punto-tirar svg { width: 14px; height: 14px; }
+
   .dic-punto-form { margin-top: 10px; display: none; }
   .dic-punto-form.abierto { display: block; }
   .dic-punto-form textarea {
@@ -210,13 +327,6 @@
     margin: var(--sp-5) 0 var(--sp-3);
     padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
-  /* Un escalón abajo del anterior: divide por dentro de una sección, sin
-     competir con el rótulo que la encabeza. */
-  .dic-subtitulo-menor {
-    font-size: 12.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.05em; color: var(--muted);
-    margin: var(--sp-4) 0 var(--sp-2);
-  }
 
   /* ── Los clientes del expediente ──
      Cada uno en su tarjeta: con tres o cuatro capturados seguidos, sin
@@ -233,6 +343,31 @@
     letter-spacing: 0.05em; color: var(--red); margin-bottom: var(--sp-2);
   }
   .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
+
+  /* ── El filtro de asesor, que admite varios ──
+     El campo crece hacia abajo conforme se van agregando: con tres o
+     cuatro elegidos, una sola línea los recortaría y ya no se sabría a
+     quiénes se está filtrando. */
+  .dic-multi { position: relative; }
+  .dic-multi-elegidos { display: flex; flex-wrap: wrap; gap: 5px; }
+  .dic-multi-elegidos:not(:empty) { margin-bottom: 6px; }
+  .dic-multi-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--pastel-rojo); color: var(--red);
+    border-radius: 999px; padding: 3px 5px 3px 10px;
+    font-size: 11.5px; font-weight: 700; max-width: 100%;
+  }
+  .dic-multi-chip span {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dic-multi-chip button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; flex-shrink: 0;
+    border: none; border-radius: 50%; background: rgba(0,0,0,0.08);
+    color: inherit; cursor: pointer; padding: 0;
+  }
+  .dic-multi-chip button:hover { background: rgba(0,0,0,0.16); }
+  .dic-multi-chip svg { width: 9px; height: 9px; }
 
   /* ── El buscador de asesor ──
      Son 94 y crecen. Un desplegable de 94 renglones se recorre a ciegas;
@@ -404,7 +539,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
               <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
             </svg>
-            <input type="text" id="f-buscar" class="kw-input" placeholder="Inmueble, folio, cliente o asesor" autocomplete="off">
+            <input type="text" id="f-buscar" class="kw-input" placeholder="Asesor, dirección, folio o cliente" autocomplete="off">
           </div>
         </div>
         <div class="kw-campo-filtro">
@@ -417,9 +552,59 @@
             <option value="autorizada">Autorizados para promoción</option>
           </select>
         </div>
+
+        <!-- Asesor: son 94 y pueden interesar varios a la vez (los de un
+             equipo, por ejemplo), así que no es un desplegable de uno
+             sino un buscador que va juntando los elegidos. -->
         <div class="kw-campo-filtro">
-          <label for="f-asesor">Asesor</label>
-          <select id="f-asesor"><option value="todos">Todos los asesores</option></select>
+          <label for="f-asesor-busca">Asesor</label>
+          <div class="dic-multi" id="f-asesor-caja">
+            <div class="dic-multi-elegidos" id="f-asesor-elegidos"></div>
+            <input type="text" id="f-asesor-busca" class="kw-input"
+              placeholder="Todos los asesores" autocomplete="off">
+            <div class="dic-asesor-lista" id="f-asesor-lista"></div>
+          </div>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label for="f-listado">Listado</label>
+          <select id="f-listado">
+            <option value="todos">Cualquier listado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="sin_listado">No tiene cargado el listado</option>
+            <option value="aprobado">Aprobado</option>
+          </select>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label for="f-contrato">Contrato</label>
+          <select id="f-contrato">
+            <option value="todos">Exclusiva y abierto</option>
+            <option value="exclusiva">Exclusiva</option>
+            <option value="abierto">Abierto</option>
+          </select>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label for="f-tipo">Tipo de inmueble</label>
+          <select id="f-tipo"><option value="todos">Todos los tipos</option></select>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label for="f-mes">Mes</label>
+          <select id="f-mes"><option value="todos">Todo el tiempo</option></select>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label for="f-dia">Día</label>
+          <select id="f-dia">
+            <option value="todos">Cualquier día</option>
+          </select>
+        </div>
+
+        <div class="kw-campo-filtro">
+          <label>&nbsp;</label>
+          <button type="button" class="kw-fila-btn neutro" id="f-limpiar">Limpiar filtros</button>
         </div>
       </div>
 
@@ -593,13 +778,7 @@
 
         <h2 class="kw-page-titulo dic-subtitulo">Observaciones</h2>
 
-        <div class="dic-campo">
-          <label for="e-observaciones">Observaciones generales</label>
-          <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo."></textarea>
-        </div>
-
-        <h3 class="dic-subtitulo-menor">Por atender</h3>
-        <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 0;">
+        <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 var(--sp-2);">
           Cada una se marca por separado conforme el asesor las va corrigiendo.
         </p>
 
@@ -645,6 +824,7 @@
   var dictamenes = [];
   var puntos = [];
   var clientes = [];
+  var historial = [];
   var asesores = [];
   var tipos = [];
   var abierto = null;
@@ -738,6 +918,12 @@
       .from('dictamen_clientes').select('*').order('orden').limit(5000);
     clientes = cl.data || [];
 
+    var hi = await window.kwSupabase
+      .from('dictamen_historial_con_quien').select('*')
+      .order('created_at', { ascending: false }).limit(5000);
+    historial = hi.data || [];
+
+    pintarFiltroMes();
     pintar();
   }
 
@@ -750,37 +936,147 @@
       .from('dictamen_tipos_inmueble').select('id, nombre').order('nombre');
     tipos = t.data || [];
 
-    $('f-asesor').innerHTML = '<option value="todos">Todos los asesores</option>' +
-      asesores.filter(function (x) { return x.activo; }).map(function (x) {
-        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
-      }).join('');
-
     $('e-tipo').innerHTML = '<option value="">Sin especificar</option>' +
       tipos.map(function (x) {
         return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
       }).join('') +
       '<option value="__nuevo__">Otro (escribirlo)</option>';
+
+    $('f-tipo').innerHTML = '<option value="todos">Todos los tipos</option>' +
+      tipos.map(function (x) {
+        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
+      }).join('');
+    if (window.kwUI) window.kwUI.selects(document);
   }
 
   // ── Filtrar ─────────────────────────────────────────────────
 
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  // Los meses que salen en la lista son los que de verdad tienen
+  // expedientes: ofrecer doce meses vacíos es hacer buscar entre opciones
+  // que no llevan a ningún lado.
+  function pintarFiltroMes() {
+    var vistos = [];
+    dictamenes.forEach(function (d) {
+      var f = (d.fecha_dictamen || '').slice(0, 7);
+      if (f && vistos.indexOf(f) === -1) vistos.push(f);
+    });
+    vistos.sort().reverse();
+
+    var antes = $('f-mes').value;
+    $('f-mes').innerHTML = '<option value="todos">Todo el tiempo</option>' +
+      vistos.map(function (m) {
+        var p = m.split('-');
+        return '<option value="' + m + '">' +
+          MESES[Number(p[1]) - 1] + ' ' + p[0] + '</option>';
+      }).join('');
+    if (vistos.indexOf(antes) !== -1) $('f-mes').value = antes;
+
+    var dias = '<option value="todos">Cualquier día</option>';
+    for (var i = 1; i <= 31; i++) {
+      dias += '<option value="' + String(i).padStart(2, '0') + '">' + i + '</option>';
+    }
+    var diaAntes = $('f-dia').value;
+    $('f-dia').innerHTML = dias;
+    if (diaAntes) $('f-dia').value = diaAntes;
+
+    if (window.kwUI) window.kwUI.selects(document);
+  }
+
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
     var estado = $('f-estado').value;
-    var asesor = $('f-asesor').value;
+    var listado = $('f-listado').value;
+    var contrato = $('f-contrato').value;
+    var tipo = $('f-tipo').value;
+    var mes = $('f-mes').value;
+    var dia = $('f-dia').value;
 
     return dictamenes.filter(function (d) {
       // El archivo es una lista aparte, no un filtro más: o se ve lo
       // vivo, o se ve lo archivado.
       if (verArchivo !== !!d.archivado_at) return false;
       if (estado !== 'todos' && d.estado !== estado) return false;
-      if (asesor !== 'todos' && d.asesor_id !== asesor) return false;
+      if (listado !== 'todos' && (d.estatus_listado || 'pendiente') !== listado) return false;
+      if (contrato !== 'todos' && d.tipo_contrato !== contrato) return false;
+      if (tipo !== 'todos' && d.tipo_inmueble_id !== tipo) return false;
+
+      // Sin asesores elegidos no se filtra por asesor: la lista vacía
+      // quiere decir "todos", no "ninguno".
+      if (asesoresFiltro.length && asesoresFiltro.indexOf(d.asesor_id) === -1) return false;
+
+      var f = d.fecha_dictamen || '';
+      if (mes !== 'todos' && f.slice(0, 7) !== mes) return false;
+      if (dia !== 'todos' && f.slice(8, 10) !== dia) return false;
+
       if (busca) {
         var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre]
           .join(' ').toLowerCase();
         if (heno.indexOf(busca) === -1) return false;
       }
       return true;
+    });
+  }
+
+  // ── El filtro de asesor, que admite varios ──────────────────
+
+  var asesoresFiltro = [];
+
+  function pintarAsesoresFiltro() {
+    var caja = $('f-asesor-elegidos');
+    caja.innerHTML = asesoresFiltro.map(function (id) {
+      var a = asesores.find(function (x) { return x.id === id; });
+      return '<span class="dic-multi-chip"><span>' +
+        escapar(a ? a.nombre : 'Asesor') + '</span>' +
+        '<button type="button" data-quitar-asesor="' + id + '" aria-label="Quitar">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">' +
+            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button></span>';
+    }).join('');
+
+    $('f-asesor-busca').placeholder = asesoresFiltro.length
+      ? 'Agregar otro' : 'Todos los asesores';
+
+    caja.querySelectorAll('[data-quitar-asesor]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        asesoresFiltro = asesoresFiltro.filter(function (x) {
+          return x !== b.dataset.quitarAsesor;
+        });
+        pintarAsesoresFiltro();
+        pintar();
+      });
+    });
+  }
+
+  function pintarSugerenciasAsesor() {
+    var q = $('f-asesor-busca').value.trim().toLowerCase();
+    var caja = $('f-asesor-lista');
+    if (!q) { caja.classList.remove('abierta'); return; }
+
+    var hallados = asesores.filter(function (a) {
+      if (!a.activo) return false;
+      if (asesoresFiltro.indexOf(a.id) !== -1) return false;
+      return (a.nombre + ' ' + (a.correo || '')).toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 30);
+
+    caja.innerHTML = hallados.length
+      ? hallados.map(function (a) {
+        return '<button type="button" class="dic-asesor-op" data-mas-asesor="' + a.id + '">' +
+          escapar(a.nombre) + '</button>';
+      }).join('')
+      : '<div class="dic-asesor-vacio">Ningún asesor con ese nombre.</div>';
+    caja.classList.add('abierta');
+
+    caja.querySelectorAll('[data-mas-asesor]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        asesoresFiltro.push(b.dataset.masAsesor);
+        $('f-asesor-busca').value = '';
+        caja.classList.remove('abierta');
+        pintarAsesoresFiltro();
+        pintar();
+      });
     });
   }
 
@@ -819,6 +1115,59 @@
     });
   }
 
+  // ── Preguntar en qué estatus quedó ──────────────────────────
+  //
+  // kwUI.alert y kwUI.confirm solo saben de aceptar y cancelar, y aquí
+  // hacen falta tres respuestas. Se arma con las mismas piezas del aviso
+  // del sitio (.modal-overlay/.modal-box) para que se vea igual que todo
+  // lo demás. Devuelve el estado elegido, o null si se cerró sin elegir.
+  function preguntarEstado() {
+    return new Promise(function (resolver) {
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+
+      var caja = document.createElement('div');
+      caja.className = 'modal-box';
+      caja.setAttribute('role', 'alertdialog');
+      caja.setAttribute('aria-modal', 'true');
+      caja.innerHTML =
+        '<h3>¿En qué estatus quedó este expediente?</h3>' +
+        '<p class="modal-sub">Al elegirlo se le asigna su folio y ya se puede descargar.</p>' +
+        '<div class="dic-preguntar">' +
+          ORDEN_ESTADOS.map(function (e) {
+            return '<button type="button" class="dic-preguntar-op" data-elige="' + e + '">' +
+              '<i class="' + e + '"></i>' + ESTADOS[e] + '</button>';
+          }).join('') +
+        '</div>' +
+        '<div class="modal-actions">' +
+          '<button type="button" class="btn-modal-cancelar" data-elige="">Ahora no</button>' +
+        '</div>';
+
+      var listo = false;
+      function cerrar(valor) {
+        if (listo) return;
+        listo = true;
+        document.removeEventListener('keydown', porTecla);
+        if (window.kwUI) window.kwUI.cerrarModal(overlay, function () { overlay.remove(); });
+        else overlay.remove();
+        resolver(valor);
+      }
+      function porTecla(e) { if (e.key === 'Escape') cerrar(null); }
+
+      caja.querySelectorAll('[data-elige]').forEach(function (b) {
+        b.addEventListener('click', function () { cerrar(b.dataset.elige || null); });
+      });
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) cerrar(null);
+      });
+
+      overlay.appendChild(caja);
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', porTecla);
+      caja.querySelector('[data-elige]').focus();
+    });
+  }
+
   // ── La lista ────────────────────────────────────────────────
 
   function pintar() {
@@ -834,8 +1183,9 @@
     var filas = visibles();
 
     if (!filas.length) {
-      var hayFiltro = $('f-buscar').value.trim() || $('f-estado').value !== 'todos'
-        || $('f-asesor').value !== 'todos';
+      var hayFiltro = $('f-buscar').value.trim() || asesoresFiltro.length ||
+        ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia']
+          .some(function (x) { return $(x).value !== 'todos'; });
       $('lista').innerHTML = '<div class="kw-vacio">' + (
         verArchivo ? 'No hay dictámenes archivados.'
           : hayFiltro ? 'No hay dictámenes que cumplan con lo que estás filtrando.'
@@ -857,7 +1207,10 @@
       }
     }
 
-    if (window.kwUI) window.kwUI.acordeon($('lista'));
+    if (window.kwUI) {
+      window.kwUI.acordeon($('lista'));
+      window.kwUI.tabs($('lista'));
+    }
     $('lista').querySelectorAll('.kw-fila-cabeza').forEach(function (c) {
       c.addEventListener('click', function () {
         var fila = c.closest('.kw-fila');
@@ -888,6 +1241,7 @@
               '<span class="kw-extra"><span>' + listas + ' de ' + total + '</span></span>'
             : '') +
           '<span class="kw-extra">' + etiquetaEstado(d) + '</span>' +
+          '<span class="kw-extra">' + etiquetaListado(d) + '</span>' +
         '</span>' +
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
@@ -907,6 +1261,13 @@
   // Los que se pueden poner desde el menú. Borrador no está: es de donde
   // se sale, no a donde se llega, y el folio se gasta al salir de ahí.
   var ORDEN_ESTADOS = ['devuelta', 'condicionada', 'autorizada'];
+
+  var LISTADOS = {
+    pendiente: 'Pendiente',
+    sin_listado: 'No tiene cargado el listado',
+    aprobado: 'Aprobado',
+  };
+  var ORDEN_LISTADOS = ['pendiente', 'sin_listado', 'aprobado'];
 
   var FLECHITA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
     'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
@@ -933,6 +1294,24 @@
       : '<span class="' + clases + '"' + attr + '>' + dentro + '</span>';
   }
 
+  // El estatus del listado, que es otra cosa que el dictamen: un
+  // expediente puede quedar autorizado y el listado seguir sin cargarse.
+  // Por eso lleva su propia etiqueta al lado y no un estado más adentro
+  // de la otra.
+  function etiquetaListado(d, enCuerpo) {
+    var v = d.estatus_listado || 'pendiente';
+    var mueve = puedoDictaminar && !d.archivado_at;
+    var clases = 'dic-listado ' + v +
+      (mueve ? ' dic-estado-btn' : '') +
+      (enCuerpo ? ' dic-estado-movil' : '');
+    var dentro = (LISTADOS[v] || '') + (mueve ? FLECHITA : '');
+    var attr = mueve ? ' data-listado-de="' + d.id + '"' : '';
+
+    return enCuerpo
+      ? '<button type="button" class="' + clases + '"' + attr + '>' + dentro + '</button>'
+      : '<span class="' + clases + '"' + attr + '>' + dentro + '</span>';
+  }
+
   var menuEstado = null;
   var menuAbiertoEn = 0;
 
@@ -952,16 +1331,46 @@
     cerrarMenuEstado();
   }
 
-  function abrirMenuEstado(desde, id) {
+  // El mismo menú sirve para las dos etiquetas. Lo único que cambia es de
+  // dónde salen las opciones, cuál está puesta y qué se hace al elegir,
+  // así que eso viaja en un descriptor y el resto (dónde se dibuja, cómo
+  // se cierra) es igual para ambas.
+  var MENUS = {
+    estado: {
+      opciones: ORDEN_ESTADOS,
+      nombres: ESTADOS,
+      puesta: function (d) { return d.estado; },
+      // Pasa por dictaminar() y no por un update directo porque es ahí
+      // donde se reparte el folio, que tiene que ser único.
+      poner: function (id, valor) {
+        return window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: valor });
+      },
+      error: 'No se pudo dictaminar: ',
+    },
+    listado: {
+      opciones: ORDEN_LISTADOS,
+      nombres: LISTADOS,
+      puesta: function (d) { return d.estatus_listado || 'pendiente'; },
+      poner: function (id, valor) {
+        return window.kwSupabase.from('dictamenes')
+          .update({ estatus_listado: valor }).eq('id', id);
+      },
+      error: 'No se pudo cambiar el estatus del listado: ',
+    },
+  };
+
+  function abrirMenu(desde, id, cual) {
+    var m = MENUS[cual];
     var d = dictamenes.find(function (x) { return x.id === id; });
-    if (!d) return;
+    if (!m || !d) return;
     cerrarMenuEstado();
 
+    var puesta = m.puesta(d);
     var caja = document.createElement('div');
     caja.className = 'dic-menu-estado';
-    caja.innerHTML = ORDEN_ESTADOS.map(function (e) {
-      return '<button type="button" class="dic-menu-op' + (d.estado === e ? ' puesto' : '') +
-        '" data-poner="' + e + '"><i class="' + e + '"></i>' + ESTADOS[e] + '</button>';
+    caja.innerHTML = m.opciones.map(function (e) {
+      return '<button type="button" class="dic-menu-op' + (puesta === e ? ' puesto' : '') +
+        '" data-poner="' + e + '"><i class="' + e + '"></i>' + m.nombres[e] + '</button>';
     }).join('');
     document.body.appendChild(caja);
 
@@ -979,11 +1388,9 @@
     caja.querySelectorAll('[data-poner]').forEach(function (b) {
       b.addEventListener('click', async function () {
         cerrarMenuEstado();
-        var r2 = await window.kwSupabase.rpc('dictaminar', {
-          p_id: id, p_estado: b.dataset.poner,
-        });
-        if (r2.error) {
-          await window.kwUI.alert('No se pudo dictaminar: ' + r2.error.message);
+        var r2 = await m.poner(id, b.dataset.poner);
+        if (r2 && r2.error) {
+          await window.kwUI.alert(m.error + r2.error.message);
           return;
         }
         await cargar();
@@ -996,7 +1403,7 @@
 
   document.addEventListener('click', function (e) {
     if (!menuEstado) return;
-    if (e.target.closest('.dic-menu-estado, [data-estado-de]')) return;
+    if (e.target.closest('.dic-menu-estado, [data-estado-de], [data-listado-de]')) return;
     cerrarMenuEstado();
   });
   document.addEventListener('keydown', function (e) {
@@ -1014,10 +1421,10 @@
       dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
       dato('Tipo de inmueble', d.tipo_inmueble) +
       dato('Escrituras y fecha', d.escritura_propiedad) +
-      dato('Condominio', d.escritura_condominio) +
+      dato('Condominio', siNo(d.condominio)) +
+      dato('Escritura del condominio', d.escritura_condominio) +
       dato('CFDI', d.cfdi) +
       dato('Superficie escritura', conUnidad(d.superficie_escritura)) +
-      dato('Condominio', siNo(d.condominio)) +
       dato('Cuenta predial', d.cuenta_predial) +
       dato('Superficie terreno', conUnidad(d.superficie_terreno)) +
       dato('Superficie construcción', conUnidad(d.superficie_construccion)) +
@@ -1039,42 +1446,124 @@
         '</div>'
       : '';
 
-    // El estado se mueve desde su propia etiqueta, la del encabezado. En
-    // el celular esa etiqueta no se enseña, así que aquí adentro va la
-    // misma, que abre el mismo menú.
-    var dictaminar = (puedoDictaminar && !d.archivado_at)
-      ? etiquetaEstado(d, true)
+    // Las dos etiquetas se mueven desde el encabezado. En el celular ese
+    // renglón no las enseña, así que aquí adentro van las mismas.
+    var enCuerpo = (puedoDictaminar && !d.archivado_at)
+      ? '<div class="dic-etiquetas-movil">' +
+          etiquetaEstado(d, true) + etiquetaListado(d, true) +
+        '</div>'
       : '';
 
     var acciones = '<div class="kw-fila-acciones">' +
       '<button type="button" class="kw-fila-btn" data-imprimir="' + d.id + '">Descargar PDF</button>' +
       (puedoDictaminar && !d.archivado_at
         ? '<button type="button" class="kw-fila-btn" data-editar="' + d.id + '">Editar</button>' +
-          '<button type="button" class="kw-fila-btn neutro" data-archivar="' + d.id + '">Archivar</button>'
+          '<button type="button" class="kw-fila-btn neutro a-la-derecha" data-archivar="' + d.id + '">Archivar</button>'
         : '') +
       (puedoDictaminar && d.archivado_at
         ? '<button type="button" class="kw-fila-btn" data-restaurar="' + d.id + '">Restaurar</button>' +
-          '<button type="button" class="kw-fila-btn neutro" data-borrar="' + d.id + '">Borrar</button>'
+          '<button type="button" class="kw-fila-btn neutro a-la-derecha" data-borrar="' + d.id + '">Borrar</button>'
         : '') +
     '</div>';
 
-    return datos + obs +
-      '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
-      dictaminar + acciones;
+    // Dos pestañas: lo que dice el expediente hoy, y cómo llegó a decir
+    // eso. El historial va aparte y no debajo porque es de otra
+    // naturaleza: lo de arriba se edita, esto solo se lee.
+    return '<div class="kw-tabs dic-tabs" data-kw-tabs>' +
+        '<button type="button" class="kw-tab activo" data-tab="exp-' + d.id + '">Expediente</button>' +
+        '<button type="button" class="kw-tab" data-tab="hist-' + d.id + '">Historial</button>' +
+      '</div>' +
+      '<div class="kw-tabpanels dic-tabpanels">' +
+        '<section class="kw-tabpanel activo" data-panel="exp-' + d.id + '">' +
+          datos + obs +
+          '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
+          enCuerpo +
+        '</section>' +
+        '<section class="kw-tabpanel" data-panel="hist-' + d.id + '">' +
+          historialHTML(d) +
+        '</section>' +
+      '</div>' +
+      acciones;
   }
+
+  // ── El historial ────────────────────────────────────────────
+
+  var COMO = {
+    creado: 'Se levantó el expediente',
+    estado: 'Dictamen',
+    listado: 'Listado',
+    archivado: 'Archivado',
+    restaurado: 'Restaurado',
+    punto_nuevo: 'Observación nueva',
+    punto_corregida: 'Corregida',
+    punto_pendiente: 'De vuelta a pendiente',
+    punto_quitado: 'Observación quitada',
+    punto_nota: 'Nota',
+  };
+
+  function historialHTML(d) {
+    var suyo = historial
+      .filter(function (h) { return h.dictamen_id === d.id; })
+      .sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+
+    if (!suyo.length) {
+      return '<div class="kw-vacio" style="padding:var(--sp-4);">' +
+        'Todavía no hay movimientos registrados en este expediente.</div>';
+    }
+
+    return '<div class="dic-historia">' + suyo.map(function (h) {
+      var titulo = COMO[h.que] || h.que;
+      // Hay movimientos cuyo detalle es la misma frase del título (el de
+      // "se levantó el expediente", por ejemplo). Repetirla dos renglones
+      // seguidos se lee como un error.
+      var detalle = (h.detalle && h.detalle !== titulo) ? h.detalle : '';
+
+      return '<div class="dic-historia-fila">' +
+        '<span class="dic-historia-punto ' + escapar(h.que) + '"></span>' +
+        '<div class="dic-historia-txt">' +
+          '<b>' + escapar(titulo) + '</b>' +
+          (detalle ? '<span>' + escapar(detalle) + '</span>' : '') +
+        '</div>' +
+        '<div class="dic-historia-cuando">' +
+          fechaHora(h.created_at) +
+          (h.quien_nombre ? '<span>' + escapar(h.quien_nombre) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  function fechaHora(iso) {
+    if (!iso) return '';
+    var f = new Date(iso);
+    if (isNaN(f)) return '';
+    return f.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' · ' + f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  var BOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/>' +
+    '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+    '<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 
   function puntoHTML(p, i) {
     var corregida = p.estado === 'corregida';
+
+    // Un solo renglón de acciones. Los de la nota viven aquí también,
+    // escondidos hasta que se abre: así no aparece una segunda hilera
+    // encima de la primera cuando alguien va a escribir.
     var btns = puedoDictaminar
       ? '<div class="dic-punto-acciones">' +
           '<button type="button" class="kw-btn-mini" data-mover="' + p.id + '">' +
             (corregida ? 'Marcar pendiente' : 'Marcar corregida') + '</button>' +
-          '<button type="button" class="kw-btn-mini" data-nota="' + p.id + '">Nota</button>' +
-          '<button type="button" class="kw-btn-mini" data-quitar-punto="' + p.id + '">Quitar</button>' +
+          '<button type="button" class="kw-btn-mini oculto-notando" data-nota="' + p.id + '">Nota</button>' +
+          '<button type="button" class="kw-btn-mini verde solo-notando" data-guardar-nota="' + p.id + '">Enviar nota</button>' +
+          '<button type="button" class="kw-btn-mini rojo solo-notando" data-cerrar-form="' + p.id + '">Cancelar</button>' +
+          '<button type="button" class="dic-punto-tirar a-la-derecha" data-quitar-punto="' + p.id + '" ' +
+            'title="Eliminar esta observación" aria-label="Eliminar esta observación">' + BOTE + '</button>' +
         '</div>'
       : '';
 
-    return '<div class="dic-punto' + (corregida ? ' corregida' : '') + '">' +
+    return '<div class="dic-punto' + (corregida ? ' corregida' : '') + '" data-punto="' + p.id + '">' +
       '<div class="dic-punto-cabeza">' +
         '<span class="dic-punto-texto">' + (i + 1) + '. ' + escapar(p.texto) + '</span>' +
         '<span class="dic-estado ' + (corregida ? 'autorizada' : 'condicionada') + '">' +
@@ -1083,10 +1572,6 @@
       (p.nota ? '<div class="dic-punto-nota">' + escapar(p.nota) + '</div>' : '') +
       '<div class="dic-punto-form" data-form-de="' + p.id + '">' +
         '<textarea placeholder="Una nota sobre esta observación">' + escapar(p.nota || '') + '</textarea>' +
-        '<div class="dic-punto-acciones">' +
-          '<button type="button" class="kw-btn-mini" data-guardar-nota="' + p.id + '">Guardar nota</button>' +
-          '<button type="button" class="kw-btn-mini" data-cerrar-form="' + p.id + '">Cancelar</button>' +
-        '</div>' +
       '</div>' +
       btns +
     '</div>';
@@ -1105,19 +1590,21 @@
       });
     });
 
+    // Abrir y cerrar la nota marca la observación entera, no nada más el
+    // recuadro: de esa marca cuelga qué botones se enseñan.
+    function notando(id, si) {
+      var caja = raiz.querySelector('[data-form-de="' + id + '"]');
+      var punto = raiz.querySelector('[data-punto="' + id + '"]');
+      if (caja) caja.classList.toggle('abierto', si);
+      if (punto) punto.classList.toggle('notando', si);
+      if (si && caja) caja.querySelector('textarea').focus();
+    }
+
     raiz.querySelectorAll('[data-nota]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var caja = raiz.querySelector('[data-form-de="' + b.dataset.nota + '"]');
-        if (!caja) return;
-        caja.classList.add('abierto');
-        caja.querySelector('textarea').focus();
-      });
+      b.addEventListener('click', function () { notando(b.dataset.nota, true); });
     });
     raiz.querySelectorAll('[data-cerrar-form]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var caja = raiz.querySelector('[data-form-de="' + b.dataset.cerrarForm + '"]');
-        if (caja) caja.classList.remove('abierto');
-      });
+      b.addEventListener('click', function () { notando(b.dataset.cerrarForm, false); });
     });
     raiz.querySelectorAll('[data-guardar-nota]').forEach(function (b) {
       b.addEventListener('click', async function () {
@@ -1130,7 +1617,8 @@
 
     raiz.querySelectorAll('[data-quitar-punto]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        if (!(await window.kwUI.confirm('¿Quitar esta observación del dictamen?'))) return;
+        if (!(await window.kwUI.confirm('¿Deseas eliminar esta observación?',
+          { textoConfirmar: 'Sí', textoCancelar: 'No' }))) return;
         await window.kwSupabase.from('dictamen_puntos').delete().eq('id', b.dataset.quitarPunto);
         await cargar();
       });
@@ -1157,14 +1645,18 @@
       });
     });
 
-    raiz.querySelectorAll('[data-estado-de]').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        // La etiqueta del encabezado vive dentro del renglón que abre y
-        // cierra la tarjeta. Sin esto, cambiar el estado la cerraría de
-        // pasada y el menú quedaría flotando sobre una tarjeta cerrada.
-        e.stopPropagation();
-        if (menuEstado) { cerrarMenuEstado(); return; }
-        abrirMenuEstado(b, b.dataset.estadoDe);
+    [['data-estado-de', 'estadoDe', 'estado'],
+     ['data-listado-de', 'listadoDe', 'listado']].forEach(function (t) {
+      raiz.querySelectorAll('[' + t[0] + ']').forEach(function (b) {
+        b.addEventListener('click', function (e) {
+          // Las etiquetas del encabezado viven dentro del renglón que abre
+          // y cierra la tarjeta. Sin esto, cambiar el estatus la cerraría
+          // de pasada y el menú quedaría flotando sobre una tarjeta ya
+          // cerrada.
+          e.stopPropagation();
+          if (menuEstado) { cerrarMenuEstado(); return; }
+          abrirMenu(b, b.dataset[t[1]], t[2]);
+        });
       });
     });
 
@@ -1268,7 +1760,6 @@
     ['e-cuenta-predial', 'cuenta_predial'],
     ['e-sup-terreno', 'superficie_terreno'],
     ['e-sup-construccion', 'superficie_construccion'],
-    ['e-observaciones', 'observaciones'],
   ];
 
   // Las superficies se guardan como número pelón y la unidad se pone al
@@ -1420,9 +1911,14 @@
       condominio: d && d.condominio !== null && d.condominio !== undefined
         ? (d.condominio ? 'si' : 'no') : '',
       clientes: clientesDe(d),
+      // El id viaja con cada observación: es lo que deja saber después
+      // cuáles ya existían y cuáles se acaban de escribir, para no
+      // borrarlas todas y volverlas a crear en cada guardada.
       puntos: d
         ? puntos.filter(function (p) { return p.dictamen_id === d.id; })
-          .map(function (p) { return { texto: p.texto, estado: p.estado, nota: p.nota }; })
+          .map(function (p) {
+            return { id: p.id, texto: p.texto, estado: p.estado, nota: p.nota };
+          })
         : [],
     };
     CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
@@ -1601,7 +2097,8 @@
     if (id) {
       var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
       if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
-      await window.kwSupabase.from('dictamen_puntos').delete().eq('dictamen_id', id);
+      // Los clientes sí se rehacen enteros: no llevan historial ni fechas
+      // propias, así que volver a escribirlos no pierde nada.
       await window.kwSupabase.from('dictamen_clientes').delete().eq('dictamen_id', id);
     } else {
       fila.dictaminado_por = yo.id;
@@ -1611,8 +2108,6 @@
       borrador.id = id;
     }
 
-    // Igual que las observaciones: se borran y se vuelven a escribir en
-    // vez de comparar cuál cambió.
     var rc = await window.kwSupabase.from('dictamen_clientes').insert(
       losClientes.map(function (x, i) {
         return {
@@ -1622,17 +2117,54 @@
       }));
     if (rc.error) return await fallo('No se pudieron guardar los clientes: ' + rc.error.message);
 
-    if (borrador.puntos.length) {
-      var p = await window.kwSupabase.from('dictamen_puntos').insert(
-        borrador.puntos.map(function (x, i) {
-          return {
-            dictamen_id: id, texto: x.texto, orden: i + 1,
-            estado: x.estado || 'pendiente', nota: x.nota || null,
-          };
-        }));
-      if (p.error) return await fallo('No se pudieron guardar las observaciones: ' + p.error.message);
-    }
+    var errPuntos = await guardarPuntosDe(id);
+    if (errPuntos) return await fallo('No se pudieron guardar las observaciones: ' + errPuntos);
+
     return id;
+  }
+
+  // Las observaciones se comparan una por una en vez de borrarlas todas y
+  // volver a escribirlas. Borrar y rehacer era más corto, pero le cambiaba
+  // el id a cada observación en cada guardada: se perdía la fecha en que
+  // se marcó corregida, y el historial quedaba lleno de "se quitó" y "se
+  // pidió" cada vez que alguien corregía una coma del expediente.
+  async function guardarPuntosDe(id) {
+    var antes = puntos.filter(function (p) { return p.dictamen_id === id; });
+    var siguen = borrador.puntos
+      .filter(function (p) { return p.id; })
+      .map(function (p) { return p.id; });
+
+    var sobran = antes.filter(function (p) { return siguen.indexOf(p.id) === -1; });
+    if (sobran.length) {
+      var rb = await window.kwSupabase.from('dictamen_puntos').delete()
+        .in('id', sobran.map(function (p) { return p.id; }));
+      if (rb.error) return rb.error.message;
+    }
+
+    var nuevos = [];
+    for (var i = 0; i < borrador.puntos.length; i++) {
+      var p = borrador.puntos[i];
+      if (!p.id) {
+        nuevos.push({
+          dictamen_id: id, texto: p.texto, orden: i + 1,
+          estado: p.estado || 'pendiente', nota: p.nota || null,
+        });
+        continue;
+      }
+      // A las que ya estaban solo se les toca lo que de verdad cambió: un
+      // update que deja todo igual también dispara el historial.
+      var viejo = antes.find(function (x) { return x.id === p.id; });
+      if (viejo && viejo.texto === p.texto && viejo.orden === i + 1) continue;
+      var ru = await window.kwSupabase.from('dictamen_puntos')
+        .update({ texto: p.texto, orden: i + 1 }).eq('id', p.id);
+      if (ru.error) return ru.error.message;
+    }
+
+    if (nuevos.length) {
+      var rn = await window.kwSupabase.from('dictamen_puntos').insert(nuevos);
+      if (rn.error) return rn.error.message;
+    }
+    return null;
   }
 
   // ── La hoja ─────────────────────────────────────────────────
@@ -1781,12 +2313,33 @@
 
     await cargarCatalogos();
     if (window.kwUI) window.kwUI.selects(document);
+    pintarAsesoresFiltro();
     await cargar();
   }
 
   $('f-buscar').addEventListener('input', pintar);
-  $('f-estado').addEventListener('change', pintar);
-  $('f-asesor').addEventListener('change', pintar);
+  ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia'].forEach(function (x) {
+    $(x).addEventListener('change', pintar);
+  });
+
+  $('f-asesor-busca').addEventListener('input', pintarSugerenciasAsesor);
+  $('f-asesor-busca').addEventListener('focus', pintarSugerenciasAsesor);
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#f-asesor-caja')) $('f-asesor-lista').classList.remove('abierta');
+  });
+
+  $('f-limpiar').addEventListener('click', function () {
+    $('f-buscar').value = '';
+    ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia'].forEach(function (x) {
+      $(x).value = 'todos';
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    asesoresFiltro = [];
+    $('f-asesor-busca').value = '';
+    $('f-asesor-lista').classList.remove('abierta');
+    pintarAsesoresFiltro();
+    pintar();
+  });
 
   // Sincronizar es en dos tiempos: primero se pregunta sin escribir nada,
   // y solo si se confirma se manda "aplicar". Así, si la hoja se leyó a
@@ -1898,10 +2451,27 @@
     b.textContent = 'Guardar';
     if (!id) return;
 
+    // Guardar y dictaminar son un solo movimiento: se revisó el
+    // expediente y se llegó a una conclusión. Preguntarlo aquí es lo que
+    // hace que el folio y el PDF salgan en el mismo momento, en vez de
+    // dejar el expediente en borrador esperando a que alguien se acuerde.
+    var quedo = await preguntarEstado();
+    if (quedo) {
+      var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
+      if (r.error) {
+        await fallo('Se guardó el expediente, pero no se le pudo poner el dictamen: '
+          + r.error.message);
+      }
+    }
+
     await cargar();
     aviso('editor-msg', '', '');
-    $('e-listo-txt').textContent = 'Guardado. Ya puedes descargar el PDF, '
-      + 'y desde la lista ponerle el dictamen.';
+
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    $('e-listo-txt').textContent = (d && d.folio)
+      ? 'Listo. Quedó como ' + (ESTADOS[d.estado] || '').toLowerCase() +
+        ', con folio ' + d.folio + '.'
+      : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
     $('e-listo').classList.add('visible');
     $('e-descargar').onclick = function () { imprimir(id); };
   });
