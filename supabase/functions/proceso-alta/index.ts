@@ -3,9 +3,12 @@
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
 // Panel, sin tener que entrar a cada una a mano:
 //
-//   1. Lo agrega a Google Contacts de dani.guerrero@kwmexico.mx
+//   1. Lo agrega a Google Contacts de la cuenta de contactos, con la
+//      etiqueta que le toque (Asesores Inmobiliarios o Back Office)
 //   2. Le comparte la carpeta de Drive como lector
 //   3. Le da acceso de lectura al calendario de KW Premier
+//
+// Los tres se pueden quitar igual que se dan.
 //
 // La gente se lee de un Google Sheet que se llena a mano. El libro trae
 // una hoja por grupo (asesores activos, bajas, back office, células) y
@@ -32,14 +35,23 @@
 //    en "APIs y servicios > Biblioteca", habilitar:
 //      Google Sheets API, People API, Google Drive API, Google Calendar API
 //
-// B) El token que ya existe (GOOGLE_REFRESH_TOKEN) probablemente solo
-//    tiene permiso de calendario. Hay que volver a autorizar pidiendo
-//    TODOS estos permisos, entrando con dani.guerrero@kwmexico.mx:
+// B) GOOGLE_REFRESH_TOKEN es de la cuenta dueña del Sheet, la carpeta
+//    de Drive y el calendario. Se autoriza entrando con esa cuenta
+//    (dani.guerrero@kwmexico.mx) y pidiendo estos permisos:
 //      https://www.googleapis.com/auth/spreadsheets.readonly
-//      https://www.googleapis.com/auth/contacts
 //      https://www.googleapis.com/auth/drive
 //      https://www.googleapis.com/auth/calendar
-//    El token que salga de ahí reemplaza a GOOGLE_REFRESH_TOKEN.
+//
+//    Los CONTACTOS van aparte, en la cuenta del Market Center
+//    (kwpremier@kwmexico.mx), y por eso llevan su propio token: uno solo
+//    no puede ser de dos cuentas a la vez. Se autoriza igual, pero
+//    entrando con kwpremier@kwmexico.mx y pidiendo:
+//      https://www.googleapis.com/auth/contacts
+//    Ese token va en GOOGLE_REFRESH_TOKEN_CONTACTOS.
+//
+//    Mientras ese secreto no exista se usa el de siempre, así que los
+//    contactos se seguirían guardando en la cuenta vieja: sin ponerlo,
+//    este cambio no surte efecto.
 //
 // C) Project Settings > Edge Functions > Secrets:
 //      ALTA_SHEET_ID          el id del Google Sheet (va en su URL,
@@ -49,6 +61,9 @@
 //                             el nombre de la hoja no va aquí.
 //      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
 //                             URL, después de /folders/)
+//      GOOGLE_REFRESH_TOKEN_CONTACTOS
+//                             el token de kwpremier@kwmexico.mx, la
+//                             cuenta donde se guardan los contactos
 //      ALTA_EMAILS            opcional. Master y Admin ya pasan por su
 //                             rol; esto es para abrirle a alguien que no
 //                             sea ninguno de los dos. Correos separados
@@ -67,6 +82,17 @@ const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!
 const GOOGLE_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN')!
 const GOOGLE_CALENDAR_ID = Deno.env.get('GOOGLE_CALENDAR_ID')
+
+// Los contactos viven en la cuenta del Market Center
+// (kwpremier@kwmexico.mx) y el Sheet, la carpeta y el calendario en la
+// de quien los creó: son dos cuentas distintas, y un refresh token es de
+// UNA cuenta, así que hacen falta dos.
+//
+// Sin el secreto puesto se cae al de siempre en vez de tronar: así la
+// función sigue trabajando igual que antes mientras se consigue el
+// token nuevo, nada más que guardando los contactos donde los guardaba.
+const GOOGLE_REFRESH_TOKEN_CONTACTOS =
+  Deno.env.get('GOOGLE_REFRESH_TOKEN_CONTACTOS') || GOOGLE_REFRESH_TOKEN
 
 const ALTA_SHEET_ID = Deno.env.get('ALTA_SHEET_ID')
 const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A1:Z500'
@@ -113,6 +139,14 @@ async function getAccessToken(refreshToken: string): Promise<string> {
   throw new Error(`No se pudo renovar el token de Google: ${ultimoError}`)
 }
 
+// Las dos cuentas usan el mismo token cuando el de contactos no está
+// configurado, y ahí no tiene caso pedirlo dos veces.
+async function getTokenContactos(): Promise<string> {
+  return GOOGLE_REFRESH_TOKEN_CONTACTOS === GOOGLE_REFRESH_TOKEN
+    ? await getAccessToken(GOOGLE_REFRESH_TOKEN)
+    : await getAccessToken(GOOGLE_REFRESH_TOKEN_CONTACTOS)
+}
+
 // ── Lectura del Google Sheet ────────────────────────────────
 // Las columnas se buscan por su encabezado, no por posición: la hoja se
 // llena a mano y mover una columna no debe romper esto.
@@ -155,15 +189,6 @@ function aFecha(s: string): string | null {
   if (!f || !f.year) return null
   if (f.month < 1 || f.month > 12 || f.day < 1 || f.day > 31) return null
   return `${String(f.year).padStart(4, '0')}-${String(f.month).padStart(2, '0')}-${String(f.day).padStart(2, '0')}`
-}
-
-function indiceDe(encabezados: string[], claves: string[]): number {
-  const limpio = encabezados.map(normalizar)
-  for (const clave of claves) {
-    const i = limpio.findIndex((h) => h.includes(clave))
-    if (i !== -1) return i
-  }
-  return -1
 }
 
 // ── Las hojas del libro ─────────────────────────────────────
@@ -283,40 +308,111 @@ type Persona = {
   fechaBaja: string
 }
 
+// Con qué encabezado se reconoce cada dato. Se compara sin acentos ni
+// mayúsculas y por "contiene", que es lo único que aguanta que la misma
+// columna se llame "Correo", "CORREO KW" o "e-mail" según la hoja.
+//
+// `no` son las palabras que DESCALIFICAN una columna aunque coincida.
+// Hace falta porque "celular" contiene "celula": sin este freno, en una
+// hoja con columna CELULAR el teléfono salía como si fuera la célula del
+// asesor ("Célula: 5534347566" en la tarjeta).
+const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
+  // "agente" es el nombre real de la persona; "nombre" (si existe
+  // aparte) suele ser el nombre comercial, así que va después.
+  agente: { si: ['agente'] },
+  nombre: { si: ['nombre completo', 'nombre'], no: ['comercial', 'celula', 'sponsor', 'coach'] },
+  apellido: { si: ['apellido'] },
+  correo: { si: ['correo', 'email', 'e-mail', 'mail'] },
+  telefono: { si: ['telefono', 'celular', 'movil', 'whatsapp'] },
+  kwid: { si: ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'] },
+  ingreso: { si: ['fecha de ingreso', 'fecha ingreso'] },
+  cumple: { si: ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'] },
+  puesto: { si: ['puesto', 'cargo'] },
+  celula: { si: ['celula', 'equipo'], no: ['celular'] },
+  baja: { si: ['fecha de baja', 'baja'] },
+}
+
+function indiceDeColumna(encabezados: string[], clave: string): number {
+  const def = COLUMNAS[clave]
+  const limpio = encabezados.map(normalizar)
+  for (const palabra of def.si) {
+    const i = limpio.findIndex((h) =>
+      h.includes(palabra) && !(def.no || []).some((mal) => h.includes(mal)))
+    if (i !== -1) return i
+  }
+  return -1
+}
+
+// Cuál de las primeras filas es la de los encabezados. No siempre es la
+// primera: una hoja puede traer un título, un logo o un par de renglones
+// en blanco antes de la tabla, y dando por hecho que era la fila 1 la
+// hoja se leía entera como si no tuviera ni una columna reconocible y
+// salía vacía sin decir por qué (justo lo que pasaba con "2. BAJAS").
+// Gana la fila de las primeras 15 que reconozca más columnas.
+const FILAS_A_MIRAR = 15
+
+function filaDeEncabezados(filas: string[][]): number {
+  let mejor = -1
+  let mejorCuenta = 0
+  for (let i = 0; i < Math.min(filas.length, FILAS_A_MIRAR); i++) {
+    const cuenta = Object.keys(COLUMNAS)
+      .filter((c) => indiceDeColumna(filas[i], c) !== -1).length
+    if (cuenta > mejorCuenta) { mejor = i; mejorCuenta = cuenta }
+  }
+  // Con una sola columna reconocida no hay tabla que valga: puede ser
+  // cualquier renglón suelto que traiga la palabra "nombre".
+  return mejorCuenta >= 2 ? mejor : -1
+}
+
+// Qué columnas se le reconocieron a una hoja. Sirve para poder decir en
+// pantalla POR QUÉ una hoja salió vacía: no es lo mismo "no hay nadie
+// capturado" que "la tabla está ahí pero sus columnas se llaman de otra
+// forma y no se reconoció ninguna".
+function columnasDe(filas: string[][]): string[] {
+  const iEnc = filaDeEncabezados(filas)
+  if (iEnc === -1) return []
+  return Object.keys(COLUMNAS).filter((c) => indiceDeColumna(filas[iEnc], c) !== -1)
+}
+
 function parsearPersonas(filas: string[][]): Persona[] {
-  if (!filas.length) return []
+  const iEnc = filaDeEncabezados(filas)
+  if (iEnc === -1) return []
 
-  const enc = filas[0]
-  // "agente" es el nombre real de la persona; "nombre" (si existe aparte)
-  // suele ser el nombre comercial, así que "agente" tiene prioridad.
-  const iAgente = indiceDe(enc, ['agente'])
-  const iNombre = indiceDe(enc, ['nombre completo', 'nombre'])
-  const iApellido = indiceDe(enc, ['apellido'])
-  const iCorreo = indiceDe(enc, ['correo', 'email', 'e-mail', 'mail'])
-  const iTelefono = indiceDe(enc, ['telefono', 'celular', 'movil', 'whatsapp'])
-  const iKwid = indiceDe(enc, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
-  const iIngreso = indiceDe(enc, ['fecha de ingreso', 'fecha ingreso'])
-  const iCumple = indiceDe(enc, ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'])
-  const iPuesto = indiceDe(enc, ['puesto', 'cargo'])
-  const iCelula = indiceDe(enc, ['celula', 'equipo'])
-  const iBaja = indiceDe(enc, ['fecha de baja', 'baja'])
+  const enc = filas[iEnc]
+  const col: Record<string, number> = {}
+  for (const clave of Object.keys(COLUMNAS)) col[clave] = indiceDeColumna(enc, clave)
 
-  const dato = (fila: string[], i: number) => (i === -1 ? '' : String(fila[i] || '').trim())
+  const dato = (fila: string[], clave: string) => {
+    const i = col[clave]
+    return i === -1 ? '' : String(fila[i] || '').trim()
+  }
 
-  return filas.slice(1).map((fila, n) => ({
-    fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
-    nombre: iAgente !== -1
-      ? dato(fila, iAgente)
-      : [dato(fila, iNombre), dato(fila, iApellido)].filter(Boolean).join(' '),
-    correo: limpiarCorreo(iCorreo === -1 ? '' : fila[iCorreo]),
-    telefono: dato(fila, iTelefono),
-    kwid: dato(fila, iKwid),
-    fechaIngreso: dato(fila, iIngreso),
-    cumpleanos: dato(fila, iCumple),
-    puesto: dato(fila, iPuesto),
-    celula: dato(fila, iCelula),
-    fechaBaja: dato(fila, iBaja),
+  const personas = filas.slice(iEnc + 1).map((fila, n) => ({
+    // +1 por el encabezado y +1 porque las filas de Sheets empiezan en 1
+    fila: iEnc + n + 2,
+    nombre: col.agente !== -1
+      ? dato(fila, 'agente')
+      : [dato(fila, 'nombre'), dato(fila, 'apellido')].filter(Boolean).join(' '),
+    correo: limpiarCorreo(col.correo === -1 ? '' : fila[col.correo]),
+    telefono: dato(fila, 'telefono'),
+    kwid: dato(fila, 'kwid'),
+    fechaIngreso: dato(fila, 'ingreso'),
+    cumpleanos: dato(fila, 'cumple'),
+    puesto: dato(fila, 'puesto'),
+    celula: dato(fila, 'celula'),
+    fechaBaja: dato(fila, 'baja'),
   }))
+
+  // Una hoja no trae solo personas: trae subtítulos que parten la tabla
+  // en secciones ("BAJAS" a media hoja de BACKOFFICE), renglones de
+  // totales y filas a medio llenar. Todos esos caen en la misma forma:
+  // un texto suelto en la columna del nombre y NADA más en el renglón.
+  // Alguien de verdad trae por lo menos otro dato además de su nombre.
+  return personas.filter((p) => {
+    if (p.correo) return true
+    if (!p.nombre) return false
+    return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja)
+  })
 }
 
 // La hoja de los asesores activos es la que manda para todo lo demás: el
@@ -343,14 +439,16 @@ async function leerHojaActivos(token: string): Promise<string[][]> {
 // todavía, simplemente no aparecía en ningún lado y nadie se enteraba de
 // por qué), se puede avisar por nombre.
 async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
-  const filas = await leerHojaActivos(token)
-  if (!filas.length) return []
+  const todas = parsearPersonas(await leerHojaActivos(token))
+  if (!todas.length) return []
 
-  if (indiceDe(filas[0], ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid']) === -1) {
-    throw new Error('La hoja no tiene una columna de KW ID. Se busca un encabezado que diga "kwid", "kw id" o similar.')
+  // Ni un solo KW ID en toda la hoja no es "nadie lo tiene capturado":
+  // es que la columna se llama de otra forma y no se reconoció. Aplicar
+  // una sincronización con eso daría de baja a todo el padrón.
+  if (!todas.some((p) => p.kwid)) {
+    throw new Error('La hoja de activos no tiene una columna de KW ID. Se busca un encabezado que diga "kwid", "kw id" o similar.')
   }
 
-  const todas = parsearPersonas(filas)
   if (omitidos) {
     for (const p of todas) {
       // Fila realmente vacía (nadie capturó nada todavía): no cuenta
@@ -367,14 +465,13 @@ async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: str
 // la hoja sin correo capturado todavía desaparecía de la lista de altas
 // sin que nadie se enterara de por qué.
 async function leerHoja(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
-  const filas = await leerHojaActivos(token)
-  if (!filas.length) return []
+  const todas = parsearPersonas(await leerHojaActivos(token))
+  if (!todas.length) return []
 
-  if (indiceDe(filas[0], ['correo', 'email', 'e-mail', 'mail']) === -1) {
-    throw new Error('La hoja no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
+  if (!todas.some((p) => p.correo)) {
+    throw new Error('La hoja de activos no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
   }
 
-  const todas = parsearPersonas(filas)
   if (omitidos) {
     for (const p of todas) {
       if (!p.correo && p.nombre) omitidos.push({ fila: p.fila, nombre: p.nombre, motivo: 'sin correo' })
@@ -389,12 +486,17 @@ async function leerHoja(token: string, omitidos?: { fila: number; nombre: string
 // los resultados para poder decir exactamente qué salió y qué no.
 
 // Los tres "quién ya está" se piden completos una sola vez (no por
-// persona) y se comparan en memoria: así "verificar" cuesta 3 llamadas
-// a Google sin importar cuánta gente haya en la hoja, y agregarContacto
-// reusa el mismo listado para no crear un contacto duplicado.
+// persona) y se comparan en memoria: así revisar los accesos cuesta 3
+// llamadas a Google sin importar cuánta gente haya en el libro.
+//
+// Y no se guarda un simple "sí lo tiene", sino el ID con el que Google
+// identifica ese acceso: para QUITARLO hace falta ese id (el permiso de
+// Drive, la regla del calendario, la ficha del contacto), y pedirlo
+// aparte por cada persona sería una llamada más por cada quitar.
+type PorCorreo = Map<string, string>
 
-async function listarContactos(token: string): Promise<Set<string>> {
-  const correos = new Set<string>()
+async function listarContactos(token: string): Promise<PorCorreo> {
+  const contactos: PorCorreo = new Map()
   let pageToken: string | undefined
   do {
     const url = new URL('https://people.googleapis.com/v1/people/me/connections')
@@ -406,23 +508,72 @@ async function listarContactos(token: string): Promise<Set<string>> {
     if (!res.ok) throw new Error(`No se pudo revisar los contactos existentes: ${res.status} ${await res.text()}`)
     const data = await res.json()
 
-    for (const p of (data.connections || []) as { emailAddresses?: { value?: string }[] }[]) {
+    for (const p of (data.connections || []) as { resourceName?: string; emailAddresses?: { value?: string }[] }[]) {
       for (const e of p.emailAddresses || []) {
-        if (e.value) correos.add(String(e.value).toLowerCase())
+        if (e.value && p.resourceName) contactos.set(String(e.value).toLowerCase(), p.resourceName)
       }
     }
     pageToken = data.nextPageToken
   } while (pageToken)
-  return correos
+  return contactos
 }
 
-async function listarPermisosDrive(token: string): Promise<Set<string>> {
-  const correos = new Set<string>()
-  if (!ALTA_DRIVE_FOLDER_ID) return correos
+// ── Las etiquetas de Contactos ──────────────────────────────
+// En Google Contacts una etiqueta es un "grupo de contactos". Se busca
+// por nombre y, si no existe, se crea: así la primera alta de cada tipo
+// deja la etiqueta lista sin que nadie tenga que ir a crearla a mano.
+const ETIQUETAS_CONTACTO: Record<string, string> = {
+  asesores: 'Asesores Inmobiliarios',
+  back_office: 'Back Office',
+}
+
+// Qué etiqueta le toca a cada hoja del libro. Las bajas no llevan: a esa
+// gente ya no se le da de alta.
+function etiquetaDeGrupo(clave: string): string | null {
+  if (clave === 'back_office') return ETIQUETAS_CONTACTO.back_office
+  if (clave === 'activos' || clave === 'celulas') return ETIQUETAS_CONTACTO.asesores
+  return null
+}
+
+async function grupoDeContactos(token: string, nombre: string): Promise<string | null> {
+  const url = new URL('https://people.googleapis.com/v1/contactGroups')
+  url.searchParams.set('pageSize', '1000')
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`No se pudieron leer las etiquetas de Contactos: ${res.status} ${await res.text()}`)
+
+  const grupos = ((await res.json()).contactGroups || []) as { name?: string; resourceName?: string }[]
+  const buscado = normalizar(nombre)
+  const existente = grupos.find((g) => normalizar(g.name) === buscado)
+  if (existente?.resourceName) return existente.resourceName
+
+  const creado = await fetch('https://people.googleapis.com/v1/contactGroups', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contactGroup: { name: nombre } }),
+  })
+  if (!creado.ok) throw new Error(`No se pudo crear la etiqueta "${nombre}": ${creado.status} ${await creado.text()}`)
+  return (await creado.json()).resourceName || null
+}
+
+async function etiquetarContacto(token: string, grupo: string, contacto: string) {
+  const res = await fetch(
+    `https://people.googleapis.com/v1/${grupo}/members:modify`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resourceNamesToAdd: [contacto] }),
+    },
+  )
+  if (!res.ok) throw new Error(`No se pudo etiquetar el contacto: ${res.status} ${await res.text()}`)
+}
+
+async function listarPermisosDrive(token: string): Promise<PorCorreo> {
+  const permisos: PorCorreo = new Map()
+  if (!ALTA_DRIVE_FOLDER_ID) return permisos
   let pageToken: string | undefined
   do {
     const url = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(ALTA_DRIVE_FOLDER_ID)}/permissions`)
-    url.searchParams.set('fields', 'nextPageToken, permissions(emailAddress)')
+    url.searchParams.set('fields', 'nextPageToken, permissions(id, emailAddress)')
     url.searchParams.set('supportsAllDrives', 'true')
     url.searchParams.set('pageSize', '100')
     if (pageToken) url.searchParams.set('pageToken', pageToken)
@@ -431,12 +582,12 @@ async function listarPermisosDrive(token: string): Promise<Set<string>> {
     if (!res.ok) throw new Error(`No se pudo revisar los permisos de Drive: ${res.status} ${await res.text()}`)
     const data = await res.json()
 
-    for (const p of (data.permissions || []) as { emailAddress?: string }[]) {
-      if (p.emailAddress) correos.add(String(p.emailAddress).toLowerCase())
+    for (const p of (data.permissions || []) as { id?: string; emailAddress?: string }[]) {
+      if (p.emailAddress && p.id) permisos.set(String(p.emailAddress).toLowerCase(), p.id)
     }
     pageToken = data.nextPageToken
   } while (pageToken)
-  return correos
+  return permisos
 }
 
 // ── Árbol de la carpeta de Drive ────────────────────────────
@@ -555,9 +706,9 @@ async function leerArbolDrive(token: string) {
   return { raiz: ALTA_DRIVE_FOLDER_ID, elementos, truncado }
 }
 
-async function listarAclCalendario(token: string): Promise<Set<string>> {
-  const correos = new Set<string>()
-  if (!GOOGLE_CALENDAR_ID) return correos
+async function listarAclCalendario(token: string): Promise<PorCorreo> {
+  const reglas: PorCorreo = new Map()
+  if (!GOOGLE_CALENDAR_ID) return reglas
   let pageToken: string | undefined
   do {
     const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/acl`)
@@ -567,47 +718,73 @@ async function listarAclCalendario(token: string): Promise<Set<string>> {
     if (!res.ok) throw new Error(`No se pudo revisar el calendario: ${res.status} ${await res.text()}`)
     const data = await res.json()
 
-    for (const r of (data.items || []) as { scope?: { type?: string; value?: string } }[]) {
-      if (r.scope?.type === 'user' && r.scope.value) correos.add(String(r.scope.value).toLowerCase())
+    for (const r of (data.items || []) as { id?: string; scope?: { type?: string; value?: string } }[]) {
+      if (r.scope?.type === 'user' && r.scope.value && r.id) {
+        reglas.set(String(r.scope.value).toLowerCase(), r.id)
+      }
     }
     pageToken = data.nextPageToken
   } while (pageToken)
-  return correos
+  return reglas
 }
 
-async function agregarContacto(
-  token: string,
-  persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
-  contactosExistentes?: Set<string>,
-) {
+// ── Dar cada acceso ─────────────────────────────────────────
+
+type DatosPersona = {
+  nombre: string
+  correo: string
+  telefono: string
+  cumpleanos?: string
+  grupo?: string
+}
+
+async function agregarContacto(token: string, persona: DatosPersona, contactosExistentes?: PorCorreo) {
   const contactos = contactosExistentes ?? await listarContactos(token)
-  if (contactos.has(persona.correo.toLowerCase())) {
-    return 'Ya existía en Contactos, no se creó de nuevo'
+  const yaEstaba = contactos.get(persona.correo.toLowerCase())
+
+  let recurso = yaEstaba
+  if (!recurso) {
+    const partes = persona.nombre.trim().split(/\s+/)
+    const cuerpo: Record<string, unknown> = {
+      names: [{
+        givenName: partes[0] || persona.correo,
+        familyName: partes.slice(1).join(' ') || undefined,
+      }],
+      emailAddresses: [{ value: persona.correo }],
+      // Así se identifica de un vistazo en Contacts a quién pertenece
+      // cada tarjeta, sin tener que abrir cada una.
+      organizations: [{ name: 'KW PREMIER', title: 'Asesor Inmobiliario' }],
+    }
+    if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
+
+    const fecha = parseFecha(persona.cumpleanos || '')
+    if (fecha) cuerpo.birthdays = [{ date: fecha }]
+
+    const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+    })
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+
+    recurso = (await res.json()).resourceName as string
+    contactos.set(persona.correo.toLowerCase(), recurso)
   }
 
-  const partes = persona.nombre.trim().split(/\s+/)
-  const cuerpo: Record<string, unknown> = {
-    names: [{
-      givenName: partes[0] || persona.correo,
-      familyName: partes.slice(1).join(' ') || undefined,
-    }],
-    emailAddresses: [{ value: persona.correo }],
-    // Así se identifica de un vistazo en Contacts a quién pertenece
-    // cada tarjeta, sin tener que abrir cada una.
-    organizations: [{ name: 'KW PREMIER', title: 'Profesional Inmobiliario' }],
+  // La etiqueta se pone aunque el contacto ya existiera: es lo que
+  // permite acomodar en su grupo a los que se dieron de alta antes de
+  // que hubiera etiquetas, sin tener que borrarlos y rehacerlos.
+  const etiqueta = etiquetaDeGrupo(persona.grupo || 'activos')
+  let puesta = ''
+  if (etiqueta && recurso) {
+    const grupo = await grupoDeContactos(token, etiqueta)
+    if (grupo) {
+      await etiquetarContacto(token, grupo, recurso)
+      puesta = `, etiquetado como "${etiqueta}"`
+    }
   }
-  if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
 
-  const fecha = parseFecha(persona.cumpleanos || '')
-  if (fecha) cuerpo.birthdays = [{ date: fecha }]
-
-  const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-  })
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
-  return 'Contacto creado'
+  return (yaEstaba ? 'Ya existía en Contactos' : 'Contacto creado') + puesta
 }
 
 async function compartirCarpeta(token: string, correo: string) {
@@ -638,6 +815,55 @@ async function darAccesoCalendario(token: string, correo: string) {
   return 'Acceso de lectura al calendario'
 }
 
+// ── Quitar cada acceso ──────────────────────────────────────
+// Para quitar hace falta el id que Google le puso a ese acceso, no el
+// correo: por eso los tres listados guardan el id y no un simple "sí".
+// Quitar algo que ya no está no es un error: se contesta que ya no lo
+// tenía y ya, porque el resultado que se pedía (que no lo tenga) es el
+// que hay.
+
+async function borrarContacto(token: string, correo: string, contactos?: PorCorreo) {
+  const mapa = contactos ?? await listarContactos(token)
+  const recurso = mapa.get(correo.toLowerCase())
+  if (!recurso) return 'No estaba en Contactos'
+
+  const res = await fetch(`https://people.googleapis.com/v1/${recurso}:deleteContact`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  mapa.delete(correo.toLowerCase())
+  return 'Contacto borrado'
+}
+
+async function quitarCarpeta(token: string, correo: string, permisos?: PorCorreo) {
+  if (!ALTA_DRIVE_FOLDER_ID) throw new Error('Falta configurar ALTA_DRIVE_FOLDER_ID.')
+  const mapa = permisos ?? await listarPermisosDrive(token)
+  const permiso = mapa.get(correo.toLowerCase())
+  if (!permiso) return 'No tenía acceso a Drive'
+
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(ALTA_DRIVE_FOLDER_ID)}` +
+    `/permissions/${encodeURIComponent(permiso)}?supportsAllDrives=true`
+  const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  mapa.delete(correo.toLowerCase())
+  return 'Acceso a la carpeta retirado'
+}
+
+async function quitarAccesoCalendario(token: string, correo: string, reglas?: PorCorreo) {
+  if (!GOOGLE_CALENDAR_ID) throw new Error('Falta configurar GOOGLE_CALENDAR_ID.')
+  const mapa = reglas ?? await listarAclCalendario(token)
+  const regla = mapa.get(correo.toLowerCase())
+  if (!regla) return 'No tenía acceso al calendario'
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}` +
+    `/acl/${encodeURIComponent(regla)}`
+  const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  mapa.delete(correo.toLowerCase())
+  return 'Acceso al calendario retirado'
+}
+
 async function intentar(nombre: string, fn: () => Promise<string>) {
   try {
     return { paso: nombre, ok: true, detalle: await fn() }
@@ -646,33 +872,83 @@ async function intentar(nombre: string, fn: () => Promise<string>) {
   }
 }
 
-// Compara contra lo que ya se sabe de Google (los tres Set de
-// listarContactos/Drive/Calendario, pedidos una sola vez desde afuera)
-// y solo llama a la API del paso que de verdad falta. Lo usan tanto
-// "corregir" (una persona) como "corregir_todos" (todas las pendientes).
-async function corregirPersona(
-  token: string,
-  persona: { nombre: string; correo: string; telefono: string; cumpleanos?: string },
-  contactos: Set<string>,
-  drive: Set<string>,
-  calendario: Set<string>,
+// Los tres accesos, en el orden en que se enseñan en la pantalla.
+const PASOS = ['contactos', 'drive', 'calendario'] as const
+type Paso = typeof PASOS[number]
+
+// Todo lo que se sabe de Google de una sola pasada. Se pide una vez y se
+// reusa para toda la corrida, sin importar cuánta gente se esté
+// revisando o corrigiendo.
+type EstadoGoogle = {
+  contactos: PorCorreo
+  drive: PorCorreo
+  calendario: PorCorreo
+}
+
+async function leerEstadoGoogle(tokenGoogle: string, tokenContactos: string): Promise<EstadoGoogle> {
+  const [contactos, drive, calendario] = await Promise.all([
+    listarContactos(tokenContactos),
+    listarPermisosDrive(tokenGoogle),
+    listarAclCalendario(tokenGoogle),
+  ])
+  return { contactos, drive, calendario }
+}
+
+// Da UN acceso, o lo quita. Sabiendo ya lo que hay en Google (el estado
+// de arriba), un acceso que ya está no se vuelve a pedir: repetirlo no
+// cambia nada y sí le reenvía a la persona el correo de "se compartió
+// contigo".
+async function moverAcceso(
+  paso: Paso,
+  quitar: boolean,
+  tokenGoogle: string,
+  tokenContactos: string,
+  persona: DatosPersona,
+  estado: EstadoGoogle,
 ) {
   const c = persona.correo.toLowerCase()
+  const tiene = estado[paso].has(c)
+
+  if (quitar) {
+    if (!tiene) return { paso, ok: true, detalle: 'No lo tenía' }
+    if (paso === 'contactos') return await intentar(paso, () => borrarContacto(tokenContactos, persona.correo, estado.contactos))
+    if (paso === 'drive') return await intentar(paso, () => quitarCarpeta(tokenGoogle, persona.correo, estado.drive))
+    return await intentar(paso, () => quitarAccesoCalendario(tokenGoogle, persona.correo, estado.calendario))
+  }
+
+  // Contactos es la excepción a "si ya está, no lo toco": la etiqueta se
+  // vuelve a poner aunque el contacto ya existiera, que es lo que permite
+  // acomodar en su grupo a los que se dieron de alta antes de que
+  // hubiera etiquetas.
+  if (paso === 'contactos') {
+    return await intentar(paso, () => agregarContacto(tokenContactos, persona, estado.contactos))
+  }
+  if (tiene) return { paso, ok: true, detalle: paso === 'drive' ? 'Ya tenía acceso a Drive' : 'Ya tenía acceso al calendario' }
+  if (paso === 'drive') return await intentar(paso, () => compartirCarpeta(tokenGoogle, persona.correo))
+  return await intentar(paso, () => darAccesoCalendario(tokenGoogle, persona.correo))
+}
+
+// Los pasos que se pidan (uno, dos o los tres) para una persona.
+async function moverAccesos(
+  pasos: Paso[],
+  quitar: boolean,
+  tokenGoogle: string,
+  tokenContactos: string,
+  persona: DatosPersona,
+  estado: EstadoGoogle,
+) {
   const resultados = []
-
-  resultados.push(contactos.has(c)
-    ? { paso: 'contactos_dani', ok: true, detalle: 'Ya estaba en Contactos' }
-    : await intentar('contactos_dani', () => agregarContacto(token, persona, contactos)))
-
-  resultados.push(drive.has(c)
-    ? { paso: 'drive', ok: true, detalle: 'Ya tenía acceso a Drive' }
-    : await intentar('drive', () => compartirCarpeta(token, persona.correo)))
-
-  resultados.push(calendario.has(c)
-    ? { paso: 'calendario', ok: true, detalle: 'Ya tenía acceso al calendario' }
-    : await intentar('calendario', () => darAccesoCalendario(token, persona.correo)))
-
+  for (const paso of pasos) {
+    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, tokenContactos, persona, estado))
+  }
   return resultados
+}
+
+// Qué pasos vienen en la petición. Sin nada, los tres.
+function pasosPedidos(valor: unknown): Paso[] {
+  if (!Array.isArray(valor) || !valor.length) return [...PASOS]
+  const pedidos = valor.map((p) => String(p)) as Paso[]
+  return PASOS.filter((p) => pedidos.includes(p))
 }
 
 Deno.serve(async (req: Request) => {
@@ -936,6 +1212,11 @@ Deno.serve(async (req: Request) => {
           clave: h.clave,
           titulo: h.titulo,
           hoja: h.hoja,
+          // Para poder explicar una hoja vacía en vez de solo enseñarla
+          // vacía: cuántos renglones trae y qué columnas se le
+          // reconocieron.
+          filasHoja: valores[i].length,
+          columnas: columnasDe(valores[i]),
           personas: personas.map((p) => ({
             ...p,
             alta: p.correo ? (porCorreo.get(p.correo.toLowerCase()) || null) : null,
@@ -960,185 +1241,119 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // ── Procesar: dar de alta a una persona ──
-    if (accion === 'procesar') {
-      const correo = limpiarCorreo(body.correo)
-      const nombre = String(body.nombre || '').trim()
-      const telefono = String(body.telefono || '').trim()
-      const cumpleanos = String(body.cumpleanos || '').trim()
-      if (!correo) return respond({ error: 'Falta el correo de la persona.' }, 400)
-
-      const persona = { nombre, correo, telefono, cumpleanos }
-      const resultados = []
-
-      resultados.push(await intentar('contactos_dani', () =>
-        agregarContacto(tokenPrincipal, persona)))
-
-      resultados.push(await intentar('drive', () => compartirCarpeta(tokenPrincipal, correo)))
-      resultados.push(await intentar('calendario', () => darAccesoCalendario(tokenPrincipal, correo)))
-
-      const completo = resultados.every((r) => r.ok)
-      const pasos: Record<string, unknown> = {}
-      for (const r of resultados) pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
-
-      const { error: errGuardar } = await admin.from('altas_procesadas').insert({
-        correo, nombre: nombre || null, telefono: telefono || null,
-        pasos, completo, procesado_por: quien.user.id,
-      })
-      if (errGuardar) {
-        // Los pasos de Google ya se hicieron; que no se pueda guardar la
-        // constancia no debe leerse como que el alta falló.
-        return respond({ ok: completo, resultados, aviso: 'No se pudo guardar el registro: ' + errGuardar.message })
-      }
-
-      return respond({ ok: completo, resultados })
-    }
-
-    // ── Marcar manual: para quienes ya se dieron de alta antes de este
-    // proceso (o por fuera de él). No toca las APIs de Google - solo
-    // asienta que ya están, para no duplicar el contacto ni reenviarle a
-    // alguien que ya tiene acceso los avisos de "se compartió contigo".
-    if (accion === 'marcar_manual') {
-      const personas = await leerHoja(tokenPrincipal)
-
-      const { data: yaHechas } = await admin
-        .from('altas_procesadas')
-        .select('correo, completo')
-
-      const completos = new Set<string>()
-      for (const a of yaHechas || []) {
-        if (a.completo) completos.add(String(a.correo).toLowerCase())
-      }
-
-      const pendientes = personas.filter((p) => !completos.has(p.correo.toLowerCase()))
-      if (!pendientes.length) return respond({ ok: true, marcados: 0 })
-
-      const pasosManual = {
-        contactos_dani: { ok: true, detalle: 'Marcado manualmente (ya estaba dado de alta antes de este proceso)' },
-        drive: { ok: true, detalle: 'Marcado manualmente' },
-        calendario: { ok: true, detalle: 'Marcado manualmente' },
-      }
-
-      const { error: errGuardar } = await admin.from('altas_procesadas').insert(
-        pendientes.map((p) => ({
-          correo: p.correo, nombre: p.nombre || null, telefono: p.telefono || null,
-          pasos: pasosManual, completo: true, procesado_por: quien.user.id,
+    // ── Dar o quitar accesos ────────────────────────────────
+    //
+    // Una sola acción para todo lo que toca Google, en vez de una por
+    // combinación: se le dice a QUIÉN (una persona o varias), QUÉ pasos
+    // (uno, dos o los tres) y si es dar o quitar. Con eso se cubren el
+    // botón de un acceso suelto, el de los tres de golpe, el de quitar
+    // todo, y la selección de varias personas a la vez.
+    //
+    // Lo que hay en Google se lee UNA vez para toda la corrida, aunque
+    // sean 80 personas: son 3 llamadas, no 3 por persona.
+    if (accion === 'acceso') {
+      const quitar = body.quitar === true
+      const pasos = pasosPedidos(body.pasos)
+      const gente = (Array.isArray(body.personas) ? body.personas : [body])
+        .map((p: Record<string, unknown>) => ({
+          nombre: String(p.nombre || '').trim(),
+          correo: limpiarCorreo(p.correo),
+          telefono: String(p.telefono || '').trim(),
+          cumpleanos: String(p.cumpleanos || '').trim(),
+          grupo: String(p.grupo || 'activos'),
         }))
-      )
-      if (errGuardar) return respond({ error: 'No se pudo guardar: ' + errGuardar.message }, 500)
+        .filter((p: DatosPersona) => p.correo)
 
-      return respond({ ok: true, marcados: pendientes.length })
+      if (!gente.length) return respond({ error: 'No se recibió a nadie con correo.' }, 400)
+
+      const tokenContactos = await getTokenContactos()
+      const estado = await leerEstadoGoogle(tokenPrincipal, tokenContactos)
+
+      const hechas = []
+      for (const persona of gente) {
+        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, tokenContactos, persona, estado)
+        const completo = resultados.every((r) => r.ok)
+        const detalle: Record<string, unknown> = {}
+        for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
+
+        // La constancia solo se guarda al DAR los tres: es lo que la
+        // pantalla lee como "esta persona ya quedó". Quitar uno suelto no
+        // debe contar como un alta nueva.
+        if (!quitar && pasos.length === PASOS.length) {
+          await admin.from('altas_procesadas').insert({
+            correo: persona.correo,
+            nombre: persona.nombre || null,
+            telefono: persona.telefono || null,
+            pasos: detalle,
+            completo,
+            procesado_por: quien.user.id,
+          })
+        }
+
+        hechas.push({ correo: persona.correo, nombre: persona.nombre, ok: completo, resultados })
+      }
+
+      // El estado de después, para que la pantalla se repinte con lo que
+      // de verdad quedó en Google en vez de suponerlo.
+      const estadoFinal = gente.map((p: DatosPersona) => {
+        const c = p.correo.toLowerCase()
+        return {
+          correo: p.correo,
+          contactos: estado.contactos.has(c),
+          drive: estado.drive.has(c),
+          calendario: estado.calendario.has(c),
+        }
+      })
+
+      return respond({ ok: hechas.every((h) => h.ok), hechas, estado: estadoFinal })
     }
 
-    // ── Verificar: revisa en Google (no en la base de datos) quién ya
-    // está en cada una de las tres plataformas, para poder comparar
-    // contra lo que dice el sistema. No cambia nada, solo informa.
+    // ── Revisar accesos: quién tiene qué, en Google ──────────
+    //
+    // Revisa TODO el libro, no solo la hoja de activos: los correos de
+    // back office y células también son gente a la que se le dan estos
+    // accesos, y antes no había forma de verlos aquí.
     if (accion === 'verificar') {
-      const personas = await leerHoja(tokenPrincipal)
+      const hojas = await detectarHojas(tokenPrincipal)
+      const valores = await leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja)))
 
-      const [contactos, drive, calendario] = await Promise.all([
-        listarContactos(tokenPrincipal),
-        listarPermisosDrive(tokenPrincipal),
-        listarAclCalendario(tokenPrincipal),
-      ])
+      const tokenContactos = await getTokenContactos()
+      const estado = await leerEstadoGoogle(tokenPrincipal, tokenContactos)
 
       const { data: yaHechas } = await admin
-        .from('altas_procesadas')
-        .select('correo, completo')
+        .from('altas_procesadas').select('correo, completo')
 
       const completosBD = new Set<string>()
       for (const a of yaHechas || []) {
         if (a.completo) completosBD.add(String(a.correo).toLowerCase())
       }
 
-      return respond({
-        personas: personas.map((p) => {
-          const correo = p.correo.toLowerCase()
-          return {
+      // Un correo puede estar en dos hojas (alguien de células que
+      // también sale en activos); se queda con el primero, y las bajas
+      // van al final para que no le ganen el lugar a la hoja buena.
+      const vistos = new Set<string>()
+      const personas = []
+      for (const [i, h] of hojas.entries()) {
+        for (const p of parsearPersonas(valores[i])) {
+          const c = p.correo.toLowerCase()
+          if (!c || vistos.has(c)) continue
+          vistos.add(c)
+          personas.push({
             correo: p.correo,
             nombre: p.nombre,
-            contactos: contactos.has(correo),
-            drive: drive.has(correo),
-            calendario: calendario.has(correo),
-            enSistema: completosBD.has(correo),
-          }
-        }),
-      })
-    }
-
-    // ── Corregir: a una sola persona le completa nada más el acceso que
-    // le falta (según lo que hay de verdad en Google), sin repetir lo
-    // que ya tiene.
-    if (accion === 'corregir') {
-      const correo = limpiarCorreo(body.correo)
-      if (!correo) return respond({ error: 'Falta el correo de la persona.' }, 400)
-
-      const personas = await leerHoja(tokenPrincipal)
-      const persona = personas.find((p) => p.correo.toLowerCase() === correo.toLowerCase())
-      if (!persona) return respond({ error: 'No se encontró a esa persona en la hoja.' }, 404)
-
-      const [contactos, drive, calendario] = await Promise.all([
-        listarContactos(tokenPrincipal),
-        listarPermisosDrive(tokenPrincipal),
-        listarAclCalendario(tokenPrincipal),
-      ])
-
-      const resultados = await corregirPersona(tokenPrincipal, persona, contactos, drive, calendario)
-      const completo = resultados.every((r) => r.ok)
-      const pasos: Record<string, unknown> = {}
-      for (const r of resultados) pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
-
-      const { error: errGuardar } = await admin.from('altas_procesadas').insert({
-        correo: persona.correo, nombre: persona.nombre || null, telefono: persona.telefono || null,
-        pasos, completo, procesado_por: quien.user.id,
-      })
-      if (errGuardar) {
-        return respond({ ok: completo, resultados, aviso: 'No se pudo guardar el registro: ' + errGuardar.message })
-      }
-
-      return respond({ ok: completo, resultados })
-    }
-
-    // ── Corregir todos: igual que "corregir" pero para cada persona de
-    // la hoja a la que le falte algo. Los tres listados de Google se
-    // piden una sola vez y se reusan para todos, no uno por persona.
-    if (accion === 'corregir_todos') {
-      const personas = await leerHoja(tokenPrincipal)
-
-      const [contactos, drive, calendario] = await Promise.all([
-        listarContactos(tokenPrincipal),
-        listarPermisosDrive(tokenPrincipal),
-        listarAclCalendario(tokenPrincipal),
-      ])
-
-      const faltantes = personas.filter((p) => {
-        const c = p.correo.toLowerCase()
-        return !contactos.has(c) || !drive.has(c) || !calendario.has(c)
-      })
-
-      const fallas: { correo: string; paso: string; detalle: string }[] = []
-
-      for (const persona of faltantes) {
-        const resultados = await corregirPersona(tokenPrincipal, persona, contactos, drive, calendario)
-        const completo = resultados.every((r) => r.ok)
-        const pasos: Record<string, unknown> = {}
-        for (const r of resultados) {
-          pasos[r.paso] = { ok: r.ok, detalle: r.detalle }
-          if (!r.ok) fallas.push({ correo: persona.correo, paso: r.paso, detalle: r.detalle })
+            grupo: h.clave,
+            grupoTitulo: h.titulo,
+            telefono: p.telefono,
+            cumpleanos: p.cumpleanos,
+            contactos: estado.contactos.has(c),
+            drive: estado.drive.has(c),
+            calendario: estado.calendario.has(c),
+            enSistema: completosBD.has(c),
+          })
         }
-
-        // Si se acaba de crear el contacto, se anota aquí mismo para que
-        // a la siguiente persona de esta misma corrida no la vuelva a
-        // revisar contra un listado ya desactualizado.
-        if (resultados[0]?.ok) contactos.add(persona.correo.toLowerCase())
-
-        await admin.from('altas_procesadas').insert({
-          correo: persona.correo, nombre: persona.nombre || null, telefono: persona.telefono || null,
-          pasos, completo, procesado_por: quien.user.id,
-        })
       }
 
-      return respond({ ok: fallas.length === 0, corregidos: faltantes.length, fallas })
+      return respond({ personas })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)
