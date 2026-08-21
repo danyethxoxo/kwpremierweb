@@ -35,17 +35,46 @@
 
 :root {
   /* ── El lienzo ──
-     Gris muy claro con un aliento de rosa, no gris neutro. Es lo que
-     ata el fondo al guinda de la marca sin que se note como "color":
-     al lado de una tarjeta blanca se lee tibio, no frío. */
-  --lienzo: #f6f3f3;
+     Gris de verdad, no blanco sucio: es lo que deja que una tarjeta
+     blanca se vea blanca. Con el fondo casi del mismo tono que la
+     tarjeta, el borde tiene que hacer todo el trabajo de separarlas y el
+     resultado se ve plano.
+
+     Lleva un aliento de rosa para atarlo al guinda de la marca. No se
+     nota como color; se nota al quitarlo, porque el gris neutro deja la
+     pantalla fría. */
+  --lienzo: #eceaea;
 
   --bg:
-    radial-gradient(58% 44% at 12% 0%, rgba(198,32,39,0.055) 0%, rgba(198,32,39,0) 62%),
-    radial-gradient(52% 42% at 96% 8%, rgba(138,0,0,0.04) 0%, rgba(138,0,0,0) 60%),
-    linear-gradient(180deg, #faf8f8 0%, var(--lienzo) 52%, #f2eeee 100%);
+    radial-gradient(58% 44% at 12% 0%, rgba(198,32,39,0.05) 0%, rgba(198,32,39,0) 62%),
+    radial-gradient(52% 42% at 96% 8%, rgba(138,0,0,0.035) 0%, rgba(138,0,0,0) 60%),
+    linear-gradient(180deg, #efeded 0%, var(--lienzo) 46%, #e3e0e0 100%);
 
+  /* ── La textura ──
+     Una retícula de puntos, tan tenue que de cerca casi no se ve y de
+     lejos solo se siente: el fondo deja de leerse como una plancha de
+     color y pasa a leerse como papel. Es la diferencia entre "limpio" y
+     "vacío".
+
+     Va como puntos y no como cuadrícula de cuaderno a propósito: las
+     líneas continuas compiten con los bordes de las tarjetas y con los
+     renglones de las tablas, y entonces sí se nota, que es justo lo que
+     no se quiere.
+
+     El paso es más chico en la tarjeta que en el fondo: sobre una
+     superficie chica, la misma separación se vería como cuatro puntos
+     sueltos en vez de como textura. */
+  --puntos-lienzo:  radial-gradient(circle, rgba(46,26,26,0.07) 0.9px, transparent 1px);
+  --puntos-tarjeta: radial-gradient(circle, rgba(46,26,26,0.032) 0.8px, transparent 1px);
+  --paso-lienzo: 22px;
+  --paso-tarjeta: 16px;
+
+  /* ── La tarjeta ──
+     Blanca arriba y apenas gris abajo. La caída es de dos puntos de
+     luminosidad, nada más: lo suficiente para que la superficie tenga
+     dirección y no se lea como recorte de papel pegado. */
   --card: #ffffff;
+  --card-degradado: linear-gradient(163deg, #ffffff 0%, #fdfcfc 44%, #f6f4f4 100%);
 
   /* El borde es de un pelo y casi no se ve: sobre claro, lo que separa
      una tarjeta del fondo es la sombra, no la línea. Un borde marcado
@@ -90,6 +119,20 @@
    celular, y en negro se veía como si la página se acabara. */
 html { background-color: var(--lienzo); }
 
+/* La capa del fondo se vuelve a declarar entera, y no solo con --bg,
+   porque los puntos necesitan su propio tamaño de repetición. Con
+   `background: var(--bg)` el tamaño le tocaría igual a todas las capas,
+   y los degradados de color quedarían recortados en cuadritos de 22px. */
+body::before {
+  background-image:
+    var(--puntos-lienzo),
+    radial-gradient(58% 44% at 12% 0%, rgba(198,32,39,0.05) 0%, rgba(198,32,39,0) 62%),
+    radial-gradient(52% 42% at 96% 8%, rgba(138,0,0,0.035) 0%, rgba(138,0,0,0) 60%),
+    linear-gradient(180deg, #efeded 0%, var(--lienzo) 46%, #e3e0e0 100%);
+  background-size: var(--paso-lienzo) var(--paso-lienzo), 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+}
+
 /* ── El texto que colgaba sobre el fondo oscuro ──
    Iba en blanco porque atrás había guinda. Ahora atrás hay claro, así
    que vuelve al color de siempre. Se hace aquí, en el sistema, y no
@@ -104,20 +147,24 @@ html { background-color: var(--lienzo); }
    blanca sólida con su borde de un pelo. El blur se queda porque el
    contenido sí pasa por debajo al hacer scroll, y sin él se ve el texto
    cortándose contra el borde de la pastilla. */
-header.kw-header {
-  background: rgba(255,255,255,0.86);
-  border: 1px solid var(--border);
-  box-shadow: var(--sombra-2);
-}
+header.kw-header,
 header.kw-header .kw-header-capsula,
 header.kw-header .kw-header-sueltos > * {
-  background: rgba(255,255,255,0.86);
+  /* El mismo degradado de las tarjetas, para que la barra se lea como
+     una pieza más del juego y no como una franja aparte. Sin puntos: en
+     una tira de 52px de alto la retícula no alcanza a leerse como
+     textura, solo ensucia. */
+  background-image: var(--card-degradado);
+  background-color: rgba(255,255,255,0.9);
   border: 1px solid var(--border);
   box-shadow: var(--sombra-2);
 }
 /* Partido, el <header> es solo el renglón que acomoda las dos piezas:
    el fondo lo ponen ellas. */
-header.kw-header-partido { background: none; border: 0; box-shadow: none; }
+header.kw-header-partido {
+  background: none; background-image: none;
+  border: 0; box-shadow: none;
+}
 
 .hamburger-btn { color: var(--text); }
 .hamburger-btn:hover { color: var(--red); }
@@ -130,7 +177,12 @@ header.kw-header-partido { background: none; border: 0; box-shadow: none; }
 .kw-fila,
 .tabla-envios,
 .hover-card {
-  background: var(--card);
+  /* Los puntos van encima del degradado, no debajo: al revés quedarían
+     tapados por el blanco de la primera capa y no se verían. */
+  background-image: var(--puntos-tarjeta), var(--card-degradado);
+  background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-color: var(--card);
   border: 1px solid var(--border);
   box-shadow: var(--sombra-1);
   /* El vidrio pedía blur para dejar pasar el fondo. Una tarjeta sólida
@@ -142,8 +194,11 @@ header.kw-header-partido { background: none; border: 0; box-shadow: none; }
 .kw-fila.abierta { box-shadow: var(--sombra-2); }
 .kw-fila:hover { box-shadow: var(--sombra-2); }
 
+/* Al pasar el cursor la tarjeta se aplana a blanco parejo y se levanta:
+   es lo que la despega del resto de la cuadrícula. */
 .hover-card:hover {
-  background: var(--card);
+  background-image: none;
+  background-color: #fff;
   border-color: rgba(23,10,10,0.14);
   box-shadow: var(--sombra-2);
   transform: translateY(-3px);
