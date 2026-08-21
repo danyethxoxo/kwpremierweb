@@ -918,7 +918,7 @@
       if (b) detalle += '\n\nSe marcarán como BAJA (no se borra nada, su avance se conserva):\n· ' + previa.bajas.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (b > 12 ? '\n· …y ' + (b - 12) + ' más' : '');
       detalle += avisoOmitidos;
 
-      if (!confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicaría: ' + resumen.join(', ') + '.' + detalle + '\n\n¿Aplicar estos cambios?')) return;
+      if (!(await window.kwUI.confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicaría: ' + resumen.join(', ') + '.' + detalle + '\n\n¿Aplicar estos cambios?'))) return;
 
       var hecho = await llamarSync(true);
       await cargar();
