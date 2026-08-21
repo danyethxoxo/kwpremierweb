@@ -5,7 +5,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Panel</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
-<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }  /* ── Accesos dentro de la tarjeta ────────────────────────────
+     El botón de la derecha no es un <button>: la cabeza de la fila ya
+     es el botón que abre la tarjeta, y uno dentro de otro no es HTML
+     válido. Picarlo abre la tarjeta, que es donde están los accesos. */
+  .btn-abrir-accesos {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 13px; border-radius: var(--r-pastilla);
+    background: #fff; border: 1.5px solid var(--border);
+    font-size: 12px; font-weight: 700; color: var(--red); white-space: nowrap;
+    transition: background var(--t-rapido), border-color var(--t-rapido);
+  }
+  .kw-fila-cabeza:hover .btn-abrir-accesos { background: #fff5f5; border-color: var(--red); }
+  .btn-abrir-accesos.listo { color: #1a7a1a; }
+  .btn-abrir-accesos svg { width: 13px; height: 13px; }
+
+  .accesos { margin-top: var(--sp-3); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
+  .accesos-titulo {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px;
+  }
+  .accesos-acciones { display: flex; gap: 7px; margin-left: auto; }
+  .acceso-todos { gap: 5px; }
+  .acceso-todos svg { width: 12px; height: 12px; }
+  .acceso-todos.dar { color: #1a7a1a; }
+  .acceso-todos.quitar { color: var(--red); }
+
+  .acceso {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+  }
+  .acceso + .acceso { border-top: 1px solid var(--border); }
+  .acceso-icono { flex-shrink: 0; display: flex; }
+  .acceso-icono svg { width: 15px; height: 15px; }
+  .acceso.si .acceso-icono { color: #1a7a1a; }
+  .acceso.no .acceso-icono { color: #8d9299; }
+  .acceso.esperando .acceso-icono { color: var(--muted); }
+  .acceso-texto { display: flex; flex-direction: column; min-width: 0; }
+  .acceso-nombre { font-size: 13px; font-weight: 700; }
+  .acceso-estado { font-size: 11.5px; color: var(--muted); }
+  .acceso-btn { margin-left: auto; flex-shrink: 0; }
+  .acceso-btn.quitar { color: var(--red); }
+  .acceso-btn.dar { color: #1a7a1a; }
+
+  /* ── Modal de Revisar Accesos ────────────────────────────────
+     Arriba se quedan fijos el buscador, la selección y el aviso; solo
+     la lista hace scroll, así lo de arriba sigue a la mano sin tener
+     que subir hasta el principio. */
+  #modal-verificar .modal-box {
+    max-width: 680px; max-height: 86vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .verif-cabeza { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sp-3); flex-shrink: 0; }
+  .verif-cabeza .buscador { flex: 1; max-width: none; }
+  .verif-cerrar {
+    width: 34px; height: 34px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; border: 1.5px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer;
+    transition: background var(--t-rapido), color var(--t-rapido);
+  }
+  .verif-cerrar:hover { background: #fdeaea; color: var(--red); }
+  .verif-cerrar svg { width: 15px; height: 15px; }
+
+  .verif-todos-marca {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    font-size: 12.5px; color: var(--muted); font-weight: 700;
+    padding: 0 2px var(--sp-2); cursor: pointer;
+  }
+  .verif-todos-marca input, .verif-marca input {
+    width: 16px; height: 16px; accent-color: var(--red); cursor: pointer;
+  }
+
+  .verif-barra-seleccion {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
+    padding: 9px 12px; margin-bottom: var(--sp-2);
+    border-radius: var(--r-campo); background: #fff5f5; border: 1px solid #f0cfcf;
+    font-size: 12.5px; font-weight: 700; color: var(--red);
+  }
+  .verif-barra-seleccion .verif-todo { margin-left: 0; width: auto; padding: 0 11px; gap: 6px; }
+
+  #verificar-msg { flex-shrink: 0; }
+  /* Al final de la lista el scroll no se encadena a la página de atrás,
+     que era lo que movía el header estando en el modal. */
+  .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .verif-scroll.ocupado { opacity: 0.55; pointer-events: none; }
+
+  /* Tarjetas apiladas en vez de tabla: con tantos datos por persona, una
+     tabla no cabe sin scroll lateral en pantallas angostas. */
+  .verif-lista {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;
+  }
+  .verif-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; }
+  .verif-item + .verif-item { border-top: 1px solid var(--border); }
+  .verif-item.marcado { background: #fff7f7; }
+  .verif-marca { display: flex; padding-top: 3px; }
+  .verif-cuerpo { flex: 1; min-width: 0; }
+  .verif-nombre { display: block; font-weight: 700; font-size: 13.5px; }
+  .verif-correo { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .verif-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+  /* Cada acceso es su propio botón: verde si lo tiene (picarlo lo quita),
+     apagado si no (picarlo lo da). */
+  .verif-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: var(--r-pastilla);
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    white-space: nowrap; cursor: pointer;
+    transition: background var(--t-rapido), border-color var(--t-rapido), color var(--t-rapido);
+  }
+  .verif-chip svg { width: 11px; height: 11px; }
+  .verif-chip.si { color: #1a7a1a; border-color: #cfe9d2; background: #f2fbf3; }
+  .verif-chip.si:hover { border-color: var(--red); color: var(--red); background: #fdeaea; }
+  .verif-chip.no { color: #8d9299; }
+  .verif-chip.no:hover:not(:disabled) { border-color: #1a7a1a; color: #1a7a1a; background: #f2fbf3; }
+  .verif-chip:disabled { opacity: 0.45; cursor: default; }
+
+  .verif-acciones { display: flex; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+  .verif-todo {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: background var(--t-rapido), border-color var(--t-rapido);
+  }
+  .verif-todo svg { width: 14px; height: 14px; }
+  .verif-todo.dar { color: #1a7a1a; }
+  .verif-todo.dar:hover:not(:disabled) { background: #f2fbf3; border-color: #1a7a1a; }
+  .verif-todo.quitar { color: var(--red); }
+  .verif-todo.quitar:hover:not(:disabled) { background: #fdeaea; border-color: var(--red); }
+  .verif-todo:disabled { opacity: 0.35; cursor: default; }
+
+  @media (max-width: 640px) {
+    .verif-item { flex-wrap: wrap; }
+    .verif-acciones { margin-left: auto; }
+  }
+</style>
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
@@ -163,7 +300,9 @@
      dejaban un plano gris vacío a la derecha de "Células". El max-width
      es lo que las deja deslizarse de lado en celular en vez de empujar
      la página. */
-  #asesores-tabs { margin-bottom: var(--sp-4); width: max-content; max-width: 100%; }
+  /* La misma separación arriba que abajo: pegado a la tarjeta de arriba
+     y despegado de la lista, el menú se leía como parte de la tarjeta. */
+  #asesores-tabs { margin: var(--sp-4) 0; width: max-content; max-width: 100%; }
   #asesores-tabs:empty { display: none; }
 
   /* La lista cuelga del panel, sin tarjeta detrás: cada renglón ya es
@@ -203,91 +342,18 @@
     font-size: 13px; font-weight: 700; font-family: inherit;
     transition: background 0.15s, border-color 0.15s, transform 0.12s;
   }
-  /* :not(.btn-rojo) a propósito: ".btn:hover" (dos selectores) es más
-     específico que ".btn-rojo" solo (uno), así que sin este freno, al
-     pasar el mouse por un botón rojo este "background: #fafafa" le
-     ganaba al degradado y el botón se veía en blanco justo mientras
-     estaba encima. El brillo del hover en rojo lo pone .btn-rojo:hover,
-     con la sombra, sin tocar el background. */
-  .btn:hover:not(.btn-rojo) { background: #fafafa; }
+  .btn:hover:not(:disabled) { background: #fafafa; }
   .btn:active { transform: translateY(1px) scale(0.98); }
   .btn:disabled { opacity: 0.55; cursor: default; }
   .btn svg { width: 15px; height: 15px; }
-  .btn-rojo {
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-    color: var(--red); border: none;
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38), 0 5px 16px rgba(0,0,0,0.16);
-  }
-  .btn-rojo:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
-  .btn-rojo:disabled { background: #e2e2e0; color: #999; box-shadow: none; }
   .btn-mini { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
 
-  .estado-alta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .estado-alta.pendiente { color: var(--muted); }
-  .estado-alta.listo { color: #1a7a1a; }
-  .estado-alta.parcial { color: #93600a; }
-  .estado-alta.baja { color: #8d9299; }
+  /* Lo que va en lugar del botón en la hoja de bajas. */
+  .estado-alta {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; white-space: nowrap; color: #8d9299;
+  }
   .estado-alta svg { width: 14px; height: 14px; }
-
-  /* Cerrar y Corregir todos se quedan fijos arriba (junto con el
-     título): solo la lista de abajo hace scroll, así los botones siguen
-     a la mano sin tener que bajar hasta el final. */
-  #modal-verificar .modal-box {
-    max-width: 620px; max-height: 85vh;
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .verif-acciones-arriba { margin: 2px 0 12px; flex-shrink: 0; }
-  #verificar-msg { flex-shrink: 0; }
-  /* Al final de la lista el scroll no se encadena a la página de atrás,
-     que era lo que movía el header estando en el modal. */
-  .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-
-  /* Tarjetas apiladas en vez de tabla: con tantos datos por persona, una
-     tabla no cabe sin scroll lateral en pantallas angostas. Apiladas,
-     todo se lee sin importar el ancho. */
-  .verif-lista {
-    border: 1px solid rgba(255,255,255,0.82); border-radius: 12px; overflow: hidden;
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-  }
-  .verif-item { padding: 12px 14px; }
-  .verif-item + .verif-item { border-top: 1px solid var(--border); }
-  .verif-nombre { display: block; font-weight: 700; font-size: 13.5px; }
-  /* El botón cierra la fila pegado a la derecha; con margin-left:auto se
-     queda ahí aunque las etiquetas se acomoden en varios renglones. */
-  .verif-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
-  .verif-chips .btn-mini { margin-left: auto; }
-  /* Etiquetas de lo que ya tiene el asesor: es información, no botones,
-     así que van sin pastilla, solo el texto con su color. */
-  .verif-chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11.5px; font-weight: 700; white-space: nowrap;
-  }
-  .verif-chip svg { width: 11px; height: 11px; }
-  .verif-chip.si { color: #1a7a1a; }
-  .verif-chip.no { color: #8d9299; }
-
-  /* Resultado de cada paso del alta, en el modal */
-  .pasos { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 6px; }
-  .paso {
-    display: flex; gap: 11px; align-items: flex-start;
-    padding: 12px 14px; border-radius: 11px; border: 1px solid var(--border);
-    background: #fafafa;
-  }
-  .paso.ok { background: #f2fbf3; border-color: #cfe9d2; }
-  .paso.mal { background: #fdf2f2; border-color: #f0cfcf; }
-  .paso-icono { flex-shrink: 0; margin-top: 1px; }
-  .paso-icono svg { width: 17px; height: 17px; }
-  .paso.ok .paso-icono { color: #1a7a1a; }
-  .paso.mal .paso-icono { color: var(--red); }
-  .paso.esperando .paso-icono { color: var(--muted); }
-  /* Son <span>, así que sin display:block el nombre del paso y su
-     detalle salen pegados en el mismo renglón. */
-  .paso-nombre { display: block; font-size: 13.5px; font-weight: 700; }
-  .paso-detalle { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 2px; word-break: break-word; }
 
   @media (max-width: 640px) {
     /* El contador baja a su propio renglón: al lado del texto dejaba la
@@ -370,7 +436,6 @@
             <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div>
             <div>
               <h2>Asesores del Market Center</h2>
-              <div class="kw-card-sub">Se leen del libro de asesores, una lista por hoja. Dar de alta agrega a la persona a Contactos, Drive y Calendario; si un paso falla, los demás igual se completan y aquí se dice cuál.</div>
             </div>
             <div class="resumen-activos">
               <span class="num" id="asesores-num">·</span>
@@ -386,14 +451,8 @@
             <span class="crece"></span>
             <div class="barra-botones">
             <button type="button" class="btn" id="btn-verificar" onclick="abrirVerificacion()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <span class="btn-txt">Comprobar<span class="btn-txt-largo"> en Google</span></span>
-            </button>
-            <button type="button" class="btn" id="btn-marcar-todos"
-              data-kw-confirmar="¿Marcar a todos como dados de alta?"
-              onclick="marcarTodosManual()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-              <span class="btn-txt">Marcar todos<span class="btn-txt-largo"> como dados de alta</span></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              <span class="btn-txt">Revisar<span class="btn-txt-largo"> Accesos</span></span>
             </button>
             <button type="button" class="btn" id="btn-recargar" onclick="cargarAsesores()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -402,8 +461,7 @@
             </div>
           </div>
 
-          <div class="msg" id="marcar-msg"></div>
-          <div class="msg" id="omitidos-msg"></div>
+          <div class="msg" id="asesores-msg"></div>
         </div>
 
         <!-- Una pestaña por hoja del libro. Las arma cargarAsesores() con
@@ -643,35 +701,36 @@
   </div>
 
 
-  <!-- Modal: confirmar y ver el resultado del alta -->
-  <div id="modal-alta" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-      <h3 id="alta-titulo">Dar de alta</h3>
-      <p class="modal-sub" id="alta-sub"></p>
-      <div class="pasos" id="alta-pasos"></div>
-      <div class="msg" id="alta-msg"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn-modal-cancelar" id="alta-btn-cerrar" onclick="cerrarModalAlta()">Cancelar</button>
-        <button type="button" class="btn-modal-confirmar" id="alta-btn" onclick="ejecutarAlta()">
-          <span class="kw-btn-cont" id="alta-btn-cont">Dar de alta</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: comprobar en Google quién ya está en cada plataforma -->
+  <!-- Modal: revisar y mover los accesos de Google -->
   <div id="modal-verificar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <h3>Comprobar en Google</h3>
-      <p class="modal-sub">Revisa directo en Contactos, Drive y Calendario a los asesores activos. "Corregir" solo completa lo que le falte a esa persona; lo que ya tenga no se vuelve a tocar.</p>
-      <div class="modal-actions verif-acciones-arriba">
-        <button type="button" class="btn-modal-cancelar" onclick="window.kwUI.cerrarModal('modal-verificar')">Cerrar</button>
-        <button type="button" class="btn-modal-confirmar" id="btn-corregir-todos" style="display:none;"
-          data-kw-confirmar="¿Corregir a todos los pendientes?"
-          onclick="corregirTodos()">
-          Corregir todos los accesos
+      <div class="verif-cabeza">
+        <div class="buscador">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="verificar-buscador" placeholder="Buscar por nombre o correo…" />
+        </div>
+        <button type="button" class="verif-cerrar" id="verif-cerrar" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
+
+      <label class="verif-todos-marca">
+        <input type="checkbox" id="verif-marcar-todos" />
+        <span>Seleccionar todos los que se ven</span>
+      </label>
+
+      <div class="verif-barra-seleccion" id="verif-seleccion" style="display:none;">
+        <span id="verif-seleccion-num"></span>
+        <button type="button" class="verif-todo dar" id="verif-dar-todos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Dar todos los accesos
+        </button>
+        <button type="button" class="verif-todo quitar" id="verif-quitar-todos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Quitar todos los accesos
+        </button>
+      </div>
+
       <div class="msg" id="verificar-msg"></div>
       <div id="verificar-cont" class="verif-scroll"></div>
     </div>
@@ -1265,25 +1324,29 @@
   // ══════════════════════════════════════════════════════════════
   // El libro de asesores trae una hoja por grupo: activos, bajas, back
   // office y células. La función devuelve una lista por hoja y aquí cada
-  // una es una pestaña. Dar de alta (Contactos, Drive, Calendario) solo
-  // aplica a quien sigue en el Market Center, así que la hoja de bajas
-  // se enseña de solo lectura.
+  // una es una pestaña.
+  //
+  // Los tres accesos (Contactos, Drive, Calendario) se dan y se quitan
+  // uno por uno o los tres de golpe, y lo que se enseña es lo que de
+  // verdad hay en Google, no lo que quedó apuntado en la base: la base
+  // dice lo que se hizo desde aquí, Google dice cómo está hoy.
   const ALTA_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
-  const NOMBRE_PASO = {
-    contactos_dani: 'Contactos de dani.guerrero@kwmexico.mx',
-    drive: 'Carpeta de Drive (lector)',
-    calendario: 'Calendario de KW Premier',
-  };
-  const ORDEN_PASOS = ['contactos_dani', 'drive', 'calendario'];
+  const ACCESOS = [
+    { clave: 'contactos', nombre: 'Contactos' },
+    { clave: 'drive', nombre: 'Drive' },
+    { clave: 'calendario', nombre: 'Calendario' },
+  ];
 
   const ICONO_LISTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-  const ICONO_ALERTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+  const ICONO_EQUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
   const ICONO_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
 
   let gruposAsesores = [];
   let grupoActivo = '';
-  let personaActual = null;
+  // correo -> { contactos, drive, calendario }. Lo que Google contesta.
+  let estadoGoogle = {};
+  let estadoGoogleListo = false;
 
   async function llamarAlta(cuerpo) {
     const { data: sesion } = await window.kwSupabase.auth.getSession();
@@ -1309,6 +1372,18 @@
   // Quien ya se fue del Market Center no recibe accesos nuevos, así que
   // esa hoja va de solo lectura.
   function grupoDaDeAlta(clave) { return clave !== 'bajas'; }
+
+  function accesosDe(correo) {
+    return estadoGoogle[String(correo || '').toLowerCase()] || null;
+  }
+
+  function personaPorCorreo(correo) {
+    for (const g of gruposAsesores) {
+      const p = g.personas.find(function (x) { return x.correo === correo; });
+      if (p) return { persona: p, grupo: g };
+    }
+    return null;
+  }
 
   // ── Las pestañas de cada hoja ──
   // Se rearman solo cuando cambia el juego de hojas (alguien agregó o
@@ -1349,30 +1424,10 @@
     });
   }
 
-  // Los botones de arriba trabajan sobre la hoja de activos (así la lee
-  // la función), así que en las demás pestañas no se enseñan en vez de
-  // dejarlos puestos y que hagan algo que no es lo que se ve.
   function actualizarBarra() {
     const g = grupoDe(grupoActivo);
-    const soloActivos = grupoActivo === 'activos';
-
-    const btnVerificar = document.getElementById('btn-verificar');
-    btnVerificar.style.display = soloActivos ? '' : 'none';
-
-    const btnTodos = document.getElementById('btn-marcar-todos');
-    const cajaTodos = btnTodos.closest('.kw-confirmar') || btnTodos;
-    cajaTodos.style.display = soloActivos ? '' : 'none';
-    if (soloActivos) {
-      const pendientes = (g ? g.personas : []).filter(function (p) {
-        return p.correo && !(p.alta && p.alta.completo);
-      }).length;
-      btnTodos.disabled = pendientes === 0;
-    }
-
     document.getElementById('asesores-num').textContent = String(visiblesDe(g).length);
     document.getElementById('asesores-etiqueta').textContent = g ? g.titulo.toLowerCase() : 'en la lista';
-
-    pintarOmitidos(g && grupoDaDeAlta(g.clave) ? g.omitidos || [] : []);
   }
 
   function filtroBuscador() {
@@ -1380,46 +1435,77 @@
     return el ? el.value.trim().toLowerCase() : '';
   }
 
+  function coincide(p, filtro) {
+    return (p.nombre || '').toLowerCase().includes(filtro)
+      || (p.correo || '').toLowerCase().includes(filtro)
+      || (p.kwid || '').toLowerCase().includes(filtro)
+      || (p.telefono || '').toLowerCase().includes(filtro);
+  }
+
   function visiblesDe(g) {
     if (!g) return [];
     const filtro = filtroBuscador();
-    if (!filtro) return g.personas;
-    return g.personas.filter(function (p) {
-      return (p.nombre || '').toLowerCase().includes(filtro)
-        || (p.correo || '').toLowerCase().includes(filtro)
-        || (p.kwid || '').toLowerCase().includes(filtro)
-        || (p.telefono || '').toLowerCase().includes(filtro);
-    });
+    return filtro ? g.personas.filter(function (p) { return coincide(p, filtro); }) : g.personas;
   }
 
-  function estadoHtml(alta) {
-    if (!alta) return '<span class="estado-alta pendiente">' + ICONO_RELOJ + 'Sin dar de alta</span>';
-    if (alta.completo) return '<span class="estado-alta listo">' + ICONO_LISTO + 'Dado de alta</span>';
-    return '<span class="estado-alta parcial">' + ICONO_ALERTA + 'Quedó a medias</span>';
+  // ── La tarjeta de cada persona ──
+  // Cerrada trae el nombre, el correo y el botón; abierta, sus datos y
+  // los tres accesos con su estado, cada uno con su propio botón.
+
+  // El bloque de accesos. Mientras Google no conteste se enseña
+  // "Comprobando" en vez de un "no lo tiene" que sería mentira.
+  function accesosHtml(p, g) {
+    if (!grupoDaDeAlta(g.clave)) return '';
+
+    const estado = accesosDe(p.correo);
+    const filas = ACCESOS.map(function (a) {
+      const tiene = estado ? estado[a.clave] : null;
+      const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
+      const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
+      const texto = estado === null ? 'Comprobando…' : (tiene ? 'Tiene acceso' : 'Sin acceso');
+      const accion = tiene ? 'quitar' : 'dar';
+      return '<div class="acceso ' + clase + '">' +
+        '<span class="acceso-icono">' + icono + '</span>' +
+        '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span>' +
+          '<span class="acceso-estado">' + texto + '</span></span>' +
+        (estado === null ? '' :
+          '<button type="button" class="btn btn-mini acceso-btn ' + accion + '"' +
+            ' data-acceso="' + a.clave + '" data-hacer="' + accion + '">' +
+            (tiene ? 'Quitar' : 'Dar') + '</button>') +
+      '</div>';
+    }).join('');
+
+    const faltan = estado && ACCESOS.some(function (a) { return !estado[a.clave]; });
+    const tieneAlguno = estado && ACCESOS.some(function (a) { return estado[a.clave]; });
+
+    return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
+      '<div class="accesos-titulo">Accesos' +
+        '<span class="accesos-acciones">' +
+          (faltan ? '<button type="button" class="btn btn-mini acceso-todos dar" data-hacer="dar" title="Dar los tres accesos">' + ICONO_LISTO + 'Dar los 3</button>' : '') +
+          (tieneAlguno ? '<button type="button" class="btn btn-mini acceso-todos quitar" data-hacer="quitar" title="Quitar los tres accesos">' + ICONO_EQUIS + 'Quitar los 3</button>' : '') +
+        '</span>' +
+      '</div>' + filas +
+    '</div>';
   }
 
-  // Cada persona es su propia tarjeta: cerrada trae el nombre, el correo
-  // y un punto con el estado, y al picarle se abre con lo demás y el
-  // botón de dar de alta.
   function filaAsesorHtml(p, g, i) {
     const I = window.kwUI.iconos;
     const esBaja = g.clave === 'bajas';
-    const punto = esBaja ? 'gris' : (!p.alta ? 'gris' : (p.alta.completo ? 'verde' : 'ambar'));
+    const estado = accesosDe(p.correo);
+    const completo = estado && ACCESOS.every(function (a) { return estado[a.clave]; });
+    const alguno = estado && ACCESOS.some(function (a) { return estado[a.clave]; });
+    const punto = esBaja ? 'gris' : (completo ? 'verde' : (alguno ? 'ambar' : 'gris'));
     const fecha = esBaja ? (p.fechaBaja || p.fechaIngreso) : p.fechaIngreso;
     const etiquetaFecha = esBaja ? 'Baja' : 'Ingreso';
-    const estado = esBaja
-      ? '<span class="estado-alta baja">' + ICONO_RELOJ + 'Dado de baja</span>'
-      : estadoHtml(p.alta);
 
-    // Sin correo no hay a quién darle acceso, y a quien ya se fue tampoco
-    // se le abre nada: en esos dos casos la fila va sin botón.
-    const acciones = (!esBaja && p.correo)
-      ? '<div class="kw-fila-acciones">' +
-          '<button type="button" class="kw-fila-btn" data-correo="' + escapeHtml(p.correo) + '">' +
-            (p.alta ? 'Volver a intentar' : 'Dar de alta') +
-          '</button>' +
-        '</div>'
-      : '';
+    // El botón vive DENTRO de la cabeza, que ya es el botón que abre la
+    // tarjeta: por eso es un <span> y no un <button> (un botón dentro de
+    // otro no es HTML válido). Picarlo abre la tarjeta, que es donde
+    // están los accesos.
+    const boton = (!esBaja && p.correo)
+      ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + '">' +
+          (completo ? ICONO_LISTO : '') + 'Dar de alta</span>'
+      : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Dado de baja</span>';
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -1432,7 +1518,7 @@
         '<span class="kw-fila-extra">' +
           '<span class="kw-extra">' + I.etiqueta + '<span>' + escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
           '<span class="kw-extra">' + I.calendario + '<span>' + escapeHtml(fecha || 'Sin fecha') + '</span></span>' +
-          '<span class="kw-extra">' + estado + '</span>' +
+          '<span class="kw-extra">' + boton + '</span>' +
         '</span>' + I.flecha +
       '</button>' +
       '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
@@ -1442,8 +1528,8 @@
           (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
           '<div class="kw-dato kw-solo-movil">' + I.etiqueta + '<span class="kw-dato-txt">KWID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
           '<div class="kw-dato kw-solo-movil">' + I.calendario + '<span class="kw-dato-txt">' + etiquetaFecha + ': ' + escapeHtml(fecha || 'sin fecha') + '</span></div>' +
-          '<div class="kw-dato con-acciones texto-solo-movil">' + I.reloj + '<span class="kw-dato-txt">' + estado + '</span>' + acciones + '</div>' +
         '</div>' +
+        accesosHtml(p, g) +
       '</div></div></div>' +
     '</div>';
   }
@@ -1454,8 +1540,18 @@
       if (!cont) return;
 
       if (!g.personas.length) {
-        cont.innerHTML = '<div class="kw-vacio"><strong>Esta hoja está vacía</strong>' +
-          'La hoja "' + escapeHtml(g.hoja) + '" del libro no tiene a nadie capturado todavía.</div>';
+        // Una hoja con renglones pero sin columnas reconocidas no está
+        // vacía: es que sus encabezados se llaman de otra forma. Decirlo
+        // ahorra la adivinanza de por qué no sale nadie.
+        const sinColumnas = g.filasHoja > 1 && !(g.columnas || []).length;
+        cont.innerHTML = '<div class="kw-vacio"><strong>' +
+          (sinColumnas ? 'No se reconocieron las columnas' : 'Esta hoja está vacía') + '</strong>' +
+          (sinColumnas
+            ? 'La hoja "' + escapeHtml(g.hoja) + '" trae ' + g.filasHoja + ' renglones, pero ninguno de sus ' +
+              'encabezados coincide con los que se buscan (Agente o Nombre, Correo, Celular, KW ID, ' +
+              'Fecha de ingreso). Revisa cómo se llaman las columnas de esa hoja.'
+            : 'La hoja "' + escapeHtml(g.hoja) + '" del libro no tiene a nadie capturado todavía.') +
+          '</div>';
         return;
       }
 
@@ -1466,25 +1562,119 @@
         return;
       }
 
+      // Se guarda cuál estaba abierta para volver a abrirla al repintar:
+      // sin esto, dar un acceso cerraba la tarjeta en la cara de quien
+      // acababa de picarle.
+      const abierta = cont.querySelector('.kw-fila.abierta .kw-fila-sub');
+      const correoAbierto = abierta ? abierta.textContent : null;
+
       cont.innerHTML = '<div class="kw-lista">' + visibles.map(function (p, i) {
         return filaAsesorHtml(p, g, i);
       }).join('') + '</div>';
       window.kwUI.acordeon(cont);
 
-      Array.from(cont.querySelectorAll('button[data-correo]')).forEach(function (b) {
-        b.addEventListener('click', function () {
-          // Se busca por correo (único) y no por posición: con el
-          // buscador filtrando, el lugar en la lista que se ve ya no
-          // coincide con el del arreglo completo.
-          const p = g.personas.find(function (x) { return x.correo === b.dataset.correo; });
-          if (p) abrirModalAlta(p);
+      if (correoAbierto) {
+        Array.from(cont.querySelectorAll('.kw-fila')).forEach(function (fila) {
+          const sub = fila.querySelector('.kw-fila-sub');
+          if (sub && sub.textContent === correoAbierto) fila.classList.add('abierta');
         });
-      });
+      }
     });
 
     actualizarBarra();
   }
 
+  // Un solo escuchador para toda la pestaña: las listas se repintan cada
+  // vez que cambia un acceso, y volver a colgarle un escuchador a cada
+  // botón en cada repintado los va acumulando.
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.acceso-btn, .acceso-todos');
+    if (!btn) return;
+    const caja = btn.closest('.accesos');
+    if (!caja) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pasos = btn.dataset.acceso ? [btn.dataset.acceso] : null;
+    moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
+  });
+
+  // ── Dar y quitar accesos ──
+  // `pasos` null son los tres. La pregunta de confirmar es la misma para
+  // todos los caminos (un acceso suelto, los tres, o varias personas
+  // desde el modal): esto toca cuentas de gente de verdad y un clic de
+  // más no debe bastar.
+  const NOMBRE_ACCESO = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
+
+  function textoDeAccesos(pasos) {
+    if (!pasos) return 'los tres accesos';
+    return pasos.map(function (p) { return NOMBRE_ACCESO[p] || p; }).join(', ');
+  }
+
+  async function moverAcceso(correo, pasos, quitar) {
+    const encontrado = personaPorCorreo(correo);
+    if (!encontrado) return;
+    const { persona, grupo } = encontrado;
+
+    const ok = await window.kwUI.confirm(
+      (quitar ? 'Quitar ' : 'Dar ') + textoDeAccesos(pasos) + ' a ' + (persona.nombre || correo) + '?');
+    if (!ok) return;
+
+    marcarAccesosOcupados(correo, true);
+    try {
+      const data = await llamarAlta({
+        accion: 'acceso',
+        quitar: quitar,
+        pasos: pasos || undefined,
+        personas: [{
+          correo: persona.correo, nombre: persona.nombre,
+          telefono: persona.telefono, cumpleanos: persona.cumpleanos,
+          grupo: grupo.clave,
+        }],
+      });
+      aplicarEstado(data.estado);
+      pintarGrupos();
+      avisoAsesores(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
+    } catch (err) {
+      marcarAccesosOcupados(correo, false);
+      avisoAsesores(err.message || 'No se pudo cambiar el acceso.', 'error');
+    }
+  }
+
+  function mensajeDeResultado(data, quitar) {
+    const fallas = [];
+    (data.hechas || []).forEach(function (h) {
+      (h.resultados || []).forEach(function (r) {
+        if (!r.ok) fallas.push((h.nombre || h.correo) + ' · ' + (NOMBRE_ACCESO[r.paso] || r.paso) + ': ' + r.detalle);
+      });
+    });
+    if (fallas.length) return 'No se pudo completar: ' + fallas.join(' | ');
+    const cuantos = (data.hechas || []).length;
+    return quitar
+      ? ('Acceso retirado' + (cuantos > 1 ? ' a ' + cuantos + ' personas.' : '.'))
+      : ('Acceso dado' + (cuantos > 1 ? ' a ' + cuantos + ' personas.' : '.'));
+  }
+
+  function marcarAccesosOcupados(correo, ocupado) {
+    const caja = document.querySelector('.accesos[data-correo="' + (window.CSS && CSS.escape ? CSS.escape(correo) : correo) + '"]');
+    if (!caja) return;
+    Array.from(caja.querySelectorAll('button')).forEach(function (b) { b.disabled = ocupado; });
+  }
+
+  function aplicarEstado(lista) {
+    (lista || []).forEach(function (e) {
+      estadoGoogle[String(e.correo).toLowerCase()] = {
+        contactos: e.contactos, drive: e.drive, calendario: e.calendario,
+      };
+    });
+  }
+
+  function avisoAsesores(texto, clase) {
+    const el = document.getElementById('asesores-msg');
+    el.textContent = texto;
+    el.className = 'msg ' + (clase || '');
+  }
+
+  // ── Cargar ──
   function esqueletoAsesores() {
     const hueco = function (ancho) {
       return '<div class="kw-fila"><div class="kw-fila-cabeza">' +
@@ -1508,11 +1698,11 @@
       // no manda `grupos`, solo la lista de siempre. En vez de quedarse en
       // blanco sin decir por qué, se enseña esa lista como el único grupo.
       gruposAsesores = data.grupos || (data.personas
-        ? [{ clave: 'activos', titulo: 'Asesores Activos', hoja: 'Activos',
-             personas: data.personas, omitidos: data.omitidos || [] }]
+        ? [{ clave: 'activos', titulo: 'Asesores Activos', hoja: 'Activos', personas: data.personas }]
         : []);
       armarTabsAsesores();
       pintarGrupos();
+      cargarEstadoGoogle();
     } catch (err) {
       // Un "esta sección es solo para el equipo de altas" se queda aquí
       // dentro, no tumba el Panel entero: lo demás del Panel sí es suyo.
@@ -1529,256 +1719,225 @@
     }
   }
 
-  // Antes, alguien nuevo en el libro sin correo capturado todavía
-  // simplemente no aparecía y nadie se enteraba de por qué. La función
-  // ahora reporta esos casos por nombre y fila.
-  function pintarOmitidos(omitidos) {
-    const el = document.getElementById('omitidos-msg');
-    if (!omitidos.length) { el.className = 'msg'; el.textContent = ''; return; }
-    el.className = 'msg error';
-    el.textContent = omitidos.length + ' persona(s) de esta hoja no se pueden dar de alta por falta de correo: ' +
-      omitidos.map(function (o) { return o.nombre + ' (fila ' + o.fila + ')'; }).join(', ') +
-      '. Captúrales el correo en el libro y vuelve a cargarlo.';
-  }
-
-  // A quienes ya se les dio de alta a mano antes de que existiera esta
-  // pantalla (o por fuera de ella) se les marca así, sin volver a llamar
-  // a las APIs de Google: repetir esos pasos no actualiza nada útil y sí
-  // duplica el contacto y reenvía los correos de "se compartió contigo".
-  async function marcarTodosManual() {
-    const btn = document.getElementById('btn-marcar-todos');
-    const msg = document.getElementById('marcar-msg');
-    btn.disabled = true;
-    msg.className = 'msg';
-    try {
-      const data = await llamarAlta({ accion: 'marcar_manual' });
-      msg.textContent = data.marcados
-        ? ('Se marcaron ' + data.marcados + ' asesores como dados de alta.')
-        : 'No había nadie pendiente por marcar.';
-      msg.className = 'msg ok';
-      await cargarAsesores();
-    } catch (err) {
-      msg.textContent = err.message || 'No se pudo marcar.';
-      msg.className = 'msg error';
-      btn.disabled = false;
-    }
-  }
-
-  // ── Comprobar en Google ──
-  // Revisa directo contra Google (no contra la tabla local) quién ya está
-  // en cada plataforma, para poder comparar contra lo que dice el
-  // sistema. Solo informa, no cambia nada.
-  const ICONO_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-  const ICONO_EQUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-
-  const NOMBRE_CAMPO_VERIF = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
-  let ultimaVerificacion = [];
-
-  function verifChip(si, etiqueta) {
-    return '<span class="verif-chip ' + (si ? 'si' : 'no') + '">' + (si ? ICONO_CHECK : ICONO_EQUIS) + etiqueta + '</span>';
-  }
-
-  async function abrirVerificacion() {
-    const btn = document.getElementById('btn-verificar');
-    const cont = document.getElementById('verificar-cont');
-    const msg = document.getElementById('verificar-msg');
-    btn.disabled = true;
-    msg.className = 'msg';
-    cont.innerHTML = '<div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
-    document.getElementById('modal-verificar').style.display = 'flex';
+  // Lo que hay en Google se pide aparte y después de pintar la lista: son
+  // tres llamadas a Google y tardan bastante más que leer el libro, así
+  // que la lista aparece de inmediato y los accesos se van llenando
+  // cuando llegan, en vez de dejar la pantalla en blanco esperándolos.
+  async function cargarEstadoGoogle() {
     try {
       const data = await llamarAlta({ accion: 'verificar' });
+      estadoGoogle = {};
+      (data.personas || []).forEach(function (p) {
+        estadoGoogle[String(p.correo).toLowerCase()] = {
+          contactos: p.contactos, drive: p.drive, calendario: p.calendario,
+        };
+      });
+      estadoGoogleListo = true;
       ultimaVerificacion = data.personas || [];
-      pintarVerificacion();
+      pintarGrupos();
+      if (document.getElementById('modal-verificar').style.display === 'flex') pintarVerificacion();
     } catch (err) {
-      cont.innerHTML = '<div class="kw-vacio">' + escapeHtml(err.message || 'No se pudo comprobar.') + '</div>';
-      document.getElementById('btn-corregir-todos').style.display = 'none';
-    } finally {
-      btn.disabled = false;
+      avisoAsesores('No se pudieron leer los accesos de Google: ' + (err.message || ''), 'error');
     }
+  }
+
+  // ── Revisar accesos ──
+  // Revisa TODO el libro contra Google (no solo la hoja de activos) y
+  // deja dar o quitar cada acceso desde ahí mismo, de a uno o de a
+  // varios seleccionados.
+  let ultimaVerificacion = [];
+  let seleccionados = new Set();
+
+  async function abrirVerificacion() {
+    const cont = document.getElementById('verificar-cont');
+    const msg = document.getElementById('verificar-msg');
+    seleccionados = new Set();
+    msg.className = 'msg';
+    document.getElementById('verificar-buscador').value = '';
+    document.getElementById('modal-verificar').style.display = 'flex';
+
+    if (estadoGoogleListo && ultimaVerificacion.length) {
+      pintarVerificacion();
+      return;
+    }
+    cont.innerHTML = '<div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+    await cargarEstadoGoogle();
+    if (!ultimaVerificacion.length) {
+      cont.innerHTML = '<div class="kw-vacio">El libro no tiene a nadie con correo capturado.</div>';
+    }
+  }
+
+  function filtroVerif() {
+    const el = document.getElementById('verificar-buscador');
+    return el ? el.value.trim().toLowerCase() : '';
+  }
+
+  function verifVisibles() {
+    const f = filtroVerif();
+    if (!f) return ultimaVerificacion;
+    return ultimaVerificacion.filter(function (p) {
+      return (p.nombre || '').toLowerCase().includes(f) || (p.correo || '').toLowerCase().includes(f);
+    });
   }
 
   function pintarVerificacion() {
     const cont = document.getElementById('verificar-cont');
-    const btnTodos = document.getElementById('btn-corregir-todos');
-    const filas = ultimaVerificacion;
+    const filas = verifVisibles();
 
+    if (!ultimaVerificacion.length) {
+      cont.innerHTML = '<div class="kw-vacio">El libro no tiene a nadie con correo capturado.</div>';
+      pintarSeleccion();
+      return;
+    }
     if (!filas.length) {
-      cont.innerHTML = '<div class="kw-vacio">La hoja de activos no tiene filas con correo todavía.</div>';
-      btnTodos.style.display = 'none';
+      cont.innerHTML = '<div class="kw-vacio">Nadie coincide con la búsqueda.</div>';
+      pintarSeleccion();
       return;
     }
 
-    let html = '<div class="verif-lista">';
-    let faltantes = 0;
-    filas.forEach(function (p) {
-      const faltan = ['contactos', 'drive', 'calendario'].filter(function (k) { return !p[k]; });
-      if (faltan.length) faltantes++;
-      html += '<div class="verif-item">' +
-        '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
-        '<div class="verif-chips">' +
-          verifChip(p.contactos, 'Contactos') +
-          verifChip(p.drive, 'Drive') +
-          verifChip(p.calendario, 'Calendario') +
-          (faltan.length
-            ? '<button type="button" class="btn btn-rojo btn-mini" data-corregir="' + escapeHtml(p.correo) + '" ' +
-              'title="Falta: ' + escapeHtml(faltan.map(function (k) { return NOMBRE_CAMPO_VERIF[k]; }).join(', ')) + '">Corregir</button>'
-            : '') +
+    cont.innerHTML = '<div class="verif-lista">' + filas.map(function (p) {
+      const marcado = seleccionados.has(p.correo);
+      // Cada acceso es su propio botón: verde si lo tiene (y picarlo lo
+      // quita), apagado si no (y picarlo lo da).
+      // A quien ya causó baja solo se le puede QUITAR: darle accesos
+      // nuevos a alguien que ya se fue no es algo que se quiera a un
+      // clic de distancia.
+      const daDeAlta = grupoDaDeAlta(p.grupo);
+      const chips = ACCESOS.map(function (a) {
+        const tiene = p[a.clave];
+        const bloqueado = !tiene && !daDeAlta;
+        return '<button type="button" class="verif-chip ' + (tiene ? 'si' : 'no') + '"' +
+          ' data-correo="' + escapeHtml(p.correo) + '" data-acceso="' + a.clave + '"' +
+          ' data-hacer="' + (tiene ? 'quitar' : 'dar') + '"' + (bloqueado ? ' disabled' : '') +
+          ' title="' + (bloqueado ? 'Dado de baja' : (tiene ? 'Quitar ' : 'Dar ') + a.nombre) + '">' +
+          (tiene ? ICONO_LISTO : ICONO_EQUIS) + a.nombre + '</button>';
+      }).join('');
+
+      const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
+      const alguno = ACCESOS.some(function (a) { return p[a.clave]; });
+
+      return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
+        '<label class="verif-marca">' +
+          '<input type="checkbox" data-marcar="' + escapeHtml(p.correo) + '"' + (marcado ? ' checked' : '') + ' />' +
+        '</label>' +
+        '<div class="verif-cuerpo">' +
+          '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
+          '<span class="verif-correo">' + escapeHtml(p.correo) +
+            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
+          '<div class="verif-chips">' + chips + '</div>' +
+        '</div>' +
+        '<div class="verif-acciones">' +
+          '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
+            ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Dar los tres accesos">' + ICONO_LISTO + '</button>' +
+          '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
+            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Quitar los tres accesos">' + ICONO_EQUIS + '</button>' +
         '</div>' +
       '</div>';
-    });
-    cont.innerHTML = html + '</div>';
+    }).join('') + '</div>';
 
-    btnTodos.style.display = faltantes ? '' : 'none';
-
-    Array.from(cont.querySelectorAll('button[data-corregir]')).forEach(function (b) {
-      b.addEventListener('click', function () { corregirUno(b.dataset.corregir, b); });
-    });
+    pintarSeleccion();
   }
 
-  // El mensaje se pone SIEMPRE después de abrirVerificacion(), porque esa
-  // función lo limpia al empezar: puesto antes, se borraba solo y por eso
-  // una corrección fallida parecía "no hacer nada".
+  function pintarSeleccion() {
+    const barra = document.getElementById('verif-seleccion');
+    const n = seleccionados.size;
+    barra.style.display = n ? '' : 'none';
+    if (n) document.getElementById('verif-seleccion-num').textContent =
+      n + (n === 1 ? ' seleccionado' : ' seleccionados');
+  }
+
   function mostrarMsgVerif(texto, clase) {
     const msg = document.getElementById('verificar-msg');
-    msg.innerHTML = texto;
+    msg.textContent = texto;
     msg.className = 'msg ' + clase;
   }
 
-  function textoFallas(fallas) {
-    return 'No se pudo completar:<br>' + fallas.map(function (f) {
-      return '· ' + escapeHtml((f.correo ? f.correo + ' - ' : '') + (NOMBRE_PASO[f.paso] || f.paso) + ': ' + f.detalle);
-    }).join('<br>');
-  }
-
-  async function corregirUno(correo, btn) {
-    btn.disabled = true;
-    btn.textContent = 'Corrigiendo…';
-    try {
-      const data = await llamarAlta({ accion: 'corregir', correo: correo });
-      // La función responde 200 aunque un paso falle (informa paso por
-      // paso), así que hay que mirar los resultados, no solo el status.
-      const fallaron = (data.resultados || []).filter(function (r) { return !r.ok; });
-      await abrirVerificacion();
-      if (fallaron.length) mostrarMsgVerif(textoFallas(fallaron), 'error');
-      else if (data.aviso) mostrarMsgVerif(escapeHtml(data.aviso), 'error');
-      else mostrarMsgVerif('Listo, acceso completado.', 'ok');
-      cargarAsesores();
-    } catch (err) {
-      mostrarMsgVerif(escapeHtml(err.message || 'No se pudo corregir.'), 'error');
-      btn.disabled = false;
-      btn.textContent = 'Corregir';
+  // Cambia accesos desde el modal: a una persona o a las seleccionadas.
+  async function accesoDesdeVerif(correos, pasos, quitar) {
+    const gente = correos.map(function (c) {
+      const fila = ultimaVerificacion.find(function (p) { return p.correo === c; });
+      // Dar accesos se salta a los de baja; quitar sí les aplica.
+      if (fila && !quitar && !grupoDaDeAlta(fila.grupo)) return null;
+      return fila ? {
+        correo: fila.correo, nombre: fila.nombre, telefono: fila.telefono,
+        cumpleanos: fila.cumpleanos, grupo: fila.grupo,
+      } : null;
+    }).filter(Boolean);
+    if (!gente.length) {
+      mostrarMsgVerif('Nadie de los seleccionados puede recibir accesos: los de baja se saltan.', 'error');
+      return;
     }
-  }
 
-  async function corregirTodos() {
-    const btn = document.getElementById('btn-corregir-todos');
-    btn.disabled = true;
-    try {
-      const data = await llamarAlta({ accion: 'corregir_todos' });
-      await abrirVerificacion();
-      if ((data.fallas || []).length) {
-        mostrarMsgVerif(textoFallas(data.fallas), 'error');
-      } else {
-        mostrarMsgVerif(data.corregidos
-          ? ('Se corrigió el acceso de ' + data.corregidos + (data.corregidos === 1 ? ' persona.' : ' personas.'))
-          : 'No había accesos faltantes.', 'ok');
-      }
-      cargarAsesores();
-    } catch (err) {
-      mostrarMsgVerif(escapeHtml(err.message || 'No se pudo corregir.'), 'error');
-    } finally {
-      btn.disabled = false;
-    }
-  }
+    const aQuien = gente.length === 1 ? (gente[0].nombre || gente[0].correo) : (gente.length + ' personas');
+    const ok = await window.kwUI.confirm(
+      (quitar ? 'Quitar ' : 'Dar ') + textoDeAccesos(pasos) + ' a ' + aQuien + '?');
+    if (!ok) return;
 
-  // ── Modal del alta ──
-  function pasosHtml(resultados) {
-    return ORDEN_PASOS.map(function (clave) {
-      const r = resultados && resultados[clave];
-      const estado = !r ? 'esperando' : (r.ok ? 'ok' : 'mal');
-      const icono = !r ? ICONO_RELOJ : (r.ok ? ICONO_LISTO : ICONO_ALERTA);
-      return '<div class="paso ' + estado + '">' +
-        '<span class="paso-icono">' + icono + '</span>' +
-        '<span><span class="paso-nombre">' + NOMBRE_PASO[clave] + '</span>' +
-        (r ? '<span class="paso-detalle">' + escapeHtml(r.detalle) + '</span>' : '') +
-        '</span></div>';
-    }).join('');
-  }
-
-  function abrirModalAlta(p) {
-    personaActual = p;
-    document.getElementById('alta-titulo').textContent = p.nombre || p.correo;
-    document.getElementById('alta-sub').textContent = [p.correo, p.telefono, p.kwid ? ('KWID ' + p.kwid) : '']
-      .filter(Boolean).join(' · ');
-    // Si ya se había intentado, se muestra cómo quedó la última vez.
-    document.getElementById('alta-pasos').innerHTML = pasosHtml(p.alta ? p.alta.pasos : null);
-    document.getElementById('alta-msg').className = 'msg';
-    document.getElementById('alta-btn-cerrar').textContent = 'Cancelar';
-    estadoBotonAlta('inicial');
-    document.getElementById('alta-btn').style.display = '';
-    document.getElementById('modal-alta').style.display = 'flex';
-  }
-
-  function cerrarModalAlta() {
-    window.kwUI.cerrarModal('modal-alta');
-  }
-
-  function estadoBotonAlta(estado) {
-    const btn = document.getElementById('alta-btn');
-    const cont = document.getElementById('alta-btn-cont');
-    btn.classList.remove('enviando', 'enviado');
-    if (estado === 'enviando') {
-      btn.disabled = true;
-      btn.classList.add('enviando');
-      cont.innerHTML = '<span class="kw-btn-spinner"></span>Dando de alta…';
-    } else if (estado === 'listo') {
-      btn.disabled = true;
-      btn.classList.add('enviado');
-      cont.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Listo';
-    } else {
-      btn.disabled = false;
-      cont.textContent = personaActual && personaActual.alta ? 'Volver a intentar' : 'Dar de alta';
-    }
-  }
-
-  async function ejecutarAlta() {
-    if (!personaActual) return;
-    estadoBotonAlta('enviando');
-    const msg = document.getElementById('alta-msg');
-    msg.className = 'msg';
+    const cont = document.getElementById('verificar-cont');
+    cont.classList.add('ocupado');
     try {
       const data = await llamarAlta({
-        accion: 'procesar',
-        correo: personaActual.correo,
-        nombre: personaActual.nombre,
-        telefono: personaActual.telefono,
-        cumpleanos: personaActual.cumpleanos,
+        accion: 'acceso', quitar: quitar, pasos: pasos || undefined, personas: gente,
       });
-
-      const porClave = {};
-      (data.resultados || []).forEach(function (r) { porClave[r.paso] = { ok: r.ok, detalle: r.detalle }; });
-      document.getElementById('alta-pasos').innerHTML = pasosHtml(porClave);
-
-      if (data.aviso) {
-        msg.textContent = data.aviso;
-        msg.className = 'msg error';
-      } else if (!data.ok) {
-        msg.textContent = 'Algunos pasos no se pudieron completar. Puedes volver a intentar cuando lo corrijas.';
-        msg.className = 'msg error';
-      }
-
-      estadoBotonAlta('listo');
-      document.getElementById('alta-btn-cerrar').textContent = 'Cerrar';
-      // El estado de la lista de atrás cambió: se vuelve a leer para que
-      // quede marcado sin tener que recargar la página a mano.
-      cargarAsesores();
+      aplicarEstado(data.estado);
+      (data.estado || []).forEach(function (e) {
+        const fila = ultimaVerificacion.find(function (p) { return p.correo === e.correo; });
+        if (fila) { fila.contactos = e.contactos; fila.drive = e.drive; fila.calendario = e.calendario; }
+      });
+      pintarVerificacion();
+      pintarGrupos();
+      mostrarMsgVerif(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
     } catch (err) {
-      msg.textContent = err.message || 'No se pudo completar el alta.';
-      msg.className = 'msg error';
-      estadoBotonAlta('inicial');
+      mostrarMsgVerif(err.message || 'No se pudo cambiar el acceso.', 'error');
+    } finally {
+      cont.classList.remove('ocupado');
     }
   }
+
+  (function armarModalVerificar() {
+    const modal = document.getElementById('modal-verificar');
+    const cont = document.getElementById('verificar-cont');
+
+    cont.addEventListener('click', function (e) {
+      const chip = e.target.closest('.verif-chip');
+      if (chip) return accesoDesdeVerif([chip.dataset.correo], [chip.dataset.acceso], chip.dataset.hacer === 'quitar');
+      const todo = e.target.closest('.verif-todo');
+      if (todo) return accesoDesdeVerif([todo.dataset.correo], null, todo.dataset.hacer === 'quitar');
+    });
+
+    cont.addEventListener('change', function (e) {
+      const caja = e.target.closest('input[data-marcar]');
+      if (!caja) return;
+      if (caja.checked) seleccionados.add(caja.dataset.marcar);
+      else seleccionados.delete(caja.dataset.marcar);
+      const item = caja.closest('.verif-item');
+      if (item) item.classList.toggle('marcado', caja.checked);
+      pintarSeleccion();
+    });
+
+    document.getElementById('verificar-buscador').addEventListener('input', pintarVerificacion);
+
+    document.getElementById('verif-marcar-todos').addEventListener('change', function (e) {
+      if (e.target.checked) verifVisibles().forEach(function (p) { seleccionados.add(p.correo); });
+      else seleccionados = new Set();
+      pintarVerificacion();
+    });
+
+    document.getElementById('verif-dar-todos').addEventListener('click', function () {
+      accesoDesdeVerif(Array.from(seleccionados), null, false);
+    });
+    document.getElementById('verif-quitar-todos').addEventListener('click', function () {
+      accesoDesdeVerif(Array.from(seleccionados), null, true);
+    });
+
+    // Se cierra con el tache de la esquina y picando fuera del recuadro.
+    document.getElementById('verif-cerrar').addEventListener('click', function () {
+      window.kwUI.cerrarModal('modal-verificar');
+    });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) window.kwUI.cerrarModal('modal-verificar');
+    });
+  })();
 
   // ── Inicio ──
   async function initAdmin() {
