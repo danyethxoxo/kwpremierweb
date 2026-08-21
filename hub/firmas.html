@@ -18,6 +18,7 @@
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260820b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817j"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -38,8 +39,8 @@
      dentro de una tarjeta, así que necesitan su propio color claro:
      kw-page-titulo/kw-page-desc de kw-ui.css traen el oscuro de
      siempre, pensado para fondo gris. Igual que en el Panel de Admin. */
-  .kw-page-titulo { color: #fff; }
-  .kw-page-desc { color: rgba(255,255,255,0.72); }
+  .kw-page-titulo { color: var(--text); }
+  .kw-page-desc { color: var(--muted); }
 
   .header-right { display: flex; align-items: center; gap: 10px; }
 
@@ -227,15 +228,19 @@
   /* Traer el historial de weetrust. Va apagado de color: es una acción
      de mantenimiento que se corre de vez en cuando, no algo del día a
      día, y no debe competir con el botón de crear. */
+  /* Iba blanco translucido sobre el fondo guinda. Sobre el lienzo claro
+     eso es blanco sobre blanco: el boton desaparecia. Ahora es del mismo
+     vidrio que la tabla, con su borde. */
   .btn-importar {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 9px 15px; border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.3);
-    background: rgba(255,255,255,0.12); color: #fff;
+    border: 1px solid var(--border);
+    background: #fff; color: var(--text);
+    box-shadow: var(--sombra-1);
     font-family: inherit; font-size: 12.5px; font-weight: 700;
     cursor: pointer;
   }
-  .btn-importar:hover { background: rgba(255,255,255,0.22); }
+  .btn-importar:hover { background: var(--pastel-rojo); color: var(--red); }
   .btn-importar:disabled { opacity: 0.5; cursor: default; }
   /* El de actualizar se usa seguido, así que se deja solo el ícono: con
      texto competía por espacio con los demás botones de la barra. */
@@ -708,7 +713,7 @@
     color: #fff; cursor: pointer;
   }
   .btn-volver-paso:hover { background: rgba(255,255,255,0.2); }
-  .editor-nombre { font-size: 12.5px; color: rgba(255,255,255,0.75); }
+  .editor-nombre { font-size: 12.5px; color: var(--muted); }
 
   .editor-split { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
   @media (max-width: 900px) { .editor-split { grid-template-columns: 1fr; } }
@@ -734,7 +739,7 @@
   .editor-doc canvas, .editor-doc .pagina-caja { max-width: 100%; }
   .editor-cargando {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
-    padding: 40px 0; color: rgba(255,255,255,0.8); font-size: 13px;
+    padding: 40px 0; color: var(--muted); font-size: 13px;
   }
 
   /* Guardar y mandar, juntos al final del formulario. Guardar va en
@@ -768,7 +773,7 @@
   .pagina-caja canvas { display: block; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
   .pagina-capa { position: absolute; inset: 0; }
   .pagina-num {
-    text-align: center; font-size: 11px; color: rgba(255,255,255,0.6);
+    text-align: center; font-size: 11px; color: var(--muted);
     margin-top: 4px; margin-bottom: var(--sp-3);
   }
   /* Mientras se está colocando una firma, la hoja invita a picarle. */
@@ -3729,7 +3734,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260820c" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260820d" data-menu="hub"></script>
 
 </body>
 </html>

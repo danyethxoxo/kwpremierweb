@@ -350,7 +350,10 @@
   // Se esconde el bloque entero, no nada más el campo: si se quita solo
   // el <input>, su franja sigue ocupando su renglón y su relleno, y queda
   // una banda vacía arriba de la tabla.
-  const CAJAS_LOCALES = '.buscador, .lista-buscador, .tabla-buscar-fila';
+  // .kw-campo-filtro va incluido porque en las barras de filtros el
+  // campo viene con su etiqueta arriba: escondiendo solo el campo, la
+  // etiqueta se quedaba sola rotulando un hueco.
+  const CAJAS_LOCALES = '.buscador, .lista-buscador, .tabla-buscar-fila, .kw-campo-filtro';
 
   const campoLocal = document.querySelector(BUSCADORES_LOCALES.join(','));
   const contenedorLocal = campoLocal

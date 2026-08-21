@@ -1,0 +1,356 @@
+/* ════════════════════════════════════════════════════════════
+   TEMA CLARO
+   ════════════════════════════════════════════════════════════
+
+   El sitio nació sobre fondo guinda oscuro, y todo lo que va encima
+   está armado como vidrio blanco translúcido: tarjetas, header,
+   botones, filtros. Eso funciona porque atrás hay oscuro. Sobre un
+   lienzo claro, ese mismo vidrio queda blanco a medias sobre casi
+   blanco, o sea que desaparece.
+
+   Por eso esta hoja no cambia el color del fondo y ya: cambia el
+   MATERIAL. El vidrio translúcido se vuelve tarjeta blanca sólida con
+   borde de un pelo y sombra suave, que es lo que hace que un diseño
+   claro se lea ordenado en vez de plano.
+
+   ── Por qué vive en su propio archivo ──
+   Mientras se prueba, solo la cargan las pantallas que ya se pasaron al
+   tema nuevo. Las demás siguen viéndose como siempre, sin quedar a
+   medio camino. Cuando el sitio entero esté migrado, esto se funde con
+   kw-ui.css y el archivo desaparece.
+
+   ── Cómo se pasa una pantalla al tema claro ──
+   1. Enlazar esta hoja DESPUÉS de kw-base.css (o de kw-ui.css, si la
+      página no carga la otra).
+   2. Quitarle a la página su propia definición de --bg, si la trae
+      copiada en un <style>: al ir después, le ganaría a esta.
+   3. Revisar los `color: #fff` de esa página. Los que estaban ahí
+      porque el texto colgaba sobre el fondo oscuro ahora tienen que
+      irse; los que están dentro de algo de color (un botón guinda, por
+      ejemplo) se quedan.
+
+   Va sin @import a propósito: encadenar hojas obliga al navegador a
+   bajar una, leerla y hasta entonces enterarse de que hay otra. Un
+   <link> más en el HTML se baja en paralelo. */
+
+:root {
+  /* ── El lienzo ──
+     Blanco, con manchas de gris muy difuso repartidas. Las manchas son
+     las que hacen el trabajo que antes hacía el gris parejo: dan de qué
+     despegarse a la tarjeta. Sin ellas, blanco sobre blanco deja todo el
+     peso en la sombra y la pantalla se ve lavada.
+
+     Los grises van tibios (con más rojo que azul en la mezcla), no
+     neutros. Un gris frío al lado del guinda de la marca se ve azuloso,
+     y el conjunto queda con dos temperaturas peleadas. */
+  --lienzo: #ffffff;
+
+  --bg:
+    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
+    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
+    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
+
+  /* ── La textura ──
+     El fondo lleva cuadrícula de hoja de cuaderno; las tarjetas, puntos.
+     No es descuido que sean distintas: son dos planos, y darles la misma
+     textura los pega. La cuadrícula queda como el papel sobre el que se
+     apoyan las tarjetas, y el punteado como el grano del papel de la
+     tarjeta misma.
+
+     La línea va apenas encima de la nada. Una cuadrícula que se vea
+     compite con los bordes de las tarjetas y con los renglones de las
+     tablas, y entonces el fondo deja de ser fondo. Con este valor, de
+     cerca casi no se distingue y de lejos solo se siente. */
+  --linea-cuadro: rgba(58,40,40,0.03);
+  --paso-cuadro: 26px;
+
+  --puntos-tarjeta: radial-gradient(circle, rgba(46,26,26,0.032) 0.8px, transparent 1px);
+  --paso-tarjeta: 16px;
+
+  /* ── La tarjeta ──
+     Blanca arriba y apenas gris abajo. La caída es de dos puntos de
+     luminosidad, nada más: lo suficiente para que la superficie tenga
+     dirección y no se lea como recorte de papel pegado. */
+  --card: #ffffff;
+  --card-degradado: linear-gradient(163deg, #ffffff 0%, #fdfcfc 44%, #f6f4f4 100%);
+
+  /* El borde es de un pelo y casi no se ve: sobre claro, lo que separa
+     una tarjeta del fondo es la sombra, no la línea. Un borde marcado
+     sobre blanco se lee como recuadro de formulario viejo. */
+  --border: rgba(23,10,10,0.09);
+
+  --text: #191414;
+  --muted: #736c6c;
+  --placeholder: #b5adad;
+
+  /* Sombras teñidas de guinda, no de negro puro. Sobre un lienzo tibio
+     una sombra gris se ve sucia; con el mismo tono de la marca se ve
+     como profundidad y no como mugre. */
+  --sombra-1: 0 1px 2px rgba(40,12,12,0.05), 0 5px 16px rgba(40,12,12,0.045);
+  --sombra-2: 0 2px 4px rgba(40,12,12,0.06), 0 12px 30px rgba(40,12,12,0.08);
+  --sombra-3: 0 18px 48px rgba(40,12,12,0.14);
+
+  /* Esquinas más generosas: es de lo que más aporta a que se vea
+     amable, y es gratis. */
+  --r-campo: 12px;
+  --r-tarjeta: 18px;
+
+  /* ── Los pasteles ──
+     El rojo manda: es el primero de la lista y el que se usa por
+     omisión. Los demás están para cuando hay varios bloques juntos y
+     todos del mismo color se leerían como un solo bloque.
+
+     Cada uno trae su pareja de texto, ya calculada para que se lea
+     encima sin quedarse corta de contraste. Ponerle a ojo un texto
+     oscuro a un pastel es como se llega a un sitio que se ve bien en la
+     pantalla de quien lo hizo y no se puede leer en la de nadie más. */
+  --pastel-rojo:    #fbe9e9;  --pastel-rojo-txt:    #7d1113;
+  --pastel-rosa:    #fdecf2;  --pastel-rosa-txt:    #8a1c48;
+  --pastel-menta:   #e6f4ea;  --pastel-menta-txt:   #17603a;
+  --pastel-cielo:   #e8f0fb;  --pastel-cielo-txt:   #17457e;
+  --pastel-lavanda: #f0ecf9;  --pastel-lavanda-txt: #4a3781;
+  --pastel-crema:   #fbf3e0;  --pastel-crema-txt:   #7a5610;
+
+  /* ── Los tintes ──
+     El pastel es un relleno parejo, para bloques chicos. El tinte es el
+     mismo color pero disuelto, para bañar una tarjeta entera desde una
+     esquina.
+
+     Van en rgba y no en hex porque tienen que dejar pasar el degradado
+     y los puntos que llevan debajo: en opaco los taparían y la tarjeta
+     volvería a verse plana, solo que de color. */
+  --tinte-rojo:    rgba(198,32,39,0.16);
+  --tinte-rosa:    rgba(214,51,108,0.15);
+  --tinte-menta:   rgba(23,150,90,0.15);
+  --tinte-cielo:   rgba(37,110,200,0.15);
+  --tinte-lavanda: rgba(110,80,190,0.15);
+  --tinte-crema:   rgba(200,140,20,0.18);
+}
+
+/* El respaldo de <html> deja de ser negro: es el color que se asoma en
+   la franja de rebote al llegar al tope o al fondo del scroll en
+   celular, y en negro se veía como si la página se acabara. */
+html { background-color: var(--lienzo); }
+
+/* La capa del fondo se vuelve a declarar entera, y no solo con --bg,
+   porque la cuadrícula necesita su propio tamaño de repetición. Con
+   `background: var(--bg)` el tamaño le tocaría igual a todas las capas,
+   y las manchas de gris quedarían recortadas en cuadritos de 26px.
+
+   La cuadrícula son dos capas, no una: una raya vertical que se repite a
+   lo ancho y otra horizontal que se repite a lo alto. Cruzadas dibujan
+   los cuadros. No hay forma de hacer una cuadrícula con un solo
+   degradado, porque un degradado va en una sola dirección. */
+body::before {
+  /* La forma de la capa va aquí completa, no solo su fondo. Cinco
+     pantallas (login, restablecer, completar registro, api y el ABC) no
+     cargan las hojas compartidas y traían la suya copiada a mano; al
+     migrarlas se les quitó, así que esta tiene que bastarse sola. Para
+     las demás es repetir lo que kw-ui.css ya dice, que no estorba. */
+  content: '';
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+
+  background-image:
+    linear-gradient(to right,  var(--linea-cuadro) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--linea-cuadro) 1px, transparent 1px),
+    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
+    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
+    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
+  background-size:
+    var(--paso-cuadro) var(--paso-cuadro),
+    var(--paso-cuadro) var(--paso-cuadro),
+    100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+/* ── El texto que colgaba sobre el fondo oscuro ──
+   Iba en blanco porque atrás había guinda. Ahora atrás hay claro, así
+   que vuelve al color de siempre. Se hace aquí, en el sistema, y no
+   página por página: son los mismos dos nombres de clase en todas. */
+.kw-page-titulo { color: var(--text); }
+.kw-page-desc   { color: var(--muted); }
+
+/* ══════════════════════════════════════════════════════════
+   El header
+   ══════════════════════════════════════════════════════════
+   Sigue siendo la pastilla flotante de siempre, pero ya no de vidrio:
+   blanca sólida con su borde de un pelo. El blur se queda porque el
+   contenido sí pasa por debajo al hacer scroll, y sin él se ve el texto
+   cortándose contra el borde de la pastilla. */
+header.kw-header,
+header.kw-header .kw-header-capsula,
+header.kw-header .kw-header-sueltos > * {
+  /* El mismo degradado de las tarjetas, para que la barra se lea como
+     una pieza más del juego y no como una franja aparte. Sin puntos: en
+     una tira de 52px de alto la retícula no alcanza a leerse como
+     textura, solo ensucia. */
+  background-image: var(--card-degradado);
+  background-color: rgba(255,255,255,0.9);
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra-2);
+}
+/* Partido, el <header> es solo el renglón que acomoda las dos piezas:
+   el fondo lo ponen ellas. */
+header.kw-header-partido {
+  background: none; background-image: none;
+  border: 0; box-shadow: none;
+}
+
+.hamburger-btn { color: var(--text); }
+.hamburger-btn:hover { color: var(--red); }
+
+/* ══════════════════════════════════════════════════════════
+   Tarjetas y listas
+   ══════════════════════════════════════════════════════════ */
+
+.kw-card,
+.kw-fila,
+.tabla-envios,
+.hover-card {
+  /* Los puntos van encima del degradado, no debajo: al revés quedarían
+     tapados por el blanco de la primera capa y no se verían. */
+  background-image: var(--puntos-tarjeta), var(--card-degradado);
+  background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra-1);
+  /* El vidrio pedía blur para dejar pasar el fondo. Una tarjeta sólida
+     no deja pasar nada, así que el blur solo costaría GPU. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.kw-fila.abierta { box-shadow: var(--sombra-2); }
+.kw-fila:hover { box-shadow: var(--sombra-2); }
+
+/* ══════════════════════════════════════════════════════════
+   El baño de color de cada tarjeta
+   ══════════════════════════════════════════════════════════
+   Una mancha del color de la tarjeta que sale de la esquina de abajo a
+   la izquierda y se disuelve antes de llegar al centro. Es lo que hace
+   que la cuadrícula se lea como un juego de piezas distintas y no como
+   diez rectángulos blancos con texto adentro.
+
+   Sale de abajo y no de arriba a propósito: arriba está el ícono, que ya
+   trae su cuadro de color, y dos manchas del mismo tono juntas se leen
+   como una sola mal recortada.
+
+   ── De dónde sale el color ──
+   Del ícono que la tarjeta ya tiene adentro, con :has(). Podría ponerse
+   una clase más en cada tarjeta, pero entonces el color viviría en dos
+   lugares y tarde o temprano uno cambia y el otro no. Así hay una sola
+   fuente: el ícono manda.
+
+   Un navegador viejo que no entienda :has() ignora estos renglones y
+   deja el tinte rojo de abajo, que es el de la marca. Se ve distinto,
+   no roto. */
+.hover-card { --tinte: var(--tinte-rojo); }
+.hover-card:has(.icon-prospectos)  { --tinte: var(--tinte-rosa); }
+.hover-card:has(.icon-calendario)  { --tinte: var(--tinte-crema); }
+.hover-card:has(.icon-incidencias) { --tinte: var(--tinte-cielo); }
+.hover-card:has(.icon-firmas)      { --tinte: var(--tinte-menta); }
+.hover-card:has(.icon-dictamenes)  { --tinte: var(--tinte-lavanda); }
+
+.hover-card {
+  background-image:
+    var(--puntos-tarjeta),
+    radial-gradient(118% 100% at -4% 104%, var(--tinte) 0%, transparent 66%),
+    var(--card-degradado);
+  background-size:
+    var(--paso-tarjeta) var(--paso-tarjeta),
+    100% 100%,
+    100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat;
+}
+
+/* Al pasar el cursor el baño crece y sube de intensidad, en vez de
+   aplanarse a blanco. Lo que se busca es que la tarjeta se encienda, no
+   que se apague para distinguirse. */
+.hover-card:hover {
+  background-image:
+    var(--puntos-tarjeta),
+    radial-gradient(140% 122% at -4% 104%, var(--tinte) 0%, transparent 74%),
+    var(--card-degradado);
+  border-color: rgba(23,10,10,0.14);
+  box-shadow: var(--sombra-2);
+  transform: translateY(-3px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Botones
+   ══════════════════════════════════════════════════════════
+   Los de la lista eran vidrio sobre vidrio y se despegaban con sombra.
+   Sobre blanco eso ya no funciona: lo que los separa ahora es el borde
+   y un relleno apenas más oscuro que la tarjeta. */
+.kw-fila-btn,
+.kw-btn-mini {
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(40,12,12,0.05);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.kw-fila-btn:hover,
+.kw-btn-mini:hover {
+  background: var(--pastel-rojo);
+  border-color: rgba(138,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(40,12,12,0.08);
+  color: var(--red);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Campos y desplegables
+   ══════════════════════════════════════════════════════════ */
+.kw-input,
+.kw-select-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.kw-input:focus,
+.kw-select-btn:focus-visible,
+.kw-select.abierto .kw-select-btn {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(138,0,0,0.10);
+}
+.kw-select-menu {
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra-3);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Bloques de color
+   ══════════════════════════════════════════════════════════
+   Para cifras, estados y todo lo que se quiera destacar sin sacarlo de
+   la tarjeta. Se usa como clase suelta:
+
+     <div class="kw-bloque">42%</div>            el rojo, por omisión
+     <div class="kw-bloque menta">60k</div>      cuando hay varios juntos
+
+   El color y su texto salen de la misma pareja de variables, así que no
+   hay manera de emparejar mal un pastel con un texto que no se lea. */
+.kw-bloque {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-tarjeta);
+  background: var(--pastel-rojo);
+  color: var(--pastel-rojo-txt);
+}
+.kw-bloque.rosa    { background: var(--pastel-rosa);    color: var(--pastel-rosa-txt); }
+.kw-bloque.menta   { background: var(--pastel-menta);   color: var(--pastel-menta-txt); }
+.kw-bloque.cielo   { background: var(--pastel-cielo);   color: var(--pastel-cielo-txt); }
+.kw-bloque.lavanda { background: var(--pastel-lavanda); color: var(--pastel-lavanda-txt); }
+.kw-bloque.crema   { background: var(--pastel-crema);   color: var(--pastel-crema-txt); }
+
+.kw-bloque-num { font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.kw-bloque-txt { font-size: 12px; opacity: 0.78; }

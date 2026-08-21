@@ -21,6 +21,10 @@
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260820b">
+<!-- Va DESPUÉS de kw-base.css: es quien reemplaza el vidrio sobre fondo
+     oscuro por tarjeta blanca sobre lienzo claro, y para eso tiene que
+     leerse al final. -->
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -77,41 +81,9 @@
   })();
 </script>
 <style>
-  :root {
-    --red: #8a0000;
-    --text: #1a1a1a;
-    --muted: #6b6b6b;
-    --bg: /* Formas oscuras encima: tapan tramos de los filos, y ese tapado es
-         lo que hace que una onda se vea pasando por delante de otra. */
-      radial-gradient(68% 96% at 13% 26%, rgba(8,0,3,0.94) 0%, rgba(8,0,3,0.55) 44%, transparent 72%),
-      radial-gradient(58% 85% at 94% 64%, rgba(8,0,3,0.90) 0%, rgba(8,0,3,0.45) 42%, transparent 70%),
-      /* Filos luminosos: de cada elipse enorme solo se asoma un tramo del
-         borde, y ese arco es el que dibuja el pliegue. El hilo claro va
-         angosto y el resplandor ancho, para que se lea como luz pegandole
-         al canto de la onda y no como una linea pintada.
-         Los tamanos van en porcentaje del propio recuadro y no en vmax:
-         asi la composicion se ve igual de proporcionada en la pantalla
-         ancha del escritorio que en la alta del celular; con vmax los
-         arcos se salian por abajo en vertical. */
-      radial-gradient(170% 178% at 62% -72%,
-        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 46%,
-        rgba(255,95,120,0) 57.4%, rgba(255,150,170,0.52) 59.5%,
-        rgba(255,105,135,0.26) 60.3%, rgba(255,60,95,0.09) 63%, transparent 73%),
-      radial-gradient(106% 171% at 72% 126%,
-        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 45%,
-        rgba(255,95,120,0) 56.8%, rgba(255,145,165,0.48) 58.9%,
-        rgba(255,100,130,0.24) 59.7%, rgba(255,55,90,0.09) 62.5%, transparent 72%),
-      radial-gradient(96% 128% at -22% 76%,
-        rgba(110,9,32,0.17) 0%, rgba(65,4,20,0.08) 44%,
-        rgba(255,95,120,0) 56.2%, rgba(255,140,160,0.40) 58.4%,
-        rgba(255,95,125,0.20) 59.2%, rgba(255,50,85,0.08) 62%, transparent 71%),
-      /* Resplandor de ambiente, para que los filos no floten en negro seco */
-      radial-gradient(95% 133% at 30% 4%, rgba(140,10,38,0.28), transparent 64%),
-      radial-gradient(88% 139% at 80% 98%, rgba(95,0,26,0.36), transparent 62%),
-      linear-gradient(165deg, #1c0209 0%, #120106 46%, #080003 100%);
-    --card: #ffffff;
-    --border: rgba(0,0,0,0.07);
-  }
+  /* Los colores y el fondo vienen de kw-claro.css, que se enlaza arriba.
+     Esta pagina traia una copia del fondo oscuro pegada a mano, y al ir
+     en un <style> le ganaba al del sistema: por eso se quito. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     min-height: 100%;
@@ -166,34 +138,58 @@
     padding: 94px 20px 50px;
   }
   .welcome { text-align: center; margin-bottom: 32px; }
-  .welcome-title { font-size: 26px; font-weight: 800; color: #fff; }
+  /* Iba en blanco porque colgaba sobre el fondo guinda. Ahora cuelga
+     sobre el lienzo claro, así que toma el color de siempre. Y baja de
+     peso: en un diseño claro, una negrita de 800 en un título grande se
+     lee como grito. */
+  .welcome-title {
+    font-size: 30px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.03em; line-height: 1.15;
+  }
 
   .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .cards-grid .hover-card { min-height: 160px; }
   .cards-grid .hover-card-icon svg { width: 25px; height: 25px; }
-  .icon-accesos { background: #fff0f0; color: #CC0000; }
-  .icon-propiedades { background: #FFF0F0; color: var(--red); }
-  .icon-prospectos { background: #FFF0F0; color: var(--red); }
-  .icon-calendario { background: #fff0f5; color: var(--red); }
-  .icon-incidencias { background: #f0f7ff; color: var(--red); }
-  .icon-documentos { background: #FFF0F0; color: var(--red); }
-  .icon-firmas { background: #FFF0F0; color: var(--red); }
-  .icon-dictamenes { background: #FFF0F0; color: var(--red); }
-  .icon-drive { background: #FFF0F0; color: var(--red); }
-  .icon-liderazgo { background: #FFF0F0; color: var(--red); }
+  /* ── El color de cada tarjeta ──
+     Antes eran todas del mismo rosa y la cuadrícula se leía como un
+     solo bloque: para encontrar algo había que leer los diez títulos.
+     Ahora cada una tiene su tono, y el ojo aprende dónde está lo que
+     usa a diario sin leer.
+
+     El rojo sigue mandando (es la mitad de la cuadrícula, y es el que
+     se llena al pasar el cursor en todas). Los demás pasteles están
+     para separar, no para competir. */
+  .icon-propiedades { background: var(--pastel-rojo);    color: var(--pastel-rojo-txt); }
+  .icon-prospectos  { background: var(--pastel-rosa);    color: var(--pastel-rosa-txt); }
+  .icon-accesos     { background: var(--pastel-rojo);    color: var(--pastel-rojo-txt); }
+  .icon-calendario  { background: var(--pastel-crema);   color: var(--pastel-crema-txt); }
+  .icon-incidencias { background: var(--pastel-cielo);   color: var(--pastel-cielo-txt); }
+  .icon-documentos  { background: var(--pastel-rojo);    color: var(--pastel-rojo-txt); }
+  .icon-firmas      { background: var(--pastel-menta);   color: var(--pastel-menta-txt); }
+  .icon-dictamenes  { background: var(--pastel-lavanda); color: var(--pastel-lavanda-txt); }
+  .icon-drive       { background: var(--pastel-rojo);    color: var(--pastel-rojo-txt); }
+  .icon-liderazgo   { background: var(--pastel-rojo);    color: var(--pastel-rojo-txt); }
 
 
 
 
 
   footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; }
+  /* Blancos con su borde, no gris sobre gris: el gris de antes se
+     apoyaba en que atrás hubiera oscuro, y sobre el lienzo claro queda
+     casi del mismo tono que el fondo. */
   .footer-social {
     width: 34px; height: 34px; border-radius: 50%;
-    background: #f5f5f5; color: #888;
+    background: #fff; color: var(--muted);
+    border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, transform 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
   }
-  .footer-social:hover { background: #ffe0e0; color: var(--red); transform: translateY(-2px); }
+  .footer-social:hover {
+    background: var(--pastel-rojo); color: var(--red);
+    border-color: rgba(138,0,0,0.18);
+    transform: translateY(-2px); box-shadow: var(--sombra-1);
+  }
   .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
 
   @media (max-width: 640px) {
@@ -469,6 +465,6 @@
     window.addEventListener('kw-auth-ready', mostrarTarjetaAdminSiAplica, { once: true });
   }
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260820c" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260820d" data-menu="hub"></script>
 </body>
 </html>
