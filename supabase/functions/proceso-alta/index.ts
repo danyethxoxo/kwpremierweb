@@ -7,9 +7,11 @@
 //   2. Le comparte la carpeta de Drive como lector
 //   3. Le da acceso de lectura al calendario de KW Premier
 //
-// Los asesores nuevos se leen de un Google Sheet que se llena a mano;
-// esta función lo lee y devuelve las filas para que en la pantalla se
-// elija a quién procesar.
+// La gente se lee de un Google Sheet que se llena a mano. El libro trae
+// una hoja por grupo (asesores activos, bajas, back office, células) y
+// esta función las devuelve por separado, para que en la pantalla cada
+// grupo sea su propio apartado y se elija a quién procesar. Las hojas se
+// reconocen por su NOMBRE, no por su posición dentro del libro.
 //
 // Cada paso va por separado a propósito: si uno falla, los demás sí se
 // hacen y se reporta cuál falló. Así nunca se queda a medias sin saber
@@ -42,12 +44,16 @@
 // C) Project Settings > Edge Functions > Secrets:
 //      ALTA_SHEET_ID          el id del Google Sheet (va en su URL,
 //                             entre /d/ y /edit)
-//      ALTA_SHEET_RANGO       opcional, por defecto 'A1:Z500'
+//      ALTA_SHEET_RANGO       opcional, por defecto 'A1:Z500'. Es el
+//                             pedazo de celdas que se lee de CADA hoja;
+//                             el nombre de la hoja no va aquí.
 //      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
 //                             URL, después de /folders/)
-//      ALTA_EMAILS            los correos que pueden usar esto,
-//                             separados por coma. Ej:
-//                             dani.guerrero@kwmexico.mx,tumaster@correo.com
+//      ALTA_EMAILS            opcional. Master y Admin ya pasan por su
+//                             rol; esto es para abrirle a alguien que no
+//                             sea ninguno de los dos. Correos separados
+//                             por coma. Ej:
+//                             dani.guerrero@kwmexico.mx,otro@correo.com
 //
 // Ya existen y se reusan: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 // GOOGLE_REFRESH_TOKEN, GOOGLE_CALENDAR_ID.
@@ -120,9 +126,15 @@ function limpiarCorreo(s: unknown): string {
   return String(s || '').replace(/[\u200B\u200C\u200D\uFEFF\s]/g, '')
 }
 
+// Sin acentos y en minúsculas, para poder comparar nombres de hoja y de
+// columna sin importar cómo los haya escrito quien llena el libro.
+function normalizar(s: unknown): string {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '').trim()
+}
+
 // Convierte "DD/MM/AAAA" (o con guiones, o "AAAA-MM-DD") al formato de
-// fecha de la People API. El a\u00F1o es opcional: si la celda solo trae d\u00EDa
-// y mes, el cumplea\u00F1os igual se guarda (sin a\u00F1o) en vez de descartarse.
+// fecha de la People API. El año es opcional: si la celda solo trae día
+// y mes, el cumpleaños igual se guarda (sin año) en vez de descartarse.
 function parseFecha(s: string): { day: number; month: number; year?: number } | null {
   const texto = String(s || '').trim()
   if (!texto) return null
@@ -145,54 +157,200 @@ function aFecha(s: string): string | null {
   return `${String(f.year).padStart(4, '0')}-${String(f.month).padStart(2, '0')}-${String(f.day).padStart(2, '0')}`
 }
 
-// Lectura de la hoja para el ABC: solo nombre, KW ID y fecha de ingreso
-// - el DT asignado y el avance se administran a mano desde el sitio, no
-// vienen de aquí. A propósito NO reusa leerHoja(): esa filtra las filas
-// sin correo (la necesita para invitar por email en el alta), y aquí eso
-// sería peligroso - un asesor viejo sin correo capturado desaparecería
-// de la lista y la sincronización lo marcaría como baja por error. Aquí
-// lo único que se exige es el KW ID.
+function indiceDe(encabezados: string[], claves: string[]): number {
+  const limpio = encabezados.map(normalizar)
+  for (const clave of claves) {
+    const i = limpio.findIndex((h) => h.includes(clave))
+    if (i !== -1) return i
+  }
+  return -1
+}
+
+// ── Las hojas del libro ─────────────────────────────────────
+// El libro del alta trae una hoja por grupo de gente: los asesores
+// activos, los que ya causaron baja, back office y las células.
 //
-// `omitidos`, si se manda, se llena con quien tenía nombre pero le
-// faltó el KW ID - así, en vez de desaparecer de la sincronización sin
-// dejar rastro (que es justo lo que pasaba antes: alguien nuevo en la
-// hoja, sin KW ID asignado todavía, simplemente no aparecía en ningún
-// lado y nadie se enteraba de por qué), se puede avisar por nombre.
-async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
+// Antes aquí se leía SIEMPRE la primera hoja del libro, sin mirar cómo
+// se llamaba. Eso era una bomba de tiempo: el día que alguien
+// reacomodara las pestañas del libro, el padrón del ABC se habría
+// llenado con la hoja de bajas y habría dado por baja a medio Market
+// Center sin que nada se viera raro. Ahora la hoja se busca por su
+// nombre, y el orden dentro del libro deja de importar.
+//
+// El nombre se compara sin acentos ni mayúsculas y por "contiene", que
+// es lo único que aguanta que la misma hoja se llame "ACTIVOS",
+// "Asesores activos" o "Activos 2026" según quién la haya nombrado.
+type Grupo = { clave: string; titulo: string; palabras: string[] }
+
+const GRUPOS: Grupo[] = [
+  { clave: 'activos', titulo: 'Asesores Activos', palabras: ['activo'] },
+  { clave: 'bajas', titulo: 'Asesores de Baja', palabras: ['baja'] },
+  { clave: 'back_office', titulo: 'Back Office', palabras: ['back office', 'backoffice', 'back'] },
+  { clave: 'celulas', titulo: 'Células', palabras: ['celula'] },
+]
+
+// Una hoja que cae en dos grupos a la vez (una llamada "Células y Back
+// Office", por ejemplo) no se puede repartir sola, y mandarla entera al
+// primero que coincida sería etiquetar mal a la mitad de la gente. Esas
+// se quedan como su propio apartado, con el nombre que traigan.
+function clasificarHoja(titulo: string): Grupo | null {
+  const t = normalizar(titulo)
+  const posibles = GRUPOS.filter((g) => g.palabras.some((p) => t.includes(p)))
+  return posibles.length === 1 ? posibles[0] : null
+}
+
+type HojaDelLibro = { hoja: string; clave: string; titulo: string }
+
+async function detectarHojas(token: string): Promise<HojaDelLibro[]> {
   if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}` +
-    `/values/${encodeURIComponent(ALTA_SHEET_RANGO)}`
+    `?fields=sheets.properties(title,hidden)`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`No se pudieron leer las hojas del libro: ${res.status} ${await res.text()}`)
+
+  const hojas: HojaDelLibro[] = []
+  for (const s of ((await res.json()).sheets || []) as { properties?: { title?: string; hidden?: boolean } }[]) {
+    const titulo = String(s.properties?.title || '').trim()
+    // Las hojas escondidas son cuentas y borradores de quien llena el
+    // libro, no gente a la que haya que dar de alta.
+    if (!titulo || s.properties?.hidden) continue
+    const grupo = clasificarHoja(titulo)
+    hojas.push({
+      hoja: titulo,
+      clave: grupo ? grupo.clave : 'hoja_' + (normalizar(titulo).replace(/[^a-z0-9]+/g, '_') || String(hojas.length)),
+      titulo: grupo ? grupo.titulo : titulo,
+    })
+  }
+
+  // En el orden en que se enseñan en la pantalla (activos primero); lo
+  // que no cayó en ningún grupo va al final, como venga en el libro.
+  const orden = (h: HojaDelLibro) => {
+    const i = GRUPOS.findIndex((g) => g.clave === h.clave)
+    return i === -1 ? GRUPOS.length : i
+  }
+  return hojas.sort((a, b) => orden(a) - orden(b))
+}
+
+// ALTA_SHEET_RANGO puede traer todavía el nombre de una hoja pegado
+// ("Hoja1!A1:Z500"), de cuando esto leía una sola: de ahí se usa nada
+// más el pedazo de celdas, y la hoja la pone quien llama.
+const RANGO_CELDAS = ALTA_SHEET_RANGO.includes('!')
+  ? ALTA_SHEET_RANGO.slice(ALTA_SHEET_RANGO.lastIndexOf('!') + 1)
+  : ALTA_SHEET_RANGO
+
+// Sin hoja se lee la primera del libro, que es lo que esto hacía antes.
+// Las comillas simples son lo que permite nombres con espacios; una
+// comilla dentro del nombre se escribe doble.
+function rangoDeHoja(hoja: string | null): string {
+  return hoja ? `'${hoja.replace(/'/g, "''")}'!${RANGO_CELDAS}` : RANGO_CELDAS
+}
+
+// Varias hojas en una sola llamada. La respuesta viene en el mismo orden
+// en que se pidieron los rangos, así que se empareja por posición.
+async function leerValores(token: string, rangos: string[]): Promise<string[][][]> {
+  if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
+  if (!rangos.length) return []
+
+  const url = new URL(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}/values:batchGet`
+  )
+  for (const r of rangos) url.searchParams.append('ranges', r)
+
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) throw new Error(`No se pudo leer la hoja: ${res.status} ${await res.text()}`)
 
-  const filas: string[][] = (await res.json()).values || []
+  const leidos = ((await res.json()).valueRanges || []) as { values?: string[][] }[]
+  return rangos.map((_, i) => leidos[i]?.values || [])
+}
+
+// ── Una fila de cualquiera de las hojas ─────────────────────
+// Las columnas se buscan por su encabezado, no por posición: el libro se
+// llena a mano y mover una columna de lugar no debe romper esto. Las
+// hojas tampoco traen todas las mismas columnas (la de bajas trae fecha
+// de baja, la de células trae célula), así que lo que no esté se queda
+// vacío en vez de tumbar la lectura.
+type Persona = {
+  fila: number
+  nombre: string
+  correo: string
+  telefono: string
+  kwid: string
+  fechaIngreso: string
+  cumpleanos: string
+  puesto: string
+  celula: string
+  fechaBaja: string
+}
+
+function parsearPersonas(filas: string[][]): Persona[] {
   if (!filas.length) return []
 
-  const encabezados = filas[0]
-  const iAgente = indiceDe(encabezados, ['agente'])
-  const iNombre = indiceDe(encabezados, ['nombre completo', 'nombre'])
-  const iApellido = indiceDe(encabezados, ['apellido'])
-  const iKwid = indiceDe(encabezados, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
-  const iFechaIngreso = indiceDe(encabezados, ['fecha de ingreso', 'fecha ingreso'])
+  const enc = filas[0]
+  // "agente" es el nombre real de la persona; "nombre" (si existe aparte)
+  // suele ser el nombre comercial, así que "agente" tiene prioridad.
+  const iAgente = indiceDe(enc, ['agente'])
+  const iNombre = indiceDe(enc, ['nombre completo', 'nombre'])
+  const iApellido = indiceDe(enc, ['apellido'])
+  const iCorreo = indiceDe(enc, ['correo', 'email', 'e-mail', 'mail'])
+  const iTelefono = indiceDe(enc, ['telefono', 'celular', 'movil', 'whatsapp'])
+  const iKwid = indiceDe(enc, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
+  const iIngreso = indiceDe(enc, ['fecha de ingreso', 'fecha ingreso'])
+  const iCumple = indiceDe(enc, ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'])
+  const iPuesto = indiceDe(enc, ['puesto', 'cargo'])
+  const iCelula = indiceDe(enc, ['celula', 'equipo'])
+  const iBaja = indiceDe(enc, ['fecha de baja', 'baja'])
 
-  if (iKwid === -1) {
+  const dato = (fila: string[], i: number) => (i === -1 ? '' : String(fila[i] || '').trim())
+
+  return filas.slice(1).map((fila, n) => ({
+    fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
+    nombre: iAgente !== -1
+      ? dato(fila, iAgente)
+      : [dato(fila, iNombre), dato(fila, iApellido)].filter(Boolean).join(' '),
+    correo: limpiarCorreo(iCorreo === -1 ? '' : fila[iCorreo]),
+    telefono: dato(fila, iTelefono),
+    kwid: dato(fila, iKwid),
+    fechaIngreso: dato(fila, iIngreso),
+    cumpleanos: dato(fila, iCumple),
+    puesto: dato(fila, iPuesto),
+    celula: dato(fila, iCelula),
+    fechaBaja: dato(fila, iBaja),
+  }))
+}
+
+// La hoja de los asesores activos es la que manda para todo lo demás: el
+// alta, el padrón del ABC y el catálogo de Dictámenes se arman de ahí.
+async function hojaDeActivos(token: string): Promise<string | null> {
+  const activos = (await detectarHojas(token)).find((h) => h.clave === 'activos')
+  return activos ? activos.hoja : null
+}
+
+async function leerHojaActivos(token: string): Promise<string[][]> {
+  return (await leerValores(token, [rangoDeHoja(await hojaDeActivos(token))]))[0] || []
+}
+
+// Lectura de la hoja de activos para el ABC: solo nombre, KW ID y fecha
+// de ingreso - el DT asignado y el avance se administran a mano desde el
+// sitio, no vienen de aquí. Lo que se exige aquí es el KW ID y no el
+// correo (que es lo que pide leerHoja), y es a propósito: un asesor
+// viejo sin correo capturado no debe desaparecer de la sincronización,
+// porque desaparecer aquí significa que lo marque como baja por error.
+//
+// `omitidos`, si se manda, se llena con quien tenía nombre pero le faltó
+// el KW ID - así, en vez de desaparecer sin dejar rastro (que es justo
+// lo que pasaba antes: alguien nuevo en la hoja, sin KW ID asignado
+// todavía, simplemente no aparecía en ningún lado y nadie se enteraba de
+// por qué), se puede avisar por nombre.
+async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
+  const filas = await leerHojaActivos(token)
+  if (!filas.length) return []
+
+  if (indiceDe(filas[0], ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid']) === -1) {
     throw new Error('La hoja no tiene una columna de KW ID. Se busca un encabezado que diga "kwid", "kw id" o similar.')
   }
 
-  const todas = filas.slice(1).map((fila, n) => {
-    const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
-      iNombre !== -1 ? fila[iNombre] : '',
-      iApellido !== -1 ? fila[iApellido] : '',
-    ].filter(Boolean).join(' ').trim()
-    return {
-      fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
-      nombre,
-      kwid: String(fila[iKwid] || '').trim(),
-      fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
-    }
-  })
-
+  const todas = parsearPersonas(filas)
   if (omitidos) {
     for (const p of todas) {
       // Fila realmente vacía (nadie capturó nada todavía): no cuenta
@@ -204,64 +362,19 @@ async function leerHojaABC(token: string, omitidos?: { fila: number; nombre: str
   return todas.filter((p) => p.kwid)
 }
 
-function indiceDe(encabezados: string[], claves: string[]): number {
-  const limpio = encabezados.map((h) =>
-    String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-  )
-  for (const clave of claves) {
-    const i = limpio.findIndex((h) => h.includes(clave))
-    if (i !== -1) return i
-  }
-  return -1
-}
-
-// `omitidos`, si se manda, se llena con quien tenía nombre pero le
-// faltó el correo - mismo motivo que en leerHojaABC: alguien recién
-// agregado a la hoja sin correo capturado todavía desaparecía de la
-// lista de altas sin que nadie se enterara de por qué.
+// `omitidos`, si se manda, se llena con quien tenía nombre pero le faltó
+// el correo - mismo motivo que en leerHojaABC: alguien recién agregado a
+// la hoja sin correo capturado todavía desaparecía de la lista de altas
+// sin que nadie se enterara de por qué.
 async function leerHoja(token: string, omitidos?: { fila: number; nombre: string; motivo: string }[]) {
-  if (!ALTA_SHEET_ID) throw new Error('Falta configurar ALTA_SHEET_ID.')
-
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(ALTA_SHEET_ID)}` +
-    `/values/${encodeURIComponent(ALTA_SHEET_RANGO)}`
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`No se pudo leer la hoja: ${res.status} ${await res.text()}`)
-
-  const filas: string[][] = (await res.json()).values || []
+  const filas = await leerHojaActivos(token)
   if (!filas.length) return []
 
-  const encabezados = filas[0]
-  // "agente" es el nombre real de la persona; "nombre" (si existe aparte)
-  // suele ser el nombre comercial, así que "agente" tiene prioridad.
-  const iAgente = indiceDe(encabezados, ['agente'])
-  const iNombre = indiceDe(encabezados, ['nombre completo', 'nombre'])
-  const iApellido = indiceDe(encabezados, ['apellido'])
-  const iCorreo = indiceDe(encabezados, ['correo', 'email', 'e-mail', 'mail'])
-  const iTelefono = indiceDe(encabezados, ['telefono', 'celular', 'movil', 'whatsapp'])
-  const iKwid = indiceDe(encabezados, ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'])
-  const iFechaIngreso = indiceDe(encabezados, ['fecha de ingreso', 'fecha ingreso'])
-  const iCumpleanos = indiceDe(encabezados, ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'])
-
-  if (iCorreo === -1) {
+  if (indiceDe(filas[0], ['correo', 'email', 'e-mail', 'mail']) === -1) {
     throw new Error('La hoja no tiene una columna de correo. Se busca un encabezado que diga "correo", "email" o "mail".')
   }
 
-  const todas = filas.slice(1).map((fila, n) => {
-    const nombre = iAgente !== -1 ? String(fila[iAgente] || '').trim() : [
-      iNombre !== -1 ? fila[iNombre] : '',
-      iApellido !== -1 ? fila[iApellido] : '',
-    ].filter(Boolean).join(' ').trim()
-    return {
-      fila: n + 2, // +2: se salta el encabezado y las filas de Sheets empiezan en 1
-      nombre,
-      correo: limpiarCorreo(fila[iCorreo]),
-      telefono: iTelefono !== -1 ? String(fila[iTelefono] || '').trim() : '',
-      kwid: iKwid !== -1 ? String(fila[iKwid] || '').trim() : '',
-      fechaIngreso: iFechaIngreso !== -1 ? String(fila[iFechaIngreso] || '').trim() : '',
-      cumpleanos: iCumpleanos !== -1 ? String(fila[iCumpleanos] || '').trim() : '',
-    }
-  })
-
+  const todas = parsearPersonas(filas)
   if (omitidos) {
     for (const p of todas) {
       if (!p.correo && p.nombre) omitidos.push({ fila: p.fila, nombre: p.nombre, motivo: 'sin correo' })
@@ -593,28 +706,37 @@ Deno.serve(async (req: Request) => {
     // que es quien da las sesiones - no solo los correos del alta.
     const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync']
 
-    if (ACCIONES_STAFF.includes(accion)) {
+    // Las altas las hacen Master y Admin, más quien esté puesto a mano en
+    // ALTA_EMAILS. El rol es lo que manda: así, dar de alta a un Admin
+    // nuevo en el Panel ya le da acceso, sin que alguien tenga que
+    // acordarse de ir a agregarle el correo al secreto de la función. La
+    // lista se queda para poder abrirle a alguien que no sea ni una cosa
+    // ni la otra.
+    const ROLES_ALTA = ['master', 'admin']
+
+    // El candado de verdad va aquí, no en la pantalla: esconder una
+    // pestaña no impide que alguien llame a la función por su cuenta.
+    if (!ACCIONES_ABIERTAS.includes(accion)) {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', quien.user.id).single()
-      if (!perfil || !['master', 'admin', 'staff'].includes(String(perfil.role))) {
-        return respond({ error: 'Esta acción es solo para el equipo de liderazgo.' }, 403)
-      }
-    } else if (!ACCIONES_ABIERTAS.includes(accion)) {
-      // El candado de verdad va aquí, no en la pantalla: esconder un botón
-      // no impide que alguien llame a la función por su cuenta.
-      const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
+      const miRol = String(perfil?.role || '')
       const miCorreo = String(quien.user.email || '').toLowerCase()
-      if (!permitidos.length) {
-        return respond({ error: 'Falta configurar ALTA_EMAILS en los secretos de la función.' }, 500)
-      }
-      if (!permitidos.includes(miCorreo)) {
-        // Aviso temporal para diagnosticar por qué no coincide (se quita
-        // en cuanto quede resuelto): enseña qué correo detectó la función
-        // y contra qué lista lo comparó.
-        return respond({
-          error: 'Esta sección es solo para el equipo de altas.',
-          diagnostico: { tu_correo: miCorreo, lista_permitidos: permitidos },
-        }, 403)
+
+      if (ACCIONES_STAFF.includes(accion)) {
+        if (!['master', 'admin', 'staff'].includes(miRol)) {
+          return respond({ error: 'Esta acción es solo para el equipo de liderazgo.' }, 403)
+        }
+      } else {
+        const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
+        if (!ROLES_ALTA.includes(miRol) && !permitidos.includes(miCorreo)) {
+          // Aviso temporal para diagnosticar por qué no pasó (se quita en
+          // cuanto quede resuelto): enseña con qué rol y qué correo llegó,
+          // y contra qué se comparó.
+          return respond({
+            error: 'Esta sección es solo para Master, Admin y el equipo de altas.',
+            diagnostico: { tu_correo: miCorreo, tu_rol: miRol || '(sin perfil)', lista_permitidos: permitidos },
+          }, 403)
+        }
       }
     }
 
@@ -784,10 +906,15 @@ Deno.serve(async (req: Request) => {
       return respond({ aplicado: true, ...resumen })
     }
 
-    // ── Listar: lo que hay en la hoja + lo que ya se procesó ──
+    // ── Listar: el libro completo + lo que ya se procesó ──
+    //
+    // Se devuelve una lista por hoja del libro (activos, bajas, back
+    // office, células), no una sola lista revuelta: en la pantalla cada
+    // grupo es su propio apartado y quién está en cuál es justo el dato
+    // que se quiere ver.
     if (accion === 'listar') {
-      const omitidos: { fila: number; nombre: string; motivo: string }[] = []
-      const personas = await leerHoja(tokenPrincipal, omitidos)
+      const hojas = await detectarHojas(tokenPrincipal)
+      const valores = await leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja)))
 
       const { data: yaHechas } = await admin
         .from('altas_procesadas')
@@ -800,11 +927,36 @@ Deno.serve(async (req: Request) => {
         if (!porCorreo.has(k)) porCorreo.set(k, a) // la más reciente
       }
 
+      const grupos = hojas.map((h, i) => {
+        // Una fila sin nombre NI correo es una fila que nadie ha llenado
+        // todavía, no una persona a medias: esa no se enseña ni se
+        // reporta como omitida.
+        const personas = parsearPersonas(valores[i]).filter((p) => p.nombre || p.correo)
+        return {
+          clave: h.clave,
+          titulo: h.titulo,
+          hoja: h.hoja,
+          personas: personas.map((p) => ({
+            ...p,
+            alta: p.correo ? (porCorreo.get(p.correo.toLowerCase()) || null) : null,
+          })),
+          // Gente con nombre en la hoja pero sin correo capturado: sin
+          // correo no se le puede dar de alta en nada, así que en vez de
+          // enseñarla como si estuviera pendiente se avisa aparte con su
+          // fila para ir a corregirla.
+          omitidos: personas
+            .filter((p) => p.nombre && !p.correo)
+            .map((p) => ({ fila: p.fila, nombre: p.nombre, motivo: 'sin correo' })),
+        }
+      })
+
+      // Los activos son el grupo de siempre: lo que esta acción devolvía
+      // cuando el libro se leía como una sola hoja.
+      const activos = grupos.find((g) => g.clave === 'activos') || grupos[0]
       return respond({
-        personas: personas.map((p) => ({ ...p, alta: porCorreo.get(p.correo.toLowerCase()) || null })),
-        // Gente con nombre en la hoja pero sin correo capturado: antes
-        // desaparecía de esta lista sin dejar rastro.
-        omitidos,
+        grupos,
+        personas: activos ? activos.personas : [],
+        omitidos: activos ? activos.omitidos : [],
       })
     }
 
