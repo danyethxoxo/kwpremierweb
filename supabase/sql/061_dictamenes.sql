@@ -283,6 +283,78 @@ alter table public.dictamenes
   add column if not exists archivado_at timestamptz,
   add column if not exists dictaminado_at timestamptz;
 
+-- ── Poner al día las llaves y los "check" de una base vieja ──
+--
+-- Los alter de arriba agregan columnas, pero una llave foránea o un check
+-- no son columnas: se quedan como nacieron. En una base donde esta tabla
+-- se creó con la primera versión de este archivo siguen vivos los de
+-- entonces, y cada uno rechaza justo lo que la pantalla manda hoy:
+--
+--   asesor_id  apuntaba a profiles, porque el asesor era un usuario del
+--              sitio. Hoy es un renglón del catálogo, así que cualquier
+--              dictamen nuevo truena con "violates foreign key
+--              constraint dictamenes_asesor_id_fkey".
+--   estado     traía los estados de antes (abierto, en_revision,
+--              cerrado), así que dictaminar() no puede dejarlo en
+--              devuelta, condicionada ni autorizada.
+--   inmueble   estaba topado a 200 caracteres, y una dirección con
+--              colonia y alcaldía se pasa.
+--
+-- Todos van "not valid": revisar los renglones viejos aquí haría fallar
+-- el archivo entero en una base que todavía tenga dictámenes de aquella
+-- versión, y esos renglones no son de nadie que haya capturado desde el
+-- sitio como está hoy. La llave queda activa para todo lo que entre de
+-- ahora en adelante, que es lo que importa.
+alter table public.dictamenes drop constraint if exists dictamenes_asesor_id_fkey;
+alter table public.dictamenes
+  add constraint dictamenes_asesor_id_fkey
+  foreign key (asesor_id) references public.dictamen_asesores(id) on delete restrict
+  not valid;
+
+alter table public.dictamenes drop constraint if exists dictamenes_estado_check;
+alter table public.dictamenes
+  add constraint dictamenes_estado_check
+  check (estado in ('borrador', 'devuelta', 'condicionada', 'autorizada'))
+  not valid;
+
+alter table public.dictamenes drop constraint if exists dictamenes_operacion_check;
+alter table public.dictamenes
+  add constraint dictamenes_operacion_check
+  check (operacion in ('venta', 'renta'))
+  not valid;
+
+alter table public.dictamenes drop constraint if exists dictamenes_uso_check;
+alter table public.dictamenes
+  add constraint dictamenes_uso_check
+  check (uso in ('residencial', 'comercial', 'mixto'))
+  not valid;
+
+alter table public.dictamenes drop constraint if exists dictamenes_inmueble_largo;
+alter table public.dictamenes
+  add constraint dictamenes_inmueble_largo
+  check (char_length(trim(inmueble)) between 3 and 400)
+  not valid;
+
+-- Si no quedó ningún renglón viejo estorbando, se validan y dejan de ser
+-- "not valid". Si sí quedaron, se avisa y se sigue: la base queda
+-- funcionando para lo nuevo, que es lo que se venía a arreglar.
+do $$
+declare
+  v_nombre text;
+begin
+  foreach v_nombre in array array[
+    'dictamenes_asesor_id_fkey', 'dictamenes_estado_check',
+    'dictamenes_operacion_check', 'dictamenes_uso_check',
+    'dictamenes_inmueble_largo'
+  ] loop
+    begin
+      execute format('alter table public.dictamenes validate constraint %I', v_nombre);
+    exception when others then
+      raise notice 'Quedaron dictámenes viejos que no cumplen %. Se deja activa para lo nuevo.', v_nombre;
+    end;
+  end loop;
+end $$;
+
 create index if not exists idx_dictamenes_asesor
   on public.dictamenes(asesor_id, created_at desc);
 -- El archivo se consulta poco y la lista de siempre se consulta mucho, así
@@ -353,6 +425,28 @@ create table if not exists public.dictamen_puntos (
 alter table public.dictamen_puntos
   add column if not exists nota text,
   add column if not exists corregida_at timestamptz;
+
+-- El mismo caso que en dictamenes: el check de esta tabla nació con
+-- cuatro estados y "corregido" en masculino. Hoy son dos y la pantalla
+-- escribe "corregida", así que marcar una observación como corregida
+-- tronaba. Las que ya estuvieran marcadas con el nombre viejo se pasan al
+-- nuevo antes de rehacer el check, porque son la misma cosa dicha de otra
+-- manera y no hay razón para dejarlas fuera.
+update public.dictamen_puntos set estado = 'corregida'
+  where estado in ('corregido', 'subsanado');
+
+alter table public.dictamen_puntos drop constraint if exists dictamen_puntos_estado_check;
+alter table public.dictamen_puntos
+  add constraint dictamen_puntos_estado_check
+  check (estado in ('pendiente', 'corregida'))
+  not valid;
+
+do $$
+begin
+  alter table public.dictamen_puntos validate constraint dictamen_puntos_estado_check;
+exception when others then
+  raise notice 'Quedaron observaciones con un estado que ya no existe. El check queda activo para lo nuevo.';
+end $$;
 
 create index if not exists idx_dictamen_puntos_dictamen
   on public.dictamen_puntos(dictamen_id, orden);

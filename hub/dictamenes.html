@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dictámenes</title>
+<title>Dictaminación de Expedientes</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
@@ -162,11 +162,37 @@
   @media (max-width: 700px) {
     .dic-dos, .dic-tres { grid-template-columns: 1fr; }
   }
+  /* Las tres partes del formulario (cliente, inmueble, observaciones)
+     se separan con este rótulo. La línea de abajo es la que hace que se
+     lean como bloques y no como un solo chorro de campos. */
   .dic-subtitulo {
     font-size: 15px; color: var(--text);
     margin: var(--sp-5) 0 var(--sp-3);
     padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
+  /* Un escalón abajo del anterior: divide por dentro de una sección, sin
+     competir con el rótulo que la encabeza. */
+  .dic-subtitulo-menor {
+    font-size: 12.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    margin: var(--sp-4) 0 var(--sp-2);
+  }
+
+  /* ── Los clientes del expediente ──
+     Cada uno en su tarjeta: con tres o cuatro capturados seguidos, sin
+     algo que los encierre no se distingue dónde acaba uno y empieza el
+     que sigue, y se acaba escribiendo el estado civil en el renglón del
+     otro. */
+  .dic-cliente {
+    border: 1px solid var(--border); border-radius: var(--r-campo);
+    padding: var(--sp-3); margin-bottom: var(--sp-3);
+    background: var(--card-degradado, #fff);
+  }
+  .dic-cliente-num {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--red); margin-bottom: var(--sp-2);
+  }
+  .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
 
   /* ── El buscador de asesor ──
      Son 94 y crecen. Un desplegable de 94 renglones se recorre a ciegas;
@@ -298,7 +324,7 @@
 <body>
 
   <header class="kw-header">
-    <span class="kw-header-title">Dictámenes</span>
+    <span class="kw-header-title">Dictaminación de Expedientes</span>
     <div class="header-right">
       <div id="notif-bell-slot"></div>
       <a href="../portal.html" class="back-btn">
@@ -316,7 +342,7 @@
     <div id="vista-lista">
       <div class="dic-barra">
         <div>
-          <h1 class="kw-page-titulo" id="page-titulo">Dictámenes</h1>
+          <h1 class="kw-page-titulo" id="page-titulo">Dictaminación de Expedientes</h1>
           <p class="kw-page-desc" id="page-desc">Revisión de expedientes y seguimiento de lo que falta corregir.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -393,9 +419,49 @@
           </div>
         </div>
 
-        <div class="dic-campo">
-          <label for="e-cliente">Nombre del cliente</label>
-          <textarea id="e-cliente" rows="2" placeholder="Como aparece en la escritura"></textarea>
+        <h2 class="kw-page-titulo dic-subtitulo">Datos del cliente</h2>
+
+        <!-- Cuántos son se pregunta antes que nada porque de eso depende
+             cuántas casillas hay que llenar. Del 1 al 5 cubre casi todo;
+             para una sucesión con más herederos se escribe el número. -->
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-clientes-cuantos">¿Cuántos clientes son?</label>
+            <select id="e-clientes-cuantos">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="__mas__">Más de 5</option>
+            </select>
+          </div>
+          <div class="dic-campo" id="e-clientes-otros-caja" style="display:none;">
+            <label for="e-clientes-otros">¿Cuántos exactamente?</label>
+            <input type="number" id="e-clientes-otros" class="kw-input" min="6" max="30" placeholder="6" autocomplete="off">
+          </div>
+        </div>
+
+        <div id="e-clientes"></div>
+
+        <h2 class="kw-page-titulo dic-subtitulo">Datos del inmueble</h2>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-tipo-contrato">Tipo de contrato</label>
+            <select id="e-tipo-contrato">
+              <option value="">Sin especificar</option>
+              <option value="exclusiva">Exclusiva</option>
+              <option value="abierto">Abierto</option>
+            </select>
+          </div>
+          <div class="dic-campo">
+            <label for="e-tipo">Tipo de inmueble</label>
+            <select id="e-tipo"></select>
+            <!-- Sale solo al elegir "Otro": se escribe una vez y queda en
+                 el catálogo para las siguientes, igual que las etiquetas. -->
+            <input type="text" id="e-tipo-nuevo" class="kw-input" placeholder="¿Cuál? Se guarda para la próxima" style="display:none;margin-top:8px;" autocomplete="off">
+          </div>
         </div>
 
         <div class="dic-campo">
@@ -403,7 +469,7 @@
           <textarea id="e-inmueble" rows="2" placeholder="Calle, número, edificio, departamento, colonia, alcaldía"></textarea>
         </div>
 
-        <div class="dic-tres">
+        <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-operacion">Operación</label>
             <select id="e-operacion">
@@ -419,25 +485,27 @@
               <option value="mixto">Mixto</option>
             </select>
           </div>
-          <div class="dic-campo">
-            <label for="e-tipo">Tipo de inmueble</label>
-            <select id="e-tipo"></select>
-            <!-- Sale solo al elegir "Otro": se escribe una vez y queda en
-                 el catálogo para las siguientes, igual que las etiquetas. -->
-            <input type="text" id="e-tipo-nuevo" class="kw-input" placeholder="¿Cuál? Se guarda para la próxima" style="display:none;margin-top:8px;" autocomplete="off">
-          </div>
         </div>
 
-        <h2 class="kw-page-titulo dic-subtitulo">Datos del expediente</h2>
+        <div class="dic-campo">
+          <label for="e-esc-propiedad">Escrituras y fecha</label>
+          <textarea id="e-esc-propiedad" rows="2" placeholder="Escritura 25,928 de fecha 01 de agosto del 2000, ante el Lic. ..."></textarea>
+        </div>
 
         <div class="dic-dos">
           <div class="dic-campo">
-            <label for="e-esc-propiedad">Escrituras y fecha</label>
-            <textarea id="e-esc-propiedad" rows="2" placeholder="Escritura 25,928 de fecha 01 de agosto del 2000, ante el Lic. ..."></textarea>
+            <label for="e-condominio">Condominio</label>
+            <select id="e-condominio">
+              <option value="">Sin especificar</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
           </div>
-          <div class="dic-campo">
-            <label for="e-esc-condominio">Condominio</label>
-            <textarea id="e-esc-condominio" rows="2" placeholder="Escritura de condominio y fecha, si aplica"></textarea>
+          <!-- La escritura del condominio solo se pide si dijo que sí:
+               preguntarla cuando no aplica es pedir un dato que no existe. -->
+          <div class="dic-campo" id="e-esc-condominio-caja" style="display:none;">
+            <label for="e-esc-condominio">Escritura del condominio</label>
+            <textarea id="e-esc-condominio" rows="2" placeholder="Escritura de condominio y fecha"></textarea>
           </div>
         </div>
 
@@ -461,42 +529,36 @@
             </div>
           </div>
           <div class="dic-campo">
-            <label for="e-estado-civil">Estado civil</label>
-            <select id="e-estado-civil">
-              <option value="">Sin especificar</option>
-              <option>Soltero(a)</option>
-              <option>Casado(a) por sociedad conyugal</option>
-              <option>Casado(a) por separación de bienes</option>
-              <option>Divorciado(a)</option>
-              <option>Viudo(a)</option>
-              <option>Concubinato</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Estos dos no estaban en la lista que se pidió, pero sí en el
-             machote de papel. Se dejan: quitarlos sería perder un dato que
-             hoy se captura. -->
-        <div class="dic-dos">
-          <div class="dic-campo">
             <label for="e-cuenta-predial">Cuenta predial</label>
             <input type="text" id="e-cuenta-predial" class="kw-input" autocomplete="off">
           </div>
+        </div>
+
+        <div class="dic-dos">
           <div class="dic-campo">
-            <label for="e-sup-predial">Superficie predial</label>
+            <label for="e-sup-terreno">Superficie de terreno</label>
             <div class="dic-conunidad">
-              <input type="text" id="e-sup-predial" class="kw-input" inputmode="decimal" placeholder="90.15" autocomplete="off">
+              <input type="text" id="e-sup-terreno" class="kw-input" inputmode="decimal" placeholder="120.00" autocomplete="off">
+              <span>m²</span>
+            </div>
+          </div>
+          <div class="dic-campo">
+            <label for="e-sup-construccion">Superficie de construcción</label>
+            <div class="dic-conunidad">
+              <input type="text" id="e-sup-construccion" class="kw-input" inputmode="decimal" placeholder="90.15" autocomplete="off">
               <span>m²</span>
             </div>
           </div>
         </div>
+
+        <h2 class="kw-page-titulo dic-subtitulo">Observaciones</h2>
 
         <div class="dic-campo">
           <label for="e-observaciones">Observaciones generales</label>
           <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo."></textarea>
         </div>
 
-        <h2 class="kw-page-titulo dic-subtitulo">Observaciones por atender</h2>
+        <h3 class="dic-subtitulo-menor">Por atender</h3>
         <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 0;">
           Cada una se marca por separado conforme el asesor las va corrigiendo.
         </p>
@@ -542,6 +604,7 @@
 
   var dictamenes = [];
   var puntos = [];
+  var clientes = [];
   var asesores = [];
   var tipos = [];
   var abierto = null;
@@ -557,6 +620,27 @@
 
   var OPERACIONES = { venta: 'Venta', renta: 'Renta' };
   var USOS = { residencial: 'Residencial', comercial: 'Comercial', mixto: 'Mixto' };
+  var CONTRATOS = { exclusiva: 'Exclusiva', abierto: 'Abierto' };
+
+  // Un booleano de la base tiene tres respuestas posibles en pantalla: sí,
+  // no, y todavía no se contesta. La tercera se enseña vacía, no como "No".
+  function siNo(v) {
+    if (v === true) return 'Sí';
+    if (v === false) return 'No';
+    return '';
+  }
+
+  // Los clientes de un expediente, con su estado civil entre paréntesis
+  // para no gastar un renglón por cada uno en la tarjeta.
+  function clientesTexto(d) {
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+    if (!suyos.length) return d.clientes_nombres || '';
+    return suyos.map(function (c) {
+      return c.nombre + (c.estado_civil ? ' (' + c.estado_civil + ')' : '');
+    }).join(' · ');
+  }
 
   function escapar(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -606,6 +690,14 @@
     var p = await window.kwSupabase
       .from('dictamen_puntos').select('*').order('orden').limit(5000);
     puntos = p.data || [];
+
+    // Y los clientes, por lo mismo: se ocupan al abrir cualquier
+    // expediente y traerlos uno por uno sería una vuelta a la base por
+    // cada tarjeta que se abre.
+    var cl = await window.kwSupabase
+      .from('dictamen_clientes').select('*').order('orden').limit(5000);
+    clientes = cl.data || [];
+
     pintar();
   }
 
@@ -644,7 +736,7 @@
       if (estado !== 'todos' && d.estado !== estado) return false;
       if (asesor !== 'todos' && d.asesor_id !== asesor) return false;
       if (busca) {
-        var heno = [d.inmueble, d.folio, d.cliente, d.asesor_nombre]
+        var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre]
           .join(' ').toLowerCase();
         if (heno.indexOf(busca) === -1) return false;
       }
@@ -691,7 +783,9 @@
 
   function pintar() {
     pintarResumen();
-    $('page-titulo').textContent = verArchivo ? 'Archivo de dictámenes' : 'Dictámenes';
+    $('page-titulo').textContent = verArchivo
+      ? 'Archivo de expedientes'
+      : 'Dictaminación de Expedientes';
     $('page-desc').textContent = verArchivo
       ? 'Los que se sacaron de la lista. Desde aquí se restauran o se borran de verdad.'
       : 'Revisión de expedientes y seguimiento de lo que falta corregir.';
@@ -771,16 +865,18 @@
 
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
-      dato('Cliente', d.cliente) +
+      dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d)) +
+      dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
       dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
       dato('Tipo de inmueble', d.tipo_inmueble) +
       dato('Escrituras y fecha', d.escritura_propiedad) +
       dato('Condominio', d.escritura_condominio) +
       dato('CFDI', d.cfdi) +
       dato('Superficie escritura', conUnidad(d.superficie_escritura)) +
+      dato('Condominio', siNo(d.condominio)) +
       dato('Cuenta predial', d.cuenta_predial) +
-      dato('Superficie predial', conUnidad(d.superficie_predial)) +
-      dato('Estado civil', d.estado_civil) +
+      dato('Superficie terreno', conUnidad(d.superficie_terreno)) +
+      dato('Superficie construcción', conUnidad(d.superficie_construccion)) +
       dato('Folio real', d.folio_real) +
       dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
     '</div>';
@@ -1026,16 +1122,15 @@
   // un renglón sea agregar un renglón aquí, y no acordarse de tocar el
   // leer, el guardar y el reabrir por separado.
   var CAMPOS = [
-    ['e-cliente', 'cliente'],
     ['e-inmueble', 'inmueble'],
     ['e-esc-propiedad', 'escritura_propiedad'],
     ['e-esc-condominio', 'escritura_condominio'],
     ['e-cfdi', 'cfdi'],
     ['e-folio-real', 'folio_real'],
     ['e-sup-escritura', 'superficie_escritura'],
-    ['e-estado-civil', 'estado_civil'],
     ['e-cuenta-predial', 'cuenta_predial'],
-    ['e-sup-predial', 'superficie_predial'],
+    ['e-sup-terreno', 'superficie_terreno'],
+    ['e-sup-construccion', 'superficie_construccion'],
     ['e-observaciones', 'observaciones'],
   ];
 
@@ -1043,7 +1138,16 @@
   // enseñarlas. Antes eran texto libre, así que en la base ya hay
   // "92.40", "92.40 m2" y "92.40 m²" queriendo decir lo mismo: al leer se
   // le quita la unidad venga como venga, y al pintar se le pone una sola.
-  var SUPERFICIES = ['superficie_escritura', 'superficie_predial'];
+  var SUPERFICIES = ['superficie_escritura', 'superficie_terreno', 'superficie_construccion'];
+
+  var ESTADOS_CIVILES = [
+    'Soltero(a)',
+    'Casado(a) por sociedad conyugal',
+    'Casado(a) por separación de bienes',
+    'Divorciado(a)',
+    'Viudo(a)',
+    'Concubinato',
+  ];
 
   function soloNumero(v) {
     return String(v == null ? '' : v).replace(/\s*m\s*(2|²)\s*$/i, '').trim();
@@ -1054,21 +1158,113 @@
     return n ? n + ' m²' : '';
   }
 
-  // Un dictamen de antes pudo quedar con el estado civil escrito a mano,
-  // de cuando el campo era libre. Si lo que trae no está en la lista se le
-  // agrega su propia opción: dejarlo caer en "Sin especificar" le borraría
-  // un dato al expediente sin avisarle a nadie.
-  function acomodarEstadoCivil(valor) {
-    if (!valor) return;
-    var sel = $('e-estado-civil');
-    var existe = Array.prototype.some.call(sel.options, function (o) {
-      return o.value === valor;
+  // ── Los clientes del expediente ─────────────────────────────
+
+  // Las opciones del estado civil de un cliente. Si el expediente venía
+  // con algo escrito a mano (de cuando era campo libre y estaba en el
+  // dictamen, no en cada persona) se le agrega su propia opción: dejarlo
+  // caer en "Sin especificar" le borraría un dato sin avisarle a nadie.
+  function opcionesEstadoCivil(valor) {
+    var lista = ESTADOS_CIVILES.slice();
+    if (valor && lista.indexOf(valor) === -1) lista.push(valor);
+    return '<option value="">Sin especificar</option>' +
+      lista.map(function (e) {
+        return '<option value="' + escapar(e) + '"' +
+          (e === valor ? ' selected' : '') + '>' + escapar(e) + '</option>';
+      }).join('');
+  }
+
+  // Cuántas casillas hay que enseñar. El desplegable llega hasta 5 y de
+  // ahí en adelante manda el número que se escriba, topado para que un
+  // teclazo no pinte trescientas tarjetas.
+  function cuantosClientes() {
+    var sel = $('e-clientes-cuantos').value;
+    if (sel !== '__mas__') return Number(sel) || 1;
+    var n = Number($('e-clientes-otros').value) || 6;
+    return Math.max(6, Math.min(30, n));
+  }
+
+  // Lo escrito se guarda en el borrador antes de volver a pintar, para
+  // que cambiar el número de clientes no borre lo que ya se había
+  // capturado en las casillas de arriba.
+  function leerClientes() {
+    $('e-clientes').querySelectorAll('[data-cliente]').forEach(function (caja) {
+      var i = Number(caja.dataset.cliente);
+      borrador.clientes[i] = {
+        nombre: caja.querySelector('[data-cliente-nombre]').value.trim(),
+        estado_civil: caja.querySelector('[data-cliente-estado]').value || null,
+      };
     });
-    if (existe) return;
-    var op = document.createElement('option');
-    op.value = valor;
-    op.textContent = valor;
-    sel.appendChild(op);
+  }
+
+  function pintarClientes() {
+    var n = cuantosClientes();
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      var c = borrador.clientes[i] || { nombre: '', estado_civil: '' };
+      html += '<div class="dic-cliente" data-cliente="' + i + '">' +
+        '<div class="dic-cliente-num">Cliente ' + (i + 1) + '</div>' +
+        '<div class="dic-dos">' +
+          '<div class="dic-campo">' +
+            '<label>Nombre</label>' +
+            '<input type="text" class="kw-input" data-cliente-nombre ' +
+              'placeholder="Como aparece en la escritura" autocomplete="off" ' +
+              'value="' + escapar(c.nombre || '') + '">' +
+          '</div>' +
+          '<div class="dic-campo">' +
+            '<label>Estado civil</label>' +
+            '<select data-cliente-estado>' + opcionesEstadoCivil(c.estado_civil) + '</select>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    $('e-clientes').innerHTML = html;
+    // Los desplegables recién pintados todavía son los grises del
+    // navegador hasta que kw-ui los arma.
+    if (window.kwUI) window.kwUI.selects($('e-clientes'));
+
+    // Lo que se teclee se va guardando solo: así cambiar el número de
+    // clientes, o guardar, no depende de que el campo haya perdido el foco.
+    $('e-clientes').querySelectorAll('[data-cliente-nombre]').forEach(function (inp) {
+      inp.addEventListener('input', leerClientes);
+    });
+    $('e-clientes').querySelectorAll('[data-cliente-estado]').forEach(function (sel) {
+      sel.addEventListener('change', leerClientes);
+    });
+  }
+
+  // El campo del número exacto solo estorba mientras no se elija "Más
+  // de 5", así que vive escondido hasta entonces.
+  function acomodarCuantos() {
+    var mas = $('e-clientes-cuantos').value === '__mas__';
+    $('e-clientes-otros-caja').style.display = mas ? '' : 'none';
+    if (mas && !$('e-clientes-otros').value) $('e-clientes-otros').value = '6';
+  }
+
+  // De dónde salen los clientes de un expediente que se abre. Los de la
+  // tabla nueva mandan; si no tiene (porque se capturó antes de que los
+  // clientes fueran varios), se arma uno solo con lo que traía el
+  // dictamen en sus casillas viejas, para no llegar con el formulario en
+  // blanco a un expediente que sí tenía cliente.
+  function clientesDe(d) {
+    if (!d) return [{ nombre: '', estado_civil: '' }];
+
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); })
+      .map(function (c) { return { nombre: c.nombre, estado_civil: c.estado_civil || '' }; });
+    if (suyos.length) return suyos;
+
+    if (d.cliente || d.estado_civil) {
+      return [{ nombre: d.cliente || '', estado_civil: d.estado_civil || '' }];
+    }
+    return [{ nombre: '', estado_civil: '' }];
+  }
+
+  // La escritura del condominio solo se pide si se dijo que sí.
+  function acomodarCondominio() {
+    $('e-esc-condominio-caja').style.display =
+      $('e-condominio').value === 'si' ? '' : 'none';
   }
 
   function abrirEditor(id) {
@@ -1081,6 +1277,12 @@
       uso: d ? d.uso : 'residencial',
       tipo_inmueble_id: (d && d.tipo_inmueble_id) || '',
       fecha_dictamen: (d && d.fecha_dictamen) || hoy(),
+      tipo_contrato: (d && d.tipo_contrato) || '',
+      // En la base es booleano y aquí desplegable, así que viaja como
+      // texto: "" es que todavía no se contesta, que no es lo mismo que no.
+      condominio: d && d.condominio !== null && d.condominio !== undefined
+        ? (d.condominio ? 'si' : 'no') : '',
+      clientes: clientesDe(d),
       puntos: d
         ? puntos.filter(function (p) { return p.dictamen_id === d.id; })
           .map(function (p) { return { texto: p.texto, estado: p.estado, nota: p.nota }; })
@@ -1093,23 +1295,31 @@
     $('e-operacion').value = borrador.operacion;
     $('e-uso').value = borrador.uso;
     $('e-tipo').value = borrador.tipo_inmueble_id;
+    $('e-tipo-contrato').value = borrador.tipo_contrato;
+    $('e-condominio').value = borrador.condominio;
     $('e-tipo-nuevo').style.display = 'none';
     $('e-tipo-nuevo').value = '';
     // El desplegable del sitio pinta su rótulo escuchando "change", y
     // poner el valor desde el código no lo dispara.
-    ['e-operacion', 'e-uso', 'e-tipo'].forEach(function (x) {
+    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio'].forEach(function (x) {
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
-    acomodarEstadoCivil(borrador.estado_civil);
     CAMPOS.forEach(function (c) {
       $(c[0]).value = SUPERFICIES.indexOf(c[1]) !== -1
         ? soloNumero(borrador[c[1]])
         : borrador[c[1]];
     });
-    // El estado civil se llena arriba junto con los demás, así que su
-    // rótulo se repinta aquí y no en la vuelta de los otros desplegables.
-    $('e-estado-civil').dispatchEvent(new Event('change', { bubbles: true }));
     elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
+
+    // Cuántos clientes son lo dice lo que ya trae capturado; uno nuevo
+    // arranca en uno, que es el caso de todos los días.
+    var cuantos = Math.max(1, borrador.clientes.length);
+    $('e-clientes-cuantos').value = cuantos > 5 ? '__mas__' : String(cuantos);
+    $('e-clientes-otros').value = cuantos > 5 ? String(cuantos) : '';
+    $('e-clientes-cuantos').dispatchEvent(new Event('change', { bubbles: true }));
+    acomodarCuantos();
+    pintarClientes();
+    acomodarCondominio();
 
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
@@ -1155,6 +1365,9 @@
     borrador.fecha_dictamen = $('e-fecha').value || hoy();
     borrador.operacion = $('e-operacion').value;
     borrador.uso = $('e-uso').value;
+    borrador.tipo_contrato = $('e-tipo-contrato').value;
+    borrador.condominio = $('e-condominio').value;
+    leerClientes();
     CAMPOS.forEach(function (c) {
       var v = $(c[0]).value.trim();
       borrador[c[1]] = SUPERFICIES.indexOf(c[1]) !== -1 ? soloNumero(v) : v;
@@ -1214,11 +1427,23 @@
       return await fallo('Falta la dirección del inmueble.', 'e-inmueble');
     }
 
+    // De los clientes se guardan nada más los que traen nombre: las
+    // casillas de más que hayan quedado abiertas por haber subido el
+    // número y luego bajarlo no son clientes, son casillas vacías.
+    var losClientes = borrador.clientes
+      .slice(0, cuantosClientes())
+      .filter(function (c) { return c && c.nombre; });
+    if (!losClientes.length) {
+      return await fallo('Falta el nombre de por lo menos un cliente.', 'e-clientes');
+    }
+
     var fila = {
       asesor_id: borrador.asesor_id,
       fecha_dictamen: borrador.fecha_dictamen,
       operacion: borrador.operacion,
       uso: borrador.uso,
+      tipo_contrato: borrador.tipo_contrato || null,
+      condominio: borrador.condominio === '' ? null : borrador.condominio === 'si',
       tipo_inmueble_id: await resolverTipo(),
     };
     // Los vacíos van como nulo y no como cadena vacía: en la base son la
@@ -1226,12 +1451,21 @@
     // los reportes como si fuera un dato.
     CAMPOS.forEach(function (c) { fila[c[1]] = borrador[c[1]] || null; });
     fila.inmueble = borrador.inmueble;
+    // La casilla vieja se mantiene al día con los nombres de la tabla
+    // nueva. No es la fuente (esa es dictamen_clientes), pero sí lo que
+    // leen los reportes de antes, y dejarla congelada haría que un
+    // expediente editado hoy siguiera diciendo el cliente de ayer.
+    fila.cliente = losClientes.map(function (c) { return c.nombre; }).join(', ');
+    // Si el condominio quedó en no, la escritura que se hubiera escrito
+    // antes deja de tener a qué referirse.
+    if (borrador.condominio !== 'si') fila.escritura_condominio = null;
 
     var id = borrador.id;
     if (id) {
       var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
       if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
       await window.kwSupabase.from('dictamen_puntos').delete().eq('dictamen_id', id);
+      await window.kwSupabase.from('dictamen_clientes').delete().eq('dictamen_id', id);
     } else {
       fila.dictaminado_por = yo.id;
       var c = await window.kwSupabase.from('dictamenes').insert(fila).select('id').single();
@@ -1239,6 +1473,17 @@
       id = c.data.id;
       borrador.id = id;
     }
+
+    // Igual que las observaciones: se borran y se vuelven a escribir en
+    // vez de comparar cuál cambió.
+    var rc = await window.kwSupabase.from('dictamen_clientes').insert(
+      losClientes.map(function (x, i) {
+        return {
+          dictamen_id: id, orden: i + 1,
+          nombre: x.nombre, estado_civil: x.estado_civil || null,
+        };
+      }));
+    if (rc.error) return await fallo('No se pudieron guardar los clientes: ' + rc.error.message);
 
     if (borrador.puntos.length) {
       var p = await window.kwSupabase.from('dictamen_puntos').insert(
@@ -1259,6 +1504,37 @@
     return '<tr>' +
       '<td class="rotulo">' + rotulo + '</td>' +
       '<td' + (alto ? ' class="' + alto + '"' : '') + '>' + escapar(valor || '') + '</td>' +
+    '</tr>';
+  }
+
+  // Los clientes van numerados y cada uno con su estado civil debajo,
+  // porque en la hoja ese dato es de la persona: en una sucesión con tres
+  // herederos, decir un solo estado civil para los tres no querría decir
+  // nada. Si el expediente es de antes y trae uno solo sin desglosar, sale
+  // el renglón de siempre.
+  function renglonClientes(d) {
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+
+    if (!suyos.length) {
+      return renglon('Cliente', d.clientes_nombres || d.cliente, 'alto-3') +
+        renglon('Estado civil', d.estado_civil);
+    }
+
+    var cuerpo = suyos.map(function (c, i) {
+      return '<div style="margin-bottom:3px;">' +
+        (suyos.length > 1 ? '<b>' + (i + 1) + '.</b> ' : '') +
+        escapar(c.nombre) +
+        (c.estado_civil
+          ? '<span style="color:#555;"> (' + escapar(c.estado_civil) + ')</span>'
+          : '') +
+      '</div>';
+    }).join('');
+
+    return '<tr>' +
+      '<td class="rotulo">' + (suyos.length > 1 ? 'Clientes' : 'Cliente') + '</td>' +
+      '<td class="alto-3">' + cuerpo + '</td>' +
     '</tr>';
   }
 
@@ -1294,11 +1570,12 @@
         '<table class="hoja-cuadro">' +
           renglon('Fecha de dictamen', fecha(d.fecha_dictamen)) +
           renglon('Asesor', d.asesor_nombre) +
-          renglon('Cliente', d.cliente, 'alto-3') +
+          renglonClientes(d) +
           renglon('Inmueble', d.inmueble, 'alto-3') +
           renglon('Tipo de oportunidad',
             (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '') +
             (d.tipo_inmueble ? ' · ' + d.tipo_inmueble : '')) +
+          renglon('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
 
           // El único renglón que parte su celda en dos, igual que el
           // machote: la escritura de la propiedad y la del condominio.
@@ -1318,11 +1595,12 @@
             '</td>' +
           '</tr>' +
 
+          renglon('Condominio', siNo(d.condominio)) +
           renglon('CFDI', d.cfdi) +
           renglon('Superficie escritura', conUnidad(d.superficie_escritura)) +
           renglon('Cuenta predial', d.cuenta_predial) +
-          renglon('Superficie predial', conUnidad(d.superficie_predial)) +
-          renglon('Estado civil', d.estado_civil) +
+          renglon('Superficie de terreno', conUnidad(d.superficie_terreno)) +
+          renglon('Superficie de construcción', conUnidad(d.superficie_construccion)) +
           renglon('Folio real', d.folio_real) +
 
           '<tr>' +
@@ -1438,6 +1716,23 @@
     var nuevo = $('e-tipo').value === '__nuevo__';
     $('e-tipo-nuevo').style.display = nuevo ? '' : 'none';
     if (nuevo) $('e-tipo-nuevo').focus();
+  });
+
+  $('e-condominio').addEventListener('change', acomodarCondominio);
+
+  // Cambiar el número de clientes repinta las casillas. Se lee antes lo
+  // que ya estaba escrito para no borrárselo a quien apenas se dio cuenta
+  // de que eran tres y no dos.
+  $('e-clientes-cuantos').addEventListener('change', function () {
+    if (!borrador) return;
+    leerClientes();
+    acomodarCuantos();
+    pintarClientes();
+  });
+  $('e-clientes-otros').addEventListener('input', function () {
+    if (!borrador) return;
+    leerClientes();
+    pintarClientes();
   });
 
   $('e-punto-agregar').addEventListener('click', function () {
