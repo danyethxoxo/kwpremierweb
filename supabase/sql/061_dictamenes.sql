@@ -114,8 +114,16 @@ create table if not exists public.dictamen_asesores (
 -- El correo identifica a la persona mejor que el nombre (hay homónimos, y
 -- los nombres se escriben de tres maneras). Único solo cuando existe:
 -- varios asesores pueden no tener correo cargado todavía.
+--
+-- Va sobre la columna tal cual, no sobre lower(correo): un índice por
+-- expresión no sirve como blanco de "on conflict" en un upsert, y el
+-- sincronizador con la hoja del ABC necesita justo eso. Por es que el
+-- correo se guarda siempre en minúsculas desde donde se escribe (el
+-- sincronizador y el resto del código), así que la columna tal cual ya
+-- hace las veces de único sin distinguir mayúsculas.
+drop index if exists public.idx_dictamen_asesores_correo;
 create unique index if not exists idx_dictamen_asesores_correo
-  on public.dictamen_asesores(lower(correo)) where correo is not null;
+  on public.dictamen_asesores(correo) where correo is not null;
 create index if not exists idx_dictamen_asesores_nombre
   on public.dictamen_asesores(activo, nombre);
 
@@ -383,7 +391,10 @@ drop function if exists public.dictamen_recalcular_estado(uuid);
 -- ─────────────────────────────────────────────────────────────
 -- 6) Dictaminar: poner folio y estado
 -- ─────────────────────────────────────────────────────────────
--- El folio se arma DTM + consecutivo + 1 + iniciales del asesor + DBLG.
+-- El folio se arma DTM + consecutivo + iniciales del asesor. Por ejemplo
+-- DTM01DBLG es el primer dictamen (01) de Daniel Barush López Guerrero
+-- (DBLG).
+--
 -- Se genera aquí y no en la pantalla porque el consecutivo tiene que ser
 -- único: calculado en el navegador, dos personas guardando al mismo
 -- tiempo sacarían el mismo número.
@@ -425,7 +436,7 @@ begin
     select count(*) + 1 into v_n
     from public.dictamenes where folio is not null;
 
-    v_folio := 'DTM' || lpad(v_n::text, 3, '0') || '1' || v_iniciales || 'DBLG';
+    v_folio := 'DTM' || lpad(v_n::text, 2, '0') || v_iniciales;
   else
     v_folio := v_dic.folio;
   end if;

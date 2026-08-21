@@ -304,6 +304,7 @@
           <p class="kw-page-desc" id="page-desc">Revisión de expedientes y seguimiento de lo que falta corregir.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="kw-fila-btn neutro" id="btn-sync-asesores" style="display:none;">Sincronizar asesores</button>
           <button type="button" class="kw-fila-btn neutro" id="btn-archivo">Ver archivo</button>
           <button type="button" class="btn-nuevo" id="btn-nuevo" style="display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -499,6 +500,11 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
+
+  // La misma función que usa la pantalla de Proceso de Alta: ya sabe leer
+  // la hoja de asesores y traer un token de Google, y el catálogo de
+  // Dictámenes se nutre de esa misma hoja.
+  var FN_ALTA = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   var yo = null;
   var veTodo = false;
@@ -1258,6 +1264,10 @@
     puedoDictaminar = yo.puede_dictaminar === true || yo.role === 'master';
 
     if (puedoDictaminar) $('btn-nuevo').style.display = '';
+    // Sincronizar es del equipo de liderazgo, no de quien dictamina nada
+    // más: el candado de verdad vive en la Edge Function, esto solo
+    // esconde el botón para quien de todos modos no podría usarlo.
+    if (veTodo) $('btn-sync-asesores').style.display = '';
 
     await cargarCatalogos();
     if (window.kwUI) window.kwUI.selects(document);
@@ -1267,6 +1277,51 @@
   $('f-buscar').addEventListener('input', pintar);
   $('f-estado').addEventListener('change', pintar);
   $('f-asesor').addEventListener('change', pintar);
+
+  // Sincronizar es en dos tiempos: primero se pregunta sin escribir nada,
+  // y solo si se confirma se manda "aplicar". Así, si la hoja se leyó a
+  // medias (un permiso caído, un rango mal puesto), eso se ve en el
+  // resumen antes de dar de baja a medio equipo por error.
+  $('btn-sync-asesores').addEventListener('click', async function () {
+    var btn = $('btn-sync-asesores');
+    var s = await window.kwSupabase.auth.getSession();
+    var token = s.data.session && s.data.session.access_token;
+    if (!token) return;
+
+    async function pedir(aplicar) {
+      var res = await fetch(FN_ALTA, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'dictamen_asesores_sync', aplicar: aplicar }),
+      });
+      var json = await res.json().catch(function () { return null; });
+      if (!res.ok) throw new Error((json && json.error) || ('Falló (' + res.status + ')'));
+      return json;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Revisando...';
+    try {
+      var previa = await pedir(false);
+      var mensaje = 'De la hoja del ABC:\n' +
+        '  Nuevos: ' + previa.nuevos.length + '\n' +
+        '  Reactivados: ' + previa.reactivados.length + '\n' +
+        '  Bajas: ' + previa.bajas.length + '\n\n' +
+        '¿Aplicar estos cambios al catálogo de asesores?';
+      if (!confirm(mensaje)) return;
+
+      btn.textContent = 'Aplicando...';
+      await pedir(true);
+      await cargarCatalogos();
+      if (window.kwUI) window.kwUI.selects(document);
+      alert('Catálogo actualizado.');
+    } catch (e) {
+      alert('No se pudo sincronizar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sincronizar asesores';
+    }
+  });
 
   $('btn-archivo').addEventListener('click', function () {
     verArchivo = !verArchivo;
