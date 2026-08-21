@@ -97,7 +97,20 @@ create trigger trg_master_siempre_dictamina
 -- Antes esto era una vista sobre los perfiles del sitio. Se cambia por
 -- una tabla propia: los asesores del Market Center no tienen cuenta, y
 -- son ellos los que aparecen en un dictamen.
-drop view if exists public.dictamen_asesores;
+--
+-- El drop va condicionado a que todavía sea vista: "drop view if exists"
+-- solo perdona que el objeto no exista, no que exista pero sea de otro
+-- tipo. La primera vez que corrió este archivo convirtió la vista en
+-- tabla; sin la condición, cualquier corrida posterior tronaría aquí
+-- porque para entonces el objeto ya es una tabla.
+do $$
+begin
+  if exists (
+    select 1 from pg_class where relname = 'dictamen_asesores' and relkind = 'v'
+  ) then
+    execute 'drop view public.dictamen_asesores';
+  end if;
+end $$;
 
 create table if not exists public.dictamen_asesores (
   id uuid primary key default gen_random_uuid(),
