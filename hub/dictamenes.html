@@ -866,7 +866,7 @@
 
     raiz.querySelectorAll('[data-quitar-punto]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        if (!confirm('¿Quitar esta observación del dictamen?')) return;
+        if (!(await window.kwUI.confirm('¿Quitar esta observación del dictamen?'))) return;
         await window.kwSupabase.from('dictamen_puntos').delete().eq('id', b.dataset.quitarPunto);
         await cargar();
       });
@@ -884,7 +884,7 @@
         var r = await window.kwSupabase.from('dictamen_puntos')
           .insert({ dictamen_id: d, texto: texto, orden: cuantos + 1 });
         btn.disabled = false;
-        if (r.error) { alert('No se pudo agregar: ' + r.error.message); return; }
+        if (r.error) { await window.kwUI.alert('No se pudo agregar: ' + r.error.message); return; }
         await cargar();
       };
       btn.addEventListener('click', agregar);
@@ -900,7 +900,7 @@
           p_id: b.dataset.dic, p_estado: b.dataset.dictaminar,
         });
         b.disabled = false;
-        if (r.error) { alert('No se pudo dictaminar: ' + r.error.message); return; }
+        if (r.error) { await window.kwUI.alert('No se pudo dictaminar: ' + r.error.message); return; }
         await cargar();
       });
     });
@@ -930,9 +930,9 @@
     });
     raiz.querySelectorAll('[data-borrar]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        if (!confirm('Se va a borrar este dictamen para siempre, con sus observaciones. No se puede deshacer.\n\n¿Seguimos?')) return;
+        if (!(await window.kwUI.confirm('Se va a borrar este dictamen para siempre, con sus observaciones. No se puede deshacer.\n\n¿Seguimos?'))) return;
         var r = await window.kwSupabase.from('dictamenes').delete().eq('id', b.dataset.borrar);
-        if (r.error) { alert('No se pudo borrar: ' + r.error.message); return; }
+        if (r.error) { await window.kwUI.alert('No se pudo borrar: ' + r.error.message); return; }
         abierto = null;
         await cargar();
       });
@@ -941,7 +941,7 @@
 
   async function guardarPunto(id, datos) {
     var r = await window.kwSupabase.from('dictamen_puntos').update(datos).eq('id', id);
-    if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
+    if (r.error) { await window.kwUI.alert('No se pudo guardar: ' + r.error.message); return; }
     await cargar();
   }
 
@@ -1308,15 +1308,15 @@
         '  Reactivados: ' + previa.reactivados.length + '\n' +
         '  Bajas: ' + previa.bajas.length + '\n\n' +
         '¿Aplicar estos cambios al catálogo de asesores?';
-      if (!confirm(mensaje)) return;
+      if (!(await window.kwUI.confirm(mensaje))) return;
 
       btn.textContent = 'Aplicando...';
       await pedir(true);
       await cargarCatalogos();
       if (window.kwUI) window.kwUI.selects(document);
-      alert('Catálogo actualizado.');
+      await window.kwUI.alert('Catálogo actualizado.');
     } catch (e) {
-      alert('No se pudo sincronizar: ' + e.message);
+      await window.kwUI.alert('No se pudo sincronizar: ' + e.message);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Sincronizar asesores';

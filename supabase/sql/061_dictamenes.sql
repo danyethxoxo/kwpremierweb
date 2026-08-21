@@ -125,18 +125,25 @@ create table if not exists public.dictamen_asesores (
 );
 
 -- El correo identifica a la persona mejor que el nombre (hay homónimos, y
--- los nombres se escriben de tres maneras). Único solo cuando existe:
--- varios asesores pueden no tener correo cargado todavía.
+-- los nombres se escriben de tres maneras).
 --
 -- Va sobre la columna tal cual, no sobre lower(correo): un índice por
 -- expresión no sirve como blanco de "on conflict" en un upsert, y el
--- sincronizador con la hoja del ABC necesita justo eso. Por es que el
+-- sincronizador con la hoja del ABC necesita justo eso. Por eso el
 -- correo se guarda siempre en minúsculas desde donde se escribe (el
 -- sincronizador y el resto del código), así que la columna tal cual ya
 -- hace las veces de único sin distinguir mayúsculas.
+--
+-- Tampoco lleva "where correo is not null": no hace falta, porque en un
+-- índice único de Postgres varios NULL nunca chocan entre sí (NULL no es
+-- igual a NULL). Con el "where" quedaba como índice parcial, y un índice
+-- parcial no sirve de blanco de "on conflict" a menos que el upsert
+-- repita ahí mismo el mismo "where", cosa que el cliente de Supabase no
+-- hace: por eso tronaba con "no unique or exclusion constraint matching
+-- the ON CONFLICT specification".
 drop index if exists public.idx_dictamen_asesores_correo;
 create unique index if not exists idx_dictamen_asesores_correo
-  on public.dictamen_asesores(correo) where correo is not null;
+  on public.dictamen_asesores(correo);
 create index if not exists idx_dictamen_asesores_nombre
   on public.dictamen_asesores(activo, nombre);
 

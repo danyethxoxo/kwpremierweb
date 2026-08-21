@@ -1598,8 +1598,8 @@
   // Traer el historial de weetrust. Solo liderazgo, y con confirmación:
   // recorre toda la cuenta y en una con muchos documentos se tarda.
   $('btn-importar').addEventListener('click', async () => {
-    if (!confirm('Se van a traer al sitio los documentos que ya existen en weetrust.\n\n'
-      + 'Se puede correr las veces que haga falta: los que ya están se actualizan, no se duplican.')) return;
+    if (!(await window.kwUI.confirm('Se van a traer al sitio los documentos que ya existen en weetrust.\n\n'
+      + 'Se puede correr las veces que haga falta: los que ya están se actualizan, no se duplican.'))) return;
 
     const btn = $('btn-importar');
     btn.disabled = true;
@@ -1613,10 +1613,10 @@
       if (r.problemas && r.problemas.length) {
         msg += '\n\nNo se pudieron traer:\n' + r.problemas.join('\n');
       }
-      alert(msg);
+      await window.kwUI.alert(msg);
       await cargarEnvios();
     } catch (e) {
-      alert(e.message || 'No se pudo traer el historial.');
+      await window.kwUI.alert(e.message || 'No se pudo traer el historial.');
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
@@ -1637,13 +1637,13 @@
       const r = await llamarFuncion({ accion: 'limpiar_fantasmas' });
 
       if (!r.sobran) {
-        alert('Se revisaron ' + r.revisados + ' documentos y todos existen en weetrust.\n'
+        await window.kwUI.alert('Se revisaron ' + r.revisados + ' documentos y todos existen en weetrust.\n'
           + 'No hay nada que limpiar.');
         return;
       }
 
       const lista = (r.nombres || []).join('\n');
-      const ok = confirm(
+      const ok = await window.kwUI.confirm(
         'En el sitio hay ' + r.revisados + ' documentos traídos de weetrust.\n'
         + 'En weetrust existen ' + r.enWeetrust + '.\n\n'
         + 'Sobran ' + r.sobran + ', que allá ya no están:\n\n' + lista
@@ -1655,10 +1655,10 @@
 
       btn.textContent = 'Borrando...';
       const r2 = await llamarFuncion({ accion: 'limpiar_fantasmas', confirmado: true });
-      alert('Se borraron ' + r2.borrados + ' renglones.');
+      await window.kwUI.alert('Se borraron ' + r2.borrados + ' renglones.');
       await cargarEnvios();
     } catch (e) {
-      alert(e.message || 'No se pudo limpiar.');
+      await window.kwUI.alert(e.message || 'No se pudo limpiar.');
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
@@ -1678,10 +1678,10 @@
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
       await cargarEnvios();
       if (!r.actualizados) {
-        alert('Todo estaba al día. No hubo nada que cambiar.');
+        await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
       }
     } catch (e) {
-      alert(e.message || 'No se pudo actualizar.');
+      await window.kwUI.alert(e.message || 'No se pudo actualizar.');
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
@@ -2557,7 +2557,7 @@
       }
 
       if (fallos.length) {
-        alert('No se pudo etiquetar ' + fallos.length + ':\n' + fallos.slice(0, 10).join('\n'));
+        await window.kwUI.alert('No se pudo etiquetar ' + fallos.length + ':\n' + fallos.slice(0, 10).join('\n'));
       }
       await cargarEnvios();
     }
@@ -3035,15 +3035,15 @@
         const accion = b.dataset.accion;
         cerrarFlotante();
 
-        if (accion === 'borrar' && !confirm('¿Eliminar "' + nombreDoc(f) + '" del historial?\n\n'
-          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.')) return;
+        if (accion === 'borrar' && !(await window.kwUI.confirm('¿Eliminar "' + nombreDoc(f) + '" del historial?\n\n'
+          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.'))) return;
 
         try {
           const r = await llamarFuncion({ accion, id: f.id });
-          if (r.aviso) alert(r.aviso);
+          if (r.aviso) await window.kwUI.alert(r.aviso);
           await Promise.all([cargarEnvios(), cargarCupo()]);
         } catch (e) {
-          alert(e.message || 'No se pudo completar la acción.');
+          await window.kwUI.alert(e.message || 'No se pudo completar la acción.');
         }
       });
     });
@@ -3094,7 +3094,7 @@
           const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
             p_documento: f.id, p_asesor: b.dataset.asesor || null,
           });
-          if (error) return alert('No se pudo cambiar el asesor: ' + error.message);
+          if (error) { await window.kwUI.alert('No se pudo cambiar el asesor: ' + error.message); return; }
           await cargarEnvios();
         });
       });
@@ -3112,7 +3112,7 @@
       const { error } = await window.kwSupabase.rpc('firmas_etiquetar', {
         p_documento: f.id, p_etiquetas: ids,
       });
-      if (error) { alert('No se pudo etiquetar: ' + error.message); return false; }
+      if (error) { await window.kwUI.alert('No se pudo etiquetar: ' + error.message); return false; }
       return true;
     }
 
@@ -3195,7 +3195,7 @@
           const { error } = await window.kwSupabase.rpc('firmas_actualizar_etiqueta', {
             p_etiqueta: b.dataset.recolor, p_nombre: null, p_color: b.dataset.color,
           });
-          if (error) return alert('No se pudo cambiar el color: ' + error.message);
+          if (error) { await window.kwUI.alert('No se pudo cambiar el color: ' + error.message); return; }
           await cargarEtiquetas();
           pintarOpcionesFiltros();
           // El panel se queda abierto: casi siempre se prueban dos o
@@ -3209,12 +3209,12 @@
         b.addEventListener('click', async (ev) => {
           ev.stopPropagation();
           const et = etiquetas.find((x) => x.id === b.dataset.borrarTag);
-          if (!confirm('¿Borrar la etiqueta "' + (et ? et.nombre : '') + '"?\n\n'
-            + 'Se quita de todos los documentos que la tuvieran.')) return;
+          if (!(await window.kwUI.confirm('¿Borrar la etiqueta "' + (et ? et.nombre : '') + '"?\n\n'
+            + 'Se quita de todos los documentos que la tuvieran.'))) return;
           const { error } = await window.kwSupabase.rpc('firmas_borrar_etiqueta', {
             p_etiqueta: b.dataset.borrarTag,
           });
-          if (error) return alert('No se pudo borrar: ' + error.message);
+          if (error) { await window.kwUI.alert('No se pudo borrar: ' + error.message); return; }
           tagAbierta = null;
           await cargarEtiquetas();
           pintarOpcionesFiltros();
@@ -3230,7 +3230,7 @@
           const { data, error } = await window.kwSupabase.rpc('firmas_crear_etiqueta', {
             p_nombre: q, p_color: color,
           });
-          if (error) return alert('No se pudo crear la etiqueta: ' + error.message);
+          if (error) { await window.kwUI.alert('No se pudo crear la etiqueta: ' + error.message); return; }
           cerrarFlotante();
           await cargarEtiquetas();
           pintarOpcionesFiltros();
@@ -3379,7 +3379,7 @@
     raiz.querySelectorAll('[data-accion]').forEach((b) => {
       b.addEventListener('click', async () => {
         const accion = b.dataset.accion;
-        if (accion === 'cancelar' && !confirm('¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.')) return;
+        if (accion === 'cancelar' && !(await window.kwUI.confirm('¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.'))) return;
 
         const textoOriginal = b.textContent;
         b.disabled = true;
@@ -3391,7 +3391,7 @@
           // también se vuelve a calcular.
           await Promise.all([cargarEnvios(), cargarCupo()]);
         } catch (err) {
-          alert(err.message || 'No se pudo completar la acción.');
+          await window.kwUI.alert(err.message || 'No se pudo completar la acción.');
           b.disabled = false;
           b.textContent = textoOriginal;
         }

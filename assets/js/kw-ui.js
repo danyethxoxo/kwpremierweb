@@ -478,6 +478,90 @@
     setTimeout(unaVez, 400);
   }
 
+  // ═════════════════════════════════════════════════════════════
+  // Avisos y confirmaciones (reemplazan al alert()/confirm() del navegador)
+  // ═════════════════════════════════════════════════════════════
+  // El cuadro nativo no tiene nada del diseño del sitio, y en modo oscuro
+  // del sistema sale negro con letras blancas sin que la página lo pida.
+  // Este arma el mismo .modal-overlay/.modal-box/.modal-actions que ya
+  // usa cada página a mano para sus confirmaciones, pero por JS, para no
+  // repetir el HTML del modal en cada pantalla nueva.
+
+  function avisoBase(mensaje, opciones) {
+    opciones = opciones || {};
+    return new Promise(function (resolver) {
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+
+      var caja = document.createElement('div');
+      caja.className = 'modal-box';
+      caja.setAttribute('role', 'alertdialog');
+      caja.setAttribute('aria-modal', 'true');
+
+      if (opciones.titulo) {
+        var h3 = document.createElement('h3');
+        h3.textContent = opciones.titulo;
+        caja.appendChild(h3);
+      }
+
+      var p = document.createElement('p');
+      p.className = 'kw-aviso-msg';
+      p.textContent = mensaje;
+      caja.appendChild(p);
+
+      var acciones = document.createElement('div');
+      acciones.className = 'modal-actions';
+
+      var resuelto = false;
+      function cerrar(valor) {
+        if (resuelto) return;
+        resuelto = true;
+        document.removeEventListener('keydown', porTecla);
+        cerrarModal(overlay, function () { overlay.remove(); });
+        resolver(valor);
+      }
+
+      function porTecla(e) {
+        if (e.key === 'Escape') cerrar(opciones.esConfirmacion ? false : undefined);
+      }
+
+      if (opciones.esConfirmacion) {
+        var btnCancelar = document.createElement('button');
+        btnCancelar.type = 'button';
+        btnCancelar.className = 'btn-modal-cancelar';
+        btnCancelar.textContent = opciones.textoCancelar || 'Cancelar';
+        btnCancelar.addEventListener('click', function () { cerrar(false); });
+        acciones.appendChild(btnCancelar);
+      }
+
+      var btnConfirmar = document.createElement('button');
+      btnConfirmar.type = 'button';
+      btnConfirmar.className = 'btn-modal-confirmar';
+      btnConfirmar.textContent = opciones.textoConfirmar || (opciones.esConfirmacion ? 'Confirmar' : 'Aceptar');
+      btnConfirmar.addEventListener('click', function () { cerrar(opciones.esConfirmacion ? true : undefined); });
+      acciones.appendChild(btnConfirmar);
+
+      caja.appendChild(acciones);
+      overlay.appendChild(caja);
+
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) cerrar(opciones.esConfirmacion ? false : undefined);
+      });
+
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', porTecla);
+      btnConfirmar.focus();
+    });
+  }
+
+  function kwAlert(mensaje, opciones) {
+    return avisoBase(mensaje, Object.assign({}, opciones, { esConfirmacion: false }));
+  }
+
+  function kwConfirm(mensaje, opciones) {
+    return avisoBase(mensaje, Object.assign({}, opciones, { esConfirmacion: true }));
+  }
+
   // Los iconitos que acompañan a cada dato dentro de una tarjeta.
   // Van aquí y no en cada página porque son los mismos en todas.
   var TRAZO = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
@@ -634,6 +718,8 @@
     entraDesdeAbajo: entraDesdeAbajo,
     iconos: ICONOS,
     cerrarModal: cerrarModal,
+    alert: kwAlert,
+    confirm: kwConfirm,
     activarTab: function (nombre, tabs) {
       var t = tabs || document.querySelector('[data-kw-tabs]');
       if (t) activar(t, nombre);
