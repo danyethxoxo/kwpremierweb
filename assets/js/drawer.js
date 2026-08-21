@@ -99,7 +99,7 @@
     { label: 'Dictámenes', href: `${BASE}/hub/dictamenes.html`, cat: 'Hub', alias: 'dictamen expediente revision legal observaciones subsanar' },
     { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub' },
     { label: 'Reporta una Incidencia', href: `${BASE}/hub/tickets.html`, cat: 'Hub', alias: 'ticket soporte tecnico ayuda' },
-    { label: 'Proceso de Alta', href: `${BASE}/hub/alta.html`, cat: 'Hub', alias: 'dar de alta asesor nuevo' },
+    { label: 'Asesores (Proceso de Alta)', href: `${BASE}/hub/admin.html#asesores`, cat: 'Hub', alias: 'dar de alta asesor nuevo bajas back office celulas' },
     { label: 'Panel de Admin', href: `${BASE}/hub/admin.html`, cat: 'Hub', alias: 'administracion' },
     { label: 'Mi Perfil', href: `${BASE}/perfil.html`, cat: 'Hub', alias: 'micrositio perfil publico' },
 

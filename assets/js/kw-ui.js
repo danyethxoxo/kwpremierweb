@@ -259,6 +259,12 @@
       // moviste, para que se sienta como avanzar y regresar.
       cont.dataset.dir = (actual >= 0 && destino < actual) ? 'izq' : 'der';
       cont.querySelectorAll('.kw-tabpanel').forEach(function (p) {
+        // Solo los paneles de ESTAS pestañas. Un panel puede traer
+        // dentro otras pestañas con sus propios paneles (Asesores, en el
+        // Panel), y sin este freno las de afuera los apagaban todos al
+        // cambiar de sección: el nombre de una pestaña de adentro nunca
+        // coincide con el de una de afuera.
+        if (p.closest('.kw-tabpanels') !== cont) return;
         p.classList.toggle('activo', p.dataset.panel === nombre);
       });
     }
