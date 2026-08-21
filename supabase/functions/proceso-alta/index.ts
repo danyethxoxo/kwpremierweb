@@ -49,9 +49,11 @@
 //                             el nombre de la hoja no va aquí.
 //      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
 //                             URL, después de /folders/)
-//      ALTA_EMAILS            los correos que pueden usar esto,
-//                             separados por coma. Ej:
-//                             dani.guerrero@kwmexico.mx,tumaster@correo.com
+//      ALTA_EMAILS            opcional. Master y Admin ya pasan por su
+//                             rol; esto es para abrirle a alguien que no
+//                             sea ninguno de los dos. Correos separados
+//                             por coma. Ej:
+//                             dani.guerrero@kwmexico.mx,otro@correo.com
 //
 // Ya existen y se reusan: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 // GOOGLE_REFRESH_TOKEN, GOOGLE_CALENDAR_ID.
@@ -704,28 +706,37 @@ Deno.serve(async (req: Request) => {
     // que es quien da las sesiones - no solo los correos del alta.
     const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync']
 
-    if (ACCIONES_STAFF.includes(accion)) {
+    // Las altas las hacen Master y Admin, más quien esté puesto a mano en
+    // ALTA_EMAILS. El rol es lo que manda: así, dar de alta a un Admin
+    // nuevo en el Panel ya le da acceso, sin que alguien tenga que
+    // acordarse de ir a agregarle el correo al secreto de la función. La
+    // lista se queda para poder abrirle a alguien que no sea ni una cosa
+    // ni la otra.
+    const ROLES_ALTA = ['master', 'admin']
+
+    // El candado de verdad va aquí, no en la pantalla: esconder una
+    // pestaña no impide que alguien llame a la función por su cuenta.
+    if (!ACCIONES_ABIERTAS.includes(accion)) {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', quien.user.id).single()
-      if (!perfil || !['master', 'admin', 'staff'].includes(String(perfil.role))) {
-        return respond({ error: 'Esta acción es solo para el equipo de liderazgo.' }, 403)
-      }
-    } else if (!ACCIONES_ABIERTAS.includes(accion)) {
-      // El candado de verdad va aquí, no en la pantalla: esconder un botón
-      // no impide que alguien llame a la función por su cuenta.
-      const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
+      const miRol = String(perfil?.role || '')
       const miCorreo = String(quien.user.email || '').toLowerCase()
-      if (!permitidos.length) {
-        return respond({ error: 'Falta configurar ALTA_EMAILS en los secretos de la función.' }, 500)
-      }
-      if (!permitidos.includes(miCorreo)) {
-        // Aviso temporal para diagnosticar por qué no coincide (se quita
-        // en cuanto quede resuelto): enseña qué correo detectó la función
-        // y contra qué lista lo comparó.
-        return respond({
-          error: 'Esta sección es solo para el equipo de altas.',
-          diagnostico: { tu_correo: miCorreo, lista_permitidos: permitidos },
-        }, 403)
+
+      if (ACCIONES_STAFF.includes(accion)) {
+        if (!['master', 'admin', 'staff'].includes(miRol)) {
+          return respond({ error: 'Esta acción es solo para el equipo de liderazgo.' }, 403)
+        }
+      } else {
+        const permitidos = ALTA_EMAILS.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean)
+        if (!ROLES_ALTA.includes(miRol) && !permitidos.includes(miCorreo)) {
+          // Aviso temporal para diagnosticar por qué no pasó (se quita en
+          // cuanto quede resuelto): enseña con qué rol y qué correo llegó,
+          // y contra qué se comparó.
+          return respond({
+            error: 'Esta sección es solo para Master, Admin y el equipo de altas.',
+            diagnostico: { tu_correo: miCorreo, tu_rol: miRol || '(sin perfil)', lista_permitidos: permitidos },
+          }, 403)
+        }
       }
     }
 

@@ -1503,7 +1503,14 @@
     if (!gruposAsesores.length) paneles.innerHTML = esqueletoAsesores();
     try {
       const data = await llamarAlta({ accion: 'listar' });
-      gruposAsesores = data.grupos || [];
+      // Mientras la Edge Function siga siendo la vieja (se publica a mano
+      // desde Supabase, así que puede ir un rato atrás de esta pantalla)
+      // no manda `grupos`, solo la lista de siempre. En vez de quedarse en
+      // blanco sin decir por qué, se enseña esa lista como el único grupo.
+      gruposAsesores = data.grupos || (data.personas
+        ? [{ clave: 'activos', titulo: 'Asesores Activos', hoja: 'Activos',
+             personas: data.personas, omitidos: data.omitidos || [] }]
+        : []);
       armarTabsAsesores();
       pintarGrupos();
     } catch (err) {
@@ -1797,12 +1804,10 @@
       document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
       document.getElementById('panel-title-header').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
 
-      // Asesores es del equipo de altas. Esto solo decide si se ENSEÑA
-      // la pestaña: el candado real está en la Edge Function, que compara
-      // el correo contra su secreto ALTA_EMAILS. Aquí se usan el rol
-      // master y el correo de altas para no tener que repetir esa lista
-      // en el cliente.
-      const puedeAltas = miRol === 'master'
+      // Asesores es de Master y Admin, más el equipo de altas. Esto solo
+      // decide si se ENSEÑA la pestaña: el candado real está en la Edge
+      // Function, que comprueba lo mismo del lado del servidor.
+      const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
       if (!puedeAltas) quitarTabPanel('asesores');
 
@@ -1837,6 +1842,12 @@
     }
   }
 
+  // Quién entra a Asesores. El rol es lo que manda, para que dar de alta
+  // a un Admin nuevo en el Panel ya le abra la sección sin que alguien
+  // tenga que acordarse de venir a agregar su correo aquí y en el secreto
+  // ALTA_EMAILS de la función. La lista de correos se queda para abrirle
+  // a alguien que no sea ni Master ni Admin.
+  const ROLES_ALTA = ['master', 'admin'];
   const CORREOS_ALTA = ['dani.guerrero@kwmexico.mx'];
 
   // Se va la pestaña Y su panel: dejar el panel puesto sin forma de
