@@ -591,7 +591,7 @@ Deno.serve(async (req: Request) => {
 
     // El ABC lo sincroniza el equipo de liderazgo (Master/Admin/Staff),
     // que es quien da las sesiones - no solo los correos del alta.
-    const ACCIONES_STAFF = ['abc_sync']
+    const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync']
 
     if (ACCIONES_STAFF.includes(accion)) {
       const { data: perfil } = await admin
@@ -700,6 +700,84 @@ Deno.serve(async (req: Request) => {
           .from('abc_asesores')
           .update({ activo: false, sincronizado_en: ahora })
           .in('kwid', bajas.map((b) => b.kwid))
+        if (errBaja) return respond({ error: `No se pudieron marcar las bajas: ${errBaja.message}` }, 500)
+      }
+
+      return respond({ aplicado: true, ...resumen })
+    }
+
+    // ── Sincronizar el catálogo de asesores de Dictámenes ──
+    //
+    // El nombre y el correo salen de la misma hoja del alta (leerHoja ya
+    // los trae), y de ahí se toma solo a quien esté activo en el padrón
+    // del ABC: ese padrón es la fuente de quién sigue en el Market Center
+    // hoy, y este catálogo debe reflejar lo mismo, no un universo propio
+    // que se desalinee con el tiempo.
+    //
+    // Mismo patrón que abc_sync: en dos tiempos. Sin `aplicar: true` solo
+    // reporta qué cambiaría, para poder revisarlo antes de que una lectura
+    // a medias de la hoja o del padrón dé de baja a medio equipo por
+    // error.
+    if (accion === 'dictamen_asesores_sync') {
+      const aplicar = body.aplicar === true
+
+      const { data: activosAbc, error: errAbc } = await admin
+        .from('abc_asesores').select('kwid').eq('activo', true)
+      if (errAbc) return respond({ error: `No se pudo leer el padrón del ABC: ${errAbc.message}` }, 500)
+      const kwidsActivos = new Set((activosAbc || []).map((a: { kwid: string }) => a.kwid))
+      if (!kwidsActivos.size) {
+        return respond({ error: 'El padrón del ABC está vacío. Sincronízalo primero desde esa pantalla.' }, 400)
+      }
+
+      const enHoja = (await leerHoja(tokenPrincipal))
+        .filter((p) => p.kwid && kwidsActivos.has(p.kwid))
+      if (!enHoja.length) {
+        return respond({ error: 'Ningún renglón de la hoja coincidió con el padrón activo del ABC. No se cambió nada.' }, 400)
+      }
+
+      const { data: actuales, error: errLeer } = await admin
+        .from('dictamen_asesores').select('id, nombre, correo, activo')
+      if (errLeer) return respond({ error: `No se pudo leer el catálogo: ${errLeer.message}` }, 500)
+
+      // Un registro sin correo no puede venir de este sincronizador (solo
+      // escribe filas que sí lo traen), pero se guarda por si algún día
+      // alguien mete uno a mano por otro camino: sin esto, ese renglón
+      // tronaría la sincronización entera en vez de simplemente
+      // ignorarse.
+      const mapaDb = new Map(
+        (actuales || [])
+          .filter((a: { correo: string | null }) => a.correo)
+          .map((a: { correo: string }) => [a.correo.toLowerCase(), a] as const))
+      const mapaHoja = new Map(enHoja.map((p) => [p.correo.toLowerCase(), p] as const))
+
+      const nuevos = enHoja.filter((p) => !mapaDb.has(p.correo.toLowerCase()))
+      const reactivados = enHoja.filter((p) => {
+        const db = mapaDb.get(p.correo.toLowerCase())
+        return db && db.activo === false
+      })
+      const bajas = (actuales || []).filter((a: { correo: string | null; activo: boolean }) =>
+        a.activo && a.correo && !mapaHoja.has(a.correo.toLowerCase()))
+
+      const resumen = {
+        total_hoja: enHoja.length,
+        total_catalogo: (actuales || []).length,
+        nuevos: nuevos.map((p) => ({ nombre: p.nombre, correo: p.correo })),
+        reactivados: reactivados.map((p) => ({ nombre: p.nombre, correo: p.correo })),
+        bajas: bajas.map((a) => ({ nombre: a.nombre, correo: a.correo })),
+      }
+
+      if (!aplicar) return respond({ aplicado: false, ...resumen })
+
+      const filas = enHoja.map((p) => ({ nombre: p.nombre, correo: p.correo.toLowerCase(), activo: true }))
+      const { error: errUp } = await admin
+        .from('dictamen_asesores').upsert(filas, { onConflict: 'correo' })
+      if (errUp) return respond({ error: `No se pudo guardar el catálogo: ${errUp.message}` }, 500)
+
+      if (bajas.length) {
+        const { error: errBaja } = await admin
+          .from('dictamen_asesores')
+          .update({ activo: false })
+          .in('correo', bajas.map((b) => String(b.correo).toLowerCase()))
         if (errBaja) return respond({ error: `No se pudieron marcar las bajas: ${errBaja.message}` }, 500)
       }
 

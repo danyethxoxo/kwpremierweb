@@ -22,12 +22,6 @@
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260817j"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
-
-  /* Sobre el fondo guinda, el título y la descripción necesitan su
-     propio color claro: los de kw-ui.css están pensados para fondo gris. */
-  .kw-page-titulo { color: var(--text); }
-  .kw-page-desc { color: var(--muted); }
-
   .header-right { display: flex; align-items: center; gap: 10px; }
 
   /* ── La barra de arriba ─────────────────────────────────────── */
@@ -40,29 +34,26 @@
     padding: 9px 16px; border-radius: 999px;
     border: none; background: var(--red); color: #fff;
     font-family: inherit; font-size: 13px; font-weight: 700;
-    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    cursor: pointer; box-shadow: 0 4px 14px rgba(40,12,12,0.2);
     transition: transform var(--t-medio);
   }
   .btn-nuevo:hover { transform: translateY(-1px); }
   .btn-nuevo:disabled { opacity: 0.5; cursor: default; transform: none; }
 
-  /* ── El resumen de arriba ────────────────────────────────────
-     Tres números y ya. Es lo que uno viene a saber al entrar: qué le
-     toca a él y qué trae atorada la oficina. Cada uno es un botón que
+  /* ── El resumen ──
+     Tres números y ya. Es lo que uno viene a saber al entrar. Cada uno
      filtra la lista, para no tener que ir a buscar el filtro. */
   .dic-resumen { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-4); }
   .dic-tarjeta {
     flex: 1 1 150px; min-width: 0;
     display: flex; flex-direction: column; gap: 2px;
     padding: 13px 15px; border-radius: 14px;
-    border: 1px solid var(--border);
-    background: #fff; box-shadow: var(--sombra-1);
+    border: 1px solid var(--border); background: #fff;
+    box-shadow: var(--sombra-1);
     color: var(--text); font-family: inherit; text-align: left; cursor: pointer;
     transition: background var(--t-medio), border-color var(--t-medio);
   }
   .dic-tarjeta:hover { background: var(--pastel-rojo); }
-  /* La elegida se pinta del guinda de la marca: sobre claro, un fondo
-     apenas mas oscuro no alcanza a decir cual esta puesta. */
   .dic-tarjeta.activa {
     background: var(--pastel-rojo); border-color: rgba(138,0,0,0.28);
     color: var(--pastel-rojo-txt);
@@ -70,67 +61,70 @@
   .dic-tarjeta-num { font-size: 22px; font-weight: 700; line-height: 1.1; }
   .dic-tarjeta-txt { font-size: 11.5px; color: var(--muted); }
 
-  /* ── El avance de cada dictamen ──────────────────────────────
-     Una barrita en vez de "3 de 8": el número exacto está al lado de
-     todos modos, y de un vistazo lo que importa es cuánto falta. */
+  /* ── El estado del dictamen ──
+     Cada uno con su color, porque es lo que se viene a mirar de un
+     vistazo: devuelto naranja, condicionado amarillo, autorizado verde. */
+  .dic-estado {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  }
+  .dic-estado::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+  .dic-estado.borrador     { background: rgba(0,0,0,0.05);   color: #5b5b5b; }
+  .dic-estado.devuelta     { background: #ffeede;            color: #b4530b; }
+  .dic-estado.condicionada { background: var(--pastel-crema); color: var(--pastel-crema-txt); }
+  .dic-estado.autorizada   { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
+
   .dic-avance {
     width: 84px; height: 5px; border-radius: 999px;
-    background: rgba(0,0,0,0.1); overflow: hidden; flex-shrink: 0;
+    background: rgba(0,0,0,0.09); overflow: hidden; flex-shrink: 0;
   }
   .dic-avance span { display: block; height: 100%; background: #1f9d55; border-radius: 999px; }
 
-  /* ── Un punto del checklist ──────────────────────────────────
-     Cada observación es su propio bloque con su borde de color según
-     cómo va: es lo que se viene a mirar, así que no puede ser un
-     renglón más de texto corrido. */
+  /* ── Una observación por atender ── */
   .dic-punto {
-    border: 1px solid rgba(0,0,0,0.09);
-    border-left: 3px solid #b3b3b3;
-    border-radius: 11px;
-    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--border);
+    border-left: 3px solid #e0a218;
+    border-radius: 11px; background: #fff;
     padding: 11px 13px; margin-bottom: 9px;
   }
-  .dic-punto.pendiente { border-left-color: #e0a218; }
-  .dic-punto.corregido { border-left-color: #0d4a7d; }
-  .dic-punto.subsanado { border-left-color: #1f9d55; }
-  .dic-punto.no_aplica { border-left-color: #b3b3b3; opacity: 0.65; }
-
+  .dic-punto.corregida { border-left-color: #1f9d55; }
   .dic-punto-cabeza { display: flex; align-items: flex-start; gap: 10px; }
   .dic-punto-texto { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.5; color: var(--text); }
-  .dic-punto-cat {
-    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.04em; color: var(--muted); display: block; margin-bottom: 2px;
-  }
   .dic-punto-nota {
     margin-top: 8px; padding: 8px 10px; border-radius: 9px;
-    background: rgba(0,0,0,0.04); font-size: 12.5px; color: #444;
+    background: rgba(0,0,0,0.035); font-size: 12.5px; color: #444;
     line-height: 1.5; white-space: pre-line;
   }
-  .dic-punto-nota b { color: var(--text); }
   .dic-punto-acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-
-  /* El recuadro para escribir la nota al marcar o al regresar. Sale
-     dentro del punto y no en una ventana aparte: lo que se escribe es
-     sobre ese punto, y sacarlo de contexto lo haría más difícil. */
   .dic-punto-form { margin-top: 10px; display: none; }
   .dic-punto-form.abierto { display: block; }
   .dic-punto-form textarea {
-    width: 100%; min-height: 62px; resize: vertical;
-    border: 1.5px solid var(--border); border-radius: 10px;
-    padding: 9px 11px; font-family: inherit; font-size: 13px; color: var(--text);
-    background: #fff;
+    width: 100%; min-height: 58px; resize: vertical;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; font-family: inherit; font-size: 13px;
+    color: var(--text); background: #fff;
   }
   .dic-punto-form textarea:focus { outline: none; border-color: var(--red); }
-  .dic-punto-form .dic-punto-acciones { margin-top: 8px; }
 
-  /* ── El editor ───────────────────────────────────────────────── */
+  /* ── Los datos del expediente dentro de la tarjeta ── */
+  .dic-datos {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 9px var(--sp-4); margin: var(--sp-3) 0;
+  }
+  .dic-dato { font-size: 13px; line-height: 1.45; }
+  .dic-dato b {
+    display: block; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  }
+
+  /* ── El editor ── */
   .dic-editor {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: var(--r-tarjeta);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: var(--sombra-1);
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--r-tarjeta); box-shadow: var(--sombra-1);
     padding: var(--sp-4);
   }
   .dic-campo { margin-bottom: var(--sp-3); }
@@ -139,43 +133,65 @@
     font-size: 11.5px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; color: var(--muted);
   }
-  .dic-campo textarea {
-    width: 100%; min-height: 84px; resize: vertical;
-    border: 1.5px solid var(--border); border-radius: var(--r-campo);
-    padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--text);
-    background: #fff;
+  .dic-campo textarea, .dic-campo input[type="date"] {
+    width: 100%; resize: vertical;
+    border: 1px solid var(--border); border-radius: var(--r-campo);
+    padding: 10px 12px; font-family: inherit; font-size: 13.5px;
+    color: var(--text); background: #fff;
   }
-  .dic-campo textarea:focus { outline: none; border-color: var(--red); }
+  .dic-campo textarea { min-height: 62px; }
+  .dic-campo textarea:focus, .dic-campo input:focus { outline: none; border-color: var(--red); }
   .dic-dos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-  @media (max-width: 640px) { .dic-dos { grid-template-columns: 1fr; } }
-
-  .dic-nuevo-punto {
-    display: grid; grid-template-columns: 1fr 170px auto; gap: 8px; align-items: start;
-    padding: 12px; border-radius: 12px;
-    border: 1.5px dashed rgba(0,0,0,0.16);
-    background: rgba(0,0,0,0.02);
-    margin-top: var(--sp-2);
-  }
+  .dic-tres { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
   @media (max-width: 700px) {
-    .dic-nuevo-punto { grid-template-columns: 1fr; }
+    .dic-dos, .dic-tres { grid-template-columns: 1fr; }
   }
-  .dic-nuevo-punto textarea {
-    width: 100%; min-height: 44px; resize: vertical;
-    border: 1.5px solid var(--border); border-radius: 10px;
-    padding: 9px 11px; font-family: inherit; font-size: 13.5px; background: #fff;
+  .dic-subtitulo {
+    font-size: 15px; color: var(--text);
+    margin: var(--sp-5) 0 var(--sp-3);
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
-  .dic-nuevo-punto textarea:focus { outline: none; border-color: var(--red); }
+
+  /* ── El buscador de asesor ──
+     Son 94 y crecen. Un desplegable de 94 renglones se recorre a ciegas;
+     escribiendo tres letras se llega en un segundo. */
+  .dic-busca-asesor { position: relative; }
+  .dic-asesor-lista {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+    max-height: 260px; overflow-y: auto;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: var(--sombra-3);
+    padding: 5px; display: none;
+  }
+  .dic-asesor-lista.abierta { display: block; }
+  .dic-asesor-op {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 10px; border: none; border-radius: 9px;
+    background: none; font-family: inherit; font-size: 13.5px;
+    color: var(--text); cursor: pointer;
+  }
+  .dic-asesor-op:hover, .dic-asesor-op.resaltada { background: var(--pastel-rojo); }
+  .dic-asesor-op small { display: block; color: var(--muted); font-size: 11.5px; }
+  .dic-asesor-vacio { padding: 14px 10px; color: var(--muted); font-size: 13px; text-align: center; }
+  /* Ya elegido: se enseña como pastilla para que se note que es un dato
+     tomado del catálogo y no algo que se escribió a mano. */
+  .dic-asesor-puesto {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--r-campo);
+    border: 1px solid var(--border); background: var(--pastel-rojo);
+  }
+  .dic-asesor-puesto span { flex: 1; min-width: 0; font-size: 13.5px; }
+  .dic-asesor-puesto small { display: block; color: var(--muted); font-size: 11.5px; }
 
   .dic-lista-puntos { margin-top: var(--sp-3); }
   .dic-punto-edit {
     display: flex; align-items: flex-start; gap: 10px;
     padding: 10px 12px; margin-bottom: 8px;
-    border: 1px solid rgba(0,0,0,0.09); border-radius: 11px;
-    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--border); border-radius: 11px; background: #fff;
   }
   .dic-punto-edit-num {
     width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-    background: #fff3f3; color: var(--red);
+    background: var(--pastel-rojo); color: var(--pastel-rojo-txt);
     font-size: 11px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
   }
@@ -187,16 +203,38 @@
   }
   .dic-quitar:hover { color: var(--red); background: rgba(198,32,39,0.08); }
 
-  .dic-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--sp-4); }
+  .dic-nuevo-punto {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
+    padding: 12px; border-radius: 12px;
+    border: 1px dashed rgba(0,0,0,0.18); background: rgba(0,0,0,0.015);
+    margin-top: var(--sp-2);
+  }
+  .dic-nuevo-punto textarea {
+    width: 100%; min-height: 44px; resize: vertical;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; font-family: inherit; font-size: 13.5px; background: #fff;
+  }
+  .dic-nuevo-punto textarea:focus { outline: none; border-color: var(--red); }
 
+  .dic-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--sp-4); }
   .dic-msg { border-radius: 12px; padding: 11px 13px; font-size: 13px; margin-bottom: var(--sp-3); display: none; }
   .dic-msg.error { display: block; background: rgba(198,32,39,0.08); color: #8a1212; }
-  .dic-msg.ok { display: block; background: rgba(31,157,85,0.1); color: #0d5c2f; }
+  .dic-msg.ok { display: block; background: var(--pastel-menta); color: var(--pastel-menta-txt); }
 
-  /* ── La hoja que se imprime ──────────────────────────────────
-     Las mismas medidas que el resto de los formatos de la oficina
-     (carta, márgenes y el logo arriba), para que un dictamen impreso no
-     se distinga de los demás documentos. */
+  /* Al guardar aparece la descarga. Antes de guardar no tiene sentido:
+     el PDF lleva el folio, y el folio se pone al dictaminar. */
+  .dic-listo {
+    display: none; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+    margin-top: var(--sp-4); padding: 13px 15px;
+    border-radius: var(--r-tarjeta);
+    background: var(--pastel-menta); color: var(--pastel-menta-txt);
+  }
+  .dic-listo.visible { display: flex; }
+  .dic-listo span { flex: 1; min-width: 200px; font-size: 13.5px; }
+
+  /* ── La hoja que se imprime ──
+     Las mismas medidas que el resto de los formatos de la oficina, para
+     que un dictamen impreso no se distinga de los demás documentos. */
   #solo-impresion { display: none; }
   .hoja {
     background: #fff; width: 21.6cm; min-height: 27.9cm;
@@ -204,30 +242,34 @@
     font-family: Arial, Helvetica, sans-serif;
     font-size: 10pt; line-height: 1.55; color: #000;
   }
-  .hoja-logo img { height: 42px; width: auto; display: block; margin-bottom: 14px; }
-  .hoja h1 { font-size: 13pt; font-weight: 700; text-align: center; margin: 10px 0 4px; }
-  .hoja-folio { text-align: center; font-size: 9pt; color: #444; margin-bottom: 16px; }
-  .hoja-datos { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  .hoja-datos td { padding: 4px 0; vertical-align: top; }
-  .hoja-datos td:first-child { width: 4.6cm; font-weight: 700; }
-  .hoja h2 {
-    font-size: 10.5pt; font-weight: 700; margin: 16px 0 8px;
-    border-bottom: 1px solid #000; padding-bottom: 3px;
+  .hoja-logo img { height: 46px; width: auto; display: block; margin-bottom: 18px; }
+  .hoja h1 {
+    font-size: 10.5pt; font-weight: 700; color: #7d1113;
+    margin: 0 0 4px 3.2cm; letter-spacing: 0.01em;
   }
-  .hoja-texto { text-align: justify; white-space: pre-line; margin: 0 0 10px; }
-  .hoja-puntos { width: 100%; border-collapse: collapse; }
-  .hoja-puntos th, .hoja-puntos td {
-    border: 1px solid #000; padding: 5px 6px; text-align: left; vertical-align: top;
-    font-size: 9.5pt;
+  .hoja-folio { font-size: 8.5pt; color: #444; margin: 0 0 16px 3.2cm; }
+  .hoja-cuadro { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .hoja-cuadro td {
+    border: 1px solid #000; padding: 4px 6px;
+    vertical-align: top; font-size: 9.5pt; line-height: 1.4;
+    word-wrap: break-word;
   }
-  .hoja-puntos th { background: #eee; font-size: 9pt; }
-  .hoja-puntos .col-num { width: 1cm; text-align: center; }
-  .hoja-puntos .col-cat { width: 2.4cm; }
-  .hoja-puntos .col-est { width: 2.6cm; }
-  .hoja-firmas { display: flex; gap: 1.6cm; margin-top: 1.6cm; }
-  .hoja-firma { flex: 1; text-align: center; font-size: 9pt; }
-  .hoja-firma-linea { border-top: 1px solid #000; margin-bottom: 4px; padding-top: 3px; }
-  .hoja-pie { margin-top: 1cm; font-size: 8pt; color: #444; text-align: center; }
+  .hoja-cuadro .rotulo {
+    width: 4.4cm; color: #7d1113; font-weight: 400;
+    text-transform: uppercase; font-size: 8.5pt;
+  }
+  .hoja-cuadro .alto-2 { height: 1.6cm; }
+  .hoja-cuadro .alto-3 { height: 2.4cm; }
+  .hoja-cuadro .alto-4 { height: 3.2cm; }
+  .hoja-cuadro .sub {
+    color: #7d1113; text-transform: uppercase;
+    font-size: 8.5pt; display: block; margin-bottom: 3px;
+  }
+  .hoja-lista { margin: 0; padding-left: 1.1em; }
+  .hoja-lista li { margin-bottom: 3px; }
+  .hoja-lista .estado { color: #444; font-size: 8.5pt; }
+  .hoja-nota { margin: 0 0 6px; white-space: pre-line; }
+  .hoja-pie { margin-top: 0.7cm; font-size: 8pt; color: #444; }
 
   @media print {
     @page { size: Letter; margin: 0; }
@@ -258,13 +300,17 @@
     <div id="vista-lista">
       <div class="dic-barra">
         <div>
-          <h1 class="kw-page-titulo">Dictámenes</h1>
+          <h1 class="kw-page-titulo" id="page-titulo">Dictámenes</h1>
           <p class="kw-page-desc" id="page-desc">Revisión de expedientes y seguimiento de lo que falta corregir.</p>
         </div>
-        <button type="button" class="btn-nuevo" id="btn-nuevo" style="display:none;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Nuevo dictamen</span>
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="kw-fila-btn neutro" id="btn-sync-asesores" style="display:none;">Sincronizar asesores</button>
+          <button type="button" class="kw-fila-btn neutro" id="btn-archivo">Ver archivo</button>
+          <button type="button" class="btn-nuevo" id="btn-nuevo" style="display:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Nuevo dictamen</span>
+          </button>
+        </div>
       </div>
 
       <div class="dic-resumen" id="resumen"></div>
@@ -276,20 +322,20 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
               <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
             </svg>
-            <input type="text" id="f-buscar" class="kw-input" placeholder="Inmueble, folio o asesor" autocomplete="off">
+            <input type="text" id="f-buscar" class="kw-input" placeholder="Inmueble, folio, cliente o asesor" autocomplete="off">
           </div>
         </div>
         <div class="kw-campo-filtro">
           <label for="f-estado">Estado</label>
           <select id="f-estado">
             <option value="todos">Todos los estados</option>
-            <option value="abierto">Con pendientes</option>
-            <option value="en_revision">Esperan revisión</option>
-            <option value="cerrado">Cerrados</option>
             <option value="borrador">Borradores</option>
+            <option value="devuelta">Devueltos</option>
+            <option value="condicionada">Autorizados condicionados</option>
+            <option value="autorizada">Autorizados para promoción</option>
           </select>
         </div>
-        <div class="kw-campo-filtro" id="w-asesor" style="display:none;">
+        <div class="kw-campo-filtro">
           <label for="f-asesor">Asesor</label>
           <select id="f-asesor"><option value="todos">Todos los asesores</option></select>
         </div>
@@ -306,7 +352,7 @@
       <div class="dic-barra">
         <div>
           <h1 class="kw-page-titulo" id="editor-titulo">Nuevo dictamen</h1>
-          <p class="kw-page-desc">Mientras sea borrador solo lo ve el liderazgo. Al entregarlo le llega al asesor.</p>
+          <p class="kw-page-desc">Se guarda como borrador hasta que le pongas un dictamen.</p>
         </div>
       </div>
 
@@ -315,51 +361,132 @@
 
         <div class="dic-dos">
           <div class="dic-campo">
-            <label for="e-asesor">Asesor del expediente</label>
-            <select id="e-asesor"></select>
+            <label for="e-fecha">Fecha del dictamen</label>
+            <input type="date" id="e-fecha">
           </div>
+          <div class="dic-campo">
+            <label for="e-asesor-busca">Asesor</label>
+            <div class="dic-busca-asesor">
+              <input type="text" id="e-asesor-busca" class="kw-input" placeholder="Escribe el nombre" autocomplete="off">
+              <div class="dic-asesor-lista" id="e-asesor-lista"></div>
+            </div>
+            <div class="dic-asesor-puesto" id="e-asesor-puesto" style="display:none;">
+              <span id="e-asesor-nombre"></span>
+              <button type="button" class="kw-btn-mini" id="e-asesor-cambiar">Cambiar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="dic-campo">
+          <label for="e-cliente">Nombre del cliente</label>
+          <textarea id="e-cliente" rows="2" placeholder="Como aparece en la escritura"></textarea>
+        </div>
+
+        <div class="dic-campo">
+          <label for="e-inmueble">Dirección del inmueble</label>
+          <textarea id="e-inmueble" rows="2" placeholder="Calle, número, edificio, departamento, colonia, alcaldía"></textarea>
+        </div>
+
+        <div class="dic-tres">
           <div class="dic-campo">
             <label for="e-operacion">Operación</label>
             <select id="e-operacion">
               <option value="venta">Venta</option>
               <option value="renta">Renta</option>
-              <option value="otro">Otra</option>
             </select>
+          </div>
+          <div class="dic-campo">
+            <label for="e-uso">Uso</label>
+            <select id="e-uso">
+              <option value="residencial">Residencial</option>
+              <option value="comercial">Comercial</option>
+              <option value="mixto">Mixto</option>
+            </select>
+          </div>
+          <div class="dic-campo">
+            <label for="e-tipo">Tipo de inmueble</label>
+            <select id="e-tipo"></select>
+            <!-- Sale solo al elegir "Otro": se escribe una vez y queda en
+                 el catálogo para las siguientes, igual que las etiquetas. -->
+            <input type="text" id="e-tipo-nuevo" class="kw-input" placeholder="¿Cuál? Se guarda para la próxima" style="display:none;margin-top:8px;" autocomplete="off">
+          </div>
+        </div>
+
+        <h2 class="kw-page-titulo dic-subtitulo">Datos del expediente</h2>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-esc-propiedad">Escrituras y fecha</label>
+            <textarea id="e-esc-propiedad" rows="2" placeholder="Escritura 25,928 de fecha 01 de agosto del 2000, ante el Lic. ..."></textarea>
+          </div>
+          <div class="dic-campo">
+            <label for="e-esc-condominio">Condominio</label>
+            <textarea id="e-esc-condominio" rows="2" placeholder="Escritura de condominio y fecha, si aplica"></textarea>
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-cfdi">CFDI</label>
+            <input type="text" id="e-cfdi" class="kw-input" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-folio-real">Folio real</label>
+            <input type="text" id="e-folio-real" class="kw-input" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-sup-escritura">Superficie escritura</label>
+            <input type="text" id="e-sup-escritura" class="kw-input" placeholder="92.40 m2" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-estado-civil">Estado civil</label>
+            <input type="text" id="e-estado-civil" class="kw-input" placeholder="Casado por sociedad conyugal, soltero..." autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Estos dos no estaban en la lista que se pidió, pero sí en el
+             machote de papel. Se dejan: quitarlos sería perder un dato que
+             hoy se captura. -->
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-cuenta-predial">Cuenta predial</label>
+            <input type="text" id="e-cuenta-predial" class="kw-input" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-sup-predial">Superficie predial</label>
+            <input type="text" id="e-sup-predial" class="kw-input" placeholder="90.15 m2" autocomplete="off">
           </div>
         </div>
 
         <div class="dic-campo">
-          <label for="e-inmueble">Inmueble</label>
-          <input type="text" id="e-inmueble" class="kw-input" placeholder="Calle, número, colonia" autocomplete="off">
-        </div>
-
-        <div class="dic-campo">
           <label for="e-observaciones">Observaciones generales</label>
-          <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo, como observaciones."></textarea>
+          <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo."></textarea>
         </div>
 
-        <h2 class="kw-page-titulo" style="font-size:15px;color:var(--text);margin-top:var(--sp-4);">Observaciones por atender</h2>
-        <p style="font-size:12.5px;color:var(--muted);margin:4px 0 0;">
-          Cada una se le marca al asesor por separado, y por separado se da por subsanada.
+        <h2 class="kw-page-titulo dic-subtitulo">Observaciones por atender</h2>
+        <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 0;">
+          Cada una se marca por separado conforme el asesor las va corrigiendo.
         </p>
 
         <div class="dic-lista-puntos" id="e-puntos"></div>
 
         <div class="dic-nuevo-punto">
           <textarea id="e-punto-texto" placeholder="Falta la boleta predial actualizada" rows="1"></textarea>
-          <select id="e-punto-cat">
-            <option value="documento">Documento</option>
-            <option value="acuerdo">Acuerdo</option>
-            <option value="legal">Legal</option>
-            <option value="otro">Otro</option>
-          </select>
           <button type="button" class="kw-btn-mini" id="e-punto-agregar">Agregar</button>
         </div>
 
         <div class="dic-acciones">
-          <button type="button" class="kw-fila-btn" id="e-guardar">Guardar borrador</button>
-          <button type="button" class="btn-nuevo" id="e-entregar">Entregar al asesor</button>
+          <button type="button" class="btn-nuevo" id="e-guardar">Guardar</button>
           <button type="button" class="kw-fila-btn neutro" id="e-cancelar">Cancelar</button>
+        </div>
+
+        <div class="dic-listo" id="e-listo">
+          <span id="e-listo-txt">Guardado.</span>
+          <button type="button" class="kw-fila-btn" id="e-descargar">Descargar PDF</button>
+          <button type="button" class="kw-fila-btn neutro" id="e-volver">Volver a la lista</button>
         </div>
       </div>
     </div>
@@ -374,40 +501,32 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  // Quién soy y qué puedo hacer. Se llena al iniciar.
-  var yo = null;          // { id, role, puede_dictaminar }
-  var veTodo = false;     // staff para arriba: ve los expedientes de todos
+  // La misma función que usa la pantalla de Proceso de Alta: ya sabe leer
+  // la hoja de asesores y traer un token de Google, y el catálogo de
+  // Dictámenes se nutre de esa misma hoja.
+  var FN_ALTA = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
+
+  var yo = null;
+  var veTodo = false;
   var puedoDictaminar = false;
 
-  var dictamenes = [];    // de la vista, con los nombres y las cuentas
-  var puntos = [];        // todos los de los dictámenes visibles
+  var dictamenes = [];
+  var puntos = [];
   var asesores = [];
-  var abierto = null;     // qué dictamen está desplegado, para no cerrarlo al repintar
-
-  // Lo que se está armando en el editor. Los puntos viven aquí y no en la
-  // base hasta que se guarda: así se puede quitar uno mal escrito sin
-  // dejar rastro, y armar el dictamen entero sin conexión intermitente.
+  var tipos = [];
+  var abierto = null;
+  var verArchivo = false;
   var borrador = null;
 
   var ESTADOS = {
-    borrador:    ['kw-pill-neutro', 'gris',  'Borrador'],
-    abierto:     ['kw-pill-espera', 'ambar', 'Con pendientes'],
-    en_revision: ['kw-pill-info',   'ambar', 'Espera revisión'],
-    cerrado:     ['kw-pill-ok',     'verde', 'Cerrado'],
+    borrador:     'Borrador',
+    devuelta:     'Devuelto',
+    condicionada: 'Autorizado condicionado',
+    autorizada:   'Autorizado para promoción',
   };
 
-  var ESTADO_PUNTO = {
-    pendiente: ['kw-pill-espera', 'Pendiente'],
-    corregido: ['kw-pill-info',   'Corregido, espera revisión'],
-    subsanado: ['kw-pill-ok',     'Subsanado'],
-    no_aplica: ['kw-pill-neutro', 'No aplica'],
-  };
-
-  var CATEGORIAS = {
-    documento: 'Documento', acuerdo: 'Acuerdo', legal: 'Legal', otro: 'Otro',
-  };
-
-  var OPERACIONES = { venta: 'Venta', renta: 'Renta', otro: 'Otra' };
+  var OPERACIONES = { venta: 'Venta', renta: 'Renta' };
+  var USOS = { residencial: 'Residencial', comercial: 'Comercial', mixto: 'Mixto' };
 
   function escapar(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -417,19 +536,19 @@
 
   function fecha(iso) {
     if (!iso) return '';
-    return new Date(iso).toLocaleDateString('es-MX', {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
+    // Las fechas de solo día vienen como "2026-08-18". Pasarlas por Date
+    // las lee como medianoche UTC y en México se corren un día hacia
+    // atrás, así que se parten a mano.
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+    var d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
-  function nombreDe(p) {
-    var n = ((p.nombre || '') + ' ' + (p.apellido || '')).trim();
-    return n || p.email || 'Sin nombre';
-  }
-
-  function nombreAsesor(d) {
-    var n = ((d.asesor_nombre || '') + ' ' + (d.asesor_apellido || '')).trim();
-    return n || d.asesor_email || 'Sin asesor';
+  function hoy() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
   }
 
   function aviso(caja, texto, tipo) {
@@ -442,10 +561,8 @@
 
   async function cargar() {
     var r = await window.kwSupabase
-      .from('dictamenes_con_asesor')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(300);
+      .from('dictamenes_con_asesor').select('*')
+      .order('created_at', { ascending: false }).limit(500);
 
     if (r.error) {
       $('lista').innerHTML = '<div class="kw-vacio">No se pudieron cargar los dictámenes: '
@@ -454,45 +571,33 @@
     }
     dictamenes = r.data || [];
 
-    // Los puntos de todos, de una sola vez. Uno por uno, al desplegar,
-    // serían decenas de idas y vueltas y habría que repintar a mano cada
-    // vez que cambia algo; así hay una sola lista y todo se vuelve a
-    // dibujar solo.
-    //
-    // Sin filtrar por dictamen: la regla de acceso de la base ya devuelve
-    // nada más los que a uno le tocan, y mandar trescientos
-    // identificadores en la dirección de la petición la haría larguísima
-    // para no ganar nada.
+    // Las observaciones de todos, de una sola vez. La regla de acceso de
+    // la base ya devuelve nada más las que a uno le tocan.
     var p = await window.kwSupabase
-      .from('dictamen_puntos').select('*').order('orden').limit(3000);
+      .from('dictamen_puntos').select('*').order('orden').limit(5000);
     puntos = p.data || [];
     pintar();
   }
 
-  async function cargarAsesores() {
-    // Solo hace falta para el desplegable de quién dictamina y para el
-    // filtro del liderazgo. Al asesor no le sirve de nada.
-    if (!veTodo && !puedoDictaminar) return;
-    // De la vista y no de profiles: esa tabla solo deja leer el renglón
-    // propio y los de Admin para arriba, y quien dictamina bien puede ser
-    // Liderazgo, que ahí se quedaría con una lista de una sola persona.
-    var r = await window.kwSupabase
-      .from('dictamen_asesores').select('id, nombre, apellido, email').order('nombre');
-    asesores = r.data || [];
+  async function cargarCatalogos() {
+    var a = await window.kwSupabase
+      .from('dictamen_asesores').select('id, nombre, correo, activo').order('nombre');
+    asesores = a.data || [];
 
-    if (veTodo) {
-      $('w-asesor').style.display = '';
-      $('f-asesor').innerHTML = '<option value="todos">Todos los asesores</option>' +
-        asesores.map(function (a) {
-          return '<option value="' + a.id + '">' + escapar(nombreDe(a)) + '</option>';
-        }).join('');
-    }
-    if (puedoDictaminar) {
-      $('e-asesor').innerHTML = '<option value="">Elige al asesor</option>' +
-        asesores.map(function (a) {
-          return '<option value="' + a.id + '">' + escapar(nombreDe(a)) + '</option>';
-        }).join('');
-    }
+    var t = await window.kwSupabase
+      .from('dictamen_tipos_inmueble').select('id, nombre').order('nombre');
+    tipos = t.data || [];
+
+    $('f-asesor').innerHTML = '<option value="todos">Todos los asesores</option>' +
+      asesores.filter(function (x) { return x.activo; }).map(function (x) {
+        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
+      }).join('');
+
+    $('e-tipo').innerHTML = '<option value="">Sin especificar</option>' +
+      tipos.map(function (x) {
+        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
+      }).join('') +
+      '<option value="__nuevo__">Otro (escribirlo)</option>';
   }
 
   // ── Filtrar ─────────────────────────────────────────────────
@@ -500,36 +605,38 @@
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
     var estado = $('f-estado').value;
-    var asesor = veTodo ? $('f-asesor').value : 'todos';
+    var asesor = $('f-asesor').value;
 
     return dictamenes.filter(function (d) {
+      // El archivo es una lista aparte, no un filtro más: o se ve lo
+      // vivo, o se ve lo archivado.
+      if (verArchivo !== !!d.archivado_at) return false;
       if (estado !== 'todos' && d.estado !== estado) return false;
       if (asesor !== 'todos' && d.asesor_id !== asesor) return false;
       if (busca) {
-        var heno = (d.inmueble + ' ' + (d.folio || '') + ' ' + nombreAsesor(d)).toLowerCase();
+        var heno = [d.inmueble, d.folio, d.cliente, d.asesor_nombre]
+          .join(' ').toLowerCase();
         if (heno.indexOf(busca) === -1) return false;
       }
       return true;
     });
   }
 
-  // ── El resumen de arriba ────────────────────────────────────
+  // ── El resumen ──────────────────────────────────────────────
 
   function pintarResumen() {
-    // Al asesor le importa lo que le toca hacer; a quien dictamina, lo
-    // que le toca revisar. Es la misma barra con distinta lectura, así
-    // que el texto cambia según quién mira.
-    var conPendientes = dictamenes.filter(function (d) { return d.estado === 'abierto'; }).length;
-    var enRevision = dictamenes.filter(function (d) { return d.estado === 'en_revision'; }).length;
-    var cerrados = dictamenes.filter(function (d) { return d.estado === 'cerrado'; }).length;
-
+    if (verArchivo) { $('resumen').innerHTML = ''; return; }
+    var vivos = dictamenes.filter(function (d) { return !d.archivado_at; });
+    var cuenta = function (e) {
+      return vivos.filter(function (d) { return d.estado === e; }).length;
+    };
     var tarjetas = [
-      ['abierto', conPendientes, puedoDictaminar || veTodo ? 'Con pendientes del asesor' : 'Te falta corregir'],
-      ['en_revision', enRevision, puedoDictaminar ? 'Esperan tu revisión' : 'Esperan revisión'],
-      ['cerrado', cerrados, 'Cerrados'],
+      ['devuelta', cuenta('devuelta'), 'Devueltos'],
+      ['condicionada', cuenta('condicionada'), 'Condicionados'],
+      ['autorizada', cuenta('autorizada'), 'Autorizados'],
     ];
-
     var activo = $('f-estado').value;
+
     $('resumen').innerHTML = tarjetas.map(function (t) {
       return '<button type="button" class="dic-tarjeta' + (activo === t[0] ? ' activa' : '') +
         '" data-estado="' + t[0] + '">' +
@@ -540,8 +647,8 @@
 
     $('resumen').querySelectorAll('[data-estado]').forEach(function (b) {
       b.addEventListener('click', function () {
-        // Volver a picarle al que ya está puesto lo quita: si no, para
-        // ver todo habría que ir hasta el filtro de abajo.
+        // Volver a picarle al que ya está puesto lo quita: si no, para ver
+        // todo habría que ir hasta el filtro de abajo.
         var quiere = b.dataset.estado;
         $('f-estado').value = ($('f-estado').value === quiere) ? 'todos' : quiere;
         $('f-estado').dispatchEvent(new Event('change', { bubbles: true }));
@@ -554,24 +661,29 @@
 
   function pintar() {
     pintarResumen();
+    $('page-titulo').textContent = verArchivo ? 'Archivo de dictámenes' : 'Dictámenes';
+    $('page-desc').textContent = verArchivo
+      ? 'Los que se sacaron de la lista. Desde aquí se restauran o se borran de verdad.'
+      : 'Revisión de expedientes y seguimiento de lo que falta corregir.';
+    $('btn-archivo').textContent = verArchivo ? 'Volver a la lista' : 'Ver archivo';
+
     var filas = visibles();
 
     if (!filas.length) {
       var hayFiltro = $('f-buscar').value.trim() || $('f-estado').value !== 'todos'
-        || (veTodo && $('f-asesor').value !== 'todos');
+        || $('f-asesor').value !== 'todos';
       $('lista').innerHTML = '<div class="kw-vacio">' + (
-        hayFiltro
-          ? 'No hay dictámenes que cumplan con lo que estás filtrando.'
-          : (veTodo ? 'Todavía no se ha levantado ningún dictamen.'
-                    : 'No tienes dictámenes. Cuando revisen alguno de tus expedientes, aparecerá aquí.')
+        verArchivo ? 'No hay dictámenes archivados.'
+          : hayFiltro ? 'No hay dictámenes que cumplan con lo que estás filtrando.'
+            : 'Todavía no se ha levantado ningún dictamen.'
       ) + '</div>';
       return;
     }
 
-    $('lista').innerHTML = filas.map(function (d) { return filaHTML(d); }).join('');
+    $('lista').innerHTML = filas.map(filaHTML).join('');
 
-    // Se vuelve a abrir el que estaba abierto: sin esto, marcar un punto
-    // cierra la tarjeta y hay que volver a buscarla para seguir.
+    // Se vuelve a abrir el que estaba abierto: sin esto, marcar una
+    // observación cierra la tarjeta y hay que volver a buscarla.
     if (abierto) {
       var f = $('lista').querySelector('[data-fila="' + abierto + '"]');
       if (f) {
@@ -581,14 +693,7 @@
       }
     }
 
-    if (window.kwUI) {
-      window.kwUI.acordeon($('lista'));
-      // Los desplegables de "agregar observación" nacen con cada pintada,
-      // así que hay que volver a convertirlos: si no, salen con el gris
-      // del navegador en medio de una pantalla que no lo usa en ningún
-      // otro lado.
-      window.kwUI.selects($('lista'));
-    }
+    if (window.kwUI) window.kwUI.acordeon($('lista'));
     $('lista').querySelectorAll('.kw-fila-cabeza').forEach(function (c) {
       c.addEventListener('click', function () {
         var fila = c.closest('.kw-fila');
@@ -599,27 +704,27 @@
   }
 
   function filaHTML(d) {
-    var est = ESTADOS[d.estado] || ESTADOS.abierto;
-    var total = d.puntos_total || 0;
-    var listos = (d.puntos_subsanados || 0);
-    var pct = total ? Math.round((listos / total) * 100) : 0;
-
     var mios = puntos.filter(function (p) { return p.dictamen_id === d.id; });
+    var total = d.puntos_total || 0;
+    var listas = d.puntos_corregidas || 0;
+    var pct = total ? Math.round((listas / total) * 100) : 0;
 
     return '<div class="kw-fila" data-fila="' + d.id + '">' +
       '<button type="button" class="kw-fila-cabeza">' +
-        '<span class="kw-fila-punto ' + est[1] + '"></span>' +
         '<span class="kw-fila-texto">' +
           '<span class="kw-fila-titulo">' + escapar(d.inmueble) + '</span>' +
           '<span class="kw-fila-sub">' +
             (d.folio ? escapar(d.folio) + ' · ' : '') +
-            escapar(nombreAsesor(d)) + ' · ' + (OPERACIONES[d.operacion] || '') +
+            escapar(d.asesor_nombre || '') + ' · ' + fecha(d.fecha_dictamen) +
           '</span>' +
         '</span>' +
         '<span class="kw-fila-extra">' +
-          '<span class="kw-extra"><span class="dic-avance"><span style="width:' + pct + '%"></span></span></span>' +
-          '<span class="kw-extra"><span>' + listos + ' de ' + total + '</span></span>' +
-          '<span class="kw-extra"><span class="kw-pill ' + est[0] + '">' + est[2] + '</span></span>' +
+          (total
+            ? '<span class="kw-extra"><span class="dic-avance"><span style="width:' + pct + '%"></span></span></span>' +
+              '<span class="kw-extra"><span>' + listas + ' de ' + total + '</span></span>'
+            : '') +
+          '<span class="kw-extra"><span class="dic-estado ' + d.estado + '">' +
+            (ESTADOS[d.estado] || '') + '</span></span>' +
         '</span>' +
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
@@ -629,111 +734,97 @@
     '</div>';
   }
 
-  function cuerpoHTML(d, mios) {
-    var est = ESTADOS[d.estado] || ESTADOS.abierto;
-    var soyElAsesor = d.asesor_id === yo.id;
+  function dato(rotulo, valor) {
+    if (!valor) return '';
+    return '<div class="dic-dato"><b>' + rotulo + '</b>' + escapar(valor) + '</div>';
+  }
 
-    var datos = '<div class="kw-datos">' +
-      '<div class="kw-dato kw-solo-movil"><span class="kw-dato-txt">' +
-        escapar(nombreAsesor(d)) + '</span></div>' +
-      '<div class="kw-dato"><span class="kw-dato-txt"><b>Revisó:</b> ' +
-        escapar(((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim() || 'Sin registrar') +
-        (d.entregado_at ? ' · ' + fecha(d.entregado_at) : '') +
-      '</span></div>' +
-      '<div class="kw-dato kw-solo-movil"><span class="kw-dato-txt">' +
-        '<span class="kw-pill ' + est[0] + '">' + est[2] + '</span></span></div>' +
+  function cuerpoHTML(d, mios) {
+    var datos = '<div class="dic-datos">' +
+      dato('Cliente', d.cliente) +
+      dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
+      dato('Tipo de inmueble', d.tipo_inmueble) +
+      dato('Escrituras y fecha', d.escritura_propiedad) +
+      dato('Condominio', d.escritura_condominio) +
+      dato('CFDI', d.cfdi) +
+      dato('Superficie escritura', d.superficie_escritura) +
+      dato('Cuenta predial', d.cuenta_predial) +
+      dato('Superficie predial', d.superficie_predial) +
+      dato('Estado civil', d.estado_civil) +
+      dato('Folio real', d.folio_real) +
+      dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
     '</div>';
 
     var obs = d.observaciones
-      ? '<div class="kw-nota">' + escapar(d.observaciones) + '</div>'
-      : '';
+      ? '<div class="kw-nota">' + escapar(d.observaciones) + '</div>' : '';
 
     var lista = mios.length
-      ? mios.map(function (p, i) { return puntoHTML(d, p, i, soyElAsesor); }).join('')
-      : '<div class="kw-vacio" style="padding:var(--sp-4);">Este dictamen todavía no tiene observaciones.</div>';
+      ? mios.map(function (p, i) { return puntoHTML(p, i); }).join('')
+      : '<div class="kw-vacio" style="padding:var(--sp-4);">Sin observaciones por atender.</div>';
 
-    // Agregar una observación a un dictamen ya entregado: pasa cuando al
-    // revisar lo corregido sale algo que no se había visto. El recuadro
-    // vive dentro de la tarjeta, abierto, en vez de detrás de un botón:
-    // solo lo ve quien dictamina y solo con la tarjeta desplegada, así
-    // que no estorba a nadie más.
-    var agregar = (puedoDictaminar && d.estado !== 'borrador' && d.estado !== 'cerrado')
+    var agregar = (puedoDictaminar && !d.archivado_at)
       ? '<div class="dic-nuevo-punto" data-agregar-en="' + d.id + '">' +
           '<textarea data-nuevo-texto placeholder="Otra observación para este expediente" rows="1"></textarea>' +
-          '<select data-nuevo-cat>' +
-            '<option value="documento">Documento</option>' +
-            '<option value="acuerdo">Acuerdo</option>' +
-            '<option value="legal">Legal</option>' +
-            '<option value="otro">Otro</option>' +
-          '</select>' +
           '<button type="button" class="kw-btn-mini" data-nuevo-agregar>Agregar</button>' +
         '</div>'
       : '';
 
+    // El dictamen en sí: los tres botones que mueven el estado. Van juntos
+    // y siempre los tres, incluso el que ya está puesto, porque leerlos
+    // uno al lado del otro es lo que deja ver de qué se está eligiendo.
+    var dictaminar = (puedoDictaminar && !d.archivado_at)
+      ? '<div class="dic-punto-acciones" style="margin-top:var(--sp-3);">' +
+          ['devuelta', 'condicionada', 'autorizada'].map(function (e) {
+            return '<button type="button" class="kw-btn-mini" data-dictaminar="' + e +
+              '" data-dic="' + d.id + '"' + (d.estado === e ? ' disabled' : '') + '>' +
+              ESTADOS[e] + '</button>';
+          }).join('') +
+        '</div>'
+      : '';
+
     var acciones = '<div class="kw-fila-acciones">' +
-      '<button type="button" class="kw-fila-btn" data-imprimir="' + d.id + '">Imprimir o guardar PDF</button>' +
-      (puedoDictaminar && d.estado === 'borrador'
-        ? '<button type="button" class="kw-fila-btn" data-editar="' + d.id + '">Seguir armándolo</button>' +
+      '<button type="button" class="kw-fila-btn" data-imprimir="' + d.id + '">Descargar PDF</button>' +
+      (puedoDictaminar && !d.archivado_at
+        ? '<button type="button" class="kw-fila-btn" data-editar="' + d.id + '">Editar</button>' +
+          '<button type="button" class="kw-fila-btn neutro" data-archivar="' + d.id + '">Archivar</button>'
+        : '') +
+      (puedoDictaminar && d.archivado_at
+        ? '<button type="button" class="kw-fila-btn" data-restaurar="' + d.id + '">Restaurar</button>' +
           '<button type="button" class="kw-fila-btn neutro" data-borrar="' + d.id + '">Borrar</button>'
         : '') +
     '</div>';
 
     return datos + obs +
-      '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' + acciones;
+      '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
+      dictaminar + acciones;
   }
 
-  function puntoHTML(d, p, i, soyElAsesor) {
-    var est = ESTADO_PUNTO[p.estado] || ESTADO_PUNTO.pendiente;
+  function puntoHTML(p, i) {
+    var corregida = p.estado === 'corregida';
+    var btns = puedoDictaminar
+      ? '<div class="dic-punto-acciones">' +
+          '<button type="button" class="kw-btn-mini" data-mover="' + p.id + '">' +
+            (corregida ? 'Marcar pendiente' : 'Marcar corregida') + '</button>' +
+          '<button type="button" class="kw-btn-mini" data-nota="' + p.id + '">Nota</button>' +
+          '<button type="button" class="kw-btn-mini" data-quitar-punto="' + p.id + '">Quitar</button>' +
+        '</div>'
+      : '';
 
-    var notas = '';
-    if (p.nota_asesor) {
-      notas += '<div class="dic-punto-nota"><b>El asesor:</b> ' + escapar(p.nota_asesor) + '</div>';
-    }
-    if (p.nota_revision) {
-      notas += '<div class="dic-punto-nota"><b>Revisión:</b> ' + escapar(p.nota_revision) + '</div>';
-    }
-
-    // Quién puede hacer qué. El asesor solo empuja su parte del camino;
-    // dar por bueno un punto es de quien dictamina, y esa regla también
-    // está en la base, no nada más aquí.
-    var btns = [];
-    if (soyElAsesor && d.estado !== 'borrador' && d.estado !== 'cerrado') {
-      if (p.estado === 'pendiente') {
-        btns.push('<button type="button" class="kw-btn-mini" data-form="corregir" data-punto="' + p.id + '">Ya lo corregí</button>');
-      } else if (p.estado === 'corregido') {
-        btns.push('<button type="button" class="kw-btn-mini" data-mover="pendiente" data-punto="' + p.id + '">Todavía no</button>');
-      }
-    }
-    if (puedoDictaminar && d.estado !== 'borrador') {
-      if (p.estado !== 'subsanado') {
-        btns.push('<button type="button" class="kw-btn-mini" data-mover="subsanado" data-punto="' + p.id + '">Dar por subsanado</button>');
-      }
-      if (p.estado === 'corregido' || p.estado === 'subsanado') {
-        btns.push('<button type="button" class="kw-btn-mini" data-form="regresar" data-punto="' + p.id + '">Regresar</button>');
-      }
-      if (p.estado === 'pendiente') {
-        btns.push('<button type="button" class="kw-btn-mini" data-mover="no_aplica" data-punto="' + p.id + '">No aplica</button>');
-      }
-      btns.push('<button type="button" class="kw-btn-mini" data-quitar-punto="' + p.id + '">Quitar</button>');
-    }
-
-    return '<div class="dic-punto ' + p.estado + '">' +
+    return '<div class="dic-punto' + (corregida ? ' corregida' : '') + '">' +
       '<div class="dic-punto-cabeza">' +
-        '<span class="dic-punto-texto">' +
-          '<span class="dic-punto-cat">' + (i + 1) + '. ' + (CATEGORIAS[p.categoria] || '') + '</span>' +
-          escapar(p.texto) +
-        '</span>' +
-        '<span class="kw-pill ' + est[0] + '">' + est[1] + '</span>' +
+        '<span class="dic-punto-texto">' + (i + 1) + '. ' + escapar(p.texto) + '</span>' +
+        '<span class="dic-estado ' + (corregida ? 'autorizada' : 'condicionada') + '">' +
+          (corregida ? 'Corregida' : 'Pendiente') + '</span>' +
       '</div>' +
-      notas +
+      (p.nota ? '<div class="dic-punto-nota">' + escapar(p.nota) + '</div>' : '') +
       '<div class="dic-punto-form" data-form-de="' + p.id + '">' +
-        '<textarea placeholder="Una nota, si hace falta explicar algo"></textarea>' +
+        '<textarea placeholder="Una nota sobre esta observación">' + escapar(p.nota || '') + '</textarea>' +
         '<div class="dic-punto-acciones">' +
-          '<button type="button" class="kw-btn-mini" data-confirmar="' + p.id + '">Confirmar</button>' +
+          '<button type="button" class="kw-btn-mini" data-guardar-nota="' + p.id + '">Guardar nota</button>' +
           '<button type="button" class="kw-btn-mini" data-cerrar-form="' + p.id + '">Cancelar</button>' +
         '</div>' +
       '</div>' +
-      (btns.length ? '<div class="dic-punto-acciones">' + btns.join('') + '</div>' : '') +
+      btns +
     '</div>';
   }
 
@@ -743,47 +834,40 @@
     var raiz = $('lista');
 
     raiz.querySelectorAll('[data-mover]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        moverPunto(b.dataset.punto, b.dataset.mover, null);
+      b.addEventListener('click', async function () {
+        var p = puntos.find(function (x) { return x.id === b.dataset.mover; });
+        if (!p) return;
+        await guardarPunto(p.id, { estado: p.estado === 'corregida' ? 'pendiente' : 'corregida' });
       });
     });
 
-    // Los que piden nota abren el recuadro en vez de guardar de una vez.
-    raiz.querySelectorAll('[data-form]').forEach(function (b) {
+    raiz.querySelectorAll('[data-nota]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var caja = raiz.querySelector('[data-form-de="' + b.dataset.punto + '"]');
+        var caja = raiz.querySelector('[data-form-de="' + b.dataset.nota + '"]');
         if (!caja) return;
         caja.classList.add('abierto');
-        caja.dataset.accion = b.dataset.form;
         caja.querySelector('textarea').focus();
       });
     });
-
     raiz.querySelectorAll('[data-cerrar-form]').forEach(function (b) {
       b.addEventListener('click', function () {
         var caja = raiz.querySelector('[data-form-de="' + b.dataset.cerrarForm + '"]');
         if (caja) caja.classList.remove('abierto');
       });
     });
-
-    raiz.querySelectorAll('[data-confirmar]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var caja = raiz.querySelector('[data-form-de="' + b.dataset.confirmar + '"]');
+    raiz.querySelectorAll('[data-guardar-nota]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        var caja = raiz.querySelector('[data-form-de="' + b.dataset.guardarNota + '"]');
         if (!caja) return;
-        var nota = caja.querySelector('textarea').value.trim();
-        if (caja.dataset.accion === 'corregir') {
-          moverPunto(b.dataset.confirmar, 'corregido', { nota_asesor: nota || null });
-        } else {
-          moverPunto(b.dataset.confirmar, 'pendiente', { nota_revision: nota || null });
-        }
+        await guardarPunto(b.dataset.guardarNota,
+          { nota: caja.querySelector('textarea').value.trim() || null });
       });
     });
 
     raiz.querySelectorAll('[data-quitar-punto]').forEach(function (b) {
       b.addEventListener('click', async function () {
         if (!confirm('¿Quitar esta observación del dictamen?')) return;
-        await window.kwSupabase.from('dictamen_puntos')
-          .delete().eq('id', b.dataset.quitarPunto);
+        await window.kwSupabase.from('dictamen_puntos').delete().eq('id', b.dataset.quitarPunto);
         await cargar();
       });
     });
@@ -791,90 +875,174 @@
     raiz.querySelectorAll('[data-agregar-en]').forEach(function (caja) {
       var btn = caja.querySelector('[data-nuevo-agregar]');
       var txt = caja.querySelector('[data-nuevo-texto]');
-
       var agregar = async function () {
         var texto = txt.value.trim();
         if (!texto) return;
         var d = caja.dataset.agregarEn;
         var cuantos = puntos.filter(function (p) { return p.dictamen_id === d; }).length;
         btn.disabled = true;
-        var r = await window.kwSupabase.from('dictamen_puntos').insert({
-          dictamen_id: d,
-          texto: texto,
-          categoria: caja.querySelector('[data-nuevo-cat]').value,
-          orden: cuantos + 1,
-        });
+        var r = await window.kwSupabase.from('dictamen_puntos')
+          .insert({ dictamen_id: d, texto: texto, orden: cuantos + 1 });
         btn.disabled = false;
         if (r.error) { alert('No se pudo agregar: ' + r.error.message); return; }
         await cargar();
       };
-
       btn.addEventListener('click', agregar);
       txt.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agregar(); }
       });
     });
 
+    raiz.querySelectorAll('[data-dictaminar]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        b.disabled = true;
+        var r = await window.kwSupabase.rpc('dictaminar', {
+          p_id: b.dataset.dic, p_estado: b.dataset.dictaminar,
+        });
+        b.disabled = false;
+        if (r.error) { alert('No se pudo dictaminar: ' + r.error.message); return; }
+        await cargar();
+      });
+    });
+
     raiz.querySelectorAll('[data-imprimir]').forEach(function (b) {
       b.addEventListener('click', function () { imprimir(b.dataset.imprimir); });
     });
-
     raiz.querySelectorAll('[data-editar]').forEach(function (b) {
       b.addEventListener('click', function () { abrirEditor(b.dataset.editar); });
     });
 
+    raiz.querySelectorAll('[data-archivar]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        await window.kwSupabase.from('dictamenes')
+          .update({ archivado_at: new Date().toISOString() }).eq('id', b.dataset.archivar);
+        abierto = null;
+        await cargar();
+      });
+    });
+    raiz.querySelectorAll('[data-restaurar]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        await window.kwSupabase.from('dictamenes')
+          .update({ archivado_at: null }).eq('id', b.dataset.restaurar);
+        abierto = null;
+        await cargar();
+      });
+    });
     raiz.querySelectorAll('[data-borrar]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        if (!confirm('¿Borrar este borrador? No se puede deshacer.')) return;
+        if (!confirm('Se va a borrar este dictamen para siempre, con sus observaciones. No se puede deshacer.\n\n¿Seguimos?')) return;
         var r = await window.kwSupabase.from('dictamenes').delete().eq('id', b.dataset.borrar);
-        if (r.error) alert('No se pudo borrar: ' + r.error.message);
+        if (r.error) { alert('No se pudo borrar: ' + r.error.message); return; }
         abierto = null;
         await cargar();
       });
     });
   }
 
-  async function moverPunto(id, estado, extra) {
-    var datos = { estado: estado };
-    if (extra) Object.keys(extra).forEach(function (k) { datos[k] = extra[k]; });
-
+  async function guardarPunto(id, datos) {
     var r = await window.kwSupabase.from('dictamen_puntos').update(datos).eq('id', id);
-    if (r.error) {
-      alert('No se pudo guardar: ' + r.error.message);
-      return;
-    }
+    if (r.error) { alert('No se pudo guardar: ' + r.error.message); return; }
     await cargar();
+  }
+
+  // ── El buscador de asesor ───────────────────────────────────
+
+  function elegirAsesor(a) {
+    borrador.asesor_id = a ? a.id : '';
+    if (a) {
+      $('e-asesor-nombre').innerHTML = escapar(a.nombre) +
+        (a.correo ? '<small>' + escapar(a.correo) + '</small>' : '');
+      $('e-asesor-puesto').style.display = '';
+      $('e-asesor-busca').parentElement.style.display = 'none';
+    } else {
+      $('e-asesor-puesto').style.display = 'none';
+      $('e-asesor-busca').parentElement.style.display = '';
+      $('e-asesor-busca').value = '';
+      $('e-asesor-lista').classList.remove('abierta');
+    }
+  }
+
+  function pintarAsesores() {
+    var q = $('e-asesor-busca').value.trim().toLowerCase();
+    var caja = $('e-asesor-lista');
+    if (!q) { caja.classList.remove('abierta'); return; }
+
+    var hallados = asesores.filter(function (a) {
+      if (!a.activo) return false;
+      return (a.nombre + ' ' + (a.correo || '')).toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 40);
+
+    caja.innerHTML = hallados.length
+      ? hallados.map(function (a) {
+        return '<button type="button" class="dic-asesor-op" data-asesor="' + a.id + '">' +
+          escapar(a.nombre) +
+          (a.correo ? '<small>' + escapar(a.correo) + '</small>' : '') +
+        '</button>';
+      }).join('')
+      : '<div class="dic-asesor-vacio">Ningún asesor con ese nombre.</div>';
+
+    caja.classList.add('abierta');
+    caja.querySelectorAll('[data-asesor]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        elegirAsesor(asesores.find(function (a) { return a.id === b.dataset.asesor; }));
+      });
+    });
   }
 
   // ── Armar un dictamen ───────────────────────────────────────
 
+  // Los campos del machote, con el id del campo en pantalla al lado del
+  // nombre de la columna. La lista vive en un solo lugar para que agregar
+  // un renglón sea agregar un renglón aquí, y no acordarse de tocar el
+  // leer, el guardar y el reabrir por separado.
+  var CAMPOS = [
+    ['e-cliente', 'cliente'],
+    ['e-inmueble', 'inmueble'],
+    ['e-esc-propiedad', 'escritura_propiedad'],
+    ['e-esc-condominio', 'escritura_condominio'],
+    ['e-cfdi', 'cfdi'],
+    ['e-folio-real', 'folio_real'],
+    ['e-sup-escritura', 'superficie_escritura'],
+    ['e-estado-civil', 'estado_civil'],
+    ['e-cuenta-predial', 'cuenta_predial'],
+    ['e-sup-predial', 'superficie_predial'],
+    ['e-observaciones', 'observaciones'],
+  ];
+
   function abrirEditor(id) {
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
-    borrador = d
-      ? {
-        id: d.id,
-        asesor_id: d.asesor_id,
-        inmueble: d.inmueble,
-        operacion: d.operacion,
-        observaciones: d.observaciones || '',
-        puntos: puntos.filter(function (p) { return p.dictamen_id === d.id; })
-          .map(function (p) { return { id: p.id, texto: p.texto, categoria: p.categoria }; }),
-      }
-      : { id: null, asesor_id: '', inmueble: '', operacion: 'venta', observaciones: '', puntos: [] };
+    borrador = {
+      id: d ? d.id : null,
+      asesor_id: d ? d.asesor_id : '',
+      operacion: d ? d.operacion : 'venta',
+      uso: d ? d.uso : 'residencial',
+      tipo_inmueble_id: (d && d.tipo_inmueble_id) || '',
+      fecha_dictamen: (d && d.fecha_dictamen) || hoy(),
+      puntos: d
+        ? puntos.filter(function (p) { return p.dictamen_id === d.id; })
+          .map(function (p) { return { texto: p.texto, estado: p.estado, nota: p.nota }; })
+        : [],
+    };
+    CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
 
-    $('editor-titulo').textContent = d ? 'Dictamen en borrador' : 'Nuevo dictamen';
-    $('e-asesor').value = borrador.asesor_id;
+    $('editor-titulo').textContent = d ? 'Editar dictamen' : 'Nuevo dictamen';
+    $('e-fecha').value = borrador.fecha_dictamen;
     $('e-operacion').value = borrador.operacion;
+    $('e-uso').value = borrador.uso;
+    $('e-tipo').value = borrador.tipo_inmueble_id;
+    $('e-tipo-nuevo').style.display = 'none';
+    $('e-tipo-nuevo').value = '';
     // El desplegable del sitio pinta su rótulo escuchando "change", y
-    // poner el valor desde el código no lo dispara: sin esto, al reabrir
-    // un borrador el botón seguiría diciendo "Elige al asesor" aunque
-    // por dentro ya estuviera elegido.
-    $('e-asesor').dispatchEvent(new Event('change', { bubbles: true }));
-    $('e-operacion').dispatchEvent(new Event('change', { bubbles: true }));
-    $('e-inmueble').value = borrador.inmueble;
-    $('e-observaciones').value = borrador.observaciones;
+    // poner el valor desde el código no lo dispara.
+    ['e-operacion', 'e-uso', 'e-tipo'].forEach(function (x) {
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    CAMPOS.forEach(function (c) { $(c[0]).value = borrador[c[1]]; });
+    elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
+
     aviso('editor-msg', '', '');
+    $('e-listo').classList.remove('visible');
     pintarPuntosEditor();
 
     $('vista-lista').style.display = 'none';
@@ -891,16 +1059,14 @@
   function pintarPuntosEditor() {
     if (!borrador.puntos.length) {
       $('e-puntos').innerHTML = '<div class="kw-vacio" style="padding:var(--sp-4);">' +
-        'Todavía no hay observaciones. Agrega abajo las que se le van a pedir al asesor.</div>';
+        'Todavía no hay observaciones. Agrega abajo lo que se le va a pedir al asesor.</div>';
       return;
     }
     $('e-puntos').innerHTML = borrador.puntos.map(function (p, i) {
       return '<div class="dic-punto-edit">' +
         '<span class="dic-punto-edit-num">' + (i + 1) + '</span>' +
-        '<span style="flex:1;min-width:0;">' +
-          '<span class="dic-punto-cat">' + (CATEGORIAS[p.categoria] || '') + '</span>' +
-          '<span style="font-size:13.5px;line-height:1.5;">' + escapar(p.texto) + '</span>' +
-        '</span>' +
+        '<span style="flex:1;min-width:0;font-size:13.5px;line-height:1.5;">' +
+          escapar(p.texto) + '</span>' +
         '<button type="button" class="dic-quitar" data-quitar="' + i + '" aria-label="Quitar">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
         '</button>' +
@@ -916,27 +1082,55 @@
   }
 
   function leerEditor() {
-    borrador.asesor_id = $('e-asesor').value;
+    borrador.fecha_dictamen = $('e-fecha').value || hoy();
     borrador.operacion = $('e-operacion').value;
-    borrador.inmueble = $('e-inmueble').value.trim();
-    borrador.observaciones = $('e-observaciones').value.trim();
+    borrador.uso = $('e-uso').value;
+    CAMPOS.forEach(function (c) { borrador[c[1]] = $(c[0]).value.trim(); });
   }
 
-  // Guarda el dictamen y sus puntos. Los puntos se borran y se vuelven a
-  // escribir en vez de andar comparando cuál cambió: mientras es
-  // borrador nadie los ha tocado más que quien lo está armando, así que
-  // no hay nada que se pueda perder.
-  async function guardarBorrador() {
+  // Si se escribió un tipo nuevo, se guarda en el catálogo antes que nada
+  // y se usa el que quedó. Así la próxima vez ya sale en la lista, igual
+  // que las etiquetas de Firmas.
+  async function resolverTipo() {
+    var elegido = $('e-tipo').value;
+    if (elegido !== '__nuevo__') return elegido || null;
+
+    var nombre = $('e-tipo-nuevo').value.trim();
+    if (!nombre) return null;
+
+    var ya = tipos.find(function (t) {
+      return t.nombre.toLowerCase() === nombre.toLowerCase();
+    });
+    if (ya) return ya.id;
+
+    var r = await window.kwSupabase.from('dictamen_tipos_inmueble')
+      .insert({ nombre: nombre }).select('id, nombre').single();
+    if (r.error) { aviso('editor-msg', 'No se pudo guardar el tipo: ' + r.error.message, 'error'); return null; }
+    tipos.push(r.data);
+    await cargarCatalogos();
+    return r.data.id;
+  }
+
+  // Guarda el dictamen y sus observaciones. Las observaciones se borran y
+  // se vuelven a escribir en vez de andar comparando cuál cambió: el
+  // editor es de quien dictamina y nadie más las está tocando mientras.
+  async function guardar() {
     leerEditor();
-    if (!borrador.asesor_id) { aviso('editor-msg', 'Falta decir de quién es el expediente.', 'error'); return null; }
-    if (borrador.inmueble.length < 3) { aviso('editor-msg', 'Falta el inmueble.', 'error'); return null; }
+    if (!borrador.asesor_id) { aviso('editor-msg', 'Falta elegir al asesor.', 'error'); return null; }
+    if (borrador.inmueble.length < 3) { aviso('editor-msg', 'Falta la dirección del inmueble.', 'error'); return null; }
 
     var fila = {
       asesor_id: borrador.asesor_id,
-      inmueble: borrador.inmueble,
+      fecha_dictamen: borrador.fecha_dictamen,
       operacion: borrador.operacion,
-      observaciones: borrador.observaciones || null,
+      uso: borrador.uso,
+      tipo_inmueble_id: await resolverTipo(),
     };
+    // Los vacíos van como nulo y no como cadena vacía: en la base son la
+    // misma ausencia, pero una cadena vacía se cuela en las búsquedas y en
+    // los reportes como si fuera un dato.
+    CAMPOS.forEach(function (c) { fila[c[1]] = borrador[c[1]] || null; });
+    fila.inmueble = borrador.inmueble;
 
     var id = borrador.id;
     if (id) {
@@ -954,63 +1148,101 @@
     if (borrador.puntos.length) {
       var p = await window.kwSupabase.from('dictamen_puntos').insert(
         borrador.puntos.map(function (x, i) {
-          return { dictamen_id: id, texto: x.texto, categoria: x.categoria, orden: i + 1 };
+          return {
+            dictamen_id: id, texto: x.texto, orden: i + 1,
+            estado: x.estado || 'pendiente', nota: x.nota || null,
+          };
         }));
       if (p.error) { aviso('editor-msg', 'No se pudieron guardar las observaciones: ' + p.error.message, 'error'); return null; }
     }
     return id;
   }
 
-  // ── Imprimir ────────────────────────────────────────────────
+  // ── La hoja ─────────────────────────────────────────────────
+
+  function renglon(rotulo, valor, alto) {
+    return '<tr>' +
+      '<td class="rotulo">' + rotulo + '</td>' +
+      '<td' + (alto ? ' class="' + alto + '"' : '') + '>' + escapar(valor || '') + '</td>' +
+    '</tr>';
+  }
 
   function imprimir(id) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
     var mios = puntos.filter(function (p) { return p.dictamen_id === id; });
 
-    var filas = mios.map(function (p, i) {
-      return '<tr>' +
-        '<td class="col-num">' + (i + 1) + '</td>' +
-        '<td class="col-cat">' + (CATEGORIAS[p.categoria] || '') + '</td>' +
-        '<td>' + escapar(p.texto) +
-          (p.nota_revision ? '<br><i>' + escapar(p.nota_revision) + '</i>' : '') +
-        '</td>' +
-        '<td class="col-est">' + (ESTADO_PUNTO[p.estado] || ESTADO_PUNTO.pendiente)[1] + '</td>' +
-      '</tr>';
-    }).join('');
+    // Las observaciones por atender van numeradas dentro de la celda de
+    // OBSERVACIONES, con su estado. Esa es toda la diferencia entre este
+    // dictamen y el de papel: el de papel dice qué falta, este además dice
+    // qué ya se corrigió.
+    var lista = mios.length
+      ? '<ol class="hoja-lista">' + mios.map(function (p) {
+        return '<li>' + escapar(p.texto) +
+          ' <span class="estado">(' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')</span>' +
+          (p.nota ? '<br><span class="estado">' + escapar(p.nota) + '</span>' : '') +
+        '</li>';
+      }).join('') + '</ol>'
+      : '';
+
+    var observaciones =
+      (d.observaciones ? '<p class="hoja-nota">' + escapar(d.observaciones) + '</p>' : '') + lista;
 
     var dictaminador = ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim();
 
     $('solo-impresion').innerHTML =
       '<div class="hoja">' +
         '<div class="hoja-logo"><img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier"></div>' +
-        '<h1>DICTAMEN DE EXPEDIENTE</h1>' +
+        '<h1>DICTAMINACIÓN DE EXPEDIENTES</h1>' +
         '<div class="hoja-folio">' + escapar(d.folio || 'Borrador, sin folio') + '</div>' +
-        '<table class="hoja-datos">' +
-          '<tr><td>Asesor:</td><td>' + escapar(nombreAsesor(d)) + '</td></tr>' +
-          '<tr><td>Inmueble:</td><td>' + escapar(d.inmueble) + '</td></tr>' +
-          '<tr><td>Operación:</td><td>' + (OPERACIONES[d.operacion] || '') + '</td></tr>' +
-          '<tr><td>Fecha de revisión:</td><td>' + fecha(d.entregado_at || d.created_at) + '</td></tr>' +
-          '<tr><td>Estado:</td><td>' + (ESTADOS[d.estado] || ESTADOS.abierto)[2] + '</td></tr>' +
+
+        '<table class="hoja-cuadro">' +
+          renglon('Fecha de dictamen', fecha(d.fecha_dictamen)) +
+          renglon('Asesor', d.asesor_nombre) +
+          renglon('Cliente', d.cliente, 'alto-3') +
+          renglon('Inmueble', d.inmueble, 'alto-3') +
+          renglon('Tipo de oportunidad',
+            (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '') +
+            (d.tipo_inmueble ? ' · ' + d.tipo_inmueble : '')) +
+
+          // El único renglón que parte su celda en dos, igual que el
+          // machote: la escritura de la propiedad y la del condominio.
+          '<tr>' +
+            '<td class="rotulo">Escrituras y fecha</td>' +
+            '<td class="alto-3" style="padding:0;">' +
+              '<table style="width:100%;border-collapse:collapse;height:100%;">' +
+                '<tr>' +
+                  '<td style="border:0;border-right:1px solid #000;width:50%;vertical-align:top;">' +
+                    '<span class="sub">Propiedad</span>' + escapar(d.escritura_propiedad || '') +
+                  '</td>' +
+                  '<td style="border:0;width:50%;vertical-align:top;">' +
+                    '<span class="sub">Condominio</span>' + escapar(d.escritura_condominio || '') +
+                  '</td>' +
+                '</tr>' +
+              '</table>' +
+            '</td>' +
+          '</tr>' +
+
+          renglon('CFDI', d.cfdi) +
+          renglon('Superficie escritura', d.superficie_escritura) +
+          renglon('Cuenta predial', d.cuenta_predial) +
+          renglon('Superficie predial', d.superficie_predial) +
+          renglon('Estado civil', d.estado_civil) +
+          renglon('Folio real', d.folio_real) +
+
+          '<tr>' +
+            '<td class="rotulo">Observaciones</td>' +
+            '<td class="alto-4">' + observaciones + '</td>' +
+          '</tr>' +
+          renglon('Autorización',
+            d.estado === 'borrador' ? 'Sin dictaminar' : ESTADOS[d.estado], 'alto-2') +
         '</table>' +
-        (d.observaciones
-          ? '<h2>Observaciones generales</h2><p class="hoja-texto">' + escapar(d.observaciones) + '</p>'
-          : '') +
-        '<h2>Puntos por atender</h2>' +
-        (filas
-          ? '<table class="hoja-puntos"><thead><tr>' +
-              '<th class="col-num">#</th><th class="col-cat">Tipo</th>' +
-              '<th>Observación</th><th class="col-est">Estado</th>' +
-            '</tr></thead><tbody>' + filas + '</tbody></table>'
-          : '<p class="hoja-texto">Sin observaciones.</p>') +
-        '<div class="hoja-firmas">' +
-          '<div class="hoja-firma"><div class="hoja-firma-linea"></div>' +
-            escapar(dictaminador || 'Quien dictamina') + '<br>Revisión de expedientes</div>' +
-          '<div class="hoja-firma"><div class="hoja-firma-linea"></div>' +
-            escapar(nombreAsesor(d)) + '<br>Asesor</div>' +
+
+        '<div class="hoja-pie">' +
+          (dictaminador ? 'Dictaminó: ' + escapar(dictaminador) + '. ' : '') +
+          'Generado desde el portal de KW Premier el ' +
+          fecha(new Date().toISOString()) + '.' +
         '</div>' +
-        '<div class="hoja-pie">Documento generado desde el portal de KW Premier el ' +
-          fecha(new Date().toISOString()) + '.</div>' +
       '</div>';
 
     window.print();
@@ -1028,17 +1260,16 @@
     yo = r.data || { id: uid, role: 'asociado', puede_dictaminar: false };
 
     veTodo = ['master', 'admin', 'staff'].indexOf(yo.role) !== -1;
-    // Master entra siempre, igual que en la base: si el permiso se
-    // apagara por error, tiene que poder volver a encenderlo.
+    // Master entra siempre, igual que en la base.
     puedoDictaminar = yo.puede_dictaminar === true || yo.role === 'master';
 
     if (puedoDictaminar) $('btn-nuevo').style.display = '';
-    if (!veTodo) {
-      $('page-desc').textContent =
-        'Lo que se revisó de tus expedientes y qué falta por corregir.';
-    }
+    // Sincronizar es del equipo de liderazgo, no de quien dictamina nada
+    // más: el candado de verdad vive en la Edge Function, esto solo
+    // esconde el botón para quien de todos modos no podría usarlo.
+    if (veTodo) $('btn-sync-asesores').style.display = '';
 
-    await cargarAsesores();
+    await cargarCatalogos();
     if (window.kwUI) window.kwUI.selects(document);
     await cargar();
   }
@@ -1047,19 +1278,82 @@
   $('f-estado').addEventListener('change', pintar);
   $('f-asesor').addEventListener('change', pintar);
 
+  // Sincronizar es en dos tiempos: primero se pregunta sin escribir nada,
+  // y solo si se confirma se manda "aplicar". Así, si la hoja se leyó a
+  // medias (un permiso caído, un rango mal puesto), eso se ve en el
+  // resumen antes de dar de baja a medio equipo por error.
+  $('btn-sync-asesores').addEventListener('click', async function () {
+    var btn = $('btn-sync-asesores');
+    var s = await window.kwSupabase.auth.getSession();
+    var token = s.data.session && s.data.session.access_token;
+    if (!token) return;
+
+    async function pedir(aplicar) {
+      var res = await fetch(FN_ALTA, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'dictamen_asesores_sync', aplicar: aplicar }),
+      });
+      var json = await res.json().catch(function () { return null; });
+      if (!res.ok) throw new Error((json && json.error) || ('Falló (' + res.status + ')'));
+      return json;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Revisando...';
+    try {
+      var previa = await pedir(false);
+      var mensaje = 'De la hoja del ABC:\n' +
+        '  Nuevos: ' + previa.nuevos.length + '\n' +
+        '  Reactivados: ' + previa.reactivados.length + '\n' +
+        '  Bajas: ' + previa.bajas.length + '\n\n' +
+        '¿Aplicar estos cambios al catálogo de asesores?';
+      if (!confirm(mensaje)) return;
+
+      btn.textContent = 'Aplicando...';
+      await pedir(true);
+      await cargarCatalogos();
+      if (window.kwUI) window.kwUI.selects(document);
+      alert('Catálogo actualizado.');
+    } catch (e) {
+      alert('No se pudo sincronizar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sincronizar asesores';
+    }
+  });
+
+  $('btn-archivo').addEventListener('click', function () {
+    verArchivo = !verArchivo;
+    abierto = null;
+    pintar();
+  });
+
   $('btn-nuevo').addEventListener('click', function () { abrirEditor(null); });
   $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
+  $('e-volver').addEventListener('click', function () { cerrarEditor(); });
+
+  $('e-asesor-busca').addEventListener('input', pintarAsesores);
+  $('e-asesor-cambiar').addEventListener('click', function () { elegirAsesor(null); });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.dic-busca-asesor')) $('e-asesor-lista').classList.remove('abierta');
+  });
+
+  $('e-tipo').addEventListener('change', function () {
+    var nuevo = $('e-tipo').value === '__nuevo__';
+    $('e-tipo-nuevo').style.display = nuevo ? '' : 'none';
+    if (nuevo) $('e-tipo-nuevo').focus();
+  });
 
   $('e-punto-agregar').addEventListener('click', function () {
     var texto = $('e-punto-texto').value.trim();
     if (!texto) return;
-    borrador.puntos.push({ texto: texto, categoria: $('e-punto-cat').value });
+    borrador.puntos.push({ texto: texto, estado: 'pendiente' });
     $('e-punto-texto').value = '';
     $('e-punto-texto').focus();
     pintarPuntosEditor();
   });
-
-  // Enter agrega, salto de línea con Shift: se capturan varias
+  // Enter agrega, Shift+Enter salta de línea: se capturan varias
   // observaciones seguidas y llevar la mano al botón cada vez estorba.
   $('e-punto-texto').addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1071,32 +1365,18 @@
   $('e-guardar').addEventListener('click', async function () {
     var b = $('e-guardar');
     b.disabled = true;
-    var id = await guardarBorrador();
+    b.textContent = 'Guardando...';
+    var id = await guardar();
     b.disabled = false;
+    b.textContent = 'Guardar';
     if (!id) return;
-    aviso('editor-msg', 'Guardado. Sigue siendo borrador: el asesor todavía no lo ve.', 'ok');
+
     await cargar();
-  });
-
-  $('e-entregar').addEventListener('click', async function () {
-    if (!borrador.puntos.length) {
-      aviso('editor-msg', 'Agrega al menos una observación antes de entregarlo.', 'error');
-      return;
-    }
-    if (!confirm('Al entregarlo le llega al asesor por correo, con copia al liderazgo. ¿Seguimos?')) return;
-
-    var b = $('e-entregar');
-    b.disabled = true;
-    var id = await guardarBorrador();
-    if (!id) { b.disabled = false; return; }
-
-    var r = await window.kwSupabase.rpc('entregar_dictamen', { p_id: id });
-    b.disabled = false;
-    if (r.error) { aviso('editor-msg', 'No se pudo entregar: ' + r.error.message, 'error'); return; }
-
-    cerrarEditor();
-    abierto = id;
-    await cargar();
+    aviso('editor-msg', '', '');
+    $('e-listo-txt').textContent = 'Guardado. Ya puedes descargar el PDF, '
+      + 'y desde la lista ponerle el dictamen.';
+    $('e-listo').classList.add('visible');
+    $('e-descargar').onclick = function () { imprimir(id); };
   });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {

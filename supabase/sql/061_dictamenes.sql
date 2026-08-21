@@ -1,47 +1,45 @@
 -- Fase 34: dictámenes de expedientes.
 --
--- Hoy el dictamen de un expediente se escribe a mano, se escanea con el
--- teléfono, se manda a recepción y de ahí sale un correo al asesor con
--- copia a medio liderazgo. El PDF llega, sí, pero ahí muere: nadie sabe
--- si el asesor corrigió lo que se le pidió, ni cuánto lleva atorado, ni
--- qué expedientes traen pendientes hoy.
+-- Hoy el dictamen se escribe a mano, se escanea con el teléfono, se manda
+-- a recepción y de ahí sale un correo al asesor con copia a medio
+-- liderazgo. El PDF llega, sí, pero ahí muere: nadie sabe si el asesor
+-- corrigió lo que se le pidió, ni cuánto lleva atorado, ni qué
+-- expedientes traen pendientes hoy.
 --
--- Por eso el corazón de esto NO es el documento, son los puntos. Cada
--- observación es su propio renglón con su propio estado, y de ahí sale
--- todo lo demás: el PDF, el semáforo del expediente y la respuesta a
--- "¿qué trae atorada la oficina?".
+-- Por eso el corazón de esto NO es el documento, son las observaciones.
+-- Cada una es su propio renglón con su propio estado, y de ahí sale todo
+-- lo demás: el PDF, el semáforo del expediente y la respuesta a "¿qué
+-- trae atorada la oficina?".
 --
 -- ─────────────────────────────────────────────────────────────
--- POR QUÉ LOS PUNTOS VAN EN SU PROPIA TABLA
+-- POR QUÉ LAS OBSERVACIONES VAN EN SU PROPIA TABLA
 -- ─────────────────────────────────────────────────────────────
 -- Cabrían como una lista dentro del dictamen, y sería menos código. Pero
--- entonces marcar un punto significaría reescribir la lista entera, y
--- dos personas trabajando el mismo expediente al mismo tiempo se
--- pisarían: la última en guardar borraría lo que hizo la otra. Además no
--- habría manera de preguntar "cuántos puntos llevan más de un mes sin
--- subsanar" sin recorrer todos los dictámenes a mano.
+-- entonces marcar una significaría reescribir la lista entera, y dos
+-- personas trabajando el mismo expediente al mismo tiempo se pisarían.
+-- Además no habría manera de preguntar "cuántas llevan más de un mes sin
+-- corregir" sin recorrer todos los dictámenes a mano.
 --
 -- ─────────────────────────────────────────────────────────────
--- EL CAMINO DE UN PUNTO
+-- QUIÉN ES EL ASESOR
 -- ─────────────────────────────────────────────────────────────
---   pendiente   recién levantado, el asesor tiene que hacer algo
---   corregido   el asesor dice que ya; espera revisión (lo ve todo mundo)
---   subsanado   quien dictamina lo revisó y lo dio por bueno
---   no_aplica   se levantó de más, o dejó de tener sentido
+-- No es un usuario del sitio: es un renglón de un catálogo propio. Por
+-- ahora los dictámenes se llevan de forma interna y los asesores no
+-- entran a la plataforma, así que amarrarlos a una cuenta dejaría fuera a
+-- los 90 y tantos que no tienen. El catálogo se carga del Excel del
+-- Market Center y se busca por nombre.
 --
--- El paso de en medio es a propósito. Sin él, "subsanado" querría decir
--- nada más que el asesor dice que lo hizo, que es justo lo que hoy no se
--- puede comprobar. Solo quien dictamina pasa un punto a subsanado, y
--- puede regresarlo a pendiente con una nota si no quedó bien.
+-- Si algún día se les abre el acceso, el catálogo puede ganar una columna
+-- que apunte al perfil, y ahí sí cada quien vería lo suyo. Hoy no hace
+-- falta y no se construye.
 --
 -- ─────────────────────────────────────────────────────────────
 -- QUIÉN DICTAMINA
 -- ─────────────────────────────────────────────────────────────
 -- No es un rol nuevo: es un permiso suelto sobre el perfil, que Master y
--- Admin encienden y apagan desde el Panel. Hoy lo trae una sola persona
--- (la abogada), pero si se va de vacaciones o entra alguien más al
--- equipo legal, no hay que tocar la base de datos para que pueda
--- trabajar.
+-- Admin encienden desde el Panel. Master lo trae siempre. Hoy lo usa una
+-- sola persona (la abogada), pero si se va de vacaciones o entra alguien
+-- más al equipo legal, no hay que tocar la base de datos.
 --
 -- Requiere 001_profiles.sql, 005_roles_jerarquia.sql y
 -- 013_notificaciones.sql.
@@ -55,18 +53,14 @@ alter table public.profiles
   add column if not exists puede_dictaminar boolean not null default false;
 
 comment on column public.profiles.puede_dictaminar is
-  'Puede levantar dictámenes y dar por subsanados sus puntos. Lo encienden Master y Admin desde el Panel. Master lo trae siempre.';
+  'Puede levantar dictámenes y moverles el estado. Lo encienden Master y Admin desde el Panel. Master lo trae siempre.';
 
--- Master lo trae encendido de entrada. La función de abajo lo dejaría
--- pasar de todos modos, pero entonces el Panel enseñaría la casilla
--- apagada para alguien que sí puede: el dato tiene que decir lo mismo
--- que el sistema hace.
+-- Master lo trae encendido. La función de abajo lo dejaría pasar de todos
+-- modos, pero entonces el Panel enseñaría la casilla apagada para alguien
+-- que sí puede: el dato tiene que decir lo mismo que el sistema hace.
 update public.profiles set puede_dictaminar = true
 where role = 'master' and puede_dictaminar = false;
 
--- Master entra siempre, tenga o no el permiso encendido. Es la cuenta
--- dueña del sistema: si el único perfil con permiso se borra o se apaga
--- por error, sin esto nadie podría volver a encenderlo desde el sitio.
 create or replace function public.puede_dictaminar()
 returns boolean
 language sql security definer set search_path = public stable
@@ -81,7 +75,7 @@ $$;
 grant execute on function public.puede_dictaminar() to authenticated;
 
 -- Y quien llegue a Master después también, sin que nadie se acuerde de
--- prenderle la casilla. El "update" de arriba solo arregla a los de hoy.
+-- prenderle la casilla.
 create or replace function public.master_siempre_dictamina()
 returns trigger
 language plpgsql set search_path = public
@@ -98,83 +92,208 @@ create trigger trg_master_siempre_dictamina
   for each row execute function public.master_siempre_dictamina();
 
 -- ─────────────────────────────────────────────────────────────
--- 2) El dictamen
+-- 2) El catálogo de asesores
+-- ─────────────────────────────────────────────────────────────
+-- Antes esto era una vista sobre los perfiles del sitio. Se cambia por
+-- una tabla propia: los asesores del Market Center no tienen cuenta, y
+-- son ellos los que aparecen en un dictamen.
+drop view if exists public.dictamen_asesores;
+
+create table if not exists public.dictamen_asesores (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  correo text,
+  -- Quien se va del Market Center se apaga, no se borra: sus dictámenes
+  -- viejos tienen que seguir diciendo de quién eran.
+  activo boolean not null default true,
+  created_at timestamptz not null default now(),
+
+  constraint dictamen_asesores_nombre_largo check (char_length(trim(nombre)) between 3 and 160)
+);
+
+-- El correo identifica a la persona mejor que el nombre (hay homónimos, y
+-- los nombres se escriben de tres maneras). Único solo cuando existe:
+-- varios asesores pueden no tener correo cargado todavía.
+--
+-- Va sobre la columna tal cual, no sobre lower(correo): un índice por
+-- expresión no sirve como blanco de "on conflict" en un upsert, y el
+-- sincronizador con la hoja del ABC necesita justo eso. Por es que el
+-- correo se guarda siempre en minúsculas desde donde se escribe (el
+-- sincronizador y el resto del código), así que la columna tal cual ya
+-- hace las veces de único sin distinguir mayúsculas.
+drop index if exists public.idx_dictamen_asesores_correo;
+create unique index if not exists idx_dictamen_asesores_correo
+  on public.dictamen_asesores(correo) where correo is not null;
+create index if not exists idx_dictamen_asesores_nombre
+  on public.dictamen_asesores(activo, nombre);
+
+alter table public.dictamen_asesores enable row level security;
+
+drop policy if exists "select_liderazgo" on public.dictamen_asesores;
+create policy "select_liderazgo" on public.dictamen_asesores
+  for select to authenticated
+  using (public.is_staff_or_above() or public.puede_dictaminar());
+
+drop policy if exists "escribe_dictaminador" on public.dictamen_asesores;
+create policy "escribe_dictaminador" on public.dictamen_asesores
+  for all to authenticated
+  using (public.puede_dictaminar()) with check (public.puede_dictaminar());
+
+-- ─────────────────────────────────────────────────────────────
+-- 3) El catálogo de tipos de inmueble
+-- ─────────────────────────────────────────────────────────────
+-- Arranca con los de siempre y crece solo: si al llenar un dictamen hace
+-- falta uno que no está, se escribe y queda guardado para la próxima. Es
+-- el mismo trato que las etiquetas de Firmas.
+create table if not exists public.dictamen_tipos_inmueble (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null unique,
+  created_at timestamptz not null default now(),
+
+  constraint dictamen_tipos_nombre_largo check (char_length(trim(nombre)) between 2 and 60)
+);
+
+insert into public.dictamen_tipos_inmueble (nombre)
+values ('Casa'), ('Departamento'), ('Terreno'), ('Oficina'),
+       ('Local comercial'), ('Bodega'), ('Edificio')
+on conflict (nombre) do nothing;
+
+alter table public.dictamen_tipos_inmueble enable row level security;
+
+drop policy if exists "select_liderazgo" on public.dictamen_tipos_inmueble;
+create policy "select_liderazgo" on public.dictamen_tipos_inmueble
+  for select to authenticated
+  using (public.is_staff_or_above() or public.puede_dictaminar());
+
+drop policy if exists "escribe_dictaminador" on public.dictamen_tipos_inmueble;
+create policy "escribe_dictaminador" on public.dictamen_tipos_inmueble
+  for all to authenticated
+  using (public.puede_dictaminar()) with check (public.puede_dictaminar());
+
+-- ─────────────────────────────────────────────────────────────
+-- 4) El dictamen
 -- ─────────────────────────────────────────────────────────────
 
 create table if not exists public.dictamenes (
   id uuid primary key default gen_random_uuid(),
 
-  -- El folio se pone al publicarlo, no al crearlo: un borrador que se
+  -- El folio se pone al dictaminar, no al crear el borrador: uno que se
   -- descarta no debe gastarse un número de la serie.
   folio text unique,
 
-  -- De quién es el expediente. Es lo que decide quién puede verlo, así
-  -- que no puede quedar vacío.
-  asesor_id uuid not null references public.profiles(id) on delete cascade,
+  asesor_id uuid not null references public.dictamen_asesores(id) on delete restrict,
 
-  -- Quién lo levantó. Se conserva aunque esa persona salga de la
-  -- oficina: el dictamen sigue siendo constancia de lo que se revisó.
+  -- Quién lo levantó. Se conserva aunque esa persona salga de la oficina:
+  -- el dictamen sigue siendo constancia de lo que se revisó.
   dictaminado_por uuid references public.profiles(id) on delete set null,
 
-  inmueble text not null,
-  operacion text not null default 'venta'
-    check (operacion in ('venta', 'renta', 'otro')),
+  -- La fecha del dictamen la pone quien dictamina, no el reloj. Nace con
+  -- la de hoy, pero se puede corregir: a veces se captura días después de
+  -- haber revisado el expediente, y la que vale es la de la revisión.
+  fecha_dictamen date not null default current_date,
 
-  -- Lo que no cabe en un punto del checklist: el resumen de la revisión.
+  cliente text,
+  inmueble text not null,
+
+  -- El tipo de oportunidad son dos cosas distintas y por eso van en dos
+  -- columnas: qué se hace con el inmueble, y para qué sirve.
+  operacion text not null default 'venta'
+    check (operacion in ('venta', 'renta')),
+  uso text not null default 'residencial'
+    check (uso in ('residencial', 'comercial', 'mixto')),
+
+  tipo_inmueble_id uuid references public.dictamen_tipos_inmueble(id) on delete set null,
+
+  -- ── Los datos del expediente ──
+  -- Los renglones del machote. Todos texto libre y todos opcionales, a
+  -- propósito: "Escritura 25,928 de fecha 01 de agosto del 2000" no es
+  -- una fecha, y un expediente a medio revisar tiene huecos por
+  -- definición. Obligar a llenarlos volvería el formato una carrera de
+  -- obstáculos justo cuando lo que falta ES el hallazgo.
+  escritura_propiedad text,
+  escritura_condominio text,
+  cfdi text,
+  superficie_escritura text,
+  cuenta_predial text,
+  superficie_predial text,
+  estado_civil text,
+  folio_real text,
   observaciones text,
 
-  -- borrador   se está armando, el asesor todavía no lo ve
-  -- abierto    entregado, con puntos por resolver
-  -- en_revision  el asesor ya movió todo lo suyo y espera revisión
-  -- cerrado    no queda nada pendiente
+  -- ── El dictamen en sí ──
+  -- borrador     se está armando, todavía no tiene folio
+  -- devuelta     el expediente se regresa: le falta lo grueso
+  -- condicionada se autoriza sujeto a que se corrija lo que se anotó
+  -- autorizada   listo para promoción
+  --
+  -- Lo mueve quien dictamina, a mano. No se calcula de las observaciones
+  -- a propósito: que no quede ninguna pendiente no quiere decir que el
+  -- expediente esté autorizado, esa es una decisión y la toma una persona.
   estado text not null default 'borrador'
-    check (estado in ('borrador', 'abierto', 'en_revision', 'cerrado')),
+    check (estado in ('borrador', 'devuelta', 'condicionada', 'autorizada')),
 
-  entregado_at timestamptz,
-  cerrado_at timestamptz,
+  -- Archivar es sacarlo de la vista sin perderlo. Borrar de verdad solo
+  -- se puede desde el archivo, y es a propósito: obliga a pasar por dos
+  -- decisiones separadas en vez de una sola en caliente.
+  archivado_at timestamptz,
+
+  dictaminado_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  constraint dictamenes_inmueble_largo check (char_length(trim(inmueble)) between 3 and 200)
+  constraint dictamenes_inmueble_largo check (char_length(trim(inmueble)) between 3 and 400)
 );
+
+-- Para las bases donde la tabla ya se creó con una versión anterior de
+-- este archivo: "create table if not exists" no agrega columnas a una
+-- tabla que ya está.
+alter table public.dictamenes
+  add column if not exists fecha_dictamen date not null default current_date,
+  add column if not exists cliente text,
+  add column if not exists uso text not null default 'residencial',
+  add column if not exists tipo_inmueble_id uuid references public.dictamen_tipos_inmueble(id) on delete set null,
+  add column if not exists escritura_propiedad text,
+  add column if not exists escritura_condominio text,
+  add column if not exists cfdi text,
+  add column if not exists superficie_escritura text,
+  add column if not exists cuenta_predial text,
+  add column if not exists superficie_predial text,
+  add column if not exists estado_civil text,
+  add column if not exists folio_real text,
+  add column if not exists archivado_at timestamptz,
+  add column if not exists dictaminado_at timestamptz;
 
 create index if not exists idx_dictamenes_asesor
   on public.dictamenes(asesor_id, created_at desc);
+-- El archivo se consulta poco y la lista de siempre se consulta mucho, así
+-- que el índice cubre nada más lo que está a la vista.
 create index if not exists idx_dictamenes_estado
-  on public.dictamenes(estado, created_at desc);
+  on public.dictamenes(estado, created_at desc) where archivado_at is null;
 
 alter table public.dictamenes enable row level security;
 
--- El asesor ve los suyos, y solo a partir de que se le entregan: un
--- borrador a medio escribir no es un dictamen todavía. El liderazgo ve
--- todo, incluidos los borradores.
-drop policy if exists "select_propios_o_liderazgo" on public.dictamenes;
-create policy "select_propios_o_liderazgo" on public.dictamenes
-  for select to authenticated
-  using (
-    public.is_staff_or_above()
-    or (asesor_id = auth.uid() and estado <> 'borrador')
-  );
+-- Todo el liderazgo ve los dictámenes: la idea es justamente que
+-- cualquiera pueda entrar a ver en qué va un expediente.
+drop policy if exists "select_liderazgo" on public.dictamenes;
+create policy "select_liderazgo" on public.dictamenes
+  for select to authenticated using (public.is_staff_or_above());
 
 drop policy if exists "insert_dictaminador" on public.dictamenes;
 create policy "insert_dictaminador" on public.dictamenes
   for insert to authenticated
   with check (public.puede_dictaminar() and dictaminado_por = auth.uid());
 
--- Un dictamen cerrado ya no se toca: es la constancia de que el
--- expediente quedó en orden. Para corregir algo después se levanta otro.
 drop policy if exists "update_dictaminador" on public.dictamenes;
 create policy "update_dictaminador" on public.dictamenes
-  for update to authenticated
-  using (public.puede_dictaminar() and estado <> 'cerrado');
+  for update to authenticated using (public.puede_dictaminar());
 
--- Borrar solo lo que nunca se entregó. Lo demás se cierra, no se borra:
--- si un dictamen entregado desapareciera, el asesor se quedaría con
--- correcciones que nadie le puede explicar de dónde salieron.
-drop policy if exists "delete_borradores" on public.dictamenes;
-create policy "delete_borradores" on public.dictamenes
+-- Borrar solo lo archivado. Es lo que vuelve al archivo una red y no un
+-- trámite: para perder un dictamen hay que archivarlo primero y luego
+-- borrarlo, dos decisiones en dos momentos.
+drop policy if exists "delete_archivados" on public.dictamenes;
+create policy "delete_archivados" on public.dictamenes
   for delete to authenticated
-  using (public.puede_dictaminar() and estado = 'borrador');
+  using (public.puede_dictaminar() and archivado_at is not null);
 
 drop trigger if exists set_dictamenes_updated_at on public.dictamenes;
 create trigger set_dictamenes_updated_at
@@ -182,40 +301,38 @@ create trigger set_dictamenes_updated_at
   for each row execute function public.set_updated_at();
 
 -- ─────────────────────────────────────────────────────────────
--- 3) Los puntos del checklist
+-- 5) Las observaciones por atender
 -- ─────────────────────────────────────────────────────────────
 
 create table if not exists public.dictamen_puntos (
   id uuid primary key default gen_random_uuid(),
   dictamen_id uuid not null references public.dictamenes(id) on delete cascade,
 
-  -- El orden lo pone quien dictamina: en el PDF se lee como una lista
+  -- El orden lo pone quien dictamina: en el PDF se lee como lista
   -- numerada, y ahí sí importa cuál va primero.
   orden integer not null default 0,
 
   texto text not null,
 
-  -- Para agrupar en el PDF y poder filtrar después. Es texto libre
-  -- acotado y no una tabla aparte: son cuatro cajones que no cambian.
-  categoria text not null default 'documento'
-    check (categoria in ('documento', 'acuerdo', 'legal', 'otro')),
-
+  -- Dos estados y ya. Se probó con más (corregido a medias, no aplica) y
+  -- sobraban: lo único que se necesita saber de una observación es si
+  -- sigue pendiente o si ya quedó.
   estado text not null default 'pendiente'
-    check (estado in ('pendiente', 'corregido', 'subsanado', 'no_aplica')),
+    check (estado in ('pendiente', 'corregida')),
 
-  -- Lo que el asesor contesta al marcarlo corregido ("ya subí la boleta
-  -- al Drive"), y lo que quien dictamina le responde si lo regresa.
-  nota_asesor text,
-  nota_revision text,
-
-  corregido_at timestamptz,
-  subsanado_at timestamptz,
+  nota text,
+  corregida_at timestamptz,
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
   constraint dictamen_puntos_texto_largo check (char_length(trim(texto)) between 3 and 1000)
 );
+
+-- Para las bases creadas con la versión anterior.
+alter table public.dictamen_puntos
+  add column if not exists nota text,
+  add column if not exists corregida_at timestamptz;
 
 create index if not exists idx_dictamen_puntos_dictamen
   on public.dictamen_puntos(dictamen_id, orden);
@@ -226,86 +343,33 @@ create index if not exists idx_dictamen_puntos_estado
 
 alter table public.dictamen_puntos enable row level security;
 
--- Se ve un punto si se ve su dictamen. Toda la regla de acceso vive en
--- la tabla de arriba, para que no haya dos criterios que mantener al día.
+-- Se ve una observación si se ve su dictamen. Toda la regla de acceso vive
+-- en la tabla de arriba, para que no haya dos criterios que mantener al
+-- día.
 drop policy if exists "select_por_dictamen" on public.dictamen_puntos;
 create policy "select_por_dictamen" on public.dictamen_puntos
-  for select to authenticated
-  using (exists (
-    select 1 from public.dictamenes d
-    where d.id = dictamen_id
-      and (public.is_staff_or_above()
-           or (d.asesor_id = auth.uid() and d.estado <> 'borrador'))
-  ));
+  for select to authenticated using (public.is_staff_or_above());
 
-drop policy if exists "insert_dictaminador" on public.dictamen_puntos;
-create policy "insert_dictaminador" on public.dictamen_puntos
-  for insert to authenticated
-  with check (public.puede_dictaminar());
-
--- Aquí está el candado del proceso.
---
--- Quien dictamina mueve lo que quiera. El asesor solo puede tocar SUS
--- puntos, y solo por el carril que le toca: de pendiente a corregido, o
--- de corregido a pendiente si se arrepintió. Nunca a subsanado.
---
--- El "with check" es el que hace el trabajo: sin él, el asesor podría
--- leer un punto pendiente (que la parte de "using" le permite) y
--- guardarlo como subsanado, que es exactamente lo que este diseño
--- existe para impedir.
-drop policy if exists "update_dictaminador_o_asesor" on public.dictamen_puntos;
-create policy "update_dictaminador_o_asesor" on public.dictamen_puntos
-  for update to authenticated
-  using (
-    public.puede_dictaminar()
-    or exists (
-      select 1 from public.dictamenes d
-      where d.id = dictamen_id
-        and d.asesor_id = auth.uid()
-        and d.estado not in ('borrador', 'cerrado')
-    )
-  )
-  with check (
-    public.puede_dictaminar()
-    or (
-      estado in ('pendiente', 'corregido')
-      and exists (
-        select 1 from public.dictamenes d
-        where d.id = dictamen_id
-          and d.asesor_id = auth.uid()
-          and d.estado not in ('borrador', 'cerrado')
-      )
-    )
-  );
-
-drop policy if exists "delete_dictaminador" on public.dictamen_puntos;
-create policy "delete_dictaminador" on public.dictamen_puntos
-  for delete to authenticated
-  using (public.puede_dictaminar());
+drop policy if exists "escribe_dictaminador" on public.dictamen_puntos;
+create policy "escribe_dictaminador" on public.dictamen_puntos
+  for all to authenticated
+  using (public.puede_dictaminar()) with check (public.puede_dictaminar());
 
 drop trigger if exists set_dictamen_puntos_updated_at on public.dictamen_puntos;
 create trigger set_dictamen_puntos_updated_at
   before update on public.dictamen_puntos
   for each row execute function public.set_updated_at();
 
--- Las fechas del camino las pone la base, no la pantalla: así quedan
--- aunque el punto se mueva desde otro lado, y no se recorren cada vez
--- que se guarda una nota.
+-- La fecha de corregida la pone la base, no la pantalla: así queda aunque
+-- el punto se mueva desde otro lado, y no se recorre cada vez que se
+-- guarda una nota.
 create or replace function public.dictamen_punto_fechas()
 returns trigger
 language plpgsql set search_path = public
 as $$
 begin
   if new.estado is distinct from old.estado then
-    if new.estado = 'corregido' then new.corregido_at := now(); end if;
-    if new.estado = 'subsanado' then new.subsanado_at := now(); end if;
-    -- Regresarlo a pendiente borra el rastro del intento anterior: si se
-    -- quedara la fecha, el punto se vería subsanado en los reportes
-    -- aunque esté abierto otra vez.
-    if new.estado = 'pendiente' then
-      new.corregido_at := null;
-      new.subsanado_at := null;
-    end if;
+    new.corregida_at := case when new.estado = 'corregida' then now() else null end;
   end if;
   return new;
 end;
@@ -316,352 +380,197 @@ create trigger trg_dictamen_punto_fechas
   before update on public.dictamen_puntos
   for each row execute function public.dictamen_punto_fechas();
 
--- ─────────────────────────────────────────────────────────────
--- 4) El estado del dictamen sale de sus puntos
--- ─────────────────────────────────────────────────────────────
--- Nadie lo mueve a mano, porque a mano se olvida: el expediente se
--- quedaría "abierto" para siempre aunque ya no le falte nada. Se
--- recalcula cada vez que un punto cambia.
---
--- Un dictamen entregado está cerrado cuando ninguno de sus puntos sigue
--- esperando algo; en revisión cuando el asesor ya movió todo lo suyo y
--- la pelota está del lado de quien dictamina; abierto mientras al asesor
--- le falte algo por hacer.
-create or replace function public.dictamen_recalcular_estado(p_dictamen uuid)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-declare
-  v_estado text;
-  v_pendientes integer;
-  v_corregidos integer;
-  v_nuevo text;
-begin
-  select estado into v_estado from public.dictamenes where id = p_dictamen;
-  -- Un borrador no tiene estado que calcular: todavía no es de nadie.
-  if v_estado is null or v_estado = 'borrador' then return; end if;
-
-  select
-    count(*) filter (where estado = 'pendiente'),
-    count(*) filter (where estado = 'corregido')
-  into v_pendientes, v_corregidos
-  from public.dictamen_puntos
-  where dictamen_id = p_dictamen;
-
-  v_nuevo := case
-    when v_pendientes > 0 then 'abierto'
-    when v_corregidos > 0 then 'en_revision'
-    else 'cerrado'
-  end;
-
-  if v_nuevo is distinct from v_estado then
-    update public.dictamenes
-    set estado = v_nuevo,
-        cerrado_at = case when v_nuevo = 'cerrado' then now() else null end,
-        updated_at = now()
-    where id = p_dictamen;
-  end if;
-end;
-$$;
-
-create or replace function public.dictamen_punto_movido()
-returns trigger
-language plpgsql security definer set search_path = public
-as $$
-begin
-  perform public.dictamen_recalcular_estado(
-    coalesce(new.dictamen_id, old.dictamen_id));
-  return null;
-end;
-$$;
-
+-- Las versiones anteriores calculaban solas el estado del dictamen a
+-- partir de sus puntos. Se quita: el estado es una decisión de quien
+-- dictamina, y un cálculo automático se la quitaría de las manos justo
+-- en el momento en que la tiene que tomar.
 drop trigger if exists trg_dictamen_punto_movido on public.dictamen_puntos;
-create trigger trg_dictamen_punto_movido
-  after insert or update or delete on public.dictamen_puntos
-  for each row execute function public.dictamen_punto_movido();
+drop function if exists public.dictamen_punto_movido();
+drop function if exists public.dictamen_recalcular_estado(uuid);
 
 -- ─────────────────────────────────────────────────────────────
--- 5) Entregar el dictamen
+-- 6) Dictaminar: poner folio y estado
 -- ─────────────────────────────────────────────────────────────
--- Pasa de borrador a la vista del asesor y le pone folio. Es un paso
--- aparte y no un update cualquiera porque es el momento en que el
--- dictamen deja de ser un apunte y se vuelve algo que alguien tiene que
--- atender: de aquí salen el correo y la campanita.
-create or replace function public.entregar_dictamen(p_id uuid)
+-- El folio se arma DTM + consecutivo + iniciales del asesor. Por ejemplo
+-- DTM01DBLG es el primer dictamen (01) de Daniel Barush López Guerrero
+-- (DBLG).
+--
+-- Se genera aquí y no en la pantalla porque el consecutivo tiene que ser
+-- único: calculado en el navegador, dos personas guardando al mismo
+-- tiempo sacarían el mismo número.
+create or replace function public.dictaminar(p_id uuid, p_estado text)
 returns text
 language plpgsql security definer set search_path = public
 as $$
 declare
   v_dic public.dictamenes%rowtype;
   v_folio text;
-  v_cuantos integer;
+  v_iniciales text;
+  v_n integer;
 begin
   if not public.puede_dictaminar() then
     raise exception 'No tienes permiso para dictaminar';
   end if;
+  if p_estado not in ('devuelta', 'condicionada', 'autorizada') then
+    raise exception 'Estado de dictamen no reconocido: %', p_estado;
+  end if;
 
   select * into v_dic from public.dictamenes where id = p_id;
   if not found then raise exception 'Ese dictamen no existe'; end if;
-  if v_dic.estado <> 'borrador' then return v_dic.folio; end if;
 
-  select count(*) into v_cuantos
-  from public.dictamen_puntos where dictamen_id = p_id;
-  if v_cuantos = 0 then
-    raise exception 'Un dictamen sin observaciones no tiene qué entregar';
+  -- El folio se pone una sola vez. Si ya lo tiene, cambiar de estado no se
+  -- lo cambia: el folio es el nombre del documento, y un documento que ya
+  -- circuló no puede cambiar de nombre.
+  if v_dic.folio is null then
+    select coalesce(string_agg(left(palabra, 1), '' order by orden), 'XX')
+    into v_iniciales
+    from (
+      select palabra, orden
+      from unnest(regexp_split_to_array(
+             upper(trim((select nombre from public.dictamen_asesores where id = v_dic.asesor_id))),
+             '\s+')) with ordinality as t(palabra, orden)
+      where palabra <> ''
+      limit 4
+    ) p;
+
+    select count(*) + 1 into v_n
+    from public.dictamenes where folio is not null;
+
+    v_folio := 'DTM' || lpad(v_n::text, 2, '0') || v_iniciales;
+  else
+    v_folio := v_dic.folio;
   end if;
 
-  -- Folio DIC-AÑO-####, con su propia serie: mezclarlo con el de los
-  -- documentos haría que los números saltaran sin explicación.
-  select 'DIC-' || to_char(now(), 'YYYY') || '-' ||
-         lpad((count(*) + 1)::text, 4, '0')
-  into v_folio
-  from public.dictamenes
-  where folio is not null
-    and date_part('year', entregado_at) = date_part('year', now());
-
   update public.dictamenes
-  set estado = 'abierto',
+  set estado = p_estado,
       folio = v_folio,
-      entregado_at = now(),
+      dictaminado_at = coalesce(dictaminado_at, now()),
       updated_at = now()
   where id = p_id;
-
-  -- Y que el estado cuadre desde el primer momento: si todos los puntos
-  -- nacieron marcados "no aplica", el dictamen ya nace cerrado.
-  perform public.dictamen_recalcular_estado(p_id);
 
   return v_folio;
 end;
 $$;
 
-grant execute on function public.entregar_dictamen(uuid) to authenticated;
+grant execute on function public.dictaminar(uuid, text) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────
--- 6) Avisos
+-- 7) Avisos
 -- ─────────────────────────────────────────────────────────────
--- Se apoyan en la tabla de notificaciones, que ya manda correo sola por
--- el trigger de 036_notificar_email_trigger.sql. Eso es justo lo que
--- sustituye al correo a mano con copia a medio mundo.
-
--- 6.1) Dictamen entregado -> al asesor, y al liderazgo de enterado.
-create or replace function public.notificar_dictamen_entregado()
+-- Se apoyan en la tabla de notificaciones, que ya manda correo sola por el
+-- trigger de 036_notificar_email_trigger.sql.
+--
+-- Mientras los asesores no entren a la plataforma, el aviso es para el
+-- liderazgo: es quien tiene que enterarse de que un expediente se
+-- dictaminó y en qué quedó.
+create or replace function public.notificar_dictamen()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
 declare
   v_asesor text;
+  v_como text;
 begin
-  if new.estado = 'borrador' or old.estado <> 'borrador' then
+  if new.estado = 'borrador' or new.estado is not distinct from old.estado then
     return new;
   end if;
 
-  select coalesce(nullif(trim(coalesce(nombre, '') || ' ' || coalesce(apellido, '')), ''), email)
-  into v_asesor
-  from public.profiles where id = new.asesor_id;
+  select nombre into v_asesor from public.dictamen_asesores where id = new.asesor_id;
+  v_como := case new.estado
+    when 'devuelta' then 'Devuelto'
+    when 'condicionada' then 'Autorizado condicionado'
+    else 'Autorizado para promoción'
+  end;
 
   insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
-  values (
-    new.asesor_id, 'dictamen_nuevo',
-    'Dictamen de tu expediente: ' || new.inmueble,
-    'Se revisó tu expediente y hay observaciones que atender. Folio ' ||
-      coalesce(new.folio, 'sin folio') || '.',
-    '/kwpremierweb/hub/dictamenes.html'
-  );
-
-  -- La copia al liderazgo, que es lo que hoy se hace poniendo a todos en
-  -- el "CC". Se salta a quien lo levantó: ya sabe.
-  insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
-  select p.id, 'dictamen_nuevo',
-         'Nuevo dictamen: ' || new.inmueble,
-         'Expediente de ' || coalesce(v_asesor, 'un asesor') || '.',
+  select p.id, 'dictamen', v_como || ': ' || new.inmueble,
+         'Expediente de ' || coalesce(v_asesor, 'un asesor') ||
+           '. Folio ' || coalesce(new.folio, 'sin folio') || '.',
          '/kwpremierweb/hub/dictamenes.html'
   from public.profiles p
   where p.role in ('master', 'admin', 'staff')
-    and p.id is distinct from new.dictaminado_por
-    and p.id is distinct from new.asesor_id;
+    and p.id is distinct from auth.uid();
 
   return new;
 end;
 $$;
 
+drop trigger if exists trg_notificar_dictamen on public.dictamenes;
+create trigger trg_notificar_dictamen
+  after update on public.dictamenes
+  for each row execute function public.notificar_dictamen();
+
+-- Los triggers de las versiones anteriores, que avisaban al asesor por
+-- correo. Mientras no tenga cuenta no hay a quién avisarle.
 drop trigger if exists trg_notificar_dictamen_entregado on public.dictamenes;
-create trigger trg_notificar_dictamen_entregado
-  after update on public.dictamenes
-  for each row execute function public.notificar_dictamen_entregado();
-
--- 6.2) El asesor marcó algo corregido -> a quien puede revisarlo.
---
--- Un aviso por punto sería una lluvia de correos: un expediente con ocho
--- observaciones mandaría ocho. Solo se avisa cuando ya no queda nada
--- pendiente, que es cuando de verdad hay algo que sentarse a revisar.
-create or replace function public.notificar_dictamen_en_revision()
-returns trigger
-language plpgsql security definer set search_path = public
-as $$
-declare
-  v_asesor text;
-begin
-  if new.estado <> 'en_revision' or old.estado = 'en_revision' then
-    return new;
-  end if;
-
-  select coalesce(nullif(trim(coalesce(nombre, '') || ' ' || coalesce(apellido, '')), ''), email)
-  into v_asesor
-  from public.profiles where id = new.asesor_id;
-
-  insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
-  select p.id, 'dictamen_en_revision',
-         'Listo para revisar: ' || new.inmueble,
-         coalesce(v_asesor, 'El asesor') || ' marcó como corregidas todas las observaciones.',
-         '/kwpremierweb/hub/dictamenes.html'
-  from public.profiles p
-  where (p.puede_dictaminar = true or p.role = 'master')
-    and p.id is distinct from new.asesor_id;
-
-  return new;
-end;
-$$;
-
 drop trigger if exists trg_notificar_dictamen_en_revision on public.dictamenes;
-create trigger trg_notificar_dictamen_en_revision
-  after update on public.dictamenes
-  for each row execute function public.notificar_dictamen_en_revision();
-
--- 6.3) Le regresaron un punto al asesor -> se le avisa.
---
--- Este es el aviso que hoy no existe de ninguna forma: el asesor manda
--- su corrección por correo y nunca se entera de que no quedó bien.
-create or replace function public.notificar_punto_regresado()
-returns trigger
-language plpgsql security definer set search_path = public
-as $$
-declare
-  v_dic public.dictamenes%rowtype;
-begin
-  if not (old.estado = 'corregido' and new.estado = 'pendiente') then
-    return new;
-  end if;
-
-  select * into v_dic from public.dictamenes where id = new.dictamen_id;
-  if v_dic.asesor_id = auth.uid() then return new; end if;
-
-  insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
-  values (
-    v_dic.asesor_id, 'dictamen_punto_regresado',
-    'Te regresaron una corrección: ' || v_dic.inmueble,
-    coalesce(nullif(trim(coalesce(new.nota_revision, '')), ''), left(new.texto, 120)),
-    '/kwpremierweb/hub/dictamenes.html'
-  );
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_notificar_punto_regresado on public.dictamen_puntos;
-create trigger trg_notificar_punto_regresado
-  after update on public.dictamen_puntos
-  for each row execute function public.notificar_punto_regresado();
-
--- 6.4) Dictamen cerrado -> al asesor, que se enteró de que abrió y
--- merece enterarse de que cerró.
-create or replace function public.notificar_dictamen_cerrado()
-returns trigger
-language plpgsql security definer set search_path = public
-as $$
-begin
-  if new.estado <> 'cerrado' or old.estado = 'cerrado' then
-    return new;
-  end if;
-
-  insert into public.notificaciones (user_id, tipo, titulo, mensaje, url)
-  values (
-    new.asesor_id, 'dictamen_cerrado',
-    'Expediente en orden: ' || new.inmueble,
-    'Se subsanaron todas las observaciones del dictamen ' ||
-      coalesce(new.folio, '') || '.',
-    '/kwpremierweb/hub/dictamenes.html'
-  );
-  return new;
-end;
-$$;
-
 drop trigger if exists trg_notificar_dictamen_cerrado on public.dictamenes;
-create trigger trg_notificar_dictamen_cerrado
-  after update on public.dictamenes
-  for each row execute function public.notificar_dictamen_cerrado();
+drop trigger if exists trg_notificar_punto_regresado on public.dictamen_puntos;
+drop function if exists public.notificar_dictamen_entregado();
+drop function if exists public.notificar_dictamen_en_revision();
+drop function if exists public.notificar_dictamen_cerrado();
+drop function if exists public.notificar_punto_regresado();
+drop function if exists public.entregar_dictamen(uuid);
 
 -- ─────────────────────────────────────────────────────────────
--- 7) La lista, con los nombres y las cuentas ya hechas
+-- 8) La lista, con los nombres y las cuentas ya hechas
 -- ─────────────────────────────────────────────────────────────
--- La pantalla necesita, por cada dictamen, de quién es y cómo va. Sin
--- esto tendría que pedir los perfiles por separado y contar los puntos
+-- La pantalla necesita, por cada dictamen, de quién es y cómo va. Sin esto
+-- tendría que pedir los asesores por separado y contar las observaciones
 -- de cada uno: con cien dictámenes son doscientas consultas.
 --
 -- El control de acceso NO va aquí: las vistas corren con los permisos de
--- quien las creó, así que la restricción de siempre vive en el WHERE,
--- igual que en incidencias_con_reportante.
+-- quien las creó, así que la restricción de siempre vive en el WHERE.
+--
+-- Se borra antes de crear: "create or replace view" solo deja AGREGAR
+-- columnas al final, nunca cambiarles el orden ni el nombre. Como el
+-- orden de esta vista cambió entre versiones de este archivo (ahora
+-- "fecha_dictamen" entra donde antes iba "inmueble"), reemplazarla sin
+-- más truena. Borrarla primero es seguro: es una vista de solo lectura,
+-- no se pierde ningún dato al recrearla.
+drop view if exists public.dictamenes_con_asesor;
+
 create or replace view public.dictamenes_con_asesor as
 select
-  d.id,
-  d.folio,
-  d.asesor_id,
-  d.dictaminado_por,
-  d.inmueble,
-  d.operacion,
-  d.observaciones,
-  d.estado,
-  d.entregado_at,
-  d.cerrado_at,
-  d.created_at,
-  d.updated_at,
-  p.nombre        as asesor_nombre,
-  p.apellido      as asesor_apellido,
-  p.email         as asesor_email,
-  q.nombre        as dictaminador_nombre,
-  q.apellido      as dictaminador_apellido,
-  coalesce(c.total, 0)      as puntos_total,
-  coalesce(c.pendientes, 0) as puntos_pendientes,
-  coalesce(c.corregidos, 0) as puntos_corregidos,
-  coalesce(c.subsanados, 0) as puntos_subsanados
+  d.id, d.folio, d.asesor_id, d.dictaminado_por,
+  d.fecha_dictamen, d.cliente, d.inmueble,
+  d.operacion, d.uso, d.tipo_inmueble_id,
+  d.escritura_propiedad, d.escritura_condominio, d.cfdi,
+  d.superficie_escritura, d.cuenta_predial, d.superficie_predial,
+  d.estado_civil, d.folio_real, d.observaciones,
+  d.estado, d.archivado_at, d.dictaminado_at,
+  d.created_at, d.updated_at,
+  a.nombre          as asesor_nombre,
+  a.correo          as asesor_correo,
+  t.nombre          as tipo_inmueble,
+  q.nombre          as dictaminador_nombre,
+  q.apellido        as dictaminador_apellido,
+  coalesce(c.total, 0)       as puntos_total,
+  coalesce(c.pendientes, 0)  as puntos_pendientes,
+  coalesce(c.corregidas, 0)  as puntos_corregidas
 from public.dictamenes d
-join public.profiles p on p.id = d.asesor_id
+join public.dictamen_asesores a on a.id = d.asesor_id
+left join public.dictamen_tipos_inmueble t on t.id = d.tipo_inmueble_id
 left join public.profiles q on q.id = d.dictaminado_por
 left join lateral (
   select
-    count(*)                                   as total,
+    count(*)                                    as total,
     count(*) filter (where estado = 'pendiente') as pendientes,
-    count(*) filter (where estado = 'corregido') as corregidos,
-    count(*) filter (where estado = 'subsanado') as subsanados
+    count(*) filter (where estado = 'corregida') as corregidas
   from public.dictamen_puntos pt
   where pt.dictamen_id = d.id
 ) c on true
-where public.is_staff_or_above()
-   or (d.asesor_id = auth.uid() and d.estado <> 'borrador');
+where public.is_staff_or_above();
 
 grant select on public.dictamenes_con_asesor to authenticated;
 
 -- ─────────────────────────────────────────────────────────────
--- 8) A quién se le puede levantar un dictamen
+-- 9) Encender y apagar el permiso de dictaminar
 -- ─────────────────────────────────────────────────────────────
--- La pantalla necesita la lista del equipo para el desplegable de
--- "asesor del expediente". La tabla de perfiles no sirve: solo deja leer
--- el propio renglón y el de Admin para arriba, y quien dictamina bien
--- puede ser Liderazgo. Y perfiles_publicos tampoco, porque esconde a
--- quien está marcado como oculto, y a esa persona igual hay que poder
--- revisarle un expediente.
-create or replace view public.dictamen_asesores as
-select p.id, p.nombre, p.apellido, p.email, p.role
-from public.profiles p
-where public.puede_dictaminar() or public.is_staff_or_above();
-
-grant select on public.dictamen_asesores to authenticated;
-
--- ─────────────────────────────────────────────────────────────
--- 9) Encender y apagar el permiso
--- ─────────────────────────────────────────────────────────────
--- Va como función y no como política de update sobre profiles porque
--- esa tabla solo deja que cada quien toque su propio renglón, a
--- propósito: abrirla para que Admin edite perfiles ajenos le daría de
--- pasada permiso sobre el rol, el correo y todo lo demás.
+-- Va como función y no como política de update sobre profiles porque esa
+-- tabla solo deja que cada quien toque su propio renglón, a propósito:
+-- abrirla para que Admin edite perfiles ajenos le daría de pasada permiso
+-- sobre el rol, el correo y todo lo demás.
 create or replace function public.set_puede_dictaminar(p_user uuid, p_valor boolean)
 returns void
 language plpgsql security definer set search_path = public
