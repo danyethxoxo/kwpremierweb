@@ -147,6 +147,13 @@
   }
   .dic-campo textarea:focus { outline: none; border-color: var(--red); }
   .dic-dos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  /* Los apartados del formulario. Con quince campos seguidos uno se
+     pierde; agrupados se ve de un vistazo qué bloque falta. */
+  .dic-subtitulo {
+    font-size: 15px; color: var(--text);
+    margin: var(--sp-5) 0 var(--sp-3);
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
   @media (max-width: 640px) { .dic-dos { grid-template-columns: 1fr; } }
 
   .dic-nuevo-punto {
@@ -204,30 +211,53 @@
     font-family: Arial, Helvetica, sans-serif;
     font-size: 10pt; line-height: 1.55; color: #000;
   }
-  .hoja-logo img { height: 42px; width: auto; display: block; margin-bottom: 14px; }
-  .hoja h1 { font-size: 13pt; font-weight: 700; text-align: center; margin: 10px 0 4px; }
-  .hoja-folio { text-align: center; font-size: 9pt; color: #444; margin-bottom: 16px; }
-  .hoja-datos { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  .hoja-datos td { padding: 4px 0; vertical-align: top; }
-  .hoja-datos td:first-child { width: 4.6cm; font-weight: 700; }
-  .hoja h2 {
-    font-size: 10.5pt; font-weight: 700; margin: 16px 0 8px;
-    border-bottom: 1px solid #000; padding-bottom: 3px;
+  .hoja-logo img { height: 46px; width: auto; display: block; margin-bottom: 18px; }
+  /* El título va a la derecha del logo y no centrado en la hoja, como en
+     el machote que se usa hoy. */
+  .hoja h1 {
+    font-size: 10.5pt; font-weight: 700; color: #7d1113;
+    margin: 0 0 22px 3.2cm; letter-spacing: 0.01em;
   }
-  .hoja-texto { text-align: justify; white-space: pre-line; margin: 0 0 10px; }
-  .hoja-puntos { width: 100%; border-collapse: collapse; }
-  .hoja-puntos th, .hoja-puntos td {
-    border: 1px solid #000; padding: 5px 6px; text-align: left; vertical-align: top;
-    font-size: 9.5pt;
+  .hoja-folio { font-size: 8.5pt; color: #444; margin: -18px 0 16px 3.2cm; }
+
+  /* ── El cuadro del machote ──
+     Un solo marco con sus renglones, no una lista de datos: es la forma
+     que la oficina ya reconoce, y cambiarla obligaría a volver a
+     aprenderse dónde va cada cosa.
+
+     Las alturas se ponen por renglón porque en el formato de papel no son
+     parejas: cliente, inmueble, observaciones y autorización llevan un
+     bloque grande para escribir a mano lo que no quepa. */
+  .hoja-cuadro { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .hoja-cuadro td {
+    border: 1px solid #000; padding: 4px 6px;
+    vertical-align: top; font-size: 9.5pt; line-height: 1.4;
+    word-wrap: break-word;
   }
-  .hoja-puntos th { background: #eee; font-size: 9pt; }
-  .hoja-puntos .col-num { width: 1cm; text-align: center; }
-  .hoja-puntos .col-cat { width: 2.4cm; }
-  .hoja-puntos .col-est { width: 2.6cm; }
-  .hoja-firmas { display: flex; gap: 1.6cm; margin-top: 1.6cm; }
-  .hoja-firma { flex: 1; text-align: center; font-size: 9pt; }
-  .hoja-firma-linea { border-top: 1px solid #000; margin-bottom: 4px; padding-top: 3px; }
-  .hoja-pie { margin-top: 1cm; font-size: 8pt; color: #444; text-align: center; }
+  .hoja-cuadro .rotulo {
+    width: 4.4cm; color: #7d1113; font-weight: 400;
+    text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.01em;
+  }
+  .hoja-cuadro .alto-2 { height: 1.9cm; }
+  .hoja-cuadro .alto-3 { height: 2.6cm; }
+  .hoja-cuadro .alto-4 { height: 3.6cm; }
+  /* Los dos subrótulos del renglón de escrituras van dentro de su celda,
+     con el mismo tratamiento que los de la izquierda. */
+  .hoja-cuadro .sub {
+    color: #7d1113; text-transform: uppercase;
+    font-size: 8.5pt; display: block; margin-bottom: 3px;
+  }
+
+  /* Las observaciones por atender van dentro de la celda de
+     OBSERVACIONES, numeradas. Es lo que el machote de papel tiene como un
+     bloque en blanco, solo que aquí cada renglón es el que despues se
+     marca como subsanado. */
+  .hoja-lista { margin: 0; padding-left: 1.1em; }
+  .hoja-lista li { margin-bottom: 3px; }
+  .hoja-lista .estado { color: #444; font-size: 8.5pt; }
+  .hoja-nota { margin: 0 0 6px; white-space: pre-line; }
+
+  .hoja-pie { margin-top: 0.7cm; font-size: 8pt; color: #444; }
 
   @media print {
     @page { size: Letter; margin: 0; }
@@ -329,13 +359,74 @@
         </div>
 
         <div class="dic-campo">
+          <label for="e-cliente">Cliente</label>
+          <textarea id="e-cliente" rows="2" placeholder="Nombre del propietario o de la sucesión, como aparece en la escritura"></textarea>
+        </div>
+
+        <div class="dic-campo">
           <label for="e-inmueble">Inmueble</label>
-          <input type="text" id="e-inmueble" class="kw-input" placeholder="Calle, número, colonia" autocomplete="off">
+          <textarea id="e-inmueble" rows="2" placeholder="Calle, número, edificio, departamento, colonia, alcaldía"></textarea>
+        </div>
+
+        <!-- ── Los datos del expediente ──
+             Es el machote, renglón por renglón. Van todos opcionales: un
+             expediente a medio revisar tiene huecos por definición, y
+             obligar a llenarlos volvería el formato una carrera de
+             obstáculos justo cuando lo que falta ES el hallazgo. -->
+        <h2 class="kw-page-titulo dic-subtitulo">Datos del expediente</h2>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-esc-propiedad">Escritura de propiedad y fecha</label>
+            <textarea id="e-esc-propiedad" rows="2" placeholder="Escritura 25,928 de fecha 01 de agosto del 2000, ante el Lic. ..."></textarea>
+          </div>
+          <div class="dic-campo">
+            <label for="e-esc-condominio">Escritura de condominio y fecha</label>
+            <textarea id="e-esc-condominio" rows="2" placeholder="Si aplica"></textarea>
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-cfdi">CFDI</label>
+            <input type="text" id="e-cfdi" class="kw-input" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-folio-real">Folio real</label>
+            <input type="text" id="e-folio-real" class="kw-input" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-sup-escritura">Superficie según escritura</label>
+            <input type="text" id="e-sup-escritura" class="kw-input" placeholder="120.50 m2" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-sup-predial">Superficie según predial</label>
+            <input type="text" id="e-sup-predial" class="kw-input" placeholder="120.50 m2" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-cuenta-predial">Cuenta predial</label>
+            <input type="text" id="e-cuenta-predial" class="kw-input" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-estado-civil">Estado civil</label>
+            <input type="text" id="e-estado-civil" class="kw-input" placeholder="Casado por sociedad conyugal, soltero..." autocomplete="off">
+          </div>
         </div>
 
         <div class="dic-campo">
           <label for="e-observaciones">Observaciones generales</label>
-          <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo, como observaciones."></textarea>
+          <textarea id="e-observaciones" placeholder="El resumen de la revisión. Lo que hay que corregir va abajo, como observaciones por atender."></textarea>
+        </div>
+
+        <div class="dic-campo">
+          <label for="e-autorizacion">Autorización</label>
+          <textarea id="e-autorizacion" rows="3" placeholder="Bajo qué condición se autoriza el expediente, o qué falta para autorizarlo."></textarea>
         </div>
 
         <h2 class="kw-page-titulo" style="font-size:15px;color:var(--text);margin-top:var(--sp-4);">Observaciones por atender</h2>
@@ -848,20 +939,40 @@
 
   // ── Armar un dictamen ───────────────────────────────────────
 
+  // Los campos del machote, con el id del campo en la pantalla al lado
+  // del nombre de la columna. La lista vive en un solo lugar para que
+  // agregar un renglón al formato sea agregar un renglón aquí, y no
+  // acordarse de tocar el leer, el guardar y el reabrir por separado.
+  var CAMPOS = [
+    ['e-cliente', 'cliente'],
+    ['e-inmueble', 'inmueble'],
+    ['e-esc-propiedad', 'escritura_propiedad'],
+    ['e-esc-condominio', 'escritura_condominio'],
+    ['e-cfdi', 'cfdi'],
+    ['e-folio-real', 'folio_real'],
+    ['e-sup-escritura', 'superficie_escritura'],
+    ['e-sup-predial', 'superficie_predial'],
+    ['e-cuenta-predial', 'cuenta_predial'],
+    ['e-estado-civil', 'estado_civil'],
+    ['e-observaciones', 'observaciones'],
+    ['e-autorizacion', 'autorizacion'],
+  ];
+
   function abrirEditor(id) {
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
-    borrador = d
-      ? {
-        id: d.id,
-        asesor_id: d.asesor_id,
-        inmueble: d.inmueble,
-        operacion: d.operacion,
-        observaciones: d.observaciones || '',
-        puntos: puntos.filter(function (p) { return p.dictamen_id === d.id; })
-          .map(function (p) { return { id: p.id, texto: p.texto, categoria: p.categoria }; }),
-      }
-      : { id: null, asesor_id: '', inmueble: '', operacion: 'venta', observaciones: '', puntos: [] };
+    borrador = {
+      id: d ? d.id : null,
+      asesor_id: d ? d.asesor_id : '',
+      operacion: d ? d.operacion : 'venta',
+      puntos: d
+        ? puntos.filter(function (p) { return p.dictamen_id === d.id; })
+          .map(function (p) { return { id: p.id, texto: p.texto, categoria: p.categoria }; })
+        : [],
+    };
+    CAMPOS.forEach(function (c) {
+      borrador[c[1]] = (d && d[c[1]]) || '';
+    });
 
     $('editor-titulo').textContent = d ? 'Dictamen en borrador' : 'Nuevo dictamen';
     $('e-asesor').value = borrador.asesor_id;
@@ -872,8 +983,7 @@
     // por dentro ya estuviera elegido.
     $('e-asesor').dispatchEvent(new Event('change', { bubbles: true }));
     $('e-operacion').dispatchEvent(new Event('change', { bubbles: true }));
-    $('e-inmueble').value = borrador.inmueble;
-    $('e-observaciones').value = borrador.observaciones;
+    CAMPOS.forEach(function (c) { $(c[0]).value = borrador[c[1]]; });
     aviso('editor-msg', '', '');
     pintarPuntosEditor();
 
@@ -918,8 +1028,7 @@
   function leerEditor() {
     borrador.asesor_id = $('e-asesor').value;
     borrador.operacion = $('e-operacion').value;
-    borrador.inmueble = $('e-inmueble').value.trim();
-    borrador.observaciones = $('e-observaciones').value.trim();
+    CAMPOS.forEach(function (c) { borrador[c[1]] = $(c[0]).value.trim(); });
   }
 
   // Guarda el dictamen y sus puntos. Los puntos se borran y se vuelven a
@@ -933,10 +1042,16 @@
 
     var fila = {
       asesor_id: borrador.asesor_id,
-      inmueble: borrador.inmueble,
       operacion: borrador.operacion,
-      observaciones: borrador.observaciones || null,
     };
+    // Los vacíos van como nulo y no como cadena vacía: en la base son la
+    // misma ausencia, pero una cadena vacía se cuela en las búsquedas y
+    // en los reportes como si fuera un dato.
+    CAMPOS.forEach(function (c) {
+      fila[c[1]] = borrador[c[1]] || null;
+    });
+    // Salvo el inmueble, que no puede ir nulo: es lo único obligatorio.
+    fila.inmueble = borrador.inmueble;
 
     var id = borrador.id;
     if (id) {
@@ -963,54 +1078,91 @@
 
   // ── Imprimir ────────────────────────────────────────────────
 
+  // Un renglón del cuadro. Si el valor viene vacío, la celda va en blanco
+  // igual que en el machote de papel: el renglón no se esconde, porque un
+  // hueco visible dice "esto falta" y un renglón ausente no dice nada.
+  function renglon(rotulo, valor, alto) {
+    return '<tr>' +
+      '<td class="rotulo">' + rotulo + '</td>' +
+      '<td' + (alto ? ' class="' + alto + '"' : '') + '>' +
+        escapar(valor || '') + '</td>' +
+    '</tr>';
+  }
+
   function imprimir(id) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
     var mios = puntos.filter(function (p) { return p.dictamen_id === id; });
 
-    var filas = mios.map(function (p, i) {
-      return '<tr>' +
-        '<td class="col-num">' + (i + 1) + '</td>' +
-        '<td class="col-cat">' + (CATEGORIAS[p.categoria] || '') + '</td>' +
-        '<td>' + escapar(p.texto) +
-          (p.nota_revision ? '<br><i>' + escapar(p.nota_revision) + '</i>' : '') +
-        '</td>' +
-        '<td class="col-est">' + (ESTADO_PUNTO[p.estado] || ESTADO_PUNTO.pendiente)[1] + '</td>' +
-      '</tr>';
-    }).join('');
+    // Las observaciones por atender van numeradas dentro de la celda de
+    // OBSERVACIONES, con el estado de cada una entre paréntesis. Esa es
+    // toda la diferencia entre este dictamen y el de papel: el de papel
+    // dice qué falta, este además dice qué ya se corrigió.
+    var lista = mios.length
+      ? '<ol class="hoja-lista">' + mios.map(function (p) {
+        var est = (ESTADO_PUNTO[p.estado] || ESTADO_PUNTO.pendiente)[1];
+        return '<li>' + escapar(p.texto) +
+          ' <span class="estado">(' + est + ')</span>' +
+          (p.nota_revision ? '<br><span class="estado">' + escapar(p.nota_revision) + '</span>' : '') +
+        '</li>';
+      }).join('') + '</ol>'
+      : '';
+
+    var observaciones =
+      (d.observaciones ? '<p class="hoja-nota">' + escapar(d.observaciones) + '</p>' : '') + lista;
 
     var dictaminador = ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim();
 
     $('solo-impresion').innerHTML =
       '<div class="hoja">' +
         '<div class="hoja-logo"><img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier"></div>' +
-        '<h1>DICTAMEN DE EXPEDIENTE</h1>' +
-        '<div class="hoja-folio">' + escapar(d.folio || 'Borrador, sin folio') + '</div>' +
-        '<table class="hoja-datos">' +
-          '<tr><td>Asesor:</td><td>' + escapar(nombreAsesor(d)) + '</td></tr>' +
-          '<tr><td>Inmueble:</td><td>' + escapar(d.inmueble) + '</td></tr>' +
-          '<tr><td>Operación:</td><td>' + (OPERACIONES[d.operacion] || '') + '</td></tr>' +
-          '<tr><td>Fecha de revisión:</td><td>' + fecha(d.entregado_at || d.created_at) + '</td></tr>' +
-          '<tr><td>Estado:</td><td>' + (ESTADOS[d.estado] || ESTADOS.abierto)[2] + '</td></tr>' +
+        '<h1>DICTAMINACIÓN DE EXPEDIENTES</h1>' +
+        (d.folio ? '<div class="hoja-folio">' + escapar(d.folio) + '</div>' : '') +
+
+        '<table class="hoja-cuadro">' +
+          // La fecha es la de entrega, no la de hoy: es cuando se dictaminó.
+          renglon('Fecha de dictamen', fecha(d.entregado_at || d.created_at)) +
+          renglon('Asesor', nombreAsesor(d)) +
+          renglon('Cliente', d.cliente, 'alto-3') +
+          renglon('Inmueble', d.inmueble, 'alto-4') +
+
+          // El único renglón que parte su celda en dos, igual que el
+          // machote: la escritura de la propiedad y la del condominio.
+          '<tr>' +
+            '<td class="rotulo">Escrituras y fecha</td>' +
+            '<td class="alto-3" colspan="1" style="padding:0;">' +
+              '<table style="width:100%;border-collapse:collapse;height:100%;">' +
+                '<tr>' +
+                  '<td style="border:0;border-right:1px solid #000;width:50%;vertical-align:top;">' +
+                    '<span class="sub">Propiedad</span>' + escapar(d.escritura_propiedad || '') +
+                  '</td>' +
+                  '<td style="border:0;width:50%;vertical-align:top;">' +
+                    '<span class="sub">Condominio</span>' + escapar(d.escritura_condominio || '') +
+                  '</td>' +
+                '</tr>' +
+              '</table>' +
+            '</td>' +
+          '</tr>' +
+
+          renglon('CFDI', d.cfdi) +
+          renglon('Superficie escritura', d.superficie_escritura) +
+          renglon('Cuenta predial', d.cuenta_predial) +
+          renglon('Superficie predial', d.superficie_predial) +
+          renglon('Estado civil', d.estado_civil) +
+          renglon('Folio real', d.folio_real) +
+
+          '<tr>' +
+            '<td class="rotulo">Observaciones</td>' +
+            '<td class="alto-4">' + observaciones + '</td>' +
+          '</tr>' +
+          renglon('Autorización', d.autorizacion, 'alto-3') +
         '</table>' +
-        (d.observaciones
-          ? '<h2>Observaciones generales</h2><p class="hoja-texto">' + escapar(d.observaciones) + '</p>'
-          : '') +
-        '<h2>Puntos por atender</h2>' +
-        (filas
-          ? '<table class="hoja-puntos"><thead><tr>' +
-              '<th class="col-num">#</th><th class="col-cat">Tipo</th>' +
-              '<th>Observación</th><th class="col-est">Estado</th>' +
-            '</tr></thead><tbody>' + filas + '</tbody></table>'
-          : '<p class="hoja-texto">Sin observaciones.</p>') +
-        '<div class="hoja-firmas">' +
-          '<div class="hoja-firma"><div class="hoja-firma-linea"></div>' +
-            escapar(dictaminador || 'Quien dictamina') + '<br>Revisión de expedientes</div>' +
-          '<div class="hoja-firma"><div class="hoja-firma-linea"></div>' +
-            escapar(nombreAsesor(d)) + '<br>Asesor</div>' +
+
+        '<div class="hoja-pie">' +
+          (dictaminador ? 'Dictaminó: ' + escapar(dictaminador) + '. ' : '') +
+          'Generado desde el portal de KW Premier el ' +
+          fecha(new Date().toISOString()) + '.' +
         '</div>' +
-        '<div class="hoja-pie">Documento generado desde el portal de KW Premier el ' +
-          fecha(new Date().toISOString()) + '.</div>' +
       '</div>';
 
     window.print();

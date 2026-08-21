@@ -120,8 +120,30 @@ create table if not exists public.dictamenes (
   operacion text not null default 'venta'
     check (operacion in ('venta', 'renta', 'otro')),
 
+  -- ── Los datos del expediente ──
+  -- Son los renglones del machote que la abogada llena a mano hoy. Van
+  -- todos como texto libre y todos opcionales, a propósito: "Escritura
+  -- 25,928 de fecha 01 de agosto del 2000" no es una fecha, y un
+  -- expediente a medio revisar tiene huecos por definición. Obligar a
+  -- llenarlos volvería el formato una carrera de obstáculos justo cuando
+  -- lo que falta ES el hallazgo.
+  cliente text,
+  escritura_propiedad text,
+  escritura_condominio text,
+  cfdi text,
+  superficie_escritura text,
+  cuenta_predial text,
+  superficie_predial text,
+  estado_civil text,
+  folio_real text,
+
   -- Lo que no cabe en un punto del checklist: el resumen de la revisión.
   observaciones text,
+
+  -- El renglón de autorización del machote. Va aparte de las
+  -- observaciones porque no dice qué falta, dice bajo qué condición se
+  -- deja pasar el expediente.
+  autorizacion text,
 
   -- borrador   se está armando, el asesor todavía no lo ve
   -- abierto    entregado, con puntos por resolver
@@ -137,6 +159,22 @@ create table if not exists public.dictamenes (
 
   constraint dictamenes_inmueble_largo check (char_length(trim(inmueble)) between 3 and 200)
 );
+
+-- Los datos del expediente, otra vez, para las bases donde la tabla ya se
+-- creó con una versión anterior de este archivo. "create table if not
+-- exists" no agrega columnas a una tabla que ya está, así que sin esto
+-- volver a correrlo no serviría de nada ahí.
+alter table public.dictamenes
+  add column if not exists cliente text,
+  add column if not exists escritura_propiedad text,
+  add column if not exists escritura_condominio text,
+  add column if not exists cfdi text,
+  add column if not exists superficie_escritura text,
+  add column if not exists cuenta_predial text,
+  add column if not exists superficie_predial text,
+  add column if not exists estado_civil text,
+  add column if not exists folio_real text,
+  add column if not exists autorizacion text;
 
 create index if not exists idx_dictamenes_asesor
   on public.dictamenes(asesor_id, created_at desc);
@@ -607,7 +645,17 @@ select
   d.dictaminado_por,
   d.inmueble,
   d.operacion,
+  d.cliente,
+  d.escritura_propiedad,
+  d.escritura_condominio,
+  d.cfdi,
+  d.superficie_escritura,
+  d.cuenta_predial,
+  d.superficie_predial,
+  d.estado_civil,
+  d.folio_real,
   d.observaciones,
+  d.autorizacion,
   d.estado,
   d.entregado_at,
   d.cerrado_at,
