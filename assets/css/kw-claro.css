@@ -143,6 +143,21 @@ html { background-color: var(--lienzo); }
    los cuadros. No hay forma de hacer una cuadrícula con un solo
    degradado, porque un degradado va en una sola dirección. */
 body::before {
+  /* La forma de la capa va aquí completa, no solo su fondo. Cinco
+     pantallas (login, restablecer, completar registro, api y el ABC) no
+     cargan las hojas compartidas y traían la suya copiada a mano; al
+     migrarlas se les quitó, así que esta tiene que bastarse sola. Para
+     las demás es repetir lo que kw-ui.css ya dice, que no estorba. */
+  content: '';
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+
   background-image:
     linear-gradient(to right,  var(--linea-cuadro) 1px, transparent 1px),
     linear-gradient(to bottom, var(--linea-cuadro) 1px, transparent 1px),

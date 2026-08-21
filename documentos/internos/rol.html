@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260820b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
@@ -25,34 +26,6 @@
       --red: #8a0000;
       --text: #1a1a1a;
       --muted: #6b6b6b;
-      --bg: /* Formas oscuras encima: tapan tramos de los filos, y ese tapado es
-         lo que hace que una onda se vea pasando por delante de otra. */
-      radial-gradient(68% 96% at 13% 26%, rgba(8,0,3,0.94) 0%, rgba(8,0,3,0.55) 44%, transparent 72%),
-      radial-gradient(58% 85% at 94% 64%, rgba(8,0,3,0.90) 0%, rgba(8,0,3,0.45) 42%, transparent 70%),
-      /* Filos luminosos: de cada elipse enorme solo se asoma un tramo del
-         borde, y ese arco es el que dibuja el pliegue. El hilo claro va
-         angosto y el resplandor ancho, para que se lea como luz pegandole
-         al canto de la onda y no como una linea pintada.
-         Los tamanos van en porcentaje del propio recuadro y no en vmax:
-         asi la composicion se ve igual de proporcionada en la pantalla
-         ancha del escritorio que en la alta del celular; con vmax los
-         arcos se salian por abajo en vertical. */
-      radial-gradient(170% 178% at 62% -72%,
-        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 46%,
-        rgba(255,95,120,0) 57.4%, rgba(255,150,170,0.52) 59.5%,
-        rgba(255,105,135,0.26) 60.3%, rgba(255,60,95,0.09) 63%, transparent 73%),
-      radial-gradient(106% 171% at 72% 126%,
-        rgba(120,10,35,0.20) 0%, rgba(70,5,22,0.09) 45%,
-        rgba(255,95,120,0) 56.8%, rgba(255,145,165,0.48) 58.9%,
-        rgba(255,100,130,0.24) 59.7%, rgba(255,55,90,0.09) 62.5%, transparent 72%),
-      radial-gradient(96% 128% at -22% 76%,
-        rgba(110,9,32,0.17) 0%, rgba(65,4,20,0.08) 44%,
-        rgba(255,95,120,0) 56.2%, rgba(255,140,160,0.40) 58.4%,
-        rgba(255,95,125,0.20) 59.2%, rgba(255,50,85,0.08) 62%, transparent 71%),
-      /* Resplandor de ambiente, para que los filos no floten en negro seco */
-      radial-gradient(95% 133% at 30% 4%, rgba(140,10,38,0.28), transparent 64%),
-      radial-gradient(88% 139% at 80% 98%, rgba(95,0,26,0.36), transparent 62%),
-      linear-gradient(165deg, #1c0209 0%, #120106 46%, #080003 100%);
       --card: #ffffff;
       --border: rgba(0,0,0,0.07);
       /* El tono del puesto lo pone el JS al cargar la carpeta (sale de
@@ -68,10 +41,10 @@
 
     .page { flex: 1; max-width: 860px; width: 100%; margin: 0 auto; padding: 100px 24px 60px; }
 
-    .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.72); margin-bottom: 18px; }
-    .breadcrumb a { color: rgba(255,255,255,0.72); text-decoration: none; }
-    .breadcrumb a:hover { color: #fff; }
-    .breadcrumb span { color: #fff; font-weight: 500; }
+    .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .breadcrumb a { color: var(--muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--text); }
+    .breadcrumb span { color: var(--text); font-weight: 500; }
 
     .cab { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
     /* La misma sigla clara con la letra de color que en la lista de
@@ -86,8 +59,8 @@
       box-shadow: 0 3px 12px rgba(var(--rol-rgb), 0.24), inset 0 1px 0 rgba(255,255,255,0.9);
       backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
     }
-    .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
-    .page-desc { font-size: 15px; color: rgba(255,255,255,0.72); margin-bottom: 34px; }
+    .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+    .page-desc { font-size: 15px; color: var(--muted); margin-bottom: 34px; }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
     @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, 1fr); } }
@@ -146,7 +119,7 @@
     .card-cta { margin-top: 16px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--rol); transition: color 0.2s; }
     .card-cta svg { width: 12px; height: 12px; }
 
-    .aviso { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: rgba(255,255,255,0.72); font-size: 13.5px; }
+    .aviso { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--muted); font-size: 13.5px; }
     .aviso strong { display: block; font-size: 15px; color: #fff; margin-bottom: 5px; }
   </style>
 </head>
@@ -164,7 +137,7 @@
 
   <main class="page">
 
-    <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color:rgba(255,255,255,0.72);">
+    <div id="denegado" style="display:none; text-align:center; padding:60px 20px; color: var(--muted);">
       No tienes permiso para ver esta página. <a href="../documentos.html">Regresar</a>.
     </div>
 
