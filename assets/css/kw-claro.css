@@ -35,38 +35,37 @@
 
 :root {
   /* ── El lienzo ──
-     Gris de verdad, no blanco sucio: es lo que deja que una tarjeta
-     blanca se vea blanca. Con el fondo casi del mismo tono que la
-     tarjeta, el borde tiene que hacer todo el trabajo de separarlas y el
-     resultado se ve plano.
+     Blanco, con manchas de gris muy difuso repartidas. Las manchas son
+     las que hacen el trabajo que antes hacía el gris parejo: dan de qué
+     despegarse a la tarjeta. Sin ellas, blanco sobre blanco deja todo el
+     peso en la sombra y la pantalla se ve lavada.
 
-     Lleva un aliento de rosa para atarlo al guinda de la marca. No se
-     nota como color; se nota al quitarlo, porque el gris neutro deja la
-     pantalla fría. */
-  --lienzo: #eceaea;
+     Los grises van tibios (con más rojo que azul en la mezcla), no
+     neutros. Un gris frío al lado del guinda de la marca se ve azuloso,
+     y el conjunto queda con dos temperaturas peleadas. */
+  --lienzo: #ffffff;
 
   --bg:
-    radial-gradient(58% 44% at 12% 0%, rgba(198,32,39,0.05) 0%, rgba(198,32,39,0) 62%),
-    radial-gradient(52% 42% at 96% 8%, rgba(138,0,0,0.035) 0%, rgba(138,0,0,0) 60%),
-    linear-gradient(180deg, #efeded 0%, var(--lienzo) 46%, #e3e0e0 100%);
+    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
+    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
+    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
 
   /* ── La textura ──
-     Una retícula de puntos, tan tenue que de cerca casi no se ve y de
-     lejos solo se siente: el fondo deja de leerse como una plancha de
-     color y pasa a leerse como papel. Es la diferencia entre "limpio" y
-     "vacío".
+     El fondo lleva cuadrícula de hoja de cuaderno; las tarjetas, puntos.
+     No es descuido que sean distintas: son dos planos, y darles la misma
+     textura los pega. La cuadrícula queda como el papel sobre el que se
+     apoyan las tarjetas, y el punteado como el grano del papel de la
+     tarjeta misma.
 
-     Va como puntos y no como cuadrícula de cuaderno a propósito: las
-     líneas continuas compiten con los bordes de las tarjetas y con los
-     renglones de las tablas, y entonces sí se nota, que es justo lo que
-     no se quiere.
+     La línea va apenas encima de la nada. Una cuadrícula que se vea
+     compite con los bordes de las tarjetas y con los renglones de las
+     tablas, y entonces el fondo deja de ser fondo. Con este valor, de
+     cerca casi no se distingue y de lejos solo se siente. */
+  --linea-cuadro: rgba(58,40,40,0.055);
+  --paso-cuadro: 26px;
 
-     El paso es más chico en la tarjeta que en el fondo: sobre una
-     superficie chica, la misma separación se vería como cuatro puntos
-     sueltos en vez de como textura. */
-  --puntos-lienzo:  radial-gradient(circle, rgba(46,26,26,0.07) 0.9px, transparent 1px);
   --puntos-tarjeta: radial-gradient(circle, rgba(46,26,26,0.032) 0.8px, transparent 1px);
-  --paso-lienzo: 22px;
   --paso-tarjeta: 16px;
 
   /* ── La tarjeta ──
@@ -135,17 +134,27 @@
 html { background-color: var(--lienzo); }
 
 /* La capa del fondo se vuelve a declarar entera, y no solo con --bg,
-   porque los puntos necesitan su propio tamaño de repetición. Con
+   porque la cuadrícula necesita su propio tamaño de repetición. Con
    `background: var(--bg)` el tamaño le tocaría igual a todas las capas,
-   y los degradados de color quedarían recortados en cuadritos de 22px. */
+   y las manchas de gris quedarían recortadas en cuadritos de 26px.
+
+   La cuadrícula son dos capas, no una: una raya vertical que se repite a
+   lo ancho y otra horizontal que se repite a lo alto. Cruzadas dibujan
+   los cuadros. No hay forma de hacer una cuadrícula con un solo
+   degradado, porque un degradado va en una sola dirección. */
 body::before {
   background-image:
-    var(--puntos-lienzo),
-    radial-gradient(58% 44% at 12% 0%, rgba(198,32,39,0.05) 0%, rgba(198,32,39,0) 62%),
-    radial-gradient(52% 42% at 96% 8%, rgba(138,0,0,0.035) 0%, rgba(138,0,0,0) 60%),
-    linear-gradient(180deg, #efeded 0%, var(--lienzo) 46%, #e3e0e0 100%);
-  background-size: var(--paso-lienzo) var(--paso-lienzo), 100% 100%, 100% 100%, 100% 100%;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+    linear-gradient(to right,  var(--linea-cuadro) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--linea-cuadro) 1px, transparent 1px),
+    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
+    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
+    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
+  background-size:
+    var(--paso-cuadro) var(--paso-cuadro),
+    var(--paso-cuadro) var(--paso-cuadro),
+    100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 
 /* ── El texto que colgaba sobre el fondo oscuro ──
