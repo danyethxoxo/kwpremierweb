@@ -109,6 +109,14 @@ async function leerRespuesta(res: Response, queHacia: string) {
 
 // Sube el PDF. Va como multipart, que es lo único que aceptan: no hay
 // forma de mandarles una URL ni base64.
+//
+// El país va como encabezado 'country' y no se deja al default de
+// weetrust. Su documentación dice que sin mandarlo asume "Mexico", pero
+// un documento ya firmado que se revisó con la acción 'espiar' vino con
+// country vacío: el default que documentan no es el que aplican. Y no es
+// un detalle cosmético, es bajo qué legislación queda sellada la firma,
+// así que se manda explícito en vez de confiar en un valor que no se
+// puede comprobar de antemano.
 async function subirDocumento(token: string, archivo: Blob, nombre: string) {
   const form = new FormData()
   form.append('document', archivo, nombre)
@@ -117,7 +125,7 @@ async function subirDocumento(token: string, archivo: Blob, nombre: string) {
     method: 'POST',
     // Sin Content-Type a propósito: fetch lo pone solo, con el "boundary"
     // que multipart necesita. Ponerlo a mano rompe la petición.
-    headers: encabezados(token),
+    headers: encabezados(token, { country: 'Mexico' }),
     body: form,
   })
   return await leerRespuesta(res, 'Subir el documento')
