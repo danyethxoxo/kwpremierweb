@@ -78,6 +78,46 @@
   .dic-estado.condicionada { background: var(--pastel-crema); color: var(--pastel-crema-txt); }
   .dic-estado.autorizada   { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
 
+  /* La misma etiqueta, pero se le puede picar para cambiar el estado. Se
+     queda del color que tiene puesto: es lo que se viene a mirar de un
+     vistazo, y volverla neutra por ser botón la haría perder eso. La
+     flechita es la que avisa que además se abre. */
+  .dic-estado-btn {
+    border: none; font-family: inherit; cursor: pointer;
+    transition: filter 0.15s, box-shadow 0.15s;
+  }
+  .dic-estado-btn:hover { filter: brightness(0.96); box-shadow: var(--sombra-1); }
+  .dic-estado-btn svg { width: 11px; height: 11px; margin-left: -1px; opacity: 0.75; }
+  /* En el celular la etiqueta del encabezado no se enseña (no cabe), así
+     que el botón para cambiar el estado sale adentro de la tarjeta ya
+     desplegada. En escritorio estorba: ahí se pica la etiqueta de arriba. */
+  .dic-estado-movil { margin-bottom: var(--sp-3); }
+  @media (min-width: 901px) { .dic-estado-movil { display: none; } }
+
+  /* El menú del estado. Va pegado al body y con position:fixed porque la
+     tarjeta lleva overflow:hidden: colgado de ella quedaría recortado. */
+  .dic-menu-estado {
+    position: fixed; z-index: 120; min-width: 210px; padding: 5px;
+    background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 45%, rgba(255,255,255,0.88) 100%);
+    border: 1px solid rgba(255,255,255,0.82); border-radius: 12px;
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30);
+  }
+  .dic-menu-op {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    border: none; background: none; font-family: inherit;
+    font-size: 13px; color: var(--text); text-align: left;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  }
+  .dic-menu-op:hover { background: #f5f5f5; }
+  .dic-menu-op i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dic-menu-op.puesto { font-weight: 700; background: #fff3f3; }
+  .dic-menu-op i.borrador     { background: #5b5b5b; }
+  .dic-menu-op i.devuelta     { background: #b4530b; }
+  .dic-menu-op i.condicionada { background: var(--pastel-crema-txt); }
+  .dic-menu-op i.autorizada   { background: var(--pastel-menta-txt); }
+
   .dic-avance {
     width: 84px; height: 5px; border-radius: 999px;
     background: rgba(0,0,0,0.09); overflow: hidden; flex-shrink: 0;
@@ -847,8 +887,7 @@
             ? '<span class="kw-extra"><span class="dic-avance"><span style="width:' + pct + '%"></span></span></span>' +
               '<span class="kw-extra"><span>' + listas + ' de ' + total + '</span></span>'
             : '') +
-          '<span class="kw-extra"><span class="dic-estado ' + d.estado + '">' +
-            (ESTADOS[d.estado] || '') + '</span></span>' +
+          '<span class="kw-extra">' + etiquetaEstado(d) + '</span>' +
         '</span>' +
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
@@ -862,6 +901,111 @@
     if (!valor) return '';
     return '<div class="dic-dato"><b>' + rotulo + '</b>' + escapar(valor) + '</div>';
   }
+
+  // ── La etiqueta del estado, que además lo cambia ─────────────
+
+  // Los que se pueden poner desde el menú. Borrador no está: es de donde
+  // se sale, no a donde se llega, y el folio se gasta al salir de ahí.
+  var ORDEN_ESTADOS = ['devuelta', 'condicionada', 'autorizada'];
+
+  var FLECHITA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+    '<polyline points="6 9 12 15 18 9"/></svg>';
+
+  // La misma etiqueta sirve de adorno y de botón. Quien no puede
+  // dictaminar la ve nada más como etiqueta, sin flechita: un botón que no
+  // hace nada al picarle es peor que no tenerlo.
+  //
+  // En el encabezado va como <span> a propósito, no como <button>: ese
+  // renglón entero YA es el botón que abre la tarjeta, y un botón dentro
+  // de otro no es HTML válido. En el cuerpo, que no está dentro de nada,
+  // sí va como botón de verdad.
+  function etiquetaEstado(d, enCuerpo) {
+    var mueve = puedoDictaminar && !d.archivado_at;
+    var clases = 'dic-estado ' + d.estado +
+      (mueve ? ' dic-estado-btn' : '') +
+      (enCuerpo ? ' dic-estado-movil' : '');
+    var dentro = (ESTADOS[d.estado] || '') + (mueve ? FLECHITA : '');
+    var attr = mueve ? ' data-estado-de="' + d.id + '"' : '';
+
+    return enCuerpo
+      ? '<button type="button" class="' + clases + '"' + attr + '>' + dentro + '</button>'
+      : '<span class="' + clases + '"' + attr + '>' + dentro + '</span>';
+  }
+
+  var menuEstado = null;
+  var menuAbiertoEn = 0;
+
+  function cerrarMenuEstado() {
+    if (!menuEstado) return;
+    menuEstado.remove();
+    menuEstado = null;
+  }
+
+  // Cerrarlo porque la página se movió, pero no por el movimiento que
+  // provoca abrirlo: al picarle a un botón el navegador rueda la página
+  // para traerlo a la vista, y ese scroll llega justo después de abrir el
+  // menú. Sin esta guarda, en el celular el menú se cerraba solo en el
+  // mismo instante en que aparecía.
+  function cerrarMenuSiSeMovio() {
+    if (Date.now() - menuAbiertoEn < 350) return;
+    cerrarMenuEstado();
+  }
+
+  function abrirMenuEstado(desde, id) {
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    if (!d) return;
+    cerrarMenuEstado();
+
+    var caja = document.createElement('div');
+    caja.className = 'dic-menu-estado';
+    caja.innerHTML = ORDEN_ESTADOS.map(function (e) {
+      return '<button type="button" class="dic-menu-op' + (d.estado === e ? ' puesto' : '') +
+        '" data-poner="' + e + '"><i class="' + e + '"></i>' + ESTADOS[e] + '</button>';
+    }).join('');
+    document.body.appendChild(caja);
+
+    // Se cuelga de la etiqueta, y si abajo ya no cabe se voltea hacia
+    // arriba en vez de salirse de la pantalla.
+    var r = desde.getBoundingClientRect();
+    var arriba = r.bottom + 6;
+    if (arriba + caja.offsetHeight > window.innerHeight - 8) {
+      arriba = Math.max(8, r.top - caja.offsetHeight - 6);
+    }
+    var izq = Math.min(r.left, window.innerWidth - caja.offsetWidth - 8);
+    caja.style.top = arriba + 'px';
+    caja.style.left = Math.max(8, izq) + 'px';
+
+    caja.querySelectorAll('[data-poner]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        cerrarMenuEstado();
+        var r2 = await window.kwSupabase.rpc('dictaminar', {
+          p_id: id, p_estado: b.dataset.poner,
+        });
+        if (r2.error) {
+          await window.kwUI.alert('No se pudo dictaminar: ' + r2.error.message);
+          return;
+        }
+        await cargar();
+      });
+    });
+
+    menuEstado = caja;
+    menuAbiertoEn = Date.now();
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!menuEstado) return;
+    if (e.target.closest('.dic-menu-estado, [data-estado-de]')) return;
+    cerrarMenuEstado();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') cerrarMenuEstado();
+  });
+  // Colgado con position:fixed, el menú no sigue a la tarjeta al rodar la
+  // página: se cierra, que es lo que uno espera.
+  window.addEventListener('scroll', cerrarMenuSiSeMovio, true);
+  window.addEventListener('resize', cerrarMenuSiSeMovio);
 
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
@@ -895,17 +1039,11 @@
         '</div>'
       : '';
 
-    // El dictamen en sí: los tres botones que mueven el estado. Van juntos
-    // y siempre los tres, incluso el que ya está puesto, porque leerlos
-    // uno al lado del otro es lo que deja ver de qué se está eligiendo.
+    // El estado se mueve desde su propia etiqueta, la del encabezado. En
+    // el celular esa etiqueta no se enseña, así que aquí adentro va la
+    // misma, que abre el mismo menú.
     var dictaminar = (puedoDictaminar && !d.archivado_at)
-      ? '<div class="dic-punto-acciones" style="margin-top:var(--sp-3);">' +
-          ['devuelta', 'condicionada', 'autorizada'].map(function (e) {
-            return '<button type="button" class="kw-btn-mini" data-dictaminar="' + e +
-              '" data-dic="' + d.id + '"' + (d.estado === e ? ' disabled' : '') + '>' +
-              ESTADOS[e] + '</button>';
-          }).join('') +
-        '</div>'
+      ? etiquetaEstado(d, true)
       : '';
 
     var acciones = '<div class="kw-fila-acciones">' +
@@ -1019,15 +1157,14 @@
       });
     });
 
-    raiz.querySelectorAll('[data-dictaminar]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        b.disabled = true;
-        var r = await window.kwSupabase.rpc('dictaminar', {
-          p_id: b.dataset.dic, p_estado: b.dataset.dictaminar,
-        });
-        b.disabled = false;
-        if (r.error) { await window.kwUI.alert('No se pudo dictaminar: ' + r.error.message); return; }
-        await cargar();
+    raiz.querySelectorAll('[data-estado-de]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        // La etiqueta del encabezado vive dentro del renglón que abre y
+        // cierra la tarjeta. Sin esto, cambiar el estado la cerraría de
+        // pasada y el menú quedaría flotando sobre una tarjeta cerrada.
+        e.stopPropagation();
+        if (menuEstado) { cerrarMenuEstado(); return; }
+        abrirMenuEstado(b, b.dataset.estadoDe);
       });
     });
 
