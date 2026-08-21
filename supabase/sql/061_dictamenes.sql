@@ -510,6 +510,15 @@ drop function if exists public.entregar_dictamen(uuid);
 --
 -- El control de acceso NO va aquí: las vistas corren con los permisos de
 -- quien las creó, así que la restricción de siempre vive en el WHERE.
+--
+-- Se borra antes de crear: "create or replace view" solo deja AGREGAR
+-- columnas al final, nunca cambiarles el orden ni el nombre. Como el
+-- orden de esta vista cambió entre versiones de este archivo (ahora
+-- "fecha_dictamen" entra donde antes iba "inmueble"), reemplazarla sin
+-- más truena. Borrarla primero es seguro: es una vista de solo lectura,
+-- no se pierde ningún dato al recrearla.
+drop view if exists public.dictamenes_con_asesor;
+
 create or replace view public.dictamenes_con_asesor as
 select
   d.id, d.folio, d.asesor_id, d.dictaminado_por,
