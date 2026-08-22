@@ -17,9 +17,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260821a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260822a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260821b"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .header-right { display: flex; align-items: center; gap: 10px; }
@@ -378,6 +378,17 @@
   }
   .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
 
+  /* Los rótulos de arriba de cada filtro se quitan de la vista: lo que
+     dice cada uno (Estado, Listado, Contrato...) ya sale dentro de la
+     cápsula, como su propio valor por defecto ("Estado" en vez de "Todos
+     los estados"). Un rótulo repitiendo lo mismo arriba era doble aviso
+     del mismo dato. Sigue en el HTML, nada más oculto, para quien use
+     lector de pantalla. */
+  #vista-lista .kw-campo-filtro > label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
   /* Ocho filtros en una hilera se reparten el ancho a partes iguales y
      ninguno alcanza a enseñar lo que dice. Con un tope, el que sobra en
      el último renglón se queda de su tamaño en vez de estirarse de lado a
@@ -386,16 +397,26 @@
   .kw-filtros > .kw-campo-filtro { max-width: 250px; }
   .kw-filtros > .dic-campo-buscar { flex: 1.5 1 260px; max-width: 330px; }
 
-  /* Limpiar va pegado al buscador y no como un filtro más: no es algo que
-     se elija, es el botón para deshacer lo elegido. Ocupando su propia
-     casilla se veía del tamaño de un filtro sin serlo. */
-  .dic-buscar-fila { display: flex; gap: 6px; align-items: stretch; }
-  .dic-buscar-fila .kw-buscador { flex: 1; min-width: 0; }
+  /* Las dos fechas del rango. El estilo va por la clase y no por
+     input[type="date"] porque kw-ui.js le cambia el tipo a "text"
+     mientras está vacío, para poder enseñar el texto de adentro. */
+  .dic-fecha {
+    width: 100%; height: var(--control-h);
+    border: 1px solid var(--border); border-radius: var(--r-campo);
+    padding: 0 11px; background: #fff;
+    font-family: inherit; font-size: 13.5px; color: var(--text);
+  }
+  .dic-fecha:focus { outline: none; border-color: var(--red); }
+
+  /* Limpiar cierra la hilera: no es un filtro más, es el botón para
+     deshacer lo elegido, así que va al final de todos y no compitiendo
+     por lugar entre ellos. */
+  .dic-campo-limpiar { justify-content: flex-end; }
   .dic-limpiar {
-    flex-shrink: 0; padding: 0 12px;
+    height: var(--control-h); padding: 0 14px;
     border: 1px solid var(--border); border-radius: var(--r-campo);
     background: #fff; color: var(--muted);
-    font-family: inherit; font-size: 12px; font-weight: 700;
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
     cursor: pointer; white-space: nowrap;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
@@ -592,14 +613,11 @@
       <div class="kw-filtros">
         <div class="kw-campo-filtro dic-campo-buscar" data-kw-buscador-propio>
           <label for="f-buscar">Buscar</label>
-          <div class="dic-buscar-fila">
-            <div class="kw-buscador">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-                <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
-              </svg>
-              <input type="text" id="f-buscar" class="kw-input" placeholder="Folio, dirección o asesor" autocomplete="off">
-            </div>
-            <button type="button" class="dic-limpiar" id="f-limpiar" title="Quitar todos los filtros">Limpiar</button>
+          <div class="kw-buscador">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
+            </svg>
+            <input type="text" id="f-buscar" class="kw-input" placeholder="Folio, dirección o asesor" autocomplete="off">
           </div>
         </div>
         <!-- Asesor: son 94 y pueden interesar varios a la vez (los de un
@@ -610,7 +628,7 @@
           <div class="dic-multi" id="f-asesor-caja">
             <div class="dic-multi-elegidos" id="f-asesor-elegidos"></div>
             <input type="text" id="f-asesor-busca" class="kw-input"
-              placeholder="Todos los asesores" autocomplete="off">
+              placeholder="Asesor" autocomplete="off">
             <div class="dic-asesor-lista" id="f-asesor-lista"></div>
           </div>
         </div>
@@ -618,7 +636,7 @@
         <div class="kw-campo-filtro">
           <label for="f-estado">Estado</label>
           <select id="f-estado">
-            <option value="todos">Todos los estados</option>
+            <option value="todos">Estado</option>
             <option value="borrador">Borradores</option>
             <option value="devuelta">Devueltos</option>
             <option value="condicionada">Autorizados condicionados</option>
@@ -629,7 +647,7 @@
         <div class="kw-campo-filtro">
           <label for="f-listado">Listado</label>
           <select id="f-listado">
-            <option value="todos">Cualquier listado</option>
+            <option value="todos">Listado</option>
             <option value="pendiente">Pendiente</option>
             <option value="sin_listado">No tiene cargado el listado</option>
             <option value="aprobado">Aprobado</option>
@@ -639,7 +657,7 @@
         <div class="kw-campo-filtro">
           <label for="f-contrato">Contrato</label>
           <select id="f-contrato">
-            <option value="todos">Exclusiva y abierto</option>
+            <option value="todos">Contrato</option>
             <option value="exclusiva">Exclusiva</option>
             <option value="abierto">Abierto</option>
           </select>
@@ -647,19 +665,25 @@
 
         <div class="kw-campo-filtro">
           <label for="f-tipo">Tipo de inmueble</label>
-          <select id="f-tipo"><option value="todos">Todos los tipos</option></select>
+          <select id="f-tipo"><option value="todos">Tipo de inmueble</option></select>
+        </div>
+
+        <!-- Un rango en vez de mes y día sueltos: "del 3 al 17" no se
+             podía pedir con dos listas, y con el calendario se elige el
+             día y el mes de una vez. -->
+        <div class="kw-campo-filtro">
+          <label for="f-desde">Desde</label>
+          <input type="date" id="f-desde" class="dic-fecha" data-texto="Desde">
         </div>
 
         <div class="kw-campo-filtro">
-          <label for="f-mes">Mes</label>
-          <select id="f-mes"><option value="todos">Todo el tiempo</option></select>
+          <label for="f-hasta">Hasta</label>
+          <input type="date" id="f-hasta" class="dic-fecha" data-texto="Hasta">
         </div>
 
-        <div class="kw-campo-filtro">
-          <label for="f-dia">Día</label>
-          <select id="f-dia">
-            <option value="todos">Cualquier día</option>
-          </select>
+        <div class="kw-campo-filtro dic-campo-limpiar">
+          <label>&nbsp;</label>
+          <button type="button" class="dic-limpiar" id="f-limpiar" title="Quitar todos los filtros">Limpiar filtros</button>
         </div>
 
       </div>
@@ -987,7 +1011,6 @@
       .order('created_at', { ascending: false }).limit(5000);
     historial = hi.data || [];
 
-    pintarFiltroMes();
     pintar();
   }
 
@@ -1006,7 +1029,7 @@
       }).join('') +
       '<option value="__nuevo__">Otro (escribirlo)</option>';
 
-    $('f-tipo').innerHTML = '<option value="todos">Todos los tipos</option>' +
+    $('f-tipo').innerHTML = '<option value="todos">Tipo de inmueble</option>' +
       tipos.map(function (x) {
         return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
       }).join('');
@@ -1015,39 +1038,7 @@
 
   // ── Filtrar ─────────────────────────────────────────────────
 
-  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-  // Los meses que salen en la lista son los que de verdad tienen
-  // expedientes: ofrecer doce meses vacíos es hacer buscar entre opciones
-  // que no llevan a ningún lado.
-  function pintarFiltroMes() {
-    var vistos = [];
-    dictamenes.forEach(function (d) {
-      var f = (d.fecha_dictamen || '').slice(0, 7);
-      if (f && vistos.indexOf(f) === -1) vistos.push(f);
-    });
-    vistos.sort().reverse();
-
-    var antes = $('f-mes').value;
-    $('f-mes').innerHTML = '<option value="todos">Todo el tiempo</option>' +
-      vistos.map(function (m) {
-        var p = m.split('-');
-        return '<option value="' + m + '">' +
-          MESES[Number(p[1]) - 1] + ' ' + p[0] + '</option>';
-      }).join('');
-    if (vistos.indexOf(antes) !== -1) $('f-mes').value = antes;
-
-    var dias = '<option value="todos">Cualquier día</option>';
-    for (var i = 1; i <= 31; i++) {
-      dias += '<option value="' + String(i).padStart(2, '0') + '">' + i + '</option>';
-    }
-    var diaAntes = $('f-dia').value;
-    $('f-dia').innerHTML = dias;
-    if (diaAntes) $('f-dia').value = diaAntes;
-
-    if (window.kwUI) window.kwUI.selects(document);
-  }
+  var DESPLEGABLES = ['f-estado', 'f-listado', 'f-contrato', 'f-tipo'];
 
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
@@ -1055,8 +1046,8 @@
     var listado = $('f-listado').value;
     var contrato = $('f-contrato').value;
     var tipo = $('f-tipo').value;
-    var mes = $('f-mes').value;
-    var dia = $('f-dia').value;
+    var desde = $('f-desde').value;
+    var hasta = $('f-hasta').value;
 
     return dictamenes.filter(function (d) {
       // El archivo es una lista aparte, no un filtro más: o se ve lo
@@ -1071,9 +1062,11 @@
       // quiere decir "todos", no "ninguno".
       if (asesoresFiltro.length && asesoresFiltro.indexOf(d.asesor_id) === -1) return false;
 
+      // Las fechas viajan como aaaa-mm-dd, y en ese formato compararlas
+      // como texto da el mismo resultado que compararlas como fechas.
       var f = d.fecha_dictamen || '';
-      if (mes !== 'todos' && f.slice(0, 7) !== mes) return false;
-      if (dia !== 'todos' && f.slice(8, 10) !== dia) return false;
+      if (desde && (!f || f < desde)) return false;
+      if (hasta && (!f || f > hasta)) return false;
 
       if (busca) {
         var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre]
@@ -1251,8 +1244,8 @@
 
     if (!filas.length) {
       var hayFiltro = $('f-buscar').value.trim() || asesoresFiltro.length ||
-        ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia']
-          .some(function (x) { return $(x).value !== 'todos'; });
+        $('f-desde').value || $('f-hasta').value ||
+        DESPLEGABLES.some(function (x) { return $(x).value !== 'todos'; });
       $('lista').innerHTML = '<div class="kw-vacio">' + (
         verArchivo ? 'No hay dictámenes archivados.'
           : hayFiltro ? 'No hay dictámenes que cumplan con lo que estás filtrando.'
@@ -2385,7 +2378,7 @@
   }
 
   $('f-buscar').addEventListener('input', pintar);
-  ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia'].forEach(function (x) {
+  DESPLEGABLES.concat(['f-desde', 'f-hasta']).forEach(function (x) {
     $(x).addEventListener('change', pintar);
   });
 
@@ -2397,8 +2390,12 @@
 
   $('f-limpiar').addEventListener('click', function () {
     $('f-buscar').value = '';
-    ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia'].forEach(function (x) {
+    DESPLEGABLES.forEach(function (x) {
       $(x).value = 'todos';
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    ['f-desde', 'f-hasta'].forEach(function (x) {
+      $(x).value = '';
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
     asesoresFiltro = [];
