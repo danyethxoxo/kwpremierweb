@@ -102,6 +102,40 @@
   .dic-etiquetas-movil { display: flex; flex-wrap: wrap; gap: 8px; }
   @media (min-width: 901px) { .dic-etiquetas-movil { display: none; } }
 
+  /* ── Las dos autorizaciones como dos columnas ──
+     Cada una con el mismo ancho en todos los renglones: sin eso, un
+     estatus largo empuja al de junto y las etiquetas quedan escalonadas
+     de tarjeta en tarjeta, que es lo que hacía difícil compararlas. La
+     línea de en medio es la que las separa de verdad.
+
+     Los rótulos de arriba viven fuera de las tarjetas, así que su
+     alineación se sostiene repitiendo aquí las medidas del renglón: el
+     relleno de la tarjeta (16px), el hueco antes de la flecha (12px) y
+     la flecha misma (17px). */
+  .dic-cabecera { display: none; }
+  @media (min-width: 901px) {
+    .dic-col { width: 200px; flex-shrink: 0; }
+    .dic-col-listado {
+      border-left: 1px solid var(--border);
+      padding-left: 20px; margin-left: -4px;
+    }
+    .dic-col .dic-estado, .dic-col .dic-listado { max-width: 100%; }
+
+    .dic-cabecera {
+      display: flex; justify-content: flex-end; gap: 20px;
+      /* El 1px de más es el borde de la tarjeta, que los rótulos no
+         tienen y que si no los deja corridos por esa misma cantidad. */
+      padding: 0 calc(16px + 12px + 17px + 1px) 7px 16px;
+      margin-bottom: 2px;
+    }
+    .dic-cabecera-col {
+      width: 200px; flex-shrink: 0;
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted);
+    }
+    .dic-cabecera-col:last-child { padding-left: 20px; margin-left: -4px; }
+  }
+
   /* La misma etiqueta, pero se le puede picar para cambiar el estado. Se
      queda del color que tiene puesto: es lo que se viene a mirar de un
      vistazo, y volverla neutra por ser botón la haría perder eso. La
@@ -344,6 +378,29 @@
   }
   .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
 
+  /* Ocho filtros en una hilera se reparten el ancho a partes iguales y
+     ninguno alcanza a enseñar lo que dice. Con un tope, el que sobra en
+     el último renglón se queda de su tamaño en vez de estirarse de lado a
+     lado, y el buscador pesa un poco más que los demás porque es el que
+     más se usa. */
+  .kw-filtros > .kw-campo-filtro { max-width: 250px; }
+  .kw-filtros > .dic-campo-buscar { flex: 1.5 1 260px; max-width: 330px; }
+
+  /* Limpiar va pegado al buscador y no como un filtro más: no es algo que
+     se elija, es el botón para deshacer lo elegido. Ocupando su propia
+     casilla se veía del tamaño de un filtro sin serlo. */
+  .dic-buscar-fila { display: flex; gap: 6px; align-items: stretch; }
+  .dic-buscar-fila .kw-buscador { flex: 1; min-width: 0; }
+  .dic-limpiar {
+    flex-shrink: 0; padding: 0 12px;
+    border: 1px solid var(--border); border-radius: var(--r-campo);
+    background: #fff; color: var(--muted);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .dic-limpiar:hover { background: #fafafa; color: var(--red); border-color: var(--red); }
+
   /* ── El filtro de asesor, que admite varios ──
      El campo crece hacia abajo conforme se van agregando: con tres o
      cuatro elegidos, una sola línea los recortaría y ya no se sabría a
@@ -533,13 +590,16 @@
       <div class="dic-resumen" id="resumen"></div>
 
       <div class="kw-filtros">
-        <div class="kw-campo-filtro ancho">
+        <div class="kw-campo-filtro dic-campo-buscar">
           <label for="f-buscar">Buscar</label>
-          <div class="kw-buscador">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
-            </svg>
-            <input type="text" id="f-buscar" class="kw-input" placeholder="Asesor, dirección, folio o cliente" autocomplete="off">
+          <div class="dic-buscar-fila">
+            <div class="kw-buscador">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
+              </svg>
+              <input type="text" id="f-buscar" class="kw-input" placeholder="Folio, dirección o asesor" autocomplete="off">
+            </div>
+            <button type="button" class="dic-limpiar" id="f-limpiar" title="Quitar todos los filtros">Limpiar</button>
           </div>
         </div>
         <div class="kw-campo-filtro">
@@ -602,10 +662,14 @@
           </select>
         </div>
 
-        <div class="kw-campo-filtro">
-          <label>&nbsp;</label>
-          <button type="button" class="kw-fila-btn neutro" id="f-limpiar">Limpiar filtros</button>
-        </div>
+      </div>
+
+      <!-- Los rótulos de las dos autorizaciones. Van una sola vez arriba y
+           no repetidos en cada tarjeta: son las mismas dos columnas para
+           todos los renglones, y repetirlos treinta veces sería ruido. -->
+      <div class="dic-cabecera" id="dic-cabecera">
+        <span class="dic-cabecera-col">Expediente</span>
+        <span class="dic-cabecera-col">Listado</span>
       </div>
 
       <div class="kw-lista" id="lista">
@@ -1182,6 +1246,9 @@
 
     var filas = visibles();
 
+    // Los rótulos solo tienen sentido si hay renglones debajo.
+    $('dic-cabecera').style.display = filas.length ? '' : 'none';
+
     if (!filas.length) {
       var hayFiltro = $('f-buscar').value.trim() || asesoresFiltro.length ||
         ['f-estado', 'f-listado', 'f-contrato', 'f-tipo', 'f-mes', 'f-dia']
@@ -1240,8 +1307,8 @@
             ? '<span class="kw-extra"><span class="dic-avance"><span style="width:' + pct + '%"></span></span></span>' +
               '<span class="kw-extra"><span>' + listas + ' de ' + total + '</span></span>'
             : '') +
-          '<span class="kw-extra">' + etiquetaEstado(d) + '</span>' +
-          '<span class="kw-extra">' + etiquetaListado(d) + '</span>' +
+          '<span class="kw-extra dic-col">' + etiquetaEstado(d) + '</span>' +
+          '<span class="kw-extra dic-col dic-col-listado">' + etiquetaListado(d) + '</span>' +
         '</span>' +
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
