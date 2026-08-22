@@ -130,6 +130,27 @@
     caja.querySelector('.kw-select-btn').setAttribute('aria-expanded', 'true');
     abiertoAhora = caja;
     resaltar(caja, select.selectedIndex);
+    acomodarAncho(caja, r);
+  }
+
+  // El menú puede ser más ancho que su campo. En una barra de filtros
+  // apretada el campo mide poco y las opciones largas se partían en dos
+  // renglones o no se alcanzaban a leer; abierto no hay razón para
+  // limitarlo al ancho de abajo, porque va flotando encima de todo.
+  //
+  // Se hace aquí y no solo en el CSS porque hay que ver de qué lado cae:
+  // creciendo siempre hacia la derecha, el último filtro del renglón se
+  // saldría de la pantalla. Cuando no cabe, se ancla por la derecha.
+  function acomodarAncho(caja, r) {
+    var menu = caja.querySelector('.kw-select-menu');
+    if (!menu) return;
+
+    menu.style.left = '';
+    menu.style.right = '';
+    if (menu.scrollWidth <= Math.ceil(r.width)) return;
+
+    var cabe = r.left + menu.offsetWidth <= window.innerWidth - 8;
+    if (cabe) { menu.style.right = 'auto'; } else { menu.style.left = 'auto'; }
   }
 
   function armarSelect(select) {

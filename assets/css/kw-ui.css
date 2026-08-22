@@ -470,8 +470,14 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder { color: v
 .kw-select.abierto .kw-select-flecha { transform: rotate(180deg); color: var(--red); }
 .kw-select.deshabilitado { opacity: 0.55; pointer-events: none; }
 
+/* Abierto, el menú puede pasarse del ancho de su campo: va flotando
+   encima de todo y no hay razón para que una opción larga se parta en dos
+   renglones nada más porque el filtro de abajo mide poco. El mínimo sigue
+   siendo el ancho del campo, y de qué lado crece lo decide kw-ui.js según
+   quede espacio (si no, el último filtro del renglón se saldría). */
 .kw-select-menu {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 80;
+  min-width: 100%; width: max-content; max-width: min(360px, 86vw);
   background: #fff;
   border: 1px solid var(--border); border-radius: 12px;
   box-shadow: var(--sombra-3);
