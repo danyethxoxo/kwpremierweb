@@ -359,7 +359,18 @@
   const contenedorLocal = campoLocal
     ? campoLocal.closest(CAJAS_LOCALES) || campoLocal.parentElement
     : null;
-  if (contenedorLocal) contenedorLocal.classList.add('kw-buscador-local-oculto');
+
+  // Una pantalla puede pedir quedarse con su buscador a la vista poniendo
+  // data-kw-buscador-propio en el bloque. La lupa del header le sigue
+  // pasando lo que se escriba, nada más no se lo esconde. Hace falta
+  // cuando en ese bloque vive algo más que el campo: en Dictaminación de
+  // Expedientes lo acompaña el botón de limpiar filtros, y esconder el
+  // bloque entero se llevaba también ese botón.
+  const buscadorPropio = contenedorLocal
+    && contenedorLocal.hasAttribute('data-kw-buscador-propio');
+  if (contenedorLocal && !buscadorPropio) {
+    contenedorLocal.classList.add('kw-buscador-local-oculto');
+  }
 
   const capsula = header
     ? (header.querySelector('.kw-header-capsula') || header)
