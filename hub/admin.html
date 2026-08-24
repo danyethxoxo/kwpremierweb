@@ -49,6 +49,19 @@
   .acceso-btn.quitar { color: var(--red); }
   .acceso-btn.dar { color: #1a7a1a; }
 
+  /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
+     más de una cuenta configurada. Es solo información - el botón de
+     Dar/Quitar de arriba sigue aplicando a las dos de un jalón. */
+  .acceso-cuentas { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 0 0 8px 25px; margin-top: -4px; }
+  .acceso-cuenta {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .acceso-cuenta svg { width: 10px; height: 10px; }
+  .acceso-cuenta.si { color: #1a7a1a; }
+  .acceso-cuenta.no { color: #8d9299; }
+  .verif-cuentas.acceso-cuentas { padding-left: 0; margin-top: 2px; }
+
   /* ── Modal de Revisar Accesos ────────────────────────────────
      Arriba se quedan fijos el buscador, la selección y el aviso; solo
      la lista hace scroll, así lo de arriba sigue a la mano sin tener
@@ -1344,9 +1357,19 @@
 
   let gruposAsesores = [];
   let grupoActivo = '';
-  // correo -> { contactos, drive, calendario }. Lo que Google contesta.
+  // correo -> { contactos, drive, calendario, contactosPorCuenta }. Lo
+  // que Google contesta. contactosPorCuenta solo llega si quien entró es
+  // Master: es el desglose de en cuál cuenta de Contactos está cada
+  // quien, y Admin no lo necesita para su trabajo del día a día.
   let estadoGoogle = {};
   let estadoGoogleListo = false;
+  // [{clave, nombre}] de las cuentas de Contactos configuradas. Solo
+  // llega para Master, y solo trae más de una cuando ya se configuró la
+  // segunda (GOOGLE_REFRESH_TOKEN_CONTACTOS); mientras tanto se queda
+  // vacío y el desglose no se enseña.
+  let cuentasContactosInfo = [];
+
+  function esMaster() { return miRol === 'master'; }
 
   async function llamarAlta(cuerpo) {
     const { data: sesion } = await window.kwSupabase.auth.getSession();
@@ -1454,6 +1477,19 @@
 
   // El bloque de accesos. Mientras Google no conteste se enseña
   // "Comprobando" en vez de un "no lo tiene" que sería mentira.
+  // Solo para Master, y solo cuando ya hay más de una cuenta configurada:
+  // en cuál de las dos está (o no está) el contacto de esta persona. Es
+  // nada más informativo - el botón de Dar/Quitar de arriba sigue
+  // aplicando a las dos cuentas de un jalón.
+  function desgloseContactosHtml(estado, claseExtra) {
+    if (!esMaster() || cuentasContactosInfo.length < 2 || !estado || !estado.contactosPorCuenta) return '';
+    return '<div class="acceso-cuentas' + (claseExtra ? ' ' + claseExtra : '') + '">' + cuentasContactosInfo.map(function (cuenta) {
+      const tiene = estado.contactosPorCuenta[cuenta.clave];
+      return '<span class="acceso-cuenta ' + (tiene ? 'si' : 'no') + '">' +
+        (tiene ? ICONO_LISTO : ICONO_EQUIS) + escapeHtml(cuenta.nombre) + '</span>';
+    }).join('') + '</div>';
+  }
+
   function accesosHtml(p, g) {
     if (!grupoDaDeAlta(g.clave)) return '';
 
@@ -1472,7 +1508,8 @@
           '<button type="button" class="btn btn-mini acceso-btn ' + accion + '"' +
             ' data-acceso="' + a.clave + '" data-hacer="' + accion + '">' +
             (tiene ? 'Quitar' : 'Dar') + '</button>') +
-      '</div>';
+      '</div>' +
+      (a.clave === 'contactos' ? desgloseContactosHtml(estado) : '');
     }).join('');
 
     const faltan = estado && ACCESOS.some(function (a) { return !estado[a.clave]; });
@@ -1631,6 +1668,7 @@
           grupo: grupo.clave,
         }],
       });
+      if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       aplicarEstado(data.estado);
       pintarGrupos();
       avisoAsesores(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
@@ -1664,6 +1702,7 @@
     (lista || []).forEach(function (e) {
       estadoGoogle[String(e.correo).toLowerCase()] = {
         contactos: e.contactos, drive: e.drive, calendario: e.calendario,
+        contactosPorCuenta: e.contactosPorCuenta || null,
       };
     });
   }
@@ -1726,10 +1765,12 @@
   async function cargarEstadoGoogle() {
     try {
       const data = await llamarAlta({ accion: 'verificar' });
+      if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       estadoGoogle = {};
       (data.personas || []).forEach(function (p) {
         estadoGoogle[String(p.correo).toLowerCase()] = {
           contactos: p.contactos, drive: p.drive, calendario: p.calendario,
+          contactosPorCuenta: p.contactosPorCuenta || null,
         };
       });
       estadoGoogleListo = true;
@@ -1815,6 +1856,7 @@
 
       const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
       const alguno = ACCESOS.some(function (a) { return p[a.clave]; });
+      const desglose = desgloseContactosHtml({ contactosPorCuenta: p.contactosPorCuenta }, 'verif-cuentas');
 
       return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
         '<label class="verif-marca">' +
@@ -1824,7 +1866,7 @@
           '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
           '<span class="verif-correo">' + escapeHtml(p.correo) +
             (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
-          '<div class="verif-chips">' + chips + '</div>' +
+          '<div class="verif-chips">' + chips + '</div>' + desglose +
         '</div>' +
         '<div class="verif-acciones">' +
           '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
@@ -1879,10 +1921,14 @@
       const data = await llamarAlta({
         accion: 'acceso', quitar: quitar, pasos: pasos || undefined, personas: gente,
       });
+      if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       aplicarEstado(data.estado);
       (data.estado || []).forEach(function (e) {
         const fila = ultimaVerificacion.find(function (p) { return p.correo === e.correo; });
-        if (fila) { fila.contactos = e.contactos; fila.drive = e.drive; fila.calendario = e.calendario; }
+        if (fila) {
+          fila.contactos = e.contactos; fila.drive = e.drive; fila.calendario = e.calendario;
+          fila.contactosPorCuenta = e.contactosPorCuenta || fila.contactosPorCuenta;
+        }
       });
       pintarVerificacion();
       pintarGrupos();

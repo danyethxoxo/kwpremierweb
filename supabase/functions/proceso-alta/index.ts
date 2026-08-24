@@ -148,7 +148,7 @@ async function getAccessToken(refreshToken: string): Promise<string> {
 type CuentaContactos = { clave: string; nombre: string; refreshToken: string }
 
 const CUENTAS_CONTACTOS: CuentaContactos[] = [
-  { clave: 'original', nombre: 'tu cuenta', refreshToken: GOOGLE_REFRESH_TOKEN },
+  { clave: 'original', nombre: 'dani.guerrero@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN },
   ...(GOOGLE_REFRESH_TOKEN_CONTACTOS
     ? [{ clave: 'kwpremier', nombre: 'kwpremier@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN_CONTACTOS }]
     : []),
@@ -560,6 +560,16 @@ function algunContacto(mapa: ContactosPorCuenta, correo: string): boolean {
   return CUENTAS_CONTACTOS.some((cuenta) => mapa.get(cuenta.clave)?.has(c))
 }
 
+// En qué cuenta de Contactos está cada quien. Es lo que ve Master (y
+// Admin no) para no confundirlo con un dato que no necesita: para Admin
+// "tiene Contactos" es una sola cosa, sí o no.
+function desglosePorCuenta(mapa: ContactosPorCuenta, correo: string): Record<string, boolean> {
+  const c = correo.toLowerCase()
+  const salida: Record<string, boolean> = {}
+  for (const cuenta of CUENTAS_CONTACTOS) salida[cuenta.clave] = Boolean(mapa.get(cuenta.clave)?.has(c))
+  return salida
+}
+
 // ── Las etiquetas de Contactos ──────────────────────────────
 // En Google Contacts una etiqueta es un "grupo de contactos". Se busca
 // por nombre y, si no existe, se crea: así la primera alta de cada tipo
@@ -818,10 +828,13 @@ async function agregarContacto(
   cuentas: { clave: string; nombre: string; token: string }[],
   persona: DatosPersona,
   contactosExistentes: ContactosPorCuenta,
+  detallado: boolean,
 ) {
   const etiqueta = etiquetaDeGrupo(persona.grupo || 'activos')
   const c = persona.correo.toLowerCase()
   const detalles: string[] = []
+  let algunaEraNueva = false
+  let ultimaEtiqueta = ''
 
   for (const cuenta of cuentas) {
     const mapa = contactosExistentes.get(cuenta.clave) ?? new Map<string, string>()
@@ -832,6 +845,7 @@ async function agregarContacto(
     if (!recurso) {
       recurso = await crearContacto(cuenta.token, persona)
       mapa.set(c, recurso)
+      algunaEraNueva = true
     }
 
     let puesta = ''
@@ -839,17 +853,19 @@ async function agregarContacto(
       const grupo = await grupoDeContactos(cuenta.token, etiqueta)
       if (grupo) { await etiquetarContacto(cuenta.token, grupo, recurso); puesta = `, "${etiqueta}"` }
     }
+    ultimaEtiqueta = puesta
 
-    // Con una sola cuenta configurada el mensaje se queda como siempre
-    // fue, sin nombrarla: nombrar "tu cuenta" cuando es la única que hay
-    // no aporta nada y sí hace más largo un mensaje que la gente ya
-    // conocía.
-    detalles.push(cuentas.length > 1
-      ? `${cuenta.nombre}: ${yaEstaba ? 'ya existía' : 'creado'}${puesta}`
-      : `${yaEstaba ? 'Ya existía en Contactos' : 'Contacto creado'}${puesta}`)
+    // El desglose por cuenta es solo para quien sabe que hay más de una
+    // (Master, ver "detallado" en quien llama a esto). A Admin, y a
+    // cualquiera con una sola cuenta configurada, le llega el mismo
+    // mensaje sencillo de siempre.
+    if (detallado && cuentas.length > 1) {
+      detalles.push(`${cuenta.nombre}: ${yaEstaba ? 'ya existía' : 'creado'}${puesta}`)
+    }
   }
 
-  return detalles.join(' · ')
+  if (detalles.length) return detalles.join(' · ')
+  return `${algunaEraNueva ? 'Contacto creado' : 'Ya existía en Contactos'}${ultimaEtiqueta}`
 }
 
 async function compartirCarpeta(token: string, correo: string) {
@@ -891,15 +907,17 @@ async function borrarContacto(
   cuentas: { clave: string; nombre: string; token: string }[],
   correo: string,
   contactosExistentes: ContactosPorCuenta,
+  detallado: boolean,
 ) {
   const c = correo.toLowerCase()
   const detalles: string[] = []
+  let algunoSeBorro = false
 
   for (const cuenta of cuentas) {
     const mapa = contactosExistentes.get(cuenta.clave) ?? new Map<string, string>()
     const recurso = mapa.get(c)
     if (!recurso) {
-      detalles.push(cuentas.length > 1 ? `${cuenta.nombre}: no estaba` : 'No estaba en Contactos')
+      if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: no estaba`)
       continue
     }
 
@@ -909,10 +927,12 @@ async function borrarContacto(
     })
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
     mapa.delete(c)
-    detalles.push(cuentas.length > 1 ? `${cuenta.nombre}: borrado` : 'Contacto borrado')
+    algunoSeBorro = true
+    if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: borrado`)
   }
 
-  return detalles.join(' · ')
+  if (detalles.length) return detalles.join(' · ')
+  return algunoSeBorro ? 'Contacto borrado' : 'No estaba en Contactos'
 }
 
 async function quitarCarpeta(token: string, correo: string, permisos?: PorCorreo) {
@@ -987,20 +1007,21 @@ async function moverAcceso(
   cuentasContactos: { clave: string; nombre: string; token: string }[],
   persona: DatosPersona,
   estado: EstadoGoogle,
+  detalladoContactos: boolean,
 ) {
   const c = persona.correo.toLowerCase()
 
   if (paso === 'contactos') {
     if (quitar) {
       if (!algunContacto(estado.contactos, c)) return { paso, ok: true, detalle: 'No lo tenía' }
-      return await intentar(paso, () => borrarContacto(cuentasContactos, persona.correo, estado.contactos))
+      return await intentar(paso, () => borrarContacto(cuentasContactos, persona.correo, estado.contactos, detalladoContactos))
     }
     // Contactos es la excepción a "si ya está, no lo toco": la etiqueta
     // se vuelve a poner aunque el contacto ya existiera en alguna cuenta,
     // que es lo que permite acomodar en su grupo a los que se dieron de
     // alta antes de que hubiera etiquetas, y completar la cuenta que le
     // falte a quien ya estaba en una sola.
-    return await intentar(paso, () => agregarContacto(cuentasContactos, persona, estado.contactos))
+    return await intentar(paso, () => agregarContacto(cuentasContactos, persona, estado.contactos, detalladoContactos))
   }
 
   const tiene = estado[paso].has(c)
@@ -1022,10 +1043,11 @@ async function moverAccesos(
   cuentasContactos: { clave: string; nombre: string; token: string }[],
   persona: DatosPersona,
   estado: EstadoGoogle,
+  detalladoContactos: boolean,
 ) {
   const resultados = []
   for (const paso of pasos) {
-    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, cuentasContactos, persona, estado))
+    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, cuentasContactos, persona, estado, detalladoContactos))
   }
   return resultados
 }
@@ -1078,10 +1100,17 @@ Deno.serve(async (req: Request) => {
 
     // El candado de verdad va aquí, no en la pantalla: esconder una
     // pestaña no impide que alguien llame a la función por su cuenta.
+    //
+    // miRol se queda declarado aquí afuera (no dentro del if) porque las
+    // acciones de más abajo también lo usan: Master ve el desglose de en
+    // qué cuenta de Contactos quedó cada quien, Admin no - así no se
+    // confunde con un dato que no necesita para su trabajo del día a
+    // día.
+    let miRol = ''
     if (!ACCIONES_ABIERTAS.includes(accion)) {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', quien.user.id).single()
-      const miRol = String(perfil?.role || '')
+      miRol = String(perfil?.role || '')
       const miCorreo = String(quien.user.email || '').toLowerCase()
 
       if (ACCIONES_STAFF.includes(accion)) {
@@ -1352,12 +1381,13 @@ Deno.serve(async (req: Request) => {
 
       if (!gente.length) return respond({ error: 'No se recibió a nadie con correo.' }, 400)
 
+      const soyMaster = miRol === 'master'
       const cuentasContactos = await getTokensContactos()
       const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
 
       const hechas = []
       for (const persona of gente) {
-        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasContactos, persona, estado)
+        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasContactos, persona, estado, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1386,12 +1416,21 @@ Deno.serve(async (req: Request) => {
         return {
           correo: p.correo,
           contactos: contactoCompleto(estado.contactos, c),
+          contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
           drive: estado.drive.has(c),
           calendario: estado.calendario.has(c),
         }
       })
 
-      return respond({ ok: hechas.every((h) => h.ok), hechas, estado: estadoFinal })
+      return respond({
+        ok: hechas.every((h) => h.ok),
+        hechas,
+        estado: estadoFinal,
+        // Con qué cuentas se está trabajando: solo Master la recibe, es
+        // lo que la pantalla usa para ponerle nombre a cada columna del
+        // desglose.
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+      })
     }
 
     // ── Revisar accesos: quién tiene qué, en Google ──────────
@@ -1403,6 +1442,7 @@ Deno.serve(async (req: Request) => {
       const hojas = await detectarHojas(tokenPrincipal)
       const valores = await leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja)))
 
+      const soyMaster = miRol === 'master'
       const cuentasContactos = await getTokensContactos()
       const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
 
@@ -1432,6 +1472,7 @@ Deno.serve(async (req: Request) => {
             telefono: p.telefono,
             cumpleanos: p.cumpleanos,
             contactos: contactoCompleto(estado.contactos, c),
+            contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
             drive: estado.drive.has(c),
             calendario: estado.calendario.has(c),
             enSistema: completosBD.has(c),
@@ -1439,7 +1480,10 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      return respond({ personas })
+      return respond({
+        personas,
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+      })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)
