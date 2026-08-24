@@ -12,14 +12,53 @@
   .btn-abrir-accesos {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 6px 13px; border-radius: var(--r-pastilla);
-    background: #fff; border: 1.5px solid var(--border);
+    background: #fff5f5; border: 1.5px solid rgba(138,0,0,0.3);
     font-size: 12px; font-weight: 700; color: var(--red); white-space: nowrap;
     transition: background var(--t-rapido), border-color var(--t-rapido);
   }
-  .kw-fila-cabeza:hover .btn-abrir-accesos { background: #fff5f5; border-color: var(--red); }
-  .btn-abrir-accesos.listo { color: #1a7a1a; }
+  .kw-fila-cabeza:hover .btn-abrir-accesos { background: #ffe6e6; border-color: var(--red); }
+  .btn-abrir-accesos.listo { color: #146c14; background: #f0faf1; border-color: rgba(26,122,26,0.3); }
+  .kw-fila-cabeza:hover .btn-abrir-accesos.listo { background: #e3f6e4; border-color: #1a7a1a; }
   .btn-abrir-accesos.activo { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-abrir-accesos.activo.listo { background: #1a7a1a; color: #fff; border-color: #1a7a1a; }
   .btn-abrir-accesos svg { width: 13px; height: 13px; }
+
+  /* El KWID va sin ícono, solo el texto "ID:" delante del número. */
+  .kw-extra-id { font-weight: 700; color: var(--muted); }
+
+  /* ── Células ──────────────────────────────────────────────────
+     Nada de tarjetas que se abren: un grupo por líder, con su color, y
+     dentro nada más el nombre de cada quien. */
+  .celula-grupo { margin-bottom: var(--sp-5); }
+  .celula-grupo:last-child { margin-bottom: 0; }
+  .celula-titulo {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: var(--sp-3);
+  }
+  .celula-punto { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: var(--cc); }
+  .celula-cuenta {
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: rgba(0,0,0,0.05); border-radius: var(--r-pastilla);
+    padding: 2px 9px;
+  }
+  .celula-tarjetas { display: flex; flex-wrap: wrap; gap: 9px; }
+  .celula-persona {
+    padding: 9px 15px; border-radius: var(--r-campo);
+    border: 1.5px solid var(--cc); background: var(--cc-bg);
+    font-size: 13px; font-weight: 700; color: #2a2a2a;
+  }
+
+  .color-ambar     { --cc: #b8860b; --cc-bg: #fdf6e0; }
+  .color-azul      { --cc: #2563eb; --cc-bg: #eaf0fe; }
+  .color-verde     { --cc: #15803d; --cc-bg: #e9f7ee; }
+  .color-morado    { --cc: #7c3aed; --cc-bg: #f2ecfe; }
+  .color-rosa      { --cc: #db2777; --cc-bg: #fdecf4; }
+  .color-cian      { --cc: #0e7490; --cc-bg: #e6f6f9; }
+  .color-naranja   { --cc: #c2540c; --cc-bg: #fdece0; }
+  .color-indigo    { --cc: #4338ca; --cc-bg: #ecebfc; }
+  .color-rojo      { --cc: #b91c1c; --cc-bg: #fbeaea; }
+  .color-gris-oscuro { --cc: #52525b; --cc-bg: #eeeef0; }
 
   /* ── El expediente del asesor (Usuario Command, contraseña, correo
      personal, etc.) ────────────────────────────────────────────
@@ -1641,7 +1680,7 @@
           '<span class="kw-fila-sub">' + escapeHtml(p.correo || 'Sin correo') + '</span>' +
         '</span>' +
         '<span class="kw-fila-extra">' +
-          '<span class="kw-extra">' + I.etiqueta + '<span>' + escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
+          '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' + escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
           '<span class="kw-extra">' + I.calendario + '<span>' + escapeHtml(fecha || 'Sin fecha') + '</span></span>' +
           '<span class="kw-extra">' + boton + '</span>' +
         '</span>' + I.flecha +
@@ -1651,7 +1690,7 @@
           (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
           (p.puesto ? '<div class="kw-dato">' + I.maletin + '<span class="kw-dato-txt">' + escapeHtml(p.puesto) + '</span></div>' : '') +
           (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
-          '<div class="kw-dato kw-solo-movil">' + I.etiqueta + '<span class="kw-dato-txt">KWID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
+          '<div class="kw-dato kw-solo-movil"><span class="kw-dato-txt">ID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
           '<div class="kw-dato kw-solo-movil">' + I.calendario + '<span class="kw-dato-txt">' + etiquetaFecha + ': ' + escapeHtml(fecha || 'sin fecha') + '</span></div>' +
           infoExtraHtml(p) +
         '</div>' +
@@ -1660,6 +1699,45 @@
         (mostrando ? accesosHtml(p, g) : '') +
       '</div></div></div>' +
     '</div>';
+  }
+
+  // ── Células ──────────────────────────────────────────────────
+  // No es una tarjeta que se abre: aquí solo importa quién está en cada
+  // célula, así que cada quien es nada más su nombre, agrupado bajo el
+  // nombre de su líder y con el color de esa célula en el contorno.
+  const PALETA_CELULAS = ['ambar', 'azul', 'verde', 'morado', 'rosa', 'cian', 'naranja', 'indigo', 'rojo', 'gris-oscuro'];
+
+  // El mismo color para la misma célula cada vez que se pinta: se asigna
+  // por orden alfabético del nombre del líder, no por el orden en que
+  // aparecen en la hoja (ese sí puede cambiar de una recarga a otra).
+  function colorDeCelula(nombreCelula, todasLasCelulas) {
+    const i = todasLasCelulas.indexOf(nombreCelula);
+    return PALETA_CELULAS[i % PALETA_CELULAS.length];
+  }
+
+  function pintarCelulas(cont, g, visibles) {
+    const porCelula = new Map();
+    visibles.forEach(function (p) {
+      const nombreCelula = (p.celula || '').trim() || 'Sin célula asignada';
+      if (!porCelula.has(nombreCelula)) porCelula.set(nombreCelula, []);
+      porCelula.get(nombreCelula).push(p);
+    });
+
+    const nombresCelulas = Array.from(porCelula.keys()).sort(function (a, b) { return a.localeCompare(b, 'es'); });
+
+    cont.innerHTML = nombresCelulas.map(function (nombreCelula) {
+      const color = colorDeCelula(nombreCelula, nombresCelulas);
+      const personas = porCelula.get(nombreCelula)
+        .slice()
+        .sort(function (a, b) { return (a.nombre || '').localeCompare(b.nombre || '', 'es'); });
+      return '<div class="celula-grupo">' +
+        '<div class="celula-titulo"><span class="celula-punto color-' + color + '"></span>' +
+          escapeHtml(nombreCelula) + '<span class="celula-cuenta">' + personas.length + '</span></div>' +
+        '<div class="celula-tarjetas">' + personas.map(function (p) {
+          return '<div class="celula-persona color-' + color + '">' + escapeHtml(p.nombre || 'Sin nombre') + '</div>';
+        }).join('') + '</div>' +
+      '</div>';
+    }).join('');
   }
 
   function pintarGrupos() {
@@ -1689,6 +1767,11 @@
           'Prueba con otro nombre, correo o KWID.</div>';
         return;
       }
+
+      // Células no es una lista de tarjetas que se abren: es nada más
+      // ver quién está en cada célula, así que se agrupa por líder y se
+      // pinta aparte (ver pintarCelulas).
+      if (g.clave === 'celulas') { pintarCelulas(cont, g, visibles); return; }
 
       // Se guarda cuál estaba abierta para volver a abrirla al repintar:
       // sin esto, dar un acceso cerraba la tarjeta en la cara de quien
