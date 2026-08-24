@@ -19,8 +19,16 @@
   .kw-fila-cabeza:hover .btn-abrir-accesos { background: #ffe6e6; border-color: var(--red); }
   .btn-abrir-accesos.listo { color: #146c14; background: #f0faf1; border-color: rgba(26,122,26,0.3); }
   .kw-fila-cabeza:hover .btn-abrir-accesos.listo { background: #e3f6e4; border-color: #1a7a1a; }
+  /* .activo (accesos abiertos) rellena con el color sólido y letras
+     blancas. Necesita su PROPIA regla de :hover con más peso que las de
+     arriba (dos clases contra una, o tres contra dos): sin eso, al pasar
+     el mouse por encima el fondo se caía al rosa/verde pálido de siempre
+     mientras el texto se quedaba blanco - blanco sobre casi blanco,
+     that's the "las letras se ponen blancas" que se reportó. */
   .btn-abrir-accesos.activo { background: var(--red); color: #fff; border-color: var(--red); }
+  .kw-fila-cabeza:hover .btn-abrir-accesos.activo { background: #6e0000; border-color: #6e0000; }
   .btn-abrir-accesos.activo.listo { background: #1a7a1a; color: #fff; border-color: #1a7a1a; }
+  .kw-fila-cabeza:hover .btn-abrir-accesos.activo.listo { background: #146c14; border-color: #146c14; }
   .btn-abrir-accesos svg { width: 13px; height: 13px; }
 
   /* El KWID va sin ícono, solo el texto "ID:" delante del número. */
@@ -42,11 +50,20 @@
     background: rgba(0,0,0,0.05); border-radius: var(--r-pastilla);
     padding: 2px 9px;
   }
-  .celula-tarjetas { display: flex; flex-wrap: wrap; gap: 9px; }
+  /* Renglones, no chips sueltos - y a dos columnas para que la lista no
+     se vaya tan larga con muchos asesores por célula. */
+  .celula-tarjetas {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px;
+  }
   .celula-persona {
-    padding: 9px 15px; border-radius: var(--r-campo);
-    border: 1.5px solid var(--cc); background: var(--cc-bg);
-    font-size: 13px; font-weight: 700; color: #2a2a2a;
+    display: flex; align-items: center;
+    padding: 10px 13px; border-radius: 9px;
+    border: 1px solid var(--border); border-left: 4px solid var(--cc);
+    background: #fff;
+    font-size: 13px; font-weight: 600; color: var(--text);
+  }
+  @media (max-width: 640px) {
+    .celula-tarjetas { grid-template-columns: 1fr; }
   }
 
   .color-ambar     { --cc: #b8860b; --cc-bg: #fdf6e0; }
@@ -426,6 +443,8 @@
   .btn:disabled { opacity: 0.55; cursor: default; }
   .btn svg { width: 15px; height: 15px; }
   .btn-mini { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
+  /* Solo el ícono, cuadrado en vez de alargado por texto que ya no lleva. */
+  .btn-solo-icono { padding: 9px; width: 38px; justify-content: center; flex-shrink: 0; }
 
   /* Lo que va en lugar del botón en la hoja de bajas. */
   .estado-alta {
@@ -450,9 +469,12 @@
     .buscador { max-width: none; flex: 1 1 100%; order: -1; }
     .barra-botones { flex: 1 1 100%; gap: 7px; position: relative; }
     /* El de marcar todos va dentro de su envoltorio de confirmar, así que
-       el reparto del renglón se le pide a ese, no al botón. */
-    .barra-botones > .btn, .barra-botones > .kw-confirmar { flex: 1 1 0; min-width: 0; }
-    .barra-botones .btn { width: 100%; justify-content: center; gap: 6px; padding: 9px 6px; font-size: 12px; }
+       el reparto del renglón se le pide a ese, no al botón. El de solo
+       ícono se queda de su tamaño fijo - crecer parejo lo dejaría
+       ancho por gusto, con todo ese hueco vacío alrededor del ícono. */
+    .barra-botones > .btn:not(.btn-solo-icono), .barra-botones > .kw-confirmar { flex: 1 1 0; min-width: 0; }
+    .barra-botones > .btn-solo-icono { flex: 0 0 auto; }
+    .barra-botones .btn:not(.btn-solo-icono) { width: 100%; justify-content: center; gap: 6px; padding: 9px 6px; font-size: 12px; }
     .barra-botones .btn svg { width: 14px; height: 14px; }
     .btn-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .btn-txt-largo { display: none; }
@@ -533,9 +555,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
               <span class="btn-txt">Revisar<span class="btn-txt-largo"> Accesos</span></span>
             </button>
-            <button type="button" class="btn" id="btn-recargar" onclick="cargarAsesores()">
+            <button type="button" class="btn btn-solo-icono" id="btn-recargar" onclick="cargarAsesores()" title="Recargar el libro" aria-label="Recargar el libro">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              <span class="btn-txt">Recargar<span class="btn-txt-largo"> el libro</span></span>
             </button>
             </div>
           </div>
