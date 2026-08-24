@@ -1186,6 +1186,51 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ── Nuevo Asesor: capturar el expediente desde el sitio ──────
+    //
+    // No toca Google Sheets ni las demás APIs de Google - es un guardado
+    // directo a la base, así que va ANTES de pedir el token de Google:
+    // que ese servicio esté lento o caído no debe tumbar algo que no lo
+    // necesita para nada.
+    if (accion === 'crear_ingreso') {
+      const d = (body.datos || {}) as Record<string, unknown>
+      const texto = (v: unknown) => { const s = String(v ?? '').trim(); return s || null }
+      const tipo = String(d.tipo || 'asesor')
+      if (!['asesor', 'back_office'].includes(tipo)) {
+        return respond({ error: 'Tipo de ingreso no reconocido.' }, 400)
+      }
+      const nombre = texto(d.nombre)
+      if (!nombre) return respond({ error: 'Falta el nombre del asesor.' }, 400)
+
+      const cumpleanos = aFecha(String(d.cumpleanos || ''))
+
+      const { data: creado, error: errCrear } = await admin.from('ingreso_asesores').insert({
+        tipo,
+        nombre,
+        correo_personal: texto(d.correo_personal),
+        celular: texto(d.celular),
+        curp: texto(d.curp)?.toUpperCase() ?? null,
+        cumpleanos,
+        tipo_asociado: texto(d.tipo_asociado),
+        sponsor: texto(d.sponsor),
+        usuario_command: texto(d.usuario_command),
+        correo_kw: limpiarCorreo(d.correo_kw) || null,
+        contrasena: texto(d.contrasena),
+        kwid: texto(d.kwid),
+        aniversario: texto(d.aniversario),
+        clasificacion: texto(d.clasificacion),
+        coach_asignado: texto(d.coach_asignado),
+        emergencia_nombre: texto(d.emergencia_nombre),
+        emergencia_celular: texto(d.emergencia_celular),
+        emergencia_correo: limpiarCorreo(d.emergencia_correo) || null,
+        emergencia_parentesco: texto(d.emergencia_parentesco),
+        capturado_por: quien.user.id,
+      }).select('id').single()
+
+      if (errCrear) return respond({ error: `No se pudo guardar: ${errCrear.message}` }, 500)
+      return respond({ ok: true, id: creado?.id })
+    }
+
     const tokenPrincipal = await getAccessToken(GOOGLE_REFRESH_TOKEN)
 
     // ── Árbol de la carpeta de Drive (pantalla de Documentos) ──
