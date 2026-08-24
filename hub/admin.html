@@ -18,7 +18,34 @@
   }
   .kw-fila-cabeza:hover .btn-abrir-accesos { background: #fff5f5; border-color: var(--red); }
   .btn-abrir-accesos.listo { color: #1a7a1a; }
+  .btn-abrir-accesos.activo { background: var(--red); color: #fff; border-color: var(--red); }
   .btn-abrir-accesos svg { width: 13px; height: 13px; }
+
+  /* ── El expediente del asesor (Usuario Command, contraseña, correo
+     personal, etc.) ────────────────────────────────────────────
+     Sale del mismo Excel de siempre; mientras eso siga siendo la fuente
+     va a haber huecos, y esos se dejan vacíos en vez de mostrar algo. */
+  .kw-clave { display: inline-flex; align-items: center; gap: 8px; }
+  .clave-valor {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    letter-spacing: 0.02em;
+  }
+  /* Esto es para que no se quede a la vista sin querer al abrir la
+     tarjeta - el texto real sigue en el DOM debajo del borrón, así que
+     no es una forma de esconderla de quien abra las herramientas de
+     desarrollador del navegador. */
+  .clave-valor.oculta { filter: blur(5px); user-select: none; }
+  .clave-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    border: none; background: none; color: var(--muted); cursor: pointer;
+    transition: background var(--t-rapido), color var(--t-rapido);
+  }
+  .clave-toggle:hover { background: #f0f0f0; color: var(--text); }
+  .clave-toggle svg { width: 14px; height: 14px; }
+
+  .kw-emergencia .kw-dato-txt { display: flex; flex-direction: column; gap: 1px; }
+  .kw-emergencia-titulo { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
   .accesos { margin-top: var(--sp-3); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
   .accesos-titulo {
@@ -1368,6 +1395,16 @@
   // segunda (GOOGLE_REFRESH_TOKEN_CONTACTOS); mientras tanto se queda
   // vacío y el desglose no se enseña.
   let cuentasContactosInfo = [];
+  // Correos cuya tarjeta trae abierto el bloque de Accesos. Picar la
+  // tarjeta (la flecha, el nombre, donde sea del encabezado) solo
+  // enseña los datos del asesor; los accesos se quedan escondidos hasta
+  // que se pica el botón "Dar de alta" a propósito.
+  const mostrandoAccesos = new Set();
+  // Contraseñas del expediente que se pidieron mostrar (ver
+  // infoExtraHtml). El texto real siempre vive en el DOM; esto solo
+  // decide si se ve borroso o no.
+  const clavesVisibles = new Set();
+  const ICONO_LLAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>';
 
   function esMaster() { return miRol === 'master'; }
 
@@ -1490,6 +1527,52 @@
     }).join('') + '</div>';
   }
 
+  // Una línea del bloque de info, o nada si el dato viene vacío: casi
+  // todo esto sale del Excel a mano, así que huecos son lo normal, no
+  // el error.
+  function datoHtml(icono, texto, href) {
+    if (!texto) return '';
+    const contenido = '<span class="kw-dato-txt">' + escapeHtml(texto) + '</span>';
+    return href
+      ? '<a class="kw-dato" href="' + escapeHtml(href) + '">' + icono + contenido + '</a>'
+      : '<div class="kw-dato">' + icono + contenido + '</div>';
+  }
+
+  // El expediente del asesor: lo que trae el Excel además de lo que ya
+  // se usaba para el alta. Mientras esto siga viviendo en una hoja, va a
+  // haber datos que falten - se dejan vacíos, no es un error.
+  function infoExtraHtml(p) {
+    const I = window.kwUI.iconos;
+    const emergencia = [p.emergenciaNombre, p.emergenciaParentesco ? '(' + p.emergenciaParentesco + ')' : '']
+      .filter(Boolean).join(' ');
+    const claveVisible = clavesVisibles.has(p.correo);
+    const clave = p.contrasena
+      ? '<div class="kw-dato">' + ICONO_LLAVE +
+          '<span class="kw-dato-txt kw-clave">' +
+            '<span class="clave-valor' + (claveVisible ? '' : ' oculta') + '" data-correo="' + escapeHtml(p.correo) + '">' + escapeHtml(p.contrasena) + '</span>' +
+            '<button type="button" class="clave-toggle" data-correo="' + escapeHtml(p.correo) + '" aria-label="' + (claveVisible ? 'Ocultar' : 'Mostrar') + ' contraseña">' + I.ojo + '</button>' +
+          '</span>' +
+        '</div>'
+      : '';
+    return datoHtml(I.persona, p.usuarioCommand, null) +
+      clave +
+      datoHtml(I.correo, p.correoPersonal, p.correoPersonal ? 'mailto:' + p.correoPersonal : null) +
+      datoHtml(I.calendario, p.cumpleanos ? 'Cumpleaños: ' + p.cumpleanos : '', null) +
+      datoHtml(I.etiqueta, p.tipoAsociado ? 'Tipo de asociado: ' + p.tipoAsociado : '', null) +
+      datoHtml(I.calendario, p.aniversario ? 'Aniversario KW: ' + p.aniversario : '', null) +
+      datoHtml(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
+      (emergencia || p.emergenciaTelefono || p.emergenciaCorreo
+        ? '<div class="kw-dato kw-emergencia">' + I.persona +
+            '<span class="kw-dato-txt">' +
+              '<span class="kw-emergencia-titulo">Contacto de emergencia</span>' +
+              (emergencia ? '<span>' + escapeHtml(emergencia) + '</span>' : '') +
+              (p.emergenciaTelefono ? '<a href="tel:' + escapeHtml(p.emergenciaTelefono) + '">' + escapeHtml(p.emergenciaTelefono) + '</a>' : '') +
+              (p.emergenciaCorreo ? '<a href="mailto:' + escapeHtml(p.emergenciaCorreo) + '">' + escapeHtml(p.emergenciaCorreo) + '</a>' : '') +
+            '</span>' +
+          '</div>'
+        : '');
+  }
+
   function accesosHtml(p, g) {
     if (!grupoDaDeAlta(g.clave)) return '';
 
@@ -1537,10 +1620,15 @@
 
     // El botón vive DENTRO de la cabeza, que ya es el botón que abre la
     // tarjeta: por eso es un <span> y no un <button> (un botón dentro de
-    // otro no es HTML válido). Picarlo abre la tarjeta, que es donde
-    // están los accesos.
+    // otro no es HTML válido) - pero sí tiene su propio escuchador (ver
+    // más abajo, en fase de captura) para que picarlo NO sea lo mismo
+    // que picar el resto del encabezado. El resto del encabezado abre la
+    // tarjeta y enseña los datos del asesor; este botón, además, enseña
+    // los accesos.
+    const mostrando = mostrandoAccesos.has(p.correo);
     const boton = (!esBaja && p.correo)
-      ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + '">' +
+      ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + (mostrando ? ' activo' : '') + '"' +
+          ' data-correo="' + escapeHtml(p.correo) + '">' +
           (completo ? ICONO_LISTO : '') + 'Dar de alta</span>'
       : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Dado de baja</span>';
 
@@ -1565,8 +1653,11 @@
           (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
           '<div class="kw-dato kw-solo-movil">' + I.etiqueta + '<span class="kw-dato-txt">KWID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
           '<div class="kw-dato kw-solo-movil">' + I.calendario + '<span class="kw-dato-txt">' + etiquetaFecha + ': ' + escapeHtml(fecha || 'sin fecha') + '</span></div>' +
+          infoExtraHtml(p) +
         '</div>' +
-        accesosHtml(p, g) +
+        // Los accesos van escondidos hasta que se pica "Dar de alta" a
+        // propósito: picar la tarjeta nada más enseña los datos.
+        (mostrando ? accesosHtml(p, g) : '') +
       '</div></div></div>' +
     '</div>';
   }
@@ -1633,6 +1724,52 @@
     e.stopPropagation();
     const pasos = btn.dataset.acceso ? [btn.dataset.acceso] : null;
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
+  });
+
+  // El botón "Dar de alta" vive DENTRO del encabezado de la tarjeta, que
+  // es a su vez un <button> que abre/cierra la tarjeta entera (lo arma
+  // kw-ui.js). Para que picar el botón NO dispare también el abrir/cerrar
+  // de kw-ui (que llegaría primero si se frenara nada más al burbujear),
+  // este escuchador va en FASE DE CAPTURA: así se entera del clic antes
+  // de que le toque al de kw-ui, y puede detenerlo ahí mismo.
+  document.addEventListener('click', function (e) {
+    const boton = e.target.closest('.btn-abrir-accesos');
+    if (!boton) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const correo = boton.dataset.correo;
+    if (mostrandoAccesos.has(correo)) {
+      mostrandoAccesos.delete(correo);
+    } else {
+      mostrandoAccesos.add(correo);
+      // Se abre la tarjeta si estaba cerrada, para que los accesos que
+      // se acaban de pedir de verdad se alcancen a ver. Si ya estaba
+      // abierta (mostrando los datos), se queda como está.
+      const fila = boton.closest('.kw-fila');
+      if (fila && !fila.classList.contains('abierta')) {
+        const lista = fila.closest('.kw-lista');
+        if (lista) Array.from(lista.querySelectorAll('.kw-fila.abierta')).forEach(function (f) { f.classList.remove('abierta'); });
+        fila.classList.add('abierta');
+      }
+    }
+    pintarGrupos();
+  }, true);
+
+  // Mostrar/ocultar una contraseña del expediente. El texto real ya
+  // vive en el DOM (nada más se ve borroso mientras está oculta): esto
+  // es para que no se quede a la vista sin querer al abrir la tarjeta,
+  // no una forma de esconderla de alguien que abra las herramientas de
+  // desarrollador del navegador.
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.clave-toggle');
+    if (!btn) return;
+    e.preventDefault();
+    const correo = btn.dataset.correo;
+    if (clavesVisibles.has(correo)) clavesVisibles.delete(correo); else clavesVisibles.add(correo);
+    const valor = btn.parentElement.querySelector('.clave-valor');
+    if (valor) valor.classList.toggle('oculta', !clavesVisibles.has(correo));
+    btn.setAttribute('aria-label', clavesVisibles.has(correo) ? 'Ocultar contraseña' : 'Mostrar contraseña');
   });
 
   // ── Dar y quitar accesos ──

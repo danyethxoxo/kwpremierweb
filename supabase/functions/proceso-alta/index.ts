@@ -319,6 +319,19 @@ type Persona = {
   puesto: string
   celula: string
   fechaBaja: string
+  // Lo que trae el libro además de lo de arriba: el expediente del
+  // asesor mientras esto siga viviendo en el Excel. El día que se
+  // capture directo en el sitio, estos dejan de venir de aquí.
+  usuarioCommand: string
+  contrasena: string
+  correoPersonal: string
+  tipoAsociado: string
+  aniversario: string
+  coachAsignado: string
+  emergenciaNombre: string
+  emergenciaTelefono: string
+  emergenciaCorreo: string
+  emergenciaParentesco: string
 }
 
 // Con qué encabezado se reconoce cada dato. Se compara sin acentos ni
@@ -333,16 +346,32 @@ const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
   // "agente" es el nombre real de la persona; "nombre" (si existe
   // aparte) suele ser el nombre comercial, así que va después.
   agente: { si: ['agente'] },
-  nombre: { si: ['nombre completo', 'nombre'], no: ['comercial', 'celula', 'sponsor', 'coach'] },
+  nombre: { si: ['nombre completo', 'nombre'], no: ['comercial', 'celula', 'sponsor', 'coach', 'personal'] },
   apellido: { si: ['apellido'] },
-  correo: { si: ['correo', 'email', 'e-mail', 'mail'] },
-  telefono: { si: ['telefono', 'celular', 'movil', 'whatsapp'] },
+  // "personal" descalifica: sin eso, una columna "Correo personal" se
+  // podía colar como SI fuera el correo de KW (el que de verdad se usa
+  // para el alta), nada más por venir antes en la hoja.
+  correo: { si: ['correo', 'email', 'e-mail', 'mail'], no: ['personal', 'particular'] },
+  telefono: { si: ['telefono', 'celular', 'movil', 'whatsapp'], no: ['emergencia'] },
   kwid: { si: ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'] },
   ingreso: { si: ['fecha de ingreso', 'fecha ingreso'] },
-  cumple: { si: ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'] },
+  cumple: { si: ['cumpleanos', 'cumple', 'fecha de nacimiento', 'nacimiento', 'birthday'] },
   puesto: { si: ['puesto', 'cargo'] },
   celula: { si: ['celula', 'equipo'], no: ['celular'] },
   baja: { si: ['fecha de baja', 'baja'] },
+  // El expediente del asesor. Vive en el mismo Excel mientras no haya
+  // otra fuente; el día que se capture desde el sitio, esto se conecta
+  // ahí en vez de leerlo de la hoja.
+  usuarioCommand: { si: ['usuario command', 'usuario de command', 'usuario kw'] },
+  contrasena: { si: ['contrasena'] },
+  correoPersonal: { si: ['correo personal', 'correo particular', 'email personal'] },
+  tipoAsociado: { si: ['tipo de asociado', 'tipo asociado'] },
+  aniversario: { si: ['aniversario'] },
+  coachAsignado: { si: ['coach asignado', 'coach'] },
+  emergenciaNombre: { si: ['contacto de emergencia', 'nombre emergencia', 'emergencia'], no: ['cel', 'tel', 'correo', 'email', 'parentesco'] },
+  emergenciaTelefono: { si: ['cel emergencia', 'celular emergencia', 'tel emergencia', 'telefono emergencia'] },
+  emergenciaCorreo: { si: ['correo emergencia', 'email emergencia'] },
+  emergenciaParentesco: { si: ['parentesco'] },
 }
 
 function indiceDeColumna(encabezados: string[], clave: string): number {
@@ -414,6 +443,16 @@ function parsearPersonas(filas: string[][]): Persona[] {
     puesto: dato(fila, 'puesto'),
     celula: dato(fila, 'celula'),
     fechaBaja: dato(fila, 'baja'),
+    usuarioCommand: dato(fila, 'usuarioCommand'),
+    contrasena: dato(fila, 'contrasena'),
+    correoPersonal: dato(fila, 'correoPersonal'),
+    tipoAsociado: dato(fila, 'tipoAsociado'),
+    aniversario: dato(fila, 'aniversario'),
+    coachAsignado: dato(fila, 'coachAsignado'),
+    emergenciaNombre: dato(fila, 'emergenciaNombre'),
+    emergenciaTelefono: dato(fila, 'emergenciaTelefono'),
+    emergenciaCorreo: dato(fila, 'emergenciaCorreo'),
+    emergenciaParentesco: dato(fila, 'emergenciaParentesco'),
   }))
 
   // Una hoja no trae solo personas: trae subtítulos que parten la tabla
@@ -424,7 +463,8 @@ function parsearPersonas(filas: string[][]): Persona[] {
   return personas.filter((p) => {
     if (p.correo) return true
     if (!p.nombre) return false
-    return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja)
+    return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja
+      || p.usuarioCommand || p.correoPersonal || p.tipoAsociado || p.aniversario || p.coachAsignado)
   })
 }
 
@@ -574,9 +614,13 @@ function desglosePorCuenta(mapa: ContactosPorCuenta, correo: string): Record<str
 // En Google Contacts una etiqueta es un "grupo de contactos". Se busca
 // por nombre y, si no existe, se crea: así la primera alta de cada tipo
 // deja la etiqueta lista sin que nadie tenga que ir a crearla a mano.
+// Los nombres tienen que ser EXACTOS a los que ya existen en Google
+// Contacts (se comparan sin acentos ni mayúsculas, así que el caso no
+// importa para encontrarlos, pero sí conviene que el texto sea el mismo
+// para no dejar una etiqueta nueva y duplicada al lado de la de siempre).
 const ETIQUETAS_CONTACTO: Record<string, string> = {
-  asesores: 'Asesores Inmobiliarios',
-  back_office: 'Back Office',
+  asesores: 'ASOCIADOS VIGENTES',
+  back_office: 'BACKOFFICE',
 }
 
 // Qué etiqueta le toca a cada hoja del libro. Las bajas no llevan: a esa
