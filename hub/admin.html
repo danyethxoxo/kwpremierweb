@@ -35,9 +35,15 @@
   .kw-extra-id { font-weight: 700; color: var(--muted); }
 
   /* ── Células ──────────────────────────────────────────────────
-     Nada de tarjetas que se abren: un grupo por líder, con su color, y
-     dentro nada más el nombre de cada quien. */
-  .celula-grupo { margin-bottom: var(--sp-5); }
+     Nada de tarjetas que se abren: una caja por líder (célula o, si no
+     tiene, su Coaching), con el color en el CONTORNO de la caja entera
+     - así se ve de un vistazo dónde empieza y termina la gente de cada
+     quien. Dentro, nada más el nombre de cada persona, en renglones
+     lisos sin color propio: el color ya lo puso la caja que los rodea. */
+  .celula-grupo {
+    border: 1.5px solid var(--cc); border-radius: var(--r-tarjeta);
+    padding: var(--sp-4); margin-bottom: var(--sp-4); background: #fff;
+  }
   .celula-grupo:last-child { margin-bottom: 0; }
   .celula-titulo {
     display: flex; align-items: center; gap: 9px;
@@ -57,12 +63,12 @@
   }
   .celula-persona {
     display: flex; align-items: center;
-    padding: 10px 13px; border-radius: 9px;
-    border: 1px solid var(--border); border-left: 4px solid var(--cc);
-    background: #fff;
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: #fafafa;
     font-size: 13px; font-weight: 600; color: var(--text);
   }
   @media (max-width: 640px) {
+    .celula-grupo { padding: var(--sp-3); }
     .celula-tarjetas { grid-template-columns: 1fr; }
   }
 
@@ -1740,9 +1746,13 @@
   function pintarCelulas(cont, g, visibles) {
     const porCelula = new Map();
     visibles.forEach(function (p) {
-      const nombreCelula = (p.celula || '').trim() || 'Sin célula asignada';
-      if (!porCelula.has(nombreCelula)) porCelula.set(nombreCelula, []);
-      porCelula.get(nombreCelula).push(p);
+      // Quien no tiene célula pero sí trae Coaching se agrupa bajo su
+      // coach: en la hoja es la misma idea (a quién le reporta), nada
+      // más en otra columna. "Sin célula asignada" se queda para quien
+      // de plano no trae ninguna de las dos.
+      const nombreGrupo = (p.celula || '').trim() || (p.coachAsignado || '').trim() || 'Sin célula asignada';
+      if (!porCelula.has(nombreGrupo)) porCelula.set(nombreGrupo, []);
+      porCelula.get(nombreGrupo).push(p);
     });
 
     const nombresCelulas = Array.from(porCelula.keys()).sort(function (a, b) { return a.localeCompare(b, 'es'); });
@@ -1752,11 +1762,14 @@
       const personas = porCelula.get(nombreCelula)
         .slice()
         .sort(function (a, b) { return (a.nombre || '').localeCompare(b.nombre || '', 'es'); });
-      return '<div class="celula-grupo">' +
+      // El color va en el CONTORNO del grupo entero (una caja por líder),
+      // no en cada renglón: así se ve de un vistazo dónde empieza y
+      // termina la gente de cada quien.
+      return '<div class="celula-grupo color-' + color + '">' +
         '<div class="celula-titulo"><span class="celula-punto color-' + color + '"></span>' +
           escapeHtml(nombreCelula) + '<span class="celula-cuenta">' + personas.length + '</span></div>' +
         '<div class="celula-tarjetas">' + personas.map(function (p) {
-          return '<div class="celula-persona color-' + color + '">' + escapeHtml(p.nombre || 'Sin nombre') + '</div>';
+          return '<div class="celula-persona">' + escapeHtml(p.nombre || 'Sin nombre') + '</div>';
         }).join('') + '</div>' +
       '</div>';
     }).join('');
