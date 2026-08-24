@@ -175,8 +175,19 @@ function limpiarCorreo(s: unknown): string {
 
 // Sin acentos y en minúsculas, para poder comparar nombres de hoja y de
 // columna sin importar cómo los haya escrito quien llena el libro.
+// Los encabezados tambi\u00E9n se pegan a mano igual que el resto de la
+// hoja, as\u00ED que pueden traer el mismo tipo de espacios invisibles que
+// limpiarCorreo ya cuida en el correo (espacio de ancho cero, BOM,
+// espacio de "no separar" \u00A0 que deja Word/Google Docs al copiar).
+// Sin esto, un encabezado como "Fecha de\u00A0nacimiento" no coincid\u00EDa
+// con la palabra clave "fecha de nacimiento" (espacio normal) aunque a
+// simple vista se vieran id\u00E9nticos.
 function normalizar(s: unknown): string {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '').trim()
+  return String(s || '')
+    .replace(/[\u200B\u200C\u200D\uFEFF\u00A0]/g, ' ')
+    .toLowerCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // Convierte "DD/MM/AAAA" (o con guiones, o "AAAA-MM-DD") al formato de
