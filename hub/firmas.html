@@ -501,7 +501,7 @@
 
   .env-menu {
     position: fixed; z-index: 60; width: 260px;
-    max-height: 380px; overflow-y: auto;
+    max-height: min(380px, calc(100vh - 32px)); overflow-y: auto;
     background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 45%, rgba(255,255,255,0.88) 100%);
     border: 1px solid rgba(255,255,255,0.82); border-radius: 12px;
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
@@ -2992,7 +2992,20 @@
 
   // Lo coloca pegado al botón, y si no cabe hacia abajo lo sube: en un
   // renglón del final de la lista se saldría de la pantalla.
-  function colocar(caja, boton, ancho) {
+  //
+  // El del lápiz (asesor + etiquetas) pide "centrado" en cambio: mide su
+  // alto antes de llenar esas listas, que se pintan aparte y después, así
+  // que ese cálculo de "cabe o no cabe" ya le sale con un alto más chico
+  // del que de verdad va a ocupar. Centrarlo en la pantalla en vez de
+  // pegarlo al botón evita el problema sin depender de esa medición, y de
+  // paso queda igual de completo sin importar el zoom de la página.
+  function colocar(caja, boton, ancho, centrado) {
+    if (centrado) {
+      caja.style.top = '50%';
+      caja.style.left = '50%';
+      caja.style.transform = 'translate(-50%, -50%)';
+      return;
+    }
     const r = boton.getBoundingClientRect();
     const alto = caja.offsetHeight;
     const arriba = r.bottom + alto > window.innerHeight - 8;
@@ -3000,7 +3013,7 @@
     caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
   }
 
-  function abrirFlotante(boton, ancho, html) {
+  function abrirFlotante(boton, ancho, html, centrado) {
     // Si ya estaba abierto por este mismo botón, se cierra y ya.
     if (botonAbierto === boton) { cerrarFlotante(); return null; }
 
@@ -3012,7 +3025,7 @@
     caja.innerHTML = html;
     document.body.appendChild(caja);
     flotante = caja;
-    colocar(caja, boton, ancho);
+    colocar(caja, boton, ancho, centrado);
     caja.addEventListener('click', (e) => e.stopPropagation());
     return caja;
   }
@@ -3092,7 +3105,7 @@
       '<div class="env-menu-busca">' +
         '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
       '</div>' +
-      '<div id="lista-etiquetas"></div>');
+      '<div id="lista-etiquetas"></div>', true);
     if (!caja) return;
 
     // ── Asesores ──
