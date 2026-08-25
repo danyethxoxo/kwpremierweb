@@ -583,8 +583,17 @@
     background: #f4f4f4;
   }
 
-  .doc-lado { display: flex; flex-direction: column; gap: var(--sp-3); }
-  .doc-lado-tit { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  /* Mismo alto que el visor de al lado (.doc-marco), para que el
+     recuadro no crezca según cuántos firmantes tenga el documento: con
+     cuatro o más se hacía larguísimo y descuadraba el modal. La lista de
+     firmantes es lo único que se desplaza; el título y "Descargar" se
+     quedan fijos arriba y abajo. */
+  .doc-lado {
+    display: flex; flex-direction: column; gap: var(--sp-3);
+    height: min(72vh, 760px);
+  }
+  .doc-lado-tit { font-size: 13px; font-weight: 700; margin-bottom: 4px; flex: 0 0 auto; }
+  .doc-firmantes { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
   .doc-firmante {
     display: flex; align-items: flex-start; gap: 9px;
     padding: 9px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
@@ -1180,7 +1189,8 @@
       <div class="doc-split">
         <div id="doc-cuerpo" class="doc-marco"></div>
         <div class="doc-lado">
-          <div id="doc-lado"></div>
+          <div id="doc-lado-tit" class="doc-lado-tit"></div>
+          <div id="doc-lado" class="doc-firmantes"></div>
           <div class="det-acciones" id="doc-acciones"></div>
         </div>
       </div>
@@ -2621,6 +2631,7 @@
     // y hasta ahora la pantalla se quedaba muerta sin decir nada: uno le
     // picaba al renglón y no pasaba nada durante varios segundos.
     $('doc-titulo').textContent = nombreDoc(f);
+    $('doc-lado-tit').textContent = '';
     $('doc-lado').innerHTML = '';
     $('doc-acciones').innerHTML = '';
     $('doc-cuerpo').innerHTML =
@@ -2697,12 +2708,13 @@
     const yaFirmaron = firmantes.filter((x) => x.firmado).length;
     const faltan = firmantes.length - yaFirmaron;
 
+    $('doc-lado-tit').textContent = firmantes.length
+      ? (faltan ? 'Firmas pendientes ' + faltan + '/' + firmantes.length
+                : 'Firmado por los ' + firmantes.length)
+      : '';
+
     $('doc-lado').innerHTML = firmantes.length
-      ? '<div class="doc-lado-tit">' +
-          (faltan ? 'Firmas pendientes ' + faltan + '/' + firmantes.length
-                  : 'Firmado por los ' + firmantes.length) +
-        '</div>' +
-        firmantes.map((x) => {
+      ? firmantes.map((x) => {
           // La liga solo mientras esa persona no haya firmado: pasársela
           // a quien ya firmó lo manda a un documento donde no puede
           // hacer nada.
