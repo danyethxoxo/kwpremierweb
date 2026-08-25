@@ -180,6 +180,18 @@
         </div>
         <button type="submit" class="btn-submit" id="olvide-btn">Enviar link para restablecer</button>
       </form>
+
+      <form id="mfa-form" style="display:none;">
+        <p class="sub" style="margin-bottom:14px;">Abre tu app autenticadora y escribe el código de 6 dígitos.</p>
+        <div class="field">
+          <label>Código</label>
+          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
+        </div>
+        <button type="submit" class="btn-submit" id="mfa-btn">Verificar</button>
+        <div class="toggle-mode" style="margin-top:14px;">
+          <a href="#" id="link-mfa-cancelar" onclick="return cancelarMFA()">Usar otra cuenta</a>
+        </div>
+      </form>
     </div>
   </main>
 
@@ -231,6 +243,76 @@
     el.textContent = '';
   }
 
+  // Después de una contraseña correcta (o al llegar con sesión ya
+  // abierta) falta ver si esa cuenta tiene verificación en dos pasos
+  // activada: la sesión existe pero se queda en "aal1" hasta que se
+  // complete el código, y las páginas protegidas la rechazan igual
+  // (auth-guard.js hace la misma comprobación, por si alguien se salta
+  // este paso navegando directo a otra URL).
+  async function revisarAAL() {
+    try {
+      const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error) throw error;
+      if (data.nextLevel === 'aal2' && data.currentLevel !== data.nextLevel) {
+        mostrarFormMFA();
+        return;
+      }
+    } catch (err) {
+      // Si esta comprobación falla, se deja pasar: la sesión de
+      // cualquier forma queda atrapada por auth-guard.js en la
+      // siguiente página, o por RLS del lado de la base.
+    }
+    try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
+    mostrarCargando();
+    location.replace(getRedirectTarget());
+  }
+
+  function mostrarFormMFA() {
+    document.getElementById('auth-form').style.display = 'none';
+    document.getElementById('link-olvide').parentElement.style.display = 'none';
+    document.getElementById('olvide-form').style.display = 'none';
+    document.getElementById('mfa-form').style.display = 'block';
+    document.getElementById('form-title').textContent = 'Verificación en dos pasos';
+    document.getElementById('form-sub').textContent = 'Un paso más para entrar.';
+    clearMsg();
+    document.getElementById('mfa-codigo').focus();
+  }
+
+  function cancelarMFA() {
+    sb.auth.signOut().then(function () { location.reload(); });
+    return false;
+  }
+
+  document.getElementById('mfa-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearMsg();
+    const codigo = document.getElementById('mfa-codigo').value.trim();
+    const btn = document.getElementById('mfa-btn');
+    if (!/^\d{6}$/.test(codigo)) {
+      showMsg('Escribe los 6 dígitos que te da la app.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const { data: factores, error: errFactores } = await sb.auth.mfa.listFactors();
+      if (errFactores) throw errFactores;
+      const factor = (factores.totp || []).find((f) => f.status === 'verified');
+      if (!factor) throw new Error('No se encontró tu verificación en dos pasos.');
+      const { data: reto, error: errReto } = await sb.auth.mfa.challenge({ factorId: factor.id });
+      if (errReto) throw errReto;
+      const { error: errVerifica } = await sb.auth.mfa.verify({
+        factorId: factor.id, challengeId: reto.id, code: codigo,
+      });
+      if (errVerifica) throw errVerifica;
+      try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
+      mostrarCargando();
+      location.replace(getRedirectTarget());
+    } catch (err) {
+      showMsg(err.message || 'Código incorrecto, intenta de nuevo.', 'error');
+      btn.disabled = false;
+    }
+  });
+
   document.getElementById('auth-form').addEventListener('submit', async function (e) {
     e.preventDefault();
     clearMsg();
@@ -242,24 +324,18 @@
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Se estrena el reloj de inactividad aquí mismo. Antes no se
-      // tocaba, y quien volvía después de cuatro horas entraba, el
-      // guardián de la siguiente página veía la marca vieja y lo
-      // regresaba: dos inicios de sesión para entrar una vez.
-      try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
-      mostrarCargando();
-      location.replace(getRedirectTarget());
+      await revisarAAL();
     } catch (err) {
       showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
       submitBtn.disabled = false;
     }
   });
 
-  // Si ya hay sesión activa, no tiene caso mostrar el login.
+  // Si ya hay sesión activa, no tiene caso mostrar el login (salvo
+  // que le falte el segundo paso, que es justo lo que revisa esto).
   sb.auth.getSession().then(({ data }) => {
     if (data && data.session) {
-      mostrarCargando();
-      location.replace(getRedirectTarget());
+      revisarAAL();
     }
   });
 

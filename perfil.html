@@ -302,6 +302,26 @@
       <div class="msg" id="password-msg"></div>
     </div>
 
+    <!-- Módulo 5: Verificación en dos pasos (MFA) -->
+    <div class="card">
+      <h2>Verificación en dos pasos</h2>
+      <p class="kw-nota">Un código extra que genera tu celular, además de tu contraseña. Muy recomendado si tienes rol Master o Admin.</p>
+      <div id="mfa-estado">Revisando…</div>
+
+      <div id="mfa-enroll" style="display:none;margin-top:14px;">
+        <div id="mfa-qr" style="margin:10px 0;max-width:220px;"></div>
+        <p class="kw-nota">Escanéalo con Google Authenticator, Authy o la app que uses. Si no puedes escanear, captura este código a mano: <code id="mfa-secreto"></code></p>
+        <div class="field"><label>Código de 6 dígitos</label>
+          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn-guardar" id="btn-mfa-confirmar" onclick="confirmarActivacionMFA()">Confirmar código</button>
+          <button type="button" class="btn-modal-cancelar" id="btn-mfa-cancelar" onclick="cancelarActivacionMFA()">Cancelar</button>
+        </div>
+        <div class="msg" id="mfa-msg"></div>
+      </div>
+    </div>
+
     </section>
     </div>
   </main>
@@ -798,8 +818,96 @@
     }
   }
 
+  let mfaFactorPendienteId = null;
+
+  async function cargarEstadoMFA() {
+    const estadoDiv = document.getElementById('mfa-estado');
+    try {
+      const { data, error } = await window.kwSupabase.auth.mfa.listFactors();
+      if (error) throw error;
+      const activo = (data.totp || []).find((f) => f.status === 'verified');
+      if (activo) {
+        estadoDiv.innerHTML =
+          '<span class="rol-badge" style="background:#eaf7ea;color:#1a7a1a;">Activada</span> ' +
+          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-desactivar">Desactivar</button>';
+        document.getElementById('btn-mfa-desactivar').onclick = function () { desactivarMFA(activo.id); };
+      } else {
+        estadoDiv.innerHTML =
+          '<span class="rol-badge" style="background:#f2f2f2;color:#666;">No activada</span> ' +
+          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-activar">Activar verificación en dos pasos</button>';
+        document.getElementById('btn-mfa-activar').onclick = iniciarActivacionMFA;
+      }
+    } catch (err) {
+      estadoDiv.textContent = 'No se pudo revisar el estado.';
+    }
+  }
+
+  async function iniciarActivacionMFA() {
+    setMsg('mfa-msg', '', '');
+    try {
+      const { data, error } = await window.kwSupabase.auth.mfa.enroll({ factorType: 'totp' });
+      if (error) throw error;
+      mfaFactorPendienteId = data.id;
+      document.getElementById('mfa-qr').innerHTML = data.totp.qr_code;
+      document.getElementById('mfa-secreto').textContent = data.totp.secret;
+      document.getElementById('mfa-codigo').value = '';
+      document.getElementById('mfa-enroll').style.display = 'block';
+    } catch (err) {
+      setMsg('mfa-msg', err.message || 'No se pudo iniciar la activación.', 'error');
+    }
+  }
+
+  async function confirmarActivacionMFA() {
+    const codigo = document.getElementById('mfa-codigo').value.trim();
+    const btn = document.getElementById('btn-mfa-confirmar');
+    setMsg('mfa-msg', '', '');
+    if (!/^\d{6}$/.test(codigo)) {
+      setMsg('mfa-msg', 'Escribe los 6 dígitos que te da la app.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const { data: reto, error: errReto } = await window.kwSupabase.auth.mfa.challenge({ factorId: mfaFactorPendienteId });
+      if (errReto) throw errReto;
+      const { error: errVerifica } = await window.kwSupabase.auth.mfa.verify({
+        factorId: mfaFactorPendienteId,
+        challengeId: reto.id,
+        code: codigo,
+      });
+      if (errVerifica) throw errVerifica;
+      document.getElementById('mfa-enroll').style.display = 'none';
+      mfaFactorPendienteId = null;
+      await cargarEstadoMFA();
+    } catch (err) {
+      setMsg('mfa-msg', err.message || 'Código incorrecto, intenta de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function cancelarActivacionMFA() {
+    document.getElementById('mfa-enroll').style.display = 'none';
+    if (mfaFactorPendienteId) {
+      try { await window.kwSupabase.auth.mfa.unenroll({ factorId: mfaFactorPendienteId }); } catch (err) { /* factor sin verificar, no pasa nada si queda */ }
+      mfaFactorPendienteId = null;
+    }
+  }
+
+  async function desactivarMFA(factorId) {
+    const ok = await window.kwUI.confirm('¿Desactivar la verificación en dos pasos? Ya no se te va a pedir el código al entrar.');
+    if (!ok) return;
+    try {
+      const { error } = await window.kwSupabase.auth.mfa.unenroll({ factorId });
+      if (error) throw error;
+      await cargarEstadoMFA();
+    } catch (err) {
+      setMsg('mfa-msg', err.message || 'No se pudo desactivar.', 'error');
+    }
+  }
+
   function iniciarPagina() {
     cargarPerfil();
+    cargarEstadoMFA();
     window.kwUI.iniciar();
   }
 
