@@ -1679,6 +1679,10 @@
       await cargarEnvios();
       if (!r.actualizados) {
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
+      } else if (r.eliminadosEnWeetrust) {
+        await window.kwUI.alert(r.eliminadosEnWeetrust === 1
+          ? 'Un documento ya no existe en weetrust (lo borraron desde su panel) y se marcó como cancelado.'
+          : r.eliminadosEnWeetrust + ' documentos ya no existen en weetrust (los borraron desde su panel) y se marcaron como cancelados.');
       }
     } catch (e) {
       await window.kwUI.alert(e.message || 'No se pudo actualizar.');
@@ -1687,6 +1691,19 @@
       btn.innerHTML = original;
     }
   });
+
+  // Lo mismo que el botón de arriba, pero sin diálogos: se usa para
+  // poner la pantalla al día sola en cuanto se entra, sin que la
+  // persona tenga que acordarse de apretar "Actualizar".
+  async function actualizarSilencioso() {
+    try {
+      const r = await llamarFuncion({ accion: 'actualizar_todos' });
+      if (r.actualizados) await cargarEnvios();
+    } catch (e) {
+      // Sin diálogo: si falla, la tabla se queda con lo que ya tenía de
+      // la base y la persona puede intentarlo a mano con el botón.
+    }
+  }
 
   $('btn-nuevo').addEventListener('click', () => {
     // Se limpia todo: si se venía de retomar un borrador, seguir con su
@@ -3721,6 +3738,12 @@
     pintarOpcionesFiltros();
     await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
+
+    // La tabla ya se ve con lo que había en la base; de una vez, sin que
+    // tapar la pantalla ni que la persona lo pida, se pone al día contra
+    // weetrust por si el webhook se perdió algún aviso. Sin await: si se
+    // tarda, no detiene la entrada a la pantalla.
+    actualizarSilencioso();
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
