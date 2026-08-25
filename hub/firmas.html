@@ -3012,13 +3012,19 @@
     tagAbierta = null;
   }
 
-  // Lo coloca pegado al botón, y si no cabe hacia abajo lo sube: en un
-  // renglón del final de la lista se saldría de la pantalla.
+  // Lo coloca pegado al botón: hacia abajo si cabe, y si no, hacia el
+  // lado (arriba o abajo) donde quede más hueco. En un renglón cerca de
+  // una orilla, "el otro lado" tampoco alcanza siempre, así que al final
+  // igual se recorta contra el borde de la pantalla: así nunca se sale,
+  // ni tapa lo que esté por encima, así el botón esté pegado al tope.
   function colocar(caja, boton, ancho) {
     const r = boton.getBoundingClientRect();
     const alto = caja.offsetHeight;
-    const arriba = r.bottom + alto > window.innerHeight - 8;
-    caja.style.top = (arriba ? Math.max(8, r.top - alto - 4) : r.bottom + 4) + 'px';
+    const espacioAbajo = window.innerHeight - r.bottom - 8;
+    const espacioArriba = r.top - 8;
+    const arriba = alto > espacioAbajo && espacioArriba > espacioAbajo;
+    const top = arriba ? (r.top - alto - 4) : (r.bottom + 4);
+    caja.style.top = Math.max(8, Math.min(top, window.innerHeight - alto - 8)) + 'px';
     caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
   }
 
