@@ -130,10 +130,28 @@
   // no entraba en más de cuatro horas se autenticaba, llegaba aquí, el
   // reloj traía la marca vieja (login.html no la tocaba) y lo mandaba de
   // regreso; a la segunda ya entraba, porque al salir la marca se borra.
+  // Si la cuenta tiene verificación en dos pasos activada, la sesión se
+  // queda en "aal1" hasta que login.html complete el código; una
+  // sesión así no debe dejar ver ninguna página protegida, aunque quien
+  // la tenga llegue aquí navegando directo por la URL (no por login).
+  function faltaSegundoPaso() {
+    return window.kwSupabase.auth.mfa.getAuthenticatorAssuranceLevel().then(function (r) {
+      var d = r && r.data;
+      return !!(d && d.nextLevel === 'aal2' && d.currentLevel !== d.nextLevel);
+    }).catch(function () { return false; });
+  }
+
   window.kwSupabase.auth.getSession().then(function (result) {
     var session = result && result.data && result.data.session;
     if (!session) return redirectToLogin();
 
+    return faltaSegundoPaso().then(function (falta) {
+      if (falta) return redirectToLogin();
+      continuarConSesion();
+    });
+  }).catch(redirectToLogin);
+
+  function continuarConSesion() {
     // Sesión recién hecha y sin marca: se estrena ahora, no se juzga.
     var conMarca = false;
     try { conMarca = !!localStorage.getItem(ACTIVITY_KEY); } catch (e) {}
@@ -150,7 +168,7 @@
     setInterval(function () {
       if (inactivoDemasiado()) cerrarPorInactividad();
     }, 60 * 1000);
-  }).catch(redirectToLogin);
+  }
 
   window.kwLogout = function () {
     try { localStorage.removeItem(ACTIVITY_KEY); } catch (e) {}
