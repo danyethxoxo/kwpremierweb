@@ -1141,9 +1141,32 @@ Deno.serve(async (req: Request) => {
 
       const cambios: Array<{ id: string; datos: Record<string, unknown> }> = []
 
+      let eliminadosEnWeetrust = 0
+
       for (const fila of filas) {
         const doc = porId.get(fila.weetrust_document_id!)
-        if (!doc) continue
+        if (!doc) {
+          // Ya no está en la lista de weetrust: alguien lo borró desde su
+          // panel. La lista de arriba se trajo completa (si hubiera
+          // fallado, ya se habría regresado el error antes de llegar
+          // aquí), así que esto sí es confiable y no un hueco pasajero.
+          //
+          // No se toca lo ya completado: esa copia y su PDF firmado ya
+          // son la versión buena, y que weetrust lo archive o lo borre
+          // después no cambia que sí se firmó. Tampoco lo ya cancelado,
+          // para no repetir el aviso cada vez que se corre esto.
+          if (!['completado', 'cancelado'].includes(fila.estado)) {
+            cambios.push({
+              id: fila.id,
+              datos: {
+                estado: 'cancelado',
+                error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.',
+              },
+            })
+            eliminadosEnWeetrust++
+          }
+          continue
+        }
 
         const suyos = Array.isArray(doc.signatory) ? doc.signatory : []
         const previos = (fila.firmantes || []) as Array<Record<string, any>>
@@ -1212,6 +1235,7 @@ Deno.serve(async (req: Request) => {
         revisados: filas.length,
         enWeetrust: porId.size,
         actualizados,
+        eliminadosEnWeetrust,
       })
     }
 
