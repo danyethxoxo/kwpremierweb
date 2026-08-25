@@ -23,6 +23,20 @@
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
+  /* ── Pantalla de carga ──────────────────────────────────────
+     Tapa todo mientras se trae el historial y se sincroniza con
+     weetrust. Empieza visible (sin display:none) para que aparezca en
+     cuanto el auth-guard deja de esconder el body, y JS la quita
+     cuando "iniciar()" termina de verdad. */
+  .pantalla-carga {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(20,16,14,0.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px;
+  }
+  .pantalla-carga .kw-loader { min-height: 0; padding: 0; width: 56px; height: 56px; }
+  .pantalla-carga-texto { color: #fff; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
+
   /* ── El vidrio de la tabla ──────────────────────────────────
      Sobre el fondo guinda, lo que va encima no es blanco liso sino un
      vidrio esmerilado: el degradado da el brillo, el borde claro el
@@ -960,6 +974,16 @@
 </head>
 <body>
 
+  <!-- Tapa toda la pantalla mientras se trae el historial y se pone al
+       día contra weetrust. Antes eso pasaba con la tabla ya visible: se
+       veía la lista, y un momento después se volvía a pintar sola con
+       lo que cambió, como si las tarjetas "parpadearan". Aquí se espera
+       a que todo termine antes de enseñar nada. -->
+  <div id="pantalla-carga" class="pantalla-carga">
+    <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+    <div class="pantalla-carga-texto">Cargando tus documentos...</div>
+  </div>
+
   <header class="kw-header">
     <span class="kw-header-title">Firmas Digitales</span>
     <div class="header-right">
@@ -1718,15 +1742,18 @@
   });
 
   // Lo mismo que el botón de arriba, pero sin diálogos: se usa para
-  // poner la pantalla al día sola en cuanto se entra, sin que la
-  // persona tenga que acordarse de apretar "Actualizar".
+  // poner la base al día sola en cuanto se entra, sin que la persona
+  // tenga que acordarse de apretar "Actualizar". No pinta nada: eso lo
+  // hace quien la llama, una sola vez, cuando ya se sabe si hubo
+  // cambios o no. Pintar aquí también significaba que la tabla se veía
+  // dos veces (una con lo que había, otra ya al día), como si las
+  // tarjetas parpadearan solas apenas se abría la pantalla.
   async function actualizarSilencioso() {
     try {
-      const r = await llamarFuncion({ accion: 'actualizar_todos' });
-      if (r.actualizados) await cargarEnvios();
+      await llamarFuncion({ accion: 'actualizar_todos' });
     } catch (e) {
-      // Sin diálogo: si falla, la tabla se queda con lo que ya tenía de
-      // la base y la persona puede intentarlo a mano con el botón.
+      // Sin diálogo: si falla, la tabla se pinta con lo que ya había en
+      // la base y la persona puede ponerla al día a mano con el botón.
     }
   }
 
@@ -3022,19 +3049,20 @@
     tagAbierta = null;
   }
 
-  // Lo coloca pegado al botón: hacia abajo si cabe, y si no, hacia el
-  // lado (arriba o abajo) donde quede más hueco. En un renglón cerca de
-  // una orilla, "el otro lado" tampoco alcanza siempre, así que al final
-  // igual se recorta contra el borde de la pantalla: así nunca se sale,
-  // ni tapa lo que esté por encima, así el botón esté pegado al tope.
+  // Siempre pegado al botón, hacia abajo. Antes "volteaba" hacia arriba
+  // cuando no cabía abajo, pero eso es justo lo que lo hacía salir en un
+  // lugar distinto según el renglón: a veces arriba, a veces abajo, a
+  // veces recortado contra el tope de la pantalla tapando el
+  // encabezado. Así siempre es el mismo comportamiento.
+  //
+  // Para que nunca se salga por abajo, su propio alto se limita al
+  // hueco real que quede hasta el fondo de la pantalla: si el contenido
+  // no cabe entero, se desplaza solo por dentro (ya trae su barra).
   function colocar(caja, boton, ancho) {
     const r = boton.getBoundingClientRect();
-    const alto = caja.offsetHeight;
-    const espacioAbajo = window.innerHeight - r.bottom - 8;
-    const espacioArriba = r.top - 8;
-    const arriba = alto > espacioAbajo && espacioArriba > espacioAbajo;
-    const top = arriba ? (r.top - alto - 4) : (r.bottom + 4);
-    caja.style.top = Math.max(8, Math.min(top, window.innerHeight - alto - 8)) + 'px';
+    const top = r.bottom + 4;
+    caja.style.top = top + 'px';
+    caja.style.maxHeight = Math.max(160, window.innerHeight - top - 8) + 'px';
     caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
   }
 
@@ -3324,12 +3352,6 @@
 
     pintarEtiquetas('');
     $('bus-etiqueta').addEventListener('input', (e) => pintarEtiquetas(e.target.value));
-
-    // Recién aquí el panel ya tiene su alto de verdad: las listas de
-    // arriba se pintan después de abrirlo, así que colocarlo pegado al
-    // botón desde antes de esto lo hacía con una medida más chica de la
-    // que al final ocupa.
-    colocar(caja, boton, 290);
   }
 
   const COLORES_TAG = ['#6b7280', '#16a34a', '#2563eb', '#e0a218', '#c62027', '#7c3aed', '#0891b2', '#db2777'];
@@ -3753,6 +3775,17 @@
   }
 
   async function iniciar() {
+    try {
+      await iniciarDeVerdad();
+    } finally {
+      // Pase lo que pase (que todo salga bien, que algo truene a medio
+      // camino), la pantalla de carga no se puede quedar tapando todo
+      // para siempre.
+      $('pantalla-carga').style.display = 'none';
+    }
+  }
+
+  async function iniciarDeVerdad() {
     const { data: userData } = await window.kwSupabase.auth.getUser();
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
@@ -3795,14 +3828,16 @@
     // catálogo saldrían en blanco hasta la siguiente recarga.
     await Promise.all([cargarEtiquetas(), cargarAsesores()]);
     pintarOpcionesFiltros();
-    await Promise.all([cargarCupo(), cargarEnvios()]);
-    marcarFrecuentesPuestos();
 
-    // La tabla ya se ve con lo que había en la base; de una vez, sin que
-    // tapar la pantalla ni que la persona lo pida, se pone al día contra
-    // weetrust por si el webhook se perdió algún aviso. Sin await: si se
-    // tarda, no detiene la entrada a la pantalla.
-    actualizarSilencioso();
+    // Antes de pintar la tabla, y no después: se pone al día contra
+    // weetrust por si el webhook se perdió algún aviso, sin que la
+    // persona tenga que pedirlo con el botón. Hacerlo antes (con la
+    // pantalla de carga tapando todo) evita que la tabla se vea dos
+    // veces seguidas, una con lo que había y otra ya actualizada, que
+    // se sentía como que las tarjetas parpadeaban solas.
+    await Promise.all([cargarCupo(), actualizarSilencioso()]);
+    await cargarEnvios();
+    marcarFrecuentesPuestos();
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
