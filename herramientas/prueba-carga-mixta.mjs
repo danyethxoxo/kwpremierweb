@@ -26,7 +26,7 @@ const CUENTAS_ASESOR = [
   { email: 'prueba4@kwmexico.mx', password: '123456789' },
 ];
 // La que está en "usuarios" y "firmas" al mismo tiempo.
-const CUENTA_MASTER = { email: 'prueba1@kwmexico.mx', password: '123456789' };
+const CUENTA_MASTER = { email: 'prueba5@kwmexico.mx', password: '123456789' };
 
 const DOCS_POR_ASESOR = 7; // 3 × 7 = 21 documentos, ~"20 al mismo tiempo"
 const CONSULTAS_MASTER = 10; // veces que revisa usuarios / firmas mientras tanto
