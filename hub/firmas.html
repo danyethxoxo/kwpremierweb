@@ -513,6 +513,16 @@
     text-transform: uppercase; color: var(--muted);
     padding: 8px 10px 5px;
   }
+  /* Solo el panel del lápiz (asesor + etiquetas) lo trae: los demás
+     menús flotantes son cortos y se cierran solos al picar fuera. */
+  .env-menu-cerrar {
+    position: absolute; top: 6px; right: 6px; z-index: 1;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: rgba(0,0,0,0.05); color: var(--muted);
+    cursor: pointer; padding: 0;
+  }
+  .env-menu-cerrar:hover { background: rgba(0,0,0,0.1); color: var(--text); }
   .env-menu-op {
     display: flex; align-items: center; gap: 9px; width: 100%;
     border: none; background: none; font-family: inherit;
@@ -3105,6 +3115,9 @@
     if (!f) return;
 
     const caja = abrirFlotante(boton, 290,
+      '<button type="button" class="env-menu-cerrar" aria-label="Cerrar">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
       (veTodo
         ? '<div class="env-menu-titulo">Asesor</div>' +
           '<div class="env-menu-busca">' +
@@ -3119,6 +3132,8 @@
       '</div>' +
       '<div id="lista-etiquetas"></div>', true);
     if (!caja) return;
+
+    caja.querySelector('.env-menu-cerrar').addEventListener('click', cerrarFlotante);
 
     // ── Asesores ──
     // Solo cuatro a la vez: la lista completa dentro de un menú flotante
@@ -3306,6 +3321,12 @@
 
     pintarEtiquetas('');
     $('bus-etiqueta').addEventListener('input', (e) => pintarEtiquetas(e.target.value));
+
+    // Recién aquí el panel ya tiene su alto de verdad: las listas de
+    // arriba se pintan después de abrirlo, así que colocarlo pegado al
+    // botón desde antes de esto lo hacía con una medida más chica de la
+    // que al final ocupa.
+    colocar(caja, boton, 290);
   }
 
   const COLORES_TAG = ['#6b7280', '#16a34a', '#2563eb', '#e0a218', '#c62027', '#7c3aed', '#0891b2', '#db2777'];
