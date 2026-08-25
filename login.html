@@ -182,7 +182,7 @@
       </form>
 
       <form id="mfa-form" style="display:none;">
-        <p class="sub" style="margin-bottom:14px;">Abre tu app autenticadora y escribe el código de 6 dígitos.</p>
+        <p class="sub" style="margin-bottom:14px;">Te mandamos un código a tu correo. Escríbelo aquí.</p>
         <div class="field">
           <label>Código</label>
           <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
@@ -243,18 +243,41 @@
     el.textContent = '';
   }
 
+  const MFA_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/mfa-correo';
+
+  async function llamarMFA(cuerpo, tokenSesion) {
+    const res = await fetch(MFA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tokenSesion },
+      body: JSON.stringify(cuerpo),
+    });
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || 'Ocurrió un error.');
+    return datos;
+  }
+
   // Después de una contraseña correcta (o al llegar con sesión ya
   // abierta) falta ver si esa cuenta tiene verificación en dos pasos
-  // activada: la sesión existe pero se queda en "aal1" hasta que se
-  // complete el código, y las páginas protegidas la rechazan igual
-  // (auth-guard.js hace la misma comprobación, por si alguien se salta
-  // este paso navegando directo a otra URL).
-  async function revisarAAL() {
+  // activada. Se guarda en app_metadata de la sesión (solo la Edge
+  // Function mfa-correo la puede escribir, con la llave de servicio),
+  // así que no es algo que el navegador se pueda inventar solo.
+  // auth-guard.js hace la misma comprobación en el resto del sitio,
+  // por si alguien se salta este paso navegando directo a otra URL.
+  async function revisarSegundoPaso() {
     try {
-      const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (error) throw error;
-      if (data.nextLevel === 'aal2' && data.currentLevel !== data.nextLevel) {
+      const { data } = await sb.auth.getSession();
+      const sesion = data && data.session;
+      const meta = sesion && sesion.user.app_metadata;
+      const activo = meta && meta.mfa_correo_activo === true;
+      const okHasta = meta && meta.mfa_correo_ok_hasta;
+      const vigente = okHasta && new Date(okHasta).getTime() > Date.now();
+      if (activo && !vigente) {
         mostrarFormMFA();
+        try {
+          await llamarMFA({ accion: 'enviar' }, sesion.access_token);
+        } catch (err) {
+          showMsg(err.message || 'No se pudo mandar el código.', 'error');
+        }
         return;
       }
     } catch (err) {
@@ -289,21 +312,14 @@
     const codigo = document.getElementById('mfa-codigo').value.trim();
     const btn = document.getElementById('mfa-btn');
     if (!/^\d{6}$/.test(codigo)) {
-      showMsg('Escribe los 6 dígitos que te da la app.', 'error');
+      showMsg('Escribe los 6 dígitos que te llegaron por correo.', 'error');
       return;
     }
     btn.disabled = true;
     try {
-      const { data: factores, error: errFactores } = await sb.auth.mfa.listFactors();
-      if (errFactores) throw errFactores;
-      const factor = (factores.totp || []).find((f) => f.status === 'verified');
-      if (!factor) throw new Error('No se encontró tu verificación en dos pasos.');
-      const { data: reto, error: errReto } = await sb.auth.mfa.challenge({ factorId: factor.id });
-      if (errReto) throw errReto;
-      const { error: errVerifica } = await sb.auth.mfa.verify({
-        factorId: factor.id, challengeId: reto.id, code: codigo,
-      });
-      if (errVerifica) throw errVerifica;
+      const { data } = await sb.auth.getSession();
+      await llamarMFA({ accion: 'verificar', codigo }, data.session.access_token);
+      await sb.auth.refreshSession();
       try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
       mostrarCargando();
       location.replace(getRedirectTarget());
@@ -324,7 +340,7 @@
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      await revisarAAL();
+      await revisarSegundoPaso();
     } catch (err) {
       showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
       submitBtn.disabled = false;
@@ -335,7 +351,7 @@
   // que le falte el segundo paso, que es justo lo que revisa esto).
   sb.auth.getSession().then(({ data }) => {
     if (data && data.session) {
-      revisarAAL();
+      revisarSegundoPaso();
     }
   });
 

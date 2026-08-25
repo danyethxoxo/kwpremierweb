@@ -130,25 +130,26 @@
   // no entraba en más de cuatro horas se autenticaba, llegaba aquí, el
   // reloj traía la marca vieja (login.html no la tocaba) y lo mandaba de
   // regreso; a la segunda ya entraba, porque al salir la marca se borra.
-  // Si la cuenta tiene verificación en dos pasos activada, la sesión se
-  // queda en "aal1" hasta que login.html complete el código; una
-  // sesión así no debe dejar ver ninguna página protegida, aunque quien
-  // la tenga llegue aquí navegando directo por la URL (no por login).
-  function faltaSegundoPaso() {
-    return window.kwSupabase.auth.mfa.getAuthenticatorAssuranceLevel().then(function (r) {
-      var d = r && r.data;
-      return !!(d && d.nextLevel === 'aal2' && d.currentLevel !== d.nextLevel);
-    }).catch(function () { return false; });
+  // Si la cuenta tiene verificación en dos pasos por correo activada
+  // (app_metadata.mfa_correo_activo, escrito solo por la Edge Function
+  // mfa-correo con la llave de servicio - el navegador no se lo puede
+  // inventar solo), la sesión no vale hasta que login.html complete el
+  // código: mfa_correo_ok_hasta trae hasta cuándo. Una sesión sin eso
+  // vigente no debe dejar ver ninguna página protegida, aunque quien la
+  // tenga llegue aquí navegando directo por la URL (no por login).
+  function faltaSegundoPaso(session) {
+    var meta = session.user && session.user.app_metadata;
+    var activo = meta && meta.mfa_correo_activo === true;
+    var okHasta = meta && meta.mfa_correo_ok_hasta;
+    var vigente = okHasta && new Date(okHasta).getTime() > Date.now();
+    return !!(activo && !vigente);
   }
 
   window.kwSupabase.auth.getSession().then(function (result) {
     var session = result && result.data && result.data.session;
     if (!session) return redirectToLogin();
-
-    return faltaSegundoPaso().then(function (falta) {
-      if (falta) return redirectToLogin();
-      continuarConSesion();
-    });
+    if (faltaSegundoPaso(session)) return redirectToLogin();
+    continuarConSesion();
   }).catch(redirectToLogin);
 
   function continuarConSesion() {
