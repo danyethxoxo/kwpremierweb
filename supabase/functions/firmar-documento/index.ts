@@ -742,7 +742,17 @@ Deno.serve(async (req: Request) => {
 
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
-      if (!doc) return respond({ error: 'weetrust ya no reconoce ese documento.' }, 404)
+      if (!doc) {
+        // Igual que en "actualizar_todos": ya no existe allá, así que se
+        // marca en vez de dejarlo pendiente para siempre.
+        await admin.from('firmas_documentos')
+          .update({
+            estado: 'eliminado',
+            error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.',
+          })
+          .eq('id', id)
+        return respond({ ok: true, estado: 'eliminado', firmantes: fila.firmantes })
+      }
 
       // Su "isSigned" viene a veces como número y a veces como texto,
       // según el endpoint; se normaliza aquí para que la pantalla no
@@ -1153,13 +1163,18 @@ Deno.serve(async (req: Request) => {
           //
           // No se toca lo ya completado: esa copia y su PDF firmado ya
           // son la versión buena, y que weetrust lo archive o lo borre
-          // después no cambia que sí se firmó. Tampoco lo ya cancelado,
-          // para no repetir el aviso cada vez que se corre esto.
-          if (!['completado', 'cancelado'].includes(fila.estado)) {
+          // después no cambia que sí se firmó. Tampoco lo ya cancelado o
+          // marcado como eliminado, para no repetir el aviso cada vez
+          // que se corre esto.
+          //
+          // Va aparte de "cancelado": ese estado es para cuando alguien
+          // lo cancela a propósito desde aquí. Esto es distinto, que
+          // weetrust ya no lo tenga porque lo borraron de su panel.
+          if (!['completado', 'cancelado', 'eliminado'].includes(fila.estado)) {
             cambios.push({
               id: fila.id,
               datos: {
-                estado: 'cancelado',
+                estado: 'eliminado',
                 error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.',
               },
             })

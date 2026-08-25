@@ -969,11 +969,13 @@
       <div class="hist-barra">
         <div class="hist-filtros">
           <select id="f-estado">
-            <option value="todos">Todos los estados</option>
+            <option value="activos" selected>Esperando firmas y completados</option>
             <option value="pendiente">Esperando firmas</option>
-            <option value="borrador">Borradores</option>
             <option value="completado">Completados</option>
+            <option value="borrador">Borradores</option>
             <option value="cancelado">Cancelados</option>
+            <option value="eliminado">Eliminados</option>
+            <option value="todos">Todos los estados</option>
           </select>
 
           <div id="w-falta" style="display:none;"><select id="f-falta"></select></div>
@@ -1229,8 +1231,11 @@
   // Si quien mira es liderazgo, el historial trae los envíos de todos y
   // hay que decir de quién es cada uno.
   let veTodo = false;
-  // Qué estado se está mostrando en el historial.
-  let filtro = 'todos';
+  // Qué estado se está mostrando en el historial. Por defecto solo lo
+  // que sigue activo (esperando firmas o ya completado): lo cancelado,
+  // lo eliminado y los borradores se quedan escondidos hasta que se
+  // pidan a propósito con el filtro.
+  let filtro = 'activos';
   // Los envíos ya cargados. El detalle los lee de aquí en vez de volver
   // a consultarlos: son los mismos datos que se acaban de pintar.
   let envios = [];
@@ -1681,8 +1686,8 @@
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
       } else if (r.eliminadosEnWeetrust) {
         await window.kwUI.alert(r.eliminadosEnWeetrust === 1
-          ? 'Un documento ya no existe en weetrust (lo borraron desde su panel) y se marcó como cancelado.'
-          : r.eliminadosEnWeetrust + ' documentos ya no existen en weetrust (los borraron desde su panel) y se marcaron como cancelados.');
+          ? 'Un documento ya no existe en weetrust (lo borraron desde su panel) y se marcó como eliminado.'
+          : r.eliminadosEnWeetrust + ' documentos ya no existen en weetrust (los borraron desde su panel) y se marcaron como eliminados.');
       }
     } catch (e) {
       await window.kwUI.alert(e.message || 'No se pudo actualizar.');
@@ -2377,11 +2382,14 @@
     pendiente: ['kw-pill-espera', 'Esperando firmas'],
     completado: ['kw-pill-ok', 'Firmado'],
     cancelado: ['kw-pill-neutro', 'Cancelado'],
+    // Distinto de "Cancelado": aquí nadie de este lado le paró, weetrust
+    // ya no lo tiene porque alguien lo borró desde su panel.
+    eliminado: ['kw-pill-info', 'Eliminado en weetrust'],
     error: ['kw-pill-alerta', 'Falló'],
   };
   const PUNTO = {
     preparando: 'gris', borrador: 'gris', pendiente: 'ambar',
-    completado: 'verde', cancelado: 'gris', error: 'rojo',
+    completado: 'verde', cancelado: 'gris', eliminado: 'gris', error: 'rojo',
   };
 
   function fecha(iso) {
@@ -3522,7 +3530,9 @@
 
   function envíosFiltrados() {
     const lista = envios.filter((e) => {
-      if (filtro !== 'todos' && e.estado !== filtro) return false;
+      if (filtro === 'activos') {
+        if (!['pendiente', 'completado'].includes(e.estado)) return false;
+      } else if (filtro !== 'todos' && e.estado !== filtro) return false;
 
       if (buscaAsesor) {
         const nombreAsesor = ((e.autor && e.autor.nombre) || '').toLowerCase();
