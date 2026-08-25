@@ -2434,6 +2434,16 @@
   // distinguirlo; partiéndolo, el enlace sobra.
 
   function pintarEnvios() {
+    // Si el panel del lápiz o el de los tres puntos estaba abierto,
+    // queda pegado a un botón que está a punto de desaparecer (la tabla
+    // se vuelve a armar completa). Sin esto se quedaba flotando huérfano
+    // donde sea que estuviera, y a ojos de quien lo veía "salía en
+    // lugares raros" sin razón aparente: la razón era esta, no la
+    // posición en sí. Pasa sobre todo cuando algo repinta la tabla solo
+    // (la sincronización automática, un aviso de weetrust) mientras el
+    // panel sigue abierto.
+    cerrarFlotante();
+
     const cont = $('lista-envios');
     const filas = envíosFiltrados();
     // El detalle se abre por posición dentro de lo que se está viendo,
