@@ -1726,12 +1726,21 @@
     try {
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
       await cargarEnvios();
-      if (!r.actualizados) {
+      if (!r.actualizados && !r.importados) {
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
-      } else if (r.eliminadosEnWeetrust) {
-        await window.kwUI.alert(r.eliminadosEnWeetrust === 1
-          ? 'Un documento ya no existe en weetrust (lo borraron desde su panel) y se marcó como eliminado.'
-          : r.eliminadosEnWeetrust + ' documentos ya no existen en weetrust (los borraron desde su panel) y se marcaron como eliminados.');
+      } else {
+        const avisos = [];
+        if (r.importados) {
+          avisos.push(r.importados === 1
+            ? 'Se trajo 1 documento que solo existía en weetrust.'
+            : 'Se trajeron ' + r.importados + ' documentos que solo existían en weetrust.');
+        }
+        if (r.eliminadosEnWeetrust) {
+          avisos.push(r.eliminadosEnWeetrust === 1
+            ? 'Un documento ya no existe en weetrust (lo borraron desde su panel) y se marcó como eliminado.'
+            : r.eliminadosEnWeetrust + ' documentos ya no existen en weetrust (los borraron desde su panel) y se marcaron como eliminados.');
+        }
+        if (avisos.length) await window.kwUI.alert(avisos.join('\n\n'));
       }
     } catch (e) {
       await window.kwUI.alert(e.message || 'No se pudo actualizar.');

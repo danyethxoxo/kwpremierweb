@@ -1115,7 +1115,6 @@ Deno.serve(async (req: Request) => {
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
       const { data: filas } = await q
-      if (!filas?.length) return respond({ ok: true, revisados: 0, actualizados: 0 })
 
       const token = await obtenerToken()
       const porId = new Map<string, Record<string, any>>()
@@ -1153,7 +1152,7 @@ Deno.serve(async (req: Request) => {
 
       let eliminadosEnWeetrust = 0
 
-      for (const fila of filas) {
+      for (const fila of filas || []) {
         const doc = porId.get(fila.weetrust_document_id!)
         if (!doc) {
           // Ya no está en la lista de weetrust: alguien lo borró desde su
@@ -1245,12 +1244,77 @@ Deno.serve(async (req: Request) => {
         res.forEach((r: { error: unknown }) => { if (!r.error) actualizados++ })
       }
 
+      // ── Los que solo existen en weetrust ──
+      // Pasa con lo que se manda directo desde su panel en vez de este
+      // sitio: no llega ningún webhook que lo cree aquí, así que sin
+      // esto se quedaban sin aparecer para siempre, aunque el resto ya
+      // estuviera al día. La lista de arriba (porId) ya es la cuenta
+      // completa de weetrust, así que no hace falta volver a pedirla.
+      const { data: existentes } = await admin
+        .from('firmas_documentos')
+        .select('weetrust_document_id')
+        .in('weetrust_document_id', [...porId.keys()])
+
+      const yaEstaban = new Set(
+        (existentes || []).map((f: { weetrust_document_id: string }) => f.weetrust_document_id))
+      const faltantes = [...porId.entries()].filter(([id]) => !yaEstaban.has(id))
+
+      let importados = 0
+      if (faltantes.length) {
+        const nuevasFilas = await Promise.all(faltantes.map(async ([documentID, doc]) => {
+          const suyos = (Array.isArray(doc?.signatory) ? doc.signatory : [])
+            .map((s: Record<string, any>) => ({
+              nombre: String(s?.name || s?.emailID || ''),
+              correo: String(s?.emailID || '').toLowerCase(),
+              firmado: Number(s?.isSigned) === 1,
+              signatoryID: s?.signatoryID ?? null,
+              url_firma: s?.signing?.url ?? null,
+              url_expira: s?.signing?.expiry ?? null,
+              imagen: s?.imageURL || null,
+            }))
+          const archivoDoc = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+          const nombre = nombreEnWeetrust(doc, documentID)
+          const estadoDoc = estados[String(doc?.status)] || 'pendiente'
+          const cuando = doc?.addedOn
+            ? new Date(Number(doc.addedOn)).toISOString()
+            : new Date().toISOString()
+
+          // Igual que en "importar": weetrust no dice quién lo creó, así
+          // que se adivina por los firmantes.
+          const { data: asesor } = await admin
+            .rpc('firmas_adivinar_asesor', { p_firmantes: suyos })
+
+          return {
+            origen: 'importado',
+            weetrust_document_id: documentID,
+            titulo: nombre,
+            nombre_archivo: nombre,
+            archivo_ruta: null,
+            user_id: (asesor as string | null) ?? null,
+            creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+            estado: estadoDoc,
+            firmantes: suyos,
+            ambiente: WEETRUST_AMBIENTE,
+            pdf_firmado_url: (archivoDoc.url as string) ?? null,
+            created_at: cuando,
+            ...(estadoDoc === 'completado' ? { completado_at: cuando } : {}),
+          }
+        }))
+
+        for (let i = 0; i < nuevasFilas.length; i += 200) {
+          const trozo = nuevasFilas.slice(i, i + 200)
+          const { error } = await admin.from('firmas_documentos').insert(trozo)
+          if (!error) importados += trozo.length
+        }
+      }
+
       return respond({
         ok: true,
-        revisados: filas.length,
+        revisados: (filas || []).length,
         enWeetrust: porId.size,
         actualizados,
         eliminadosEnWeetrust,
+        importados,
       })
     }
 
