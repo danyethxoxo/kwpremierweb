@@ -527,16 +527,6 @@
     text-transform: uppercase; color: var(--muted);
     padding: 8px 10px 5px;
   }
-  /* Solo el panel del lápiz (asesor + etiquetas) lo trae: los demás
-     menús flotantes son cortos y se cierran solos al picar fuera. */
-  .env-menu-cerrar {
-    position: absolute; top: 6px; right: 6px; z-index: 1;
-    width: 22px; height: 22px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    border: none; background: rgba(0,0,0,0.05); color: var(--muted);
-    cursor: pointer; padding: 0;
-  }
-  .env-menu-cerrar:hover { background: rgba(0,0,0,0.1); color: var(--text); }
   .env-menu-op {
     display: flex; align-items: center; gap: 9px; width: 100%;
     border: none; background: none; font-family: inherit;
@@ -648,6 +638,13 @@
     cursor: pointer; padding: 0;
   }
   .det-cerrar:hover { background: rgba(0,0,0,0.1); }
+
+  /* ── Editar (lápiz): asesor y etiquetas ──────────────────────
+     Antes era un menú flotante pegado al icono, y eso era justo lo que
+     lo hacía salir en lugares distintos según dónde estuviera el
+     renglón. Ahora es una tarjeta como la de "Estatus": aparece igual
+     sin importar de qué renglón se abrió. */
+  #editar-cuerpo { max-height: 60vh; overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
 
   .det-encabezado {
     display: flex; align-items: flex-start; justify-content: space-between;
@@ -1238,6 +1235,16 @@
       </button>
       <h3>Estatus</h3>
       <div id="det-cuerpo"></div>
+    </div>
+  </div>
+
+  <div id="modal-editar" class="modal-overlay" style="display:none;">
+    <div class="modal-box det-caja">
+      <button type="button" class="det-cerrar" id="editar-cerrar" aria-label="Cerrar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h3>Editar</h3>
+      <div id="editar-cuerpo"></div>
     </div>
   </div>
 
@@ -2586,7 +2593,7 @@
       b.addEventListener('click', () => abrirDetalle(Number(b.dataset.detalle)));
     });
     cont.querySelectorAll('[data-editar]').forEach((b) => {
-      b.addEventListener('click', (e) => { e.stopPropagation(); abrirEditar(b, Number(b.dataset.editar)); });
+      b.addEventListener('click', (e) => { e.stopPropagation(); abrirEditar(Number(b.dataset.editar)); });
     });
     cont.querySelectorAll('[data-menu]').forEach((b) => {
       b.addEventListener('click', (e) => { e.stopPropagation(); abrirMenu(b, Number(b.dataset.menu)); });
@@ -3150,14 +3157,21 @@
   }
 
   // ── Lápiz: asesor y etiquetas ──
-  function abrirEditar(boton, i) {
+  // Es una tarjeta como la de "Estatus" (mismo modal, mismo botón de
+  // cerrar) y no un menú pegado al icono: eso era justo lo que la hacía
+  // salir en lugares distintos según qué renglón fuera. Así se ve igual
+  // siempre, sin importar de dónde se abrió.
+  function cerrarEditar() {
+    $('modal-editar').style.display = 'none';
+    $('editar-cuerpo').innerHTML = '';
+    tagAbierta = null;
+  }
+
+  function abrirEditar(i) {
     const f = visibles[i];
     if (!f) return;
 
-    const caja = abrirFlotante(boton, 290,
-      '<button type="button" class="env-menu-cerrar" aria-label="Cerrar">' +
-        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>' +
+    $('editar-cuerpo').innerHTML =
       (veTodo
         ? '<div class="env-menu-titulo">Asesor</div>' +
           '<div class="env-menu-busca">' +
@@ -3170,15 +3184,12 @@
       '<div class="env-menu-busca">' +
         '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
       '</div>' +
-      '<div id="lista-etiquetas"></div>');
-    if (!caja) return;
-
-    caja.querySelector('.env-menu-cerrar').addEventListener('click', cerrarFlotante);
+      '<div id="lista-etiquetas"></div>';
+    $('modal-editar').style.display = 'flex';
 
     // ── Asesores ──
-    // Solo cuatro a la vez: la lista completa dentro de un menú flotante
-    // obliga a recorrerla y tapa media pantalla. Para llegar al que no
-    // se ve, se escribe.
+    // Solo cuatro a la vez: con cien asesores la lista completa se hace
+    // eterna de recorrer. Para llegar al que no se ve, se escribe.
     function pintarAsesores(busca) {
       const q = (busca || '').trim().toLowerCase();
       const hallados = asesores
@@ -3195,7 +3206,7 @@
 
       $('lista-asesores').querySelectorAll('[data-asesor]').forEach((b) => {
         b.addEventListener('click', async () => {
-          cerrarFlotante();
+          cerrarEditar();
           const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
             p_documento: f.id, p_asesor: b.dataset.asesor || null,
           });
@@ -3278,7 +3289,7 @@
           const nuevas = puestas.has(id)
             ? [...puestas].filter((x) => x !== id)
             : [...puestas, id];
-          cerrarFlotante();
+          cerrarEditar();
           if (await ponerEtiquetas(nuevas)) await cargarEnvios();
         });
       });
@@ -3336,7 +3347,7 @@
             p_nombre: q, p_color: color,
           });
           if (error) { await window.kwUI.alert('No se pudo crear la etiqueta: ' + error.message); return; }
-          cerrarFlotante();
+          cerrarEditar();
           await cargarEtiquetas();
           pintarOpcionesFiltros();
           // Se le pone de una vez al documento desde el que se creó:
@@ -3456,10 +3467,17 @@
     // tarjeta: si no, arrastrar para seleccionar texto lo cierra.
     if (e.target === $('modal-detalle')) cerrarDetalle();
   });
+
+  $('editar-cerrar').addEventListener('click', cerrarEditar);
+  $('modal-editar').addEventListener('click', (e) => {
+    if (e.target === $('modal-editar')) cerrarEditar();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if ($('modal-detalle').style.display === 'flex') cerrarDetalle();
     if ($('modal-doc').style.display === 'flex') cerrarDoc();
+    if ($('modal-editar').style.display === 'flex') cerrarEditar();
   });
 
   // Copiar liga, actualizar y cancelar. Vive aparte porque ahora estos
