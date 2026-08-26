@@ -23,6 +23,35 @@
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
+  /* ── Las barras de desplazamiento ───────────────────────────
+     La del navegador se ve prestada de otro sitio. Esta es una pastilla
+     delgada, sin flechas y sin canal marcado: el truco del borde
+     transparente con recorte al contenido es lo que la adelgaza sin
+     tener que dibujar dos capas.
+
+     Va en dos tonos porque el sitio tiene dos fondos: oscuro por
+     defecto (sobre el guinda) y ".barra-oscura" para lo que está sobre
+     blanco, como el visor del documento. */
+  * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.42) transparent; }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.42);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.66); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  .barra-oscura, .env-menu, .modal-box { scrollbar-color: rgba(0,0,0,0.26) transparent; }
+  .barra-oscura::-webkit-scrollbar-thumb,
+  .env-menu::-webkit-scrollbar-thumb,
+  .modal-box::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.26); }
+  .barra-oscura::-webkit-scrollbar-thumb:hover,
+  .env-menu::-webkit-scrollbar-thumb:hover,
+  .modal-box::-webkit-scrollbar-thumb:hover { background-color: rgba(0,0,0,0.42); }
+
   /* ── Pantalla de carga ──────────────────────────────────────
      Tapa todo mientras se trae el historial y se sincroniza con
      weetrust. Empieza visible (sin display:none) para que aparezca en
@@ -102,9 +131,14 @@
   /* Cada firmante es su propia tarjeta. Con los renglones sueltos, en un
      contrato de cuatro firmantes no se veía dónde acababa uno y empezaba
      el siguiente, y los iconos de verificación parecían de todos. */
+  /* Cada firmante lleva el color con el que salen sus recuadros en la
+     hoja: el contorno de su tarjeta, la pestaña de la izquierda y su
+     botón de fijar. Así se sabe de un vistazo cuál recuadro del
+     documento es de quién, sin tener que leer el rótulo de adentro. */
   .firmante-fila {
     position: relative;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1.5px solid var(--firmante-color, rgba(0,0,0,0.1));
+    border-left-width: 5px;
     border-radius: 13px;
     background: rgba(255,255,255,0.72);
     padding: 12px 12px 11px;
@@ -585,8 +619,11 @@
   .doc-split { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: var(--sp-4); align-items: start; }
   @media (max-width: 780px) { .doc-split { grid-template-columns: 1fr; } }
 
+  /* Blanco, igual que el visor del editor: la hoja se separa por su
+     filo y su sombra, no por un fondo gris alrededor. */
   .doc-marco {
-    background: rgba(0,0,0,0.06); border-radius: 10px; padding: var(--sp-3);
+    background: #fff; border-radius: 10px; padding: var(--sp-3);
+    border: 1px solid rgba(0,0,0,0.09);
     max-height: min(72vh, 760px); overflow-y: auto; overflow-x: hidden;
   }
   .doc-marco .pagina-num { color: var(--muted); }
@@ -745,22 +782,80 @@
   .btn-volver-paso:hover { background: rgba(255,255,255,0.2); }
   .editor-nombre { font-size: 12.5px; color: var(--muted); }
 
-  .editor-split { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
+  /* El alto de la zona de trabajo. Lo comparten el visor y la columna
+     de campos: que los dos midan lo mismo es justo lo que evita que
+     agregar firmantes alargue la página entera. */
+  :root { --alto-editor: calc(100vh - 170px); }
+
+  .editor-split { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
   @media (max-width: 900px) { .editor-split { grid-template-columns: 1fr; } }
+
+  /* El visor es la hoja blanca con su tira de miniaturas al lado,
+     dentro de un mismo marco. La tira no se desplaza con el documento:
+     tiene su propio scroll, para poder saltar a una página de en medio
+     sin perder de vista dónde se está. */
+  .editor-visor {
+    display: flex; align-items: stretch;
+    background: #fff;
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: var(--r-tarjeta);
+    box-shadow: var(--sombra-1);
+    overflow: hidden;
+    height: var(--alto-editor);
+    min-height: 420px;
+  }
+
+  .editor-minis {
+    flex: 0 0 128px;
+    display: flex; flex-direction: column;
+    border-right: 1px solid rgba(0,0,0,0.09);
+    background: #fafafa;
+  }
+  .minis-tit {
+    flex: 0 0 auto;
+    padding: 10px 12px; font-size: 11px; font-weight: 700;
+    color: var(--muted); border-bottom: 1px solid rgba(0,0,0,0.07);
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .minis-tit b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .minis-lista { flex: 1 1 auto; overflow-y: auto; padding: 10px 8px; }
+  .mini-hoja {
+    display: block; width: 100%; padding: 0; margin-bottom: 9px;
+    border: none; background: none; cursor: pointer; font-family: inherit;
+  }
+  .mini-hoja canvas {
+    display: block; width: 100%; border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.14);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    transition: border-color var(--t-medio), box-shadow var(--t-medio);
+  }
+  .mini-hoja:hover canvas { border-color: rgba(0,0,0,0.34); }
+  .mini-hoja.activa canvas {
+    border-color: var(--red);
+    box-shadow: 0 0 0 2px rgba(198,32,39,0.28), 0 1px 4px rgba(0,0,0,0.12);
+  }
+  .mini-num {
+    display: block; text-align: center; font-size: 10.5px;
+    color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums;
+  }
+  .mini-hoja.activa .mini-num { color: var(--red); font-weight: 700; }
+  /* En pantalla angosta la tira se come el ancho de la hoja, que es lo
+     que de verdad hace falta ver. */
+  @media (max-width: 720px) { .editor-minis { display: none; } }
 
   .editor-doc {
     position: relative;
-    background: rgba(0,0,0,0.28);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: var(--r-tarjeta);
+    flex: 1 1 auto; min-width: 0;
+    /* Blanco, como en el visor de weetrust: el gris de antes competía
+       con la hoja en vez de dejarla ser lo único que se mira. Cada hoja
+       conserva su sombra, que es lo que las separa entre sí. */
+    background: #fff;
     padding: var(--sp-3);
     /* Se lleva casi todo el alto de la ventana: mientras más hoja se
        vea de una vez, menos hay que subir y bajar para colocar firmas.
        Solo se desplaza en vertical; el ancho se calcula para que la hoja
        quepa siempre, así que una barra horizontal solo aparecería por un
        error de cálculo. */
-    height: calc(100vh - 170px);
-    min-height: 420px;
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -771,6 +866,11 @@
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 40px 0; color: var(--muted); font-size: 13px;
   }
+  /* Los aros de carga son blancos, que es lo correcto sobre el guinda
+     del sitio. Dentro del visor, que ahora es blanco, se perdían: aquí
+     se pintan del rojo de la marca. */
+  .editor-doc .kw-loader .circle,
+  .doc-marco .kw-loader .circle { border-top-color: var(--red); }
 
   /* Guardar y mandar, juntos al final del formulario. Guardar va en
      secundario: es lo que se hace de paso, no el objetivo. */
@@ -785,6 +885,12 @@
   .btn-borrador:hover { border-color: var(--red); color: var(--red); }
   .btn-borrador:disabled { opacity: 0.5; cursor: default; }
 
+  /* Mismo alto que el visor de al lado, y no el que resulte de cuántos
+     firmantes haya: antes, con cinco o seis, la columna crecía y
+     arrastraba a toda la página con ella, así que colocar una firma
+     obligaba a subir de nuevo hasta la hoja. Ahora solo se desplaza lo
+     de en medio (los firmantes); el título arriba y los botones abajo
+     se quedan fijos. */
   .editor-campos {
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
     border: 1px solid rgba(255,255,255,0.82);
@@ -793,6 +899,25 @@
     backdrop-filter: blur(18px) saturate(165%);
     -webkit-backdrop-filter: blur(18px) saturate(165%);
     box-shadow: var(--sombra-1), inset 0 1px 0 rgba(255,255,255,0.95);
+    height: var(--alto-editor);
+    min-height: 420px;
+    display: flex; flex-direction: column;
+  }
+  .editor-campos #form-firma { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+  /* El trozo que sí se desplaza. El margen negativo con el relleno de
+     vuelta deja que la barra viva pegada a la orilla de la tarjeta, en
+     vez de flotando a media columna. */
+  .editor-scroll {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    margin: 0 calc(var(--sp-4) * -1);
+    padding: 2px var(--sp-4) 4px;
+  }
+  .editor-campos .editor-botones { flex: 0 0 auto; }
+  @media (max-width: 900px) {
+    /* Apilado, dos cajas de alto fijo una tras otra son dos scrolls
+       metidos dentro del scroll de la página: ahí es peor el remedio. */
+    .editor-campos, .editor-visor { height: auto; }
+    .editor-scroll { overflow: visible; margin: 0; padding: 0; }
   }
 
   /* Cada página del PDF, con su capa para los recuadros de firma
@@ -800,14 +925,21 @@
      así el recuadro se queda en su lugar aunque cambie el zoom o el
      ancho de la ventana. */
   .pagina-caja { position: relative; margin: 0 auto var(--sp-3); width: fit-content; }
-  .pagina-caja canvas { display: block; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
+  /* Sobre el blanco del visor la hoja ya no se distingue sola, así que
+     el contorno lo dan el filo y la sombra: sin ellos, en un documento
+     de varias páginas no se ve dónde acaba una y empieza la otra. */
+  .pagina-caja canvas {
+    display: block; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.13);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.13);
+  }
   .pagina-capa { position: absolute; inset: 0; }
   .pagina-num {
     text-align: center; font-size: 11px; color: var(--muted);
     margin-top: 4px; margin-bottom: var(--sp-3);
   }
   /* Mientras se está colocando una firma, la hoja invita a picarle. */
-  .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(255,255,255,0.06); }
+  .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(198,32,39,0.05); }
 
   /* El recuadro de firma. Va translúcido a propósito: se coloca encima
      de la rayita donde toca firmar, y si tapara el texto habría que
@@ -906,7 +1038,17 @@
     border: 1.5px solid var(--border); background: #fff;
     font-family: inherit; font-size: 12px; font-weight: 700;
     color: var(--text); cursor: pointer; white-space: nowrap;
+    transition: background var(--t-medio), border-color var(--t-medio);
   }
+  /* En cuanto el correo está completo, el botón se pinta del color con
+     el que van a salir sus recuadros: fijar una firma es lo siguiente
+     que se hace, y así de una vez se ve de qué color va a quedar. Los
+     tonos son pastel, así que el texto sigue en oscuro. */
+  .firmante-fijar.listo {
+    background: var(--firmante-color, #fff);
+    border-color: var(--firmante-color, var(--border));
+  }
+  .firmante-fijar.listo .cuenta { background: rgba(0,0,0,0.16); }
   .firmante-fijar:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
   .firmante-fijar:disabled { opacity: 0.4; cursor: not-allowed; }
   .firmante-fijar.armado { border-color: var(--red); background: var(--red); color: #fff; }
@@ -1146,13 +1288,20 @@
 
           <div class="editor-split">
 
-            <!-- Vista previa -->
-            <div class="editor-doc" id="editor-doc">
-              <div class="editor-cargando" id="editor-cargando">
-                <div class="kw-loader"></div>
-                <span>Preparando el documento...</span>
+            <!-- Vista previa: la tira de miniaturas y la hoja, en un
+                 mismo marco blanco. -->
+            <div class="editor-visor">
+              <aside class="editor-minis">
+                <div class="minis-tit">Páginas <b id="minis-cuenta">0/0</b></div>
+                <div class="minis-lista barra-oscura" id="minis-lista"></div>
+              </aside>
+              <div class="editor-doc barra-oscura" id="editor-doc">
+                <div class="editor-cargando" id="editor-cargando">
+                  <div class="kw-loader"></div>
+                  <span>Preparando el documento...</span>
+                </div>
+                <div id="paginas"></div>
               </div>
-              <div id="paginas"></div>
             </div>
 
             <!-- Campos -->
@@ -1165,30 +1314,37 @@
 
                 <h2 class="section-title" style="margin-top:var(--sp-4);">Quién firma</h2>
 
-                <!-- Se pregunta antes de nada porque es lo que cambia el
-                     resto: si el asesor firma, su tarjeta ya sale llena y
-                     no tiene que capturarse a sí mismo. -->
-                <div class="firmo-yo" id="pregunta-firmo">
-                  <span class="firmo-yo-txt">¿Tú también firmas este documento?</span>
-                  <span class="firmo-yo-btns">
-                    <button type="button" class="firmo-yo-btn si" id="firmo-si">Sí</button>
-                    <button type="button" class="firmo-yo-btn" id="firmo-no">No</button>
-                  </span>
+                <!-- Lo único que se desplaza. El título de arriba y los
+                     botones de abajo se quedan quietos, para no tener
+                     que recorrer toda la lista de firmantes cada vez que
+                     se quiere mandar el documento. -->
+                <div class="editor-scroll barra-oscura">
+
+                  <!-- Se pregunta antes de nada porque es lo que cambia el
+                       resto: si el asesor firma, su tarjeta ya sale llena y
+                       no tiene que capturarse a sí mismo. -->
+                  <div class="firmo-yo" id="pregunta-firmo">
+                    <span class="firmo-yo-txt">¿Tú también firmas este documento?</span>
+                    <span class="firmo-yo-btns">
+                      <button type="button" class="firmo-yo-btn si" id="firmo-si">Sí</button>
+                      <button type="button" class="firmo-yo-btn" id="firmo-no">No</button>
+                    </span>
+                  </div>
+
+                  <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
+                  <div id="firmantes"></div>
+                  <button type="button" class="firma-agregar" id="btn-agregar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Agregar otro firmante
+                  </button>
+
+                  <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
+                    <input type="checkbox" id="en-orden">
+                    <span>Firmar en orden</span>
+                  </label>
+
+                  <div id="msg-firma" class="msg" style="display:none;"></div>
                 </div>
-
-                <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
-                <div id="firmantes"></div>
-                <button type="button" class="firma-agregar" id="btn-agregar">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Agregar otro firmante
-                </button>
-
-                <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
-                  <input type="checkbox" id="en-orden">
-                  <span>Firmar en orden</span>
-                </label>
-
-                <div id="msg-firma" class="msg" style="display:none;"></div>
 
                 <div class="editor-botones">
                   <button type="button" class="btn-borrador" id="btn-borrador">
@@ -1218,10 +1374,10 @@
       </button>
       <h3 id="doc-titulo">Documento</h3>
       <div class="doc-split">
-        <div id="doc-cuerpo" class="doc-marco"></div>
+        <div id="doc-cuerpo" class="doc-marco barra-oscura"></div>
         <div class="doc-lado">
           <div id="doc-lado-tit" class="doc-lado-tit"></div>
-          <div id="doc-lado" class="doc-firmantes"></div>
+          <div id="doc-lado" class="doc-firmantes barra-oscura"></div>
           <div class="det-acciones" id="doc-acciones"></div>
         </div>
       </div>
@@ -1244,7 +1400,7 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       <h3>Editar</h3>
-      <div id="editar-cuerpo"></div>
+      <div id="editar-cuerpo" class="barra-oscura"></div>
     </div>
   </div>
 
@@ -1611,19 +1767,94 @@
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
       }).promise;
 
-      hojas.push({ numero: n, capa: capa, anchoPt: natural.width, altoPt: natural.height });
+      hojas.push({
+        numero: n, capa: capa, caja: caja, lienzo: lienzo,
+        anchoPt: natural.width, altoPt: natural.height,
+      });
     }
     return hojas;
   }
 
+  // ── La tira de miniaturas ──
+  // Se arman copiando el lienzo que ya se dibujó, en chiquito: volver a
+  // pedirle la página a pdf.js sería dibujar el documento dos veces, y
+  // en un contrato de veinte hojas eso se siente.
+  function pintarMiniaturas() {
+    const lista = $('minis-lista');
+    lista.innerHTML = '';
+    $('minis-cuenta').textContent = paginas.length ? '1/' + paginas.length : '0/0';
+
+    paginas.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mini-hoja' + (p.numero === 1 ? ' activa' : '');
+      btn.dataset.pagina = String(p.numero);
+
+      const mini = document.createElement('canvas');
+      const ANCHO_MINI = 104;
+      const escala = ANCHO_MINI / p.lienzo.width;
+      mini.width = ANCHO_MINI;
+      mini.height = Math.round(p.lienzo.height * escala);
+      mini.getContext('2d').drawImage(p.lienzo, 0, 0, mini.width, mini.height);
+
+      const num = document.createElement('span');
+      num.className = 'mini-num';
+      num.textContent = String(p.numero);
+
+      btn.appendChild(mini);
+      btn.appendChild(num);
+      btn.addEventListener('click', () => {
+        p.caja.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      lista.appendChild(btn);
+    });
+  }
+
+  // Cuál se está viendo, para marcarla en la tira y en el contador. Se
+  // toma la hoja cuyo centro esté más cerca del centro del visor: con
+  // "la primera que asome" el número saltaba de ida y vuelta mientras
+  // se pasaba de una a otra.
+  function marcarMiniaturaVisible() {
+    if (!paginas.length) return;
+    const marco = $('editor-doc').getBoundingClientRect();
+    const centro = marco.top + marco.height / 2;
+
+    let cual = paginas[0];
+    let mejor = Infinity;
+    paginas.forEach((p) => {
+      const r = p.caja.getBoundingClientRect();
+      const dist = Math.abs((r.top + r.height / 2) - centro);
+      if (dist < mejor) { mejor = dist; cual = p; }
+    });
+
+    $('minis-cuenta').textContent = cual.numero + '/' + paginas.length;
+    $('minis-lista').querySelectorAll('.mini-hoja').forEach((b) => {
+      b.classList.toggle('activa', Number(b.dataset.pagina) === cual.numero);
+    });
+  }
+
   async function pintarDocumento(bytes) {
     paginas = await dibujarEn(bytes, $('paginas'), $('editor-doc'));
+    pintarMiniaturas();
     // Solo en el editor las hojas reciben clics: en la vista previa del
     // historial el documento se mira, no se toca.
     paginas.forEach((p) => {
       p.capa.addEventListener('click', (e) => colocarEnPagina(e, p));
     });
   }
+
+  // El contador y la miniatura marcada siguen al scroll de la hoja. Se
+  // engancha una sola vez (el visor no se vuelve a crear, solo se
+  // repinta por dentro) y se deja pasar un cuadro antes de recalcular,
+  // para no hacer cuentas de geometría en cada pixel que se rueda.
+  (function seguirScrollDelVisor() {
+    let pendiente = false;
+    $('editor-doc').addEventListener('scroll', () => {
+      if (pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(() => { pendiente = false; marcarMiniaturaVisible(); });
+    });
+  })();
 
 
   // ── Pasar del paso 1 al paso 2 ──────────────────────────────
@@ -1926,6 +2157,11 @@
       el.style.top = m.y + '%';
       el.style.width = m.anchoPct + '%';
       el.style.height = m.altoPct + '%';
+      // El color se vuelve a sacar de la posición del firmante en la
+      // lista, no del que se guardó al colocarla: quitar un firmante de
+      // en medio recorre los colores de los de abajo, y con el guardado
+      // el recuadro se quedaba de un color que ya no era el de nadie.
+      m.color = colorDe(m.fila) || m.color;
       // El color va como variable para que el borde, el relleno
       // translúcido y el tirador salgan del mismo tono desde el CSS.
       el.style.setProperty('--marca-color', m.color);
@@ -2031,14 +2267,30 @@
     refrescarBotonesFijar();
   }
 
+  // Un correo se da por completo cuando ya tiene forma de correo. No se
+  // valida más a fondo aquí: esto solo decide si pintar el botón, y
+  // quien manda el documento ya revisa de verdad.
+  const CORREO_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
   // Cuántas firmas lleva colocadas cada quien, para que se vea en su
-  // botón sin tener que ir contando recuadros por el documento.
+  // botón sin tener que ir contando recuadros por el documento. De paso
+  // reparte los colores: el de la tarjeta y el del botón son el mismo
+  // con el que van a salir sus recuadros en la hoja.
   function refrescarBotonesFijar() {
-    $('firmantes').querySelectorAll('.firmante-fila').forEach((fila) => {
+    const filas = Array.from($('firmantes').querySelectorAll('.firmante-fila'));
+    filas.forEach((fila, i) => {
+      const color = COLORES[i % COLORES.length];
+      fila.style.setProperty('--firmante-color', color);
+
       const btn = fila.querySelector('.firmante-fijar');
       if (!btn) return;
       const cuantas = marcas.filter((m) => m.fila === fila).length;
+      const correo = fila.querySelector('.firmante-mail').value.trim();
       btn.classList.toggle('armado', filaArmada === fila);
+      // Con el correo a medias no se puede fijar nada (la firma se
+      // amarra al correo), así que tampoco se pinta: el color aparece
+      // justo cuando el botón empieza a servir.
+      btn.classList.toggle('listo', CORREO_OK.test(correo));
       btn.querySelector('.cuenta').textContent = String(cuantas);
       btn.querySelector('.rotulo').textContent =
         filaArmada === fila ? 'Pica en la hoja' : 'Fijar firma';
@@ -2155,6 +2407,9 @@
       marcarUnico();
       // Sus firmas colocadas se van con él.
       limpiarMarcasHuerfanas();
+      // Los colores van por posición, así que quitar una de en medio
+      // recorre los de todas las de abajo.
+      refrescarBotonesFijar();
       // Quitar un renglón no dispara ningún evento 'input', así que sin
       // esto el botón del frecuente que se acaba de borrar se quedaba
       // apagado para siempre y ya no se podía volver a agregar.
@@ -2201,6 +2456,10 @@
   function agregarFirmante(nombre, correo) {
     $('firmantes').appendChild(filaFirmante(nombre, correo));
     marcarUnico();
+    // Reparte los colores: la tarjeta nueva no tiene el suyo hasta que
+    // esto corre, y las de arriba pueden cambiar si se quitó una de en
+    // medio (el color va por posición, no por firmante).
+    refrescarBotonesFijar();
   }
 
   // ── ¿Yo también firmo? ──
@@ -3839,6 +4098,9 @@
     // con un frecuente, así que los botones se revisan al vuelo.
     $('firmantes').addEventListener('input', () => {
       marcarFrecuentesPuestos();
+      // Para que el botón de fijar se pinte en cuanto el correo queda
+      // completo, mientras se escribe.
+      refrescarBotonesFijar();
       // Los recuadros ya colocados llevan el nombre del firmante escrito
       // encima, así que se redibujan al corregirlo.
       if (marcas.length) pintarMarcas();
