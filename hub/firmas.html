@@ -202,6 +202,20 @@
     color: var(--red); cursor: pointer;
   }
 
+  /* ── Observadores ──
+     A diferencia de los firmantes no llevan tarjeta ni color propio: solo
+     ven el flujo de firmas, no firman nada, así que basta con su correo
+     en un renglón sencillo. */
+  .observadores-bloque {
+    margin-top: var(--sp-4); padding-top: var(--sp-4);
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .observadores-titulo { display: flex; flex-direction: column; gap: 2px; margin-bottom: 9px; }
+  .observadores-titulo strong { font-size: 13px; }
+  .observadores-titulo span { font-size: 11.5px; color: var(--muted); }
+  .observador-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .observador-fila .kw-input { flex: 1 1 auto; min-width: 0; margin: 0; }
+
   /* Cuánto le queda del mes. Se enseña antes del formulario, no al
      apretar enviar: enterarte de que ya no te quedan después de llenar
      todo y subir el archivo es la peor manera de saberlo. */
@@ -1425,6 +1439,18 @@
                     <span>Firmar en orden</span>
                   </label>
 
+                  <div class="observadores-bloque">
+                    <div class="observadores-titulo">
+                      <strong>Observadores</strong>
+                      <span>Opcional. Ven el flujo de firmas del documento, pero no firman nada.</span>
+                    </div>
+                    <div id="observadores"></div>
+                    <button type="button" class="firma-agregar" id="btn-agregar-observador">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Agregar observador
+                    </button>
+                  </div>
+
                   <div id="msg-firma" class="msg" style="display:none;"></div>
                 </div>
 
@@ -2604,6 +2630,7 @@
   // con un campo vacío que ya invita a escribir.
   function prepararFirmantes() {
     $('firmantes').innerHTML = '';
+    $('observadores').innerHTML = '';
     $('pregunta-firmo').style.display = 'flex';
     marcarFrecuentesPuestos();
   }
@@ -2640,6 +2667,41 @@
         check: !!check,
       };
     }).filter((f) => f.nombre || f.correo);
+  }
+
+  // ── Observadores ──
+  // Solo ven el flujo de firmas, así que basta su correo: ni tarjeta, ni
+  // color, ni verificaciones.
+  function filaObservador(correo) {
+    const fila = document.createElement('div');
+    fila.className = 'observador-fila';
+    fila.innerHTML =
+      '<input type="email" class="kw-input observador-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '<button type="button" class="firmante-quitar" aria-label="Quitar observador" title="Quitar observador">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<polyline points="3 6 5 6 21 6"/>' +
+          '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+          '<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' +
+        '</svg>' +
+      '</button>';
+    fila.querySelector('.firmante-quitar').addEventListener('click', () => fila.remove());
+    return fila;
+  }
+
+  function agregarObservador(correo) {
+    $('observadores').appendChild(filaObservador(correo));
+  }
+
+  $('btn-agregar-observador').addEventListener('click', () => {
+    agregarObservador('');
+    const filas = $('observadores').querySelectorAll('.observador-mail');
+    filas[filas.length - 1].focus();
+  });
+
+  function leerObservadores() {
+    return Array.from($('observadores').querySelectorAll('.observador-fila')).map((f) => ({
+      correo: f.querySelector('.observador-mail').value.trim(),
+    })).filter((o) => o.correo);
   }
 
   // ── Mandar ──────────────────────────────────────────────────
@@ -2714,6 +2776,7 @@
         // A medias está bien: se guarda justamente porque falta algo.
         firmantes: leerFirmantes(),
         posiciones: posicionesParaEnviar(),
+        observadores: leerObservadores(),
       });
       // Se recuerda cuál es, para que guardar otra vez actualice este
       // mismo borrador y no vaya dejando copias.
@@ -2779,6 +2842,7 @@
         firmantes: firmantes,
         enOrden: $('en-orden').checked,
         posiciones: posicionesParaEnviar(),
+        observadores: leerObservadores(),
       });
 
       // Se limpia todo para que no se mande dos veces sin querer.
@@ -3389,6 +3453,11 @@
     marcarUnico();
     marcarFrecuentesPuestos();
 
+    // Los observadores, igual que se dejaron.
+    $('observadores').innerHTML = '';
+    const observadoresGuardados = Array.isArray(f.observadores) ? f.observadores : [];
+    observadoresGuardados.forEach((o) => agregarObservador(o.correo || ''));
+
     try {
       // El PDF se baja del bucket. Es el mismo que se subió al guardar,
       // así que la paginación coincide con las coordenadas guardadas.
@@ -3520,6 +3589,10 @@
       (enCurso
         ? '<button type="button" class="env-menu-op" data-accion="reenviar">' +
             '<span>Reenviar el correo</span></button>'
+        : '') +
+      (enCurso
+        ? '<button type="button" class="env-menu-op" data-accion="regenerar_enlaces">' +
+            '<span>Regenerar ligas de firma</span></button>'
         : '') +
       (enCurso && puedeBorrar ? '<div class="env-menu-sep"></div>' : '') +
       (puedeBorrar
@@ -3778,6 +3851,7 @@
     if (!f) return;
 
     const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+    const observadores = Array.isArray(f.observadores) ? f.observadores : [];
     const pill = PILL[f.estado] || PILL.pendiente;
 
     const quienes = firmantes.map((x) => {
@@ -3837,6 +3911,8 @@
           (f.weetrust_document_id
             ? '<div><b>ID:</b> <span class="det-id">' + escapar(f.weetrust_document_id) + '</span></div>' : '') +
           '<div><b>Fecha de envío:</b> ' + fecha(f.enviado_at || f.created_at) + '</div>' +
+          (observadores.length
+            ? '<div><b>Observadores:</b> ' + escapar(observadores.map((o) => o.correo).join(', ')) + '</div>' : '') +
         '</div>' +
         '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
       '</div>' +
@@ -4080,7 +4156,7 @@
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
-    const campos = 'id, titulo, estado, firmantes, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
+    const campos = 'id, titulo, estado, firmantes, observadores, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
 
     const { data, error } = await window.kwSupabase
