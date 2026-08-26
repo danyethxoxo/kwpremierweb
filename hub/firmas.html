@@ -787,7 +787,26 @@
      agregar firmantes alargue la página entera. */
   :root { --alto-editor: calc(100vh - 170px); }
 
-  .editor-split { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
+  /* El editor se sale del ancho de página del sitio (1180px). Ese ancho
+     está bien para el historial, pero aquí lo tiene que repartir entre
+     el documento y los campos, y al documento le tocaba tan poco que el
+     contrato salía en letra chica. Se ensancha solo esta vista, sin
+     tocar --ancho-pagina, que lo usan todas las demás pantallas.
+
+     El margen negativo es lo que lo recentra: el 50% es del hueco de
+     .kw-page, así que restarle media caja nueva la deja centrada en la
+     pantalla, no en el contenedor. */
+  @media (min-width: 1240px) {
+    #vista-editor {
+      --ancho-editor: min(1560px, calc(100vw - 48px));
+      width: var(--ancho-editor);
+      margin-left: calc(50% - var(--ancho-editor) / 2);
+    }
+  }
+
+  /* Al documento le toca bastante más que a los campos: es lo que hay
+     que poder leer, y los campos ya caben holgados en lo que queda. */
+  .editor-split { display: grid; grid-template-columns: minmax(0,1.75fr) minmax(0,1fr); gap: var(--sp-4); align-items: start; }
   @media (max-width: 900px) { .editor-split { grid-template-columns: 1fr; } }
 
   /* El visor es la hoja blanca con su tira de miniaturas al lado,
@@ -843,6 +862,40 @@
      que de verdad hace falta ver. */
   @media (max-width: 720px) { .editor-minis { display: none; } }
 
+  /* La columna de la derecha del visor: la barra de zoom arriba, fija, y
+     debajo la hoja, que es lo único que se desplaza. */
+  .editor-panel { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .editor-zoom {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.09);
+    background: #fafafa;
+  }
+  .zoom-btn {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(0,0,0,0.14); background: #fff;
+    color: var(--text); cursor: pointer; padding: 0;
+    transition: border-color var(--t-medio), color var(--t-medio);
+  }
+  .zoom-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .zoom-btn:disabled { opacity: 0.35; cursor: default; }
+  .zoom-pct {
+    font-size: 12px; font-weight: 700; color: var(--text);
+    min-width: 48px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  /* Vuelve la hoja al ancho de la columna. Se apaga cuando ya está así,
+     que es cuando no haría nada. */
+  .zoom-ajustar {
+    margin-left: auto; padding: 0 10px; height: 26px; border-radius: 7px;
+    border: 1px solid rgba(0,0,0,0.14); background: #fff;
+    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    color: var(--muted); cursor: pointer;
+  }
+  .zoom-ajustar:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .zoom-ajustar:disabled { opacity: 0.35; cursor: default; }
+
   .editor-doc {
     position: relative;
     flex: 1 1 auto; min-width: 0;
@@ -853,15 +906,23 @@
     padding: var(--sp-3);
     /* Se lleva casi todo el alto de la ventana: mientras más hoja se
        vea de una vez, menos hay que subir y bajar para colocar firmas.
-       Solo se desplaza en vertical; el ancho se calcula para que la hoja
-       quepa siempre, así que una barra horizontal solo aparecería por un
-       error de cálculo. */
+       En horizontal solo se desplaza cuando el zoom saca la hoja del
+       ancho de la columna. */
     overflow-y: auto;
-    overflow-x: hidden;
   }
-  /* La hoja nunca es más ancha que su columna, pase lo que pase con el
-     cálculo de la escala. */
-  .editor-doc canvas, .editor-doc .pagina-caja { max-width: 100%; }
+  /* Con zoom la hoja SÍ puede pasarse del ancho de la columna: para eso
+     es el zoom. Cuando eso pasa aparece la barra horizontal, y por eso
+     aquí no se recorta con max-width como en la vista previa del
+     historial, donde la hoja solo se mira y siempre cabe.
+
+     El ancho lo manda .pagina-caja y el lienzo lo sigue: así el zoom es
+     un solo número por hoja, y los recuadros de firma, que se miden en
+     porcentaje de la caja, se acomodan solos. */
+  .editor-doc { overflow-x: auto; }
+  /* Sin escoger vista: el lienzo sigue a su caja en los dos lados. En
+     la vista previa del historial la caja además se recorta al ancho
+     disponible (más abajo), así que ahí nunca se sale. */
+  .pagina-caja canvas { width: 100%; height: auto; }
   .editor-cargando {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 40px 0; color: var(--muted); font-size: 13px;
@@ -1295,12 +1356,24 @@
                 <div class="minis-tit">Páginas <b id="minis-cuenta">0/0</b></div>
                 <div class="minis-lista barra-oscura" id="minis-lista"></div>
               </aside>
-              <div class="editor-doc barra-oscura" id="editor-doc">
-                <div class="editor-cargando" id="editor-cargando">
-                  <div class="kw-loader"></div>
-                  <span>Preparando el documento...</span>
+              <div class="editor-panel">
+                <div class="editor-zoom">
+                  <button type="button" class="zoom-btn" id="zoom-menos" aria-label="Alejar" title="Alejar">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                  <button type="button" class="zoom-btn" id="zoom-mas" aria-label="Acercar" title="Acercar">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                  <span class="zoom-pct" id="zoom-pct">100 %</span>
+                  <button type="button" class="zoom-ajustar" id="zoom-ajustar">Ajustar al ancho</button>
                 </div>
-                <div id="paginas"></div>
+                <div class="editor-doc barra-oscura" id="editor-doc">
+                  <div class="editor-cargando" id="editor-cargando">
+                    <div class="kw-loader"></div>
+                    <span>Preparando el documento...</span>
+                  </div>
+                  <div id="paginas"></div>
+                </div>
               </div>
             </div>
 
@@ -1737,16 +1810,20 @@
 
       const caja = document.createElement('div');
       caja.className = 'pagina-caja';
+      // El ancho de la hoja lo manda la caja y el lienzo lo sigue (en el
+      // CSS va con width:100%). Así el zoom es cambiar este número, sin
+      // volver a dibujar nada y sin tocar los recuadros de firma, que
+      // van en porcentaje de la caja.
+      caja.style.width = vista.width + 'px';
 
       const lienzo = document.createElement('canvas');
-      // El dibujo se hace al doble de resolución en pantallas que lo
-      // aprovechan; si no, el texto del contrato se ve borroso justo
-      // cuando hay que leerlo.
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // El dibujo se hace por encima del tamaño en pantalla: al doble en
+      // las que lo aprovechan, y de todas formas con margen suficiente
+      // para que al acercar el zoom el texto no se deshaga. Sin esto,
+      // acercarse a un contrato es justo cuando peor se lee.
+      const dpr = Math.max(Math.min(window.devicePixelRatio || 1, 2), 1.6);
       lienzo.width = Math.floor(vista.width * dpr);
       lienzo.height = Math.floor(vista.height * dpr);
-      lienzo.style.width = vista.width + 'px';
-      lienzo.style.height = vista.height + 'px';
 
       const capa = document.createElement('div');
       capa.className = 'pagina-capa';
@@ -1769,11 +1846,46 @@
 
       hojas.push({
         numero: n, capa: capa, caja: caja, lienzo: lienzo,
+        // El ancho al que la hoja cabe justo en la columna. El zoom se
+        // cuenta a partir de aquí: 100 % es esto.
+        anchoBase: vista.width,
         anchoPt: natural.width, altoPt: natural.height,
       });
     }
     return hojas;
   }
+
+  // ── El zoom del documento ──
+  // No redibuja nada: solo cambia el ancho de cada hoja, y el lienzo y
+  // los recuadros de firma la siguen. Se dibuja de entrada con más
+  // resolución de la que se enseña (ver dibujarEn), que es lo que deja
+  // acercarse sin que el texto se deshaga.
+  const ZOOM_MIN = 0.6;
+  const ZOOM_MAX = 2.2;
+  const ZOOM_PASO = 0.15;
+  let zoomDoc = 1;
+
+  function aplicarZoom() {
+    paginas.forEach((p) => {
+      if (p.anchoBase) p.caja.style.width = (p.anchoBase * zoomDoc) + 'px';
+    });
+    $('zoom-pct').textContent = Math.round(zoomDoc * 100) + ' %';
+    $('zoom-menos').disabled = zoomDoc <= ZOOM_MIN + 0.001;
+    $('zoom-mas').disabled = zoomDoc >= ZOOM_MAX - 0.001;
+    $('zoom-ajustar').disabled = Math.abs(zoomDoc - 1) < 0.001;
+  }
+
+  function ponerZoom(v) {
+    zoomDoc = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(v * 100) / 100));
+    aplicarZoom();
+    // Al cambiar el alto de las hojas, la que se estaba viendo puede ser
+    // otra.
+    marcarMiniaturaVisible();
+  }
+
+  $('zoom-menos').addEventListener('click', () => ponerZoom(zoomDoc - ZOOM_PASO));
+  $('zoom-mas').addEventListener('click', () => ponerZoom(zoomDoc + ZOOM_PASO));
+  $('zoom-ajustar').addEventListener('click', () => ponerZoom(1));
 
   // ── La tira de miniaturas ──
   // Se arman copiando el lienzo que ya se dibujó, en chiquito: volver a
@@ -1835,6 +1947,10 @@
 
   async function pintarDocumento(bytes) {
     paginas = await dibujarEn(bytes, $('paginas'), $('editor-doc'));
+    // El zoom que traía puesto se respeta: si alguien se acercó para
+    // leer la letra chica, cambiar de documento no tiene por qué
+    // devolverlo al tamaño de antes.
+    aplicarZoom();
     pintarMiniaturas();
     // Solo en el editor las hojas reciben clics: en la vista previa del
     // historial el documento se mira, no se toca.
