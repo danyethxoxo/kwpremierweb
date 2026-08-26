@@ -202,17 +202,17 @@
     color: var(--red); cursor: pointer;
   }
 
-  /* ── Observadores ──
-     A diferencia de los firmantes no llevan tarjeta ni color propio: solo
-     ven el flujo de firmas, no firman nada, así que basta con su correo
-     en un renglón sencillo. */
-  .observadores-bloque {
-    margin-top: var(--sp-4); padding-top: var(--sp-4);
-    border-top: 1px solid rgba(0,0,0,0.08);
-  }
-  .observadores-titulo { display: flex; flex-direction: column; gap: 2px; margin-bottom: 9px; }
-  .observadores-titulo strong { font-size: 13px; }
-  .observadores-titulo span { font-size: 11.5px; color: var(--muted); }
+  /* ── Quién firma / Observadores ──
+     Misma pestaña del sitio (kw-tabs), pero sin el alto mínimo que trae
+     por defecto: el panel se acomoda al contenido, y aquí el contenido ya
+     vive dentro de su propio recuadro con scroll (.editor-scroll). */
+  .firma-tabs { margin-bottom: var(--sp-3); }
+  .firma-tabpanels { --panel-min: 0; }
+
+  /* A diferencia de los firmantes, los observadores no llevan tarjeta ni
+     color propio: solo ven el flujo de firmas, no firman nada, así que
+     basta con su correo en un renglón sencillo. */
+  .observadores-nota { font-size: 11.5px; color: var(--muted); margin: 0 0 11px; }
   .observador-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .observador-fila .kw-input { flex: 1 1 auto; min-width: 0; margin: 0; }
 
@@ -1408,47 +1408,50 @@
                      Cuando se podía escribir aparte, el documento salía
                      con un nombre aquí y otro en weetrust, y luego no
                      había manera de casar uno con otro. -->
-                <h2 class="section-title">Quién firma</h2>
+                <div class="kw-tabs firma-tabs" data-kw-tabs="firma-tabpanels">
+                  <button type="button" class="kw-tab activo" data-tab="firmantes">Quién firma</button>
+                  <button type="button" class="kw-tab" data-tab="observadores">Observadores</button>
+                </div>
 
                 <!-- Lo único que se desplaza. El título de arriba y los
                      botones de abajo se quedan quietos, para no tener
                      que recorrer toda la lista de firmantes cada vez que
                      se quiere mandar el documento. -->
                 <div class="editor-scroll barra-oscura">
+                  <div class="kw-tabpanels firma-tabpanels" id="firma-tabpanels">
+                    <section class="kw-tabpanel activo" data-panel="firmantes">
+                      <!-- Se pregunta antes de nada porque es lo que cambia
+                           el resto: si el asesor firma, su tarjeta ya sale
+                           llena y no tiene que capturarse a sí mismo. -->
+                      <div class="firmo-yo" id="pregunta-firmo">
+                        <span class="firmo-yo-txt">¿Tú también firmas este documento?</span>
+                        <span class="firmo-yo-btns">
+                          <button type="button" class="firmo-yo-btn si" id="firmo-si">Sí</button>
+                          <button type="button" class="firmo-yo-btn" id="firmo-no">No</button>
+                        </span>
+                      </div>
 
-                  <!-- Se pregunta antes de nada porque es lo que cambia el
-                       resto: si el asesor firma, su tarjeta ya sale llena y
-                       no tiene que capturarse a sí mismo. -->
-                  <div class="firmo-yo" id="pregunta-firmo">
-                    <span class="firmo-yo-txt">¿Tú también firmas este documento?</span>
-                    <span class="firmo-yo-btns">
-                      <button type="button" class="firmo-yo-btn si" id="firmo-si">Sí</button>
-                      <button type="button" class="firmo-yo-btn" id="firmo-no">No</button>
-                    </span>
-                  </div>
+                      <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
+                      <div id="firmantes"></div>
+                      <button type="button" class="firma-agregar" id="btn-agregar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Agregar otro firmante
+                      </button>
 
-                  <div id="frecuentes" class="firma-frecuentes" style="display:none;"></div>
-                  <div id="firmantes"></div>
-                  <button type="button" class="firma-agregar" id="btn-agregar">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Agregar otro firmante
-                  </button>
+                      <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
+                        <input type="checkbox" id="en-orden">
+                        <span>Firmar en orden</span>
+                      </label>
+                    </section>
 
-                  <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
-                    <input type="checkbox" id="en-orden">
-                    <span>Firmar en orden</span>
-                  </label>
-
-                  <div class="observadores-bloque">
-                    <div class="observadores-titulo">
-                      <strong>Observadores</strong>
-                      <span>Opcional. Ven el flujo de firmas del documento, pero no firman nada.</span>
-                    </div>
-                    <div id="observadores"></div>
-                    <button type="button" class="firma-agregar" id="btn-agregar-observador">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                      Agregar observador
-                    </button>
+                    <section class="kw-tabpanel" data-panel="observadores">
+                      <p class="observadores-nota">Ven el flujo de firmas del documento, pero no firman nada.</p>
+                      <div id="observadores"></div>
+                      <button type="button" class="firma-agregar" id="btn-agregar-observador">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Agregar observador
+                      </button>
+                    </section>
                   </div>
 
                   <div id="msg-firma" class="msg" style="display:none;"></div>
@@ -1578,6 +1581,17 @@
   let enviando = false;
 
   const $ = (id) => document.getElementById(id);
+
+  // Los modal-overlay de esta pantalla (documento, detalle, editar) no
+  // bloqueaban el fondo: con la rueda o el teclado, el scroll se iba al
+  // historial de atrás en vez de quedarse dentro del modal. Se cuenta
+  // cuántos hay abiertos porque, aunque hoy no se abren dos a la vez, uno
+  // solo se restaura el scroll cuando el último se cierra.
+  let modalesAbiertos = 0;
+  function bloquearFondo(abrir) {
+    modalesAbiertos = Math.max(0, modalesAbiertos + (abrir ? 1 : -1));
+    document.body.style.overflow = modalesAbiertos > 0 ? 'hidden' : '';
+  }
 
   function aviso(texto, tipo) {
     const caja = $('msg-firma');
@@ -2118,6 +2132,7 @@
 
     try {
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
+      marcarSincronizado();
       await cargarEnvios();
       if (!r.actualizados && !r.importados) {
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
@@ -2152,11 +2167,38 @@
   // tarjetas parpadearan solas apenas se abría la pantalla.
   async function actualizarSilencioso() {
     try {
-      await llamarFuncion({ accion: 'actualizar_todos' });
+      return await llamarFuncion({ accion: 'actualizar_todos' });
     } catch (e) {
       // Sin diálogo: si falla, la tabla se pinta con lo que ya había en
       // la base y la persona puede ponerla al día a mano con el botón.
+      return null;
     }
+  }
+
+  // ── Cada cuánto se sincroniza sola contra weetrust ──
+  // "actualizar_todos" trae TODO el historial de weetrust, página por
+  // página: con una cuenta que ya lleva cientos de documentos es la parte
+  // más lenta, con mucho, de entrar a la pantalla. El webhook mantiene la
+  // base al día casi siempre, así que hacerlo de nuevo en cada entrada es
+  // trabajo de sobra. Se guarda cuándo fue la última vez (por navegador,
+  // no por cuenta) y no se repite antes de que pase una hora; el botón
+  // "Actualizar" de arriba lo sigue pudiendo forzar en cualquier momento.
+  const SYNC_CLAVE = 'kw_firmas_ultima_sync';
+  const SYNC_CADA_MS = 60 * 60 * 1000;
+
+  function debeSincronizarAuto() {
+    try {
+      const ultima = Number(localStorage.getItem(SYNC_CLAVE) || 0);
+      return !ultima || (Date.now() - ultima) >= SYNC_CADA_MS;
+    } catch {
+      // Sin localStorage (modo privado, por ejemplo) mejor sincronizar de
+      // más que quedarse sin hacerlo nunca.
+      return true;
+    }
+  }
+
+  function marcarSincronizado() {
+    try { localStorage.setItem(SYNC_CLAVE, String(Date.now())); } catch {}
   }
 
   $('btn-nuevo').addEventListener('click', () => {
@@ -3157,6 +3199,7 @@
       '<div class="editor-cargando"><div class="kw-loader"></div>' +
       '<span>Abriendo el documento...</span></div>';
     $('modal-doc').style.display = 'flex';
+    bloquearFondo(true);
 
     // Tres intentos, en orden de qué tan buena es cada copia:
     //
@@ -3633,6 +3676,7 @@
     $('modal-editar').style.display = 'none';
     $('editar-cuerpo').innerHTML = '';
     tagAbierta = null;
+    bloquearFondo(false);
   }
 
   function abrirEditar(i) {
@@ -3654,6 +3698,7 @@
       '</div>' +
       '<div id="lista-etiquetas"></div>';
     $('modal-editar').style.display = 'flex';
+    bloquearFondo(true);
 
     // ── Asesores ──
     // Solo cuatro a la vez: con cien asesores la lista completa se hace
@@ -3922,13 +3967,15 @@
 
     cablearAcciones($('det-cuerpo'));
     $('modal-detalle').style.display = 'flex';
+    bloquearFondo(true);
   }
 
   function cerrarDetalle() {
     $('modal-detalle').style.display = 'none';
+    bloquearFondo(false);
   }
 
-  function cerrarDoc() { $('modal-doc').style.display = 'none'; $('doc-cuerpo').innerHTML = ''; }
+  function cerrarDoc() { $('modal-doc').style.display = 'none'; $('doc-cuerpo').innerHTML = ''; bloquearFondo(false); }
   $('doc-cerrar').addEventListener('click', cerrarDoc);
   $('modal-doc').addEventListener('click', (e) => { if (e.target === $('modal-doc')) cerrarDoc(); });
 
@@ -4330,15 +4377,26 @@
     await Promise.all([cargarEtiquetas(), cargarAsesores()]);
     pintarOpcionesFiltros();
 
-    // Antes de pintar la tabla, y no después: se pone al día contra
-    // weetrust por si el webhook se perdió algún aviso, sin que la
-    // persona tenga que pedirlo con el botón. Hacerlo antes (con la
-    // pantalla de carga tapando todo) evita que la tabla se vea dos
-    // veces seguidas, una con lo que había y otra ya actualizada, que
-    // se sentía como que las tarjetas parpadeaban solas.
-    await Promise.all([cargarCupo(), actualizarSilencioso()]);
-    await cargarEnvios();
+    // Se pinta de inmediato con lo que ya hay en la base: la pantalla de
+    // carga no tiene por qué esperar a preguntarle a weetrust, que es lo
+    // lento. El webhook mantiene la base al día casi siempre, así que la
+    // mayoría de las veces esto ya es lo correcto.
+    await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
+
+    // La sincronización completa contra weetrust se hace aparte y no
+    // bloquea la pantalla: si no ha pasado una hora desde la última, ni
+    // siquiera se dispara. Si sí corre y trae algo nuevo, la tabla se
+    // vuelve a pintar sola.
+    if (debeSincronizarAuto()) {
+      actualizarSilencioso().then((r) => {
+        marcarSincronizado();
+        if (r && (r.actualizados || r.importados || r.eliminadosEnWeetrust)) {
+          cargarEnvios();
+          cargarCupo();
+        }
+      });
+    }
   }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
