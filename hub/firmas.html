@@ -145,19 +145,23 @@
     margin-bottom: 10px;
   }
   .firmante-fila .kw-input { margin: 0; }
-  .firmante-nom { width: 100%; margin-bottom: 8px !important; padding-right: 34px; }
+  /* El nombre y el bote de basura, en la misma fila. Antes el bote iba
+     encima de la esquina de la tarjeta y se montaba con el borde. */
+  .firmante-encabezado { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .firmante-nom { flex: 1 1 auto; min-width: 0; }
   .firmante-cola { display: flex; gap: 8px; align-items: center; }
   .firmante-mail { flex: 1 1 auto; min-width: 0; }
 
   .firmante-quitar {
-    position: absolute; top: 10px; right: 10px;
-    width: 26px; height: 26px;
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
-    border: none; border-radius: 8px;
-    background: transparent; color: var(--muted);
-    cursor: pointer; transition: color var(--t-medio), background var(--t-medio);
+    border: 1.5px solid var(--border); border-radius: 9px;
+    background: #fff; color: var(--muted);
+    cursor: pointer; padding: 0;
+    transition: color var(--t-medio), background var(--t-medio), border-color var(--t-medio);
   }
-  .firmante-quitar:hover { color: var(--red); background: rgba(198,32,39,0.08); }
+  .firmante-quitar:hover { color: var(--red); border-color: var(--red); background: rgba(198,32,39,0.06); }
   /* Con un solo firmante no hay nada que quitar: el botón se va, en vez
      de quedarse apagado dando a entender que algo falta. */
   .firmante-fila.unico .firmante-quitar { display: none; }
@@ -217,9 +221,13 @@
   /* Los que firman casi todos los contratos: se agregan de un clic en
      vez de volver a teclear nombre y correo cada vez, que es donde se
      cuelan las direcciones mal escritas. */
-  .firma-frecuentes { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  /* En una sola fila, sin bajarse: son dos o tres y cada uno en su
+     renglón se comía el alto del panel. Si no caben a lo ancho, se
+     encogen y el nombre se recorta con puntos suspensivos. */
+  .firma-frecuentes { display: flex; flex-wrap: nowrap; gap: 7px; margin-bottom: 12px; }
   .firma-frecuente {
     display: inline-flex; align-items: center; gap: 6px;
+    flex: 0 1 auto; min-width: 0;
     padding: 6px 11px; border-radius: 999px;
     border: 1px solid rgba(0,0,0,0.12);
     background: rgba(255,255,255,0.7);
@@ -232,6 +240,8 @@
      que esa persona ya está en la lista y no que el botón se perdió. */
   .firma-frecuente:disabled { opacity: 0.45; cursor: default; }
   .firma-frecuente:disabled:hover { border-color: rgba(0,0,0,0.12); color: var(--text); }
+  .firma-frecuente svg { flex: 0 0 auto; }
+  .firma-frecuente span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── Historial ──────────────────────────────────────────────
      Es lo primero que se ve: casi siempre uno entra a consultar cómo va
@@ -1380,12 +1390,11 @@
             <!-- Campos -->
             <div class="editor-campos">
               <form id="form-firma" autocomplete="off">
-                <div class="field">
-                  <label for="titulo">Título</label>
-                  <input type="text" id="titulo" class="kw-input" placeholder="Ej. Contrato de arrendamiento, Av. Reforma 100" maxlength="120">
-                </div>
-
-                <h2 class="section-title" style="margin-top:var(--sp-4);">Quién firma</h2>
+                <!-- El título ya no se captura: es el nombre del archivo.
+                     Cuando se podía escribir aparte, el documento salía
+                     con un nombre aquí y otro en weetrust, y luego no
+                     había manera de casar uno con otro. -->
+                <h2 class="section-title">Quién firma</h2>
 
                 <!-- Lo único que se desplaza. El título de arriba y los
                      botones de abajo se quedan quietos, para no tener
@@ -1506,6 +1515,10 @@
   // La ruta del PDF que ya está subido, cuando se reabre un borrador: no
   // hay que volver a subirlo si no se cambiaron los documentos.
   let rutaSubida = null;
+  // Cómo se llama el documento. Sale del nombre del archivo y ya no se
+  // captura aparte: cuando se podía escribir, el mismo documento
+  // terminaba con un nombre en el sitio y otro en weetrust.
+  let tituloDoc = '';
   // Índice del archivo que se está arrastrando en la lista del paso 1.
   let arrastrando = null;
   // Si quien mira es liderazgo, el historial trae los envíos de todos y
@@ -2159,11 +2172,11 @@
         ? archivos.length + ' documentos unidos'
         : archivos[0].name;
 
-      // El título se propone con el nombre del primer archivo, que es el
-      // contrato; los anexos van después y no lo nombran.
-      if (!$('titulo').value.trim()) {
-        $('titulo').value = archivos[0].name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
-      }
+      // El título es el nombre del archivo, sin la extensión. Del primero
+      // cuando son varios: ese es el contrato, y los anexos van después
+      // y no lo nombran.
+      tituloDoc = archivos[0].name.replace(/\.pdf$/i, '').trim()
+        || 'Documento';
 
       await pintarDocumento(pdfUnido);
       $('editor-cargando').style.display = 'none';
@@ -2491,7 +2504,16 @@
     const fila = document.createElement('div');
     fila.className = 'firmante-fila';
     fila.innerHTML =
-      '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
+      '<div class="firmante-encabezado">' +
+        '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
+        '<button type="button" class="firmante-quitar" aria-label="Quitar firmante" title="Quitar firmante">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<polyline points="3 6 5 6 21 6"/>' +
+            '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' +
+          '</svg>' +
+        '</button>' +
+      '</div>' +
       '<div class="firmante-cola">' +
         '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
       '<button type="button" class="firmante-fijar">' +
@@ -2500,9 +2522,6 @@
         '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
       '</button>' +
       '</div>' +
-      '<button type="button" class="firmante-quitar" aria-label="Quitar firmante">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>' +
       // Las verificaciones, como iconos que se prenden y apagan. Todas
       // arrancan apagadas: cada una se cobra aparte y por firmante.
       //
@@ -2676,9 +2695,8 @@
   }
 
   $('btn-borrador').addEventListener('click', async () => {
-    const titulo = $('titulo').value.trim();
+    const titulo = tituloDoc;
     if (!pdfUnido) return aviso('Falta elegir el documento.', 'error');
-    if (!titulo) return aviso('Ponle un título para poder guardarlo.', 'error');
 
     const btn = $('btn-borrador');
     btn.disabled = true;
@@ -2714,11 +2732,10 @@
     e.preventDefault();
     if (enviando) return;
 
-    const titulo = $('titulo').value.trim();
+    const titulo = tituloDoc;
     const firmantes = leerFirmantes();
 
     if (!pdfUnido) return aviso('Falta elegir el documento.', 'error');
-    if (!titulo) return aviso('Ponle un título al documento.', 'error');
     if (!firmantes.length) return aviso('Falta indicar quién firma.', 'error');
 
     // La validación de fondo (correo bien formado, sin repetidos) vive en
@@ -3339,7 +3356,10 @@
     paginas = [];
     desarmar();
 
-    $('titulo').value = f.titulo || '';
+    // El nombre del guardado es el que manda: aquí no hay archivos que
+    // volver a leer, el PDF ya vive en el bucket.
+    tituloDoc = (f.nombre_archivo || '').replace(/\.pdf$/i, '').trim()
+      || f.titulo || 'Documento';
     $('editor-nombre').textContent = f.nombre_archivo || 'Borrador guardado';
 
     // Los firmantes, como se dejaron. La pregunta de "¿yo también
@@ -4129,7 +4149,7 @@
       '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
         ' data-nombre="' + escapar(f.nombre) + '">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-        escapar(f.nombre) + (f.puesto ? ' (' + escapar(f.puesto) + ')' : '') +
+        '<span>' + escapar(f.nombre) + (f.puesto ? ' (' + escapar(f.puesto) + ')' : '') + '</span>' +
       '</button>').join('');
     caja.style.display = 'flex';
 
