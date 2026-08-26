@@ -795,16 +795,39 @@
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     margin-bottom: var(--sp-3);
   }
+  /* Iba con texto blanco sobre un fondo translúcido claro, pensado para
+     verse encima de un guinda: sobre el fondo claro de esta pantalla era
+     invisible. Mismo look que "Atrás" del header, que sí se ve bien aquí. */
   .btn-volver-paso {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 7px 13px; border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.3);
-    background: rgba(255,255,255,0.12);
+    border: 1px solid var(--border);
+    background: #fff; color: var(--text);
     font-family: inherit; font-size: 12.5px; font-weight: 700;
-    color: #fff; cursor: pointer;
+    cursor: pointer;
   }
-  .btn-volver-paso:hover { background: rgba(255,255,255,0.2); }
-  .editor-nombre { font-size: 12.5px; color: var(--muted); }
+  .btn-volver-paso:hover { background: var(--pastel-rojo); color: var(--red); }
+
+  /* ── El nombre del documento, en el header ──
+     Solo aparece mientras se edita (el header le pone .modo-editor):
+     toma el lugar del título de la pantalla, centrado, para no repetirlo
+     también en el editor y ganar ese espacio para la hoja y los
+     firmantes. */
+  .kw-header-doc {
+    display: none;
+    flex: 1; min-width: 0; text-align: center;
+    font-size: 13px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding: 0 8px;
+  }
+  #header-firmas.modo-editor .kw-header-title { display: none; }
+  #header-firmas.modo-editor .kw-header-doc { display: block; }
+  #btn-volver-archivos { display: none; }
+  #header-firmas.modo-editor #btn-volver-archivos { display: inline-flex; }
+  @media (max-width: 640px) {
+    #btn-volver-archivos span { display: none; }
+    #btn-volver-archivos { padding: 8px; }
+  }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
@@ -1208,10 +1231,22 @@
     <div class="pantalla-carga-texto">Cargando tus documentos...</div>
   </div>
 
-  <header class="kw-header">
+  <header class="kw-header" id="header-firmas">
     <span class="kw-header-title">Firmas Digitales</span>
+    <!-- Solo se ve mientras se edita un documento: el nombre del archivo
+         en el lugar del título, para no repetirlo también allá abajo y
+         ganar ese espacio para la hoja y los firmantes. -->
+    <span class="kw-header-doc" id="editor-nombre"></span>
     <div class="header-right">
       <div id="notif-bell-slot"></div>
+      <!-- Solo se ve en el editor. Vivía como botón suelto encima del
+           documento, con texto blanco sobre un fondo que aquí es claro:
+           quedaba invisible. Aquí sigue el mismo estilo que "Atrás", que
+           sí se ve. -->
+      <button type="button" class="back-btn" id="btn-volver-archivos">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        <span>Cambiar documentos</span>
+      </button>
       <a href="../portal.html" class="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -1363,14 +1398,6 @@
 
     <!-- Vista 3: el editor -->
     <div id="vista-editor" style="display:none;">
-          <div class="editor-barra">
-            <button type="button" class="btn-volver-paso" id="btn-volver-archivos">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-              Cambiar documentos
-            </button>
-            <span class="editor-nombre" id="editor-nombre"></span>
-          </div>
-
           <div class="editor-split">
 
             <!-- Vista previa: la tira de miniaturas y la hoja, en un
@@ -2048,6 +2075,10 @@
     ['historial', 'archivos', 'editor'].forEach((v) => {
       $('vista-' + v).style.display = v === cual ? 'block' : 'none';
     });
+    // El nombre del documento y "Cambiar documentos" solo tienen sentido
+    // mientras se edita: el header los muestra en lugar del título de la
+    // pantalla nada más en ese momento.
+    $('header-firmas').classList.toggle('modo-editor', cual === 'editor');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
