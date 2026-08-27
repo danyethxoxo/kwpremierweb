@@ -417,6 +417,39 @@
   }
   .dic-fecha:focus { outline: none; border-color: var(--red); }
 
+  /* Precio y comisión se piden por rango y no por un valor exacto:
+     nadie busca "los de 4,500,000", se busca "de tres a cinco millones".
+     Los dos campos caben en el lugar de un filtro para no estirar la
+     hilera a doce casillas. */
+  /* Los dos del par van más pegados entre sí que de los filtros vecinos:
+     con la misma separación de todos, "precio máx" y "comisión mín" se
+     leían tan juntos como los de un mismo rango, y no se veía qué va con
+     qué. Los dos campos caben en el lugar de un filtro para no estirar la
+     hilera a doce casillas. */
+  .dic-rango { display: flex; gap: 4px; }
+  .dic-rango .dic-fecha { min-width: 0; flex: 1; padding: 0 8px; }
+
+  /* En el celular caben dos filtros por renglón, y a medio renglón el
+     par de la comisión se quedaba sin lugar para decir "Comisión máx".
+     Con el renglón entero para él, cada mitad alcanza de sobra. */
+  @media (max-width: 700px) {
+    .kw-filtros > .dic-campo-rango { flex-basis: 100%; }
+  }
+
+  /* El de sincronizar es solo el dibujo: cuadrado, del mismo alto que
+     los de al lado, sin el hueco que dejaría el texto ausente. */
+  .dic-btn-icono {
+    padding: 9px; width: 36px; justify-content: center;
+  }
+  .dic-btn-icono svg { width: 16px; height: 16px; }
+  /* Mientras revisa o aplica, el dibujo da vueltas: sin texto que
+     cambiar, es lo que dice que está haciendo algo. */
+  .dic-btn-icono[disabled] svg { animation: dic-gira 1.1s linear infinite; }
+  @keyframes dic-gira { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .dic-btn-icono[disabled] svg { animation: none; }
+  }
+
   /* Limpiar cierra la hilera: no es un filtro más, es el botón para
      deshacer lo elegido, así que va al final de todos y no compitiendo
      por lugar entre ellos. */
@@ -608,7 +641,17 @@
           <p class="kw-page-desc" id="page-desc">Revisión de expedientes y seguimiento de lo que falta corregir.</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="kw-fila-btn neutro" id="btn-sync-asesores" style="display:none;">Sincronizar asesores</button>
+          <!-- Sincronizar va sin letras: es de mantenimiento, se usa cada
+               tanto y no compite por lugar con los de todos los días. El
+               qué hace lo dice el title, para quien se detenga encima. -->
+          <button type="button" class="kw-fila-btn neutro dic-btn-icono" id="btn-sync-asesores"
+            style="display:none;" title="Sincronizar asesores" aria-label="Sincronizar asesores">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button type="button" class="kw-fila-btn neutro" id="btn-exportar" title="Bajar lo que se está viendo, con los filtros puestos">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Exportar a Excel</span>
+          </button>
           <button type="button" class="kw-fila-btn neutro" id="btn-archivo">Ver archivo</button>
           <button type="button" class="btn-nuevo" id="btn-nuevo" style="display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -675,6 +718,26 @@
         <div class="kw-campo-filtro">
           <label for="f-tipo">Tipo de inmueble</label>
           <select id="f-tipo"><option value="todos">Tipo de inmueble</option></select>
+        </div>
+
+        <div class="kw-campo-filtro dic-campo-rango">
+          <label for="f-precio-min">Precio del listado</label>
+          <div class="dic-rango">
+            <input type="text" id="f-precio-min" class="dic-fecha" inputmode="decimal"
+              placeholder="Precio mín" autocomplete="off">
+            <input type="text" id="f-precio-max" class="dic-fecha" inputmode="decimal"
+              placeholder="Precio máx" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="kw-campo-filtro dic-campo-rango">
+          <label for="f-comision-min">Comisión</label>
+          <div class="dic-rango">
+            <input type="text" id="f-comision-min" class="dic-fecha" inputmode="decimal"
+              placeholder="Comisión mín" autocomplete="off">
+            <input type="text" id="f-comision-max" class="dic-fecha" inputmode="decimal"
+              placeholder="Comisión máx" autocomplete="off">
+          </div>
         </div>
 
         <!-- Un rango en vez de mes y día sueltos: "del 3 al 17" no se
@@ -1086,6 +1149,26 @@
 
   var DESPLEGABLES = ['f-estado', 'f-listado', 'f-contrato', 'f-tipo'];
 
+  // Los filtros que se escriben: el buscador, el rango de fechas y los de
+  // precio y comisión. Se enumeran una sola vez porque los tres lugares
+  // que los tocan (repintar al cambiarlos, saber si hay algo filtrado y
+  // limpiarlos) tienen que estar de acuerdo. Cuando la lista vivía suelta
+  // en cada uno, agregar un filtro era acordarse de los tres.
+  var ESCRITOS = ['f-buscar', 'f-desde', 'f-hasta',
+    'f-precio-min', 'f-precio-max', 'f-comision-min', 'f-comision-max'];
+
+  // Un rango de números. Si se pidió un mínimo o un máximo, el expediente
+  // que no trae ese dato queda fuera: dejarlo pasar como si valiera cero
+  // lo haría salir en "hasta 500,000" sin que nadie sepa en cuánto está.
+  function fueraDeRango(valor, min, max) {
+    if (!min && !max) return false;
+    var n = Number(soloCifra(valor));
+    if (!soloCifra(valor) || isNaN(n)) return true;
+    if (min && n < Number(min)) return true;
+    if (max && n > Number(max)) return true;
+    return false;
+  }
+
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
     var estado = $('f-estado').value;
@@ -1094,6 +1177,10 @@
     var tipo = $('f-tipo').value;
     var desde = $('f-desde').value;
     var hasta = $('f-hasta').value;
+    var precioMin = soloCifra($('f-precio-min').value);
+    var precioMax = soloCifra($('f-precio-max').value);
+    var comisionMin = soloCifra($('f-comision-min').value);
+    var comisionMax = soloCifra($('f-comision-max').value);
 
     return dictamenes.filter(function (d) {
       // El archivo es una lista aparte, no un filtro más: o se ve lo
@@ -1114,9 +1201,13 @@
       if (desde && (!f || f < desde)) return false;
       if (hasta && (!f || f > hasta)) return false;
 
+      if (fueraDeRango(d.precio_listado, precioMin, precioMax)) return false;
+      if (fueraDeRango(d.comision_porcentaje, comisionMin, comisionMax)) return false;
+
       if (busca) {
         var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre,
-          d.escritura_numero].join(' ').toLowerCase();
+          d.escritura_numero, d.precio_listado, d.comision_porcentaje]
+          .join(' ').toLowerCase();
         if (heno.indexOf(busca) === -1) return false;
       }
       return true;
@@ -1289,8 +1380,8 @@
     $('dic-cabecera').style.display = filas.length ? '' : 'none';
 
     if (!filas.length) {
-      var hayFiltro = $('f-buscar').value.trim() || asesoresFiltro.length ||
-        $('f-desde').value || $('f-hasta').value ||
+      var hayFiltro = asesoresFiltro.length ||
+        ESCRITOS.some(function (x) { return $(x).value.trim(); }) ||
         DESPLEGABLES.some(function (x) { return $(x).value !== 'todos'; });
       $('lista').innerHTML = '<div class="kw-vacio">' + (
         verArchivo ? 'No hay dictámenes archivados.'
@@ -2349,6 +2440,90 @@
     return null;
   }
 
+  // ── Bajar la lista a Excel ──────────────────────────────────
+
+  // Sale un CSV y no un .xlsx de verdad: armar un xlsx pide una librería
+  // de zip, y el sitio no carga ninguna. Con la marca de UTF-8 al frente
+  // y el separador declarado en el primer renglón, Excel lo abre en
+  // columnas y con los acentos derechos de doble clic, que es para lo que
+  // se pidió.
+  //
+  // Los números van pelones (sin $, sin comas, sin %) para que Excel los
+  // trate como números y se puedan sumar. Ponerles el símbolo los
+  // convertiría en texto y la columna no sumaría nada.
+  var COLUMNAS = [
+    ['Folio', function (d) { return d.folio || 'Sin folio'; }],
+    ['Fecha del dictamen', function (d) { return d.fecha_dictamen || ''; }],
+    ['Asesor', function (d) { return d.asesor_nombre || ''; }],
+    ['Cliente', function (d) { return d.clientes_nombres || d.cliente || ''; }],
+    ['Inmueble', function (d) { return d.inmueble || ''; }],
+    ['Tipo de contrato', function (d) { return CONTRATOS[d.tipo_contrato] || ''; }],
+    ['Operación', function (d) { return OPERACIONES[d.operacion] || ''; }],
+    ['Uso', function (d) { return USOS[d.uso] || ''; }],
+    ['Tipo de inmueble', function (d) { return d.tipo_inmueble || ''; }],
+    ['Precio del listado', function (d) { return soloCifra(d.precio_listado); }],
+    ['Comisión %', function (d) { return soloCifra(d.comision_porcentaje); }],
+    ['Número de escritura', function (d) { return d.escritura_numero || ''; }],
+    ['Fecha de escrituración', function (d) { return d.escritura_fecha || ''; }],
+    ['Notario', function (d) { return d.notario_nombre || ''; }],
+    ['Número de notaría', function (d) { return d.notaria_numero || ''; }],
+    ['Escrituras (sin desglosar)', function (d) {
+      return tieneEscrituraDesglosada(d) ? '' : (d.escritura_propiedad || ''); }],
+    ['Condominio', function (d) { return siNo(d.condominio); }],
+    ['Escritura del condominio', function (d) { return d.escritura_condominio || ''; }],
+    ['CFDI', function (d) { return d.cfdi || ''; }],
+    ['Folio real', function (d) { return d.folio_real || ''; }],
+    ['Cuenta predial', function (d) { return d.cuenta_predial || ''; }],
+    ['Superficie escritura m2', function (d) { return soloNumero(d.superficie_escritura); }],
+    ['Superficie terreno m2', function (d) { return soloNumero(d.superficie_terreno); }],
+    ['Superficie construcción m2', function (d) { return soloNumero(d.superficie_construccion); }],
+    ['Estado', function (d) { return d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || ''); }],
+    ['Listado', function (d) { return LISTADOS[d.estatus_listado || 'pendiente'] || ''; }],
+    ['Observaciones pendientes', function (d) { return String(d.puntos_pendientes || 0); }],
+    ['Observaciones totales', function (d) { return String(d.puntos_total || 0); }],
+    ['Observaciones', function (d) {
+      return puntos.filter(function (p) { return p.dictamen_id === d.id; })
+        .map(function (p, i) {
+          return (i + 1) + '. ' + p.texto +
+            ' (' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')';
+        }).join('\n');
+    }],
+    ['Dictaminó', function (d) {
+      return ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim(); }],
+  ];
+
+  // El punto y coma es el separador de listas del Excel en español. Una
+  // celda se entrecomilla nada más si lo trae adentro, o comillas, o un
+  // salto de renglón; las comillas de adentro se doblan, que es como el
+  // formato dice que se escapan.
+  function celda(v) {
+    var s = String(v == null ? '' : v);
+    return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  async function exportar() {
+    var filas = visibles();
+    if (!filas.length) {
+      return await window.kwUI.alert('No hay nada que exportar: con los filtros '
+        + 'puestos no queda ningún expediente en la lista.');
+    }
+
+    var renglones = [COLUMNAS.map(function (c) { return celda(c[0]); }).join(';')];
+    filas.forEach(function (d) {
+      renglones.push(COLUMNAS.map(function (c) { return celda(c[1](d)); }).join(';'));
+    });
+
+    var csv = '﻿' + 'sep=;\r\n' + renglones.join('\r\n') + '\r\n';
+    var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (verArchivo ? 'archivo-expedientes-' : 'dictamenes-') + hoy() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   // ── La hoja ─────────────────────────────────────────────────
 
   function renglon(rotulo, valor, alto) {
@@ -2500,10 +2675,13 @@
     await cargar();
   }
 
-  $('f-buscar').addEventListener('input', pintar);
-  DESPLEGABLES.concat(['f-desde', 'f-hasta']).forEach(function (x) {
+  // Al escribir se repinta al momento; el "change" es para el calendario,
+  // que pone la fecha sin que se teclee nada.
+  ESCRITOS.forEach(function (x) {
+    $(x).addEventListener('input', pintar);
     $(x).addEventListener('change', pintar);
   });
+  DESPLEGABLES.forEach(function (x) { $(x).addEventListener('change', pintar); });
 
   $('f-asesor-busca').addEventListener('input', pintarSugerenciasAsesor);
   $('f-asesor-busca').addEventListener('focus', pintarSugerenciasAsesor);
@@ -2512,12 +2690,11 @@
   });
 
   $('f-limpiar').addEventListener('click', function () {
-    $('f-buscar').value = '';
     DESPLEGABLES.forEach(function (x) {
       $(x).value = 'todos';
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
-    ['f-desde', 'f-hasta'].forEach(function (x) {
+    ESCRITOS.forEach(function (x) {
       $(x).value = '';
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
@@ -2549,8 +2726,13 @@
       return json;
     }
 
+    // Sin letras que cambiar, lo que avisa que está trabajando es el
+    // dibujo dando vueltas (lo prende el CSS con [disabled]); el title es
+    // para quien se detenga encima a ver en qué va.
+    function avisa(t) { btn.title = t; btn.setAttribute('aria-label', t); }
+
     btn.disabled = true;
-    btn.textContent = 'Revisando...';
+    avisa('Revisando...');
     try {
       var previa = await pedir(false);
       var mensaje = 'De la hoja del ABC:\n' +
@@ -2560,7 +2742,7 @@
         '¿Aplicar estos cambios al catálogo de asesores?';
       if (!(await window.kwUI.confirm(mensaje))) return;
 
-      btn.textContent = 'Aplicando...';
+      avisa('Aplicando...');
       await pedir(true);
       await cargarCatalogos();
       if (window.kwUI) window.kwUI.selects(document);
@@ -2569,7 +2751,7 @@
       await window.kwUI.alert('No se pudo sincronizar: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Sincronizar asesores';
+      avisa('Sincronizar asesores');
     }
   });
 
@@ -2579,6 +2761,7 @@
     pintar();
   });
 
+  $('btn-exportar').addEventListener('click', exportar);
   $('btn-nuevo').addEventListener('click', function () { abrirEditor(null); });
   $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
   $('e-volver').addEventListener('click', function () { cerrarEditor(); });
