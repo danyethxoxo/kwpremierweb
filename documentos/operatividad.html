@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Operatividad</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260822a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
+<style>
+  html, body { min-height: 100%; color: var(--text); }
+  /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
+  body { background: transparent; }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* Ancho completo, no los 720-900px del resto del sitio: aquí lo que se
+     viene a ver son veinte columnas de corrido, y cada pixel que se le
+     quite a la tabla es una columna más que hay que ir a buscar
+     arrastrando de lado. */
+  .page { flex: 1; width: 100%; margin: 0 auto; padding: 94px 22px 60px; }
+  .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: #fff; }
+  .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
+
+  /* ── Barra de arriba: buscar, filtrar, agregar ── */
+  .barra {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .buscador { position: relative; flex: 1; min-width: 220px; }
+  .buscador svg {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; color: var(--muted); pointer-events: none;
+  }
+  .buscador input {
+    width: 100%; height: 40px; padding: 0 14px 0 37px;
+    border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(13px) saturate(140%);
+    -webkit-backdrop-filter: blur(13px) saturate(140%);
+    font-family: inherit; font-size: 13.5px; color: #fff; outline: none;
+  }
+  .buscador input::placeholder { color: rgba(255,255,255,0.6); }
+  .buscador input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.2); }
+
+  /* Las mismas dos pastillas que Prospectos y que las pestañas de
+     Borradores/Finalizados en los documentos. */
+  .filtros {
+    display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(13px) saturate(140%);
+    -webkit-backdrop-filter: blur(13px) saturate(140%);
+  }
+  .filtro {
+    border: 1px solid transparent; background: none; border-radius: 999px;
+    padding: 0 16px; height: 30px; font-size: 12.5px; font-weight: 700; font-family: inherit;
+    color: var(--muted); cursor: pointer; white-space: nowrap;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  }
+  .filtro:hover { color: #fff; }
+  .filtro.activo, .filtro.activo:hover {
+    background: linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 100%);
+    border-color: rgba(255,255,255,0.85);
+    color: var(--red);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.9);
+  }
+
+  .barra-btn {
+    display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
+    border-radius: 999px; border: 1px solid rgba(255,255,255,0.82);
+    background: linear-gradient(150deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.8) 100%);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 6px 20px rgba(0,0,0,0.18);
+    color: var(--red); font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: box-shadow 0.15s, transform 0.12s;
+  }
+  .barra-btn:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
+  .barra-btn:active { transform: translateY(1px) scale(0.98); }
+  .barra-btn svg { width: 14px; height: 14px; }
+  .barra-btn.tenue {
+    background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.28);
+    color: #fff; box-shadow: none;
+  }
+  .barra-btn.tenue:hover { background: rgba(255,255,255,0.22); box-shadow: none; }
+
+  /* ── Resumen de lo que se está viendo ── */
+  .resumen { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 14px; }
+  .resumen-dato { color: #fff; }
+  .resumen-valor { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+  .resumen-etiqueta {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-top: 1px;
+  }
+
+  /* ── La tabla ── */
+  /* Va dentro de su propia caja con scroll horizontal: el <body> del
+     sitio nunca se debe poder arrastrar de lado. */
+  .tabla-caja {
+    background: linear-gradient(150deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.84) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(0,0,0,0.16);
+    border-radius: 14px; overflow: auto; max-height: calc(100vh - 260px);
+  }
+  table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+
+  /* Los aros de carga del sitio son blancos porque siempre giran sobre el
+     fondo oscuro de la página. Aquí giran adentro de la tarjeta blanca de
+     la tabla, donde no se verían. */
+  .tabla-caja .kw-loader .circle { border-top-color: var(--red); }
+
+  thead th {
+    position: sticky; top: 0; z-index: 3;
+    background: #f6f2f2;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--red); text-align: left; white-space: nowrap;
+    padding: 11px 12px; border-bottom: 1.5px solid rgba(0,0,0,0.09);
+  }
+  tbody td {
+    padding: 10px 12px; font-size: 12.5px; color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.055);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  tbody tr { cursor: pointer; transition: background 0.12s; }
+  tbody tr:hover td { background: #fff6f6; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* El nombre del asociado se queda pegado a la izquierda: es la columna
+     con la que se sabe de quién es el renglón, y sin ella arrastrar hasta
+     "Estatus Command" deja veinte números sin dueño. */
+  .col-fija { position: sticky; left: 0; z-index: 2; background: #fff; }
+  thead .col-fija { z-index: 4; background: #f6f2f2; }
+  tbody tr:hover .col-fija { background: #fff6f6; }
+  .col-fija::after {
+    content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 1px;
+    background: rgba(0,0,0,0.09);
+  }
+
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  td.vacio-celda { color: #c4c0c0; }
+
+  /* Una pastilla para las columnas que solo tienen dos o tres valores:
+     de un vistazo se ve si el renglón es venta o renta sin leer. */
+  .pill {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .pill-venta { background: #eef3fd; color: #24487f; }
+  .pill-renta { background: #fdf2e8; color: #8a4a12; }
+  .pill-exclusiva { background: #eaf7ee; color: #1a7f37; }
+  .pill-opcion { background: #f2f0f0; color: #5f5b5b; }
+  .pill-autorizado { background: #eaf7ee; color: #1a7f37; }
+  .pill-condicionado { background: #fdf6e3; color: #8a6516; }
+  .pill-devuelto { background: #fdecec; color: #a32020; }
+
+  .vacio {
+    text-align: center; color: var(--muted); font-size: 14px;
+    padding: 60px 24px; line-height: 1.6;
+  }
+  .vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
+
+  /* ── El editor ── */
+  /* Los 380px de .modal-box del CSS compartido son para confirmar un sí o
+     un no. Aquí adentro van veinte campos, así que la caja crece.
+
+     Quien hace el scroll es la capa de atrás, no la caja: el menú de un
+     desplegable va posicionado dentro de su campo, así que cualquier
+     contenedor intermedio con "overflow" se lo recorta y las opciones se
+     ven cortadas a la mitad. Con el scroll afuera, lo único que lo puede
+     recortar es la ventana, y para eso kw-ui.js ya sabe abrirlo hacia
+     arriba cuando abajo no cabe. */
+  #modal-editar { display: block; overflow-y: auto; padding: 24px 20px; }
+  .modal-ancho { max-width: 760px; margin: 0 auto; }
+  .campos {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 14px;
+  }
+  .campos .field.ancho { grid-column: 1 / -1; }
+  .grupo {
+    grid-column: 1 / -1; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+    margin: 14px 0 8px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .campos .grupo:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
+  /* Marca las columnas que alguien corrigió a mano: son las que la
+     sincronización ya no vuelve a tocar, y verlo aquí explica por qué un
+     dato no cambió cuando el documento sí. */
+  .field.a-mano > label::after {
+    content: ' · a mano'; color: var(--muted); font-weight: 600; text-transform: none;
+    letter-spacing: 0; font-size: 10.5px;
+  }
+
+  .origen {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 12px; color: var(--muted); margin-bottom: 14px;
+    background: #faf7f7; border-radius: 10px; padding: 9px 12px;
+  }
+  .origen svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .btn-texto {
+    background: none; border: none; padding: 0; font-family: inherit; font-size: 12px;
+    font-weight: 700; color: var(--red); cursor: pointer; text-decoration: underline;
+  }
+  .btn-borrar {
+    background: none; border: none; padding: 0; font-family: inherit; font-size: 12.5px;
+    font-weight: 700; color: #a32020; cursor: pointer; margin-right: auto;
+  }
+  .modal-actions.con-borrar { align-items: center; }
+  .modal-actions.con-borrar .btn-modal-cancelar,
+  .modal-actions.con-borrar .btn-modal-confirmar { flex: 0 0 auto; padding: 10px 22px; }
+
+  .editor-msg { font-size: 12.5px; margin-top: 10px; display: none; }
+
+  @media (max-width: 640px) {
+    .page-title, .page-desc { display: none; }
+    .page { padding: 84px 12px 40px; }
+    .tabla-caja { max-height: calc(100vh - 230px); }
+    .barra-btn .barra-btn-txt { display: none; }
+    .barra-btn { padding: 0 14px; }
+    #modal-editar { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="kw-header">
+    <span class="kw-header-title">Operatividad</span>
+    <a href="/kwpremierweb/documentos/documentos.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Operatividad</h1>
+    <p class="page-desc">Las captaciones del Market Center, con el desglose completo de cada una.</p>
+
+    <div class="barra">
+      <!-- El id es el que drawer.js reconoce como "el buscador de esta
+           página": así la lupa del encabezado filtra esta tabla en vez de
+           abrir la búsqueda general del sitio. Y data-kw-buscador-propio
+           le pide que no esconda este campo, porque aquí vive pegado a
+           los filtros y a los botones, y esconderlo dejaría media barra
+           coja. -->
+      <div class="buscador" data-kw-buscador-propio>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="buscador-input" placeholder="Buscar por asociado, folio, dirección o cliente" autocomplete="off" />
+      </div>
+
+      <div class="filtros" id="filtros-tipo">
+        <button type="button" class="filtro activo" data-tipo="">Todas</button>
+        <button type="button" class="filtro" data-tipo="VENTA">Venta</button>
+        <button type="button" class="filtro" data-tipo="RENTA">Renta</button>
+      </div>
+
+      <button type="button" class="barra-btn tenue" id="btn-csv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="barra-btn-txt">Descargar</span>
+      </button>
+
+      <button type="button" class="barra-btn" id="btn-nueva">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="barra-btn-txt">Nueva captación</span>
+      </button>
+    </div>
+
+    <div class="resumen" id="resumen"></div>
+
+    <div class="tabla-caja" id="caja">
+      <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+    </div>
+  </main>
+
+  <!-- ── El editor de un renglón ── -->
+  <div class="modal-overlay" id="modal-editar" style="display:none;">
+    <div class="modal-box modal-ancho">
+      <h3 id="editar-titulo">Captación</h3>
+      <p class="modal-sub" id="editar-sub"></p>
+      <div class="modal-cuerpo">
+        <div class="origen" id="editar-origen" style="display:none;"></div>
+        <div class="campos" id="editar-campos"></div>
+      </div>
+      <div class="editor-msg" id="editar-msg"></div>
+      <div class="modal-actions con-borrar">
+        <button type="button" class="btn-borrar" id="btn-borrar" style="display:none;">Eliminar</button>
+        <button type="button" class="btn-modal-cancelar" id="btn-cancelar">Cancelar</button>
+        <button type="button" class="btn-modal-confirmar" id="btn-guardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ═════════════════════════════════════════════════════════════
+// Las columnas, en un solo lugar
+// ═════════════════════════════════════════════════════════════
+// De aquí salen las tres cosas que enseñan lo mismo: los encabezados y
+// las celdas de la tabla, los campos del editor y las columnas del
+// archivo que se descarga. Agregar una columna a la hoja es agregar un
+// renglón a esta lista y su columna en 072_operatividad.sql, nada más.
+//
+// "grupo" solo lo usa el editor, para separar visualmente lo que en la
+// tabla son veinte columnas de corrido.
+var MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO',
+             'AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+var COLUMNAS = [
+  { col: 'asociado_nombre', titulo: 'Nombre asociado', grupo: 'Quién', ancho: 210, fija: true, ancho_editor: true },
+  { col: 'folio', titulo: 'Folio', grupo: 'Quién', ancho: 120 },
+
+  { col: 'fecha_dictamen', titulo: 'Fecha dictamen', grupo: 'Dictamen', tipo: 'fecha', ancho: 130 },
+  { col: 'estatus_dictamen', titulo: 'Estatus dictamen', grupo: 'Dictamen', tipo: 'opciones', ancho: 155,
+    opciones: ['AUTORIZADO', 'CONDICIONADO', 'DEVUELTO'], pastilla: true },
+
+  { col: 'mes_recibo', titulo: 'Mes de recibo', grupo: 'La operación', tipo: 'opciones', opciones: MESES, ancho: 135 },
+  { col: 'fecha_contrato', titulo: 'Fecha contrato', grupo: 'La operación', tipo: 'fecha', ancho: 130 },
+  { col: 'tipo', titulo: 'Tipo', grupo: 'La operación', tipo: 'opciones', opciones: ['VENTA', 'RENTA'], ancho: 105, pastilla: true },
+  { col: 'exclusividad', titulo: 'Exclusiva/Opción', grupo: 'La operación', tipo: 'opciones',
+    opciones: ['EXCLUSIVA', 'OPCIÓN'], ancho: 150, pastilla: true },
+  { col: 'division', titulo: 'División', grupo: 'La operación', tipo: 'opciones',
+    opciones: ['RESIDENCIAL', 'COMERCIAL'], ancho: 140 },
+  { col: 'precio', titulo: 'Precio', grupo: 'La operación', tipo: 'dinero', ancho: 145 },
+  { col: 'porcentaje', titulo: '%', grupo: 'La operación', tipo: 'porcentaje', ancho: 80 },
+  { col: 'firma', titulo: 'Firma', grupo: 'La operación', tipo: 'opciones',
+    opciones: ['DIGITAL', 'AUTÓGRAFA'], ancho: 130 },
+
+  { col: 'direccion', titulo: 'Dirección', grupo: 'El inmueble', ancho: 230, ancho_editor: true },
+  { col: 'colonia', titulo: 'Colonia', grupo: 'El inmueble', ancho: 165 },
+  { col: 'alcaldia', titulo: 'Alcaldía/Municipio', grupo: 'El inmueble', ancho: 180 },
+  { col: 'entidad', titulo: 'Estado', grupo: 'El inmueble', ancho: 125 },
+  { col: 'codigo_postal', titulo: 'Código postal', grupo: 'El inmueble', ancho: 125 },
+
+  { col: 'cliente_nombre', titulo: 'Nombre del cliente', grupo: 'El propietario', ancho: 230, ancho_editor: true },
+  { col: 'numero_propietario', titulo: 'Número propietario', grupo: 'El propietario', ancho: 165 },
+
+  { col: 'estatus_command', titulo: 'Estatus Command', grupo: 'Seguimiento', tipo: 'opciones',
+    opciones: ['CARGADA', 'PENDIENTE', 'NO APLICA'], ancho: 160 },
+];
+
+var SELECT = 'id, documento_id, dictamen_id, asociado_id, campos_manuales, sincronizado_at, created_at, ' +
+             COLUMNAS.map(function (c) { return c.col; }).join(', ');
+
+// ═════════════════════════════════════════════════════════════
+
+var filas = [];
+var editando = null;      // la fila abierta en el editor; null = una nueva
+var filtroTipo = '';
+var busqueda = '';
+
+function escapeHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str == null ? '' : str;
+  return d.innerHTML;
+}
+
+// Para lo que va DENTRO de unas comillas de un atributo (value="…"). La
+// de arriba no sirve ahí: el navegador, al serializar un nodo de texto,
+// no escapa las comillas, y una dirección como Calle "A" 5 se salía del
+// atributo y rompía el campo. Aquí sí se escapan.
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function pesos(n) {
+  if (n == null || n === '') return '';
+  var v = Number(n);
+  if (!isFinite(v)) return '';
+  return v.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 });
+}
+
+function porciento(n) {
+  if (n == null || n === '') return '';
+  var v = Number(n);
+  if (!isFinite(v)) return '';
+  // Sin decimales cuando es redondo: "5%" se lee mejor que "5.000%".
+  return (Math.round(v * 1000) / 1000) + '%';
+}
+
+// La fecha viene como AAAA-MM-DD. Partirla a mano y no con new Date()
+// es a propósito: el constructor lee esa forma como UTC y en México
+// devuelve el día anterior.
+function fechaCorta(iso) {
+  if (!iso) return '';
+  var p = String(iso).slice(0, 10).split('-');
+  if (p.length !== 3) return String(iso);
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+function claseP(valor) {
+  var v = (valor || '').toUpperCase();
+  if (v === 'VENTA') return 'pill pill-venta';
+  if (v === 'RENTA') return 'pill pill-renta';
+  if (v === 'EXCLUSIVA') return 'pill pill-exclusiva';
+  if (v === 'OPCIÓN' || v === 'OPCION') return 'pill pill-opcion';
+  if (v === 'AUTORIZADO') return 'pill pill-autorizado';
+  if (v === 'CONDICIONADO') return 'pill pill-condicionado';
+  if (v === 'DEVUELTO') return 'pill pill-devuelto';
+  return '';
+}
+
+// Lo que se ve en la celda. El mismo texto se reusa para buscar y para
+// el archivo que se descarga, así que lo que se lee en pantalla es
+// exactamente lo que se lleva quien lo baja.
+function textoCelda(fila, columna) {
+  var v = fila[columna.col];
+  if (v == null || v === '') return '';
+  if (columna.tipo === 'fecha') return fechaCorta(v);
+  if (columna.tipo === 'dinero') return pesos(v);
+  if (columna.tipo === 'porcentaje') return porciento(v);
+  return String(v);
+}
+
+function esNumerica(columna) {
+  return columna.tipo === 'dinero' || columna.tipo === 'porcentaje';
+}
+
+// ═════════════════════════════════════════════════════════════
+// La tabla
+// ═════════════════════════════════════════════════════════════
+
+function visibles() {
+  var q = busqueda.trim().toLowerCase();
+  return filas.filter(function (f) {
+    if (filtroTipo && (f.tipo || '').toUpperCase() !== filtroTipo) return false;
+    if (!q) return true;
+    return COLUMNAS.some(function (c) {
+      return textoCelda(f, c).toLowerCase().indexOf(q) !== -1;
+    });
+  });
+}
+
+function pintarResumen(lista) {
+  var volumen = lista.reduce(function (s, f) { return s + (Number(f.precio) || 0); }, 0);
+  var conPct = lista.filter(function (f) { return Number(f.porcentaje) > 0; });
+  var promedio = conPct.length
+    ? conPct.reduce(function (s, f) { return s + Number(f.porcentaje); }, 0) / conPct.length
+    : null;
+
+  var datos = [
+    [String(lista.length), lista.length === 1 ? 'Captación' : 'Captaciones'],
+    [volumen ? pesos(volumen) : '-', 'Volumen'],
+    [promedio == null ? '-' : porciento(promedio), 'Comisión promedio'],
+  ];
+
+  document.getElementById('resumen').innerHTML = datos.map(function (d) {
+    return '<div class="resumen-dato"><div class="resumen-valor">' + escapeHtml(d[0]) + '</div>' +
+           '<div class="resumen-etiqueta">' + escapeHtml(d[1]) + '</div></div>';
+  }).join('');
+}
+
+function pintar() {
+  var lista = visibles();
+  pintarResumen(lista);
+
+  var caja = document.getElementById('caja');
+
+  if (!lista.length) {
+    caja.innerHTML = '<div class="vacio">' + (filas.length
+      ? '<strong>Nada con ese filtro</strong>Prueba con otra búsqueda o quita el filtro de tipo.'
+      : '<strong>Todavía no hay captaciones</strong>En cuanto alguien finalice un acuerdo de renta o un contrato PROFECO, su renglón aparece aquí solo. También puedes capturar uno a mano.') +
+      '</div>';
+    return;
+  }
+
+  var encabezado = COLUMNAS.map(function (c) {
+    return '<th class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num' : '') + '"' +
+           ' style="min-width:' + c.ancho + 'px">' + escapeHtml(c.titulo) + '</th>';
+  }).join('');
+
+  var cuerpo = lista.map(function (f) {
+    var celdas = COLUMNAS.map(function (c) {
+      var texto = textoCelda(f, c);
+      var contenido = escapeHtml(texto);
+      if (texto && c.pastilla) {
+        var cls = claseP(texto);
+        if (cls) contenido = '<span class="' + cls + '">' + contenido + '</span>';
+      }
+      return '<td class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num ' : '') +
+             (texto ? '' : 'vacio-celda') + '" style="max-width:' + (c.ancho + 60) + 'px">' +
+             (texto ? contenido : '-') + '</td>';
+    }).join('');
+    return '<tr data-id="' + escapeAttr(f.id) + '">' + celdas + '</tr>';
+  }).join('');
+
+  caja.innerHTML = '<table><thead><tr>' + encabezado + '</tr></thead><tbody>' + cuerpo + '</tbody></table>';
+
+  caja.querySelectorAll('tbody tr').forEach(function (tr) {
+    tr.addEventListener('click', function () { abrirEditor(tr.getAttribute('data-id')); });
+  });
+}
+
+// ═════════════════════════════════════════════════════════════
+// El editor
+// ═════════════════════════════════════════════════════════════
+
+function campoHtml(columna, fila) {
+  var valor = fila ? fila[columna.col] : null;
+  var aMano = fila && (fila.campos_manuales || []).indexOf(columna.col) !== -1;
+  var clases = 'field' + (columna.ancho_editor ? ' ancho' : '') + (aMano ? ' a-mano' : '');
+  var id = 'campo-' + columna.col;
+  var html = '<div class="' + clases + '"><label for="' + id + '">' + escapeHtml(columna.titulo) + '</label>';
+
+  if (columna.tipo === 'opciones') {
+    // Un valor que no está en la lista se agrega como una opción más en
+    // vez de perderse: la hoja de la que sale esto lleva años recibiendo
+    // lo que cada quien escribe, y el editor no es quién para borrarlo.
+    var opciones = columna.opciones.slice();
+    if (valor && opciones.indexOf(valor) === -1) opciones.push(valor);
+    html += '<select id="' + id + '"><option value="">Sin definir</option>' +
+      opciones.map(function (o) {
+        return '<option value="' + escapeAttr(o) + '"' + (o === valor ? ' selected' : '') + '>' +
+               escapeHtml(o) + '</option>';
+      }).join('') + '</select>';
+  } else if (columna.tipo === 'fecha') {
+    html += '<input type="date" id="' + id + '" value="' + escapeAttr(valor ? String(valor).slice(0, 10) : '') + '" />';
+  } else if (esNumerica(columna)) {
+    html += '<input type="number" step="0.01" id="' + id + '" value="' + escapeAttr(valor == null ? '' : valor) + '" />';
+  } else {
+    html += '<input type="text" id="' + id + '" value="' + escapeAttr(valor == null ? '' : valor) + '" />';
+  }
+
+  return html + '</div>';
+}
+
+function abrirEditor(id) {
+  editando = id ? filas.find(function (f) { return f.id === id; }) : null;
+
+  document.getElementById('editar-titulo').textContent = editando ? 'Editar captación' : 'Nueva captación';
+  document.getElementById('editar-sub').textContent = editando
+    ? (editando.asociado_nombre || 'Sin asociado') + (editando.folio ? ' · folio ' + editando.folio : '')
+    : 'Para lo que se firmó fuera del sitio o antes de que existiera.';
+
+  var campos = document.getElementById('editar-campos');
+  var grupoActual = null;
+  campos.innerHTML = COLUMNAS.map(function (c) {
+    var html = '';
+    if (c.grupo && c.grupo !== grupoActual) {
+      grupoActual = c.grupo;
+      html += '<div class="grupo">' + escapeHtml(c.grupo) + '</div>';
+    }
+    return html + campoHtml(c, editando);
+  }).join('');
+
+  // De dónde salió el renglón, y cómo deshacer las correcciones a mano.
+  var origen = document.getElementById('editar-origen');
+  if (editando && editando.documento_id) {
+    var manuales = (editando.campos_manuales || []).length;
+    origen.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+      '<span>Se llenó solo desde el documento del asociado.' +
+      (manuales ? ' Hay ' + manuales + (manuales === 1 ? ' campo corregido' : ' campos corregidos') + ' a mano.' : '') +
+      '</span>' +
+      (manuales ? '<button type="button" class="btn-texto" id="btn-resync">Volver a tomarlo del documento</button>' : '');
+    origen.style.display = 'flex';
+    var btnSync = document.getElementById('btn-resync');
+    if (btnSync) btnSync.addEventListener('click', resincronizar);
+  } else {
+    origen.style.display = 'none';
+  }
+
+  document.getElementById('btn-borrar').style.display = editando ? 'block' : 'none';
+  msgEditor('');
+
+  var modal = document.getElementById('modal-editar');
+  modal.style.display = 'block';
+  modal.scrollTop = 0;
+  // Los desplegables y los campos de fecha se arman después de meter el
+  // HTML: kw-ui.js solo recorre lo que ya existe en la página.
+  if (window.kwUI) window.kwUI.iniciar(campos);
+}
+
+function cerrarEditor() {
+  if (window.kwUI && window.kwUI.cerrarModal) window.kwUI.cerrarModal(document.getElementById('modal-editar'));
+  else document.getElementById('modal-editar').style.display = 'none';
+}
+
+function msgEditor(texto, tipo) {
+  var el = document.getElementById('editar-msg');
+  if (!texto) { el.style.display = 'none'; return; }
+  el.textContent = texto;
+  el.style.display = 'block';
+  el.style.color = tipo === 'error' ? '#a30000' : '#1a7a1a';
+}
+
+function valoresDelEditor() {
+  var datos = {};
+  COLUMNAS.forEach(function (c) {
+    var el = document.getElementById('campo-' + c.col);
+    var v = el ? el.value.trim() : '';
+    // Vacío se guarda como nulo y no como cadena vacía: así "sin
+    // capturar" es un solo valor en la base y no dos que se ven igual.
+    if (v === '') { datos[c.col] = null; return; }
+    datos[c.col] = esNumerica(c) ? Number(v) : v;
+    if (esNumerica(c) && !isFinite(datos[c.col])) datos[c.col] = null;
+  });
+  return datos;
+}
+
+async function guardar() {
+  var btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  msgEditor('');
+  try {
+    var datos = valoresDelEditor();
+    var res;
+    if (editando) {
+      res = await window.kwSupabase.from('operatividad').update(datos).eq('id', editando.id);
+    } else {
+      var u = await window.kwSupabase.auth.getUser();
+      datos.creado_por = u.data && u.data.user ? u.data.user.id : null;
+      res = await window.kwSupabase.from('operatividad').insert(datos);
+    }
+    if (res.error) throw res.error;
+    cerrarEditor();
+    await cargar();
+  } catch (err) {
+    msgEditor(err.message || 'No se pudo guardar.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function borrar() {
+  if (!editando) return;
+  var ok = await window.kwUI.confirm(
+    'Se elimina el renglón de la operatividad. El documento del asociado no se toca.',
+    { titulo: 'Eliminar captación', textoConfirmar: 'Eliminar' });
+  if (!ok) return;
+
+  var res = await window.kwSupabase.from('operatividad').delete().eq('id', editando.id);
+  if (res.error) { msgEditor(res.error.message, 'error'); return; }
+  cerrarEditor();
+  await cargar();
+}
+
+async function resincronizar() {
+  var ok = await window.kwUI.confirm(
+    'Se borran las correcciones hechas a mano en este renglón y se vuelven a tomar los datos del documento del asociado.',
+    { titulo: 'Volver a tomarlo del documento', textoConfirmar: 'Volver a tomarlo' });
+  if (!ok) return;
+
+  var res = await window.kwSupabase.rpc('operatividad_resincronizar', { p_id: editando.id });
+  if (res.error) { msgEditor(res.error.message, 'error'); return; }
+  cerrarEditor();
+  await cargar();
+}
+
+// ═════════════════════════════════════════════════════════════
+// Descargar lo que se está viendo
+// ═════════════════════════════════════════════════════════════
+// Sale lo filtrado, no todo: quien pica "Descargar" después de buscar
+// algo espera llevarse eso, no la hoja entera otra vez.
+//
+// El archivo lleva BOM al principio porque si no, Excel abre los
+// acentos hechos garabatos.
+function descargar() {
+  var lista = visibles();
+  if (!lista.length) return;
+
+  function celda(t) {
+    var s = String(t == null ? '' : t);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  var lineas = [COLUMNAS.map(function (c) { return celda(c.titulo.toUpperCase()); }).join(',')];
+  lista.forEach(function (f) {
+    lineas.push(COLUMNAS.map(function (c) {
+      // El precio y el porcentaje van como número pelón: con el signo de
+      // pesos y las comas de los miles, Excel los recibe como texto y no
+      // se pueden sumar, que es justo para lo que se descarga esto.
+      if (esNumerica(c)) return f[c.col] == null ? '' : f[c.col];
+      return celda(textoCelda(f, c));
+    }).join(','));
+  });
+
+  var hoy = new Date().toISOString().slice(0, 10);
+  var blob = new Blob(['\uFEFF' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Operatividad ' + hoy + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// ═════════════════════════════════════════════════════════════
+// Arranque
+// ═════════════════════════════════════════════════════════════
+
+async function cargar() {
+  var res = await window.kwSupabase
+    .from('operatividad')
+    .select(SELECT)
+    .order('fecha_contrato', { ascending: false, nullsFirst: true })
+    .order('created_at', { ascending: false });
+
+  if (res.error) {
+    document.getElementById('caja').innerHTML =
+      '<div class="vacio"><strong>No se pudo cargar</strong>' + escapeHtml(res.error.message) + '</div>';
+    return;
+  }
+  filas = res.data || [];
+  pintar();
+}
+
+async function arrancar() {
+  // La puerta de verdad es la política de RLS de la tabla, que solo deja
+  // pasar al liderazgo. Esto es para que quien llegue aquí escribiendo la
+  // dirección a mano vea una tabla vacía y sin explicación: se le manda
+  // de regreso a lo suyo.
+  var u = await window.kwSupabase.auth.getUser();
+  var uid = u.data && u.data.user ? u.data.user.id : null;
+  if (!uid) return;
+
+  var p = await window.kwSupabase.from('profiles').select('role').eq('id', uid).single();
+  var rol = p.data ? p.data.role : null;
+  if (['master', 'admin', 'staff'].indexOf(rol) === -1) {
+    location.replace('/kwpremierweb/documentos/documentos.html');
+    return;
+  }
+
+  await cargar();
+}
+
+document.getElementById('buscador-input').addEventListener('input', function () {
+  busqueda = this.value;
+  pintar();
+});
+
+document.querySelectorAll('#filtros-tipo .filtro').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#filtros-tipo .filtro').forEach(function (x) { x.classList.remove('activo'); });
+    b.classList.add('activo');
+    filtroTipo = b.getAttribute('data-tipo');
+    pintar();
+  });
+});
+
+document.getElementById('btn-nueva').addEventListener('click', function () { abrirEditor(null); });
+document.getElementById('btn-csv').addEventListener('click', descargar);
+document.getElementById('btn-cancelar').addEventListener('click', cerrarEditor);
+document.getElementById('btn-guardar').addEventListener('click', guardar);
+document.getElementById('btn-borrar').addEventListener('click', borrar);
+document.getElementById('modal-editar').addEventListener('click', function (e) {
+  if (e.target === this) cerrarEditor();
+});
+
+if (document.documentElement.classList.contains('kw-auth-ok')) arrancar();
+else window.addEventListener('kw-auth-ready', arrancar, { once: true });
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260822a" data-menu="hub"></script>
+</body>
+</html>
