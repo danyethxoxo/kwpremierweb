@@ -276,12 +276,27 @@
   .kw-page-titulo { color: var(--text); }
   .kw-page-desc { color: var(--muted); }
 
-  /* Barra de arriba: el acceso al creador de formatos se va a la
-     derecha, separado de las pestañas, para que no se confunda con
-     ellas - no es una sección más del Panel, es otra pantalla. */
+  /* Barra de arriba: el título de la página, las pestañas y el acceso
+     al creador de formatos comparten renglón. El título se queda a la
+     izquierda y empuja lo demás a la derecha (margin-left: auto en las
+     pestañas), para que el Panel arranque de un solo bloque en vez de
+     gastar un renglón entero en el puro título. El botón de la derecha
+     queda separado de las pestañas a propósito: no es una sección más
+     del Panel, es otra pantalla. */
   .barra-superior {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap;
+    display: flex; align-items: center;
+    gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap;
+  }
+  /* El bloque de título ya no lleva el aire de abajo que traía cuando
+     vivía en su propio renglón. */
+  .barra-superior .kw-page-encabezado { margin-bottom: 0; min-width: 0; }
+  .barra-superior .kw-tabs { margin-left: auto; }
+  /* Cuando el renglón se parte (pantallas medianas), el título se lleva
+     uno completo y las pestañas con su botón el siguiente, en vez de
+     quedar las tres cosas apretadas. */
+  @media (max-width: 900px) {
+    .barra-superior .kw-page-encabezado { flex: 1 1 100%; }
+    .barra-superior .kw-tabs { margin-left: 0; }
   }
   /* Las pestañas ocupan lo que miden, no todo el renglón: estiradas
      dejaban un plano gris vacío a la derecha del último botón.
@@ -291,6 +306,7 @@
   .barra-superior .kw-tab { color: var(--muted); }
   .barra-superior .kw-tab:hover { color: #fff; }
   .barra-superior .kw-tab.activo, .barra-superior .kw-tab.activo:hover { color: var(--red); }
+  .barra-superior > .btn-formatos { flex-shrink: 0; }
 
   /* Todos los paneles arrancan del mismo alto, así cambiar de pestaña
      no mueve la página de golpe. */
@@ -525,12 +541,11 @@
 
   <main class="kw-page">
     <div id="contenido-panel" style="display:none;">
-      <div class="kw-page-encabezado">
-        <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
-        <p class="kw-page-desc" id="panel-desc"></p>
-      </div>
-
       <div class="barra-superior">
+        <div class="kw-page-encabezado">
+          <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
+          <p class="kw-page-desc" id="panel-desc"></p>
+        </div>
         <div class="kw-tabs" data-kw-tabs="panel-paneles" id="panel-tabs">
           <button type="button" class="kw-tab activo" data-tab="asesores">Asesores</button>
           <button type="button" class="kw-tab" data-tab="usuarios">Agregar usuarios</button>
