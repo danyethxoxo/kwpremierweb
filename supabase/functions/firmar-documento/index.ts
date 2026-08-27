@@ -140,6 +140,7 @@ async function enviarAFirma(
   mensaje: string,
   firmantes: Array<{ nombre: string; correo: string; identificacion?: string; check?: boolean; orden?: number }>,
   enOrden: boolean,
+  observadores: Array<{ correo: string }> = [],
 ) {
   const res = await fetch(`${WEETRUST_URL}/documents/signatory`, {
     method: 'PUT',
@@ -158,9 +159,29 @@ async function enviarAFirma(
         ...(f.check ? { check: true } : {}),
         ...(enOrden ? { order: f.orden ?? i + 1 } : {}),
       })),
+      // Observadores: solo ven el flujo de firmas, no firman nada. Se
+      // omite por completo si no hay ninguno, en vez de mandar un
+      // arreglo vacío, porque no está documentado que weetrust lo trate
+      // igual que "sin observadores".
+      ...(observadores.length
+        ? { sharedWith: observadores.map((o) => ({ emailID: o.correo })) }
+        : {}),
     }),
   })
   return await leerRespuesta(res, 'Enviar a firma')
+}
+
+// Pide a weetrust nuevas ligas para todos los firmantes de un documento,
+// cuando las que se mandaron ya caducaron. Solo aplica mientras el
+// documento sigue pendiente: uno completado ya no tiene nada que firmar,
+// y uno en borrador nunca llegó a tener ligas.
+async function regenerarEnlaces(token: string, documentID: string) {
+  const res = await fetch(`${WEETRUST_URL}/documents/update-signatures`, {
+    method: 'PUT',
+    headers: encabezados(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ documentID }),
+  })
+  return await leerRespuesta(res, 'Regenerar los enlaces de firma')
 }
 
 // Clava cada firma en su lugar del documento.
@@ -424,6 +445,33 @@ function limpiarFirmantes(crudo: unknown): Firmante[] {
   return firmantes
 }
 
+// Los observadores solo ven el flujo de firmas: weetrust no les pide ni
+// nombre, solo el correo (parámetro 'sharedWith' del endpoint).
+type Observador = { correo: string }
+
+function limpiarObservadores(crudo: unknown): Observador[] {
+  if (!crudo) return []
+  if (!Array.isArray(crudo)) throw new Error('Los observadores vienen mal armados.')
+
+  const observadores = crudo.map((o, i) => {
+    const correo = String(o?.correo || '').replace(/[\u200B\u200C\u200D\uFEFF\s]/g, '').toLowerCase()
+    if (!RE_CORREO.test(correo)) {
+      throw new Error(`El correo del observador ${i + 1} no es válido: "${correo}"`)
+    }
+    return { correo }
+  })
+
+  if (observadores.length > 20) throw new Error('Son demasiados observadores para un solo documento.')
+
+  const vistos = new Set<string>()
+  for (const o of observadores) {
+    if (vistos.has(o.correo)) throw new Error(`El correo ${o.correo} está repetido entre los observadores.`)
+    vistos.add(o.correo)
+  }
+
+  return observadores
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
@@ -487,6 +535,13 @@ Deno.serve(async (req: Request) => {
         return respond({ error: (e as Error).message }, 400)
       }
 
+      let observadores: Observador[]
+      try {
+        observadores = limpiarObservadores(body.observadores)
+      } catch (e) {
+        return respond({ error: (e as Error).message }, 400)
+      }
+
       const enOrden = body.enOrden === true
       const mensaje = String(body.mensaje || '').trim()
         || 'Se le solicita la firma del siguiente documento.'
@@ -520,6 +575,7 @@ Deno.serve(async (req: Request) => {
         ambiente: WEETRUST_AMBIENTE,
         firmantes: firmantes.map((f) => ({ ...f, firmado: false })),
         posiciones,
+        observadores,
       }
 
       // Si viene de un borrador se reusa su renglón en vez de crear otro:
@@ -590,7 +646,7 @@ Deno.serve(async (req: Request) => {
           await fijarFirmas(token, documentID, posiciones)
         }
 
-        const enviado = await enviarAFirma(token, documentID, titulo, mensaje, firmantes, enOrden)
+        const enviado = await enviarAFirma(token, documentID, titulo, mensaje, firmantes, enOrden, observadores)
 
         // weetrust regresa la lista de firmantes con su signatoryID y su
         // liga personal. Se casa por correo con lo que capturó el
@@ -670,6 +726,13 @@ Deno.serve(async (req: Request) => {
       // mandarlo.
       const posicionesCrudas = Array.isArray(body.posiciones) ? body.posiciones : []
 
+      // Igual que firmantes: en un borrador se guarda tal cual, sin
+      // exigir que el correo ya esté bien formado.
+      const observadoresCrudos = Array.isArray(body.observadores) ? body.observadores : []
+      const observadores = observadoresCrudos.map((o: Record<string, unknown>) => ({
+        correo: String(o?.correo || '').trim().toLowerCase(),
+      }))
+
       const datos = {
         origen: 'subido',
         archivo_ruta: rutaArchivo,
@@ -680,6 +743,7 @@ Deno.serve(async (req: Request) => {
         ambiente: WEETRUST_AMBIENTE,
         firmantes,
         posiciones: posicionesCrudas,
+        observadores,
       }
 
       const borradorId = String(body.borradorId || '')
@@ -742,7 +806,17 @@ Deno.serve(async (req: Request) => {
 
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
-      if (!doc) return respond({ error: 'weetrust ya no reconoce ese documento.' }, 404)
+      if (!doc) {
+        // Igual que en "actualizar_todos": ya no existe allá, así que se
+        // marca en vez de dejarlo pendiente para siempre.
+        await admin.from('firmas_documentos')
+          .update({
+            estado: 'eliminado',
+            error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.',
+          })
+          .eq('id', id)
+        return respond({ ok: true, estado: 'eliminado', firmantes: fila.firmantes })
+      }
 
       // Su "isSigned" viene a veces como número y a veces como texto,
       // según el endpoint; se normaliza aquí para que la pantalla no
@@ -850,6 +924,14 @@ Deno.serve(async (req: Request) => {
           isSigned: s?.isSigned ?? null,
           llaves: Object.keys(s || {}).sort(),
         })),
+        // Los observadores, aparte: es la única manera de saber si
+        // weetrust se quedó con los que se le mandaron en 'sharedWith'.
+        // Si aquí no viene nada, no los guardó, y entonces el problema
+        // está en el envío y no en su correo.
+        observadores_en_weetrust: doc?.sharedWith ?? null,
+        // Y las llaves de primer nivel del documento, para localizar el
+        // campo si allá se llama de otra forma al devolverlo.
+        llaves_del_documento: Object.keys(doc || {}).sort(),
         firmantes: recortar(firmantesCrudos),
         documento: recortar(doc),
       })
@@ -1020,6 +1102,70 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    // ── Regenerar las ligas de firma ──
+    // Para cuando la liga que se mandó ya caducó. weetrust regresa ligas
+    // nuevas para todos los firmantes de un jalón; no hay manera de
+    // pedirlas de uno solo.
+    if (accion === 'regenerar_enlaces') {
+      const id = String(body.id || '')
+      if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
+
+      const { data: fila } = await admin
+        .from('firmas_documentos')
+        .select('id, user_id, estado, weetrust_document_id, firmantes')
+        .eq('id', id)
+        .single()
+
+      if (!fila) return respond({ error: 'Ese envío no existe.' }, 404)
+
+      if (fila.user_id !== userId) {
+        const { data: perfil } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        if (!['master', 'admin', 'staff'].includes(String(perfil?.role))) {
+          return respond({ error: 'Ese envío no es tuyo.' }, 403)
+        }
+      }
+
+      if (!fila.weetrust_document_id) {
+        return respond({ error: 'Ese envío nunca llegó a weetrust.' }, 409)
+      }
+      if (fila.estado !== 'pendiente') {
+        return respond({
+          error: 'Solo se pueden regenerar ligas de un documento que sigue esperando firmas.',
+        }, 409)
+      }
+
+      const token = await obtenerToken()
+      let actualizado: unknown
+      try {
+        actualizado = await regenerarEnlaces(token, fila.weetrust_document_id)
+      } catch (e) {
+        return respond({ error: (e as Error).message }, 502)
+      }
+
+      // Su documentación solo muestra un objeto en el ejemplo, pero eso
+      // no dice cómo viene con varios firmantes: se acepta tanto un
+      // objeto suelto como un arreglo, y se casa por correo con lo que
+      // ya se tenía, igual que en 'consultar'.
+      const lista = Array.isArray(actualizado) ? actualizado : (actualizado ? [actualizado] : [])
+      const firmantes = (fila.firmantes as Array<Record<string, unknown>>).map((f) => {
+        const par = lista.find((s: Record<string, unknown>) =>
+          String(s?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
+        if (!par) return f
+        return {
+          ...f,
+          firmado: Number(par.isSigned) === 1,
+          url_firma: par.signing?.url ?? f.url_firma ?? null,
+          url_expira: par.signing?.expiry ?? f.url_expira ?? null,
+          imagen: par.imageURL || f.imagen || null,
+        }
+      })
+
+      await admin.from('firmas_documentos').update({ firmantes }).eq('id', id)
+
+      return respond({ ok: true, firmantes, aviso: 'Se generaron ligas nuevas de firma.' })
+    }
+
     // ── Borrar un envío del historial ──
     // Distinto de cancelar: cancelar lo retira de firma y deja el
     // renglón como constancia; borrar lo quita del historial.
@@ -1105,7 +1251,6 @@ Deno.serve(async (req: Request) => {
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
       const { data: filas } = await q
-      if (!filas?.length) return respond({ ok: true, revisados: 0, actualizados: 0 })
 
       const token = await obtenerToken()
       const porId = new Map<string, Record<string, any>>()
@@ -1141,9 +1286,37 @@ Deno.serve(async (req: Request) => {
 
       const cambios: Array<{ id: string; datos: Record<string, unknown> }> = []
 
-      for (const fila of filas) {
+      let eliminadosEnWeetrust = 0
+
+      for (const fila of filas || []) {
         const doc = porId.get(fila.weetrust_document_id!)
-        if (!doc) continue
+        if (!doc) {
+          // Ya no está en la lista de weetrust: alguien lo borró desde su
+          // panel. La lista de arriba se trajo completa (si hubiera
+          // fallado, ya se habría regresado el error antes de llegar
+          // aquí), así que esto sí es confiable y no un hueco pasajero.
+          //
+          // No se toca lo ya completado: esa copia y su PDF firmado ya
+          // son la versión buena, y que weetrust lo archive o lo borre
+          // después no cambia que sí se firmó. Tampoco lo ya cancelado o
+          // marcado como eliminado, para no repetir el aviso cada vez
+          // que se corre esto.
+          //
+          // Va aparte de "cancelado": ese estado es para cuando alguien
+          // lo cancela a propósito desde aquí. Esto es distinto, que
+          // weetrust ya no lo tenga porque lo borraron de su panel.
+          if (!['completado', 'cancelado', 'eliminado'].includes(fila.estado)) {
+            cambios.push({
+              id: fila.id,
+              datos: {
+                estado: 'eliminado',
+                error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.',
+              },
+            })
+            eliminadosEnWeetrust++
+          }
+          continue
+        }
 
         const suyos = Array.isArray(doc.signatory) ? doc.signatory : []
         const previos = (fila.firmantes || []) as Array<Record<string, any>>
@@ -1207,11 +1380,77 @@ Deno.serve(async (req: Request) => {
         res.forEach((r: { error: unknown }) => { if (!r.error) actualizados++ })
       }
 
+      // ── Los que solo existen en weetrust ──
+      // Pasa con lo que se manda directo desde su panel en vez de este
+      // sitio: no llega ningún webhook que lo cree aquí, así que sin
+      // esto se quedaban sin aparecer para siempre, aunque el resto ya
+      // estuviera al día. La lista de arriba (porId) ya es la cuenta
+      // completa de weetrust, así que no hace falta volver a pedirla.
+      const { data: existentes } = await admin
+        .from('firmas_documentos')
+        .select('weetrust_document_id')
+        .in('weetrust_document_id', [...porId.keys()])
+
+      const yaEstaban = new Set(
+        (existentes || []).map((f: { weetrust_document_id: string }) => f.weetrust_document_id))
+      const faltantes = [...porId.entries()].filter(([id]) => !yaEstaban.has(id))
+
+      let importados = 0
+      if (faltantes.length) {
+        const nuevasFilas = await Promise.all(faltantes.map(async ([documentID, doc]) => {
+          const suyos = (Array.isArray(doc?.signatory) ? doc.signatory : [])
+            .map((s: Record<string, any>) => ({
+              nombre: String(s?.name || s?.emailID || ''),
+              correo: String(s?.emailID || '').toLowerCase(),
+              firmado: Number(s?.isSigned) === 1,
+              signatoryID: s?.signatoryID ?? null,
+              url_firma: s?.signing?.url ?? null,
+              url_expira: s?.signing?.expiry ?? null,
+              imagen: s?.imageURL || null,
+            }))
+          const archivoDoc = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+          const nombre = nombreEnWeetrust(doc, documentID)
+          const estadoDoc = estados[String(doc?.status)] || 'pendiente'
+          const cuando = doc?.addedOn
+            ? new Date(Number(doc.addedOn)).toISOString()
+            : new Date().toISOString()
+
+          // Igual que en "importar": weetrust no dice quién lo creó, así
+          // que se adivina por los firmantes.
+          const { data: asesor } = await admin
+            .rpc('firmas_adivinar_asesor', { p_firmantes: suyos })
+
+          return {
+            origen: 'importado',
+            weetrust_document_id: documentID,
+            titulo: nombre,
+            nombre_archivo: nombre,
+            archivo_ruta: null,
+            user_id: (asesor as string | null) ?? null,
+            creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+            estado: estadoDoc,
+            firmantes: suyos,
+            ambiente: WEETRUST_AMBIENTE,
+            pdf_firmado_url: (archivoDoc.url as string) ?? null,
+            created_at: cuando,
+            ...(estadoDoc === 'completado' ? { completado_at: cuando } : {}),
+          }
+        }))
+
+        for (let i = 0; i < nuevasFilas.length; i += 200) {
+          const trozo = nuevasFilas.slice(i, i + 200)
+          const { error } = await admin.from('firmas_documentos').insert(trozo)
+          if (!error) importados += trozo.length
+        }
+      }
+
       return respond({
         ok: true,
-        revisados: filas.length,
+        revisados: (filas || []).length,
         enWeetrust: porId.size,
         actualizados,
+        eliminadosEnWeetrust,
+        importados,
       })
     }
 

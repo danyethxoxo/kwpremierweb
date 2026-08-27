@@ -3,8 +3,9 @@
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
 // Panel, sin tener que entrar a cada una a mano:
 //
-//   1. Lo agrega a Google Contacts de la cuenta de contactos, con la
-//      etiqueta que le toque (Asesores Inmobiliarios o Back Office)
+//   1. Lo agrega a Google Contacts, en la cuenta original Y en la de
+//      kwpremier@kwmexico.mx, con la etiqueta que le toque (Asesores
+//      Inmobiliarios o Back Office)
 //   2. Le comparte la carpeta de Drive como lector
 //   3. Le da acceso de lectura al calendario de KW Premier
 //
@@ -42,16 +43,17 @@
 //      https://www.googleapis.com/auth/drive
 //      https://www.googleapis.com/auth/calendar
 //
-//    Los CONTACTOS van aparte, en la cuenta del Market Center
-//    (kwpremier@kwmexico.mx), y por eso llevan su propio token: uno solo
-//    no puede ser de dos cuentas a la vez. Se autoriza igual, pero
-//    entrando con kwpremier@kwmexico.mx y pidiendo:
+//    GOOGLE_REFRESH_TOKEN ya trae permiso de Contactos desde el paso de
+//    arriba, así que los contactos se guardan ahí de por sí. Además se
+//    guardan por PARTIDA DOBLE en la cuenta del Market Center
+//    (kwpremier@kwmexico.mx, la que ve todo el equipo), con su propio
+//    token: uno solo no puede ser de dos cuentas a la vez. Se autoriza
+//    igual, pero entrando con kwpremier@kwmexico.mx y pidiendo:
 //      https://www.googleapis.com/auth/contacts
 //    Ese token va en GOOGLE_REFRESH_TOKEN_CONTACTOS.
 //
-//    Mientras ese secreto no exista se usa el de siempre, así que los
-//    contactos se seguirían guardando en la cuenta vieja: sin ponerlo,
-//    este cambio no surte efecto.
+//    Mientras ese secreto no exista, los contactos se siguen guardando
+//    solo en la cuenta original, como se hacía antes de esto.
 //
 // C) Project Settings > Edge Functions > Secrets:
 //      ALTA_SHEET_ID          el id del Google Sheet (va en su URL,
@@ -62,8 +64,10 @@
 //      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
 //                             URL, después de /folders/)
 //      GOOGLE_REFRESH_TOKEN_CONTACTOS
-//                             el token de kwpremier@kwmexico.mx, la
-//                             cuenta donde se guardan los contactos
+//                             opcional. El token de kwpremier@kwmexico.mx;
+//                             sin él, los contactos se guardan solo en
+//                             la cuenta original (GOOGLE_REFRESH_TOKEN).
+//                             Con él, se guardan en las dos.
 //      ALTA_EMAILS            opcional. Master y Admin ya pasan por su
 //                             rol; esto es para abrirle a alguien que no
 //                             sea ninguno de los dos. Correos separados
@@ -83,16 +87,15 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!
 const GOOGLE_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN')!
 const GOOGLE_CALENDAR_ID = Deno.env.get('GOOGLE_CALENDAR_ID')
 
-// Los contactos viven en la cuenta del Market Center
-// (kwpremier@kwmexico.mx) y el Sheet, la carpeta y el calendario en la
-// de quien los creó: son dos cuentas distintas, y un refresh token es de
-// UNA cuenta, así que hacen falta dos.
+// Los contactos se guardan por PARTIDA DOBLE: en la cuenta del Market
+// Center (kwpremier@kwmexico.mx, que ve todo el equipo) y en la cuenta
+// original (la de quien arrancó esto, que ya los tenía de antes). Un
+// refresh token es de UNA sola cuenta, así que hace falta el de las dos.
 //
-// Sin el secreto puesto se cae al de siempre en vez de tronar: así la
-// función sigue trabajando igual que antes mientras se consigue el
-// token nuevo, nada más que guardando los contactos donde los guardaba.
-const GOOGLE_REFRESH_TOKEN_CONTACTOS =
-  Deno.env.get('GOOGLE_REFRESH_TOKEN_CONTACTOS') || GOOGLE_REFRESH_TOKEN
+// Sin el secreto puesto se sigue guardando solo en la cuenta original,
+// como se hacía antes de esto: así la función no se detiene mientras se
+// consigue el token nuevo, nada más no duplica todavía en kwpremier.
+const GOOGLE_REFRESH_TOKEN_CONTACTOS = Deno.env.get('GOOGLE_REFRESH_TOKEN_CONTACTOS') || ''
 
 const ALTA_SHEET_ID = Deno.env.get('ALTA_SHEET_ID')
 const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A1:Z500'
@@ -139,12 +142,22 @@ async function getAccessToken(refreshToken: string): Promise<string> {
   throw new Error(`No se pudo renovar el token de Google: ${ultimoError}`)
 }
 
-// Las dos cuentas usan el mismo token cuando el de contactos no está
-// configurado, y ahí no tiene caso pedirlo dos veces.
-async function getTokenContactos(): Promise<string> {
-  return GOOGLE_REFRESH_TOKEN_CONTACTOS === GOOGLE_REFRESH_TOKEN
-    ? await getAccessToken(GOOGLE_REFRESH_TOKEN)
-    : await getAccessToken(GOOGLE_REFRESH_TOKEN_CONTACTOS)
+// En cuáles cuentas se guarda cada contacto. "original" siempre está
+// (es GOOGLE_REFRESH_TOKEN, que ya traía permiso de Contactos desde
+// antes de este cambio); "kwpremier" se suma en cuanto el secreto exista.
+type CuentaContactos = { clave: string; nombre: string; refreshToken: string }
+
+const CUENTAS_CONTACTOS: CuentaContactos[] = [
+  { clave: 'original', nombre: 'dani.guerrero@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN },
+  ...(GOOGLE_REFRESH_TOKEN_CONTACTOS
+    ? [{ clave: 'kwpremier', nombre: 'kwpremier@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN_CONTACTOS }]
+    : []),
+]
+
+async function getTokensContactos(): Promise<{ clave: string; nombre: string; token: string }[]> {
+  return await Promise.all(CUENTAS_CONTACTOS.map(async (c) => ({
+    clave: c.clave, nombre: c.nombre, token: await getAccessToken(c.refreshToken),
+  })))
 }
 
 // ── Lectura del Google Sheet ────────────────────────────────
@@ -162,8 +175,19 @@ function limpiarCorreo(s: unknown): string {
 
 // Sin acentos y en minúsculas, para poder comparar nombres de hoja y de
 // columna sin importar cómo los haya escrito quien llena el libro.
+// Los encabezados tambi\u00E9n se pegan a mano igual que el resto de la
+// hoja, as\u00ED que pueden traer el mismo tipo de espacios invisibles que
+// limpiarCorreo ya cuida en el correo (espacio de ancho cero, BOM,
+// espacio de "no separar" \u00A0 que deja Word/Google Docs al copiar).
+// Sin esto, un encabezado como "Fecha de\u00A0nacimiento" no coincid\u00EDa
+// con la palabra clave "fecha de nacimiento" (espacio normal) aunque a
+// simple vista se vieran id\u00E9nticos.
 function normalizar(s: unknown): string {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '').trim()
+  return String(s || '')
+    .replace(/[\u200B\u200C\u200D\uFEFF\u00A0]/g, ' ')
+    .toLowerCase().normalize('NFD').replace(/[\u0300-\u036F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // Convierte "DD/MM/AAAA" (o con guiones, o "AAAA-MM-DD") al formato de
@@ -306,6 +330,19 @@ type Persona = {
   puesto: string
   celula: string
   fechaBaja: string
+  // Lo que trae el libro además de lo de arriba: el expediente del
+  // asesor mientras esto siga viviendo en el Excel. El día que se
+  // capture directo en el sitio, estos dejan de venir de aquí.
+  usuarioCommand: string
+  contrasena: string
+  correoPersonal: string
+  tipoAsociado: string
+  aniversario: string
+  coachAsignado: string
+  emergenciaNombre: string
+  emergenciaTelefono: string
+  emergenciaCorreo: string
+  emergenciaParentesco: string
 }
 
 // Con qué encabezado se reconoce cada dato. Se compara sin acentos ni
@@ -320,16 +357,32 @@ const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
   // "agente" es el nombre real de la persona; "nombre" (si existe
   // aparte) suele ser el nombre comercial, así que va después.
   agente: { si: ['agente'] },
-  nombre: { si: ['nombre completo', 'nombre'], no: ['comercial', 'celula', 'sponsor', 'coach'] },
+  nombre: { si: ['nombre completo', 'nombre'], no: ['comercial', 'celula', 'sponsor', 'coach', 'personal'] },
   apellido: { si: ['apellido'] },
-  correo: { si: ['correo', 'email', 'e-mail', 'mail'] },
-  telefono: { si: ['telefono', 'celular', 'movil', 'whatsapp'] },
+  // "personal" descalifica: sin eso, una columna "Correo personal" se
+  // podía colar como SI fuera el correo de KW (el que de verdad se usa
+  // para el alta), nada más por venir antes en la hoja.
+  correo: { si: ['correo', 'email', 'e-mail', 'mail'], no: ['personal', 'particular'] },
+  telefono: { si: ['telefono', 'celular', 'movil', 'whatsapp'], no: ['emergencia'] },
   kwid: { si: ['idkw', 'id kw', 'kwid', 'kw id', 'kwuid'] },
   ingreso: { si: ['fecha de ingreso', 'fecha ingreso'] },
-  cumple: { si: ['cumpleanos', 'fecha de nacimiento', 'nacimiento', 'birthday'] },
+  cumple: { si: ['cumpleanos', 'cumple', 'fecha de nacimiento', 'nacimiento', 'birthday'] },
   puesto: { si: ['puesto', 'cargo'] },
   celula: { si: ['celula', 'equipo'], no: ['celular'] },
   baja: { si: ['fecha de baja', 'baja'] },
+  // El expediente del asesor. Vive en el mismo Excel mientras no haya
+  // otra fuente; el día que se capture desde el sitio, esto se conecta
+  // ahí en vez de leerlo de la hoja.
+  usuarioCommand: { si: ['usuario command', 'usuario de command', 'usuario kw'] },
+  contrasena: { si: ['contrasena'] },
+  correoPersonal: { si: ['correo personal', 'correo particular', 'email personal'] },
+  tipoAsociado: { si: ['tipo de asociado', 'tipo asociado'] },
+  aniversario: { si: ['aniversario'] },
+  coachAsignado: { si: ['coach asignado', 'coach'] },
+  emergenciaNombre: { si: ['contacto de emergencia', 'nombre emergencia', 'emergencia'], no: ['cel', 'tel', 'correo', 'email', 'parentesco'] },
+  emergenciaTelefono: { si: ['cel emergencia', 'celular emergencia', 'tel emergencia', 'telefono emergencia'] },
+  emergenciaCorreo: { si: ['correo emergencia', 'email emergencia'] },
+  emergenciaParentesco: { si: ['parentesco'] },
 }
 
 function indiceDeColumna(encabezados: string[], clave: string): number {
@@ -401,6 +454,16 @@ function parsearPersonas(filas: string[][]): Persona[] {
     puesto: dato(fila, 'puesto'),
     celula: dato(fila, 'celula'),
     fechaBaja: dato(fila, 'baja'),
+    usuarioCommand: dato(fila, 'usuarioCommand'),
+    contrasena: dato(fila, 'contrasena'),
+    correoPersonal: dato(fila, 'correoPersonal'),
+    tipoAsociado: dato(fila, 'tipoAsociado'),
+    aniversario: dato(fila, 'aniversario'),
+    coachAsignado: dato(fila, 'coachAsignado'),
+    emergenciaNombre: dato(fila, 'emergenciaNombre'),
+    emergenciaTelefono: dato(fila, 'emergenciaTelefono'),
+    emergenciaCorreo: dato(fila, 'emergenciaCorreo'),
+    emergenciaParentesco: dato(fila, 'emergenciaParentesco'),
   }))
 
   // Una hoja no trae solo personas: trae subtítulos que parten la tabla
@@ -411,7 +474,8 @@ function parsearPersonas(filas: string[][]): Persona[] {
   return personas.filter((p) => {
     if (p.correo) return true
     if (!p.nombre) return false
-    return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja)
+    return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja
+      || p.usuarioCommand || p.correoPersonal || p.tipoAsociado || p.aniversario || p.coachAsignado)
   })
 }
 
@@ -495,6 +559,11 @@ async function leerHoja(token: string, omitidos?: { fila: number; nombre: string
 // aparte por cada persona sería una llamada más por cada quitar.
 type PorCorreo = Map<string, string>
 
+// Contactos vive en varias cuentas a la vez: correo -> (cuenta -> id del
+// contacto en ESA cuenta). Drive y Calendario no lo necesitan porque son
+// una sola cuenta cada uno.
+type ContactosPorCuenta = Map<string, PorCorreo>
+
 async function listarContactos(token: string): Promise<PorCorreo> {
   const contactos: PorCorreo = new Map()
   let pageToken: string | undefined
@@ -518,13 +587,51 @@ async function listarContactos(token: string): Promise<PorCorreo> {
   return contactos
 }
 
+async function listarContactosTodasCuentas(
+  cuentas: { clave: string; token: string }[],
+): Promise<ContactosPorCuenta> {
+  const resultado: ContactosPorCuenta = new Map()
+  await Promise.all(cuentas.map(async (c) => {
+    resultado.set(c.clave, await listarContactos(c.token))
+  }))
+  return resultado
+}
+
+// True solo si el contacto está en TODAS las cuentas configuradas: es lo
+// que se enseña en la pantalla como "tiene acceso" a Contactos. Si falta
+// en una sola, no cuenta como completo - eso es justo lo que "Dar" vuelve
+// a intentar sin tocar la que ya está bien.
+function contactoCompleto(mapa: ContactosPorCuenta, correo: string): boolean {
+  const c = correo.toLowerCase()
+  return CUENTAS_CONTACTOS.every((cuenta) => mapa.get(cuenta.clave)?.has(c))
+}
+
+function algunContacto(mapa: ContactosPorCuenta, correo: string): boolean {
+  const c = correo.toLowerCase()
+  return CUENTAS_CONTACTOS.some((cuenta) => mapa.get(cuenta.clave)?.has(c))
+}
+
+// En qué cuenta de Contactos está cada quien. Es lo que ve Master (y
+// Admin no) para no confundirlo con un dato que no necesita: para Admin
+// "tiene Contactos" es una sola cosa, sí o no.
+function desglosePorCuenta(mapa: ContactosPorCuenta, correo: string): Record<string, boolean> {
+  const c = correo.toLowerCase()
+  const salida: Record<string, boolean> = {}
+  for (const cuenta of CUENTAS_CONTACTOS) salida[cuenta.clave] = Boolean(mapa.get(cuenta.clave)?.has(c))
+  return salida
+}
+
 // ── Las etiquetas de Contactos ──────────────────────────────
 // En Google Contacts una etiqueta es un "grupo de contactos". Se busca
 // por nombre y, si no existe, se crea: así la primera alta de cada tipo
 // deja la etiqueta lista sin que nadie tenga que ir a crearla a mano.
+// Los nombres tienen que ser EXACTOS a los que ya existen en Google
+// Contacts (se comparan sin acentos ni mayúsculas, así que el caso no
+// importa para encontrarlos, pero sí conviene que el texto sea el mismo
+// para no dejar una etiqueta nueva y duplicada al lado de la de siempre).
 const ETIQUETAS_CONTACTO: Record<string, string> = {
-  asesores: 'Asesores Inmobiliarios',
-  back_office: 'Back Office',
+  asesores: 'ASOCIADOS VIGENTES',
+  back_office: 'BACKOFFICE',
 }
 
 // Qué etiqueta le toca a cada hoja del libro. Las bajas no llevan: a esa
@@ -738,53 +845,82 @@ type DatosPersona = {
   grupo?: string
 }
 
-async function agregarContacto(token: string, persona: DatosPersona, contactosExistentes?: PorCorreo) {
-  const contactos = contactosExistentes ?? await listarContactos(token)
-  const yaEstaba = contactos.get(persona.correo.toLowerCase())
-
-  let recurso = yaEstaba
-  if (!recurso) {
-    const partes = persona.nombre.trim().split(/\s+/)
-    const cuerpo: Record<string, unknown> = {
-      names: [{
-        givenName: partes[0] || persona.correo,
-        familyName: partes.slice(1).join(' ') || undefined,
-      }],
-      emailAddresses: [{ value: persona.correo }],
-      // Así se identifica de un vistazo en Contacts a quién pertenece
-      // cada tarjeta, sin tener que abrir cada una.
-      organizations: [{ name: 'KW PREMIER', title: 'Asesor Inmobiliario' }],
-    }
-    if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
-
-    const fecha = parseFecha(persona.cumpleanos || '')
-    if (fecha) cuerpo.birthdays = [{ date: fecha }]
-
-    const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(cuerpo),
-    })
-    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
-
-    recurso = (await res.json()).resourceName as string
-    contactos.set(persona.correo.toLowerCase(), recurso)
+async function crearContacto(token: string, persona: DatosPersona): Promise<string> {
+  const partes = persona.nombre.trim().split(/\s+/)
+  const cuerpo: Record<string, unknown> = {
+    names: [{
+      givenName: partes[0] || persona.correo,
+      familyName: partes.slice(1).join(' ') || undefined,
+    }],
+    emailAddresses: [{ value: persona.correo }],
+    // Así se identifica de un vistazo en Contacts a quién pertenece
+    // cada tarjeta, sin tener que abrir cada una.
+    organizations: [{ name: 'KW PREMIER', title: 'Asesor Inmobiliario' }],
   }
+  if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
 
-  // La etiqueta se pone aunque el contacto ya existiera: es lo que
-  // permite acomodar en su grupo a los que se dieron de alta antes de
-  // que hubiera etiquetas, sin tener que borrarlos y rehacerlos.
+  const fecha = parseFecha(persona.cumpleanos || '')
+  if (fecha) cuerpo.birthdays = [{ date: fecha }]
+
+  const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(cuerpo),
+  })
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  return (await res.json()).resourceName as string
+}
+
+// Crea (o encuentra) el contacto en CADA cuenta configurada y lo
+// etiqueta ahí. Cada cuenta es independiente: si en una ya existía y en
+// la otra no, esta solo crea la que falta - no duplica la que ya está
+// bien.
+//
+// La etiqueta se pone aunque el contacto ya existiera: es lo que permite
+// acomodar en su grupo a los que se dieron de alta antes de que hubiera
+// etiquetas, sin tener que borrarlos y rehacerlos.
+async function agregarContacto(
+  cuentas: { clave: string; nombre: string; token: string }[],
+  persona: DatosPersona,
+  contactosExistentes: ContactosPorCuenta,
+  detallado: boolean,
+) {
   const etiqueta = etiquetaDeGrupo(persona.grupo || 'activos')
-  let puesta = ''
-  if (etiqueta && recurso) {
-    const grupo = await grupoDeContactos(token, etiqueta)
-    if (grupo) {
-      await etiquetarContacto(token, grupo, recurso)
-      puesta = `, etiquetado como "${etiqueta}"`
+  const c = persona.correo.toLowerCase()
+  const detalles: string[] = []
+  let algunaEraNueva = false
+  let ultimaEtiqueta = ''
+
+  for (const cuenta of cuentas) {
+    const mapa = contactosExistentes.get(cuenta.clave) ?? new Map<string, string>()
+    contactosExistentes.set(cuenta.clave, mapa)
+
+    const yaEstaba = mapa.get(c)
+    let recurso = yaEstaba
+    if (!recurso) {
+      recurso = await crearContacto(cuenta.token, persona)
+      mapa.set(c, recurso)
+      algunaEraNueva = true
+    }
+
+    let puesta = ''
+    if (etiqueta && recurso) {
+      const grupo = await grupoDeContactos(cuenta.token, etiqueta)
+      if (grupo) { await etiquetarContacto(cuenta.token, grupo, recurso); puesta = `, "${etiqueta}"` }
+    }
+    ultimaEtiqueta = puesta
+
+    // El desglose por cuenta es solo para quien sabe que hay más de una
+    // (Master, ver "detallado" en quien llama a esto). A Admin, y a
+    // cualquiera con una sola cuenta configurada, le llega el mismo
+    // mensaje sencillo de siempre.
+    if (detallado && cuentas.length > 1) {
+      detalles.push(`${cuenta.nombre}: ${yaEstaba ? 'ya existía' : 'creado'}${puesta}`)
     }
   }
 
-  return (yaEstaba ? 'Ya existía en Contactos' : 'Contacto creado') + puesta
+  if (detalles.length) return detalles.join(' · ')
+  return `${algunaEraNueva ? 'Contacto creado' : 'Ya existía en Contactos'}${ultimaEtiqueta}`
 }
 
 async function compartirCarpeta(token: string, correo: string) {
@@ -822,18 +958,36 @@ async function darAccesoCalendario(token: string, correo: string) {
 // tenía y ya, porque el resultado que se pedía (que no lo tenga) es el
 // que hay.
 
-async function borrarContacto(token: string, correo: string, contactos?: PorCorreo) {
-  const mapa = contactos ?? await listarContactos(token)
-  const recurso = mapa.get(correo.toLowerCase())
-  if (!recurso) return 'No estaba en Contactos'
+async function borrarContacto(
+  cuentas: { clave: string; nombre: string; token: string }[],
+  correo: string,
+  contactosExistentes: ContactosPorCuenta,
+  detallado: boolean,
+) {
+  const c = correo.toLowerCase()
+  const detalles: string[] = []
+  let algunoSeBorro = false
 
-  const res = await fetch(`https://people.googleapis.com/v1/${recurso}:deleteContact`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
-  mapa.delete(correo.toLowerCase())
-  return 'Contacto borrado'
+  for (const cuenta of cuentas) {
+    const mapa = contactosExistentes.get(cuenta.clave) ?? new Map<string, string>()
+    const recurso = mapa.get(c)
+    if (!recurso) {
+      if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: no estaba`)
+      continue
+    }
+
+    const res = await fetch(`https://people.googleapis.com/v1/${recurso}:deleteContact`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${cuenta.token}` },
+    })
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+    mapa.delete(c)
+    algunoSeBorro = true
+    if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: borrado`)
+  }
+
+  if (detalles.length) return detalles.join(' · ')
+  return algunoSeBorro ? 'Contacto borrado' : 'No estaba en Contactos'
 }
 
 async function quitarCarpeta(token: string, correo: string, permisos?: PorCorreo) {
@@ -880,14 +1034,17 @@ type Paso = typeof PASOS[number]
 // reusa para toda la corrida, sin importar cuánta gente se esté
 // revisando o corrigiendo.
 type EstadoGoogle = {
-  contactos: PorCorreo
+  contactos: ContactosPorCuenta
   drive: PorCorreo
   calendario: PorCorreo
 }
 
-async function leerEstadoGoogle(tokenGoogle: string, tokenContactos: string): Promise<EstadoGoogle> {
+async function leerEstadoGoogle(
+  tokenGoogle: string,
+  cuentasContactos: { clave: string; nombre: string; token: string }[],
+): Promise<EstadoGoogle> {
   const [contactos, drive, calendario] = await Promise.all([
-    listarContactos(tokenContactos),
+    listarContactosTodasCuentas(cuentasContactos),
     listarPermisosDrive(tokenGoogle),
     listarAclCalendario(tokenGoogle),
   ])
@@ -902,26 +1059,31 @@ async function moverAcceso(
   paso: Paso,
   quitar: boolean,
   tokenGoogle: string,
-  tokenContactos: string,
+  cuentasContactos: { clave: string; nombre: string; token: string }[],
   persona: DatosPersona,
   estado: EstadoGoogle,
+  detalladoContactos: boolean,
 ) {
   const c = persona.correo.toLowerCase()
-  const tiene = estado[paso].has(c)
 
-  if (quitar) {
-    if (!tiene) return { paso, ok: true, detalle: 'No lo tenía' }
-    if (paso === 'contactos') return await intentar(paso, () => borrarContacto(tokenContactos, persona.correo, estado.contactos))
-    if (paso === 'drive') return await intentar(paso, () => quitarCarpeta(tokenGoogle, persona.correo, estado.drive))
-    return await intentar(paso, () => quitarAccesoCalendario(tokenGoogle, persona.correo, estado.calendario))
+  if (paso === 'contactos') {
+    if (quitar) {
+      if (!algunContacto(estado.contactos, c)) return { paso, ok: true, detalle: 'No lo tenía' }
+      return await intentar(paso, () => borrarContacto(cuentasContactos, persona.correo, estado.contactos, detalladoContactos))
+    }
+    // Contactos es la excepción a "si ya está, no lo toco": la etiqueta
+    // se vuelve a poner aunque el contacto ya existiera en alguna cuenta,
+    // que es lo que permite acomodar en su grupo a los que se dieron de
+    // alta antes de que hubiera etiquetas, y completar la cuenta que le
+    // falte a quien ya estaba en una sola.
+    return await intentar(paso, () => agregarContacto(cuentasContactos, persona, estado.contactos, detalladoContactos))
   }
 
-  // Contactos es la excepción a "si ya está, no lo toco": la etiqueta se
-  // vuelve a poner aunque el contacto ya existiera, que es lo que permite
-  // acomodar en su grupo a los que se dieron de alta antes de que
-  // hubiera etiquetas.
-  if (paso === 'contactos') {
-    return await intentar(paso, () => agregarContacto(tokenContactos, persona, estado.contactos))
+  const tiene = estado[paso].has(c)
+  if (quitar) {
+    if (!tiene) return { paso, ok: true, detalle: 'No lo tenía' }
+    if (paso === 'drive') return await intentar(paso, () => quitarCarpeta(tokenGoogle, persona.correo, estado.drive))
+    return await intentar(paso, () => quitarAccesoCalendario(tokenGoogle, persona.correo, estado.calendario))
   }
   if (tiene) return { paso, ok: true, detalle: paso === 'drive' ? 'Ya tenía acceso a Drive' : 'Ya tenía acceso al calendario' }
   if (paso === 'drive') return await intentar(paso, () => compartirCarpeta(tokenGoogle, persona.correo))
@@ -933,13 +1095,14 @@ async function moverAccesos(
   pasos: Paso[],
   quitar: boolean,
   tokenGoogle: string,
-  tokenContactos: string,
+  cuentasContactos: { clave: string; nombre: string; token: string }[],
   persona: DatosPersona,
   estado: EstadoGoogle,
+  detalladoContactos: boolean,
 ) {
   const resultados = []
   for (const paso of pasos) {
-    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, tokenContactos, persona, estado))
+    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, cuentasContactos, persona, estado, detalladoContactos))
   }
   return resultados
 }
@@ -992,10 +1155,17 @@ Deno.serve(async (req: Request) => {
 
     // El candado de verdad va aquí, no en la pantalla: esconder una
     // pestaña no impide que alguien llame a la función por su cuenta.
+    //
+    // miRol se queda declarado aquí afuera (no dentro del if) porque las
+    // acciones de más abajo también lo usan: Master ve el desglose de en
+    // qué cuenta de Contactos quedó cada quien, Admin no - así no se
+    // confunde con un dato que no necesita para su trabajo del día a
+    // día.
+    let miRol = ''
     if (!ACCIONES_ABIERTAS.includes(accion)) {
       const { data: perfil } = await admin
         .from('profiles').select('role').eq('id', quien.user.id).single()
-      const miRol = String(perfil?.role || '')
+      miRol = String(perfil?.role || '')
       const miCorreo = String(quien.user.email || '').toLowerCase()
 
       if (ACCIONES_STAFF.includes(accion)) {
@@ -1014,6 +1184,51 @@ Deno.serve(async (req: Request) => {
           }, 403)
         }
       }
+    }
+
+    // ── Nuevo Asesor: capturar el expediente desde el sitio ──────
+    //
+    // No toca Google Sheets ni las demás APIs de Google - es un guardado
+    // directo a la base, así que va ANTES de pedir el token de Google:
+    // que ese servicio esté lento o caído no debe tumbar algo que no lo
+    // necesita para nada.
+    if (accion === 'crear_ingreso') {
+      const d = (body.datos || {}) as Record<string, unknown>
+      const texto = (v: unknown) => { const s = String(v ?? '').trim(); return s || null }
+      const tipo = String(d.tipo || 'asesor')
+      if (!['asesor', 'back_office'].includes(tipo)) {
+        return respond({ error: 'Tipo de ingreso no reconocido.' }, 400)
+      }
+      const nombre = texto(d.nombre)
+      if (!nombre) return respond({ error: 'Falta el nombre del asesor.' }, 400)
+
+      const cumpleanos = aFecha(String(d.cumpleanos || ''))
+
+      const { data: creado, error: errCrear } = await admin.from('ingreso_asesores').insert({
+        tipo,
+        nombre,
+        correo_personal: texto(d.correo_personal),
+        celular: texto(d.celular),
+        curp: texto(d.curp)?.toUpperCase() ?? null,
+        cumpleanos,
+        tipo_asociado: texto(d.tipo_asociado),
+        sponsor: texto(d.sponsor),
+        usuario_command: texto(d.usuario_command),
+        correo_kw: limpiarCorreo(d.correo_kw) || null,
+        contrasena: texto(d.contrasena),
+        kwid: texto(d.kwid),
+        aniversario: texto(d.aniversario),
+        clasificacion: texto(d.clasificacion),
+        coach_asignado: texto(d.coach_asignado),
+        emergencia_nombre: texto(d.emergencia_nombre),
+        emergencia_celular: texto(d.emergencia_celular),
+        emergencia_correo: limpiarCorreo(d.emergencia_correo) || null,
+        emergencia_parentesco: texto(d.emergencia_parentesco),
+        capturado_por: quien.user.id,
+      }).select('id').single()
+
+      if (errCrear) return respond({ error: `No se pudo guardar: ${errCrear.message}` }, 500)
+      return respond({ ok: true, id: creado?.id })
     }
 
     const tokenPrincipal = await getAccessToken(GOOGLE_REFRESH_TOKEN)
@@ -1266,12 +1481,13 @@ Deno.serve(async (req: Request) => {
 
       if (!gente.length) return respond({ error: 'No se recibió a nadie con correo.' }, 400)
 
-      const tokenContactos = await getTokenContactos()
-      const estado = await leerEstadoGoogle(tokenPrincipal, tokenContactos)
+      const soyMaster = miRol === 'master'
+      const cuentasContactos = await getTokensContactos()
+      const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
 
       const hechas = []
       for (const persona of gente) {
-        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, tokenContactos, persona, estado)
+        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasContactos, persona, estado, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1299,13 +1515,22 @@ Deno.serve(async (req: Request) => {
         const c = p.correo.toLowerCase()
         return {
           correo: p.correo,
-          contactos: estado.contactos.has(c),
+          contactos: contactoCompleto(estado.contactos, c),
+          contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
           drive: estado.drive.has(c),
           calendario: estado.calendario.has(c),
         }
       })
 
-      return respond({ ok: hechas.every((h) => h.ok), hechas, estado: estadoFinal })
+      return respond({
+        ok: hechas.every((h) => h.ok),
+        hechas,
+        estado: estadoFinal,
+        // Con qué cuentas se está trabajando: solo Master la recibe, es
+        // lo que la pantalla usa para ponerle nombre a cada columna del
+        // desglose.
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+      })
     }
 
     // ── Revisar accesos: quién tiene qué, en Google ──────────
@@ -1317,8 +1542,9 @@ Deno.serve(async (req: Request) => {
       const hojas = await detectarHojas(tokenPrincipal)
       const valores = await leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja)))
 
-      const tokenContactos = await getTokenContactos()
-      const estado = await leerEstadoGoogle(tokenPrincipal, tokenContactos)
+      const soyMaster = miRol === 'master'
+      const cuentasContactos = await getTokensContactos()
+      const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
 
       const { data: yaHechas } = await admin
         .from('altas_procesadas').select('correo, completo')
@@ -1345,7 +1571,8 @@ Deno.serve(async (req: Request) => {
             grupoTitulo: h.titulo,
             telefono: p.telefono,
             cumpleanos: p.cumpleanos,
-            contactos: estado.contactos.has(c),
+            contactos: contactoCompleto(estado.contactos, c),
+            contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
             drive: estado.drive.has(c),
             calendario: estado.calendario.has(c),
             enSistema: completosBD.has(c),
@@ -1353,7 +1580,10 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      return respond({ personas })
+      return respond({
+        personas,
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+      })
     }
 
     return respond({ error: 'Acción no reconocida.' }, 400)

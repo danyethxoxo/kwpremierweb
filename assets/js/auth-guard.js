@@ -130,10 +130,29 @@
   // no entraba en más de cuatro horas se autenticaba, llegaba aquí, el
   // reloj traía la marca vieja (login.html no la tocaba) y lo mandaba de
   // regreso; a la segunda ya entraba, porque al salir la marca se borra.
+  // Si la cuenta tiene verificación en dos pasos por correo activada
+  // (app_metadata.mfa_correo_activo, escrito solo por la Edge Function
+  // mfa-correo con la llave de servicio - el navegador no se lo puede
+  // inventar solo), la sesión no vale hasta que login.html complete el
+  // código: mfa_correo_ok_hasta trae hasta cuándo. Una sesión sin eso
+  // vigente no debe dejar ver ninguna página protegida, aunque quien la
+  // tenga llegue aquí navegando directo por la URL (no por login).
+  function faltaSegundoPaso(session) {
+    var meta = session.user && session.user.app_metadata;
+    var activo = meta && meta.mfa_correo_activo === true;
+    var okHasta = meta && meta.mfa_correo_ok_hasta;
+    var vigente = okHasta && new Date(okHasta).getTime() > Date.now();
+    return !!(activo && !vigente);
+  }
+
   window.kwSupabase.auth.getSession().then(function (result) {
     var session = result && result.data && result.data.session;
     if (!session) return redirectToLogin();
+    if (faltaSegundoPaso(session)) return redirectToLogin();
+    continuarConSesion();
+  }).catch(redirectToLogin);
 
+  function continuarConSesion() {
     // Sesión recién hecha y sin marca: se estrena ahora, no se juzga.
     var conMarca = false;
     try { conMarca = !!localStorage.getItem(ACTIVITY_KEY); } catch (e) {}
@@ -150,7 +169,7 @@
     setInterval(function () {
       if (inactivoDemasiado()) cerrarPorInactividad();
     }, 60 * 1000);
-  }).catch(redirectToLogin);
+  }
 
   window.kwLogout = function () {
     try { localStorage.removeItem(ACTIVITY_KEY); } catch (e) {}
