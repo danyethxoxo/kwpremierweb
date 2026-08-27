@@ -328,7 +328,8 @@
      type="text" mientras está vacío (para poder enseñar un placeholder),
      y con el selector amarrado a type="date" se quedaba sin estilo justo
      en ese rato, viéndose como una caja suelta del navegador. */
-  .dic-campo textarea, .dic-campo input[type="date"], .dic-campo input#e-fecha {
+  .dic-campo textarea, .dic-campo input[type="date"],
+  .dic-campo input#e-fecha, .dic-campo input#e-esc-fecha {
     width: 100%; resize: vertical;
     border: 1px solid var(--border); border-radius: var(--r-campo);
     padding: 10px 12px; font-family: inherit; font-size: 13.5px;
@@ -800,8 +801,57 @@
           </div>
         </div>
 
-        <div class="dic-campo">
-          <label for="e-esc-propiedad">Escrituras y fecha</label>
+        <!-- Los dos números del listado. Van juntos porque se capturan de
+             la misma hoja del contrato y casi siempre se preguntan de a
+             pares ("¿en cuánto quedó y a qué porcentaje?"). -->
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-precio-listado">Precio del listado</label>
+            <div class="dic-conunidad">
+              <input type="text" id="e-precio-listado" class="kw-input" inputmode="decimal" placeholder="3,500,000" autocomplete="off">
+              <span>MXN</span>
+            </div>
+          </div>
+          <div class="dic-campo">
+            <label for="e-comision">Porcentaje de comisión</label>
+            <div class="dic-conunidad">
+              <input type="text" id="e-comision" class="kw-input" inputmode="decimal" placeholder="5" autocomplete="off">
+              <span>%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- La escritura, en sus cuatro datos. Antes era un párrafo suelto
+             donde cabía todo y no se podía sacar nada: ni ordenar por
+             fecha, ni ver de qué notaría venía, ni saber si el expediente
+             traía el dato completo o a medias. -->
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-esc-numero">Número de escritura</label>
+            <input type="text" id="e-esc-numero" class="kw-input" placeholder="25,928" autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-esc-fecha">Fecha de escrituración</label>
+            <input type="date" id="e-esc-fecha" data-texto="Fecha de escrituración">
+          </div>
+        </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-notario">Nombre del notario</label>
+            <input type="text" id="e-notario" class="kw-input" placeholder="Lic. ..." autocomplete="off">
+          </div>
+          <div class="dic-campo">
+            <label for="e-notaria">Número de notaría</label>
+            <input type="text" id="e-notaria" class="kw-input" placeholder="12" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Lo que se capturó cuando la escritura era un párrafo. Solo sale
+             en los expedientes que traen algo escrito ahí, para no
+             perderlo mientras se van desglosando. -->
+        <div class="dic-campo" id="e-esc-propiedad-caja" style="display:none;">
+          <label for="e-esc-propiedad">Escritura (como se capturó antes)</label>
           <textarea id="e-esc-propiedad" rows="2" placeholder="Escritura 25,928 de fecha 01 de agosto del 2000, ante el Lic. ..."></textarea>
         </div>
 
@@ -867,7 +917,7 @@
         <h2 class="kw-page-titulo dic-subtitulo">Observaciones</h2>
 
         <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 var(--sp-2);">
-          Cada una se marca por separado conforme el asesor las va corrigiendo.
+          Agrega un checklist de las correcciones pendientes.
         </p>
 
         <div class="dic-lista-puntos" id="e-puntos"></div>
@@ -1480,7 +1530,15 @@
       dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
       dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
       dato('Tipo de inmueble', d.tipo_inmueble) +
-      dato('Escrituras y fecha', d.escritura_propiedad) +
+      dato('Precio del listado', dinero(d.precio_listado)) +
+      dato('Comisión', porcentaje(d.comision_porcentaje)) +
+      dato('Número de escritura', d.escritura_numero) +
+      dato('Fecha de escrituración', d.escritura_fecha ? fecha(d.escritura_fecha) : '') +
+      dato('Notario', d.notario_nombre) +
+      dato('Número de notaría', d.notaria_numero) +
+      // El párrafo de antes solo si el expediente no trae la escritura ya
+      // desglosada: con los dos, sería el mismo dato dicho dos veces.
+      dato('Escritura', escrituraDesglosada(d) ? '' : d.escritura_propiedad) +
       dato('Condominio', siNo(d.condominio)) +
       dato('Escritura del condominio', d.escritura_condominio) +
       dato('CFDI', d.cfdi) +
@@ -1812,6 +1870,12 @@
   // leer, el guardar y el reabrir por separado.
   var CAMPOS = [
     ['e-inmueble', 'inmueble'],
+    ['e-precio-listado', 'precio_listado'],
+    ['e-comision', 'comision_porcentaje'],
+    ['e-esc-numero', 'escritura_numero'],
+    ['e-esc-fecha', 'escritura_fecha'],
+    ['e-notario', 'notario_nombre'],
+    ['e-notaria', 'notaria_numero'],
     ['e-esc-propiedad', 'escritura_propiedad'],
     ['e-esc-condominio', 'escritura_condominio'],
     ['e-cfdi', 'cfdi'],
@@ -1828,13 +1892,17 @@
   // le quita la unidad venga como venga, y al pintar se le pone una sola.
   var SUPERFICIES = ['superficie_escritura', 'superficie_terreno', 'superficie_construccion'];
 
+  // El precio y la comisión sí son números en la base, así que de lo que
+  // se teclee se guarda nada más el número: "3,500,000" y "$3,500,000"
+  // son la misma cantidad, y con las comas la base ni siquiera lo
+  // aceptaría.
+  var NUMEROS = ['precio_listado', 'comision_porcentaje'];
+
   var ESTADOS_CIVILES = [
     'Soltero(a)',
     'Casado(a) por sociedad conyugal',
     'Casado(a) por separación de bienes',
     'Divorciado(a)',
-    'Viudo(a)',
-    'Concubinato',
   ];
 
   function soloNumero(v) {
@@ -1844,6 +1912,69 @@
   function conUnidad(v) {
     var n = soloNumero(v);
     return n ? n + ' m²' : '';
+  }
+
+  // De lo que se teclee se queda nada más el número. Si con eso todavía no
+  // sale un número (quedó un punto solo, o el campo estaba vacío) devuelve
+  // cadena vacía, que es lo que se guarda como "sin dato": mandarle a la
+  // base un "." la haría tronar la guardada entera.
+  function soloCantidad(v) {
+    var n = String(v == null ? '' : v).replace(/[^0-9.]/g, '');
+    // Con más de un punto no es una cantidad. Se respeta el primero, que
+    // es el de los decimales, y se juntan las cifras de atrás.
+    var p = n.indexOf('.');
+    if (p !== -1) n = n.slice(0, p + 1) + n.slice(p + 1).replace(/\./g, '');
+    if (n === '' || !isFinite(Number(n))) return '';
+    return n;
+  }
+
+  // Los dos números se guardan pelones y se visten al enseñarlos. El
+  // precio con separadores de miles porque son siete cifras y sin comas
+  // no se lee de un vistazo si son tres millones o treinta.
+  function dinero(v) {
+    var n = soloCantidad(v);
+    if (n === '') return '';
+    return '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  }
+
+  function porcentaje(v) {
+    var n = soloCantidad(v);
+    if (n === '') return '';
+    return Number(n).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + '%';
+  }
+
+  // Lo mismo pero para el campo de captura, donde el signo y el símbolo
+  // ya los pone el formulario: nada más el número con sus comas.
+  function capturable(v) {
+    var n = soloCantidad(v);
+    if (n === '') return '';
+    return Number(n).toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  }
+
+  // La escritura, armada de sus cuatro datos. Los expedientes de antes de
+  // que se partiera en campos traen el párrafo como se capturó, y ese es
+  // el que sale mientras no se desglose.
+  function escrituraDesglosada(d) {
+    return !!(d.escritura_numero || d.escritura_fecha ||
+      d.notario_nombre || d.notaria_numero);
+  }
+
+  function escrituraTexto(d) {
+    var partes = [];
+    if (d.escritura_numero) partes.push('Escritura ' + d.escritura_numero);
+    if (d.escritura_fecha) partes.push('de fecha ' + fecha(d.escritura_fecha));
+    if (d.notario_nombre) partes.push('ante ' + d.notario_nombre);
+    if (d.notaria_numero) partes.push('notaría número ' + d.notaria_numero);
+    return partes.length ? partes.join(', ') : (d.escritura_propiedad || '');
+  }
+
+  // kw-ui deja los campos de fecha como texto mientras están vacíos, para
+  // poder enseñar su propio rótulo. Al traer un expediente ya capturado
+  // hay que devolverlos a fecha, o el valor se vería crudo ("2000-08-01").
+  function ponerFecha(id, valor) {
+    var el = $(id);
+    el.value = valor || '';
+    if (valor && el.type !== 'date') el.type = 'date';
   }
 
   // ── Los clientes del expediente ─────────────────────────────
@@ -1984,7 +2115,7 @@
     CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
 
     $('editor-titulo').textContent = d ? 'Editar dictamen' : 'Nuevo dictamen';
-    $('e-fecha').value = borrador.fecha_dictamen;
+    ponerFecha('e-fecha', borrador.fecha_dictamen);
     $('e-operacion').value = borrador.operacion;
     $('e-uso').value = borrador.uso;
     $('e-tipo').value = borrador.tipo_inmueble_id;
@@ -1998,10 +2129,16 @@
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
     CAMPOS.forEach(function (c) {
-      $(c[0]).value = SUPERFICIES.indexOf(c[1]) !== -1
-        ? soloNumero(borrador[c[1]])
-        : borrador[c[1]];
+      var v = borrador[c[1]];
+      if (SUPERFICIES.indexOf(c[1]) !== -1) v = soloNumero(v);
+      else if (NUMEROS.indexOf(c[1]) !== -1) v = capturable(v);
+      $(c[0]).value = v;
     });
+    ponerFecha('e-esc-fecha', borrador.escritura_fecha);
+    // El párrafo viejo de la escritura solo se enseña si ese expediente
+    // trae algo escrito ahí: en uno nuevo sería una casilla de más que
+    // pide otra vez lo que ya se pidió desglosado.
+    $('e-esc-propiedad-caja').style.display = borrador.escritura_propiedad ? '' : 'none';
     elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
 
     // Cuántos clientes son lo dice lo que ya trae capturado; uno nuevo
@@ -2030,9 +2167,11 @@
   }
 
   function pintarPuntosEditor() {
+    // Sin observaciones no se dice nada: el rótulo de arriba y el campo de
+    // abajo ya explican qué va aquí, y un aviso en medio de los dos era
+    // repetirlo una tercera vez.
     if (!borrador.puntos.length) {
-      $('e-puntos').innerHTML = '<div class="kw-vacio" style="padding:var(--sp-4);">' +
-        'Todavía no hay observaciones. Agrega abajo lo que se le va a pedir al asesor.</div>';
+      $('e-puntos').innerHTML = '';
       return;
     }
     $('e-puntos').innerHTML = borrador.puntos.map(function (p, i) {
@@ -2063,7 +2202,9 @@
     leerClientes();
     CAMPOS.forEach(function (c) {
       var v = $(c[0]).value.trim();
-      borrador[c[1]] = SUPERFICIES.indexOf(c[1]) !== -1 ? soloNumero(v) : v;
+      if (SUPERFICIES.indexOf(c[1]) !== -1) v = soloNumero(v);
+      else if (NUMEROS.indexOf(c[1]) !== -1) v = soloCantidad(v);
+      borrador[c[1]] = v;
     });
   }
 
@@ -2305,6 +2446,8 @@
             (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '') +
             (d.tipo_inmueble ? ' · ' + d.tipo_inmueble : '')) +
           renglon('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
+          renglon('Precio del listado', dinero(d.precio_listado)) +
+          renglon('Comisión', porcentaje(d.comision_porcentaje)) +
 
           // El único renglón que parte su celda en dos, igual que el
           // machote: la escritura de la propiedad y la del condominio.
@@ -2314,7 +2457,7 @@
               '<table style="width:100%;border-collapse:collapse;height:100%;">' +
                 '<tr>' +
                   '<td style="border:0;border-right:1px solid #000;width:50%;vertical-align:top;">' +
-                    '<span class="sub">Propiedad</span>' + escapar(d.escritura_propiedad || '') +
+                    '<span class="sub">Propiedad</span>' + escapar(escrituraTexto(d)) +
                   '</td>' +
                   '<td style="border:0;width:50%;vertical-align:top;">' +
                     '<span class="sub">Condominio</span>' + escapar(d.escritura_condominio || '') +
