@@ -215,6 +215,16 @@
   .observadores-nota { font-size: 11.5px; color: var(--muted); margin: 0 0 11px; }
   .observador-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .observador-fila .kw-input { flex: 1 1 auto; min-width: 0; margin: 0; }
+  /* Cuando la TM se pone sola, se dice por qué: un correo que nadie
+     escribió, apareciendo en silencio, confunde más de lo que ayuda. */
+  .aviso-tm {
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-top: 11px; padding: 9px 11px; border-radius: 10px;
+    background: rgba(198,32,39,0.06);
+    border: 1px solid rgba(198,32,39,0.18);
+    font-size: 11.5px; line-height: 1.45; color: var(--text);
+  }
+  .aviso-tm svg { flex: 0 0 auto; margin-top: 1px; color: var(--red); }
 
   /* Cuánto le queda del mes. Se enseña antes del formulario, no al
      apretar enviar: enterarte de que ya no te quedan después de llenar
@@ -829,6 +839,47 @@
     #btn-volver-archivos { padding: 8px; }
   }
 
+  /* ── La búsqueda, siempre a la vista ──
+     El buscador que arma drawer.js arranca escondido detrás de la lupa y
+     al abrirlo se comía el header entero. Aquí se queda puesto como un
+     recuadro fijo junto a la lupa: se ve qué se puede buscar sin tener
+     que descubrir que la lupa se pica. Sigue siendo el mismo campo, así
+     que filtra igual que antes.
+
+     Al abrirlo (picar la lupa) el estilo compartido esconde el título y
+     el "Atrás" para hacerle lugar; aquí ya tiene el suyo, así que esa
+     regla se desactiva y el header no cambia de forma. */
+  #header-firmas .kw-buscar-campo-inline {
+    display: block;
+    flex: 0 1 22%; min-width: 150px;
+    height: 34px; padding: 0 12px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: #fff; font-size: 13px;
+  }
+  #header-firmas .kw-buscar-campo-inline:focus { border-color: var(--red); }
+  /* La equis solo cuando hay algo escrito: vacía no tiene nada que
+     limpiar y solo agrega ruido. La pone y la quita el JS de abajo. */
+  #header-firmas .kw-buscar-cerrar-inline { display: none; }
+  #header-firmas.tiene-busqueda .kw-buscar-cerrar-inline { display: flex; }
+  #header-firmas.kw-buscando .back-btn { display: inline-flex; }
+  #header-firmas.kw-buscando .kw-header-sueltos { display: flex; }
+  #header-firmas.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: inline-flex; }
+  #header-firmas.kw-buscando.modo-editor .kw-header-doc { display: block; }
+
+  /* En pantalla angosta no cabe el recuadro junto a todo lo demás, así
+     que ahí la lupa vuelve a su comportamiento de siempre: se pica y el
+     campo se abre ocupando el header. */
+  @media (max-width: 900px) {
+    #header-firmas .kw-buscar-campo-inline { display: none; }
+    #header-firmas.kw-buscando .kw-buscar-campo-inline {
+      display: block; flex: 1 1 auto; border: none; background: none; height: auto;
+    }
+    #header-firmas.kw-buscando .back-btn,
+    #header-firmas.kw-buscando .kw-header-sueltos,
+    #header-firmas.kw-buscando .kw-header-doc,
+    #header-firmas.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
+  }
+
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
      agregar firmantes alargue la página entera. */
@@ -983,7 +1034,15 @@
   /* Guardar y mandar, juntos al final del formulario. Guardar va en
      secundario: es lo que se hace de paso, no el objetivo. */
   .editor-botones { display: flex; gap: 8px; margin-top: var(--sp-4); }
-  .editor-botones .btn-guardar { flex: 1; margin-top: 0; }
+  /* Mandar a firma va en guinda sólido, no en el vidrio blanco de
+     .btn-guardar: al lado de "Guardar borrador" los dos se veían igual
+     de importantes, y este es el que cierra el trabajo. */
+  .editor-botones .btn-guardar {
+    flex: 1; margin-top: 0;
+    background: var(--red); color: #fff;
+    box-shadow: 0 6px 20px rgba(198,32,39,0.32);
+  }
+  .editor-botones .btn-guardar:hover { filter: brightness(1.08); box-shadow: 0 8px 24px rgba(198,32,39,0.4); }
   .btn-borrador {
     flex: 0 0 auto; padding: 0 16px; border-radius: 10px;
     border: 1.5px solid var(--border); background: #fff;
@@ -1342,7 +1401,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
               <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
             </svg>
-            <input type="text" id="f-buscar" placeholder="Buscar por asesor o nombre del documento" autocomplete="off">
+            <input type="text" id="f-buscar" placeholder="Busca por asesor o por documento" autocomplete="off">
           </label>
         </div>
         <div class="tabla-cabeza">
@@ -1476,8 +1535,12 @@
                       <div id="observadores"></div>
                       <button type="button" class="firma-agregar" id="btn-agregar-observador">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Agregar observador
+                        <span id="txt-agregar-observador">Agregar observador</span>
                       </button>
+                      <div class="aviso-tm" id="aviso-tm" style="display:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        <span>Se agregó a la Transaction Manager como observadora, porque firma el MCA o la OP. Si no hace falta, quítala con el bote.</span>
+                      </div>
                     </section>
                   </div>
 
@@ -2267,8 +2330,11 @@
       mostrarVista('editor');
       prepararFirmantes();
       $('editor-cargando').style.display = 'flex';
+      // Se nombra como el primer archivo, que es el contrato: los anexos
+      // van después y no lo nombran. Decir "4 documentos unidos" no
+      // identificaba nada.
       $('editor-nombre').textContent = archivos.length > 1
-        ? archivos.length + ' documentos unidos'
+        ? archivos[0].name + ' (+' + (archivos.length - 1) + ')'
         : archivos[0].name;
 
       // El título es el nombre del archivo, sin la extensión. Del primero
@@ -2694,6 +2760,7 @@
     // esto corre, y las de arriba pueden cambiar si se quitó una de en
     // medio (el color va por posición, no por firmante).
     refrescarBotonesFijar();
+    revisarObservadorTM();
   }
 
   // ── ¿Yo también firmo? ──
@@ -2704,6 +2771,9 @@
   function prepararFirmantes() {
     $('firmantes').innerHTML = '';
     $('observadores').innerHTML = '';
+    $('aviso-tm').style.display = 'none';
+    tmQuitadaAMano = false;
+    asegurarFilaObservador();
     $('pregunta-firmo').style.display = 'flex';
     marcarFrecuentesPuestos();
   }
@@ -2757,12 +2827,36 @@
           '<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' +
         '</svg>' +
       '</button>';
-    fila.querySelector('.firmante-quitar').addEventListener('click', () => fila.remove());
+    fila.querySelector('.firmante-quitar').addEventListener('click', () => {
+      const era = fila.querySelector('.observador-mail').value.trim().toLowerCase();
+      fila.remove();
+      // Quitar a la TM a mano es una decisión: no se vuelve a poner sola.
+      if (era === CORREO_TM) tmQuitadaAMano = true;
+      asegurarFilaObservador();
+    });
     return fila;
   }
 
   function agregarObservador(correo) {
     $('observadores').appendChild(filaObservador(correo));
+    ajustarBotonObservador();
+  }
+
+  // Siempre hay un renglón vacío a la vista, igual que con los firmantes.
+  // Antes había que picarle a "Agregar observador" para que apareciera el
+  // campo, y entonces ese mismo botón parecía el de confirmar: se
+  // escribía el correo y se le picaba otra vez esperando que lo guardara.
+  // Con el campo puesto desde el principio, el botón solo sirve para lo
+  // que dice, y por eso se llama "Agregar otro".
+  function asegurarFilaObservador() {
+    if (!$('observadores').querySelector('.observador-fila')) agregarObservador('');
+    ajustarBotonObservador();
+  }
+
+  function ajustarBotonObservador() {
+    const cuantos = $('observadores').querySelectorAll('.observador-fila').length;
+    $('txt-agregar-observador').textContent = cuantos
+      ? 'Agregar otro observador' : 'Agregar observador';
   }
 
   $('btn-agregar-observador').addEventListener('click', () => {
@@ -2771,10 +2865,75 @@
     filas[filas.length - 1].focus();
   });
 
+  // El renglón vacío existe desde el arranque, no solo al armar un
+  // documento: así la pestaña nunca se ve pelona.
+  asegurarFilaObservador();
+
+  // ── La equis del campo de búsqueda del header ──
+  // Solo cuando hay algo escrito: vacío no hay nada que limpiar. Va aquí
+  // y no dentro del arranque con sesión porque es puro adorno, y va
+  // delegado en el documento porque drawer.js arma ese campo al final del
+  // <body>: cuando esto corre puede no existir todavía.
+  function marcarSiHayBusqueda() {
+    const campo = document.getElementById('kw-buscar-input');
+    $('header-firmas').classList.toggle('tiene-busqueda', !!(campo && campo.value));
+  }
+  document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'kw-buscar-input') marcarSiHayBusqueda();
+  });
+  // Al limpiar con la equis, drawer.js vacía el campo sin disparar
+  // 'input', así que la clase se quitaría hasta la siguiente tecla.
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.kw-buscar-cerrar-inline')) {
+      setTimeout(marcarSiHayBusqueda, 0);
+    }
+  });
+
   function leerObservadores() {
     return Array.from($('observadores').querySelectorAll('.observador-fila')).map((f) => ({
       correo: f.querySelector('.observador-mail').value.trim(),
     })).filter((o) => o.correo);
+  }
+
+  // ── La revisión de la TM ──
+  // Los contratos que firman el MCA y la OP los revisa antes la
+  // Transaction Manager, para que no les llegue nada raro. En vez de
+  // acordarse de ponerla cada vez, se agrega sola en cuanto alguno de los
+  // dos aparece entre los firmantes.
+  const CORREO_TM = 'gabriela.landa@kwmexico.mx';
+  const FIRMANTES_QUE_PIDEN_TM = ['gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx'];
+
+  // Si alguien la quita a mano, se respeta: no se vuelve a poner sola en
+  // este documento. Sin esto, quitarla sería imposible.
+  let tmQuitadaAMano = false;
+
+  function hayObservador(correo) {
+    return leerObservadores().some((o) => o.correo.toLowerCase() === correo);
+  }
+
+  function revisarObservadorTM() {
+    if (tmQuitadaAMano || hayObservador(CORREO_TM)) return;
+
+    const correos = leerFirmantes().map((f) => f.correo.toLowerCase());
+    if (!FIRMANTES_QUE_PIDEN_TM.some((c) => correos.includes(c))) return;
+
+    // Se reusa el renglón vacío si lo hay, para no dejar uno suelto
+    // arriba del que se acaba de llenar.
+    const vacia = Array.from($('observadores').querySelectorAll('.observador-fila'))
+      .find((f) => !f.querySelector('.observador-mail').value.trim());
+    if (vacia) vacia.querySelector('.observador-mail').value = CORREO_TM;
+    else agregarObservador(CORREO_TM);
+
+    avisoTM();
+  }
+
+  // Se avisa, en vez de aparecer sola y en silencio: que salga un correo
+  // que nadie escribió confunde más de lo que ayuda.
+  function avisoTM() {
+    const nota = $('aviso-tm');
+    nota.style.display = 'flex';
+    clearTimeout(avisoTM.reloj);
+    avisoTM.reloj = setTimeout(() => { nota.style.display = 'none'; }, 9000);
   }
 
   // ── Mandar ──────────────────────────────────────────────────
@@ -2864,6 +3023,14 @@
     }
   });
 
+  // Enter dentro de un campo no manda el documento a firma. Mandar es
+  // irreversible (salen correos a clientes y cuenta contra el plan), así
+  // que tiene que ser un clic a propósito en el botón y no un descuido
+  // al terminar de teclear un correo.
+  $('form-firma').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault();
+  });
+
   $('form-firma').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (enviando) return;
@@ -2881,6 +3048,20 @@
     for (const f of firmantes) {
       if (!f.nombre) return aviso('A uno de los firmantes le falta el nombre.', 'error');
       if (!f.correo) return aviso('A ' + f.nombre + ' le falta el correo.', 'error');
+    }
+
+    // A quién le falta su recuadro en la hoja. Sin esto el envío se iba
+    // igual y weetrust lo rechazaba con un 400 que solo decía el correo,
+    // sin explicar qué faltaba.
+    const conFirma = new Set(posicionesParaEnviar().map((p) => p.correo));
+    const sinFirma = firmantes.filter((f) => !conFirma.has(f.correo.toLowerCase()));
+    if (sinFirma.length) {
+      await window.kwUI.alert(
+        'Todavía falta poner en el documento dónde firma:\n\n'
+        + sinFirma.map((f) => '• ' + f.nombre).join('\n')
+        + '\n\nUsa el botón "Fijar firma" de cada uno y marca el lugar en la hoja.',
+        { titulo: 'Faltan firmas por colocar' });
+      return;
     }
 
     enviando = true;
@@ -3527,10 +3708,14 @@
     marcarUnico();
     marcarFrecuentesPuestos();
 
-    // Los observadores, igual que se dejaron.
+    // Los observadores, igual que se dejaron. Si el borrador se guardó
+    // sin la TM, fue a propósito: no se vuelve a poner sola al reabrirlo.
     $('observadores').innerHTML = '';
+    $('aviso-tm').style.display = 'none';
     const observadoresGuardados = Array.isArray(f.observadores) ? f.observadores : [];
     observadoresGuardados.forEach((o) => agregarObservador(o.correo || ''));
+    tmQuitadaAMano = !hayObservador(CORREO_TM);
+    asegurarFilaObservador();
 
     try {
       // El PDF se baja del bucket. Es el mismo que se subió al guardar,
@@ -4159,6 +4344,11 @@
       pintarEnvios();
     });
 
+    // El campo del header (el que arma drawer.js) queda siempre a la
+    // vista en esta pantalla, así que su botón de limpiar solo aparece
+    // cuando hay algo escrito. drawer.js le pasa lo que se teclea a
+    // '#f-buscar', que es el que filtra de verdad.
+
     // El checkbox de "todos" vive pegado arriba de la tabla, fuera de lo
     // que pintarEnvios() vuelve a dibujar en cada filtrada, así que su
     // manejador se pone una sola vez aquí. Usa "visibles" (lo último que
@@ -4394,6 +4584,8 @@
       // Los recuadros ya colocados llevan el nombre del firmante escrito
       // encima, así que se redibujan al corregirlo.
       if (marcas.length) pintarMarcas();
+      // Por si el correo que se acaba de teclear es el del MCA o la OP.
+      revisarObservadorTM();
     });
 
     escucharCambios();
