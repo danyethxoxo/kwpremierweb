@@ -924,6 +924,14 @@ Deno.serve(async (req: Request) => {
           isSigned: s?.isSigned ?? null,
           llaves: Object.keys(s || {}).sort(),
         })),
+        // Los observadores, aparte: es la única manera de saber si
+        // weetrust se quedó con los que se le mandaron en 'sharedWith'.
+        // Si aquí no viene nada, no los guardó, y entonces el problema
+        // está en el envío y no en su correo.
+        observadores_en_weetrust: doc?.sharedWith ?? null,
+        // Y las llaves de primer nivel del documento, para localizar el
+        // campo si allá se llama de otra forma al devolverlo.
+        llaves_del_documento: Object.keys(doc || {}).sort(),
         firmantes: recortar(firmantesCrudos),
         documento: recortar(doc),
       })
