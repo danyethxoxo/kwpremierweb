@@ -120,7 +120,7 @@
     .page-title {
       font-size: 32px;
       font-weight: 700;
-      color: #fff;
+      color: var(--text);
       letter-spacing: -0.5px;
       margin-bottom: 8px;
     }
@@ -144,6 +144,35 @@
       .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
       .page-eyebrow, .page-title, .page-desc { display: none; }
     }
+
+    /* ═══════════ LA BIFURCACIÓN POR ROL ═══════════ */
+    /* Un asociado entra directo a Acuerdos/Contratos: para él esta
+       pantalla siempre fue solo un cruce de caminos. Master, Admin y
+       Staff ven antes estas dos puertas, porque para ellos esta sección
+       son dos cosas distintas: el control de lo que ya se firmó (la
+       operatividad) y el formato en blanco de siempre.
+
+       El atributo "hidden" del navegador vale menos que cualquier clase
+       con display propio - sin esto .grid seguiría enseñándose por
+       debajo. Con el !important, "hidden" gana siempre y esconder algo
+       es una línea de JS en vez de acordarse de qué display tenía. */
+    [hidden] { display: none !important; }
+
+    /* El botón "Crear un Acuerdo" reusa el look de las tarjetas de
+       enlace (.hover-card, en kw-base.css) pero es un <button>, no un
+       <a>: no navega a otra página, descubre la parrilla de siempre en
+       el mismo lugar. Se le quita el reset de <button> del navegador
+       para que el vidrio de .hover-card se vea igual que en la de al
+       lado. */
+    button.hover-card {
+      appearance: none; -webkit-appearance: none;
+      font-family: inherit; text-align: left; width: 100%;
+    }
+
+    /* El aro de carga del sitio es blanco porque siempre gira sobre el
+       fondo oscuro de la página. Aquí gira directo sobre el lienzo claro
+       de kw-claro.css, donde no se vería. */
+    #cargando .circle { border-top-color: var(--red); }
 
     /* ═══════════ TARJETA ═══════════
        El efecto de hover (relleno de color + flecha) vive en
@@ -191,9 +220,59 @@
 
     <div class="page-eyebrow">Documentos</div>
     <h1 class="page-title">Acuerdos & Contratos</h1>
-    <p class="page-desc">Selecciona la sección que necesitas</p>
+    <p class="page-desc" id="page-desc">Selecciona la sección que necesitas</p>
 
-    <div class="grid">
+    <!-- Mientras no se sabe qué rol tiene quien entró, no se enseña
+         ninguna de las dos vistas: si el liderazgo viera la parrilla
+         asomarse un instante antes de las dos puertas, se leería como un
+         parpadeo. -->
+    <div class="kw-loader" id="cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+
+    <!-- Solo para Master, Admin y Staff. Un asociado nunca la ve: pasa
+         directo a la parrilla de siempre, más abajo. -->
+    <div class="grid" id="selector" hidden>
+
+      <a href="/kwpremierweb/documentos/operatividad.html" class="hover-card" style="--card-color: var(--red);">
+        <div class="hover-card-icon" style="background:#FFF0F0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#8a0000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <rect x="7" y="12" width="3" height="6"/>
+            <rect x="12" y="8" width="3" height="10"/>
+            <rect x="17" y="4" width="3" height="14"/>
+          </svg>
+        </div>
+        <div class="hover-card-title">Ver operatividad</div>
+        <div class="hover-card-desc">El registro de todas las captaciones, con folio, dictamen, precio, comisión y ubicación.</div>
+        <div class="hover-card-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </a>
+
+      <button type="button" class="hover-card" id="btn-crear" style="--card-color: var(--red);">
+        <div class="hover-card-icon" style="background:#FFF0F0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#8a0000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="hover-card-title">Crear un Acuerdo</div>
+        <div class="hover-card-desc">Los mismos formatos en blanco que genera un asociado: acuerdos y contratos.</div>
+        <div class="hover-card-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </button>
+
+    </div>
+
+    <div class="grid" id="grid" hidden>
 
       <!-- Acuerdos -->
       <a href="acuerdos/index.html" class="hover-card" style="--card-color: var(--red);">
@@ -250,6 +329,95 @@
 
   </main>
 
+<script>
+  // ── Quién ve qué al entrar ───────────────────────────────────
+  // El asociado ve la parrilla de Acuerdos/Contratos y ya, como siempre.
+  // Master, Admin y Staff ven primero las dos puertas, y "Crear un
+  // Acuerdo" descubre esa misma parrilla sin cambiar de página.
+  //
+  // Esto es nada más lo que se enseña. La puerta de verdad está en las
+  // políticas de RLS de la tabla de operatividad, que solo dejan leerla
+  // al liderazgo: aunque un asociado escriba la dirección a mano, ahí no
+  // hay nada que enseñarle.
+  (function () {
+    var LIDERAZGO = ['master', 'admin', 'staff'];
+    var CACHE = 'kw_rol';
+
+    var selector = document.getElementById('selector');
+    var grid = document.getElementById('grid');
+    var cargando = document.getElementById('cargando');
+    var desc = document.getElementById('page-desc');
+    var esLiderazgo = false;
+
+    function verSelector(marcar) {
+      cargando.hidden = true;
+      grid.hidden = true;
+      selector.hidden = false;
+      desc.textContent = '¿Qué necesitas hacer?';
+      if (marcar) history.replaceState({ kwVista: 'selector' }, '', location.href);
+    }
+
+    function verParrilla(marcar) {
+      cargando.hidden = true;
+      selector.hidden = true;
+      grid.hidden = false;
+      desc.textContent = 'Selecciona la sección que necesitas';
+      if (marcar) history.pushState({ kwVista: 'parrilla' }, '', location.href);
+    }
+
+    document.getElementById('btn-crear').addEventListener('click', function () { verParrilla(true); });
+
+    // Con el liderazgo adentro, "Atrás" del encabezado regresa primero al
+    // selector y solo desde ahí sale al Hub: brincarse la pantalla de la
+    // que se acaba de venir se siente como si el botón se hubiera
+    // saltado un paso.
+    var btnAtras = document.querySelector('.back-btn');
+    if (btnAtras) {
+      btnAtras.addEventListener('click', function (e) {
+        if (!esLiderazgo || grid.hidden) return;
+        e.preventDefault();
+        history.back();
+      });
+    }
+
+    window.addEventListener('popstate', function (ev) {
+      if (!esLiderazgo) return;
+      if (ev.state && ev.state.kwVista === 'parrilla') verParrilla(false);
+      else verSelector(false);
+    });
+
+    function aplicar(rol) {
+      esLiderazgo = LIDERAZGO.indexOf(rol) !== -1;
+      if (esLiderazgo) verSelector(true); else verParrilla(false);
+    }
+
+    async function arranca() {
+      // El rol de esta sesión se recuerda mientras la pestaña siga
+      // abierta: sin esto, cada ida y vuelta a esta pantalla se queda
+      // esperando la misma respuesta que ya se tuvo hace un minuto.
+      var guardado = null;
+      try { guardado = sessionStorage.getItem(CACHE); } catch (e) {}
+      if (guardado) aplicar(guardado);
+
+      try {
+        var u = await window.kwSupabase.auth.getUser();
+        if (!u.data || !u.data.user) { if (!guardado) verParrilla(false); return; }
+        var p = await window.kwSupabase
+          .from('profiles').select('role').eq('id', u.data.user.id).single();
+        var rol = p.data ? p.data.role : null;
+        try { if (rol) sessionStorage.setItem(CACHE, rol); } catch (e) {}
+        // Si lo recordado ya era esto, no se repinta: hacerlo tiraría la
+        // vista que la persona acaba de abrir.
+        if (rol !== guardado) aplicar(rol);
+      } catch (e) {
+        if (!guardado) verParrilla(false);
+      }
+    }
+
+    if (document.documentElement.classList.contains('kw-auth-ok')) arranca();
+    else window.addEventListener('kw-auth-ready', arranca, { once: true });
+  })();
+</script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260822a" data-menu="hub"></script>
 </body>
 </html>

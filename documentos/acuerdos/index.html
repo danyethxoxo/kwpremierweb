@@ -135,7 +135,7 @@
     .page-title {
       font-size: 30px;
       font-weight: 700;
-      color: #fff;
+      color: var(--text);
       letter-spacing: -0.5px;
       margin-bottom: 8px;
     }
@@ -152,32 +152,6 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 14px;
     }
-
-    /* ═══════════ ENTRADA DEL LIDERAZGO ═══════════ */
-    /* Un asociado entra directo a la parrilla de formatos: generarlos es
-       todo lo que viene a hacer aquí, y meterle una pantalla de por medio
-       sería estorbo puro.
-       Master, Admin y Staff pasan antes por estas dos puertas, porque
-       para ellos esta sección son dos cosas distintas: el control de lo
-       que ya se firmó, y el formato en blanco. */
-
-    /* El atributo "hidden" del navegador vale menos que cualquier clase
-       con display propio, así que .grid seguiría enseñándose escondida.
-       Con esto, "hidden" gana siempre y esconder algo es una línea de JS
-       en vez de acordarse de qué display tenía. */
-    [hidden] { display: none !important; }
-
-    .selector {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-      max-width: 560px;
-    }
-    .selector .card {
-      appearance: none; -webkit-appearance: none;
-      font-family: inherit; text-align: left; width: 100%; cursor: pointer;
-    }
-    @media (max-width: 560px) { .selector { grid-template-columns: 1fr; } }
 
     @media (max-width: 780px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
@@ -300,44 +274,9 @@
   <main class="page">
 
     <h1 class="page-title">Acuerdos</h1>
-    <p class="page-desc" id="page-desc">Selecciona el documento que necesitas generar</p>
+    <p class="page-desc">Selecciona el documento que necesitas generar</p>
 
-    <!-- Mientras no se sabe qué rol tiene quien entró, no se enseña
-         ninguna de las dos vistas: si se enseñara la parrilla por
-         default, el liderazgo la vería aparecer y desaparecer. -->
-    <div class="kw-loader" id="cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
-
-    <div class="selector" id="selector" hidden>
-      <a href="/kwpremierweb/documentos/operatividad.html" class="card">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18"/>
-            <rect x="7" y="12" width="3" height="6"/>
-            <rect x="12" y="8" width="3" height="10"/>
-            <rect x="17" y="4" width="3" height="14"/>
-          </svg>
-        </div>
-        <div class="card-title">Ver operatividad</div>
-        <div class="card-desc">El registro de todas las captaciones, con folio, dictamen, precio, comisión y ubicación</div>
-        <div class="card-cta">Abrir <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
-      </a>
-
-      <button type="button" class="card" id="btn-crear">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="12" y1="18" x2="12" y2="12"/>
-            <line x1="9" y1="15" x2="15" y2="15"/>
-          </svg>
-        </div>
-        <div class="card-title">Crear un acuerdo</div>
-        <div class="card-desc">Los mismos formatos en blanco que genera un asociado</div>
-        <div class="card-cta">Abrir <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
-      </button>
-    </div>
-
-    <div class="grid" id="grid" hidden>
+    <div class="grid">
 
       <!-- Carta de Terminación -->
       <a href="cartaterminacion.html" class="card">
@@ -477,101 +416,8 @@
   // Menú de tres puntos en cada tarjeta. Aquí solo aparece "Compartir":
   // "Hacer visible para" se muestra únicamente en documentos internos
   // registrados en la base (los que traen data-doc-id).
-  //
-  // Se le pasa la parrilla y no la página entera a propósito: "Ver
-  // operatividad" también es una tarjeta, y no es un documento que se
-  // pueda compartir con nadie.
   (function () {
-    function arranca() { window.kwDocMenu.init(document.getElementById('grid')); }
-    if (document.documentElement.classList.contains('kw-auth-ok')) arranca();
-    else window.addEventListener('kw-auth-ready', arranca, { once: true });
-  })();
-</script>
-<script>
-  // ── Quién ve qué al entrar ───────────────────────────────────
-  // El asociado ve la parrilla de formatos y ya. El liderazgo ve primero
-  // las dos puertas, y "Crear un acuerdo" descubre esa misma parrilla sin
-  // cambiar de página.
-  //
-  // Esto es nada más lo que se enseña. La puerta de verdad está en las
-  // políticas de RLS de la tabla de operatividad, que solo dejan leerla al
-  // liderazgo: aunque un asociado escriba la dirección a mano, ahí no hay
-  // nada que enseñarle.
-  (function () {
-    var LIDERAZGO = ['master', 'admin', 'staff'];
-    var CACHE = 'kw_rol';
-
-    var selector = document.getElementById('selector');
-    var grid = document.getElementById('grid');
-    var cargando = document.getElementById('cargando');
-    var desc = document.getElementById('page-desc');
-    var esLiderazgo = false;
-
-    function verSelector(marcar) {
-      cargando.hidden = true;
-      grid.hidden = true;
-      selector.hidden = false;
-      desc.textContent = '¿Qué necesitas hacer?';
-      if (marcar) history.replaceState({ kwVista: 'selector' }, '', location.href);
-    }
-
-    function verParrilla(marcar) {
-      cargando.hidden = true;
-      selector.hidden = true;
-      grid.hidden = false;
-      desc.textContent = 'Selecciona el documento que necesitas generar';
-      if (marcar) history.pushState({ kwVista: 'parrilla' }, '', location.href);
-    }
-
-    document.getElementById('btn-crear').addEventListener('click', function () { verParrilla(true); });
-
-    // Con el liderazgo adentro, "Atrás" del encabezado regresa primero al
-    // selector y solo desde ahí sale de la sección: brincarse la pantalla
-    // de la que se acaba de venir se siente como si el botón se hubiera
-    // saltado un paso.
-    var btnAtras = document.querySelector('.back-btn');
-    if (btnAtras) {
-      btnAtras.addEventListener('click', function (e) {
-        if (!esLiderazgo || grid.hidden) return;
-        e.preventDefault();
-        history.back();
-      });
-    }
-
-    window.addEventListener('popstate', function (ev) {
-      if (!esLiderazgo) return;
-      if (ev.state && ev.state.kwVista === 'parrilla') verParrilla(false);
-      else verSelector(false);
-    });
-
-    function aplicar(rol) {
-      esLiderazgo = LIDERAZGO.indexOf(rol) !== -1;
-      if (esLiderazgo) verSelector(true); else verParrilla(false);
-    }
-
-    async function arranca() {
-      // El rol de esta sesión se recuerda mientras la pestaña siga
-      // abierta: sin esto, cada ida y vuelta a esta pantalla se queda
-      // esperando la misma respuesta que ya se tuvo hace un minuto.
-      var guardado = null;
-      try { guardado = sessionStorage.getItem(CACHE); } catch (e) {}
-      if (guardado) aplicar(guardado);
-
-      try {
-        var u = await window.kwSupabase.auth.getUser();
-        if (!u.data || !u.data.user) { if (!guardado) verParrilla(false); return; }
-        var p = await window.kwSupabase
-          .from('profiles').select('role').eq('id', u.data.user.id).single();
-        var rol = p.data ? p.data.role : null;
-        try { if (rol) sessionStorage.setItem(CACHE, rol); } catch (e) {}
-        // Si lo recordado ya era esto, no se repinta: hacerlo tiraría la
-        // parrilla que la persona acaba de abrir.
-        if (rol !== guardado) aplicar(rol);
-      } catch (e) {
-        if (!guardado) verParrilla(false);
-      }
-    }
-
+    function arranca() { window.kwDocMenu.init(); }
     if (document.documentElement.classList.contains('kw-auth-ok')) arranca();
     else window.addEventListener('kw-auth-ready', arranca, { once: true });
   })();
