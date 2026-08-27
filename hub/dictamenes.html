@@ -712,51 +712,6 @@
   .dic-listo.visible { display: flex; }
   .dic-listo span { flex: 1; min-width: 200px; font-size: 13.5px; }
 
-  /* ── La hoja que se imprime ──
-     Las mismas medidas que el resto de los formatos de la oficina, para
-     que un dictamen impreso no se distinga de los demás documentos. */
-  #solo-impresion { display: none; }
-  .hoja {
-    background: #fff; width: 21.6cm; min-height: 27.9cm;
-    padding: 1.6cm 1.9cm; margin: 0 auto; box-sizing: border-box;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10pt; line-height: 1.55; color: #000;
-  }
-  .hoja-logo img { height: 46px; width: auto; display: block; margin-bottom: 18px; }
-  .hoja h1 {
-    font-size: 10.5pt; font-weight: 700; color: #7d1113;
-    margin: 0 0 4px 3.2cm; letter-spacing: 0.01em;
-  }
-  .hoja-folio { font-size: 8.5pt; color: #444; margin: 0 0 16px 3.2cm; }
-  .hoja-cuadro { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .hoja-cuadro td {
-    border: 1px solid #000; padding: 4px 6px;
-    vertical-align: top; font-size: 9.5pt; line-height: 1.4;
-    word-wrap: break-word;
-  }
-  .hoja-cuadro .rotulo {
-    width: 4.4cm; color: #7d1113; font-weight: 400;
-    text-transform: uppercase; font-size: 8.5pt;
-  }
-  .hoja-cuadro .alto-2 { height: 1.6cm; }
-  .hoja-cuadro .alto-3 { height: 2.4cm; }
-  .hoja-cuadro .alto-4 { height: 3.2cm; }
-  .hoja-cuadro .sub {
-    color: #7d1113; text-transform: uppercase;
-    font-size: 8.5pt; display: block; margin-bottom: 3px;
-  }
-  .hoja-lista { margin: 0; padding-left: 1.1em; }
-  .hoja-lista li { margin-bottom: 3px; }
-  .hoja-lista .estado { color: #444; font-size: 8.5pt; }
-  .hoja-nota { margin: 0 0 6px; white-space: pre-line; }
-  .hoja-pie { margin-top: 0.7cm; font-size: 8pt; color: #444; }
-
-  @media print {
-    @page { size: Letter; margin: 0; }
-    body > *:not(#solo-impresion) { display: none !important; }
-    #solo-impresion { display: block !important; }
-    #solo-impresion .hoja { width: 100%; min-height: 0; }
-  }
 </style>
 </head>
 <body>
@@ -1184,8 +1139,6 @@
     </div>
 
   </main>
-
-  <div id="solo-impresion"></div>
 
 <script>
 (function () {
@@ -2973,128 +2926,486 @@
     URL.revokeObjectURL(url);
   }
 
-  // ── La hoja ─────────────────────────────────────────────────
+  // ── La hoja, armada como PDF ────────────────────────────────
 
-  function renglon(rotulo, valor, alto) {
-    return '<tr>' +
-      '<td class="rotulo">' + rotulo + '</td>' +
-      '<td' + (alto ? ' class="' + alto + '"' : '') + '>' + escapar(valor || '') + '</td>' +
-    '</tr>';
+  // El PDF se arma aquí y se baja solo. Antes se pintaba la hoja en HTML
+  // y se llamaba a window.print(), que abre el cuadro de impresión: había
+  // que elegir "Guardar como PDF" y el archivo salía con el nombre que se
+  // le ocurriera al navegador, con encabezados y números de página
+  // encima. Escribiéndolo a mano el archivo sale ya con su nombre, con el
+  // mismo acomodo siempre y sin nada añadido.
+  //
+  // Un PDF es texto plano con unos objetos numerados y, al final, una
+  // tabla que dice en qué byte empieza cada uno. Se usan las tipografías
+  // que todo lector trae de fábrica (Helvetica), así que no hay que
+  // cargar ninguna.
+
+  var HOJA_ROJO = [0.808, 0.004, 0.122];   // #CE011F
+  var HOJA_GRIS = [0.29, 0.29, 0.29];
+  var HOJA_NEGRO = [0, 0, 0];
+
+  // ── Medir el texto ──
+
+  // Lo que mide cada letra en Helvetica, en milésimas del tamaño de
+  // letra. Hace falta para saber dónde cortar un renglón: sin esto, un
+  // inmueble largo se saldría de su celda.
+  var ANCHOS_NORMAL = (
+    '278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278 ' +
+    '556 556 556 556 556 556 556 556 556 556 278 278 584 584 584 556 ' +
+    '1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 ' +
+    '667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 ' +
+    '333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 ' +
+    '556 556 333 500 278 556 500 722 500 500 500 334 260 334 584'
+  ).split(' ').map(Number);
+
+  var ANCHOS_NEGRITA = (
+    '278 333 474 556 556 889 722 238 333 333 389 584 278 333 278 278 ' +
+    '556 556 556 556 556 556 556 556 556 556 333 333 584 584 584 611 ' +
+    '975 722 722 722 722 667 611 778 722 278 556 722 611 833 722 778 ' +
+    '667 778 722 667 611 722 667 944 667 667 611 333 278 333 584 556 ' +
+    '333 556 611 556 611 556 333 611 611 278 278 556 278 889 611 611 ' +
+    '611 611 389 556 333 611 556 778 556 556 500 389 280 389 584'
+  ).split(' ').map(Number);
+
+  // Las letras con acento miden lo mismo que la letra de abajo, así que
+  // en vez de una tabla aparte se le pregunta a esa. Los signos que no
+  // son letras van con su propio ancho.
+  var SIN_ACENTO = {
+    0xC0: 'A', 0xC1: 'A', 0xC2: 'A', 0xC3: 'A', 0xC4: 'A', 0xC5: 'A', 0xC6: 'AE',
+    0xC7: 'C', 0xC8: 'E', 0xC9: 'E', 0xCA: 'E', 0xCB: 'E',
+    0xCC: 'I', 0xCD: 'I', 0xCE: 'I', 0xCF: 'I', 0xD1: 'N',
+    0xD2: 'O', 0xD3: 'O', 0xD4: 'O', 0xD5: 'O', 0xD6: 'O', 0xD8: 'O',
+    0xD9: 'U', 0xDA: 'U', 0xDB: 'U', 0xDC: 'U', 0xDD: 'Y',
+    0xE0: 'a', 0xE1: 'a', 0xE2: 'a', 0xE3: 'a', 0xE4: 'a', 0xE5: 'a', 0xE6: 'ae',
+    0xE7: 'c', 0xE8: 'e', 0xE9: 'e', 0xEA: 'e', 0xEB: 'e',
+    0xEC: 'i', 0xED: 'i', 0xEE: 'i', 0xEF: 'i', 0xF1: 'n',
+    0xF2: 'o', 0xF3: 'o', 0xF4: 'o', 0xF5: 'o', 0xF6: 'o', 0xF8: 'o',
+    0xF9: 'u', 0xFA: 'u', 0xFB: 'u', 0xFC: 'u', 0xFD: 'y', 0xFF: 'y',
+  };
+  var OTROS_ANCHOS = {
+    0xA1: 333, 0xBF: 611, 0xB0: 400, 0xB2: 333, 0xB3: 333, 0xB9: 333,
+    0xB7: 278, 0xAB: 556, 0xBB: 556, 0xA9: 737, 0xAE: 737, 0xBA: 365, 0xAA: 370,
+  };
+
+  // Del texto de la pantalla a los bytes que entiende el PDF. Se usa
+  // WinAnsi, que es la codificación que traen las tipografías de fábrica:
+  // los acentos y la ñ caben en un byte. Lo que no cabe (una comilla
+  // curva pegada de Word, un emoji) se cambia por su versión derecha o
+  // por un signo de pregunta, en vez de romper el archivo.
+  var CAMBIOS_WINANSI = {
+    0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94,
+    0x2013: 0x96, 0x2014: 0x97, 0x2022: 0x95, 0x2026: 0x85, 0x20AC: 0x80,
+  };
+
+  function aWinAnsi(texto) {
+    var s = String(texto == null ? '' : texto);
+    var r = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (CAMBIOS_WINANSI[c] !== undefined) c = CAMBIOS_WINANSI[c];
+      r += String.fromCharCode(c > 0xFF ? 0x3F : c);
+    }
+    return r;
   }
 
-  // Los clientes van numerados y cada uno con su estado civil debajo,
-  // porque en la hoja ese dato es de la persona: en una sucesión con tres
-  // herederos, decir un solo estado civil para los tres no querría decir
-  // nada. Si el expediente es de antes y trae uno solo sin desglosar, sale
-  // el renglón de siempre.
-  function renglonClientes(d) {
+  function anchoLetra(codigo, negrita) {
+    var tabla = negrita ? ANCHOS_NEGRITA : ANCHOS_NORMAL;
+    if (codigo >= 32 && codigo <= 126) return tabla[codigo - 32];
+    if (OTROS_ANCHOS[codigo] !== undefined) return OTROS_ANCHOS[codigo];
+    var base = SIN_ACENTO[codigo];
+    if (base) {
+      var n = 0;
+      for (var i = 0; i < base.length; i++) n += tabla[base.charCodeAt(i) - 32];
+      return n;
+    }
+    return tabla[0];
+  }
+
+  function anchoTexto(texto, tam, negrita) {
+    var s = aWinAnsi(texto);
+    var n = 0;
+    for (var i = 0; i < s.length; i++) n += anchoLetra(s.charCodeAt(i), negrita);
+    return n * tam / 1000;
+  }
+
+  // Un párrafo son pedazos de texto seguidos, cada uno con su color: el
+  // nombre de un cliente en negro y su estado civil en gris, por decir.
+  // Se acomodan palabra por palabra para que un párrafo que no cabe en un
+  // renglón conserve sus colores al partirse; juntando el texto y
+  // cortándolo después, la parte gris del final salía negra en cuanto la
+  // observación pasaba de un renglón.
+  function acomodarParrafo(partes, ancho, tam) {
+    var lineas = [];
+
+    // Un salto de línea escrito adentro de un pedazo corta el renglón
+    // donde está, sin esperar a que se llene.
+    var bloques = [[]];
+    partes.forEach(function (p) {
+      String(p.t == null ? '' : p.t).split('\n').forEach(function (trozo, i) {
+        if (i > 0) bloques.push([]);
+        bloques[bloques.length - 1].push({ t: trozo, color: p.color });
+      });
+    });
+
+    bloques.forEach(function (bloque) {
+      var palabras = [];
+      bloque.forEach(function (p) {
+        p.t.split(/\s+/).forEach(function (w) {
+          if (w !== '') palabras.push({ t: w, color: p.color });
+        });
+      });
+      if (!palabras.length) { lineas.push([{ t: '', color: HOJA_NEGRO }]); return; }
+
+      var actual = [], mide = 0;
+      function cerrar() { if (actual.length) { lineas.push(actual); actual = []; mide = 0; } }
+      function pegar(txt, color) {
+        var ult = actual[actual.length - 1];
+        if (ult && ult.color === color) ult.t += txt;
+        else actual.push({ t: txt, color: color });
+        mide += anchoTexto(txt, tam, false);
+      }
+
+      palabras.forEach(function (w) {
+        var pedazo = actual.length ? ' ' + w.t : w.t;
+        if (actual.length && mide + anchoTexto(pedazo, tam, false) > ancho) {
+          cerrar();
+          pedazo = w.t;
+        }
+        // Una palabra sola más ancha que la celda (una dirección sin
+        // espacios, una cuenta predial larga) se parte por letras: es
+        // preferible a dejarla salirse del cuadro.
+        while (anchoTexto(pedazo, tam, false) > ancho && pedazo.length > 1) {
+          var corte = 1;
+          while (corte < pedazo.length &&
+            anchoTexto(pedazo.slice(0, corte + 1), tam, false) <= ancho) corte++;
+          pegar(pedazo.slice(0, corte), w.color);
+          cerrar();
+          pedazo = pedazo.slice(corte);
+        }
+        pegar(pedazo, w.color);
+      });
+      cerrar();
+    });
+
+    return lineas.length ? lineas : [[{ t: '', color: HOJA_NEGRO }]];
+  }
+
+  // Parte un texto de un solo color en los renglones que caben en un
+  // ancho. Es la versión corta de lo de arriba, para el rótulo.
+  function cortar(texto, ancho, tam, negrita) {
+    var salida = [];
+    String(texto == null ? '' : texto).split('\n').forEach(function (parrafo) {
+      var palabras = parrafo.split(/\s+/).filter(function (p) { return p !== ''; });
+      if (!palabras.length) { salida.push(''); return; }
+      var linea = '';
+      palabras.forEach(function (p) {
+        var prueba = linea ? linea + ' ' + p : p;
+        if (anchoTexto(prueba, tam, negrita) <= ancho) { linea = prueba; return; }
+        if (linea) { salida.push(linea); linea = ''; }
+        while (anchoTexto(p, tam, negrita) > ancho && p.length > 1) {
+          var corte = 1;
+          while (corte < p.length && anchoTexto(p.slice(0, corte + 1), tam, negrita) <= ancho) corte++;
+          salida.push(p.slice(0, corte));
+          p = p.slice(corte);
+        }
+        linea = p;
+      });
+      if (linea) salida.push(linea);
+    });
+    return salida.length ? salida : [''];
+  }
+
+  // ── Escribir el archivo ──
+
+  function pdfTexto(s) {
+    return aWinAnsi(s).replace(/([\\()])/g, '\\$1');
+  }
+
+  function pdfNum(n) {
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  // El logo se mete como JPEG porque el PDF sabe leer ese formato tal
+  // cual, sin descomprimirlo nadie. El PNG habría que traducirlo a pixeles
+  // y volverlo a comprimir; además trae transparencia, que en papel no
+  // quiere decir nada, así que de todos modos habría que aplanarlo contra
+  // el blanco. Eso es justo lo que hace el lienzo aquí abajo.
+  function cargarLogo() {
+    return new Promise(function (listo) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var alto = 150;
+          var ancho = Math.round(img.naturalWidth * alto / img.naturalHeight);
+          var lienzo = document.createElement('canvas');
+          lienzo.width = ancho; lienzo.height = alto;
+          var cx = lienzo.getContext('2d');
+          cx.fillStyle = '#fff';
+          cx.fillRect(0, 0, ancho, alto);
+          cx.drawImage(img, 0, 0, ancho, alto);
+          var b64 = lienzo.toDataURL('image/jpeg', 0.92).split(',')[1];
+          listo({ ancho: ancho, alto: alto, datos: atob(b64) });
+        } catch (e) { listo(null); }
+      };
+      // Sin logo la hoja sale igual, nada más sin el dibujo: vale más un
+      // dictamen sin membrete que un botón que no hace nada.
+      img.onerror = function () { listo(null); };
+      img.src = '/kwpremierweb/assets/img/logo-kw-premier.png';
+    });
+  }
+
+  var PAG_ANCHO = 612, PAG_ALTO = 792;
+
+  function armarPDF(paginas, logo) {
+    var objetos = [];
+    function obj(cuerpo) { objetos.push(cuerpo); return objetos.length; }
+
+    var fuenteNormal = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ' +
+      '/Encoding /WinAnsiEncoding >>');
+    var fuenteNegrita = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold ' +
+      '/Encoding /WinAnsiEncoding >>');
+
+    var imagen = 0;
+    if (logo) {
+      imagen = obj('<< /Type /XObject /Subtype /Image /Width ' + logo.ancho +
+        ' /Height ' + logo.alto + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 ' +
+        '/Filter /DCTDecode /Length ' + logo.datos.length + ' >>\nstream\n' +
+        logo.datos + '\nendstream');
+    }
+
+    var recursos = '<< /Font << /F1 ' + fuenteNormal + ' 0 R /F2 ' + fuenteNegrita + ' 0 R >>' +
+      (imagen ? ' /XObject << /Im0 ' + imagen + ' 0 R >>' : '') + ' >>';
+
+    // El objeto de las páginas se aparta antes de llenarlo, porque cada
+    // página tiene que decir cuál es su padre y el padre cuáles son sus
+    // hijas: se necesitan los dos números de una vez.
+    var padre = obj('');
+    var hijas = paginas.map(function (contenido) {
+      var flujo = obj('<< /Length ' + contenido.length + ' >>\nstream\n' + contenido + '\nendstream');
+      return obj('<< /Type /Page /Parent ' + padre + ' 0 R /MediaBox [0 0 ' +
+        PAG_ANCHO + ' ' + PAG_ALTO + '] /Resources ' + recursos +
+        ' /Contents ' + flujo + ' 0 R >>');
+    });
+    objetos[padre - 1] = '<< /Type /Pages /Count ' + hijas.length + ' /Kids [' +
+      hijas.map(function (n) { return n + ' 0 R'; }).join(' ') + '] >>';
+
+    var raiz = obj('<< /Type /Catalog /Pages ' + padre + ' 0 R >>');
+
+    var salida = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    var donde = [];
+    objetos.forEach(function (cuerpo, i) {
+      donde.push(salida.length);
+      salida += (i + 1) + ' 0 obj\n' + cuerpo + '\nendobj\n';
+    });
+
+    // La tabla del final: en qué byte empieza cada objeto. Es lo que lee
+    // el programa que abre el archivo para llegar directo a lo que ocupa.
+    var inicioTabla = salida.length;
+    salida += 'xref\n0 ' + (objetos.length + 1) + '\n0000000000 65535 f \n';
+    donde.forEach(function (n) {
+      salida += ('0000000000' + n).slice(-10) + ' 00000 n \n';
+    });
+    salida += 'trailer\n<< /Size ' + (objetos.length + 1) + ' /Root ' + raiz + ' 0 R >>\n' +
+      'startxref\n' + inicioTabla + '\n%%EOF';
+
+    var bytes = new Uint8Array(salida.length);
+    for (var i = 0; i < salida.length; i++) bytes[i] = salida.charCodeAt(i) & 0xFF;
+    return new Blob([bytes], { type: 'application/pdf' });
+  }
+
+  // ── Dibujar la hoja ──
+
+  var MARGEN = 54;
+  var COL_ROTULO = 132;
+  var TAM_ROTULO = 7.5, TAM_DATO = 9.5;
+  var ALTO_LINEA = 12, RELLENO = 5;
+
+  // Un renglón de la hoja: el rótulo a la izquierda y el dato a la
+  // derecha. El dato puede venir en varios pedazos, cada uno con su color
+  // (el estado civil de un cliente va en gris junto a su nombre), y en
+  // varios renglones si es largo.
+  function hojaFila(rotulo, pedazos, altoMinimo) {
+    return { rotulo: rotulo, pedazos: pedazos || [], alto: altoMinimo || 0 };
+  }
+
+  function textoSimple(t) {
+    return t ? [[{ t: t, color: HOJA_NEGRO }]] : [];
+  }
+
+  function dibujarHoja(d, logo) {
+    var anchoUtil = PAG_ANCHO - MARGEN * 2;
+    var anchoDato = anchoUtil - COL_ROTULO;
+
+    var filas = [
+      hojaFila('Fecha de dictamen', textoSimple(fecha(d.fecha_dictamen))),
+      hojaFila('Asesor', textoSimple(d.asesor_nombre)),
+      filaClientes(d),
+      hojaFila('Inmueble', textoSimple(d.inmueble)),
+      hojaFila('Tipo de oportunidad', textoSimple(
+        (OPERACIONES[d.operacion] || '') + ' \xB7 ' + (USOS[d.uso] || '') +
+        (d.tipo_inmueble ? ' \xB7 ' + d.tipo_inmueble : ''))),
+      hojaFila('Tipo de contrato', textoSimple(CONTRATOS[d.tipo_contrato] || '')),
+      hojaFila('Precio del listado', textoSimple(conPesos(d.precio_listado))),
+      hojaFila('Comisión', textoSimple(conPorciento(d.comision_porcentaje))),
+    ];
+
+    if (tieneEscrituraDesglosada(d)) {
+      filas.push(hojaFila('Número de escritura', textoSimple(d.escritura_numero)));
+      filas.push(hojaFila('Fecha de escrituración', textoSimple(fecha(d.escritura_fecha))));
+      filas.push(hojaFila('Nombre del notario', textoSimple(d.notario_nombre)));
+      filas.push(hojaFila('Número de notaría', textoSimple(d.notaria_numero)));
+    } else {
+      filas.push(hojaFila('Escrituras y fecha', textoSimple(d.escritura_propiedad)));
+    }
+
+    filas.push(hojaFila('Condominio', textoSimple(siNo(d.condominio))));
+    filas.push(hojaFila('Escritura del condominio', textoSimple(d.escritura_condominio)));
+    filas.push(hojaFila('CFDI', textoSimple(d.cfdi)));
+    filas.push(hojaFila('Superficie escritura', textoSimple(conUnidad(d.superficie_escritura))));
+    filas.push(hojaFila('Cuenta predial', textoSimple(d.cuenta_predial)));
+    filas.push(hojaFila('Superficie de terreno', textoSimple(conUnidad(d.superficie_terreno))));
+    filas.push(hojaFila('Superficie de construcción', textoSimple(conUnidad(d.superficie_construccion))));
+    filas.push(hojaFila('Folio real', textoSimple(d.folio_real)));
+    filas.push(filaObservaciones(d));
+    filas.push(hojaFila('Autorización', textoSimple(
+      d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || '')), 34));
+
+    // Cada renglón se parte en las líneas que le caben antes de dibujar
+    // nada, porque de eso depende su altura y de la altura, en qué página
+    // cae.
+    filas.forEach(function (f) {
+      f.lineas = [];
+      f.pedazos.forEach(function (parrafo) {
+        acomodarParrafo(parrafo, anchoDato - RELLENO * 2, TAM_DATO)
+          .forEach(function (partes) { f.lineas.push({ partes: partes }); });
+      });
+      var rotuloLineas = cortar(f.rotulo, COL_ROTULO - RELLENO * 2, TAM_ROTULO, true).length;
+      f.altoFila = Math.max(
+        f.alto,
+        RELLENO * 2 + Math.max(f.lineas.length, 1) * ALTO_LINEA,
+        RELLENO * 2 + rotuloLineas * (ALTO_LINEA - 2));
+      f.rotuloLineas = cortar(f.rotulo, COL_ROTULO - RELLENO * 2, TAM_ROTULO, true);
+    });
+
+    // ── El dibujo ──
+    var paginas = [];
+    var c = '';
+    var y = 0;
+
+    function color(rgb, trazo) {
+      return pdfNum(rgb[0]) + ' ' + pdfNum(rgb[1]) + ' ' + pdfNum(rgb[2]) +
+        (trazo ? ' RG\n' : ' rg\n');
+    }
+    function escribir(txt, x, yArriba, tam, negrita, rgb) {
+      if (!txt) return '';
+      return 'BT\n' + color(rgb) + '/' + (negrita ? 'F2' : 'F1') + ' ' + tam + ' Tf\n' +
+        pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba) + ' Td\n(' + pdfTexto(txt) + ') Tj\nET\n';
+    }
+    function caja(x, yArriba, ancho, alto) {
+      return pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba - alto) + ' ' +
+        pdfNum(ancho) + ' ' + pdfNum(alto) + ' re S\n';
+    }
+
+    // El encabezado: el título y el folio a la izquierda, el logo a la
+    // derecha. Va nada más en la primera página; en las que siguen la
+    // tabla arranca desde arriba.
+    c = escribir('DICTAMEN DE EXPEDIENTE', MARGEN, MARGEN + 14, 15, true, HOJA_ROJO);
+    c += escribir(d.folio || 'Borrador, sin folio', MARGEN, MARGEN + 32, 10, false, HOJA_GRIS);
+    if (logo) {
+      var altoLogo = 34;
+      var anchoLogo = logo.ancho * altoLogo / logo.alto;
+      c += 'q\n' + pdfNum(anchoLogo) + ' 0 0 ' + pdfNum(altoLogo) + ' ' +
+        pdfNum(PAG_ANCHO - MARGEN - anchoLogo) + ' ' +
+        pdfNum(PAG_ALTO - MARGEN - altoLogo) + ' cm\n/Im0 Do\nQ\n';
+    }
+
+    y = MARGEN + 56;
+    c += '0.7 w\n' + color(HOJA_NEGRO, true);
+
+    filas.forEach(function (f) {
+      if (y + f.altoFila > PAG_ALTO - MARGEN) {
+        paginas.push(c);
+        c = '0.7 w\n' + color(HOJA_NEGRO, true);
+        y = MARGEN;
+      }
+      c += caja(MARGEN, y, COL_ROTULO, f.altoFila);
+      c += caja(MARGEN + COL_ROTULO, y, anchoDato, f.altoFila);
+
+      // El rótulo y el dato arrancan en la misma raya de abajo, aunque el
+      // rótulo sea de letra más chica: alineados por arriba se veían
+      // corridos uno del otro.
+      f.rotuloLineas.forEach(function (l, i) {
+        c += escribir(l.toUpperCase(), MARGEN + RELLENO,
+          y + RELLENO + TAM_DATO + i * (ALTO_LINEA - 2), TAM_ROTULO, true, HOJA_ROJO);
+      });
+
+      f.lineas.forEach(function (l, i) {
+        var x = MARGEN + COL_ROTULO + RELLENO;
+        l.partes.forEach(function (p) {
+          c += escribir(p.t, x, y + RELLENO + TAM_DATO + i * ALTO_LINEA,
+            TAM_DATO, false, p.color);
+          x += anchoTexto(p.t, TAM_DATO, false);
+        });
+      });
+
+      y += f.altoFila;
+    });
+
+    paginas.push(c);
+    return paginas;
+  }
+
+  // Los clientes van numerados, cada uno con su estado civil en gris al
+  // lado: en una sucesión con tres herederos, un solo estado civil para
+  // los tres no querría decir nada.
+  function filaClientes(d) {
     var suyos = clientes
       .filter(function (c) { return c.dictamen_id === d.id; })
       .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
 
     if (!suyos.length) {
-      return renglon('Cliente', d.clientes_nombres || d.cliente, 'alto-3') +
-        renglon('Estado civil', d.estado_civil);
+      return hojaFila('Cliente', textoSimple(d.clientes_nombres || d.cliente));
     }
-
-    var cuerpo = suyos.map(function (c, i) {
-      return '<div style="margin-bottom:3px;">' +
-        (suyos.length > 1 ? '<b>' + (i + 1) + '.</b> ' : '') +
-        escapar(c.nombre) +
-        (c.estado_civil
-          ? '<span style="color:#555;"> (' + escapar(c.estado_civil) + ')</span>'
-          : '') +
-      '</div>';
-    }).join('');
-
-    return '<tr>' +
-      '<td class="rotulo">' + (suyos.length > 1 ? 'Clientes' : 'Cliente') + '</td>' +
-      '<td class="alto-3">' + cuerpo + '</td>' +
-    '</tr>';
+    return hojaFila(suyos.length > 1 ? 'Clientes' : 'Cliente',
+      suyos.map(function (c, i) {
+        var partes = [{
+          t: (suyos.length > 1 ? (i + 1) + '. ' : '') + c.nombre,
+          color: HOJA_NEGRO,
+        }];
+        if (c.estado_civil) partes.push({ t: ' (' + c.estado_civil + ')', color: HOJA_GRIS });
+        return partes;
+      }));
   }
 
-  // La escritura ocupaba un solo renglón partido en dos celdas, como el
-  // machote de papel. Ahora son cuatro renglones, uno por dato, que es
-  // como se pidió capturarla. El expediente que traiga el párrafo viejo
-  // sigue saliendo con su renglón de antes.
-  function renglonesEscritura(d) {
-    if (!tieneEscrituraDesglosada(d)) {
-      return renglon('Escrituras y fecha', d.escritura_propiedad, 'alto-2');
-    }
-    return renglon('Número de escritura', d.escritura_numero) +
-      renglon('Fecha de escrituración', fecha(d.escritura_fecha)) +
-      renglon('Nombre del notario', d.notario_nombre) +
-      renglon('Número de notaría', d.notaria_numero);
+  function filaObservaciones(d) {
+    var mios = puntos.filter(function (p) { return p.dictamen_id === d.id; });
+    var parrafos = [];
+    if (d.observaciones) parrafos.push([{ t: d.observaciones, color: HOJA_NEGRO }]);
+    mios.forEach(function (p, i) {
+      var partes = [{ t: (i + 1) + '. ' + p.texto, color: HOJA_NEGRO }];
+      partes.push({
+        t: ' (' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')',
+        color: HOJA_GRIS,
+      });
+      parrafos.push(partes);
+      if (p.nota) parrafos.push([{ t: '   ' + p.nota, color: HOJA_GRIS }]);
+    });
+    return hojaFila('Observaciones', parrafos, 68);
   }
 
-  function imprimir(id) {
+  async function imprimir(id) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
-    var mios = puntos.filter(function (p) { return p.dictamen_id === id; });
 
-    // Las observaciones por atender van numeradas dentro de la celda de
-    // OBSERVACIONES, con su estado. Esa es toda la diferencia entre este
-    // dictamen y el de papel: el de papel dice qué falta, este además dice
-    // qué ya se corrigió.
-    var lista = mios.length
-      ? '<ol class="hoja-lista">' + mios.map(function (p) {
-        return '<li>' + escapar(p.texto) +
-          ' <span class="estado">(' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')</span>' +
-          (p.nota ? '<br><span class="estado">' + escapar(p.nota) + '</span>' : '') +
-        '</li>';
-      }).join('') + '</ol>'
-      : '';
-
-    var observaciones =
-      (d.observaciones ? '<p class="hoja-nota">' + escapar(d.observaciones) + '</p>' : '') + lista;
-
-    var dictaminador = ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim();
-
-    $('solo-impresion').innerHTML =
-      '<div class="hoja">' +
-        '<div class="hoja-logo"><img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier"></div>' +
-        '<h1>DICTAMINACIÓN DE EXPEDIENTES</h1>' +
-        '<div class="hoja-folio">' + escapar(d.folio || 'Borrador, sin folio') + '</div>' +
-
-        '<table class="hoja-cuadro">' +
-          renglon('Fecha de dictamen', fecha(d.fecha_dictamen)) +
-          renglon('Asesor', d.asesor_nombre) +
-          renglonClientes(d) +
-          renglon('Inmueble', d.inmueble, 'alto-3') +
-          renglon('Tipo de oportunidad',
-            (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '') +
-            (d.tipo_inmueble ? ' · ' + d.tipo_inmueble : '')) +
-          renglon('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
-          renglon('Precio del listado', conPesos(d.precio_listado)) +
-          renglon('Comisión', conPorciento(d.comision_porcentaje)) +
-
-          renglonesEscritura(d) +
-
-          renglon('Condominio', siNo(d.condominio)) +
-          renglon('Escritura del condominio', d.escritura_condominio) +
-          renglon('CFDI', d.cfdi) +
-          renglon('Superficie escritura', conUnidad(d.superficie_escritura)) +
-          renglon('Cuenta predial', d.cuenta_predial) +
-          renglon('Superficie de terreno', conUnidad(d.superficie_terreno)) +
-          renglon('Superficie de construcción', conUnidad(d.superficie_construccion)) +
-          renglon('Folio real', d.folio_real) +
-
-          '<tr>' +
-            '<td class="rotulo">Observaciones</td>' +
-            '<td class="alto-4">' + observaciones + '</td>' +
-          '</tr>' +
-          renglon('Autorización',
-            d.estado === 'borrador' ? 'Sin dictaminar' : ESTADOS[d.estado], 'alto-2') +
-        '</table>' +
-
-        '<div class="hoja-pie">' +
-          (dictaminador ? 'Dictaminó: ' + escapar(dictaminador) + '. ' : '') +
-          'Generado desde el portal de KW Premier el ' +
-          fecha(new Date().toISOString()) + '.' +
-        '</div>' +
-      '</div>';
-
-    window.print();
+    var logo = await cargarLogo();
+    var url = URL.createObjectURL(armarPDF(dibujarHoja(d, logo), logo));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'dictamen-' + (d.folio || 'borrador') + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   // ── Arranque ────────────────────────────────────────────────
