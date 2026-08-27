@@ -40,6 +40,50 @@
   .btn-nuevo:hover { transform: translateY(-1px); }
   .btn-nuevo:disabled { opacity: 0.5; cursor: default; transform: none; }
 
+  /* ── La cinta de arriba ──
+     El header dejaba de flotar sobre la página pero seguía costando su
+     banda: .kw-page le apartaba 90px que eran casi todo aire, y debajo
+     venía otro renglón nada más para el título y dos botones. Aquí los
+     dos son uno solo: el header se queda quieto en el flujo, se lleva el
+     título adentro y los botones van a su derecha. */
+  .dic-cinta {
+    display: flex; align-items: center; gap: 10px;
+    /* El ancho va explícito, igual que en .kw-page: el body es una
+       columna flexible y sin esto la cinta se encoge a lo que mide su
+       contenido y se queda flotando a media pantalla. */
+    width: 100%; box-sizing: border-box;
+    max-width: var(--ancho-pagina); margin: 12px auto 0;
+    padding: 0 var(--sp-4);
+  }
+  .dic-cinta > header.kw-header {
+    position: static; flex: 1; min-width: 0;
+    top: auto; left: auto; right: auto; margin: 0;
+  }
+  /* En el celular drawer.js esconde el header al rodar la página con un
+     transform. Quieto en el flujo, eso dejaría un hueco donde estaba. */
+  .dic-cinta > header.kw-header.kw-header-oculto { transform: none; }
+  /* Ya sin la banda del header, la página empieza arriba. */
+  main.kw-page { padding-top: var(--sp-4); }
+
+  /* El título vivía escondido en el header y repetido como encabezado de
+     la página. Ahora hay uno solo y es este, así que se ve en los dos
+     tamaños. */
+  /* Va pegado a la lupa y no centrado: aquí no es el rótulo de una barra
+     de aplicación, es el título de la pantalla, y un título se lee desde
+     la izquierda como cualquier otro encabezado. */
+  .dic-cinta .kw-header-title {
+    display: block; text-align: left; font-size: 15px;
+    padding-left: 2px;
+  }
+  .dic-cinta-acciones { display: flex; gap: 8px; flex-shrink: 0; }
+
+  @media (max-width: 700px) {
+    .dic-cinta { flex-wrap: wrap; padding: 0 var(--sp-3); }
+    .dic-cinta > header.kw-header { flex-basis: 100%; }
+    .dic-cinta-acciones { width: 100%; }
+    .dic-cinta-acciones .btn-nuevo { flex: 1; justify-content: center; }
+  }
+
   /* ── Lo de arriba ──
      El buscador y los tres números en un mismo renglón: cada uno por su
      lado dejaba media hilera vacía. El buscador manda un poco más porque
@@ -49,8 +93,11 @@
     display: flex; gap: var(--sp-2); align-items: stretch;
     margin-bottom: var(--sp-3);
   }
-  .dic-arriba > .dic-campo-buscar { flex: 1 1 300px; min-width: 0; }
-  .dic-arriba > .dic-resumen { flex: 2 1 460px; min-width: 0; margin: 0; }
+  /* El buscador se queda de la mitad de lo que medía: con lo que se
+     escribe ahí (un folio, media calle) sobraba ancho, y ese ancho le
+     sirve más a los tres números de al lado. */
+  .dic-arriba > .dic-campo-buscar { flex: 0 1 230px; min-width: 0; }
+  .dic-arriba > .dic-resumen { flex: 1 1 460px; min-width: 0; margin: 0; }
   .dic-arriba .kw-buscador, .dic-arriba .kw-buscador input { height: 100%; }
   @media (max-width: 820px) {
     .dic-arriba { flex-wrap: wrap; }
@@ -202,6 +249,11 @@
   .dic-menu-op:hover { background: #f5f5f5; }
   .dic-menu-op i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .dic-menu-op.puesto { font-weight: 700; background: #fff3f3; }
+  /* El expediente abierto se enmarca en rojo, como la tarjeta de los
+     filtros. Con varios abiertos a la vez, la sombra sola no alcanzaba
+     para saber dónde empieza y dónde termina cada uno. */
+  #lista .kw-fila.abierta { border-color: rgba(206,1,31,0.34); }
+
   /* ── Las pestañas de cada tarjeta ──
      Los paneles de kw-ui traen un alto mínimo pensado para una pantalla
      completa; aquí van dentro de una tarjeta y ese piso la estiraría con
@@ -215,10 +267,21 @@
     display: flex; align-items: center; gap: var(--sp-2);
     margin-bottom: var(--sp-3);
   }
-  .dic-barra-tarjeta .dic-tabs { margin: 0; flex-shrink: 0; padding: 4px; }
-  /* Dos palabras no necesitan el tamaño de una pestaña de pantalla
-     completa: así ocupaban medio renglón para decir "Expediente". */
-  .dic-barra-tarjeta .kw-tab { height: 28px; padding: 0 13px; font-size: 12px; }
+  /* Aquí las pestañas van sin cápsula: nada más las dos palabras, con
+     los mismos colores. Dentro de la tarjeta, una pastilla gris con otra
+     pastilla blanca encima eran dos cajas más sobre una tarjeta que ya
+     es una caja, y no pegaban con el resto. La abierta se distingue por
+     el color y por la raya de abajo. */
+  .dic-barra-tarjeta .dic-tabs {
+    margin: 0; flex-shrink: 0; padding: 0; gap: var(--sp-3);
+    background: none; border-radius: 0; overflow: visible;
+  }
+  .dic-barra-tarjeta .kw-tabs-indicador { display: none; }
+  .dic-barra-tarjeta .kw-tab {
+    height: 26px; padding: 0 1px; font-size: 12.5px;
+    border-bottom: 2px solid transparent; border-radius: 0;
+  }
+  .dic-barra-tarjeta .kw-tab.activo { border-bottom-color: var(--red); }
 
   /* Los botones del expediente, ya sin letras. Lo que hace cada uno lo
      dice el title; con tres iconos conocidos (bajar, lápiz, caja) el
@@ -480,22 +543,26 @@
   }
   .dic-filtros-caja .kw-filtros { margin-bottom: 0; }
 
-  /* Plegado se recorta a la altura de un renglón. Se hace con la altura
-     y no escondiendo campos por su número, porque cuántos caben en el
-     primer renglón depende de lo ancha que esté la ventana. */
-  .dic-filtros-caja:not(.abierta) .kw-filtros {
-    max-height: var(--control-h); overflow: hidden;
-  }
+  /* Plegado, los filtros que no caben en el primer renglón se esconden
+     uno por uno desde el código. Antes se recortaba la caja entera con
+     overflow, que era más corto, pero el menú de un desplegable cuelga
+     por debajo de su campo: al abrir "Tipo de inmueble" el menú quedaba
+     cortado a media lista. */
+  .dic-filtro-oculto { display: none !important; }
 
+  /* La flechita va al final del primer renglón, colgada del borde y no
+     en la hilera: metida entre los filtros se movía de lugar según
+     cuántos cupieran ese día. */
+  .dic-filtros-caja { position: relative; padding-right: 46px; }
   .dic-filtros-mas {
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-    width: 100%; padding: 9px 0 10px; margin-top: 2px;
-    border: none; background: none; font-family: inherit;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    position: absolute; right: 8px; top: calc(var(--sp-3) + var(--control-h) / 2);
+    transform: translateY(-50%);
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 6px; border: none; background: none;
     color: var(--red); cursor: pointer;
   }
   .dic-filtros-mas svg {
-    width: 15px; height: 15px;
+    width: 17px; height: 17px;
     transition: transform var(--t-medio);
   }
   .dic-filtros-caja.abierta .dic-filtros-mas svg { transform: rotate(180deg); }
@@ -504,8 +571,8 @@
      recortada sin decir por qué. */
   .dic-filtros-cuantos {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
-    background: var(--red); color: #fff; font-size: 11px; font-weight: 700;
+    min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px;
+    background: var(--red); color: #fff; font-size: 10.5px; font-weight: 700;
   }
   .dic-filtros-cuantos[hidden] { display: none; }
   @media (prefers-reduced-motion: reduce) {
@@ -716,8 +783,13 @@
 </head>
 <body>
 
+  <!-- El header deja de flotar sobre la página en su propia banda y pasa
+       a ser el primer renglón de ella, con el título adentro y los
+       botones al lado. Antes eran dos renglones (uno casi todo aire) para
+       decir el nombre de la pantalla y dejar cuatro iconos. -->
+  <div class="dic-cinta">
   <header class="kw-header">
-    <span class="kw-header-title">Dictaminación de Expedientes</span>
+    <span class="kw-header-title" id="page-titulo">Dictaminación de Expedientes</span>
     <div class="header-right">
       <div id="notif-bell-slot"></div>
       <a href="../portal.html" class="back-btn">
@@ -728,17 +800,7 @@
       </a>
     </div>
   </header>
-
-  <main class="kw-page">
-
-    <!-- ── Vista 1: la lista ───────────────────────────────────── -->
-    <div id="vista-lista">
-      <div class="dic-barra">
-        <div>
-          <h1 class="kw-page-titulo" id="page-titulo">Dictaminación de Expedientes</h1>
-          <p class="kw-page-desc" id="page-desc">Revisión de expedientes y seguimiento de lo que falta corregir.</p>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="dic-cinta-acciones">
           <!-- Exportar, ver el archivo, recargar y sincronizar se juntan
                aquí adentro: son cuatro cosas que se hacen cada tanto y
                cuatro botones al hilo tapaban al único que se usa a diario,
@@ -774,7 +836,12 @@
             <span>Nuevo dictamen</span>
           </button>
         </div>
-      </div>
+  </div>
+
+  <main class="kw-page">
+
+    <!-- ── Vista 1: la lista ───────────────────────────────────── -->
+    <div id="vista-lista">
 
       <!-- El buscador y los tres números en un mismo renglón. Cada uno
            por su lado dejaba media hilera vacía, y son las dos cosas que
@@ -892,8 +959,8 @@
         </div>
 
         <button type="button" class="dic-filtros-mas" id="btn-mas-filtros"
-          aria-expanded="false" aria-controls="filtros">
-          <span id="btn-mas-filtros-txt">Más filtros</span>
+          aria-expanded="false" aria-controls="filtros"
+          title="Ver todos los filtros" aria-label="Ver todos los filtros">
           <span class="dic-filtros-cuantos" id="filtros-cuantos" hidden></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
@@ -1511,12 +1578,12 @@
 
   function pintar() {
     pintarResumen();
+    // El título es ahora el del renglón de arriba, que es el único que
+    // queda. La descripción se fue con el encabezado que se quitó: decía
+    // lo que la propia pantalla enseña, y costaba un renglón.
     $('page-titulo').textContent = verArchivo
       ? 'Archivo de expedientes'
       : 'Dictaminación de Expedientes';
-    $('page-desc').textContent = verArchivo
-      ? 'Los que se sacaron de la lista. Desde aquí se restauran o se borran de verdad.'
-      : 'Revisión de expedientes y seguimiento de lo que falta corregir.';
     $('op-archivo-txt').textContent = verArchivo ? 'Volver a la lista' : 'Ver archivo';
 
     var filas = visibles();
@@ -1841,14 +1908,18 @@
     // Dos pestañas: lo que dice el expediente hoy, y cómo llegó a decir
     // eso. El historial va aparte y no debajo porque es de otra
     // naturaleza: lo de arriba se edita, esto solo se lee.
+    // Las pestañas apuntan a sus paneles por id. kw-ui.js los busca como
+    // hermanos cuando no se le dice cuáles son, y aquí las pestañas viven
+    // dentro de la barra que comparten con los botones: sin el id, no
+    // daba con los paneles y picarle a Historial no hacía nada.
     return '<div class="dic-barra-tarjeta">' +
-        '<div class="kw-tabs dic-tabs" data-kw-tabs>' +
+        '<div class="kw-tabs dic-tabs" data-kw-tabs="paneles-' + d.id + '">' +
           '<button type="button" class="kw-tab activo" data-tab="exp-' + d.id + '">Expediente</button>' +
           '<button type="button" class="kw-tab" data-tab="hist-' + d.id + '">Historial</button>' +
         '</div>' +
         acciones +
       '</div>' +
-      '<div class="kw-tabpanels dic-tabpanels">' +
+      '<div class="kw-tabpanels dic-tabpanels" id="paneles-' + d.id + '">' +
         '<section class="kw-tabpanel activo" data-panel="exp-' + d.id + '">' +
           datos + obs +
           '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
@@ -3446,41 +3517,54 @@
 
   // ── La tarjeta de los filtros ───────────────────────────────
 
-  // Cuántos filtros hay puestos entre los que quedaron escondidos al
-  // plegar. Sin este número, plegar la tarjeta escondía filtros prendidos
-  // y la lista salía recortada sin decir por qué.
-  function contarFiltrosEscondidos() {
-    var caja = $('filtros-caja');
-    if (caja.classList.contains('abierta')) return 0;
-    var corte = $('filtros').getBoundingClientRect().bottom;
-
-    var puestos = ESCRITOS.filter(function (x) { return $(x).value.trim(); })
-      .concat(DESPLEGABLES.filter(function (x) { return $(x).value !== 'todos'; }));
-    var n = puestos.filter(function (x) {
-      // El campo cuenta como escondido si su parte de abajo quedó
-      // debajo del corte de la tarjeta plegada.
-      return $(x).getBoundingClientRect().bottom > corte + 1;
-    }).length;
-
-    // Los asesores elegidos van en el filtro de asesor, que es un campo
-    // solo aunque traiga varios.
-    if (asesoresFiltro.length &&
-        $('f-asesor-caja').getBoundingClientRect().bottom > corte + 1) n++;
-    return n;
+  // Si el filtro que vive en esta casilla tiene algo puesto. Es lo que
+  // deja avisar, al plegar, que quedaron filtros prendidos fuera de la
+  // vista: sin ese aviso la lista salía recortada sin decir por qué.
+  function filtroPuesto(campo) {
+    var puesto = ESCRITOS.some(function (x) {
+      return campo.contains($(x)) && $(x).value.trim();
+    }) || DESPLEGABLES.some(function (x) {
+      return campo.contains($(x)) && $(x).value !== 'todos';
+    });
+    return puesto || (asesoresFiltro.length > 0 && campo.contains($('f-asesor-caja')));
   }
 
+  // Plegada, la tarjeta deja a la vista nada más el primer renglón. Cuál
+  // es el primer renglón no se sabe de antemano (depende de lo ancha que
+  // esté la ventana), así que se pregunta: los que quedaron más abajo que
+  // el primero son los que se esconden.
   function acomodarFiltros() {
-    var abierta = $('filtros-caja').classList.contains('abierta');
-    $('btn-mas-filtros').setAttribute('aria-expanded', abierta ? 'true' : 'false');
-    $('btn-mas-filtros-txt').textContent = abierta ? 'Menos filtros' : 'Más filtros';
+    var caja = $('filtros-caja');
+    var abierta = caja.classList.contains('abierta');
+    var campos = Array.prototype.slice.call($('filtros').children);
 
-    var n = contarFiltrosEscondidos();
+    // Se miden con todos a la vista: uno escondido no tiene lugar que leer.
+    campos.forEach(function (c) { c.classList.remove('dic-filtro-oculto'); });
+
+    var escondidos = 0;
+    if (!abierta && campos.length) {
+      var primerRenglon = campos[0].offsetTop;
+      campos.forEach(function (c) {
+        if (c.offsetTop <= primerRenglon + 2) return;
+        c.classList.add('dic-filtro-oculto');
+        if (filtroPuesto(c)) escondidos++;
+      });
+    }
+
+    var btn = $('btn-mas-filtros');
+    btn.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+    var dice = abierta ? 'Ver solo el primer filtro' : 'Ver todos los filtros';
+    btn.title = dice;
+    btn.setAttribute('aria-label', dice);
+
     var marca = $('filtros-cuantos');
-    marca.hidden = !n;
-    marca.textContent = n;
-    marca.title = n === 1
+    marca.hidden = !escondidos;
+    // Vacío y no "0": escondido igual no se ve, pero un lector de
+    // pantalla sí lo lee, y "cero" ahí no quiere decir nada.
+    marca.textContent = escondidos || '';
+    marca.title = escondidos === 1
       ? 'Hay 1 filtro puesto entre los que no se están viendo'
-      : 'Hay ' + n + ' filtros puestos entre los que no se están viendo';
+      : 'Hay ' + escondidos + ' filtros puestos entre los que no se están viendo';
   }
 
   $('btn-mas-filtros').addEventListener('click', function () {
