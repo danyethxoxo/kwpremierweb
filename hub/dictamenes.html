@@ -531,16 +531,34 @@
      lado. */
   .kw-filtros > .kw-campo-filtro { max-width: 250px; }
 
+  /* Cada filtro pesa según lo que le cabe adentro, en vez de repartirse
+     el ancho a partes iguales. El de asesor es el que más se usa y el que
+     crece con los elegidos, así que va más ancho; los tres desplegables
+     llevan nombres largos; la comisión son dos dígitos y una fecha es una
+     fecha. Sin esto, "Comisión %" tenía el mismo lugar que "Tipo de
+     inmueble" y ninguno de los dos alcanzaba a decirse completo. */
+  .kw-filtros > .dic-f-asesor { flex: 1.3 1 190px; max-width: 260px; }
+  .kw-filtros > .dic-f-lista  { flex: 1 1 156px; max-width: 200px; }
+  .kw-filtros > .dic-f-fecha  { flex: 0 1 138px; max-width: 150px; }
+  .kw-filtros > .dic-f-chico  { flex: 0 1 118px; max-width: 130px; }
+
   /* ── La tarjeta de los filtros ──
      Diez casillas siempre abiertas eran media pantalla antes de llegar
      al primer expediente. Encerrados en su tarjeta se lee que son un
      bloque aparte, y de entrada solo se ve el primer renglón. */
   .dic-filtros-caja {
-    border: 1.5px solid rgba(138,0,0,0.30); border-radius: 16px;
+    /* Azul, para que no compita con el rojo de la marca: la tarjeta de
+       filtros no es lo que se viene a mirar, es con lo que se busca. */
+    border: 1.5px solid rgba(27,79,138,0.34); border-radius: 16px;
     background: rgba(255,255,255,0.55);
-    padding: var(--sp-3) var(--sp-3) 0;
+    /* El mismo aire arriba que abajo. Antes el de abajo era cero, porque
+       ahí colgaba el renglón del botón de "más filtros", y al pasar ese
+       botón a la orilla la tarjeta quedó chueca. */
+    padding: var(--sp-3);
     margin-bottom: var(--sp-4);
   }
+  /* La hilera trae su propio margen de abajo, que sumado al relleno de la
+     tarjeta daba doble aire de ese lado. */
   .dic-filtros-caja .kw-filtros { margin-bottom: 0; }
 
   /* Plegado, los filtros que no caben en el primer renglón se esconden
@@ -559,7 +577,7 @@
     transform: translateY(-50%);
     display: flex; align-items: center; gap: 4px;
     padding: 5px 6px; border: none; background: none;
-    color: var(--red); cursor: pointer;
+    color: rgba(27,79,138,0.9); cursor: pointer;
   }
   .dic-filtros-mas svg {
     width: 17px; height: 17px;
@@ -664,14 +682,19 @@
      deshacer lo elegido, así que va al final de todos y no compitiendo
      por lugar entre ellos. */
   .dic-campo-limpiar { justify-content: flex-end; }
+  .kw-filtros > .dic-campo-limpiar { flex: 0 0 auto; }
+  /* Chico y con el bote: no es un filtro más, es deshacer lo elegido, y
+     del tamaño de los demás pesaba como si lo fuera. */
   .dic-limpiar {
-    height: var(--control-h); padding: 0 14px;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: var(--control-h); padding: 0 12px;
     border: 1px solid var(--border); border-radius: var(--r-campo);
     background: #fff; color: var(--muted);
     font-family: inherit; font-size: 12.5px; font-weight: 700;
     cursor: pointer; white-space: nowrap;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
+  .dic-limpiar svg { width: 14px; height: 14px; flex-shrink: 0; }
   .dic-limpiar:hover { background: #fafafa; color: var(--red); border-color: var(--red); }
 
   /* ── El filtro de asesor, que admite varios ──
@@ -847,12 +870,14 @@
            por su lado dejaba media hilera vacía, y son las dos cosas que
            se miran al entrar: cuántos hay de cada cual, y buscar uno. -->
       <div class="dic-arriba">
-        <!-- Conserva kw-campo-filtro aunque ya no viva entre los filtros:
-             es la clase por la que drawer.js encuentra el bloque del
-             buscador, y con data-kw-buscador-propio le pide que no lo
-             esconda detrás de la lupa del encabezado. Sin la clase, no
-             daba con el bloque y escondía el campo. -->
-        <div class="kw-campo-filtro dic-campo-buscar" data-kw-buscador-propio>
+        <!-- El campo se queda en la página pero ya no se ve: drawer.js lo
+             busca por la clase kw-campo-filtro y, al no encontrarle el
+             data-kw-buscador-propio de antes, lo esconde y le pasa lo que
+             se escriba en la lupa del encabezado. O sea que el buscador
+             sigue siendo este, nada más que ahora se teclea arriba y no
+             ocupa lugar aquí. Borrarlo de veras dejaría a la lupa sin a
+             quién pasarle lo que se escribe. -->
+        <div class="kw-campo-filtro dic-campo-buscar">
           <label for="f-buscar">Buscar</label>
           <div class="kw-buscador">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
@@ -872,29 +897,19 @@
         <div class="kw-filtros" id="filtros">
         <!-- Asesor: son 94 y pueden interesar varios a la vez (los de un
              equipo, por ejemplo), así que no es un desplegable de uno
-             sino un buscador que va juntando los elegidos. -->
-        <div class="kw-campo-filtro">
+             sino un buscador que va juntando los elegidos. Va primero y
+             más ancho: es el que más se usa. -->
+        <div class="kw-campo-filtro dic-f-asesor">
           <label for="f-asesor-busca">Asesor</label>
           <div class="dic-multi" id="f-asesor-caja">
             <div class="dic-multi-elegidos" id="f-asesor-elegidos"></div>
             <input type="text" id="f-asesor-busca" class="kw-input"
-              placeholder="Asesor" autocomplete="off">
+              placeholder="Buscar asesor" autocomplete="off">
             <div class="dic-asesor-lista" id="f-asesor-lista"></div>
           </div>
         </div>
 
-        <div class="kw-campo-filtro">
-          <label for="f-estado">Estado</label>
-          <select id="f-estado">
-            <option value="todos">Estado</option>
-            <option value="borrador">Borradores</option>
-            <option value="devuelta">Devueltos</option>
-            <option value="condicionada">Autorizados condicionados</option>
-            <option value="autorizada">Autorizados para promoción</option>
-          </select>
-        </div>
-
-        <div class="kw-campo-filtro">
+        <div class="kw-campo-filtro dic-f-lista">
           <label for="f-listado">Listado</label>
           <select id="f-listado">
             <option value="todos">Listado</option>
@@ -904,7 +919,7 @@
           </select>
         </div>
 
-        <div class="kw-campo-filtro">
+        <div class="kw-campo-filtro dic-f-lista">
           <label for="f-contrato">Contrato</label>
           <select id="f-contrato">
             <option value="todos">Contrato</option>
@@ -913,7 +928,7 @@
           </select>
         </div>
 
-        <div class="kw-campo-filtro">
+        <div class="kw-campo-filtro dic-f-lista">
           <label for="f-tipo">Tipo de inmueble</label>
           <select id="f-tipo"><option value="todos">Tipo de inmueble</option></select>
         </div>
@@ -928,32 +943,34 @@
           </div>
         </div>
 
-        <div class="kw-campo-filtro dic-campo-rango">
-          <label for="f-comision-min">Comisión</label>
-          <div class="dic-rango">
-            <input type="text" id="f-comision-min" class="dic-fecha" inputmode="decimal"
-              placeholder="Comisión mín" autocomplete="off">
-            <input type="text" id="f-comision-max" class="dic-fecha" inputmode="decimal"
-              placeholder="Comisión máx" autocomplete="off">
-          </div>
+        <!-- La comisión es una sola casilla y no un rango: en la práctica
+             se maneja un puñado de porcentajes cerrados (3, 5, 6), así que
+             lo que se busca es "los del 5", no "entre 4 y 6". -->
+        <div class="kw-campo-filtro dic-f-chico">
+          <label for="f-comision">Comisión</label>
+          <input type="text" id="f-comision" class="dic-fecha" inputmode="decimal"
+            placeholder="Comisión %" autocomplete="off">
         </div>
 
         <!-- Un rango en vez de mes y día sueltos: "del 3 al 17" no se
              podía pedir con dos listas, y con el calendario se elige el
              día y el mes de una vez. -->
-        <div class="kw-campo-filtro">
-          <label for="f-desde">Desde</label>
-          <input type="date" id="f-desde" class="dic-fecha" data-texto="Desde">
+        <div class="kw-campo-filtro dic-f-fecha">
+          <label for="f-desde">Fecha desde</label>
+          <input type="date" id="f-desde" class="dic-fecha" data-texto="Fecha desde">
         </div>
 
-        <div class="kw-campo-filtro">
-          <label for="f-hasta">Hasta</label>
-          <input type="date" id="f-hasta" class="dic-fecha" data-texto="Hasta">
+        <div class="kw-campo-filtro dic-f-fecha">
+          <label for="f-hasta">Fecha hasta</label>
+          <input type="date" id="f-hasta" class="dic-fecha" data-texto="Fecha hasta">
         </div>
 
         <div class="kw-campo-filtro dic-campo-limpiar">
           <label>&nbsp;</label>
-          <button type="button" class="dic-limpiar" id="f-limpiar" title="Quitar todos los filtros">Limpiar filtros</button>
+          <button type="button" class="dic-limpiar" id="f-limpiar" title="Quitar todos los filtros">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Limpiar</span>
+          </button>
         </div>
 
         </div>
@@ -1083,7 +1100,7 @@
             <label for="e-precio">Precio del listado</label>
             <div class="dic-conunidad">
               <span class="dic-unidad-izq">$</span>
-              <input type="text" id="e-precio" class="kw-input" inputmode="decimal" placeholder="4,500,000" autocomplete="off">
+              <input type="text" id="e-precio" name="dic-monto-listado" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" placeholder="4,500,000" autocomplete="off">
             </div>
           </div>
           <div class="dic-campo">
@@ -1101,7 +1118,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <input type="text" id="e-esc-numero" class="kw-input" placeholder="25,928" autocomplete="off">
+            <input type="text" id="e-esc-numero" name="dic-escritura-folio" data-lpignore="true" data-1p-ignore class="kw-input" placeholder="25,928" autocomplete="off">
           </div>
           <div class="dic-campo">
             <label for="e-esc-fecha">Fecha de escrituración</label>
@@ -1116,7 +1133,7 @@
           </div>
           <div class="dic-campo">
             <label for="e-notaria">Número de notaría</label>
-            <input type="text" id="e-notaria" class="kw-input" placeholder="45" autocomplete="off">
+            <input type="text" id="e-notaria" name="dic-notaria-id" data-lpignore="true" data-1p-ignore class="kw-input" placeholder="45" autocomplete="off">
           </div>
         </div>
 
@@ -1140,11 +1157,11 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-cfdi">CFDI</label>
-            <input type="text" id="e-cfdi" class="kw-input" autocomplete="off">
+            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
           </div>
           <div class="dic-campo">
             <label for="e-folio-real">Folio real</label>
-            <input type="text" id="e-folio-real" class="kw-input" autocomplete="off">
+            <input type="text" id="e-folio-real" name="dic-folio-real" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
           </div>
         </div>
 
@@ -1152,13 +1169,13 @@
           <div class="dic-campo">
             <label for="e-sup-escritura">Superficie escritura</label>
             <div class="dic-conunidad">
-              <input type="text" id="e-sup-escritura" class="kw-input" inputmode="decimal" placeholder="92.40" autocomplete="off">
+              <input type="text" id="e-sup-escritura" name="dic-sup-escritura" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" placeholder="92.40" autocomplete="off">
               <span>m²</span>
             </div>
           </div>
           <div class="dic-campo">
             <label for="e-cuenta-predial">Cuenta predial</label>
-            <input type="text" id="e-cuenta-predial" class="kw-input" autocomplete="off">
+            <input type="text" id="e-cuenta-predial" name="dic-predial" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
           </div>
         </div>
 
@@ -1166,14 +1183,14 @@
           <div class="dic-campo">
             <label for="e-sup-terreno">Superficie de terreno</label>
             <div class="dic-conunidad">
-              <input type="text" id="e-sup-terreno" class="kw-input" inputmode="decimal" placeholder="120.00" autocomplete="off">
+              <input type="text" id="e-sup-terreno" name="dic-sup-terreno" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" placeholder="120.00" autocomplete="off">
               <span>m²</span>
             </div>
           </div>
           <div class="dic-campo">
             <label for="e-sup-construccion">Superficie de construcción</label>
             <div class="dic-conunidad">
-              <input type="text" id="e-sup-construccion" class="kw-input" inputmode="decimal" placeholder="90.15" autocomplete="off">
+              <input type="text" id="e-sup-construccion" name="dic-sup-construccion" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" placeholder="90.15" autocomplete="off">
               <span>m²</span>
             </div>
           </div>
@@ -1351,15 +1368,20 @@
 
   // ── Filtrar ─────────────────────────────────────────────────
 
-  var DESPLEGABLES = ['f-estado', 'f-listado', 'f-contrato', 'f-tipo'];
+  var DESPLEGABLES = ['f-listado', 'f-contrato', 'f-tipo'];
 
-  // Los filtros que se escriben: el buscador, el rango de fechas y los de
-  // precio y comisión. Se enumeran una sola vez porque los tres lugares
-  // que los tocan (repintar al cambiarlos, saber si hay algo filtrado y
-  // limpiarlos) tienen que estar de acuerdo. Cuando la lista vivía suelta
-  // en cada uno, agregar un filtro era acordarse de los tres.
+  // Los filtros que se escriben: el buscador, el rango de fechas, el de
+  // precio y el de comisión. Se enumeran una sola vez porque los tres
+  // lugares que los tocan (repintar al cambiarlos, saber si hay algo
+  // filtrado y limpiarlos) tienen que estar de acuerdo. Cuando la lista
+  // vivía suelta en cada uno, agregar un filtro era acordarse de los tres.
   var ESCRITOS = ['f-buscar', 'f-desde', 'f-hasta',
-    'f-precio-min', 'f-precio-max', 'f-comision-min', 'f-comision-max'];
+    'f-precio-min', 'f-precio-max', 'f-comision'];
+
+  // El estado ya no tiene desplegable: se pone y se quita picándole a las
+  // tarjetas de arriba, que hacían exactamente lo mismo. Vive aquí en vez
+  // de leerse de un campo.
+  var estadoFiltro = 'todos';
 
   // Un rango de números. Si se pidió un mínimo o un máximo, el expediente
   // que no trae ese dato queda fuera: dejarlo pasar como si valiera cero
@@ -1375,7 +1397,6 @@
 
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
-    var estado = $('f-estado').value;
     var listado = $('f-listado').value;
     var contrato = $('f-contrato').value;
     var tipo = $('f-tipo').value;
@@ -1383,14 +1404,13 @@
     var hasta = $('f-hasta').value;
     var precioMin = soloCifra($('f-precio-min').value);
     var precioMax = soloCifra($('f-precio-max').value);
-    var comisionMin = soloCifra($('f-comision-min').value);
-    var comisionMax = soloCifra($('f-comision-max').value);
+    var comision = soloCifra($('f-comision').value);
 
     return dictamenes.filter(function (d) {
       // El archivo es una lista aparte, no un filtro más: o se ve lo
       // vivo, o se ve lo archivado.
       if (verArchivo !== !!d.archivado_at) return false;
-      if (estado !== 'todos' && d.estado !== estado) return false;
+      if (estadoFiltro !== 'todos' && d.estado !== estadoFiltro) return false;
       if (listado !== 'todos' && (d.estatus_listado || 'pendiente') !== listado) return false;
       if (contrato !== 'todos' && d.tipo_contrato !== contrato) return false;
       if (tipo !== 'todos' && d.tipo_inmueble_id !== tipo) return false;
@@ -1406,7 +1426,10 @@
       if (hasta && (!f || f > hasta)) return false;
 
       if (fueraDeRango(d.precio_listado, precioMin, precioMax)) return false;
-      if (fueraDeRango(d.comision_porcentaje, comisionMin, comisionMax)) return false;
+      // La comisión se pide exacta: se escribe 5 y salen los del 5. Como
+      // rango no aportaba, porque los porcentajes que se manejan son un
+      // puñado de valores cerrados y no una escala continua.
+      if (comision && Number(soloCifra(d.comision_porcentaje)) !== Number(comision)) return false;
 
       if (busca) {
         var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre,
@@ -1435,7 +1458,7 @@
     }).join('');
 
     $('f-asesor-busca').placeholder = asesoresFiltro.length
-      ? 'Agregar otro' : 'Todos los asesores';
+      ? 'Agregar otro' : 'Buscar asesor';
 
     caja.querySelectorAll('[data-quitar-asesor]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -1497,7 +1520,7 @@
       ['condicionada', cuenta('condicionada'), 'Condicionados'],
       ['autorizada', cuenta('autorizada'), 'Autorizados'],
     ];
-    var activo = $('f-estado').value;
+    var activo = estadoFiltro;
 
     // Cada tarjeta lleva la clase de su estado, que es la que le pone el
     // color del borde: el mismo que su etiqueta en la lista.
@@ -1511,11 +1534,10 @@
 
     $('resumen').querySelectorAll('[data-estado]').forEach(function (b) {
       b.addEventListener('click', function () {
-        // Volver a picarle al que ya está puesto lo quita: si no, para ver
-        // todo habría que ir hasta el filtro de abajo.
+        // Volver a picarle al que ya está puesto lo quita. Es la única
+        // forma de sacarlo, ahora que no hay desplegable de estado.
         var quiere = b.dataset.estado;
-        $('f-estado').value = ($('f-estado').value === quiere) ? 'todos' : quiere;
-        $('f-estado').dispatchEvent(new Event('change', { bubbles: true }));
+        estadoFiltro = (estadoFiltro === quiere) ? 'todos' : quiere;
         pintar();
       });
     });
@@ -1592,7 +1614,7 @@
     $('dic-cabecera').style.display = filas.length ? '' : 'none';
 
     if (!filas.length) {
-      var hayFiltro = asesoresFiltro.length ||
+      var hayFiltro = asesoresFiltro.length || estadoFiltro !== 'todos' ||
         ESCRITOS.some(function (x) { return $(x).value.trim(); }) ||
         DESPLEGABLES.some(function (x) { return $(x).value !== 'todos'; });
       $('lista').innerHTML = '<div class="kw-vacio">' + (
@@ -3588,6 +3610,7 @@
   });
 
   $('f-limpiar').addEventListener('click', function () {
+    estadoFiltro = 'todos';
     DESPLEGABLES.forEach(function (x) {
       $(x).value = 'todos';
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
