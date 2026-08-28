@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Constancia ABC de la Tecnología</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-ui.css?v=20260822a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
   setTimeout(function () {
@@ -73,71 +75,97 @@
     window.addEventListener('pagereveal', markDirection);
   })();
 </script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --red: #8a0000; --text: #1A1A1A; --muted: #6b6b6b;
-  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0;
     height: 100%;
-    font-family: Arial, sans-serif;
+    font-family: 'Poppins', Arial, sans-serif;
+    letter-spacing: -0.01em;
     color: var(--text);
     overflow: hidden; /* el scroll vive dentro de cada columna, no en la página */
   }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
-  html { background-color: var(--lienzo); }
-  /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
-     propia capa de fondo. No se usa background-attachment: fixed
-     porque en celular deja franjas blancas al desplazarse. */
-  
+
+  /* Mismo reparto que los acuerdos y contratos: el formulario de un lado
+     y la hoja del otro, cada uno con su propio scroll. La columna del
+     formulario va mas angosta que alla porque aqui solo son tres
+     campos: a la mitad de la pantalla quedaba un hueco gris enorme. */
   .layout {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: minmax(280px, 380px) 1fr;
     gap: 0;
     height: 100vh;
   }
 
   /* Columna formulario */
   .form-col {
-    padding: 20px 18px;
     border-right: 1px solid var(--border);
     overflow-y: auto;
     height: 100%;
-    background: var(--card);
+    padding: 24px;
+    /* El mismo gris casi blanco que la vista previa: el formulario en
+       blanco puro contra la hoja en gris se veian como dos pantallas
+       distintas, en vez de un mismo lugar de trabajo. */
+    background: #e9e9e8;
   }
+  .btn-volver {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f7f7f6; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; font-size: 12px; font-weight: 700;
+    font-family: inherit; color: #555; cursor: pointer; text-decoration: none;
+    margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, transform 0.12s;
+  }
+  .btn-volver:hover { background: #ececec; }
+  .btn-volver:active { transform: scale(0.96); }
+
   .form-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-  .form-sub { font-size: 11px; color: var(--muted); margin-bottom: 18px; }
+  .form-sub { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
   .field { margin-bottom: 14px; }
   .field label {
-    display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--red); margin-bottom: 5px;
+    display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: #CC0000; margin-bottom: 5px;
   }
   .field input,
   .field select {
     width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
-    border-radius: 10px; font-family: Arial, sans-serif; font-size: 13px;
-    color: var(--text); background: #fff; outline: none; transition: border-color 0.15s;
+    border-radius: 10px; font-family: inherit; font-size: 13px;
+    color: var(--text); background: #fff; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .field input:focus,
-  .field select:focus { border-color: var(--red); }
-  .btn-dl {
-    width: 100%; padding: 11px;
-    background: linear-gradient(180deg,#CC0000 0%,#990000 100%);
-    color: #fff; border: none; border-radius: 40px; font-family: Arial, sans-serif;
-    font-size: 13px; font-weight: 700; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 14px rgba(138,0,0,0.3); transition: filter 0.15s; margin-top: 20px;
+  .field select:focus {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08);
   }
-  .btn-dl:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
+  .field input[type="date"] { cursor: pointer; }
+
+  /* Mismo boton de descarga que los acuerdos: tarjeta clara con el
+     contorno guinda. El de antes era una pastilla roja rellena, la
+     unica que quedaba en el sitio. */
+  .btn-dl {
+    background: #f7f7f6;
+    border: 1.5px solid var(--red); color: var(--red);
+    border-radius: 10px;
+    padding: 10px 16px; font-size: 12px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, transform 0.12s;
+    margin-top: 20px;
+  }
+  .btn-dl:hover { background: #ececec; }
   .btn-dl:active { transform: scale(0.96); }
 
   /* Columna vista previa */
   .preview-col {
     overflow: auto;
     height: 100%;
-    background: #d8d8d6;
+    /* Gris casi blanco, el mismo de los acuerdos: la hoja se ve como
+       hoja y nada le pelea al documento. */
+    background: #e9e9e8;
     padding: 24px;
     display: flex; justify-content: center; align-items: flex-start;
   }
@@ -149,7 +177,10 @@
     height: 1056px;        /* 11in a 96dpi */
     padding: 94px 113px;   /* 2.5cm / 3cm convertidos a px */
     background: #fff;
-    box-shadow: 0 4px 28px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    border-radius: 2px;
+    /* La hoja se queda en Arial: es el documento que se imprime, no la
+       pantalla. Igual que los acuerdos y los contratos. */
     font-family: Arial, sans-serif;
     box-sizing: border-box;
     display: flex;
@@ -228,10 +259,16 @@
     font-weight: 700;
     text-align: center;
     cursor: pointer;
-    font-family: Arial, sans-serif;
+    font-family: inherit;
     color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s, color 0.15s;
   }
-  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); box-shadow: 0 3px 10px rgba(138,0,0,0.28); }
   .mobile-tab:active { transform: scale(0.95); }
   @media (max-width: 900px) {
     .mobile-tabs { display: flex; }
@@ -262,6 +299,10 @@
 <div class="layout">
 
   <div class="form-col">
+    <a href="../documentos.html" class="btn-volver">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Regresar
+    </a>
     <div class="form-title">Constancia ABC de la Tecnología</div>
     <div class="form-sub">Completa los campos - la vista previa se actualiza en tiempo real.</div>
     <div class="field">

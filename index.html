@@ -7,50 +7,27 @@
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <meta name="description" content="KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, venta y renta de propiedades con acompañamiento de un asesor certificado." />
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260822a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260820c">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <style>
   /* ═══════════════════════════════════════════════════════════════
      Portada de KW Premier
 
-     Toda la página va sobre un mismo fondo vino (el rojo de KW
-     oscurecido) y el contenido encima en blanco, como una revista.
-     El rojo de la marca se guarda para lo que se pica: los botones y
-     la banda de "quiero ser parte" de hasta abajo. Así el rojo llama
-     la atención donde importa en vez de competir consigo mismo.
+     Va sobre el mismo lienzo claro que el resto del sitio (kw-claro.css)
+     y con el mismo material: tarjeta blanca de borde tenue y sombra
+     suave. El guinda de la marca se guarda para lo que se pica -los
+     botones, los enlaces- y para la banda de "quiero ser parte", que es
+     el único bloque de color de toda la página. Así el guinda llama la
+     atención donde importa en vez de tapizar la pantalla.
+
+     Antes esta página traía su propio fondo vino y todo el texto en
+     blanco: era la única del sitio que seguía en el tema oscuro.
      ═══════════════════════════════════════════════════════════════ */
   :root {
-    --vino: #5C0000;              /* el fondo de toda la portada */
-    --vino-hondo: #430000;        /* el pie, un escalón más abajo */
-    --linea: rgba(255,255,255,0.22);
-    --tenue: rgba(255,255,255,0.78);
-
-    /* Gotas de color difuminadas flotando sobre el vino. Cada una es la
-       unión de varias elipses encimadas, no un círculo perfecto: donde
-       se traslapan el color se junta más y el contorno queda irregular,
-       que es lo que las hace ver líquidas.
-
-       Le dan volumen al fondo y, sobre todo, hacen que el vidrio de las
-       tarjetas se lea como vidrio: sin nada detrás que se asome, un
-       panel translúcido se ve igual que uno plano. Van fijas al
-       viewport, así que el contenido se desliza por encima de ellas. */
-    --vino-fondo:
-      radial-gradient(ellipse 235px 180px at 12% 17%, rgba(255,105,160,0.3) 0%, rgba(255,105,160,0.216) 52%, rgba(255,105,160,0) 100%),
-      radial-gradient(ellipse 160px 215px at 19% 23%, rgba(255,105,160,0.28) 0%, rgba(255,105,160,0.2) 52%, rgba(255,105,160,0) 100%),
-      radial-gradient(ellipse 335px 250px at 86% 7%, rgba(232,60,125,0.28) 0%, rgba(232,60,125,0.202) 52%, rgba(232,60,125,0) 100%),
-      radial-gradient(ellipse 240px 325px at 92% 14%, rgba(232,60,125,0.26) 0%, rgba(232,60,125,0.187) 52%, rgba(232,60,125,0) 100%),
-      radial-gradient(ellipse 190px 145px at 70% 38%, rgba(186,85,220,0.26) 0%, rgba(186,85,220,0.187) 52%, rgba(186,85,220,0) 100%),
-      radial-gradient(ellipse 270px 200px at 0% 70%, rgba(214,45,105,0.27) 0%, rgba(214,45,105,0.194) 52%, rgba(214,45,105,0) 100%),
-      radial-gradient(ellipse 190px 255px at 7% 77%, rgba(214,45,105,0.25) 0%, rgba(214,45,105,0.18) 52%, rgba(214,45,105,0) 100%),
-      radial-gradient(ellipse 230px 175px at 60% 95%, rgba(140,55,195,0.25) 0%, rgba(140,55,195,0.18) 52%, rgba(140,55,195,0) 100%),
-      radial-gradient(ellipse 140px 105px at 41% 58%, rgba(255,140,175,0.22) 0%, rgba(255,140,175,0.158) 52%, rgba(255,140,175,0) 100%),
-      radial-gradient(1100px 750px at 10% -10%, rgba(150,20,20,0.5), transparent 60%),
-      radial-gradient(1000px 800px at 45% 115%, rgba(15,0,0,0.6), transparent 60%),
-      linear-gradient(160deg, #6b0000 0%, #560000 45%, #3d0000 100%);
+    --vino: #5C0000;              /* el guinda de los bloques de color */
+    --vino-hondo: #430000;        /* un escalón más abajo, para degradar */
   }
 
-  html, body {
-    color: #fff;
-  }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   /* El menú lleva a secciones de esta misma página: se baja deslizando,
@@ -58,12 +35,6 @@
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   body { display: flex; flex-direction: column; min-height: 100vh; }
-
-  ::selection { background: #fff; color: var(--vino); }
-
-  /* Toda la portada escribe en blanco, pero el modal es una tarjeta
-     blanca: adentro de él manda el color de siempre. */
-  .modal-box { color: var(--text); }
 
   /* ── Tapa ──
      Tres zonas: las redes a la izquierda, el logo con su menú al
@@ -74,68 +45,68 @@
     gap: 16px; padding: 26px 32px 22px;
   }
   .tapa-social { display: flex; align-items: center; gap: 14px; padding-top: 6px; }
-  .tapa-social a { color: rgba(255,255,255,0.8); display: flex; transition: color 0.15s, transform 0.12s; }
-  .tapa-social a:hover { color: #fff; transform: translateY(-2px); }
+  .tapa-social a { color: var(--muted); display: flex; transition: color 0.15s, transform 0.12s; }
+  .tapa-social a:hover { color: var(--red); transform: translateY(-2px); }
   .tapa-social svg { width: 18px; height: 18px; display: block; }
 
   .tapa-centro { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .tapa-logo { display: block; }
   .tapa-logo img { height: 46px; width: auto; display: block; }
 
-  /* El menú va en una cápsula de vidrio, igual que el header del resto
-     de la plataforma. Aquí el vidrio es oscuro y no claro, porque el
-     texto que lleva dentro es blanco. */
+  /* El menú va en una cápsula de vidrio, la misma del header del resto
+     de la plataforma: blanca de borde tenue, con el texto oscuro. */
   .tapa-nav {
     display: flex; align-items: center; justify-content: center;
     flex-wrap: wrap; gap: 4px 6px;
     padding: 5px 8px; border-radius: 999px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.85);
     backdrop-filter: blur(13px) saturate(140%);
     -webkit-backdrop-filter: blur(13px) saturate(140%);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.25);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.95);
   }
   .tapa-nav a {
     position: relative;
     padding: 6px 11px; border-radius: 999px;
-    font-size: 14.5px; font-weight: 400; color: #fff;
+    font-size: 14.5px; font-weight: 500; color: var(--text);
     text-decoration: none; white-space: nowrap;
-    transition: background 0.15s;
+    transition: background 0.15s, color 0.15s;
   }
-  .tapa-nav a:hover { background: rgba(255,255,255,0.18); }
+  .tapa-nav a:hover { background: #f3efef; color: var(--red); }
 
   .tapa-der { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 2px; }
   /* Solo sale con sesión abierta (lo prende reflejarSesion). */
   .tapa-iniciales {
     display: none; align-items: center; justify-content: center;
     width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-    background: rgba(255,255,255,0.16); border: 1px solid var(--linea);
-    color: #fff; font-size: 13px; font-weight: 700;
+    background: #fff; border: 1.5px solid var(--border);
+    color: var(--red); font-size: 13px; font-weight: 700;
   }
   .tapa-iniciales.visible { display: flex; }
 
+  /* El único botón relleno de la tapa: es a donde se quiere que la
+     gente vaya, así que se lleva el guinda. */
   .btn-tapa {
     display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
-    background: rgba(255,255,255,0.92); color: var(--vino); border: 1px solid rgba(255,255,255,0.4);
+    background: linear-gradient(160deg, #7a0000 0%, var(--vino) 100%);
+    color: #fff; border: none;
     border-radius: 10px;
-    backdrop-filter: blur(12px) saturate(130%);
-    -webkit-backdrop-filter: blur(12px) saturate(130%);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
+    box-shadow: 0 8px 22px rgba(92,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.2);
     padding: 15px 30px; font-size: 14.5px; font-weight: 600; font-family: inherit;
     cursor: pointer; white-space: nowrap;
-    transition: background 0.15s, color 0.15s, transform 0.12s;
+    transition: filter 0.15s, transform 0.12s;
   }
-  .btn-tapa:hover { background: var(--red); color: #fff; }
+  .btn-tapa:hover { filter: brightness(1.18); }
   .btn-tapa:active { transform: translateY(1px); }
 
   /* ── Portada ── */
   .portada { text-align: center; padding: 62px 24px 74px; }
   .portada-antes {
-    font-size: 21px; font-weight: 600; margin-bottom: 12px;
+    font-size: 21px; font-weight: 600; margin-bottom: 12px; color: var(--red);
   }
   .portada-titulo {
     font-size: 74px; line-height: 1.02; letter-spacing: -0.035em;
-    max-width: 15ch; margin: 0 auto;
+    max-width: 15ch; margin: 0 auto; color: var(--text);
   }
 
   .portada-foto {
@@ -147,7 +118,7 @@
   /* ── Cuerpo ── */
   main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 32px; }
 
-  .bloque { padding: 74px 0; border-top: 1px solid var(--linea); }
+  .bloque { padding: 74px 0; border-top: 1px solid var(--border); }
   .bloque:first-child { border-top: 0; }
 
   /* El título grande y centrado de una sección (el de "Trabaja con
@@ -155,126 +126,144 @@
   .bloque-titulo {
     text-align: center; font-size: 62px; line-height: 1.05;
     letter-spacing: -0.035em; text-transform: uppercase;
-    margin-bottom: 46px;
+    margin-bottom: 46px; color: var(--text);
   }
   .bloque-rotulo {
-    font-size: 25px; letter-spacing: -0.02em; margin-bottom: 22px;
+    font-size: 25px; letter-spacing: -0.02em; margin-bottom: 22px; color: var(--text);
   }
 
-  /* Enlace de texto, subrayado, como el "Learn more" del ejemplo. */
+  /* Enlace de texto, subrayado, como el "Learn more" del ejemplo. Va en
+     guinda: sobre claro es lo que lo distingue del texto de junto. */
   .mas {
     display: inline-block;
-    color: #fff; font-size: 14.5px; text-decoration: none;
-    border-bottom: 1px solid rgba(255,255,255,0.55);
+    color: var(--red); font-size: 14.5px; font-weight: 600; text-decoration: none;
+    border-bottom: 1px solid rgba(138,0,0,0.35);
     padding-bottom: 2px; background: none; border-left: 0; border-right: 0; border-top: 0;
     font-family: inherit; cursor: pointer;
     transition: border-color 0.15s, opacity 0.15s;
   }
-  .mas:hover { border-color: #fff; opacity: 0.85; }
+  .mas:hover { border-color: var(--red); opacity: 0.8; }
 
   /* ── Tres columnas: cómo se trabaja con nosotros ── */
   .tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; }
   .tres-col { text-align: center; }
-  .tres-col h3 { font-size: 27px; letter-spacing: -0.025em; margin-bottom: 16px; }
+  .tres-col h3 { font-size: 27px; letter-spacing: -0.025em; margin-bottom: 16px; color: var(--text); }
   .tres-col p {
-    font-size: 14px; line-height: 1.6; color: var(--tenue);
+    font-size: 14px; line-height: 1.6; color: var(--muted);
     max-width: 34ch; margin: 0 auto 18px;
   }
 
   /* ── Bloque editorial: el Market Center de un lado, por qué crecer
         aquí del otro ── */
   .editorial { display: grid; grid-template-columns: 1fr 1.35fr; gap: 46px; align-items: start; }
-  .editorial-titulo { font-size: 27px; line-height: 1.15; letter-spacing: -0.025em; margin-bottom: 20px; }
-  .editorial-grande { font-size: 33px; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 26px; }
+  .editorial-titulo { font-size: 27px; line-height: 1.15; letter-spacing: -0.025em; margin-bottom: 20px; color: var(--text); }
+  .editorial-grande { font-size: 33px; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 26px; color: var(--text); }
   .editorial-foto {
     aspect-ratio: 4 / 3; margin-bottom: 18px; border-radius: 16px;
     background-image: url('/kwpremierweb/assets/img/equipo-kw-premier-sm.jpg');
     background-size: cover; background-position: center;
-    border: 1px solid rgba(255,255,255,0.16);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.82);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.16);
   }
-  .editorial-izq p { font-size: 14px; line-height: 1.6; color: var(--tenue); margin-bottom: 18px; }
+  .editorial-izq p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 18px; }
   .editorial-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 34px; }
-  .editorial-cols h4 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 10px; }
-  .editorial-cols p { font-size: 14px; line-height: 1.6; color: var(--tenue); margin-bottom: 12px; }
+  .editorial-cols h4 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 10px; color: var(--text); }
+  .editorial-cols p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 12px; }
 
   /* ── Reseñas ──
      En el lugar donde el ejemplo pone su fila de recetas. Se leen, no
      se ven, así que caben tres por renglón en vez de cinco. */
   .resenas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   .resena {
-    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
     border-radius: 14px;
-    backdrop-filter: blur(9px) saturate(130%);
-    -webkit-backdrop-filter: blur(9px) saturate(130%);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.16);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     padding: 24px; display: flex; flex-direction: column; gap: 13px;
   }
   .resena-estrellas { display: flex; gap: 2px; }
   .resena-estrellas svg { width: 16px; height: 16px; }
-  .resena-estrellas .llena { color: #FFC94A; }
-  .resena-estrellas .vacia { color: rgba(255,255,255,0.28); }
-  .resena-texto { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.92); flex: 1; }
+  .resena-estrellas .llena { color: #E8A600; }
+  .resena-estrellas .vacia { color: rgba(0,0,0,0.16); }
+  .resena-texto { font-size: 14px; line-height: 1.65; color: var(--text); flex: 1; }
   .resena-quien { display: flex; align-items: center; gap: 11px; }
   .resena-avatar {
     width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    background: #fff; color: var(--vino);
+    background: #FFF0F0; color: var(--red);
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700;
   }
-  .resena-nombre { font-size: 13.5px; font-weight: 700; }
-  .resena-rol { font-size: 12px; color: rgba(255,255,255,0.65); }
+  .resena-nombre { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .resena-rol { font-size: 12px; color: var(--muted); }
 
   /* ── Oficina y mapa ── */
   .oficina { display: flex; flex-direction: column; gap: 18px; }
   .oficina-mapa {
     position: relative; overflow: hidden; min-height: 420px; border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.18); background: #e6e6e6;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.82); background: #e6e6e6;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.16);
   }
   .oficina-mapa iframe { width: 100%; height: 100%; min-height: 420px; border: 0; display: block; }
   .oficina-datos { display: flex; flex-wrap: wrap; gap: 30px 46px; }
   .oficina-dato { display: flex; gap: 13px; align-items: flex-start; }
-  .oficina-dato > svg { width: 19px; height: 19px; color: #fff; flex-shrink: 0; margin-top: 2px; }
+  .oficina-dato > svg { width: 19px; height: 19px; color: var(--red); flex-shrink: 0; margin-top: 2px; }
   .oficina-dato-titulo {
     font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: rgba(255,255,255,0.6);
+    letter-spacing: 0.06em; color: var(--red);
   }
-  .oficina-dato-valor { font-size: 14.5px; line-height: 1.55; margin-top: 4px; max-width: 46ch; }
-  .oficina-dato-valor a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.4); }
-  .oficina-dato-valor a:hover { border-color: #fff; }
+  .oficina-dato-valor { font-size: 14.5px; line-height: 1.55; margin-top: 4px; max-width: 46ch; color: var(--text); }
+  .oficina-dato-valor a { color: var(--red); text-decoration: none; border-bottom: 1px solid rgba(138,0,0,0.35); }
+  .oficina-dato-valor a:hover { border-color: var(--red); }
 
-  /* ── Banda: el llamado a unirse al equipo ── */
-  .banda { background: #fff; text-align: center; padding: 72px 24px; }
+  /* ── Banda: el llamado a unirse al equipo ──
+     El único bloque de color de la página. Sobre el lienzo claro, el
+     guinda relleno es lo que hace que este llamado se vea como el
+     destino de todo lo de arriba y no como una sección más. */
+  .banda {
+    background:
+      radial-gradient(120% 140% at 15% -20%, rgba(150,20,20,0.55), transparent 62%),
+      linear-gradient(160deg, #6b0000 0%, var(--vino) 48%, var(--vino-hondo) 100%);
+    color: #fff; text-align: center; padding: 72px 24px;
+  }
   .banda h2 {
     font-size: 46px; line-height: 1.06; letter-spacing: -0.035em;
-    text-transform: uppercase; margin-bottom: 14px; color: var(--vino);
+    text-transform: uppercase; margin-bottom: 14px; color: #fff;
   }
-  .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: var(--vino); opacity: 0.82; }
+  .banda p { font-size: 15px; line-height: 1.6; max-width: 52ch; margin: 0 auto 28px; color: rgba(255,255,255,0.85); }
+  /* Sobre el guinda relleno el botón se voltea: blanco, como el de la
+     tapa pero al revés, para que siga siendo lo más claro del bloque. */
   .btn-banda {
     display: inline-flex; align-items: center; gap: 10px;
-    background: linear-gradient(160deg, #7a0000 0%, var(--vino) 100%);
-    color: #fff; border: none; border-radius: 10px;
-    box-shadow: 0 10px 26px rgba(92,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+    background: #fff; color: var(--vino); border: none; border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.24), inset 0 -1px 0 rgba(0,0,0,0.06);
     padding: 17px 38px; font-size: 15.5px; font-weight: 700; font-family: inherit;
-    cursor: pointer; transition: transform 0.12s, filter 0.15s;
+    cursor: pointer; transition: transform 0.12s, background 0.15s;
   }
-  .btn-banda:hover { filter: brightness(1.2); }
+  .btn-banda:hover { background: #ffeaea; }
   .btn-banda:active { transform: translateY(1px); }
   .btn-banda svg { width: 17px; height: 17px; }
 
-  /* ── Pie ── */
+  /* ── Pie ──
+     El mismo círculo de red social que Asesores, Propiedades y Nuestro
+     MC, para que el remate de todas las páginas públicas sea el mismo. */
   .pie {
-    background: var(--vino-hondo);
+    border-top: 1px solid var(--border);
     display: grid; grid-template-columns: auto 1fr auto; align-items: center;
     gap: 24px; padding: 34px 32px;
   }
   .pie-logo img { height: 40px; width: auto; display: block; }
-  .pie-dir { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center; }
-  .pie-social { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
-  .pie-social a { color: rgba(255,255,255,0.72); display: flex; transition: color 0.15s, transform 0.12s; }
-  .pie-social a:hover { color: #fff; transform: translateY(-2px); }
-  .pie-social svg { width: 20px; height: 20px; display: block; }
+  .pie-dir { font-size: 13px; line-height: 1.6; color: var(--muted); text-align: center; }
+  .pie-social { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .pie-social a {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #fff; border: 1.5px solid var(--border); color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+  .pie-social a:hover { background: #ffe0e0; color: var(--red); transform: translateY(-2px); }
+  .pie-social svg { width: 15px; height: 15px; display: block; }
 
   /* ── Pantallas medianas ── */
   @media (max-width: 1000px) {
@@ -346,7 +335,7 @@
 
     <div class="tapa-centro">
       <a href="/kwpremierweb/index.html" class="tapa-logo" aria-label="KW Premier">
-        <img src="/kwpremierweb/assets/img/logo-kw-premier-blanco.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
+        <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
       </a>
       <nav class="tapa-nav">
         <a href="propiedades.html">Propiedades</a>
@@ -508,7 +497,7 @@
 
   <footer class="pie">
     <a href="/kwpremierweb/index.html" class="pie-logo" aria-label="KW Premier">
-      <img src="/kwpremierweb/assets/img/logo-kw-premier-blanco.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
+      <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier · Keller Williams · Bienes Raíces" />
     </a>
     <div class="pie-dir" id="pie-dir"></div>
     <div class="pie-social">
