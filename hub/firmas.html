@@ -299,13 +299,6 @@
     -webkit-backdrop-filter: var(--vidrio-blur);
     box-shadow: var(--sombra-1);
   }
-  /* El hover del componente oscurece el borde, que sobre el vidrio se ve
-     como una raya sucia. Aquí se sube el brillo, que es como reaccionan
-     las demás piezas de vidrio del sitio. */
-  .hist-filtros .kw-select-btn:hover {
-    border-color: #fff;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.26);
-  }
   .hist-filtros .kw-select-valor { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* El botón del desplegable es una pastilla angosta a propósito, pero
      el menú que se abre no tiene por qué serlo: heredaba el mismo ancho
@@ -355,18 +348,22 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: var(--sp-3); flex-wrap: wrap;
     padding: 10px 14px; border-radius: 12px;
-    background: rgba(255,255,255,0.14);
-    border: 1px solid rgba(255,255,255,0.28);
-    color: #fff; font-size: 13px; font-weight: 700;
+    /* Era vidrio blanco translúcido con el texto en blanco, de cuando
+       había fondo guinda detrás. Sobre el lienzo claro no se veía ni la
+       barra ni lo que decía: ahora es el pastel guinda del tema, que es
+       lo que el sitio usa para destacar sin sacar del blanco. */
+    background: var(--pastel-rojo);
+    border: 1px solid rgba(138,0,0,0.18);
+    color: var(--pastel-rojo-txt); font-size: 13px; font-weight: 700;
     margin-bottom: var(--sp-3);
   }
   .barra-sel-acciones { display: flex; gap: 7px; }
   .btn-sel {
-    padding: 7px 14px; border-radius: 999px; border: none;
+    padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(138,0,0,0.18);
     background: #fff; color: var(--red);
     font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
   }
-  .btn-sel.apagado { background: rgba(255,255,255,0.18); color: #fff; }
+  .btn-sel.apagado { background: none; border-color: transparent; color: var(--pastel-rojo-txt); }
 
   .fila-check { display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .fila-check input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--red); }
