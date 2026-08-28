@@ -80,6 +80,12 @@
      sobre blanco se lee como recuadro de formulario viejo. */
   --border: rgba(23,10,10,0.09);
 
+  /* El guinda de la marca. Va aquí y no solo en kw-base.css porque hay
+     pantallas que cargan esta hoja sola (el login, el alta, la API), y
+     esta misma hoja lo usa más abajo: sin la declaración se quedaban
+     sin color de marca y cada una lo traía copiado en su <style>. */
+  --red: #8a0000;
+
   --text: #191414;
   --muted: #736c6c;
   --placeholder: #b5adad;
@@ -132,6 +138,12 @@
    la franja de rebote al llegar al tope o al fondo del scroll en
    celular, y en negro se veía como si la página se acabara. */
 html { background-color: var(--lienzo); }
+
+/* El color del texto lo pone el tema, no cada página. Sin esta regla,
+   lo que no traiga un color propio se queda con el negro del navegador,
+   que es más duro que el --text de la casa: en la misma pantalla convivían
+   dos negros distintos según qué elemento fuera. */
+body { color: var(--text); }
 
 /* La capa del fondo se vuelve a declarar entera, y no solo con --bg,
    porque la cuadrícula necesita su propio tamaño de repetición. Con
@@ -207,6 +219,12 @@ header.kw-header-partido {
 
 .hamburger-btn { color: var(--text); }
 .hamburger-btn:hover { color: var(--red); }
+
+/* El aro de carga nació blanco, porque siempre giraba sobre el fondo
+   guinda oscuro. Sobre el lienzo claro giraba en blanco sobre blanco:
+   la pantalla se veía vacía mientras cargaba, y cada página que lo notó
+   se puso a pintarlo de guinda por su cuenta. Va aquí, una vez. */
+.kw-loader .circle { border-top-color: var(--red); }
 
 /* ══════════════════════════════════════════════════════════
    Tarjetas y listas
