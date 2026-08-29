@@ -255,7 +255,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829y">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829z">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
@@ -303,6 +303,11 @@
      El min-width:0 es lo que las deja encogerse en celular; sin él no
      bajan de su ancho natural y empujan la página de lado. */
   .barra-superior .kw-tabs { margin-bottom: 0; flex: 0 1 auto; min-width: 0; }
+  /* Sin la raya de abajo: aquí las pestañas van en el renglón del
+     título, no encima de un panel, así que esa raya se veía como un
+     subrayado suelto a media fila. La de la pestaña abierta se queda,
+     que es la que dice cuál es. */
+  .barra-superior .kw-tabs.planas { border-bottom: 0; }
   .barra-superior > .btn-formatos { flex-shrink: 0; }
 
   /* Todos los paneles arrancan del mismo alto, así cambiar de pestaña
@@ -431,7 +436,12 @@
      la página. */
   /* La misma separación arriba que abajo: pegado a la tarjeta de arriba
      y despegado de la lista, el menú se leía como parte de la tarjeta. */
-  #asesores-tabs { margin: var(--sp-4) 0; width: max-content; max-width: 100%; }
+  /* Antes iban en su barra gris, y estirada a todo lo ancho dejaba un
+     plano vacío a la derecha de la última pestaña; por eso medía lo que
+     su contenido. Planas es al revés: la raya de abajo es la que separa
+     las pestañas de la lista, y cortada a la mitad de la tarjeta se veía
+     como un subrayado suelto. */
+  #asesores-tabs { margin: var(--sp-4) 0; }
   #asesores-tabs:empty { display: none; }
 
   /* La lista cuelga del panel, sin tarjeta detrás: cada renglón ya es
@@ -541,7 +551,7 @@
           <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
           <p class="kw-page-desc" id="panel-desc"></p>
         </div>
-        <div class="kw-tabs" data-kw-tabs="panel-paneles" id="panel-tabs">
+        <div class="kw-tabs planas" data-kw-tabs="panel-paneles" id="panel-tabs">
           <button type="button" class="kw-tab activo" data-tab="asesores">Asesores</button>
           <button type="button" class="kw-tab" data-tab="usuarios">Agregar usuarios</button>
           <button type="button" class="kw-tab" data-tab="documentos">Documentos</button>
@@ -606,7 +616,7 @@
              lo que de verdad venga, así que aquí nacen vacías; el
              data-kw-tabs también lo pone el JS, porque kw-ui arma cada
              barra una sola vez y armarla sin botones la dejaría muerta. -->
-        <div class="kw-tabs" id="asesores-tabs"></div>
+        <div class="kw-tabs planas" id="asesores-tabs"></div>
         <div class="kw-tabpanels" id="asesores-paneles">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
