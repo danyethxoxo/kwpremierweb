@@ -230,22 +230,36 @@
     }
     .card-cta svg { width: 13px; height: 13px; }
 
-    /* Las clases de color siguen existiendo por el marcado que ya hay
-       en la página, pero todas apuntan al mismo vino: la plataforma
-       es de un solo color, no una por herramienta. */
-    .card.c-red    { --card-color: var(--red); }
-    .card.c-orange { --card-color: var(--red); }
-    .card.c-blue   { --card-color: var(--red); }
-    .card.c-green  { --card-color: var(--red); }
-    .card.c-purple { --card-color: var(--red); }
-    .card.c-pink   { --card-color: var(--red); }
+    /* Cada herramienta con su color, de la paleta del tema (kw-claro.css).
+       Estuvieron un tiempo las seis apuntando al mismo vino, y la
+       cuadrícula entera se leía como un solo bloque rojo: el color
+       dejaba de servir para distinguir una tarjeta de otra. */
+    .card.c-red    { --tono: var(--pastel-rojo-txt);     --tinte: var(--tinte-rojo); }
+    .card.c-orange { --tono: var(--pastel-durazno-txt);  --tinte: var(--tinte-durazno); }
+    .card.c-blue   { --tono: var(--pastel-cielo-txt);    --tinte: var(--tinte-cielo); }
+    .card.c-green  { --tono: var(--pastel-menta-txt);    --tinte: var(--tinte-menta); }
+    .card.c-purple { --tono: var(--pastel-lavanda-txt);  --tinte: var(--tinte-lavanda); }
+    .card.c-pink   { --tono: var(--pastel-rosa-txt);     --tinte: var(--tinte-rosa); }
 
-    .card.c-red    .card-big, .card.c-red    .card-cta { color: var(--red); }
-    .card.c-orange .card-big, .card.c-orange .card-cta { color: var(--red); }
-    .card.c-blue   .card-big, .card.c-blue   .card-cta { color: var(--red); }
-    .card.c-green  .card-big, .card.c-green  .card-cta { color: var(--red); }
-    .card.c-purple .card-big, .card.c-purple .card-cta { color: var(--red); }
-    .card.c-pink   .card-big, .card.c-pink   .card-cta { color: var(--red); }
+    .card .card-big, .card .card-cta { color: var(--tono, var(--red)); }
+
+    /* El mismo baño de color que las tarjetas del portal: sale de la
+       esquina de abajo a la izquierda y se disuelve antes del centro. */
+    .card {
+      background-image:
+        var(--puntos-tarjeta),
+        radial-gradient(118% 100% at -4% 104%, var(--tinte, var(--tinte-rojo)) 0%, transparent 66%),
+        var(--card-degradado);
+      background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%, 100% 100%;
+      background-repeat: repeat, no-repeat, no-repeat;
+      background-color: var(--card);
+    }
+    .card:hover {
+      background-image:
+        var(--puntos-tarjeta),
+        radial-gradient(140% 122% at -4% 104%, var(--tinte, var(--tinte-rojo)) 0%, transparent 74%),
+        var(--card-degradado);
+    }
 
 
     .footer {
