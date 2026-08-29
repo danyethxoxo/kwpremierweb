@@ -303,49 +303,59 @@ header.kw-header-partido {
 .hover-card:has(.icon-acuerdos)    { --tinte: var(--tinte-cielo);    --pastel: var(--pastel-cielo);    --tono: var(--pastel-cielo-txt); }
 .hover-card:has(.icon-contratos)   { --tinte: var(--tinte-crema);    --pastel: var(--pastel-crema);    --tono: var(--pastel-crema-txt); }
 
-/* El ícono y la flecha toman el color de su tarjeta, no el guinda de la
-   marca: con diez tarjetas, diez cuadros rojos hacen que el tablero se
-   lea como un solo bloque y el color deje de servir para distinguirlas. */
-.hover-card .hover-card-icon { background: var(--pastel); }
+/* ── En reposo: el color solo en los contornos ──
+   Rellenar de color las diez tarjetas a la vez ensuciaba el tablero:
+   diez manchas pastel compitiendo entre ellas y con el texto. Así que
+   en reposo la tarjeta es blanca como todas las demás del sitio y el
+   color se queda en el filo: el de la tarjeta y el del cuadro del
+   ícono. Se distingue qué es cada una sin volver la pantalla un
+   mosaico.
+
+   El filo va al 34% del tono y no a color pleno: diez recuadros de
+   colores fuertes se leen como una alarma, no como un orden. Quien no
+   entienda color-mix se queda con el borde neutro del renglón de
+   arriba; se ve más sobrio, no roto. */
+.hover-card { border-color: var(--border); }
+.hover-card { border-color: color-mix(in srgb, var(--tono) 34%, transparent); }
+
+.hover-card .hover-card-icon {
+  background: transparent;
+  border: 1.5px solid var(--tono);
+  transition: background var(--t-medio), border-color var(--t-medio);
+}
 .hover-card .hover-card-icon svg { color: var(--tono); }
 .hover-card .hover-card-arrow { background: var(--tono); color: #fff; }
 
-/* Al pasar el cursor, el cuadro y la flecha se ponen blancos y el dibujo
-   se queda con el color de la tarjeta. Antes se rellenaban de guinda:
-   el color le ganaba al de la propia tarjeta, y las diez terminaban
-   igual justo en el momento en que se les pone atención. */
-.hover-card:hover .hover-card-icon { background: #fff; }
-.hover-card:hover .hover-card-icon svg { color: var(--tono); }
-.hover-card:hover .hover-card-arrow {
-  background: #fff;
-  color: var(--tono);
-  /* La flecha blanca sobre la tarjeta clara necesita su propio filo
-     para no desaparecer. */
-  border: 1px solid var(--border);
-  box-shadow: var(--sombra-1);
+/* ── Al pasar el cursor: se enciende ──
+   Entra el baño de color de la tarjeta (más abajo) y el cuadro del
+   ícono se rellena del tono, con el dibujo en blanco. El color aparece
+   donde se está poniendo la atención, que es justo para lo que sirve. */
+.hover-card:hover { border-color: color-mix(in srgb, var(--tono) 62%, transparent); }
+.hover-card:hover .hover-card-icon {
+  background: var(--tono);
+  border-color: var(--tono);
 }
+.hover-card:hover .hover-card-icon svg { color: #fff; }
 
+/* En reposo la tarjeta va limpia, con el mismo blanco de las demás del
+   sitio. El baño de color solo aparece al pasar el cursor. */
 .hover-card {
-  background-image:
-    var(--puntos-tarjeta),
-    radial-gradient(118% 100% at -4% 104%, var(--tinte) 0%, transparent 66%),
-    var(--card-degradado);
-  background-size:
-    var(--paso-tarjeta) var(--paso-tarjeta),
-    100% 100%,
-    100% 100%;
-  background-repeat: repeat, no-repeat, no-repeat;
+  background-image: var(--puntos-tarjeta), var(--card-degradado);
+  background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%;
+  background-repeat: repeat, no-repeat;
+  transition: background-image var(--t-medio), border-color var(--t-medio),
+              box-shadow var(--t-rapido), transform var(--t-rapido);
 }
 
-/* Al pasar el cursor el baño crece y sube de intensidad, en vez de
-   aplanarse a blanco. Lo que se busca es que la tarjeta se encienda, no
-   que se apague para distinguirse. */
+/* El baño de color entra desde la esquina de abajo a la izquierda y se
+   disuelve antes del centro. Sale de abajo y no de arriba a propósito:
+   arriba está el ícono, que para entonces ya se rellenó del mismo tono,
+   y dos manchas iguales juntas se leen como una sola mal recortada. */
 .hover-card:hover {
   background-image:
     var(--puntos-tarjeta),
     radial-gradient(140% 122% at -4% 104%, var(--tinte) 0%, transparent 74%),
     var(--card-degradado);
-  border-color: rgba(23,10,10,0.14);
   box-shadow: var(--sombra-2);
   transform: translateY(-3px);
 }
