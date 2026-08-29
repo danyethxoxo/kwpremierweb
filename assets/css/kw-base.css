@@ -812,7 +812,7 @@ header > *:last-child { margin-left: auto; }
    alcance a ver, que es la mitad del efecto. */
 .drawer {
   position: fixed; top: 10px; left: 12px; bottom: 10px;
-  width: 280px; max-width: 82vw;
+  width: var(--panel-ancho, 280px); max-width: 82vw;
   z-index: 201; border-radius: 22px; overflow: hidden;
   background:
     radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),
@@ -1262,3 +1262,65 @@ header > *:last-child { margin-left: auto; }
 .notif-item-msg { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .notif-item-fecha { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .notif-vacio { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ══════════════════════════════════════════════════════════════
+   Las notificaciones, en panel lateral
+   ══════════════════════════════════════════════════════════════
+   Eran un recuadro de 320×420 colgando de la campanita. Al lado del
+   menú, que ya es una gaveta de alto completo, se veía como una pieza
+   de otro juego: mismo sitio, dos maneras distintas de enseñar una
+   lista.
+
+   Ahora es el mismo panel, del mismo tamaño y del mismo material, solo
+   que entra por la derecha. Abre con clic y nada más: el menú se
+   ensancha al acercar el cursor porque está siempre a la vista y roza
+   sin querer no cuesta nada; unas notificaciones que se abrieran solas
+   al pasar por encima taparían la pantalla sin que nadie las pidiera.
+
+   Debajo de 1024px no aplica: ahí la campanita ya manda derecho a la
+   página de notificaciones. */
+@media (min-width: 1024px) {
+  html.kw-riel .notif-dropdown {
+    position: fixed; top: 10px; right: 12px; bottom: 10px; left: auto;
+    width: var(--panel-ancho, 280px); max-width: 82vw; max-height: none;
+    border-radius: 22px;
+    background:
+      radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),
+      radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%),
+      linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+    border: 1px solid rgba(255,255,255,0.82);
+    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: 0 18px 48px rgba(0,0,0,0.34),
+                inset 0 1px 0 rgba(255,255,255,0.95),
+                inset 0 -1px 0 rgba(255,255,255,0.30),
+                inset 1px 0 0 rgba(255,255,255,0.38);
+    z-index: 201;
+    /* Entra deslizando desde su orilla, igual que el menú, en vez de
+       aparecer creciendo desde una esquina. */
+    transform: translateX(calc(100% + 16px));
+    transition: transform var(--t-lento) var(--curva);
+    opacity: 1; visibility: visible;
+  }
+  html.kw-riel .notif-dropdown.abierto { transform: translateX(0); }
+  /* Cerrado no recibe clics ni se puede tabular hasta él, aunque siga
+     visible para poder animarlo. */
+  html.kw-riel .notif-dropdown:not(.abierto) { pointer-events: none; }
+  /* El velo va por DEBAJO del header (z-index 90) y no encima. El panel
+     vive dentro del header, que al ser fijo y con z-index arma su propio
+     contexto de apilado: por más que el panel pida 201, no puede salirse
+     de ahí. Con el velo arriba, el panel salía atenuado como si
+     estuviera apagado. Debajo, el panel se ve limpio y el velo sigue
+     tapando la página y atrapando el clic que lo cierra. */
+  html.kw-riel .notif-backdrop { z-index: 89; }
+
+  /* El encabezado y los renglones se acomodan al ancho del panel. */
+  html.kw-riel .notif-dropdown-head { padding: 18px 20px; font-size: 14px; }
+  html.kw-riel .notif-dropdown-list { padding: 6px 10px; }
+  html.kw-riel .notif-item {
+    background: none; border-bottom: 0; border-radius: 12px;
+    padding: 11px 12px; margin-bottom: 2px;
+  }
+  html.kw-riel .notif-item:hover { background: rgba(255,255,255,0.55); }
+  html.kw-riel .notif-item-nuevo { background: rgba(138,0,0,0.05); }
+  html.kw-riel .notif-item-nuevo:hover { background: rgba(138,0,0,0.09); }
+}
