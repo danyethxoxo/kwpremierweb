@@ -193,9 +193,39 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder { color: v
    angosta, así que aquí se esconde para no decir lo mismo dos veces. */
 .kw-page-encabezado { margin-bottom: var(--sp-5); }
 
+/* ── El encabezado con botones ──
+   Una pantalla que tiene algo que hacer desde arriba (levantar un
+   dictamen, abrir un menú de herramientas) pone sus botones en el mismo
+   renglón del título, pegados a la orilla derecha:
+     <div class="kw-page-encabezado con-acciones">
+       <h1 class="kw-page-titulo">…</h1>
+       <div class="kw-page-acciones"> … </div>
+     </div>
+   Así el título queda en el mismo lugar en todas las pantallas, tengan
+   botones o no, en vez de que cada una se arme su propia cinta. */
+.kw-page-encabezado.con-acciones {
+  display: flex; align-items: center; gap: var(--sp-3);
+}
+/* El título se pega al tope del renglón en vez de centrarse en él: los
+   botones son un poco más altos que la línea del título, y centrado se
+   iba dos pixeles más abajo que el de las pantallas sin botones. Son dos
+   pixeles, pero es justo lo que hace que al cambiar de pantalla el
+   título se vea "brincar". */
+.kw-page-encabezado.con-acciones > .kw-page-titulo { align-self: flex-start; }
+.kw-page-acciones {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; margin-left: auto;
+}
+
 @media (max-width: 640px) {
   .kw-page { padding: 82px var(--sp-3) var(--sp-5); }
   .kw-page-encabezado { display: none; }
+  /* El título se repite en el header cuando la pantalla es angosta, pero
+     los botones no viven en ningún otro lado: el bloque se queda y lo
+     que se esconde es nada más el título. */
+  .kw-page-encabezado.con-acciones { display: flex; }
+  .kw-page-encabezado.con-acciones > .kw-page-titulo,
+  .kw-page-encabezado.con-acciones > .kw-page-desc { display: none; }
 }
 
 /* ── Tarjeta ──
