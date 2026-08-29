@@ -17,8 +17,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829p">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829o">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829q">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
@@ -55,10 +55,17 @@
   .limpiar-busq svg { width: 14px; height: 14px; }
   .limpiar-busq.se-ve { display: flex; }
 
-  /* ── Ruta de carpetas ── */
+  /* ── Ruta de carpetas ──
+     Un solo renglón: las migas de dónde estás parado a la izquierda y,
+     hasta la orilla derecha (donde termina la tarjeta de un archivo),
+     las dos flechas para regresar y volver a entrar. */
   .ruta {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; margin-bottom: var(--sp-3); min-height: 30px;
+  }
+  .ruta-migas {
+    flex: 1; min-width: 0;
     display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
-    font-size: 13px; margin-bottom: var(--sp-3); min-height: 24px;
   }
   .ruta button {
     border: none; background: none; cursor: pointer; font-family: inherit;
@@ -68,16 +75,35 @@
   .ruta button:hover { background: rgba(0,0,0,0.05); color: var(--text); }
   .ruta .actual { color: var(--text); font-weight: 700; padding: 4px 7px; }
   .ruta .sep { color: var(--muted); font-size: 12px; }
-  /* En la raíz no hay ruta que mostrar (pintarRuta la deja vacía): sin
-     esto igual se reservaban 38px en blanco por el min-height y el
-     margen, aunque no hubiera nada que enseñar ahí. Al entrar a una
-     carpeta sí trae contenido y vuelve a ocupar su alto normal. */
+
+  /* Las dos flechas van juntas, del tamaño de un botón chico, para que
+     se lean como un par y no como dos adornos sueltos. */
+  .ruta-flechas { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ruta-flechas button {
+    width: 30px; height: 30px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 9px; background: #fff;
+    color: var(--muted); box-shadow: 0 1px 2px rgba(40,12,12,0.05);
+    transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
+  }
+  .ruta-flechas button:hover:not([disabled]) {
+    color: var(--red); border-color: color-mix(in srgb, var(--red) 32%, transparent);
+    background: #fff;
+  }
+  /* Sin lugar a dónde ir se quedan a la vista pero apagadas: si
+     desaparecieran, el renglón entero brincaría de ancho cada vez que
+     se entra o se sale de una carpeta. */
+  .ruta-flechas button[disabled] { opacity: 0.38; cursor: default; }
+  .ruta-flechas svg { width: 15px; height: 15px; }
+  /* Mientras carga el árbol todavía no hay ruta que pintar; sin esto se
+     reservaban 42px en blanco arriba del loader. */
   .ruta:empty { min-height: 0; margin-bottom: 0; }
 
-  /* Los renglones, el cuadro de ícono, los rótulos de grupo y el estado
-     vacío salen del sistema (.kw-fila, .kw-fila-icono, .kw-rotulo,
-     .kw-vacio). Aquí vivían copiados, con el vidrio de cuando el fondo
-     era oscuro y con casi todos los tipos de archivo en rojo. */
+  /* Los renglones, el cuadro de ícono y el estado vacío salen del
+     sistema (.kw-fila, .kw-fila-icono, .kw-vacio), y de ahí sale
+     también el color que toman al pasarles el mouse. Aquí vivían
+     copiados, con el vidrio de cuando el fondo era oscuro y con casi
+     todos los tipos de archivo en rojo. */
 
   .aviso {
     font-size: 12.5px; color: var(--pastel-crema-txt); background: var(--pastel-crema);
@@ -109,7 +135,6 @@
   <main class="kw-page">
     <div class="kw-page-encabezado">
       <div class="kw-page-titulo">Documentos de Drive</div>
-      <div class="kw-page-desc">La carpeta compartida del Market Center, desde aquí.</div>
     </div>
 
     <div class="buscador">
@@ -139,6 +164,13 @@
   var raiz = null;
   var carpetaActual = null;
   var porId = {};
+  // En qué paso de la navegación de esta pantalla estamos y hasta dónde
+  // llega la rama hacia adelante. Es lo que decide si las flechas de la
+  // ruta están vivas: el navegador no dice cuántas páginas trae
+  // guardadas, así que se lleva la cuenta aquí. La raíz es el paso 0, y
+  // por eso "regresar" nunca alcanza a sacar de la página.
+  var pasoActual = 0;
+  var pasoTope = 0;
 
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -228,27 +260,57 @@
 
   function pintarRuta() {
     var cont = document.getElementById('ruta');
-    if (document.getElementById('busq').value.trim()) { cont.innerHTML = ''; return; }
+    if (!raiz) { cont.innerHTML = ''; return; }
 
-    var cadena = [], p = carpetaActual, guarda = 0;
-    while (p && p !== raiz && guarda++ < 20) {
-      var c = porId[p];
-      if (!c) break;
-      cadena.unshift(c);
-      p = c.padre;
+    // Buscando no hay carpeta en la que se esté parado (los resultados
+    // salen de todo el árbol), así que las migas se van y quedan solo
+    // las flechas.
+    var migas = '';
+    if (!document.getElementById('busq').value.trim()) {
+      var cadena = [], p = carpetaActual, guarda = 0;
+      while (p && p !== raiz && guarda++ < 20) {
+        var c = porId[p];
+        if (!c) break;
+        cadena.unshift(c);
+        p = c.padre;
+      }
+
+      if (cadena.length) {
+        migas = '<button type="button" data-ir="' + esc(raiz) + '">Documentos</button>';
+        cadena.forEach(function (c, i) {
+          migas += '<span class="sep">›</span>';
+          migas += (i === cadena.length - 1)
+            ? '<span class="actual">' + esc(c.nombre) + '</span>'
+            : '<button type="button" data-ir="' + esc(c.id) + '">' + esc(c.nombre) + '</button>';
+        });
+      }
     }
 
-    var html = '<button type="button" data-ir="' + esc(raiz) + '">Documentos</button>';
-    cadena.forEach(function (c, i) {
-      html += '<span class="sep">›</span>';
-      html += (i === cadena.length - 1)
-        ? '<span class="actual">' + esc(c.nombre) + '</span>'
-        : '<button type="button" data-ir="' + esc(c.id) + '">' + esc(c.nombre) + '</button>';
-    });
-    cont.innerHTML = cadena.length ? html : '';
+    cont.innerHTML =
+      '<div class="ruta-migas">' + migas + '</div>' +
+      '<div class="ruta-flechas">' +
+        '<button type="button" data-nav="atras" title="Regresar" aria-label="Regresar"' +
+          (pasoActual > 0 ? '' : ' disabled') + '>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
+        '</button>' +
+        '<button type="button" data-nav="adelante" title="Ir adelante" aria-label="Ir adelante"' +
+          (pasoActual < pasoTope ? '' : ' disabled') + '>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '</button>' +
+      '</div>';
 
     cont.querySelectorAll('[data-ir]').forEach(function (b) {
       b.addEventListener('click', function () { abrirCarpeta(b.dataset.ir); });
+    });
+    // Las flechas mueven el historial del navegador, no la carpeta: así
+    // hacen exactamente lo mismo que el "atrás" del navegador y las dos
+    // formas de moverse no se pelean. Quien repinta es popstate.
+    cont.querySelectorAll('[data-nav]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        if (b.dataset.nav === 'atras') history.back();
+        else history.forward();
+      });
     });
   }
 
@@ -276,18 +338,15 @@
       return;
     }
 
+    // Las carpetas van primero y luego los archivos, pero sin los
+    // rótulos de "Carpetas" y "Archivos" encima: el cuadro de color y
+    // la flecha de cada renglón ya dicen cuál es cuál, y los dos
+    // letreros nada más partían la lista en dos sin agregar nada.
     var carpetas = lista.filter(function (e) { return e.tipo === 'carpeta'; });
     var archivos = lista.filter(function (e) { return e.tipo === 'archivo'; });
-    var html = '';
-    if (carpetas.length) {
-      html += '<div class="kw-rotulo">Carpetas</div><div class="kw-lista">' +
-        carpetas.map(function (e) { return filaHTML(e, buscando); }).join('') + '</div>';
-    }
-    if (archivos.length) {
-      html += '<div class="kw-rotulo">Archivos</div><div class="kw-lista">' +
-        archivos.map(function (e) { return filaHTML(e, buscando); }).join('') + '</div>';
-    }
-    cont.innerHTML = html;
+    cont.innerHTML = '<div class="kw-lista">' +
+      carpetas.concat(archivos).map(function (e) { return filaHTML(e, buscando); }).join('') +
+      '</div>';
 
     cont.querySelectorAll('[data-carpeta]').forEach(function (a) {
       a.addEventListener('click', function (ev) {
@@ -306,15 +365,23 @@
   function abrirCarpeta(id, marcar) {
     carpetaActual = id;
     document.getElementById('busq').value = '';
+    if (marcar !== false) {
+      // Entrar a una carpeta nueva corta la rama de adelante: lo que se
+      // había navegado y luego deshecho ya no se puede rehacer, igual
+      // que en el navegador.
+      pasoActual += 1;
+      pasoTope = pasoActual;
+      history.pushState({ kwCarpeta: id, kwPaso: pasoActual }, '', location.href);
+    }
     pintar();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (marcar !== false) history.pushState({ kwCarpeta: id }, '', location.href);
   }
 
   window.addEventListener('popstate', function (ev) {
     var id = (ev.state && ev.state.kwCarpeta) || raiz;
     if (!id) return; // todavía no ha cargado el árbol
     carpetaActual = id;
+    pasoActual = (ev.state && typeof ev.state.kwPaso === 'number') ? ev.state.kwPaso : 0;
     document.getElementById('busq').value = '';
     pintar();
   });
@@ -353,7 +420,9 @@
       // Se reemplaza el estado inicial (no se "empuja") para que la
       // raíz no cuente como un paso navegado: el primer "atrás" desde
       // ahí sí debe salir al portal, como se espera.
-      history.replaceState({ kwCarpeta: raiz }, '', location.href);
+      history.replaceState({ kwCarpeta: raiz, kwPaso: 0 }, '', location.href);
+      pasoActual = 0;
+      pasoTope = 0;
 
       if (data.truncado) {
         document.getElementById('aviso-tope').innerHTML =

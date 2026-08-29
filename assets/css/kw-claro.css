@@ -362,6 +362,11 @@ header.kw-header-partido {
     var(--puntos-tarjeta),
     radial-gradient(140% 122% at -4% 104%, var(--tinte) 0%, transparent 74%),
     var(--card-degradado);
+  /* Al entrar el baño son tres capas y no dos. Sin repetir aquí los
+     tamaños, la lista de dos que trae la tarjeta se da la vuelta y el
+     degradado del fondo termina mosaicado cada 16px, como los puntos. */
+  background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%, 100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat;
   box-shadow: var(--sombra-2);
   transform: translateY(-3px);
 }
@@ -455,3 +460,45 @@ header.kw-header-partido {
 .kw-fila-icono.tipo-pdf     { --pastel: var(--pastel-rosa);    --tono: var(--pastel-rosa-txt); }
 .kw-fila-icono.tipo-img     { --pastel: var(--pastel-lavanda); --tono: var(--pastel-lavanda-txt); }
 .kw-fila-icono.tipo-otro    { --pastel: #f1f1f0;               --tono: #6b6b6b; }
+
+/* ── El renglón se enciende igual que las tarjetas del hub ──
+   El color lo manda el ícono, como en las tarjetas: con :has() se sube
+   el juego de la paleta del cuadrito al renglón entero, y así el baño
+   de fondo, el filo y el relleno del cuadro salen del mismo tono sin
+   escribirlo dos veces.
+
+   Solo entra en las listas que sí distinguen por tipo (las que traen
+   .kw-fila-icono). Un renglón de personas o de trámites no tiene un
+   color propio que encender, y queda como estaba. */
+.kw-fila:has(.kw-fila-icono.tipo-carpeta) { --tinte: var(--tinte-rojo);    --tono: var(--pastel-rojo-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-doc)     { --tinte: var(--tinte-cielo);   --tono: var(--pastel-cielo-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-hoja)    { --tinte: var(--tinte-menta);   --tono: var(--pastel-menta-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-pres)    { --tinte: var(--tinte-crema);   --tono: var(--pastel-crema-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-pdf)     { --tinte: var(--tinte-rosa);    --tono: var(--pastel-rosa-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-img)     { --tinte: var(--tinte-lavanda); --tono: var(--pastel-lavanda-txt); }
+.kw-fila:has(.kw-fila-icono.tipo-otro)    { --tinte: rgba(90,90,90,0.13);  --tono: #6b6b6b; }
+
+.kw-fila:has(.kw-fila-icono) {
+  transition: background-image var(--t-medio), border-color var(--t-medio),
+              box-shadow var(--t-rapido);
+}
+/* El mismo baño que las tarjetas: entra por la esquina de abajo a la
+   izquierda y se disuelve antes del centro. */
+.kw-fila:has(.kw-fila-icono):hover {
+  background-image:
+    var(--puntos-tarjeta),
+    radial-gradient(96% 190% at -2% 104%, var(--tinte) 0%, transparent 72%),
+    var(--card-degradado);
+  background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%, 100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat;
+  border-color: color-mix(in srgb, var(--tono) 52%, transparent);
+}
+/* El cuadro del ícono se rellena del tono con el dibujo en blanco, y la
+   flecha del renglón deja el gris y toma el color de la fila. */
+.kw-fila:has(.kw-fila-icono):hover .kw-fila-icono {
+  background: var(--tono);
+  color: #fff;
+}
+.kw-fila-icono { transition: background var(--t-medio), color var(--t-medio); }
+.kw-fila-flecha { transition: transform 0.22s, color var(--t-medio); }
+.kw-fila:has(.kw-fila-icono):hover .kw-fila-flecha { color: var(--tono); }
