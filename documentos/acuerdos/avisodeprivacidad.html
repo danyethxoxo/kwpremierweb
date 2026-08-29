@@ -19,61 +19,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<style>
-  @view-transition { navigation: auto; }
-  @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
-
-  ::view-transition-group(root) {
-    animation-duration: 0.32s;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  ::view-transition-old(root) { animation-name: kw-exit-forward; }
-  ::view-transition-new(root) { animation-name: kw-enter-forward; }
-  :active-view-transition-type(back)::view-transition-old(root) { animation-name: kw-exit-back; }
-  :active-view-transition-type(back)::view-transition-new(root) { animation-name: kw-enter-back; }
-
-  @keyframes kw-enter-forward { from { transform: translateX(100%); } to { transform: translateX(0); } }
-  @keyframes kw-exit-forward  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
-  @keyframes kw-enter-back    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-  @keyframes kw-exit-back     { from { transform: translateX(0); } to { transform: translateX(100%); } }
-</style>
-<script>
-  // Transición tipo app entre páginas: avanzar desliza de derecha a izquierda,
-  // retroceder desliza de izquierda a derecha. Sin efecto en navegadores que no
-  // soportan cross-document view transitions (Safari/Firefox) - navegación normal.
-  //
-  // La dirección se marca según QUÉ link se clickeó (el botón "Regresar", el logo
-  // y el breadcrumb cuentan como "retroceso"; cualquier otro link cuenta como
-  // "avance"), no según el historial del navegador - un link de "Regresar" es,
-  // para el navegador, una navegación hacia adelante como cualquier otra.
-  (function () {
-    document.addEventListener('click', function (e) {
-      var a = e.target.closest('a[href]');
-      if (!a || a.target === '_blank') return;
-      var url;
-      try { url = new URL(a.href, location.href); } catch (err) { return; }
-      if (url.origin !== location.origin) return;
-      var isBack = !!a.closest('.back-btn, .breadcrumb, .logo');
-      sessionStorage.setItem('kwPendingDirection', isBack ? 'back' : 'forward');
-    }, true);
-
-    function markDirection(event) {
-      if (!event.viewTransition) return;
-      var direction = sessionStorage.getItem('kwPendingDirection') || 'forward';
-      sessionStorage.removeItem('kwPendingDirection');
-      event.viewTransition.types.add(direction);
-      // Al llegar por una transición, la entrada ya la hizo la propia
-      // transición. Si además corre la aparición escalonada del CSS, el
-      // contenido se ve aparecer, irse y volver: ese es el parpadeo.
-      if (event.type === 'pagereveal') {
-        document.documentElement.classList.add('kw-vino-de-transicion');
-      }
-    }
-
-    window.addEventListener('pageswap', markDirection);
-    window.addEventListener('pagereveal', markDirection);
-  })();
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
