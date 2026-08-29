@@ -23,6 +23,24 @@ usan otro carácter (`─`, U+2500) y esos sí se quedan.
   tarjeta blanca, borde suave, esquinas redondeadas y sombra.
 - Las pestañas usan `.kw-tabs` / `.kw-tab` del mismo archivo.
 
+## Archivos compartidos y el caché
+
+Las hojas y los scripts de `assets/` se enlazan con una versión pegada
+al final (`kw-claro.css?v=20260829`). Es lo único que hace que el
+navegador y el CDN de GitHub Pages se bajen la copia nueva: sin cambiar
+ese número, quien ya visitó el sitio sigue viendo la versión anterior
+aunque el archivo ya esté subido.
+
+**Al tocar cualquier archivo de `assets/`, hay que subirle la versión en
+todos los lugares que lo enlazan** (las páginas, y el `@import` que
+kw-base.css le hace a kw-ui.css). Se usa la fecha del día.
+
+Ya pasó de no hacerlo: nueve archivos se quedaron sirviendo copias de
+hasta un mes atrás, así que cambios que se veían bien en local no
+llegaban a nadie. Para revisarlo, comparar la versión que piden las
+páginas contra la fecha del último cambio real de cada archivo
+(`git log -1 -- assets/...`).
+
 ## Base de datos
 
 Las migraciones viven en `supabase/sql/` y se corren a mano desde el SQL
