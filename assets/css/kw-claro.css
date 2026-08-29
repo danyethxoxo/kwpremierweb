@@ -111,12 +111,18 @@
      encima sin quedarse corta de contraste. Ponerle a ojo un texto
      oscuro a un pastel es como se llega a un sitio que se ve bien en la
      pantalla de quien lo hizo y no se puede leer en la de nadie más. */
-  --pastel-rojo:    #fbe9e9;  --pastel-rojo-txt:    #7d1113;
-  --pastel-rosa:    #fdecf2;  --pastel-rosa-txt:    #8a1c48;
-  --pastel-menta:   #e6f4ea;  --pastel-menta-txt:   #17603a;
-  --pastel-cielo:   #e8f0fb;  --pastel-cielo-txt:   #17457e;
-  --pastel-lavanda: #f0ecf9;  --pastel-lavanda-txt: #4a3781;
-  --pastel-crema:   #fbf3e0;  --pastel-crema-txt:   #7a5610;
+  --pastel-rojo:     #fbe9e9;  --pastel-rojo-txt:     #7d1113;
+  --pastel-rosa:     #fdecf2;  --pastel-rosa-txt:     #8a1c48;
+  --pastel-menta:    #e6f4ea;  --pastel-menta-txt:    #17603a;
+  --pastel-cielo:    #e8f0fb;  --pastel-cielo-txt:    #17457e;
+  --pastel-lavanda:  #f0ecf9;  --pastel-lavanda-txt:  #4a3781;
+  --pastel-crema:    #fbf3e0;  --pastel-crema-txt:    #7a5610;
+  /* Cuatro más, para que el tablero del portal no repita: eran seis
+     colores para diez tarjetas y cinco acababan en rojo. */
+  --pastel-turquesa: #e4f2f4;  --pastel-turquesa-txt: #0f545c;
+  --pastel-durazno:  #fdeee3;  --pastel-durazno-txt:  #8a4318;
+  --pastel-oliva:    #edf3e2;  --pastel-oliva-txt:    #4a6118;
+  --pastel-indigo:   #eaecfa;  --pastel-indigo-txt:   #333f8c;
 
   /* ── Los tintes ──
      El pastel es un relleno parejo, para bloques chicos. El tinte es el
@@ -126,12 +132,16 @@
      Van en rgba y no en hex porque tienen que dejar pasar el degradado
      y los puntos que llevan debajo: en opaco los taparían y la tarjeta
      volvería a verse plana, solo que de color. */
-  --tinte-rojo:    rgba(198,32,39,0.16);
-  --tinte-rosa:    rgba(214,51,108,0.15);
-  --tinte-menta:   rgba(23,150,90,0.15);
-  --tinte-cielo:   rgba(37,110,200,0.15);
-  --tinte-lavanda: rgba(110,80,190,0.15);
-  --tinte-crema:   rgba(200,140,20,0.18);
+  --tinte-rojo:     rgba(198,32,39,0.16);
+  --tinte-rosa:     rgba(214,51,108,0.15);
+  --tinte-menta:    rgba(23,150,90,0.15);
+  --tinte-cielo:    rgba(37,110,200,0.15);
+  --tinte-lavanda:  rgba(110,80,190,0.15);
+  --tinte-crema:    rgba(200,140,20,0.18);
+  --tinte-turquesa: rgba(18,140,152,0.15);
+  --tinte-durazno:  rgba(214,110,42,0.16);
+  --tinte-oliva:    rgba(120,155,45,0.17);
+  --tinte-indigo:   rgba(70,90,205,0.15);
 }
 
 /* El respaldo de <html> deja de ser negro: es el color que se asoma en
@@ -270,14 +280,50 @@ header.kw-header-partido {
    fuente: el ícono manda.
 
    Un navegador viejo que no entienda :has() ignora estos renglones y
-   deja el tinte rojo de abajo, que es el de la marca. Se ve distinto,
-   no roto. */
-.hover-card { --tinte: var(--tinte-rojo); }
-.hover-card:has(.icon-prospectos)  { --tinte: var(--tinte-rosa); }
-.hover-card:has(.icon-calendario)  { --tinte: var(--tinte-crema); }
-.hover-card:has(.icon-incidencias) { --tinte: var(--tinte-cielo); }
-.hover-card:has(.icon-firmas)      { --tinte: var(--tinte-menta); }
-.hover-card:has(.icon-dictamenes)  { --tinte: var(--tinte-lavanda); }
+   deja el rojo de la marca. Se ve distinto, no roto.
+   Cada tarjeta trae su color completo, no solo el tinte: el baño del
+   fondo (--tinte), el cuadro del ícono (--pastel) y el trazo del ícono
+   y de la flecha (--tono). Los tres salen del mismo renglón, así que
+   para recolorear una tarjeta se toca un lugar y no tres. */
+.hover-card {
+  --tinte: var(--tinte-rojo);
+  --pastel: var(--pastel-rojo);
+  --tono: var(--pastel-rojo-txt);
+}
+.hover-card:has(.icon-prospectos)  { --tinte: var(--tinte-rosa);     --pastel: var(--pastel-rosa);     --tono: var(--pastel-rosa-txt); }
+.hover-card:has(.icon-calendario)  { --tinte: var(--tinte-crema);    --pastel: var(--pastel-crema);    --tono: var(--pastel-crema-txt); }
+.hover-card:has(.icon-incidencias) { --tinte: var(--tinte-cielo);    --pastel: var(--pastel-cielo);    --tono: var(--pastel-cielo-txt); }
+.hover-card:has(.icon-firmas)      { --tinte: var(--tinte-menta);    --pastel: var(--pastel-menta);    --tono: var(--pastel-menta-txt); }
+.hover-card:has(.icon-dictamenes)  { --tinte: var(--tinte-lavanda);  --pastel: var(--pastel-lavanda);  --tono: var(--pastel-lavanda-txt); }
+.hover-card:has(.icon-accesos)     { --tinte: var(--tinte-indigo);   --pastel: var(--pastel-indigo);   --tono: var(--pastel-indigo-txt); }
+.hover-card:has(.icon-documentos)  { --tinte: var(--tinte-durazno);  --pastel: var(--pastel-durazno);  --tono: var(--pastel-durazno-txt); }
+.hover-card:has(.icon-drive)       { --tinte: var(--tinte-turquesa); --pastel: var(--pastel-turquesa); --tono: var(--pastel-turquesa-txt); }
+.hover-card:has(.icon-liderazgo)   { --tinte: var(--tinte-oliva);    --pastel: var(--pastel-oliva);    --tono: var(--pastel-oliva-txt); }
+/* Las dos carpetas de documentos, en su propia pantalla. */
+.hover-card:has(.icon-acuerdos)    { --tinte: var(--tinte-cielo);    --pastel: var(--pastel-cielo);    --tono: var(--pastel-cielo-txt); }
+.hover-card:has(.icon-contratos)   { --tinte: var(--tinte-crema);    --pastel: var(--pastel-crema);    --tono: var(--pastel-crema-txt); }
+
+/* El ícono y la flecha toman el color de su tarjeta, no el guinda de la
+   marca: con diez tarjetas, diez cuadros rojos hacen que el tablero se
+   lea como un solo bloque y el color deje de servir para distinguirlas. */
+.hover-card .hover-card-icon { background: var(--pastel); }
+.hover-card .hover-card-icon svg { color: var(--tono); }
+.hover-card .hover-card-arrow { background: var(--tono); color: #fff; }
+
+/* Al pasar el cursor, el cuadro y la flecha se ponen blancos y el dibujo
+   se queda con el color de la tarjeta. Antes se rellenaban de guinda:
+   el color le ganaba al de la propia tarjeta, y las diez terminaban
+   igual justo en el momento en que se les pone atención. */
+.hover-card:hover .hover-card-icon { background: #fff; }
+.hover-card:hover .hover-card-icon svg { color: var(--tono); }
+.hover-card:hover .hover-card-arrow {
+  background: #fff;
+  color: var(--tono);
+  /* La flecha blanca sobre la tarjeta clara necesita su propio filo
+     para no desaparecer. */
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra-1);
+}
 
 .hover-card {
   background-image:
