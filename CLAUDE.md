@@ -93,7 +93,7 @@ Es la regla que gobierna todo lo que se puede picar:
 | Campo de fecha o número, y el par de un rango | `.kw-fecha` / `.kw-rango` + `.kw-campo-rango` |
 | Cuántos hay de cada cual, arriba, que además filtran | `.kw-resumen` + `.kw-conteo` |
 | Desplegables | `<select>` a secas: `kw-ui.js` lo convierte |
-| Pestañas | `.kw-tabs` / `.kw-tab` |
+| Pestañas | `.kw-tabs` / `.kw-tab`, y `.planas` para las de puro texto |
 | Lista vacía | `.kw-vacio` |
 | Bajar una lista a Excel | `window.kwXlsx.descargar(…)`, de `kw-xlsx.js` |
 
