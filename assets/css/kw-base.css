@@ -1004,13 +1004,55 @@ header > *:last-child { margin-left: auto; }
     backdrop-filter: none; -webkit-backdrop-filter: none;
     padding: 0; min-height: 44px;
   }
+  /* Al picar la lupa aparece un cuadro de búsqueda del tamaño de lo que
+     se escribe, no una barra de orilla a orilla. Estirado ocupaba todo
+     el renglón para un campo que casi siempre lleva dos palabras, y el
+     desplegable de resultados heredaba ese ancho: media pantalla de
+     blanco para tres renglones. */
+  html.kw-riel header.kw-buscando {
+    /* El ancho del cuadro y el de sus resultados salen de aquí: el
+       desplegable cuelga del <header> y no del cuadro, así que sin una
+       sola fuente los dos se despegan al tocar uno. */
+    --ancho-buscador: min(440px, 52vw);
+  }
   html.kw-riel header.kw-buscando .kw-header-capsula {
+    flex: 0 0 auto;
+    width: var(--ancho-buscador);
     background-image: var(--card-degradado, none);
-    background-color: rgba(255,255,255,0.9);
+    background-color: rgba(255,255,255,0.95);
     border: 1px solid var(--border);
     box-shadow: var(--sombra-2);
-    padding: 7px 16px; min-height: 52px;
+    border-radius: var(--r-tarjeta, 18px);
+    padding: 6px 14px; min-height: 44px;
   }
+  html.kw-riel header.kw-buscando .kw-buscar-campo-inline { font-size: 14px; }
+  /* Los resultados miden lo mismo que el cuadro y quedan debajo de él,
+     no de orilla a orilla del renglón. */
+  html.kw-riel header.kw-buscando .kw-buscar-resultados-inline {
+    right: auto;
+    width: var(--ancho-buscador);
+    border-radius: var(--r-tarjeta, 18px);
+  }
+
+  /* ── El contenido sube ──
+     Las páginas reservaban arriba entre 82 y 100px, que era el alto de
+     la cápsula del header más su aire. Sin barra, ese hueco quedó
+     vacío. Se fija aquí un solo valor para todas: el renglón de íconos
+     mide 44px y arranca a 10px del borde.
+
+     Va con el <html> por delante a propósito. Cada página trae su
+     padding en su propio <style>, que carga después de esta hoja; con
+     la misma especificidad le ganaría. Y solo se toca el de arriba:
+     los laterales y el de abajo son cosa de cada pantalla.
+
+     Una pantalla que acomode su header dentro del flujo (y no flotando)
+     no necesita reservar nada: se sale poniéndole .kw-header-en-flujo a
+     su <body>. Lo hace Dictámenes, que ya traía su header metido en una
+     cinta junto al título. */
+  html.kw-riel body:not(.kw-header-en-flujo) > main,
+  html.kw-riel body:not(.kw-header-en-flujo) > .page,
+  html.kw-riel body:not(.kw-header-en-flujo) > div > main,
+  html.kw-riel body:not(.kw-header-en-flujo) > div > .page { padding-top: 68px; }
   /* La hamburguesa del header sobra: la del riel hace lo mismo y está
      junto a lo que abre. */
   html.kw-riel #kw-drawer-toggle { display: none; }
