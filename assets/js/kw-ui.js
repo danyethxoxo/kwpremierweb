@@ -149,8 +149,21 @@
     menu.style.right = '';
     if (menu.scrollWidth <= Math.ceil(r.width)) return;
 
-    var cabe = r.left + menu.offsetWidth <= window.innerWidth - 8;
-    if (cabe) { menu.style.right = 'auto'; } else { menu.style.left = 'auto'; }
+    // Lo que se pasa del ancho del campo se reparte a los dos lados, en
+    // vez de crecer todo hacia la derecha: colgado de una sola orilla,
+    // el menú se veía descuadrado del filtro que lo abrió.
+    menu.style.right = 'auto';
+    var sobra = menu.offsetWidth - r.width;
+    var corrimiento = sobra / 2;
+
+    // Y sin salirse de la pantalla por ninguno de los dos lados: si de un
+    // lado no cabe, se recorre lo que se pueda y crece del otro.
+    if (r.left - corrimiento < 8) corrimiento = r.left - 8;
+    if (r.right + (sobra - corrimiento) > window.innerWidth - 8) {
+      corrimiento = sobra - (window.innerWidth - 8 - r.right);
+    }
+    corrimiento = Math.max(0, Math.min(sobra, corrimiento));
+    menu.style.left = (-corrimiento) + 'px';
   }
 
   function armarSelect(select) {

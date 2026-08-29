@@ -768,11 +768,44 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
    El borde va azul y no guinda a propósito, por lo mismo: el guinda es
    el color de la marca y de lo que la pantalla hace. */
 .kw-filtros-caja {
-  border: 1.5px solid rgba(27,79,138,0.34);
+  /* El azul de los filtros, en un solo lugar: lo usan el filo de la
+     tarjeta, el del filtro abierto y la opción elegida. */
+  --filtro-azul: #1b4f8a;
+  /* Adentro de la tarjeta los controles van más chicos que en un
+     formulario: son ocho casillas en un renglón, no ocho preguntas. */
+  --control-h: 36px;
+  border: 1.5px solid color-mix(in srgb, var(--filtro-azul) 34%, transparent);
   border-radius: 16px;
   background: rgba(255,255,255,0.55);
-  padding: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  padding: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.kw-filtros-caja .kw-select-btn,
+.kw-filtros-caja .kw-select-opcion,
+.kw-filtros-caja .kw-input,
+.kw-filtros-caja .kw-fecha { font-size: 12.5px; }
+.kw-filtros-caja .kw-select-btn,
+.kw-filtros-caja .kw-input,
+.kw-filtros-caja .kw-fecha { padding-left: 11px; padding-right: 11px; }
+
+/* ── En azul, no en guinda ──
+   Abierto o con el cursor dentro, el filtro se pinta del azul de su
+   tarjeta y no del guinda de la marca: el guinda es de lo que la
+   pantalla hace, y esto es con lo que se busca. Lo mismo la opción que
+   está puesta, que además pierde las negritas: la palomita ya dice cuál
+   es. */
+.kw-filtros-caja .kw-select-btn:focus-visible,
+.kw-filtros-caja .kw-select.abierto .kw-select-btn,
+.kw-filtros-caja .kw-input:focus,
+.kw-filtros-caja .kw-fecha:focus {
+  border-color: var(--filtro-azul);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--filtro-azul) 12%, transparent);
+}
+.kw-filtros-caja .kw-select.abierto .kw-select-flecha { color: var(--filtro-azul); }
+.kw-filtros-caja .kw-select-opcion.elegida {
+  color: var(--filtro-azul);
+  background: color-mix(in srgb, var(--filtro-azul) 8%, transparent);
+  font-weight: 500;
 }
 /* La hilera trae su propio margen de abajo, que sumado al relleno de la
    tarjeta daba doble aire de ese lado. */
