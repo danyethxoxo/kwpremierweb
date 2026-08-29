@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829r">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829s">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <style>
@@ -278,8 +278,11 @@
   /* ── Historial ──────────────────────────────────────────────
      Es lo primero que se ve: casi siempre uno entra a consultar cómo va
      algo, no a mandar uno nuevo. */
+  /* El renglón de los filtros. Los botones de la pantalla ya no van
+     aquí: se fueron al renglón del título, que es donde los pone el
+     resto del sitio. */
   .hist-barra {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center;
     gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4);
   }
   /* Los desplegables usan el componente propio del sitio, que es de
@@ -305,8 +308,13 @@
      y opciones como "Esperando firmas" salían cortadas. Se le da su
      propio ancho mínimo y se deja de pegar al lado derecho del botón. */
   .hist-filtros .kw-select-menu { left: 0; right: auto; min-width: 220px; }
+  /* En pantalla angosta los filtros se acomodan de dos en dos, y el de
+     la derecha colgaba su menú hacia afuera de la pantalla. Ahí se
+     cuelga del otro lado, como el menú del engrane en Dictámenes. */
+  @media (max-width: 700px) {
+    .hist-filtros .kw-select-menu { left: auto; right: 0; max-width: calc(100vw - 32px); }
+  }
 
-  .hist-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
   /* Traer el historial de weetrust. Va apagado de color: es una acción
      de mantenimiento que se corre de vez en cuando, no algo del día a
@@ -325,9 +333,6 @@
   }
   .btn-importar:hover { background: var(--pastel-rojo); color: var(--red); }
   .btn-importar:disabled { opacity: 0.5; cursor: default; }
-  /* El de actualizar se usa seguido, así que se deja solo el ícono: con
-     texto competía por espacio con los demás botones de la barra. */
-  .btn-importar.solo-icono { padding: 9px; gap: 0; }
 
 
   .btn-nuevo-doc {
@@ -838,52 +843,27 @@
   #header-firmas.modo-editor .kw-header-title { display: none; }
   #header-firmas.modo-editor .kw-header-doc { display: block; }
   #btn-volver-archivos { display: none; }
+  /* Los dos selectores llevan id a propósito: en escritorio el riel
+     esconde los .back-btn del header (para eso está el menú), y este no
+     es un "atrás" de más sino la única salida del editor. Con id le gana
+     a esa regla y se queda. */
   #header-firmas.modo-editor #btn-volver-archivos { display: inline-flex; }
   @media (max-width: 640px) {
     #btn-volver-archivos span { display: none; }
     #btn-volver-archivos { padding: 8px; }
   }
 
-  /* ── La búsqueda, siempre a la vista ──
-     El buscador que arma drawer.js arranca escondido detrás de la lupa y
-     al abrirlo se comía el header entero. Aquí se queda puesto como un
-     recuadro fijo junto a la lupa: se ve qué se puede buscar sin tener
-     que descubrir que la lupa se pica. Sigue siendo el mismo campo, así
-     que filtra igual que antes.
+  /* ── La búsqueda ──
+     Esta pantalla se dejaba el campo puesto de planta junto a la lupa,
+     de cuando el buscador compartido se abría de orilla a orilla y
+     estorbaba. Ya no: la lupa abre un cuadrito de su tamaño, igual que
+     en las demás pantallas, y con el campo fijo aquí el header de
+     Firmas era el único distinto de todo el sitio.
 
-     Al abrirlo (picar la lupa) el estilo compartido esconde el título y
-     el "Atrás" para hacerle lugar; aquí ya tiene el suyo, así que esa
-     regla se desactiva y el header no cambia de forma. */
-  #header-firmas .kw-buscar-campo-inline {
-    display: block;
-    flex: 0 1 22%; min-width: 150px;
-    height: 34px; padding: 0 12px;
-    border: 1px solid var(--border); border-radius: 999px;
-    background: #fff; font-size: 13px;
-  }
-  #header-firmas .kw-buscar-campo-inline:focus { border-color: var(--red); }
-  /* La equis solo cuando hay algo escrito: vacía no tiene nada que
-     limpiar y solo agrega ruido. La pone y la quita el JS de abajo. */
-  #header-firmas .kw-buscar-cerrar-inline { display: none; }
-  #header-firmas.tiene-busqueda .kw-buscar-cerrar-inline { display: flex; }
-  #header-firmas.kw-buscando .back-btn { display: inline-flex; }
-  #header-firmas.kw-buscando .kw-header-sueltos { display: flex; }
-  #header-firmas.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: inline-flex; }
+     Mientras se edita un documento el nombre del archivo se queda a la
+     vista aunque se esté buscando: es lo que dice en qué se está
+     trabajando. */
   #header-firmas.kw-buscando.modo-editor .kw-header-doc { display: block; }
-
-  /* En pantalla angosta no cabe el recuadro junto a todo lo demás, así
-     que ahí la lupa vuelve a su comportamiento de siempre: se pica y el
-     campo se abre ocupando el header. */
-  @media (max-width: 900px) {
-    #header-firmas .kw-buscar-campo-inline { display: none; }
-    #header-firmas.kw-buscando .kw-buscar-campo-inline {
-      display: block; flex: 1 1 auto; border: none; background: none; height: auto;
-    }
-    #header-firmas.kw-buscando .back-btn,
-    #header-firmas.kw-buscando .kw-header-sueltos,
-    #header-firmas.kw-buscando .kw-header-doc,
-    #header-firmas.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
-  }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
@@ -1293,29 +1273,27 @@
     <div class="pantalla-carga-texto">Cargando tus documentos...</div>
   </div>
 
+  <!-- El mismo header que las demás pantallas: la lupa de un lado, la
+       campanita del otro, y nada más. El hueco de la campanita lo pone
+       drawer.js, igual que en todas. -->
   <header class="kw-header" id="header-firmas">
     <span class="kw-header-title">Firmas Digitales</span>
     <!-- Solo se ve mientras se edita un documento: el nombre del archivo
          en el lugar del título, para no repetirlo también allá abajo y
          ganar ese espacio para la hoja y los firmantes. -->
     <span class="kw-header-doc" id="editor-nombre"></span>
-    <div class="header-right">
-      <div id="notif-bell-slot"></div>
-      <!-- Solo se ve en el editor. Vivía como botón suelto encima del
-           documento, con texto blanco sobre un fondo que aquí es claro:
-           quedaba invisible. Aquí sigue el mismo estilo que "Atrás", que
-           sí se ve. -->
-      <button type="button" class="back-btn" id="btn-volver-archivos">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-        <span>Cambiar documentos</span>
-      </button>
-      <a href="../portal.html" class="back-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        <span>Atrás</span>
-      </a>
-    </div>
+    <!-- Solo se ve en el editor: es la salida de esa vista, y esa vista
+         no tiene renglón de título donde ponerla. -->
+    <button type="button" class="back-btn" id="btn-volver-archivos">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      <span>Cambiar documentos</span>
+    </button>
+    <a href="../portal.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
   </header>
 
   <main class="kw-page">
@@ -1323,13 +1301,49 @@
     <!-- ── Tres vistas, una a la vez ──
          El historial es lo primero que se ve: la mayoría de las veces
          uno entra a consultar cómo va algo, no a mandar uno nuevo. De
-         ahí se pasa a elegir archivos y luego al editor.
-
-         El título de la pantalla vive en el header y no aquí: repetirlo
-         se comía el espacio de arriba sin decir nada nuevo. -->
+         ahí se pasa a elegir archivos y luego al editor. -->
 
     <!-- Vista 1: el historial -->
     <div id="vista-historial">
+
+      <!-- El título va donde va en todas (el bloque de encabezado de la
+           página), con los botones de la pantalla a su derecha. Vivía
+           nada más en el header, que en pantalla grande no lo enseña:
+           se entraba a una pantalla sin nombre. -->
+      <div class="kw-page-encabezado con-acciones">
+        <h1 class="kw-page-titulo">Firmas Digitales</h1>
+        <div class="kw-page-acciones">
+        <!-- El de actualizar se usa seguido y no es la acción principal
+             de la pantalla: va como puro ícono (.kw-btn-icono), igual
+             que el engrane de Dictámenes. Mientras trabaja da vueltas
+             solo, por estar [disabled]. -->
+        <button type="button" class="kw-btn-icono" id="btn-actualizar" title="Traer de weetrust el estado y las firmas más recientes" aria-label="Actualizar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/>
+          </svg>
+        </button>
+        <button type="button" class="btn-importar" id="btn-limpiar" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
+          </svg>
+          <span>Limpiar fantasmas</span>
+        </button>
+        <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Traer de weetrust</span>
+        </button>
+        <button type="button" class="btn-nuevo-doc" id="btn-nuevo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Nuevo documento</span>
+        </button>
+        </div>
+      </div>
+
+      <!-- Los filtros, en su propio renglón debajo del título. Iban
+           apretados junto a los botones en una sola barra, y con el
+           título ahí ya no cabían los tres a la vez. -->
       <div class="hist-barra">
         <div class="hist-filtros">
           <select id="f-estado">
@@ -1352,29 +1366,6 @@
             <option value="pendientes">Pendientes de firma primero</option>
             <option value="completados">Completados primero</option>
           </select>
-        </div>
-        <div class="hist-acciones">
-        <button type="button" class="btn-importar solo-icono" id="btn-actualizar" title="Traer de weetrust el estado y las firmas más recientes" aria-label="Actualizar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/>
-          </svg>
-        </button>
-        <button type="button" class="btn-importar" id="btn-limpiar" style="display:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
-          </svg>
-          <span>Limpiar fantasmas</span>
-        </button>
-        <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <span>Traer de weetrust</span>
-        </button>
-        <button type="button" class="btn-nuevo-doc" id="btn-nuevo">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Nuevo documento</span>
-        </button>
         </div>
       </div>
 
@@ -2223,9 +2214,10 @@
   // que antes no se guardaban, como el trazo de cada firma.
   $('btn-actualizar').addEventListener('click', async () => {
     const btn = $('btn-actualizar');
+    // Sin texto que escribir encima: el botón es del tamaño de su
+    // dibujo, y "Actualizando..." lo reventaba. Apagado da vueltas solo,
+    // que es lo mismo que dice el engrane de Dictámenes.
     btn.disabled = true;
-    const original = btn.innerHTML;
-    btn.textContent = 'Actualizando...';
 
     try {
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
@@ -2251,7 +2243,6 @@
       await window.kwUI.alert(e.message || 'No se pudo actualizar.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = original;
     }
   });
 
@@ -2896,43 +2887,13 @@
   // documento: así la pestaña nunca se ve pelona.
   asegurarFilaObservador();
 
-  // ── La equis del campo de búsqueda del header ──
-  // Solo cuando hay algo escrito: vacío no hay nada que limpiar. Va aquí
-  // y no dentro del arranque con sesión porque es puro adorno, y va
-  // delegado en el documento porque drawer.js arma ese campo al final del
-  // <body>: cuando esto corre puede no existir todavía.
-  function marcarSiHayBusqueda() {
-    const campo = document.getElementById('kw-buscar-input');
-    $('header-firmas').classList.toggle('tiene-busqueda', !!(campo && campo.value));
-  }
-  document.addEventListener('input', (e) => {
-    if (e.target && e.target.id === 'kw-buscar-input') marcarSiHayBusqueda();
-  });
-  // Al limpiar con la equis, drawer.js vacía el campo sin disparar
-  // 'input', así que la clase se quitaría hasta la siguiente tecla.
-  document.addEventListener('click', (e) => {
-    if (e.target && e.target.closest && e.target.closest('.kw-buscar-cerrar-inline')) {
-      setTimeout(marcarSiHayBusqueda, 0);
-    }
-  });
-
-  // drawer.js cuelga el campo al final de la cápsula, así que quedaba
-  // hasta la derecha, lejísimos de la lupa que lo manda. Aquí se mueve
-  // junto a ella, que es donde uno lo busca. Se hace después de que
-  // drawer.js corra (va al final del <body>).
-  function pegarBusquedaALaLupa() {
-    const lupa = document.getElementById('kw-buscar-toggle');
-    const campo = document.getElementById('kw-buscar-input');
-    const equis = document.querySelector('.kw-buscar-cerrar-inline');
-    if (!lupa || !campo) return;
-    lupa.insertAdjacentElement('afterend', campo);
-    if (equis) campo.insertAdjacentElement('afterend', equis);
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', pegarBusquedaALaLupa);
-  } else {
-    pegarBusquedaALaLupa();
-  }
+  // La búsqueda es la de drawer.js, tal cual: el campo se abre desde la
+  // lupa y él pone y quita su propia equis. Aquí vivían dos parches (uno
+  // que movía el campo junto a la lupa, otro que enseñaba la equis) de
+  // cuando esta pantalla se dejaba el campo puesto de planta; con el
+  // cuadrito de búsqueda compartido los dos sobran y el segundo lo
+  // estorbaba, porque el cuadro se dibuja alrededor de la cápsula y
+  // sacar el campo de ahí lo dejaba sin forma.
 
   function leerObservadores() {
     return Array.from($('observadores').querySelectorAll('.observador-fila')).map((f) => ({

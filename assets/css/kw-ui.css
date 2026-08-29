@@ -217,6 +217,43 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder { color: v
   flex-shrink: 0; margin-left: auto;
 }
 
+/* ── El botón que es nada más un ícono ──
+   Para lo que se hace cada tanto y no es la acción principal de la
+   pantalla: abrir un menú de herramientas, volver a traer la lista. Va
+   sin recuadro a propósito, porque al lado del botón que sí importa
+   ("Nuevo documento", "Nuevo dictamen") dos pastillas juntas compiten
+   por la misma atención.
+
+   Al pasar el mouse se pone azul y no guinda: el guinda es el color de
+   lo que la pantalla hace, y esto es el cajón de las herramientas.
+
+   Mientras trabaja, el dibujo da vueltas: sin texto que cambiar, es lo
+   que dice que está haciendo algo. Se prende con [disabled], que es lo
+   que ya se pone para que no le vuelvan a picar. */
+.kw-btn-icono {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; flex-shrink: 0;
+  border: 0; background: none; box-shadow: none;
+  color: var(--muted); cursor: pointer;
+  border-radius: 9px;
+  transition: color var(--t-rapido), background var(--t-rapido);
+}
+/* Los colores traen respaldo escrito: la paleta pastel vive en
+   kw-claro.css, y una página que cargue esta hoja sin aquella se
+   quedaría sin color ninguno. */
+.kw-btn-icono:hover:not([disabled]) {
+  color: var(--pastel-cielo-txt, #17457e);
+  background: var(--pastel-cielo, #e8f0fb);
+  box-shadow: none;
+}
+.kw-btn-icono svg { width: 18px; height: 18px; }
+.kw-btn-icono[disabled] { cursor: default; }
+.kw-btn-icono[disabled] svg { animation: kw-gira 1.1s linear infinite; }
+@keyframes kw-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .kw-btn-icono[disabled] svg { animation: none; }
+}
+
 @media (max-width: 640px) {
   .kw-page { padding: 82px var(--sp-3) var(--sp-5); }
   .kw-page-encabezado { display: none; }
