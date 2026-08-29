@@ -539,19 +539,54 @@
     { el: drawerDer, signo: 1 },
   ].filter((p) => p.el);
 
+  // ¿El menú de la izquierda está de riel ahora mismo? Solo entonces se
+  // porta como una gaveta que se ensancha; en celular, en el sitio
+  // público y en el panel de accesos sigue siendo un panel que se abre
+  // encima de la página.
+  function enRiel(el) {
+    return el === drawerIzq &&
+      document.documentElement.classList.contains('kw-riel') &&
+      window.matchMedia('(min-width: 1024px)').matches;
+  }
+
   function abrirPanel(panel) {
     if (!panel || !panel.el) return;
     PANELES.forEach((otro) => { if (otro !== panel) otro.el.classList.remove('open'); });
+    panel.el.classList.remove('sin-hover');
     panel.el.classList.add('open');
-    velo.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    // El riel no tapa la página: vive en su propia franja. Trabarle el
+    // scroll al cuerpo y echarle el velo encima son cosas de un panel
+    // que sí la tapa. Con el riel, picar la hamburguesa dejaba la página
+    // sin poder rodarse y sin nada visible que explicara por qué.
+    if (!enRiel(panel.el)) {
+      velo.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
     if (panel.el === drawerDer && typeof cargarAccesos === 'function') cargarAccesos();
   }
   function cerrarPaneles() {
-    PANELES.forEach((p) => p.el.classList.remove('open'));
+    PANELES.forEach((p) => {
+      // Al soltar el riel, el cursor sigue encima (se acaba de picar un
+      // botón de adentro), así que el :hover lo mantendría ancho y
+      // parecería que no pasó nada. Se le fuerza el ancho angosto hasta
+      // que el cursor salga; de ahí en adelante manda el hover otra vez.
+      if (enRiel(p.el) && p.el.classList.contains('open')) p.el.classList.add('sin-hover');
+      p.el.classList.remove('open');
+    });
     velo.classList.remove('open');
     document.body.style.overflow = '';
   }
+
+  // En cuanto el cursor sale del riel, el freno se levanta.
+  drawerIzq.addEventListener('mouseleave', () => drawerIzq.classList.remove('sin-hover'));
+
+  // Sin velo que atrape los clics, es esto lo que cierra el riel al picar
+  // fuera de él.
+  document.addEventListener('click', (e) => {
+    if (!drawerIzq.classList.contains('open') || !enRiel(drawerIzq)) return;
+    if (e.target instanceof Element && e.target.closest('#drawer, #kw-drawer-toggle')) return;
+    cerrarPaneles();
+  });
   // Nombres de siempre, para no tocar lo que ya los usaba.
   function abrir() { abrirPanel(PANELES[0]); }
   function cerrar() { cerrarPaneles(); }
