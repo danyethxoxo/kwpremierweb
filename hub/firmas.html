@@ -650,6 +650,10 @@
      El documento a la izquierda y quién ya firmó a la derecha, que es lo
      que uno quiere saber al abrir un contrato a medias. */
   .doc-caja { max-width: 1000px; width: 100%; position: relative; text-align: left; }
+  /* El título de este modal es el nombre del archivo, no un rótulo: en
+     negritas y a 17px era lo que más pesaba de la pantalla, para algo
+     que ya se sabe (se acaba de picar ese renglón). */
+  #doc-titulo { font-weight: 500; }
   .doc-split { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: var(--sp-4); align-items: start; }
   @media (max-width: 780px) { .doc-split { grid-template-columns: 1fr; } }
 
@@ -690,7 +694,7 @@
      vez de quedarse encogida contra el nombre. */
   .doc-firmante .firma-liga { align-self: flex-start; margin-top: 2px; }
   .doc-lado .det-acciones { margin-top: 0; flex-direction: column; }
-  .doc-lado .kw-fila-btn { width: 100%; justify-content: center; }
+  .doc-lado .det-btn { width: 100%; }
 
   /* Las etiquetas puestas, en su columna de la tabla. */
   .env-tags { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
@@ -717,15 +721,26 @@
      sin importar de qué renglón se abrió. */
   #editar-cuerpo { max-height: 60vh; overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
 
+  .det-titulo-fila {
+    display: flex; align-items: baseline; gap: var(--sp-2);
+    margin-bottom: 4px;
+  }
+  .det-titulo-fila h3 { margin-bottom: 0; }
+  /* Sin negritas: el color de la etiqueta ya la hace saltar. */
+  .det-titulo-fila .kw-pill { font-weight: 500; }
   .det-encabezado {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: var(--sp-3); margin-bottom: var(--sp-3);
   }
   .det-meta { font-size: 12.5px; line-height: 1.7; color: var(--text); min-width: 0; }
-  .det-meta b { color: var(--muted); font-weight: 700; }
+  /* Los rótulos ("Documento:", "ID:") van en gris y sin negritas: lo que
+     se viene a leer es lo que sigue, no el rótulo. */
+  .det-meta b { color: var(--muted); font-weight: 500; }
   /* El identificador de weetrust es largo y no se parte solo; sin esto
-     estira el cuadro y se sale de la pantalla. */
-  .det-id { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; word-break: break-all; }
+     estira el cuadro y se sale de la pantalla. La letra es la misma que
+     la de todo el sitio: en monoespaciada era lo único de la pantalla
+     con otra tipografía, y se veía como pegado de otro lado. */
+  .det-id { word-break: break-all; }
 
   .det-firmantes { border-top: 1px solid rgba(0,0,0,0.08); }
   .det-firmante {
@@ -748,7 +763,36 @@
   .det-firmo { font-size: 12px; font-weight: 700; color: #16a34a; text-align: right; }
   .det-firmo-fecha { display: block; font-size: 10.5px; font-weight: 400; color: var(--muted); }
   .det-expira { font-size: 10.5px; color: var(--muted); }
-  .det-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-4); }
+  /* Los botones de un modal van a la derecha, que es donde se busca lo
+     que cierra un cuadro de diálogo, y con color: en blanco los dos se
+     leían como avisos y no como cosas que se pueden hacer. */
+  .det-acciones {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: flex-end; margin-top: var(--sp-4);
+  }
+  .det-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 999px;
+    border: 1.5px solid transparent;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-decoration: none;
+    transition: filter var(--t-medio), background var(--t-medio), border-color var(--t-medio);
+  }
+  /* El que se hace: en guinda, como el botón principal de la pantalla. */
+  .det-btn.principal {
+    background: var(--red); color: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
+  .det-btn.principal:hover:not([disabled]) { filter: brightness(1.08); }
+  /* El que deshace: no va en guinda sólido, que es el color de lo que se
+     hace a diario, pero tampoco en blanco: se lee que es de cuidado sin
+     competir con el de al lado. */
+  .det-btn.peligro {
+    background: #fff; color: #b02a2a;
+    border-color: color-mix(in srgb, #b02a2a 42%, transparent);
+  }
+  .det-btn.peligro:hover:not([disabled]) { background: #fdeaea; }
+  .det-btn[disabled] { opacity: 0.55; cursor: default; }
 
   @media (max-width: 560px) {
     .det-firmante { flex-wrap: wrap; }
@@ -1000,9 +1044,34 @@
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 40px 0; color: var(--muted); font-size: 13px;
   }
-  /* Los aros de carga son blancos, que es lo correcto sobre el guinda
-     del sitio. Dentro del visor, que ahora es blanco, se perdían: aquí
-     se pintan del rojo de la marca. */
+
+  /* ── Mientras se dibuja el documento ──
+     La silueta de una hoja con sus renglones, en vez de un aro girando.
+     Dice lo que viene (una hoja de papel, no una lista ni una tabla) y
+     no deja el recuadro en blanco con una línea de texto a media altura,
+     que era como se veía: el aro de carga es blanco, pensado para el
+     fondo guinda del sitio, y adentro del visor, que es blanco, no se
+     veía nada. */
+  .doc-esqueleto { display: flex; flex-direction: column; gap: 12px; }
+  .doc-hoja-esqueleto {
+    background: #fff; border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 8px; box-shadow: var(--sombra-1);
+    padding: 30px 34px;
+    display: flex; flex-direction: column; gap: 11px;
+    /* De la forma de una hoja tamaño carta, con los renglones arriba y
+       el resto en blanco: así ocupa el mismo lugar que va a ocupar la
+       hoja de verdad y nada brinca cuando llega. */
+    aspect-ratio: 8.5 / 11;
+  }
+  .doc-hoja-esqueleto .kw-skel { border-radius: 5px; }
+  /* El renglón que hace de título de la hoja, y el hueco entre párrafos:
+     sin ellos son doce líneas iguales y se lee como una lista, no como
+     un documento. */
+  .doc-hoja-esqueleto .titulo { height: 17px; margin-bottom: 6px; }
+  .doc-hoja-esqueleto .parrafo { margin-top: 12px; }
+  .doc-esqueleto-pie {
+    text-align: center; color: var(--muted); font-size: 12.5px;
+  }
 
   /* Guardar y mandar, juntos al final del formulario. Guardar va en
      secundario: es lo que se hace de paso, no el objetivo. */
@@ -1214,7 +1283,7 @@
     padding: 4px 10px; border-radius: 999px;
     border: 1px solid rgba(0,0,0,0.12);
     background: rgba(255,255,255,0.7);
-    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    font-family: inherit; font-size: 11.5px; font-weight: 500;
     color: var(--text); cursor: pointer; white-space: nowrap;
     transition: border-color var(--t-medio), color var(--t-medio);
   }
@@ -1621,7 +1690,13 @@
       <button type="button" class="det-cerrar" id="det-cerrar" aria-label="Cerrar">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <h3>Estatus</h3>
+      <!-- El estatus va en el mismo renglón del título: es de lo primero
+           que se quiere saber al abrir esto, y suelto más abajo se
+           perdía entre los datos del documento. -->
+      <div class="det-titulo-fila">
+        <h3>Estatus</h3>
+        <span class="kw-pill" id="det-estatus"></span>
+      </div>
       <div id="det-cuerpo"></div>
     </div>
   </div>
@@ -3764,7 +3839,7 @@
     // pestaña igual, así que el archivo se baja aquí y se entrega ya
     // bajado.
     $('doc-acciones').innerHTML = url
-      ? '<button type="button" class="kw-fila-btn" id="doc-bajar">' +
+      ? '<button type="button" class="det-btn principal" id="doc-bajar">' +
           (conFirmas && !faltan ? 'Descargar firmado' : 'Descargar') + '</button>'
       : '';
 
@@ -3812,8 +3887,22 @@
     // no enseña nada hasta que termina de bajar el archivo entero. Aquí
     // la primera página aparece en cuanto está lista, que en un contrato
     // de catorce hojas es la diferencia entre esperar y no esperar.
+    // La silueta de una hoja mientras se dibuja la de verdad: la misma
+    // forma y el mismo lugar, así que cuando llega no brinca nada.
+    const renglon = (ancho, clase) =>
+      '<span class="kw-skel kw-skel-line ' + (clase || '') + '" style="width:' + ancho + '%"></span>';
     $('doc-cuerpo').innerHTML =
-      '<div class="editor-cargando"><div class="kw-loader"></div><span>Preparando las hojas...</span></div>' +
+      '<div class="doc-esqueleto" id="doc-esqueleto" aria-hidden="true">' +
+        // El aviso va arriba y no abajo: la hoja es del alto de una
+        // hoja de verdad, así que abajo caería fuera de lo que se ve.
+        '<div class="doc-esqueleto-pie">Preparando las hojas...</div>' +
+        '<div class="doc-hoja-esqueleto">' +
+          renglon(46, 'titulo') +
+          renglon(100) + renglon(97) + renglon(99) + renglon(64) +
+          renglon(100, 'parrafo') + renglon(96) + renglon(99) + renglon(78) +
+          renglon(100, 'parrafo') + renglon(93) + renglon(58) +
+        '</div>' +
+      '</div>' +
       '<div id="doc-paginas"></div>';
 
     // Bajar y dibujar el PDF va en su propio try: es lo único que puede
@@ -3830,7 +3919,7 @@
       if (!res.ok) throw new Error('no se pudo bajar');
       const bytes = new Uint8Array(await res.arrayBuffer());
       hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
-      $('doc-cuerpo').querySelector('.editor-cargando')?.remove();
+      $('doc-cuerpo').querySelector('.doc-esqueleto')?.remove();
     } catch {
       // Si el archivo no se deja leer desde aquí, al menos se abre en el
       // visor del navegador. Ahí ya no se pueden pintar los recuadros
@@ -4392,14 +4481,22 @@
     // completados weetrust los sella y ya no se tocan.
     const puedeCancelar = ['preparando', 'borrador', 'pendiente'].includes(f.estado);
     const acciones =
-      (f.estado === 'completado' && f.pdf_firmado_url
-        ? '<a class="kw-fila-btn" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
-        : '') +
-      (f.estado === 'pendiente'
-        ? '<button type="button" class="kw-fila-btn" data-accion="consultar" data-id="' + f.id + '">Actualizar</button>'
-        : '') +
+      // "Cancelar documento" y no "Cancelar" a secas: al lado de la equis
+      // de cerrar, "Cancelar" se lee como "cerrar sin hacer nada", que es
+      // justo lo contrario de lo que hace (retira el documento de
+      // weetrust y nadie más lo puede firmar).
       (puedeCancelar
-        ? '<button type="button" class="kw-fila-btn" data-accion="cancelar" data-id="' + f.id + '">Cancelar</button>'
+        ? '<button type="button" class="det-btn peligro" data-accion="cancelar" data-id="' + f.id + '">Cancelar documento</button>'
+        : '') +
+      // Le pregunta a weetrust cómo va ESTE documento y lo pone al día
+      // sin tocar los demás: sirve cuando alguien acaba de firmar y el
+      // aviso todavía no llega. El del engrane hace lo mismo con todo el
+      // historial, que tarda bastante más.
+      (f.estado === 'pendiente'
+        ? '<button type="button" class="det-btn principal" data-accion="consultar" data-id="' + f.id + '">Actualizar estatus</button>'
+        : '') +
+      (f.estado === 'completado' && f.pdf_firmado_url
+        ? '<a class="det-btn principal" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
         : '');
 
     $('det-cuerpo').innerHTML =
@@ -4414,11 +4511,15 @@
           (observadores.length
             ? '<div><b>Observadores:</b> ' + escapar(observadores.map((o) => o.correo).join(', ')) + '</div>' : '') +
         '</div>' +
-        '<span class="kw-pill ' + pill[0] + '">' + pill[1] + '</span>' +
       '</div>' +
       (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
       '<div class="det-firmantes">' + (quienes || '<div class="env-vacio">Este documento no llegó a tener firmantes.</div>') + '</div>' +
       (acciones ? '<div class="det-acciones">' + acciones + '</div>' : '');
+
+    // La etiqueta del estatus vive fuera del cuerpo, en el renglón del
+    // título.
+    $('det-estatus').className = 'kw-pill ' + pill[0];
+    $('det-estatus').textContent = pill[1];
 
     cablearAcciones($('det-cuerpo'));
     $('modal-detalle').style.display = 'flex';
