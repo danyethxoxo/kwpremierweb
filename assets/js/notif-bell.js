@@ -70,8 +70,22 @@
       <button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="${abierta}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         ${badge}
-      </button>
-      <div class="notif-dropdown${abierta ? ' abierto' : ''}" id="notif-dropdown">
+      </button>`;
+
+    // El panel cuelga del <body>, no del header. Dentro del header
+    // heredaba su marco (basta con que el header o algún ancestro suyo
+    // traiga backdrop-filter para que un position:fixed de adentro se
+    // mida contra él y no contra la pantalla), y de ahí salían dos
+    // cosas: estacionado fuera de la vista alargaba el ancho de la
+    // página, y no podía pintarse por encima del velo.
+    let panel = document.getElementById('notif-dropdown');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'notif-dropdown';
+      document.body.appendChild(panel);
+    }
+    panel.className = 'notif-dropdown' + (abierta ? ' abierto' : '');
+    panel.innerHTML = `
         <div class="notif-dropdown-head">
           <span>Notificaciones</span>
           ${noLeidas > 0 ? `<button type="button" class="notif-marcar-todas" id="notif-marcar-todas">Marcar todas como leídas</button>` : ''}
@@ -85,8 +99,7 @@
                 ${n.mensaje ? `<span class="notif-item-msg">${escapeHtml(n.mensaje)}</span>` : ''}
                 <span class="notif-item-fecha">${fmtRelativo(n.created_at)}</span>
               </button>`).join('')}
-        </div>
-      </div>`;
+        </div>`;
 
     document.getElementById('notif-bell-btn').addEventListener('click', function (e) {
       e.stopPropagation();
@@ -94,7 +107,7 @@
     });
     const btnTodas = document.getElementById('notif-marcar-todas');
     if (btnTodas) btnTodas.addEventListener('click', marcarTodasLeidas);
-    Array.from(slot.querySelectorAll('.notif-item')).forEach(function (btn) {
+    Array.from(panel.querySelectorAll('.notif-item')).forEach(function (btn) {
       btn.addEventListener('click', function () { abrirNotificacion(btn.dataset.id, btn.dataset.url); });
     });
 
@@ -154,6 +167,11 @@
   }
 
   function cargarNotificaciones() {
+    // Sin la librería no hay nada que traer. Se comprueba porque este
+    // arranque lo puede pedir drawer.js en pleno armado del menú: sin
+    // esta guarda, un fallo aquí reventaba hacia allá y se llevaba el
+    // menú entero, que no tiene nada que ver con las notificaciones.
+    if (!window.kwSupabase || !window.kwSupabase.auth) return;
     window.kwSupabase.auth.getUser().then(function (result) {
       const uid = result && result.data && result.data.user && result.data.user.id;
       if (!uid) return;
@@ -201,6 +219,21 @@
     render();
     cargarNotificaciones();
   }
+
+  // Reenganche, para cuando el hueco donde se dibuja aparece DESPUÉS de
+  // que este script ya corrió. Pasa en las pantallas que traen el
+  // <script> en su propio HTML: se ejecuta antes que drawer.js, que es
+  // quien arma el header y crea el hueco, así que render() no encontraba
+  // nada y se salía para siempre. drawer.js llama a esto en cuanto lo
+  // crea; si el hueco ya existía, no hace falta y no se llama.
+  window.kwNotifRefrescar = function () {
+    try {
+      render();
+      if (!notificaciones.length) cargarNotificaciones();
+    } catch (e) {
+      console.error('No se pudo dibujar la campanita:', e);
+    }
+  };
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
     init();

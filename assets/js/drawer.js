@@ -317,6 +317,46 @@
   // barra de Música de iOS. Se hace aquí y no en el HTML de cada página
   // porque la hamburguesa y la lupa también se insertan desde aquí.
   if (header && header.classList.contains('kw-header')) {
+    // ── La campanita, en todas ──
+    // Vivía en el HTML de cada pantalla, y solo cuatro la traían: en las
+    // demás no había manera de enterarse de nada sin ir al portal.
+    // Nueve cargaban el script y cinco de esas ni siquiera tenían el
+    // hueco donde dibujarse, así que corría para nada. Se crea aquí, que
+    // es donde ya se arma el header, y así está en las mismas pantallas
+    // que tienen menú.
+    if (!esPublico) {
+      if (!header.querySelector('#notif-bell-slot')) {
+        const hueco = document.createElement('div');
+        hueco.id = 'notif-bell-slot';
+        header.appendChild(hueco);
+      }
+      if (!document.querySelector('script[src*="notif-bell.js"]')) {
+        const sc = document.createElement('script');
+        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260829p`;
+        document.head.appendChild(sc);
+      } else {
+        // Ya estaba cargado. Se le avisa de todos modos, sin importar si
+        // el hueco lo acabamos de crear o ya venía en el HTML: notif-bell
+        // se dibuja una sola vez, al enterarse de que hay sesión, y
+        // quién llega primero entre ese aviso, este script y el suyo
+        // depende de en qué orden los baje el navegador. Volver a
+        // pedírselo no cuesta (dibujar es idempotente) y quita la
+        // carrera de en medio.
+        // Entre try y catch a propósito: esto corre en pleno armado del
+        // menú, y lo que le pase a la campanita no puede dejar sin menú
+        // a la pantalla entera.
+        const avisar = () => {
+          try {
+            if (typeof window.kwNotifRefrescar === 'function') window.kwNotifRefrescar();
+          } catch (e) {
+            console.error('No se pudo avisar a la campanita:', e);
+          }
+        };
+        avisar();
+        window.addEventListener('kw-auth-ready', avisar, { once: true });
+      }
+    }
+
     const sueltos = Array.from(
       header.querySelectorAll('#btn-perfil-header, #notif-bell-slot, #btn-admin'));
 
