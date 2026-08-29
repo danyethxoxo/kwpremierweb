@@ -721,18 +721,24 @@
      sin importar de qué renglón se abrió. */
   #editar-cuerpo { max-height: 60vh; overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
 
+  /* ── El aire del recuadro ──
+     Los tres bloques (el título con su etiqueta, los datos del documento
+     y la lista de quién firma) se separan siempre lo mismo, y adentro de
+     cada uno los renglones van más pegados entre sí que de los bloques
+     vecinos. Sin eso todo pesaba igual y se leía como un montón de
+     renglones amontonados en vez de tres cosas distintas. */
   .det-titulo-fila {
     display: flex; align-items: baseline; gap: var(--sp-2);
-    margin-bottom: 4px;
+    margin-bottom: var(--sp-3);
   }
   .det-titulo-fila h3 { margin-bottom: 0; }
   /* Sin negritas: el color de la etiqueta ya la hace saltar. */
   .det-titulo-fila .kw-pill { font-weight: 500; }
   .det-encabezado {
     display: flex; align-items: flex-start; justify-content: space-between;
-    gap: var(--sp-3); margin-bottom: var(--sp-3);
+    gap: var(--sp-3); margin-bottom: var(--sp-4);
   }
-  .det-meta { font-size: 12.5px; line-height: 1.7; color: var(--text); min-width: 0; }
+  .det-meta { font-size: 12.5px; line-height: 1.85; color: var(--text); min-width: 0; }
   /* Los rótulos ("Documento:", "ID:") van en gris y sin negritas: lo que
      se viene a leer es lo que sigue, no el rótulo. */
   .det-meta b { color: var(--muted); font-weight: 500; }
@@ -744,13 +750,16 @@
 
   .det-firmantes { border-top: 1px solid rgba(0,0,0,0.08); }
   .det-firmante {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
   }
+  /* El último no lleva raya: abajo ya está el aire de los botones, y con
+     las dos cosas juntas se veía un renglón vacío de más. */
+  .det-firmante:last-child { border-bottom: none; }
   .det-punto {
     flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.08); color: #fff; margin-top: 1px;
+    background: rgba(0,0,0,0.08); color: #fff;
   }
   .det-punto.ok { background: #16a34a; }
   .det-datos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
@@ -770,11 +779,14 @@
     display: flex; flex-wrap: wrap; gap: 8px;
     justify-content: flex-end; margin-top: var(--sp-4);
   }
+  /* Del tamaño de lo que hacen: un poco más grandes que "Copiar liga",
+     que es el botón chico de esta pantalla, y no del tamaño del botón
+     principal de la pantalla entera. */
   .det-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 9px 16px; border-radius: 999px;
+    padding: 7px 15px; border-radius: 999px;
     border: 1.5px solid transparent;
-    font-family: inherit; font-size: 13px; font-weight: 500;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
     cursor: pointer; text-decoration: none;
     transition: filter var(--t-medio), background var(--t-medio), border-color var(--t-medio);
   }
@@ -1040,38 +1052,36 @@
      la vista previa del historial la caja además se recorta al ancho
      disponible (más abajo), así que ahí nunca se sale. */
   .pagina-caja canvas { width: 100%; height: auto; }
+  /* Lo mismo que .doc-cargando, en el editor: los aros y una línea de
+     texto, centrados en el hueco del visor. */
   .editor-cargando {
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    padding: 40px 0; color: var(--muted); font-size: 13px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; min-height: min(50vh, 520px);
+    color: var(--muted); font-size: 13px;
   }
+  .editor-cargando .kw-loader { min-height: 0; height: 70px; padding: 0; }
+  .editor-cargando .kw-loader .circle { border-top-color: var(--red); }
 
-  /* ── Mientras se dibuja el documento ──
-     La silueta de una hoja con sus renglones, en vez de un aro girando.
-     Dice lo que viene (una hoja de papel, no una lista ni una tabla) y
-     no deja el recuadro en blanco con una línea de texto a media altura,
-     que era como se veía: el aro de carga es blanco, pensado para el
-     fondo guinda del sitio, y adentro del visor, que es blanco, no se
-     veía nada. */
-  .doc-esqueleto { display: flex; flex-direction: column; gap: 12px; }
-  .doc-hoja-esqueleto {
-    background: #fff; border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 8px; box-shadow: var(--sombra-1);
-    padding: 30px 34px;
-    display: flex; flex-direction: column; gap: 11px;
-    /* De la forma de una hoja tamaño carta, con los renglones arriba y
-       el resto en blanco: así ocupa el mismo lugar que va a ocupar la
-       hoja de verdad y nada brinca cuando llega. */
-    aspect-ratio: 8.5 / 11;
+  /* ── Mientras se abre el documento ──
+     Una sola pantalla de carga para todo lo que tarda (preguntarle a
+     weetrust, bajar el PDF, dibujarlo): los aros girando y una línea de
+     texto, centrados en el hueco entero del visor. Antes era el mismo
+     recuadro blanco con una línea de texto a media altura, y encima los
+     aros no se veían: van en blanco, que es lo correcto sobre el fondo
+     guinda del sitio, pero adentro del visor, que es blanco, no había
+     nada que ver. Ahora se pintan del guinda de la marca.
+
+     Ocupa el alto completo del visor a propósito: media pantalla de
+     blanco con una línea de texto flotando se ve como algo cortado. */
+  .doc-cargando {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; min-height: min(66vh, 700px);
+    color: var(--muted); font-size: 13px;
   }
-  .doc-hoja-esqueleto .kw-skel { border-radius: 5px; }
-  /* El renglón que hace de título de la hoja, y el hueco entre párrafos:
-     sin ellos son doce líneas iguales y se lee como una lista, no como
-     un documento. */
-  .doc-hoja-esqueleto .titulo { height: 17px; margin-bottom: 6px; }
-  .doc-hoja-esqueleto .parrafo { margin-top: 12px; }
-  .doc-esqueleto-pie {
-    text-align: center; color: var(--muted); font-size: 12.5px;
-  }
+  .doc-cargando .kw-loader { min-height: 0; height: 70px; padding: 0; }
+  .doc-cargando .kw-loader .circle { border-top-color: var(--red); }
+  /* Y cuando ya está, las hojas entran solas, sin brincar. */
+  .doc-paginas.aparece { animation: kw-aparece-fade 0.45s ease both; }
 
   /* Guardar y mandar, juntos al final del formulario. Guardar va en
      secundario: es lo que se hace de paso, no el objetivo. */
@@ -1578,9 +1588,13 @@
                   <button type="button" class="zoom-ajustar" id="zoom-ajustar">Ajustar al ancho</button>
                 </div>
                 <div class="editor-doc barra-oscura" id="editor-doc">
+                  <!-- Los tres aros van escritos: .kw-loader es nada más
+                       el hueco que los centra, y vacío no dibuja nada. -->
                   <div class="editor-cargando" id="editor-cargando">
-                    <div class="kw-loader"></div>
-                    <span>Preparando el documento...</span>
+                    <div class="kw-loader">
+                      <div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>
+                    </div>
+                    <span>Cargando documento...</span>
                   </div>
                   <div id="paginas"></div>
                 </div>
@@ -3721,9 +3735,17 @@
     $('doc-lado-tit').textContent = '';
     $('doc-lado').innerHTML = '';
     $('doc-acciones').innerHTML = '';
+    // Los tres aros van escritos aquí: .kw-loader es nada más el hueco
+    // que los centra, y vacío no dibuja nada. Así se veía el recuadro en
+    // blanco con la línea de texto a media altura.
     $('doc-cuerpo').innerHTML =
-      '<div class="editor-cargando"><div class="kw-loader"></div>' +
-      '<span>Abriendo el documento...</span></div>';
+      '<div class="doc-cargando" id="doc-cargando">' +
+        '<div class="kw-loader">' +
+          '<div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>' +
+        '</div>' +
+        '<span>Cargando documento...</span>' +
+      '</div>' +
+      '<div class="doc-paginas" id="doc-paginas"></div>';
     $('modal-doc').style.display = 'flex';
     bloquearFondo(true);
 
@@ -3887,23 +3909,10 @@
     // no enseña nada hasta que termina de bajar el archivo entero. Aquí
     // la primera página aparece en cuanto está lista, que en un contrato
     // de catorce hojas es la diferencia entre esperar y no esperar.
-    // La silueta de una hoja mientras se dibuja la de verdad: la misma
-    // forma y el mismo lugar, así que cuando llega no brinca nada.
-    const renglon = (ancho, clase) =>
-      '<span class="kw-skel kw-skel-line ' + (clase || '') + '" style="width:' + ancho + '%"></span>';
-    $('doc-cuerpo').innerHTML =
-      '<div class="doc-esqueleto" id="doc-esqueleto" aria-hidden="true">' +
-        // El aviso va arriba y no abajo: la hoja es del alto de una
-        // hoja de verdad, así que abajo caería fuera de lo que se ve.
-        '<div class="doc-esqueleto-pie">Preparando las hojas...</div>' +
-        '<div class="doc-hoja-esqueleto">' +
-          renglon(46, 'titulo') +
-          renglon(100) + renglon(97) + renglon(99) + renglon(64) +
-          renglon(100, 'parrafo') + renglon(96) + renglon(99) + renglon(78) +
-          renglon(100, 'parrafo') + renglon(93) + renglon(58) +
-        '</div>' +
-      '</div>' +
-      '<div id="doc-paginas"></div>';
+    // La pantalla de carga es una sola, la que se puso al abrir: bajar y
+    // dibujar el PDF es la parte larga de lo mismo, y cambiarla a medio
+    // camino por otra cosa se ve como si algo hubiera fallado y vuelto a
+    // empezar. Aquí solo se usa el hueco que ya está puesto.
 
     // Bajar y dibujar el PDF va en su propio try: es lo único que puede
     // fallar por algo de afuera (el archivo no se deja leer, la librería
@@ -3919,7 +3928,10 @@
       if (!res.ok) throw new Error('no se pudo bajar');
       const bytes = new Uint8Array(await res.arrayBuffer());
       hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
-      $('doc-cuerpo').querySelector('.doc-esqueleto')?.remove();
+      $('doc-cargando')?.remove();
+      // Las hojas ya dibujadas entran con un fundido corto, en vez de
+      // aparecer de golpe donde estaban los aros.
+      $('doc-paginas').classList.add('aparece');
     } catch {
       // Si el archivo no se deja leer desde aquí, al menos se abre en el
       // visor del navegador. Ahí ya no se pueden pintar los recuadros
