@@ -953,6 +953,20 @@
      vista aunque se esté buscando: es lo que dice en qué se está
      trabajando. */
   #header-firmas.kw-buscando.modo-editor .kw-header-doc { display: block; }
+  /* Abierto el cuadro de búsqueda, el botón de volver se pasa a su
+     derecha en vez de quedarse adentro comiéndose el ancho de lo que se
+     escribe. Va con position absoluta porque el cuadro es la cápsula que
+     lo contiene: la orilla izquierda del header y la de la cápsula son
+     la misma, así que su ancho (--ancho-buscador, que ya existe) dice
+     exactamente dónde empieza el hueco de al lado. */
+  @media (min-width: 901px) {
+    #header-firmas.kw-buscando .btn-volver-paso {
+      position: absolute;
+      left: calc(var(--ancho-buscador, 360px) + 10px);
+      top: 50%; transform: translateY(-50%);
+      margin: 0;
+    }
+  }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
@@ -1209,16 +1223,19 @@
   /* Mientras se está colocando una firma, la hoja invita a picarle. */
   .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(198,32,39,0.05); }
 
-  /* El recuadro de firma. Va translúcido a propósito: se coloca encima
-     de la rayita donde toca firmar, y si tapara el texto habría que
-     moverlo para comprobar que quedó en su lugar. El color de cada
-     firmante se pone como variable para que el borde, el relleno y el
-     rótulo salgan del mismo tono sin repetirlo tres veces. */
+  /* El recuadro de firma. Deja pasar algo del texto de abajo a
+     propósito: se coloca encima de la rayita donde toca firmar, y si la
+     tapara del todo habría que moverlo para comprobar que quedó en su
+     lugar. Pero solo algo: a 26% se veía como una mancha de agua y no
+     como un recuadro puesto ahí, y con dos encimados no se sabía cuál
+     era de quién. El color de cada firmante se pone como variable para
+     que el borde, el relleno y el rótulo salgan del mismo tono sin
+     repetirlo tres veces. */
   .marca-firma {
     position: absolute; box-sizing: border-box;
     border: 1.5px solid var(--marca-color, #FFD247);
     border-radius: 7px;
-    background: color-mix(in srgb, var(--marca-color, #FFD247) 26%, transparent);
+    background: color-mix(in srgb, var(--marca-color, #FFD247) 62%, transparent);
     box-shadow: 0 2px 10px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.5);
     backdrop-filter: saturate(115%);
     -webkit-backdrop-filter: saturate(115%);
@@ -1230,7 +1247,7 @@
      transparente y no se vería nada; este respaldo va antes en la
      cascada y solo aplica donde color-mix no existe. */
   @supports not (background: color-mix(in srgb, red 50%, transparent)) {
-    .marca-firma { background: rgba(255,210,71,0.3); }
+    .marca-firma { background: rgba(255,210,71,0.62); }
   }
   .marca-firma:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.7); }
   .marca-firma:active { cursor: grabbing; }
@@ -1242,7 +1259,7 @@
      del color que se le haya puesto al colocarlo. */
   .marca-firma.vista.firmada {
     --marca-color: #16a34a;
-    background: rgba(22,163,74,0.14);
+    background: rgba(22,163,74,0.34);
   }
   .marca-firma.vista.firmada .marca-rotulo { color: #15803d; }
   .firma-hecha-check {
