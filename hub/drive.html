@@ -17,24 +17,30 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829n">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829e">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829o">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829o">
 <style>
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
-  .page { flex: 1; max-width: 1000px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
+  /* Más angosta que el ancho de página general: es una lista de un solo
+     renglón por cosa, y a 1180px los nombres quedaban perdidos en medio
+     de un campo de blanco. */
+  .kw-page { max-width: 1000px; }
 
-  /* ── Buscador ── */
-  .buscador { position: relative; margin-bottom: 14px; }
+  /* ── Buscador ──
+     La clase .buscador y el id #busq son el trato con drawer.js: por
+     ellos reconoce el buscador de esta pantalla, esconde esta franja y
+     le pasa lo que se escriba en la lupa del header. */
+  .buscador { position: relative; margin-bottom: var(--sp-3); }
   .buscador svg.lupa {
     position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
     width: 17px; height: 17px; color: var(--muted); pointer-events: none;
   }
   .buscador input {
     width: 100%; height: 46px; padding: 0 42px 0 40px;
-    border: 1.5px solid var(--border); border-radius: 12px; background: #fff;
+    border: 1.5px solid var(--border); border-radius: var(--r-campo); background: #fff;
     font-family: inherit; font-size: 14.5px; color: var(--text); outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
@@ -52,7 +58,7 @@
   /* ── Ruta de carpetas ── */
   .ruta {
     display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
-    font-size: 13px; margin-bottom: 14px; min-height: 24px;
+    font-size: 13px; margin-bottom: var(--sp-3); min-height: 24px;
   }
   .ruta button {
     border: none; background: none; cursor: pointer; font-family: inherit;
@@ -68,72 +74,24 @@
      carpeta sí trae contenido y vuelve a ocupar su alto normal. */
   .ruta:empty { min-height: 0; margin-bottom: 0; }
 
-  /* ── Lista ── */
-  .fila {
-    display: flex; align-items: center; gap: 13px;
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 12px;
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-    padding: 12px 15px; margin-bottom: 8px; cursor: pointer;
-    text-decoration: none; color: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
-  }
-  .fila:hover { border-color: rgba(138,0,0,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
-  .fila:active { transform: scale(0.995); }
-  .ico {
-    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .ico svg { width: 19px; height: 19px; }
-  .i-carpeta { background: #FFF0F0; color: var(--red); }
-  .i-doc     { background: #FFF0F0; color: var(--red); }
-  .i-hoja    { background: #eefaf0; color: #1a7f37; }
-  .i-pres    { background: #FFF0F0; color: var(--red); }
-  .i-pdf     { background: #fdeaea; color: #CC0000; }
-  .i-img     { background: #FFF0F0; color: var(--red); }
-  .i-otro    { background: #f1f1f0; color: #777; }
-
-  .fila-crece { flex: 1; min-width: 0; }
-  .fila-nombre {
-    font-size: 14.5px; font-weight: 600;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .fila-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .fila-flecha { flex-shrink: 0; color: #c9c9c9; }
-  .fila-flecha svg { width: 16px; height: 16px; display: block; }
-  .fila:hover .fila-flecha { color: var(--red); }
-
-  .titulo-grupo {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 9px;
-  }
-  .titulo-grupo:first-child { margin-top: 0; }
-
-  .vacio {
-    text-align: center; color: var(--muted); font-size: 14px;
-    padding: 48px 20px; border: 1.5px dashed var(--border);
-    border-radius: 14px; line-height: 1.6;
-  }
-  .vacio strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 5px; }
+  /* Los renglones, el cuadro de ícono, los rótulos de grupo y el estado
+     vacío salen del sistema (.kw-fila, .kw-fila-icono, .kw-rotulo,
+     .kw-vacio). Aquí vivían copiados, con el vidrio de cuando el fondo
+     era oscuro y con casi todos los tipos de archivo en rojo. */
 
   .aviso {
-    font-size: 12.5px; color: #7a5c00; background: #fff8e5;
-    border: 1px solid #f0e0b0; border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 16px; line-height: 1.5;
+    font-size: 12.5px; color: var(--pastel-crema-txt); background: var(--pastel-crema);
+    border-radius: var(--r-campo);
+    padding: 10px 14px; margin-bottom: var(--sp-3); line-height: 1.5;
   }
 
   .pie {
-    margin-top: 22px; font-size: 12.5px; color: var(--muted);
+    margin-top: var(--sp-4); font-size: 12.5px; color: var(--muted);
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; flex-wrap: wrap;
   }
   .pie a { color: var(--muted); font-weight: 600; }
   .pie a:hover { color: var(--red); }
-
-  @media (max-width: 640px) {
-    .page { padding: 86px 14px 40px; }
-  }
 </style>
 </head>
 <body>
@@ -148,7 +106,12 @@
     </a>
   </header>
 
-  <main class="page">
+  <main class="kw-page">
+    <div class="kw-page-encabezado">
+      <div class="kw-page-titulo">Documentos de Drive</div>
+      <div class="kw-page-desc">La carpeta compartida del Market Center, desde aquí.</div>
+    </div>
+
     <div class="buscador">
       <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -195,23 +158,23 @@
   // ("application/pdf"), por eso se revisan las dos formas.
   function tipoDe(mime) {
     var m = String(mime || '');
-    if (m.indexOf('folder') >= 0) return { c: 'i-carpeta', n: 'Carpeta' };
-    if (m.indexOf('spreadsheet') >= 0 || m.indexOf('excel') >= 0 || m.indexOf('csv') >= 0) return { c: 'i-hoja', n: 'Hoja de cálculo' };
-    if (m.indexOf('presentation') >= 0 || m.indexOf('powerpoint') >= 0) return { c: 'i-pres', n: 'Presentación' };
-    if (m.indexOf('pdf') >= 0) return { c: 'i-pdf', n: 'PDF' };
-    if (m.indexOf('image') >= 0) return { c: 'i-img', n: 'Imagen' };
-    if (m.indexOf('document') >= 0 || m.indexOf('word') >= 0 || m.indexOf('text') >= 0) return { c: 'i-doc', n: 'Documento' };
-    return { c: 'i-otro', n: 'Archivo' };
+    if (m.indexOf('folder') >= 0) return { c: 'carpeta', n: 'Carpeta' };
+    if (m.indexOf('spreadsheet') >= 0 || m.indexOf('excel') >= 0 || m.indexOf('csv') >= 0) return { c: 'hoja', n: 'Hoja de cálculo' };
+    if (m.indexOf('presentation') >= 0 || m.indexOf('powerpoint') >= 0) return { c: 'pres', n: 'Presentación' };
+    if (m.indexOf('pdf') >= 0) return { c: 'pdf', n: 'PDF' };
+    if (m.indexOf('image') >= 0) return { c: 'img', n: 'Imagen' };
+    if (m.indexOf('document') >= 0 || m.indexOf('word') >= 0 || m.indexOf('text') >= 0) return { c: 'doc', n: 'Documento' };
+    return { c: 'otro', n: 'Archivo' };
   }
 
   function svgDe(clase) {
-    if (clase === 'i-carpeta') {
+    if (clase === 'carpeta') {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
     }
-    if (clase === 'i-img') {
+    if (clase === 'img') {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
     }
-    if (clase === 'i-hoja') {
+    if (clase === 'hoja') {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>';
     }
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
@@ -245,14 +208,16 @@
       ? 'href="#" data-carpeta="' + esc(el.id) + '"'
       : 'href="' + esc(el.link) + '" target="_blank" rel="noopener"';
 
-    return '<a class="fila kw-aparece" ' + attrs + '>' +
-      '<div class="ico ' + t.c + '">' + svgDe(t.c) + '</div>' +
-      '<div class="fila-crece">' +
-        '<div class="fila-nombre">' + esc(el.nombre) + '</div>' +
-        (meta ? '<div class="fila-meta">' + esc(meta) + '</div>' : '') +
-      '</div>' +
-      '<div class="fila-flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + flecha + '</svg></div>' +
-    '</a>';
+    return '<div class="kw-fila kw-aparece">' +
+      '<a class="kw-fila-cabeza" ' + attrs + '>' +
+        '<div class="kw-fila-icono tipo-' + t.c + '">' + svgDe(t.c) + '</div>' +
+        '<div class="kw-fila-texto">' +
+          '<span class="kw-fila-titulo">' + esc(el.nombre) + '</span>' +
+          (meta ? '<span class="kw-fila-sub">' + esc(meta) + '</span>' : '') +
+        '</div>' +
+        '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + flecha + '</svg>' +
+      '</a>' +
+    '</div>';
   }
 
   function contarDentro(id) {
@@ -306,8 +271,8 @@
 
     if (!lista.length) {
       cont.innerHTML = buscando
-        ? '<div class="vacio"><strong>Sin resultados</strong>No hay nada que se llame "' + esc(termino) + '".</div>'
-        : '<div class="vacio"><strong>Esta carpeta está vacía</strong>Todavía no hay archivos aquí.</div>';
+        ? '<div class="kw-vacio"><strong>Sin resultados</strong>No hay nada que se llame "' + esc(termino) + '".</div>'
+        : '<div class="kw-vacio"><strong>Esta carpeta está vacía</strong>Todavía no hay archivos aquí.</div>';
       return;
     }
 
@@ -315,12 +280,12 @@
     var archivos = lista.filter(function (e) { return e.tipo === 'archivo'; });
     var html = '';
     if (carpetas.length) {
-      html += '<div class="titulo-grupo">Carpetas</div>' +
-        carpetas.map(function (e) { return filaHTML(e, buscando); }).join('');
+      html += '<div class="kw-rotulo">Carpetas</div><div class="kw-lista">' +
+        carpetas.map(function (e) { return filaHTML(e, buscando); }).join('') + '</div>';
     }
     if (archivos.length) {
-      html += '<div class="titulo-grupo">Archivos</div>' +
-        archivos.map(function (e) { return filaHTML(e, buscando); }).join('');
+      html += '<div class="kw-rotulo">Archivos</div><div class="kw-lista">' +
+        archivos.map(function (e) { return filaHTML(e, buscando); }).join('') + '</div>';
     }
     cont.innerHTML = html;
 
@@ -402,7 +367,7 @@
 
       pintar();
     } catch (err) {
-      cont.innerHTML = '<div class="vacio"><strong>No se pudo cargar</strong>' + esc(err.message || '') + '</div>';
+      cont.innerHTML = '<div class="kw-vacio"><strong>No se pudo cargar</strong>' + esc(err.message || '') + '</div>';
     }
   }
 
