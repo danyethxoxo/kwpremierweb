@@ -939,6 +939,11 @@ header > *:last-child { margin-left: auto; }
   }
   html.kw-riel .drawer:not(.drawer-der):hover,
   html.kw-riel .drawer:not(.drawer-der).open { width: 280px; }
+  /* El freno de un instante: se pone al soltar el riel con el cursor
+     todavía encima, y se quita en cuanto el cursor sale. Sin él, cerrar
+     no se veía porque el :hover volvía a ensancharlo de inmediato. */
+  html.kw-riel .drawer:not(.drawer-der).sin-hover,
+  html.kw-riel .drawer:not(.drawer-der).sin-hover:hover { width: var(--riel-ancho, 64px); }
 
   /* El velo oscuro es para cuando el menú tapa la página. El riel no la
      tapa: vive en su propia franja. */
@@ -960,7 +965,10 @@ header > *:last-child { margin-left: auto; }
      letras no se vean arrastradas mientras la gaveta se mueve. */
   html.kw-riel .drawer:not(:hover):not(.open) .drawer-link > span,
   html.kw-riel .drawer:not(:hover):not(.open) .drawer-section-label,
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario-txt { opacity: 0; }
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario-txt,
+  html.kw-riel .drawer.sin-hover .drawer-link > span,
+  html.kw-riel .drawer.sin-hover .drawer-section-label,
+  html.kw-riel .drawer.sin-hover .drawer-usuario-txt { opacity: 0; }
   .drawer-link > span,
   .drawer-section-label,
   .drawer-usuario-txt { transition: opacity var(--t-rapido); }
@@ -985,7 +993,8 @@ header > *:last-child { margin-left: auto; }
   html.kw-riel .drawer-header .logo img { transition: opacity var(--t-medio); }
   /* Angosto no hay logo; ancho, la hamburguesa se queda (es la manera de
      dejarlo fijo) y el logo entra a su lado. */
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-header .logo {
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-header .logo,
+  html.kw-riel .drawer.sin-hover .drawer-header .logo {
     opacity: 0; width: 0; overflow: hidden;
   }
 
@@ -1059,7 +1068,8 @@ header > *:last-child { margin-left: auto; }
 
   /* La foto va centrada en la franja mientras está angosta: pegada a la
      izquierda quedaba fuera del eje de los íconos de abajo. */
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario { justify-content: center; padding: 13px 0; }
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario,
+  html.kw-riel .drawer.sin-hover .drawer-usuario { justify-content: center; padding: 13px 0; }
   html.kw-riel .drawer-usuario-foto {
     border: 2px solid rgba(255,255,255,0.9);
     box-shadow: 0 2px 8px rgba(40,12,12,0.14);
