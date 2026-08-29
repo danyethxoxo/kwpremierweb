@@ -17,9 +17,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829u">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829v">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
-<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260829v"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
@@ -110,7 +110,8 @@
   }
   .firma-drop:hover, .firma-drop.encima { border-color: var(--red); background: rgba(198,32,39,0.04); }
   .firma-drop svg { color: var(--muted); }
-  .firma-drop-txt { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  /* Un peso menos: es el rótulo de un recuadro, no un título. */
+  .firma-drop-txt { font-size: 13.5px; font-weight: 600; color: var(--text); }
   .firma-drop-sub { font-size: 12px; color: var(--muted); }
   .firma-drop.con-archivo { border-style: solid; border-color: rgba(0,0,0,0.14); }
 
@@ -134,6 +135,12 @@
     margin-bottom: 10px;
   }
   .firmante-fila .kw-input { margin: 0; }
+  /* Los campos del firmante también se prenden de su color y no del
+     guinda de siempre: adentro de esa tarjeta todo es de esa persona. */
+  .firmante-fila .kw-input:focus {
+    border-color: var(--firmante-color, var(--red));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--firmante-color, #000) 22%, transparent);
+  }
   /* El nombre y el bote de basura, en la misma fila. Antes el bote iba
      encima de la esquina de la tarjeta y se montaba con el borde. */
   .firmante-encabezado { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -172,12 +179,12 @@
     border: 1px solid rgba(198,32,39,0.18);
     margin-bottom: 12px;
   }
-  .firmo-yo-txt { font-size: 13px; font-weight: 700; }
+  .firmo-yo-txt { font-size: 13px; }
   .firmo-yo-btns { display: flex; gap: 7px; }
   .firmo-yo-btn {
     padding: 6px 18px; border-radius: 999px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
     color: var(--text); cursor: pointer;
     transition: border-color var(--t-medio), background var(--t-medio), color var(--t-medio);
   }
@@ -187,7 +194,7 @@
   .firma-agregar {
     display: inline-flex; align-items: center; gap: 6px;
     border: none; background: none; padding: 4px 0;
-    font-family: inherit; font-size: 13px; font-weight: 700;
+    font-family: inherit; font-size: 13px; font-weight: 500;
     color: var(--red); cursor: pointer;
   }
 
@@ -195,8 +202,31 @@
      Misma pestaña del sitio (kw-tabs), pero sin el alto mínimo que trae
      por defecto: el panel se acomoda al contenido, y aquí el contenido ya
      vive dentro de su propio recuadro con scroll (.editor-scroll). */
-  .firma-tabs { margin-bottom: var(--sp-3); }
+  /* Aquí las pestañas van como puro texto: sin la barra gris de atrás y
+     sin la pastilla blanca de la que está abierta. Son dos palabras
+     dentro de una columna angosta que ya trae recuadros por todos lados
+     (la tarjeta de cada firmante, los botones de verificación), y un
+     recuadro más encima de otro se veía apelmazado. Lo que dice cuál
+     está abierta es el color y la rayita de abajo. */
+  .firma-tabs {
+    margin-bottom: var(--sp-3);
+    padding: 0; background: none; border-radius: 0;
+    gap: var(--sp-4);
+    border-bottom: 1px solid var(--border);
+  }
+  .firma-tabs .kw-tabs-indicador { display: none; }
+  .firma-tabs .kw-tab {
+    padding: 0 0 9px; height: auto; border-radius: 0;
+    font-weight: 500; font-size: 13.5px;
+  }
+  .firma-tabs .kw-tab.activo { box-shadow: inset 0 -2px 0 var(--red); }
   .firma-tabpanels { --panel-min: 0; }
+
+  /* "Firmar en orden" se esconde: el flujo normal manda el documento a
+     todos a la vez, y de las veces que se usó, ninguna fue a propósito.
+     La casilla se queda en el HTML porque el envío la lee; escondida
+     vale siempre "no". */
+  .firma-en-orden { display: none; }
 
   /* A diferencia de los firmantes, los observadores no llevan tarjeta ni
      color propio: solo ven el flujo de firmas, no firman nada, así que
@@ -842,8 +872,7 @@
     background: var(--red); color: #fff;
     font-size: 11px; font-weight: 700;
   }
-  .archivo-nom { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .archivo-peso { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); }
+  .archivo-nom { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .archivo-btn {
     flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
     display: flex; align-items: center; justify-content: center;
@@ -853,26 +882,50 @@
   .archivo-btn:hover:not(:disabled) { color: var(--red); border-color: var(--red); }
   .archivo-btn:disabled { opacity: 0.3; cursor: default; }
 
+  /* El botón que cierra el paso va a la derecha, como en cualquier
+     formulario: es el que sigue, no el que se hace de paso. */
+  .archivos-pie { display: flex; justify-content: flex-end; margin-top: var(--sp-4); }
+  .btn-continuar {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 999px;
+    border: none; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    transition: filter var(--t-medio);
+  }
+  .btn-continuar:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn-continuar:disabled { opacity: 0.6; cursor: default; }
+
   /* ── Paso 2: el editor ──────────────────────────────────────
      Documento a la izquierda, campos a la derecha. En pantallas
      angostas se apilan, con el documento arriba: la firma se coloca
      mirando la hoja, así que la hoja va primero. */
-  .editor-barra {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    margin-bottom: var(--sp-3);
-  }
-  /* Iba con texto blanco sobre un fondo translúcido claro, pensado para
-     verse encima de un guinda: sobre el fondo claro de esta pantalla era
-     invisible. Mismo look que "Atrás" del header, que sí se ve bien aquí. */
+  /* El renglón que tenía el botón de volver ya no existe: ese botón se
+     fue al header, junto a la lupa, para que los dos de esta pantalla
+     estén siempre en el mismo lugar. */
+  /* Vive en el header, junto a la lupa, y cada uno se enseña en su
+     vista: "Historial" al elegir los archivos, "Cambiar documentos" en
+     el editor. Van en el mismo lugar y con la misma forma a propósito:
+     un botón de regresar que cambia de sitio entre una pantalla y la
+     siguiente se acaba buscando dos veces. */
   .btn-volver-paso {
-    display: inline-flex; align-items: center; gap: 6px;
+    display: none;
+    align-items: center; gap: 6px; flex: 0 0 auto;
     padding: 7px 13px; border-radius: 999px;
     border: 1px solid var(--border);
     background: #fff; color: var(--text);
-    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
     cursor: pointer;
   }
   .btn-volver-paso:hover { background: var(--pastel-rojo); color: var(--red); }
+  #header-firmas.modo-archivos #btn-volver-historial,
+  #header-firmas.modo-editor #btn-volver-archivos { display: inline-flex; }
+  @media (max-width: 640px) {
+    /* En el celular el header ya trae el título y el Atrás; el texto del
+       botón se va y queda la flecha. */
+    .btn-volver-paso { padding: 7px 9px; }
+    #btn-volver-archivos { font-size: 0; gap: 0; }
+  }
 
   /* ── El nombre del documento, en el header ──
      Solo aparece mientras se edita (el header le pone .modo-editor):
@@ -888,16 +941,6 @@
   }
   #header-firmas.modo-editor .kw-header-title { display: none; }
   #header-firmas.modo-editor .kw-header-doc { display: block; }
-  #btn-volver-archivos { display: none; }
-  /* Los dos selectores llevan id a propósito: en escritorio el riel
-     esconde los .back-btn del header (para eso está el menú), y este no
-     es un "atrás" de más sino la única salida del editor. Con id le gana
-     a esa regla y se queda. */
-  #header-firmas.modo-editor #btn-volver-archivos { display: inline-flex; }
-  @media (max-width: 640px) {
-    #btn-volver-archivos span { display: none; }
-    #btn-volver-archivos { padding: 8px; }
-  }
 
   /* ── La búsqueda ──
      Esta pantalla se dejaba el campo puesto de planta junto a la lupa,
@@ -927,10 +970,15 @@
      pantalla, no en el contenedor. */
   @media (min-width: 1240px) {
     #vista-editor {
-      --ancho-editor: min(1560px, calc(100vw - 48px));
+      /* Lo que sobra a los lados, contando el riel: sin descontarlo, el
+         editor se pasaba de la pantalla por la derecha y la columna de
+         los firmantes salía cortada. */
+      --hueco-riel: 0px;
+      --ancho-editor: min(1560px, calc(100vw - var(--hueco-riel) - 48px));
       width: var(--ancho-editor);
       margin-left: calc(50% - var(--ancho-editor) / 2);
     }
+    html.kw-riel #vista-editor { --hueco-riel: var(--riel-hueco, 84px); }
   }
 
   /* Al documento le toca bastante más que a los campos: es lo que hay
@@ -1092,13 +1140,14 @@
   .editor-botones .btn-guardar {
     flex: 1; margin-top: 0;
     background: var(--red); color: #fff;
+    font-weight: 500;
     box-shadow: 0 6px 20px rgba(198,32,39,0.32);
   }
   .editor-botones .btn-guardar:hover { filter: brightness(1.08); box-shadow: 0 8px 24px rgba(198,32,39,0.4); }
   .btn-borrador {
     flex: 0 0 auto; padding: 0 16px; border-radius: 10px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 13px; font-weight: 700;
+    font-family: inherit; font-size: 13px; font-weight: 500;
     color: var(--text); cursor: pointer;
   }
   .btn-borrador:hover { border-color: var(--red); color: var(--red); }
@@ -1249,40 +1298,57 @@
     filter: drop-shadow(0 0 1px rgba(0,0,0,0.35));
   }
 
-  /* El botón de fijar firma, dentro del renglón de cada firmante. */
+  /* El botón de fijar firma, dentro del renglón de cada firmante.
+     Lleva el color del firmante y no el guinda de la marca: el guinda es
+     de lo que hace la pantalla, y aquí el color dice de quién es cada
+     recuadro de la hoja. Con todos en guinda (que era lo que pasaba al
+     pasarles el mouse y al armarlos) los cuatro firmantes se veían
+     iguales, que es justo lo que el color venía a evitar. */
   .firmante-fijar {
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 5px;
     padding: 0 11px; height: 34px; border-radius: 9px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 12px; font-weight: 700;
+    font-family: inherit; font-size: 12px; font-weight: 500;
     color: var(--text); cursor: pointer; white-space: nowrap;
     transition: background var(--t-medio), border-color var(--t-medio);
   }
-  /* En cuanto el correo está completo, el botón se pinta del color con
-     el que van a salir sus recuadros: fijar una firma es lo siguiente
-     que se hace, y así de una vez se ve de qué color va a quedar. Los
-     tonos son pastel, así que el texto sigue en oscuro. */
+  /* En cuanto el correo está completo, el botón toma el color con el que
+     van a salir sus recuadros: fijar una firma es lo siguiente que se
+     hace, y así de una vez se ve de qué color va a quedar. Va como filo
+     y un baño clarito, no relleno a color: relleno, el texto de adentro
+     se perdía y el botón salía como una mancha sin rótulo. */
   .firmante-fijar.listo {
-    background: var(--firmante-color, #fff);
+    background: color-mix(in srgb, var(--firmante-color, #fff) 26%, #fff);
     border-color: var(--firmante-color, var(--border));
   }
   .firmante-fijar.listo .cuenta { background: rgba(0,0,0,0.16); }
-  .firmante-fijar:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .firmante-fijar:hover:not(:disabled) {
+    border-color: var(--firmante-color, var(--red));
+    background: color-mix(in srgb, var(--firmante-color, #fff) 42%, #fff);
+  }
   .firmante-fijar:disabled { opacity: 0.4; cursor: not-allowed; }
-  .firmante-fijar.armado { border-color: var(--red); background: var(--red); color: #fff; }
+  /* Armado (esperando a que se pique la hoja) es el único estado que se
+     rellena, para que se note cuál está esperando. El texto se pone
+     oscuro a fuerza: los colores de firmante son pastel. */
+  .firmante-fijar.armado {
+    border-color: var(--firmante-color, var(--red));
+    background: var(--firmante-color, var(--red));
+    color: var(--text);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--firmante-color, #000) 24%, transparent);
+  }
   .firmante-fijar .cuenta {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
     background: rgba(0,0,0,0.12); font-size: 10px;
   }
-  .firmante-fijar.armado .cuenta { background: rgba(255,255,255,0.3); }
+  .firmante-fijar.armado .cuenta { background: rgba(0,0,0,0.18); }
 
   /* Qué verificación de identidad se le pidió a ese firmante. */
   .firma-quien-verif {
     display: inline-block; margin-left: 6px; padding: 1px 7px;
     border-radius: 999px; background: rgba(0,0,0,0.06);
-    font-size: 10.5px; font-weight: 700; color: var(--muted);
+    font-size: 10.5px; font-weight: 500; color: var(--muted);
   }
 
   /* La liga personal de firma. weetrust cobra su propio envío por
@@ -1316,14 +1382,23 @@
     padding: 7px 9px; min-height: 40px;
     border: 1.5px solid var(--border); border-radius: 10px;
     background: #fff; color: var(--muted); cursor: pointer;
-    font-family: inherit; font-size: 11px; font-weight: 700;
+    font-family: inherit; font-size: 11px; font-weight: 500;
     line-height: 1.15; text-align: left;
     transition: border-color var(--t-medio), color var(--t-medio), background var(--t-medio);
   }
   .verif-btn svg { width: 17px; height: 17px; flex: 0 0 auto; }
   .verif-btn .verif-txt { min-width: 0; }
-  .verif-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
-  .verif-btn.activo { border-color: var(--red); background: var(--red); color: #fff; }
+  .verif-btn:hover:not(:disabled) {
+    border-color: var(--firmante-color, var(--red));
+    color: var(--text);
+  }
+  /* Prendida, del color del firmante y no del guinda: son cuatro casillas
+     dentro de su tarjeta, y en guinda las de todos se veían iguales. */
+  .verif-btn.activo {
+    border-color: var(--firmante-color, var(--red));
+    background: color-mix(in srgb, var(--firmante-color, var(--red)) 34%, #fff);
+    color: var(--text);
+  }
   /* Background Check sin la facial prendida: weetrust no lo hace, así
      que se ve claramente fuera de alcance en vez de dejar prenderlo y
      que el envío truene cuando ya se llenó todo. */
@@ -1346,17 +1421,24 @@
        campanita del otro, y nada más. El hueco de la campanita lo pone
        drawer.js, igual que en todas. -->
   <header class="kw-header" id="header-firmas">
+    <!-- Los dos botones de regreso, en el mismo lugar y con la misma
+         forma: junto a la lupa, que es la esquina de donde se viene. No
+         llevan .back-btn a propósito, que es la clase que drawer.js
+         manda hasta la otra punta: el "Atrás" al portal sí va allá, pero
+         estos dos son de aquí adentro. Cada uno se enseña en su vista. -->
+    <button type="button" class="btn-volver-paso" id="btn-volver-historial">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Historial
+    </button>
+    <button type="button" class="btn-volver-paso" id="btn-volver-archivos">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Cambiar documentos
+    </button>
     <span class="kw-header-title">Firmas Digitales</span>
     <!-- Solo se ve mientras se edita un documento: el nombre del archivo
          en el lugar del título, para no repetirlo también allá abajo y
          ganar ese espacio para la hoja y los firmantes. -->
     <span class="kw-header-doc" id="editor-nombre"></span>
-    <!-- Solo se ve en el editor: es la salida de esa vista, y esa vista
-         no tiene renglón de título donde ponerla. -->
-    <button type="button" class="back-btn" id="btn-volver-archivos">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      <span>Cambiar documentos</span>
-    </button>
     <a href="../portal.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -1534,13 +1616,6 @@
          Existe aparte porque un contrato casi nunca es un solo archivo:
          es el contrato más sus anexos, y el orden importa. -->
     <div id="vista-archivos" style="display:none;">
-      <div class="editor-barra">
-        <button type="button" class="btn-volver-paso" id="btn-volver-historial">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          Historial
-        </button>
-      </div>
-
       <div class="kw-card" id="paso-archivos">
           <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
@@ -1558,9 +1633,12 @@
 
           <div id="msg-archivos" class="msg" style="display:none;"></div>
 
-          <button type="button" class="btn-guardar" id="btn-continuar" style="margin-top:var(--sp-4);display:none;">
-            Continuar
-          </button>
+          <div class="archivos-pie" id="archivos-pie" style="display:none;">
+            <button type="button" class="btn-continuar" id="btn-continuar">
+              Continuar
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
         </div>
 
     </div>
@@ -1638,7 +1716,7 @@
                         Agregar otro firmante
                       </button>
 
-                      <label style="display:flex;align-items:center;gap:9px;margin-top:var(--sp-4);font-size:13px;cursor:pointer;">
+                      <label class="firma-en-orden">
                         <input type="checkbox" id="en-orden">
                         <span>Firmar en orden</span>
                       </label>
@@ -1917,8 +1995,10 @@
           '</svg>' +
         '</span>' +
         '<span class="archivo-num">' + (i + 1) + '</span>' +
+        // Sin el peso del archivo: no cambia nada de lo que se decide
+        // aquí (qué documentos van y en qué orden), y el tope lo avisa
+        // el propio recuadro cuando se pasa.
         '<span class="archivo-nom">' + escapar(a.name) + '</span>' +
-        '<span class="archivo-peso">' + (a.size / 1024 / 1024).toFixed(1) + ' MB</span>' +
         '<button type="button" class="archivo-btn" data-sube="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir">' +
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>' +
         '</button>' +
@@ -1993,7 +2073,7 @@
       });
     });
 
-    $('btn-continuar').style.display = archivos.length ? 'block' : 'none';
+    $('archivos-pie').style.display = archivos.length ? 'flex' : 'none';
     $('drop-txt').textContent = archivos.length
       ? 'Agregar más documentos'
       : 'Elige los documentos o arrástralos aquí';
@@ -2273,6 +2353,7 @@
     // mientras se edita: el header los muestra en lugar del título de la
     // pantalla nada más en ese momento.
     $('header-firmas').classList.toggle('modo-editor', cual === 'editor');
+    $('header-firmas').classList.toggle('modo-archivos', cual === 'archivos');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -4500,12 +4581,13 @@
       (puedeCancelar
         ? '<button type="button" class="det-btn peligro" data-accion="cancelar" data-id="' + f.id + '">Cancelar documento</button>'
         : '') +
-      // Le pregunta a weetrust cómo va ESTE documento y lo pone al día
-      // sin tocar los demás: sirve cuando alguien acaba de firmar y el
-      // aviso todavía no llega. El del engrane hace lo mismo con todo el
-      // historial, que tarda bastante más.
+      // Le pide a weetrust ligas nuevas para los que todavía no firman.
+      // Es lo que se viene a hacer aquí: las ligas caducan, y cuando una
+      // ya venció no hay otra manera de darle a esa persona por dónde
+      // firmar. De paso trae el estado más reciente de cada firmante,
+      // que es lo que hacía el botón de antes.
       (f.estado === 'pendiente'
-        ? '<button type="button" class="det-btn principal" data-accion="consultar" data-id="' + f.id + '">Actualizar estatus</button>'
+        ? '<button type="button" class="det-btn principal" data-accion="regenerar_enlaces" data-id="' + f.id + '">Actualizar ligas</button>'
         : '') +
       (f.estado === 'completado' && f.pdf_firmado_url
         ? '<a class="det-btn principal" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
@@ -4568,6 +4650,21 @@
 
   // Copiar liga, actualizar y cancelar. Vive aparte porque ahora estos
   // botones nacen dentro del modal y no en la lista.
+  // Qué dice cada botón mientras trabaja, y qué se hace al terminar.
+  const ACCIONES = {
+    cancelar: {
+      confirmar: '¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.',
+      trabajando: 'Cancelando...',
+      cierra: true,
+    },
+    regenerar_enlaces: {
+      trabajando: 'Pidiendo ligas...',
+      // No se cierra: las ligas nuevas se copian de aquí mismo, así que
+      // el cuadro se queda abierto y se vuelve a pintar con ellas.
+      cierra: false,
+    },
+  };
+
   function cablearAcciones(raiz) {
     raiz.querySelectorAll('[data-liga]').forEach((b) => {
       b.addEventListener('click', async () => {
@@ -4588,17 +4685,27 @@
     raiz.querySelectorAll('[data-accion]').forEach((b) => {
       b.addEventListener('click', async () => {
         const accion = b.dataset.accion;
-        if (accion === 'cancelar' && !(await window.kwUI.confirm('¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.'))) return;
+        const cual = ACCIONES[accion] || {};
+        if (cual.confirmar && !(await window.kwUI.confirm(cual.confirmar))) return;
 
+        const id = b.dataset.id;
         const textoOriginal = b.textContent;
         b.disabled = true;
-        b.textContent = accion === 'cancelar' ? 'Cancelando...' : 'Consultando...';
+        b.textContent = cual.trabajando || 'Un momento...';
         try {
-          await llamarFuncion({ accion: accion, id: b.dataset.id });
-          cerrarDetalle();
+          await llamarFuncion({ accion: accion, id: id });
+          if (cual.cierra) cerrarDetalle();
           // Cancelar libera un lugar del tope, así que el contador
           // también se vuelve a calcular.
           await Promise.all([cargarEnvios(), cargarCupo()]);
+          // El cuadro que se queda abierto tiene que volver a pintarse:
+          // si no, sigue enseñando las ligas viejas. Se busca por id
+          // porque la lista se acaba de recargar y el lugar que ocupaba
+          // pudo cambiar.
+          if (!cual.cierra) {
+            const i = visibles.findIndex((x) => x.id === id);
+            if (i >= 0) abrirDetalle(i); else cerrarDetalle();
+          }
         } catch (err) {
           await window.kwUI.alert(err.message || 'No se pudo completar la acción.');
           b.disabled = false;
