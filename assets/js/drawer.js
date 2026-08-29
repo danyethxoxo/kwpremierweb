@@ -439,8 +439,10 @@
     if (!capsula) return;
     header.classList.add('kw-buscando');
     if (!campoLocal) {
-      buscarResultados.hidden = false;
-      pintarResultados('');
+      buscarResultados.hidden = true;
+      buscarResultados.innerHTML = '';
+      // Drive y el calendario se van trayendo desde ya, aunque todavía
+      // no se enseñe nada: así la primera búsqueda no espera.
       cargarExtras();
     }
     // El foco espera al siguiente cuadro: pedirlo en el mismo tick en que
@@ -463,12 +465,16 @@
 
   function pintarResultados(termino) {
     const q = termino.trim();
+    // Con el campo vacío no se enseña nada: el recuadro decía "escribe
+    // para buscar" justo debajo de donde se está escribiendo, y lo único
+    // que hacía era tapar la página. Aparece hasta que hay algo que
+    // contestar.
     if (!q) {
-      buscarResultados.innerHTML = esPublico
-        ? '<div class="kw-buscar-vacio">Escribe para buscar páginas y herramientas del sitio.</div>'
-        : '<div class="kw-buscar-vacio">Escribe para buscar páginas del sitio, archivos de Drive y eventos del calendario.</div>';
+      buscarResultados.hidden = true;
+      buscarResultados.innerHTML = '';
       return;
     }
+    buscarResultados.hidden = false;
     const resultados = buscarEnIndice(q);
     if (!resultados.length) {
       buscarResultados.innerHTML = `<div class="kw-buscar-vacio">Sin resultados para "${q.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}".</div>`;
