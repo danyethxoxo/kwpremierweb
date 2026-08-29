@@ -3003,19 +3003,17 @@
     return firmas.sort().slice(-1)[0];
   };
 
+  // El orden es el de la lectura: primero de qué documento se trata y de
+  // quién es, luego por dónde va (las fechas y quién firmó), después los
+  // números, y hasta el final lo que casi nunca se mira.
   const COLUMNAS_EXCEL = [
     ['Documento', 'texto', 42, (f) => nombreDoc(f)],
     ['Estado', 'texto', 20, (f) => (PILL[f.estado] || ['', f.estado])[1]],
-    ['Firmas hechas', 'entero', 13, (f) => listaFirmantes(f).filter((x) => x.firmado).length],
-    ['Firmas pedidas', 'entero', 13, (f) => listaFirmantes(f).length],
-    ['Firmas que faltan', 'entero', 16, (f) => listaFirmantes(f).filter((x) => !x.firmado).length],
-    ['Ya está firmado', 'texto', 14, (f) => (listaFirmantes(f).length
-      && listaFirmantes(f).every((x) => x.firmado)) ? 'Sí' : 'No'],
+    ['Asesor', 'texto', 28, (f) => (f.autor && f.autor.nombre) || ''],
     // Las fechas van como fecha de verdad y no como texto: es lo que
     // deja ordenar la columna en Excel.
     ['Creado', 'fecha', 13, (f) => (f.created_at || '').slice(0, 10)],
     ['Enviado a firmar', 'fecha', 16, (f) => (f.enviado_at || '').slice(0, 10)],
-    ['Firmado el', 'fecha', 13, (f) => fechaFirmado(f).slice(0, 10)],
     // Quién firmó y cuándo, uno por renglón dentro de la misma celda:
     // es lo que se pregunta cuando algo lleva días detenido.
     ['Quién ya firmó', 'parrafo', 42, (f) => listaFirmantes(f)
@@ -3029,13 +3027,19 @@
     ['Todos los firmantes', 'parrafo', 44, (f) => listaFirmantes(f)
       .map((x) => (x.nombre || '') + (x.correo ? ' <' + x.correo + '>' : '')
         + (x.firmado ? ' - firmado' : ' - pendiente')).join('\n')],
+    ['Firmado el', 'fecha', 13, (f) => fechaFirmado(f).slice(0, 10)],
+
+    ['Firmas hechas', 'entero', 13, (f) => listaFirmantes(f).filter((x) => x.firmado).length],
+    ['Firmas pedidas', 'entero', 13, (f) => listaFirmantes(f).length],
+    ['Firmas que faltan', 'entero', 16, (f) => listaFirmantes(f).filter((x) => !x.firmado).length],
+    ['Ya está firmado', 'texto', 14, (f) => (listaFirmantes(f).length
+      && listaFirmantes(f).every((x) => x.firmado)) ? 'Sí' : 'No'],
+
     ['Observadores', 'parrafo', 30, (f) => (Array.isArray(f.observadores) ? f.observadores : [])
       .map((x) => x.correo || '').filter(Boolean).join('\n')],
     ['Etiquetas', 'texto', 24, (f) => (f.etiquetas || [])
       .map((id) => { const e = etiquetas.find((x) => x.id === id); return e ? e.nombre : ''; })
       .filter(Boolean).join(', ')],
-    ['Asesor', 'texto', 28, (f) => (f.autor && f.autor.nombre) || ''],
-    ['Error', 'texto', 30, (f) => f.error_mensaje || ''],
   ];
 
   // Lo mismo que hace el rango de fechas en la pantalla, pero sobre todo
