@@ -17,9 +17,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829s">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829t">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
+<script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -65,18 +66,6 @@
   }
   .pantalla-carga .kw-loader { min-height: 0; padding: 0; width: 56px; height: 56px; }
   .pantalla-carga-texto { color: #fff; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
-
-  /* ── El vidrio de la tabla ──────────────────────────────────
-     Sobre el fondo guinda, lo que va encima no es blanco liso sino un
-     vidrio esmerilado: el degradado da el brillo, el borde claro el
-     canto y el blur deja pasar el color de atrás. Vive en variables
-     porque lo usan la tabla y los filtros de arriba, y copiado a mano en
-     cada lugar se iban separando en cuanto se tocaba uno. */
-  :root {
-    --vidrio: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), linear-gradient(150deg, rgba(255,255,255,0.86) 0%, rgba(255,255,255,0.76) 45%, rgba(255,255,255,0.7) 100%);
-    --vidrio-borde: rgba(255,255,255,0.82);
-    --vidrio-blur: blur(18px) saturate(165%);
-  }
 
   /* El título y la descripción van directo sobre el fondo guinda, no
      dentro de una tarjeta, así que necesitan su propio color claro:
@@ -278,42 +267,10 @@
   /* ── Historial ──────────────────────────────────────────────
      Es lo primero que se ve: casi siempre uno entra a consultar cómo va
      algo, no a mandar uno nuevo. */
-  /* El renglón de los filtros. Los botones de la pantalla ya no van
-     aquí: se fueron al renglón del título, que es donde los pone el
-     resto del sitio. */
-  .hist-barra {
-    display: flex; align-items: center;
-    gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4);
-  }
-  /* Los desplegables usan el componente propio del sitio, que es de
-     ancho completo por defecto. En la barra de filtros eso los apila uno
-     debajo de otro y se come media pantalla, así que aquí se les da su
-     ancho justo y caben en un renglón. */
-  .hist-filtros { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 0; }
-  .hist-filtros .kw-select { width: auto; min-width: 0; }
-  /* Del mismo vidrio que la tabla: son la barra de esa tabla, y con el
-     blanco liso que trae el componente por defecto se veían como algo
-     pegado encima del fondo guinda en vez de como parte de ella. */
-  .hist-filtros .kw-select-btn {
-    height: 32px; padding: 0 10px; font-size: 12px; border-radius: 999px;
-    background: var(--vidrio);
-    border: 1px solid var(--vidrio-borde);
-    backdrop-filter: var(--vidrio-blur);
-    -webkit-backdrop-filter: var(--vidrio-blur);
-    box-shadow: var(--sombra-1);
-  }
-  .hist-filtros .kw-select-valor { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* El botón del desplegable es una pastilla angosta a propósito, pero
-     el menú que se abre no tiene por qué serlo: heredaba el mismo ancho
-     y opciones como "Esperando firmas" salían cortadas. Se le da su
-     propio ancho mínimo y se deja de pegar al lado derecho del botón. */
-  .hist-filtros .kw-select-menu { left: 0; right: auto; min-width: 220px; }
-  /* En pantalla angosta los filtros se acomodan de dos en dos, y el de
-     la derecha colgaba su menú hacia afuera de la pantalla. Ahí se
-     cuelga del otro lado, como el menú del engrane en Dictámenes. */
-  @media (max-width: 700px) {
-    .hist-filtros .kw-select-menu { left: auto; right: 0; max-width: calc(100vw - 32px); }
-  }
+  /* El primero de los filtros es el que más se usa y el que trae los
+     textos más largos ("Esperando firmas y completados"), así que pesa
+     un poco más que los demás en el reparto del renglón. */
+  .kw-filtros > .kw-campo-filtro:first-child { flex: 1.4 1 210px; }
 
 
   /* Traer el historial de weetrust. Va apagado de color: es una acción
@@ -379,13 +336,13 @@
      usa no le cambie el terreno. En pantalla angosta la tabla no cabe,
      así que cada renglón se convierte en tarjeta: una tabla de seis
      columnas con scroll horizontal en el celular es inservible. */
+  /* La tarjeta (fondo, borde y sombra) sale de kw-claro.css, que es la
+     que se las pone a todas. Aquí traía su propio vidrio translúcido con
+     blur, de cuando el fondo del sitio era oscuro: sobre el lienzo claro
+     de ahora eso solo servía para que el encabezado pegado dejara verse
+     los renglones pasando por debajo. */
   .tabla-envios {
-    background: var(--vidrio);
-    border: 1px solid var(--vidrio-borde);
     border-radius: var(--r-tarjeta);
-    backdrop-filter: var(--vidrio-blur);
-    -webkit-backdrop-filter: var(--vidrio-blur);
-    box-shadow: var(--sombra-1);
     overflow: hidden;
   }
   /* El renglón son tres piezas: la zona del documento, la del estatus y
@@ -413,22 +370,49 @@
   }
   .tabla-fila { padding: 0 var(--sp-3) 0 var(--sp-4); }
 
-  /* ── La búsqueda y el encabezado, pegados arriba ──
-     Su propia tarjeta, aparte de las filas, para poder quedarse fija con
-     position:sticky mientras el cuerpo de la tabla se desplaza por
-     debajo. Lleva el mismo redondeado que la tabla (no el de pastilla
-     del header) para que se lea como parte de ella, nada más despegada;
-     el blur de atrás es lo que evita que el contenido se vea cortado al
-     pasar por abajo. La franja de búsqueda usa la misma rejilla de
-     columnas que el encabezado, para que el cuadro de texto mida justo
-     lo mismo que las columnas de "Documento": desde donde arranca la
-     tabla hasta la división antes de "Etiquetas". */
+  /* ── El encabezado de la tabla, pegado arriba ──
+     Es una pieza aparte de las filas porque tiene que quedarse quieta
+     con position:sticky mientras el cuerpo de la tabla pasa por debajo.
+     Pero se ve como lo que es, el primer renglón de la tabla: pegado a
+     ella, redondeado nada más de arriba y sin sombra. Antes flotaba
+     encima como una cápsula suelta, con su propio aire y su sombra, y
+     al rodar la lista se le veía pasar los renglones por abajo como si
+     fuera otra cosa que nada tiene que ver con la tabla.
+
+     La sombra aparece solo cuando de veras se despegó (cuando la lista
+     ya está corriendo por abajo), y de eso se encarga la clase .pegada
+     que le pone el JS de más abajo.
+
+     La franja de búsqueda usa la misma rejilla de columnas que el
+     encabezado, para que el cuadro de texto mida justo lo mismo que las
+     columnas de "Documento": desde donde arranca la tabla hasta la
+     división antes de "Etiquetas". */
   .tabla-fija {
-    position: sticky; top: 78px; z-index: 15;
-    border-radius: var(--r-tarjeta);
-    margin-bottom: var(--sp-3);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.14);
+    position: sticky; top: var(--tope-pegado, 62px); z-index: 15;
+    border-radius: var(--r-tarjeta) var(--r-tarjeta) 0 0;
+    border-bottom: 0;
+    margin-bottom: 0;
+    box-shadow: none;
+    transition: box-shadow var(--t-medio);
   }
+  /* Despegado se le cuadran las esquinas: redondeadas, por las muescas
+     de arriba se asomaba el renglón que va pasando por detrás. */
+  .tabla-fija.pegada {
+    box-shadow: 0 10px 22px -14px rgba(0,0,0,0.45);
+    border-radius: 0;
+  }
+  /* El cuerpo de la tabla es la otra mitad de la misma tarjeta: se le
+     quitan las esquinas de arriba y su borde de ese lado, que si no
+     salía doble justo debajo del encabezado. */
+  #lista-envios > .tabla-envios {
+    border-radius: 0 0 var(--r-tarjeta) var(--r-tarjeta);
+    border-top: 0;
+  }
+  /* El vigía: un pelo de altura justo arriba del encabezado. Cuando deja
+     de verse es que el encabezado ya se despegó, y es lo que enciende su
+     sombra. Se mide con IntersectionObserver en vez de con el scroll
+     para no hacer cuentas en cada pixel que rueda la página. */
+  .tabla-vigia { height: 1px; margin: 0; }
   .tabla-buscar-fila {
     display: grid;
     grid-template-columns: 34px minmax(0,1.5fr) minmax(0,2fr) 76px;
@@ -1313,27 +1297,37 @@
       <div class="kw-page-encabezado con-acciones">
         <h1 class="kw-page-titulo">Firmas Digitales</h1>
         <div class="kw-page-acciones">
-        <!-- El de actualizar se usa seguido y no es la acción principal
-             de la pantalla: va como puro ícono (.kw-btn-icono), igual
-             que el engrane de Dictámenes. Mientras trabaja da vueltas
-             solo, por estar [disabled]. -->
-        <button type="button" class="kw-btn-icono" id="btn-actualizar" title="Traer de weetrust el estado y las firmas más recientes" aria-label="Actualizar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/>
-          </svg>
-        </button>
-        <button type="button" class="btn-importar" id="btn-limpiar" style="display:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
-          </svg>
-          <span>Limpiar fantasmas</span>
-        </button>
-        <button type="button" class="btn-importar" id="btn-importar" style="display:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <span>Traer de weetrust</span>
-        </button>
+        <!-- Todo lo que se hace cada tanto (bajar la lista, ponerla al
+             día, las dos de mantenimiento) se junta en el engrane, el
+             mismo de Dictámenes. Eran cuatro botones al hilo y tapaban
+             al único que se usa a diario, que es mandar un documento
+             nuevo; ese se queda afuera. -->
+        <div class="kw-menu-ancla">
+          <button type="button" class="kw-btn-icono" id="btn-engrane"
+            title="Más acciones" aria-label="Más acciones"
+            aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <div class="kw-menu" id="engrane-menu" role="menu" hidden>
+            <button type="button" class="kw-menu-op" role="menuitem" id="op-exportar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Exportar a Excel</span>
+            </button>
+            <button type="button" class="kw-menu-op" role="menuitem" id="btn-actualizar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span>Actualizar desde weetrust</span>
+            </button>
+            <div class="kw-menu-raya" id="op-mantenimiento-raya" hidden></div>
+            <button type="button" class="kw-menu-op" role="menuitem" id="btn-limpiar" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <span>Limpiar fantasmas</span>
+            </button>
+            <button type="button" class="kw-menu-op" role="menuitem" id="btn-importar" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Importar todo de weetrust</span>
+            </button>
+          </div>
+        </div>
         <button type="button" class="btn-nuevo-doc" id="btn-nuevo">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nuevo documento</span>
@@ -1341,31 +1335,48 @@
         </div>
       </div>
 
-      <!-- Los filtros, en su propio renglón debajo del título. Iban
-           apretados junto a los botones en una sola barra, y con el
-           título ahí ya no cabían los tres a la vez. -->
-      <div class="hist-barra">
-        <div class="hist-filtros">
-          <select id="f-estado">
-            <option value="activos" selected>Esperando firmas y completados</option>
-            <option value="pendiente">Esperando firmas</option>
-            <option value="completado">Completados</option>
-            <option value="borrador">Borradores</option>
-            <option value="cancelado">Cancelados</option>
-            <option value="eliminado">Eliminados</option>
-            <option value="todos">Todos los estados</option>
-          </select>
+      <!-- Los filtros, en su tarjeta y debajo del título, como los de
+           Dictámenes. Iban sueltos como pastillas de vidrio junto a los
+           botones: se leían como parte de la lista, y eran los únicos
+           filtros del sitio que no se veían así.
 
-          <div id="w-falta" style="display:none;"><select id="f-falta"></select></div>
-          <div id="w-etiqueta" style="display:none;"><select id="f-etiqueta"></select></div>
+           Cada uno lleva su rótulo aunque no se vea (la tarjeta lo
+           esconde): el desplegable ya dice qué es adentro, pero el
+           rótulo es lo que lo dice para un lector de pantalla. -->
+      <div class="kw-filtros-caja">
+        <div class="kw-filtros">
+          <div class="kw-campo-filtro">
+            <label for="f-estado">Estado</label>
+            <select id="f-estado">
+              <option value="activos" selected>Esperando firmas y completados</option>
+              <option value="pendiente">Esperando firmas</option>
+              <option value="completado">Completados</option>
+              <option value="borrador">Borradores</option>
+              <option value="cancelado">Cancelados</option>
+              <option value="eliminado">Eliminados</option>
+              <option value="todos">Todos los estados</option>
+            </select>
+          </div>
 
-          <select id="f-orden">
-            <option value="fecha-desc">Más nuevos primero</option>
-            <option value="fecha-asc">Más antiguos primero</option>
-            <option value="asesor">Por asesor</option>
-            <option value="pendientes">Pendientes de firma primero</option>
-            <option value="completados">Completados primero</option>
-          </select>
+          <div class="kw-campo-filtro" id="w-falta" style="display:none;">
+            <label for="f-falta">Falta la firma de</label>
+            <select id="f-falta"></select>
+          </div>
+          <div class="kw-campo-filtro" id="w-etiqueta" style="display:none;">
+            <label for="f-etiqueta">Etiqueta</label>
+            <select id="f-etiqueta"></select>
+          </div>
+
+          <div class="kw-campo-filtro">
+            <label for="f-orden">Orden</label>
+            <select id="f-orden">
+              <option value="fecha-desc">Más nuevos primero</option>
+              <option value="fecha-asc">Más antiguos primero</option>
+              <option value="asesor">Por asesor</option>
+              <option value="pendientes">Pendientes de firma primero</option>
+              <option value="completados">Completados primero</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1389,6 +1400,7 @@
            HTML de todos modos porque es lo que hace que ese enlace
            funcione, y porque si drawer.js no cargara, la búsqueda seguiría
            estando a la mano en vez de desaparecer. -->
+      <div class="tabla-vigia" id="tabla-vigia" aria-hidden="true"></div>
       <div class="tabla-envios tabla-fija" id="tabla-fija">
         <div class="tabla-buscar-fila">
           <label class="tabla-buscar">
@@ -2146,9 +2158,14 @@
       + 'Se puede correr las veces que haga falta: los que ya están se actualizan, no se duplican.'))) return;
 
     const btn = $('btn-importar');
+    const txt = btn.querySelector('span');
+    const original = txt.textContent;
+    // Dentro del menú, lo que cambia es el rótulo y no el botón entero:
+    // borrarle el contenido se llevaba también el dibujo, que es el que
+    // da vueltas para decir que está trabajando.
     btn.disabled = true;
-    const original = btn.innerHTML;
-    btn.textContent = 'Trayendo...';
+    btn.classList.add('trabajando');
+    txt.textContent = 'Trayendo...';
 
     try {
       const r = await llamarFuncion({ accion: 'importar' });
@@ -2163,7 +2180,8 @@
       await window.kwUI.alert(e.message || 'No se pudo traer el historial.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = original;
+      btn.classList.remove('trabajando');
+      txt.textContent = original;
     }
   });
 
@@ -2171,9 +2189,11 @@
   // copia por cada cadena de 24 caracteres del aviso.
   $('btn-limpiar').addEventListener('click', async () => {
     const btn = $('btn-limpiar');
+    const txt = btn.querySelector('span');
+    const original = txt.textContent;
     btn.disabled = true;
-    const original = btn.innerHTML;
-    btn.textContent = 'Revisando...';
+    btn.classList.add('trabajando');
+    txt.textContent = 'Revisando...';
 
     try {
       // Primero solo se pregunta, sin borrar: así se ve cuántos se
@@ -2205,7 +2225,8 @@
       await window.kwUI.alert(e.message || 'No se pudo limpiar.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = original;
+      btn.classList.remove('trabajando');
+      txt.textContent = original;
     }
   });
 
@@ -2214,10 +2235,16 @@
   // que antes no se guardaban, como el trazo de cada firma.
   $('btn-actualizar').addEventListener('click', async () => {
     const btn = $('btn-actualizar');
-    // Sin texto que escribir encima: el botón es del tamaño de su
-    // dibujo, y "Actualizando..." lo reventaba. Apagado da vueltas solo,
-    // que es lo mismo que dice el engrane de Dictámenes.
+    const txt = btn.querySelector('span');
+    const original = txt.textContent;
+    // Cerrar el menú al elegir: dejarlo abierto encima de la lista que
+    // se acaba de recargar estorba para ver el resultado. Lo que dice
+    // que sigue trabajando es el dibujo dando vueltas en el engrane.
+    abrirEngrane(false);
     btn.disabled = true;
+    btn.classList.add('trabajando');
+    $('btn-engrane').disabled = true;
+    txt.textContent = 'Actualizando...';
 
     try {
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
@@ -2243,6 +2270,9 @@
       await window.kwUI.alert(e.message || 'No se pudo actualizar.');
     } finally {
       btn.disabled = false;
+      btn.classList.remove('trabajando');
+      $('btn-engrane').disabled = false;
+      txt.textContent = original;
     }
   });
 
@@ -2886,6 +2916,93 @@
   // El renglón vacío existe desde el arranque, no solo al armar un
   // documento: así la pestaña nunca se ve pelona.
   asegurarFilaObservador();
+
+  // ── El menú del engrane ─────────────────────────────────────
+
+  function abrirEngrane(abrir) {
+    const menu = $('engrane-menu');
+    const quiere = abrir === undefined ? menu.hidden : abrir;
+    menu.hidden = !quiere;
+    $('btn-engrane').setAttribute('aria-expanded', quiere ? 'true' : 'false');
+  }
+
+  $('btn-engrane').addEventListener('click', (e) => {
+    e.stopPropagation();
+    abrirEngrane();
+  });
+
+  // Se cierra al picarle a cualquier otro lado y con Escape.
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.kw-menu-ancla')) abrirEngrane(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('engrane-menu').hidden) {
+      abrirEngrane(false);
+      $('btn-engrane').focus();
+    }
+  });
+
+  // ── Bajar la lista a Excel ──────────────────────────────────
+
+  // Armar el archivo vive en kw-xlsx.js, que es de todas las pantallas.
+  // Aquí queda nada más lo de esta: qué columnas lleva y de dónde sale
+  // cada valor. Se baja lo que se está viendo, con los filtros puestos:
+  // quien filtra por "esperando firmas" quiere ese pedazo, no todo.
+  const COLUMNAS_EXCEL = [
+    ['Documento', 'texto', 42, (f) => nombreDoc(f)],
+    ['Estado', 'texto', 20, (f) => (PILL[f.estado] || ['', f.estado])[1]],
+    ['Firmas', 'texto', 10, (f) => {
+      const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+      return firmantes.length
+        ? firmantes.filter((x) => x.firmado).length + '/' + firmantes.length
+        : '';
+    }],
+    ['Firmantes', 'parrafo', 40, (f) => (Array.isArray(f.firmantes) ? f.firmantes : [])
+      .map((x) => (x.nombre || '') + (x.correo ? ' <' + x.correo + '>' : '')
+        + (x.firmado ? ' - firmado' : ' - pendiente')).join('\n')],
+    ['Observadores', 'parrafo', 30, (f) => (Array.isArray(f.observadores) ? f.observadores : [])
+      .map((x) => x.correo || '').filter(Boolean).join('\n')],
+    ['Etiquetas', 'texto', 24, (f) => (f.etiquetas || [])
+      .map((id) => { const e = etiquetas.find((x) => x.id === id); return e ? e.nombre : ''; })
+      .filter(Boolean).join(', ')],
+    ['Asesor', 'texto', 28, (f) => (f.autor && f.autor.nombre) || ''],
+    // Las dos fechas van como fecha de verdad y no como texto: es lo que
+    // deja ordenar la columna en Excel.
+    ['Creado', 'fecha', 13, (f) => (f.created_at || '').slice(0, 10)],
+    ['Enviado a firmar', 'fecha', 16, (f) => (f.enviado_at || '').slice(0, 10)],
+    ['Error', 'texto', 30, (f) => f.error_mensaje || ''],
+  ];
+
+  $('op-exportar').addEventListener('click', async () => {
+    abrirEngrane(false);
+    const filas = envíosFiltrados();
+    if (!filas.length) {
+      return await window.kwUI.alert('No hay nada que exportar: con los filtros '
+        + 'puestos no queda ningún documento en la lista.');
+    }
+    const hoy = new Date().toISOString().slice(0, 10);
+    window.kwXlsx.descargar({
+      columnas: COLUMNAS_EXCEL,
+      filas: filas,
+      hoja: 'Firmas',
+      archivo: 'firmas-' + hoy + '.xlsx',
+    });
+  });
+
+  // ── La sombra del encabezado de la tabla ──
+  // Solo cuando se despegó de veras. Quieto en su lugar es el primer
+  // renglón de la tabla y no lleva sombra; con la lista corriendo por
+  // debajo sí, que es lo que dice que hay algo pasando por abajo.
+  (function () {
+    var vigia = document.getElementById('tabla-vigia');
+    var cabeza = document.getElementById('tabla-fija');
+    if (!vigia || !cabeza || !window.IntersectionObserver) return;
+    new IntersectionObserver(function (entradas) {
+      cabeza.classList.toggle('pegada', !entradas[0].isIntersecting);
+    // El margen de arriba es justo lo que mide el hueco donde se pega:
+    // sin él, el vigía se daría por escondido un renglón antes de tiempo.
+    }, { rootMargin: '-63px 0px 0px 0px', threshold: 0 }).observe(vigia);
+  })();
 
   // La búsqueda es la de drawer.js, tal cual: el campo se abre desde la
   // lupa y él pone y quita su propia equis. Aquí vivían dos parches (uno
@@ -4586,8 +4703,11 @@
     // ?importar=1, para cuando haya que forzar una resincronización.
     const pedido = new URLSearchParams(location.search).get('importar') === '1';
     if (pedido && ['master', 'admin'].includes(String(perfil?.role))) {
-      $('btn-importar').style.display = 'inline-flex';
-      $('btn-limpiar').style.display = 'inline-flex';
+      $('btn-importar').hidden = false;
+      $('btn-limpiar').hidden = false;
+      // La raya que los separa del resto del menú solo tiene sentido si
+      // hay algo debajo de ella.
+      $('op-mantenimiento-raya').hidden = false;
     }
 
     // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)

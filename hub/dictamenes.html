@@ -17,9 +17,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829s">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829t">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
+<script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -478,22 +479,8 @@
   }
   .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
 
-  /* Los rótulos de arriba de cada filtro se quitan de la vista: lo que
-     dice cada uno (Estado, Listado, Contrato...) ya sale dentro de la
-     cápsula, como su propio valor por defecto ("Estado" en vez de "Todos
-     los estados"). Un rótulo repitiendo lo mismo arriba era doble aviso
-     del mismo dato. Sigue en el HTML, nada más oculto, para quien use
-     lector de pantalla. */
-  #vista-lista .kw-campo-filtro > label {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
-
-  /* Ocho filtros en una hilera se reparten el ancho a partes iguales y
-     ninguno alcanza a enseñar lo que dice. Con un tope, el que sobra en
-     el último renglón se queda de su tamaño en vez de estirarse de lado a
-     lado. */
-  .kw-filtros > .kw-campo-filtro { max-width: 250px; }
+  /* Los rótulos escondidos y el ancho tope de cada filtro salen ahora de
+     .kw-filtros-caja, en kw-ui.css. */
 
   /* Cada filtro pesa según lo que le cabe adentro, en vez de repartirse
      el ancho a partes iguales. El de asesor es el que más se usa y el que
@@ -506,24 +493,10 @@
   .kw-filtros > .dic-f-fecha  { flex: 0 1 138px; max-width: 150px; }
   .kw-filtros > .dic-f-chico  { flex: 0 1 118px; max-width: 130px; }
 
-  /* ── La tarjeta de los filtros ──
-     Diez casillas siempre abiertas eran media pantalla antes de llegar
-     al primer expediente. Encerrados en su tarjeta se lee que son un
-     bloque aparte, y de entrada solo se ve el primer renglón. */
-  .dic-filtros-caja {
-    /* Azul, para que no compita con el rojo de la marca: la tarjeta de
-       filtros no es lo que se viene a mirar, es con lo que se busca. */
-    border: 1.5px solid rgba(27,79,138,0.34); border-radius: 16px;
-    background: rgba(255,255,255,0.55);
-    /* El mismo aire arriba que abajo. Antes el de abajo era cero, porque
-       ahí colgaba el renglón del botón de "más filtros", y al pasar ese
-       botón a la orilla la tarjeta quedó chueca. */
-    padding: var(--sp-3);
-    margin-bottom: var(--sp-4);
-  }
-  /* La hilera trae su propio margen de abajo, que sumado al relleno de la
-     tarjeta daba doble aire de ese lado. */
-  .dic-filtros-caja .kw-filtros { margin-bottom: 0; }
+  /* La tarjeta de los filtros es la compartida (.kw-filtros-caja de
+     kw-ui.css). Aquí queda nada más lo suyo: que de entrada solo se vea
+     el primer renglón, porque diez casillas abiertas eran media pantalla
+     antes de llegar al primer expediente. */
 
   /* Plegado, los filtros que no caben en el primer renglón se esconden
      uno por uno desde el código. Antes se recortaba la caja entera con
@@ -602,36 +575,9 @@
      actualizar de Firmas. */
   @keyframes dic-gira { to { transform: rotate(360deg); } }
 
-  /* El menú del engrane. Cuelga del botón y no del cuerpo de la página
-     como el de los estados: ese sale de una tarjeta que rueda con la
-     lista y necesita posición fija, este vive en el encabezado y se
-     queda donde está. Misma tarjeta blanca de siempre. */
-  .dic-engrane-caja { position: relative; }
-  .dic-engrane-menu {
-    position: absolute; top: calc(100% + 6px); right: 0; z-index: 120;
-    min-width: 208px; padding: 5px;
-    background: linear-gradient(150deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 45%, rgba(255,255,255,0.88) 100%);
-    border: 1px solid rgba(255,255,255,0.82); border-radius: 12px;
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30);
-  }
-  .dic-engrane-menu[hidden] { display: none; }
-  /* En el celular el engrane queda pegado a la orilla izquierda, y un
-     menú colgado de su derecha se sale de la pantalla. Ahí se cuelga del
-     otro lado. */
-  @media (max-width: 700px) {
-    .dic-engrane-menu { left: 0; right: auto; max-width: calc(100vw - 32px); }
-  }
-  .dic-engrane-menu .dic-menu-op svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--muted); }
-  .dic-engrane-menu .dic-menu-op:disabled { opacity: 0.55; cursor: default; }
-  .dic-menu-raya { height: 1px; background: var(--border); margin: 4px 8px; }
-  .dic-menu-raya[hidden] { display: none; }
-  /* El de sincronizar mientras trabaja: el dibujo da vueltas ahí mismo. */
-  .dic-menu-op.trabajando svg { animation: dic-gira 1.1s linear infinite; }
-  @media (prefers-reduced-motion: reduce) {
-    .dic-menu-op.trabajando svg { animation: none; }
-  }
+  /* El menú del engrane es la pieza compartida (.kw-menu de kw-ui.css).
+     El de los estados no puede serlo: ese sale de una tarjeta que rueda
+     con la lista y necesita posición fija. */
 
   /* Limpiar cierra la hilera: no es un filtro más, es el botón para
      deshacer lo elegido, así que va al final de todos y no compitiendo
@@ -789,27 +735,27 @@
                aquí adentro: son cuatro cosas que se hacen cada tanto y
                cuatro botones al hilo tapaban al único que se usa a diario,
                que es levantar un dictamen. Ese se queda afuera. -->
-          <div class="dic-engrane-caja">
+          <div class="kw-menu-ancla">
             <button type="button" class="kw-btn-icono" id="btn-engrane"
               title="Más acciones" aria-label="Más acciones"
               aria-haspopup="true" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
-            <div class="dic-engrane-menu" id="engrane-menu" role="menu" hidden>
-              <button type="button" class="dic-menu-op" role="menuitem" id="op-exportar">
+            <div class="kw-menu" id="engrane-menu" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-exportar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Exportar a Excel</span>
               </button>
-              <button type="button" class="dic-menu-op" role="menuitem" id="op-archivo">
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-archivo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                 <span id="op-archivo-txt">Ver archivo</span>
               </button>
-              <button type="button" class="dic-menu-op" role="menuitem" id="op-recargar">
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-recargar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 <span>Recargar la lista</span>
               </button>
-              <div class="dic-menu-raya" id="op-sync-raya" hidden></div>
-              <button type="button" class="dic-menu-op" role="menuitem" id="op-sync" hidden>
+              <div class="kw-menu-raya" id="op-sync-raya" hidden></div>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-sync" hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 20 8 23 11"/><path d="M20 8v6"/></svg>
                 <span id="op-sync-txt">Sincronizar asesores</span>
               </button>
@@ -849,7 +795,7 @@
            primer renglón, que es con el que se resuelve casi todo, y la
            flechita abre los demás: diez casillas siempre abiertas eran
            media pantalla antes de llegar al primer expediente. -->
-      <div class="dic-filtros-caja" id="filtros-caja">
+      <div class="kw-filtros-caja dic-filtros-caja" id="filtros-caja">
         <div class="kw-filtros" id="filtros">
         <!-- Asesor: son 94 y pueden interesar varios a la vez (los de un
              equipo, por ejemplo), así que no es un desplegable de uno
@@ -2665,16 +2611,9 @@
 
   // ── Bajar la lista a Excel ──────────────────────────────────
 
-  // Es un .xlsx de verdad y no un CSV. El CSV se veía más corto, pero
-  // Excel lo abría con su codificación vieja y llegaba con "OperaciÃ³n" y
-  // "SÃ­" en vez de los acentos, y las fechas y los precios entraban como
-  // texto. Un xlsx no deja lugar a que el programa adivine: dice de qué
-  // tipo es cada celda y en qué codificación viene.
-  //
-  // Un xlsx es un zip con unos XML adentro. Se arma a mano, guardando sin
-  // comprimir, porque comprimir pediría una librería y el sitio no carga
-  // ninguna; sin comprimir el archivo pesa más, pero para una lista de
-  // unos cientos de renglones eso son unos cuantos cientos de kilobytes.
+  // Armar el archivo (que es un zip con unos XML adentro) vive en
+  // kw-xlsx.js, que es de todas las pantallas. Aquí queda nada más lo
+  // de esta: qué columnas lleva y de dónde sale cada valor.
 
   // Cada columna dice cómo se llama, de qué es, qué tan ancha va y de
   // dónde sale su valor. El tipo es lo que hace que en Excel una fecha se
@@ -2721,242 +2660,6 @@
       return ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim(); }],
   ];
 
-  // ── Las piezas del zip ──
-
-  var CRC_TABLA = (function () {
-    var t = new Int32Array(256);
-    for (var i = 0; i < 256; i++) {
-      var c = i;
-      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-      t[i] = c;
-    }
-    return t;
-  })();
-
-  function crc32(bytes) {
-    var c = -1;
-    for (var i = 0; i < bytes.length; i++) c = CRC_TABLA[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
-    return (c ^ -1) >>> 0;
-  }
-
-  // Un zip con todo guardado sin comprimir (método 0). Lleva el encabezado
-  // de cada archivo, el directorio del final y el renglón que dice dónde
-  // empieza ese directorio, que es lo que lee quien lo abre.
-  function armarZip(archivos) {
-    var enc = new TextEncoder();
-    var partes = [];
-    var central = [];
-    var desplazamiento = 0;
-
-    function u16(n) { return [n & 0xFF, (n >>> 8) & 0xFF]; }
-    function u32(n) { return [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF]; }
-
-    // La fecha del archivo va en el formato de MS-DOS, que es lo que
-    // guarda un zip: la hora en medias unidades de segundo y el año
-    // contado desde 1980. Dejarla en ceros da el "0 de mes 0 de 1980" y
-    // hay lectores que se quejan.
-    var ahora = new Date();
-    var horaDOS = (ahora.getHours() << 11) | (ahora.getMinutes() << 5) | (ahora.getSeconds() >> 1);
-    var diaDOS = ((ahora.getFullYear() - 1980) << 9) | ((ahora.getMonth() + 1) << 5) | ahora.getDate();
-
-    archivos.forEach(function (a) {
-      var nombre = enc.encode(a.nombre);
-      var datos = enc.encode(a.texto);
-      var suma = crc32(datos);
-
-      // Los campos que el encabezado de cada archivo y el renglón del
-      // directorio llevan iguales, en el mismo orden. La bandera 0x0800
-      // dice que el nombre viene en UTF-8: los de aquí son todos ASCII,
-      // pero declararlo no cuesta y es lo que pide el formato.
-      var comun = [].concat(
-        u16(20), u16(0x0800), u16(0), u16(horaDOS), u16(diaDOS),
-        u32(suma), u32(datos.length), u32(datos.length),
-        u16(nombre.length));
-
-      partes.push(new Uint8Array([].concat(u32(0x04034B50), comun, u16(0))));
-      partes.push(nombre);
-      partes.push(datos);
-
-      // Después del tramo común van, en este orden: lo que ocupa el
-      // extra, el comentario, en qué disco empieza, los atributos de
-      // adentro, los de afuera, y dónde arranca su encabezado. Los seis
-      // tienen que estar aunque vayan en cero: de menos uno, el renglón
-      // sale corto y el siguiente se lee corrido.
-      central.push(new Uint8Array([].concat(
-        u32(0x02014B50), u16(20), comun,
-        u16(0), u16(0), u16(0), u16(0), u32(0), u32(desplazamiento))));
-      central.push(nombre);
-
-      desplazamiento += 30 + nombre.length + datos.length;
-    });
-
-    var largoCentral = central.reduce(function (n, p) { return n + p.length; }, 0);
-    var fin = new Uint8Array([].concat(
-      u32(0x06054B50), u16(0), u16(0),
-      u16(archivos.length), u16(archivos.length),
-      u32(largoCentral), u32(desplazamiento), u16(0)));
-
-    return new Blob(partes.concat(central, [fin]),
-      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  }
-
-  // ── Las piezas de la hoja ──
-
-  function xml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c];
-    // Excel no acepta los caracteres de control adentro de una celda, y de
-    // una nota pegada de otro lado bien puede colarse uno.
-    }).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-  }
-
-  // A1, B1 ... Z1, AA1. Con treinta columnas ya se pasa de la Z.
-  function letra(i) {
-    var s = '';
-    for (var n = i; n >= 0; n = Math.floor(n / 26) - 1) {
-      s = String.fromCharCode(65 + (n % 26)) + s;
-    }
-    return s;
-  }
-
-  // Excel cuenta los días desde el 30 de diciembre de 1899. Las fechas se
-  // parten a mano en vez de pasarlas por Date, que las leería como
-  // medianoche UTC y en México las correría un día hacia atrás.
-  function serieFecha(iso) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso == null ? '' : iso));
-    if (!m) return null;
-    return Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) + 25569;
-  }
-
-  // El número de formato de cada tipo, tal como quedan armados en
-  // styles.xml aquí abajo.
-  var ESTILOS = {
-    titulo: 1, fecha: 2, moneda: 3, decimal: 4,
-    entero: 0, texto: 0, parrafo: 5,
-  };
-
-  // Las que llevan número adentro. Las demás son letras, y una lista de
-  // observaciones con varios renglones es un párrafo: mismo texto, pero
-  // con el ajuste de línea prendido para que se vean los renglones.
-  var NUMERICAS = ['moneda', 'decimal', 'entero'];
-
-  function celdaXML(ref, tipo, valor, esTitulo) {
-    var estilo = esTitulo ? ESTILOS.titulo : (ESTILOS[tipo] || 0);
-    var abre = '<c r="' + ref + '"' + (estilo ? ' s="' + estilo + '"' : '');
-
-    if (!esTitulo && tipo === 'fecha') {
-      var serie = serieFecha(valor);
-      return serie === null ? '' : abre + '><v>' + serie + '</v></c>';
-    }
-    if (!esTitulo && NUMERICAS.indexOf(tipo) !== -1) {
-      var n = Number(soloCifra(valor));
-      if (!soloCifra(valor) || isNaN(n)) return '';
-      return abre + '><v>' + n + '</v></c>';
-    }
-
-    var t = String(valor == null ? '' : valor);
-    if (!t) return '';
-    // El texto va escrito adentro de la celda y no en la tabla de textos
-    // compartidos que suele traer un xlsx: son dos archivos más y un
-    // índice que mantener, para una lista que se baja y se abre una vez.
-    return abre + ' t="inlineStr"><is><t xml:space="preserve">' + xml(t) + '</t></is></c>';
-  }
-
-  function hojaXML(filas) {
-    var cols = COLUMNAS.map(function (c, i) {
-      return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + c[2] + '" customWidth="1"/>';
-    }).join('');
-
-    var titulos = '<row r="1">' + COLUMNAS.map(function (c, i) {
-      return celdaXML(letra(i) + '1', 'texto', c[0], true);
-    }).join('') + '</row>';
-
-    var cuerpo = filas.map(function (d, f) {
-      var r = f + 2;
-      return '<row r="' + r + '">' + COLUMNAS.map(function (c, i) {
-        return celdaXML(letra(i) + r, c[1], c[3](d), false);
-      }).join('') + '</row>';
-    }).join('');
-
-    var ultima = letra(COLUMNAS.length - 1) + (filas.length + 1);
-
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-      '<dimension ref="A1:' + ultima + '"/>' +
-      // El renglón de los títulos se queda pegado arriba al rodar la hoja,
-      // y cada columna trae su flechita para filtrar.
-      '<sheetViews><sheetView tabSelected="1" workbookViewId="0">' +
-        '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' +
-      '</sheetView></sheetViews>' +
-      '<sheetFormatPr defaultRowHeight="15"/>' +
-      '<cols>' + cols + '</cols>' +
-      '<sheetData>' + titulos + cuerpo + '</sheetData>' +
-      '<autoFilter ref="A1:' + ultima + '"/>' +
-      '</worksheet>';
-  }
-
-  var ESTILOS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<numFmts count="3">' +
-      '<numFmt numFmtId="164" formatCode="dd/mm/yyyy"/>' +
-      '<numFmt numFmtId="165" formatCode="&quot;$&quot;#,##0.00"/>' +
-      '<numFmt numFmtId="166" formatCode="#,##0.00"/>' +
-    '</numFmts>' +
-    '<fonts count="2">' +
-      '<font><sz val="11"/><color theme="1"/><name val="Calibri"/></font>' +
-      '<font><b/><sz val="11"/><color theme="1"/><name val="Calibri"/></font>' +
-    '</fonts>' +
-    '<fills count="2">' +
-      '<fill><patternFill patternType="none"/></fill>' +
-      '<fill><patternFill patternType="gray125"/></fill>' +
-    '</fills>' +
-    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
-    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="6">' +
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
-      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
-      '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
-      '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
-      '<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">' +
-        '<alignment vertical="top" wrapText="1"/></xf>' +
-    '</cellXfs>' +
-    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
-    '</styleSheet>';
-
-  function libroXLSX(filas, nombreHoja) {
-    var C = 'http://schemas.openxmlformats.org/';
-    return armarZip([
-      { nombre: '[Content_Types].xml', texto:
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-        '<Types xmlns="' + C + 'package/2006/content-types">' +
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-        '<Default Extension="xml" ContentType="application/xml"/>' +
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
-        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
-        '</Types>' },
-      { nombre: '_rels/.rels', texto:
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-        '<Relationships xmlns="' + C + 'package/2006/relationships">' +
-        '<Relationship Id="rId1" Type="' + C + 'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
-        '</Relationships>' },
-      { nombre: 'xl/workbook.xml', texto:
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-        '<workbook xmlns="' + C + 'spreadsheetml/2006/main" xmlns:r="' + C + 'officeDocument/2006/relationships">' +
-        '<sheets><sheet name="' + xml(nombreHoja) + '" sheetId="1" r:id="rId1"/></sheets>' +
-        '</workbook>' },
-      { nombre: 'xl/_rels/workbook.xml.rels', texto:
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-        '<Relationships xmlns="' + C + 'package/2006/relationships">' +
-        '<Relationship Id="rId1" Type="' + C + 'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
-        '<Relationship Id="rId2" Type="' + C + 'officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
-        '</Relationships>' },
-      { nombre: 'xl/styles.xml', texto: ESTILOS_XML },
-      { nombre: 'xl/worksheets/sheet1.xml', texto: hojaXML(filas) },
-    ]);
-  }
-
   async function exportar() {
     var filas = visibles();
     if (!filas.length) {
@@ -2964,15 +2667,12 @@
         + 'puestos no queda ningún expediente en la lista.');
     }
 
-    var url = URL.createObjectURL(
-      libroXLSX(filas, verArchivo ? 'Archivo' : 'Dictámenes'));
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (verArchivo ? 'archivo-expedientes-' : 'dictamenes-') + hoy() + '.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    window.kwXlsx.descargar({
+      columnas: COLUMNAS,
+      filas: filas,
+      hoja: verArchivo ? 'Archivo' : 'Dictámenes',
+      archivo: (verArchivo ? 'archivo-expedientes-' : 'dictamenes-') + hoy() + '.xlsx',
+    });
   }
 
   // ── La hoja, armada como PDF ────────────────────────────────
@@ -3601,7 +3301,7 @@
   // elige adentro también lo cierra: dejarlo abierto encima de la lista
   // que se acaba de recargar estorba para ver el resultado.
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.dic-engrane-caja')) abrirEngrane(false);
+    if (!e.target.closest('.kw-menu-ancla')) abrirEngrane(false);
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !$('engrane-menu').hidden) {
