@@ -912,6 +912,79 @@ header > *:last-child { margin-left: auto; }
 .drawer-footer { padding: 14px 20px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
 .drawer-footer .drawer-link { color: #a30000; }
 
+/* ══════════════════════════════════════════════════════════════
+   El riel: el menú siempre a la vista
+   ══════════════════════════════════════════════════════════════
+   En pantalla ancha y dentro de la plataforma (drawer.js pone .kw-riel
+   en el <html>; en el sitio público no), el menú deja de ir y venir: se
+   queda como una franja de íconos pegada a la izquierda y se ensancha
+   al acercarle el cursor o al picar la hamburguesa.
+
+   El contenido se recorre para dejarle su lugar en vez de quedar
+   debajo. Es más trabajo que dejarlo flotando encima, pero flotando le
+   tapaba la orilla al contenido en los monitores angostos, que es justo
+   donde más falta hace cada pixel.
+
+   El ensanchado se hace con el ancho y no escondiendo texto: el panel ya
+   recorta lo que se sale (overflow: hidden), así que las etiquetas se
+   asoman solas conforme crece. Así se ve como una gaveta que se abre y
+   no como texto que aparece de golpe.
+
+   Debajo de 1024px no aplica nada de esto: en celular y tableta el menú
+   sigue siendo el panel de siempre, que aparece sobre el contenido. */
+@media (min-width: 1024px) {
+  html.kw-riel body { padding-left: var(--riel-hueco, 84px); }
+  html.kw-riel header.kw-header { left: calc(var(--riel-hueco, 84px) + 12px); }
+
+  html.kw-riel .drawer:not(.drawer-der) {
+    transform: none;
+    width: var(--riel-ancho, 64px);
+    max-width: none;
+    transition: width var(--t-lento) var(--curva);
+  }
+  html.kw-riel .drawer:not(.drawer-der):hover,
+  html.kw-riel .drawer:not(.drawer-der).open { width: 280px; }
+
+  /* El velo oscuro es para cuando el menú tapa la página. El riel no la
+     tapa: vive en su propia franja. */
+  html.kw-riel .drawer-overlay { display: none; }
+
+  /* La X sobra: el riel se cierra solo al alejar el cursor. */
+  html.kw-riel .drawer-close { display: none; }
+
+  /* Angosto, el renglón del logo se queda con la marca "kw" (la parte
+     izquierda del archivo), que es justo lo que se quiere ver ahí. */
+  html.kw-riel .drawer-header { padding: 18px 14px; justify-content: flex-start; }
+  html.kw-riel .drawer-header .logo { overflow: hidden; }
+  html.kw-riel .drawer-header img { max-width: none; }
+
+  /* Angosto no se recorta nada a media palabra: dos letras sueltas al
+     filo se leen como un error, no como que hay más. Todo lo que es
+     texto se desvanece y quedan solo los íconos; al ensancharse vuelve.
+     El desvanecido va un poco más rápido que el ancho para que las
+     letras no se vean arrastradas mientras la gaveta se mueve. */
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-link > span,
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-section-label,
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario-txt { opacity: 0; }
+  .drawer-link > span,
+  .drawer-section-label,
+  .drawer-usuario-txt { transition: opacity var(--t-rapido); }
+  html.kw-riel .drawer-usuario { margin: 12px 8px 0; padding: 13px 12px; }
+
+  /* El logo, angosto, se queda con la marca "kw": es la parte izquierda
+     del archivo, así que basta con recortarlo ahí en vez de traer otra
+     imagen solo para esto. */
+  html.kw-riel .drawer:not(:hover):not(.open) .drawer-header .logo { width: 30px; }
+  html.kw-riel .drawer-header .logo { transition: width var(--t-lento) var(--curva); }
+
+  /* Sin esto, un nombre largo o una etiqueta larga estiran el renglón y
+     empujan el ícono fuera de la franja mientras está angosta. */
+  html.kw-riel .drawer-link,
+  html.kw-riel .drawer-usuario { white-space: nowrap; }
+  html.kw-riel .drawer-nav { padding: 14px 8px; }
+  html.kw-riel .drawer-footer { padding: 14px 12px 18px; }
+}
+
 /* ── Panel de la derecha: los accesos que cada quien se guarda ──
    Mismo vidrio y mismo comportamiento que el de la izquierda; solo
    entra del otro lado. */

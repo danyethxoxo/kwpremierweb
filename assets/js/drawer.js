@@ -79,7 +79,7 @@
     return items.map((item) => {
       if (item.section) return `<div class="drawer-section-label">${item.section}</div>`;
       const activo = estaActivo(item.href) ? ' activo' : '';
-      return `<a href="${item.href}" class="drawer-link${activo}">${ICONS[item.icon]}${item.label}</a>`;
+      return `<a href="${item.href}" class="drawer-link${activo}">${ICONS[item.icon]}<span>${item.label}</span></a>`;
     }).join('');
   }
 
@@ -221,11 +221,18 @@
   }
 
   const esPublico = modo === 'publico';
+  // El riel: en las pantallas de trabajo el menú deja de ser un panel que
+  // aparece y desaparece, y pasa a ser una franja de íconos siempre a la
+  // vista que se ensancha al acercarse. En el sitio público no: ahí el
+  // menú se usa de vez en cuando y una franja fija le robaría ancho a las
+  // propiedades. La marca va en el <html> para que el CSS pueda recorrer
+  // el contenido y el header, que son de la página y no del menú.
+  if (!esPublico) document.documentElement.classList.add('kw-riel');
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
   const homeHref = esPublico ? `${BASE}/index.html` : `${BASE}/portal.html`;
   const footerHtml = esPublico
-    ? `<a href="#" class="drawer-link" id="drawer-cta" style="color: var(--red);">${ICONS.logout}Inicia Sesión</a>`
-    : `<a href="#" class="drawer-link" id="drawer-logout">${ICONS.logout}Cerrar sesión</a>`;
+    ? `<a href="#" class="drawer-link" id="drawer-cta" style="color: var(--red);">${ICONS.logout}<span>Inicia Sesión</span></a>`
+    : `<a href="#" class="drawer-link" id="drawer-logout">${ICONS.logout}<span>Cerrar sesión</span></a>`;
 
   const contenedor = document.createElement('div');
   contenedor.innerHTML = `
