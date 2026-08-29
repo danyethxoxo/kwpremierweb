@@ -907,7 +907,12 @@
      vista: "Historial" al elegir los archivos, "Cambiar documentos" en
      el editor. Van en el mismo lugar y con la misma forma a propósito:
      un botón de regresar que cambia de sitio entre una pantalla y la
-     siguiente se acaba buscando dos veces. */
+     siguiente se acaba buscando dos veces.
+
+     Va fuera del cuadro de la lupa (lo saca acomodarHeader(), abajo):
+     adentro, los dos se repartían el mismo ancho y al abrir la búsqueda
+     se estorbaban. Afuera, cada pieza del renglón mide lo suyo y no le
+     quita nada a la de al lado. */
   .btn-volver-paso {
     display: none;
     align-items: center; gap: 6px; flex: 0 0 auto;
@@ -935,7 +940,7 @@
   .kw-header-doc {
     display: none;
     flex: 1; min-width: 0; text-align: center;
-    font-size: 13px; font-weight: 700; color: var(--text);
+    font-size: 13px; font-weight: 500; color: var(--text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     padding: 0 8px;
   }
@@ -959,14 +964,10 @@
      lo contiene: la orilla izquierda del header y la de la cápsula son
      la misma, así que su ancho (--ancho-buscador, que ya existe) dice
      exactamente dónde empieza el hueco de al lado. */
-  @media (min-width: 901px) {
-    #header-firmas.kw-buscando .btn-volver-paso {
-      position: absolute;
-      left: calc(var(--ancho-buscador, 360px) + 10px);
-      top: 50%; transform: translateY(-50%);
-      margin: 0;
-    }
-  }
+  /* Sin buscar, el cuadro de la lupa mide lo que su dibujo: estirado a
+     todo lo ancho (que es lo que hace de fábrica, para dejar lugar al
+     campo) empujaba al botón de volver hasta la otra orilla. */
+  html.kw-riel #header-firmas:not(.kw-buscando) .kw-header-capsula { flex: 0 0 auto; }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
@@ -2580,8 +2581,10 @@
       // Se nombra como el primer archivo, que es el contrato: los anexos
       // van después y no lo nombran. Decir "4 documentos unidos" no
       // identificaba nada.
+      // El nombre va tal cual, sin la cuenta de los que se le unieron:
+      // el "(+3)" no es parte del nombre y confundía con una versión.
       $('editor-nombre').textContent = archivos.length > 1
-        ? archivos[0].name + ' (+' + (archivos.length - 1) + ')'
+        ? archivos[0].name
         : archivos[0].name;
 
       // El título es el nombre del archivo, sin la extensión. Del primero
@@ -3263,6 +3266,35 @@
       archivo: 'firmas-' + cual + '.xlsx',
     });
   });
+
+  // ── Cada pieza del renglón de arriba, por su cuenta ──
+  // drawer.js mete todo lo que había en el header dentro de una misma
+  // cápsula, que es la que se convierte en el cuadro de búsqueda al
+  // picar la lupa. Ahí adentro, el botón de volver y el nombre del
+  // documento se repartían el ancho con el campo de escribir: al abrir
+  // la búsqueda el nombre se encimaba con el campo y el botón se
+  // partía en dos renglones.
+  //
+  // Aquí se sacan los dos de la cápsula y se dejan como piezas sueltas
+  // del renglón, entre el cuadro de la lupa y la campanita. Así cada uno
+  // mide lo suyo y nada de lo que le pase a uno mueve a los demás.
+  function acomodarHeader() {
+    const h = document.getElementById('header-firmas');
+    const capsula = h && h.querySelector('.kw-header-capsula');
+    if (!capsula) return;
+    const sueltos = h.querySelector('.kw-header-sueltos');
+    ['btn-volver-historial', 'btn-volver-archivos', 'editor-nombre'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && capsula.contains(el)) h.insertBefore(el, sueltos || null);
+    });
+  }
+  // Después de drawer.js, que es quien arma la cápsula: los dos son
+  // scripts del final del <body>, así que para entonces ya corrió.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', acomodarHeader);
+  } else {
+    acomodarHeader();
+  }
 
   // La búsqueda es la de drawer.js, tal cual: el campo se abre desde la
   // lupa y él pone y quita su propia equis. Aquí vivían dos parches (uno
