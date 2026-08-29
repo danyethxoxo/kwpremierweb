@@ -1162,9 +1162,14 @@ header > *:last-child { margin-left: auto; }
   html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-capsula {
     pointer-events: none;
   }
-  html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-capsula > *,
-  html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-sueltos,
-  html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-sueltos * {
+  /* Todo lo que cuelga del header recibe clics otra vez, menos la
+     cápsula, que es el hueco vacío que se atraviesa. Va por "cualquier
+     hijo" y no por una lista de nombres: una pantalla puede colgar sus
+     propios botones del renglón (Firmas cuelga los de volver), y con la
+     lista cerrada esos nacían muertos, sin nada que dijera por qué. */
+  html.kw-riel header.kw-header:not(.kw-buscando) > *:not(.kw-header-capsula),
+  html.kw-riel header.kw-header:not(.kw-buscando) > *:not(.kw-header-capsula) *,
+  html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-capsula > * {
     pointer-events: auto;
   }
 
