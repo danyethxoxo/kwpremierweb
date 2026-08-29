@@ -198,7 +198,15 @@ header.kw-header .kw-header-capsula {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 16px; min-height: 52px;
 }
-header.kw-header .kw-header-sueltos { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* Los atajos (la campanita) van pegados a la orilla derecha, siempre.
+   Antes los empujaba la cápsula, que se estiraba a todo lo ancho; en
+   cuanto una pantalla la deja medir lo suyo, la campanita se venía con
+   ella hasta media pantalla. Pegarla aquí la deja quieta sin depender de
+   lo que hagan las demás piezas del renglón. */
+header.kw-header .kw-header-sueltos {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  margin-left: auto;
+}
 /* Cada atajo es su propia pastilla, del mismo alto que la cápsula para
    que los dos queden alineados. */
 header.kw-header .kw-header-sueltos > * {
@@ -1048,16 +1056,10 @@ header > *:last-child { margin-left: auto; }
      el campo se estiraba de orilla a orilla y les quitaba el lugar; ya
      que es un cuadro de su propio tamaño, no le estorban a nadie y
      desaparecerlos solo dejaba la sensación de que algo se rompió. */
-  html.kw-riel header.kw-buscando .kw-header-sueltos {
-    display: flex;
-    /* Y se quedan en su orilla. Al encoger la cápsula para el cuadro de
-       búsqueda dejaron de tener quien las empujara y se resbalaban
-       hasta pegarse a él, a media pantalla. El margen automático de
-       `header > *:last-child` no alcanza: el desplegable de resultados
-       se cuelga del header después de ellas, así que el último hijo es
-       ese y no este grupo. */
-    margin-left: auto;
-  }
+  /* La orilla derecha ya se la pone la regla de arriba, que vale
+     siempre; aquí solo hace falta volver a enseñarlas, porque buscando
+     se esconden de fábrica. */
+  html.kw-riel header.kw-buscando .kw-header-sueltos { display: flex; }
 
   html.kw-riel header.kw-buscando .kw-header-capsula {
     flex: 0 0 auto;
