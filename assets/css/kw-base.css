@@ -76,6 +76,16 @@
    Linux). En Mac y celular, donde la barra flota encima, esto no cambia
    nada. */
 html {
+  /* Los paneles que entran por un lado esperan estacionados fuera de la
+     pantalla, y ahí alargan el área que se puede recorrer: aparecía una
+     barra horizontal y la página se podía arrastrar de lado hasta el
+     panel escondido. Se recorta.
+
+     Va `clip` y no `hidden` a propósito: `hidden` convierte al elemento
+     en un contenedor con scroll propio, y eso rompe todo lo que va
+     pegajoso adentro (los encabezados de tabla, sin ir más lejos).
+     `clip` solo recorta. */
+  overflow-x: clip;
   scrollbar-gutter: stable;
   /* El deslizón horizontal es para abrir los paneles laterales, no para
      irse de la página: sin esto el navegador lo toma como "atrás". */
@@ -1119,6 +1129,12 @@ header > *:last-child { margin-left: auto; }
      junto a lo que abre. */
   html.kw-riel #kw-drawer-toggle { display: none; }
 
+  /* Y el "Atrás" también. Servía cuando llegar a otro lado era volver
+     sobre los pasos; con el riel siempre a la vista, cualquier destino
+     está a un clic sin tener que retroceder. En celular no se quita:
+     ahí el menú está guardado detrás de la hamburguesa. */
+  html.kw-riel header.kw-header .back-btn { display: none; }
+
   /* ── El renglón de arriba deja pasar los clics ──
      Sin fondo, el header se ve como si no estuviera; pero seguía ahí,
      estirado de orilla a orilla, tragándose todo clic que cayera en esa
@@ -1316,14 +1332,9 @@ header > *:last-child { margin-left: auto; }
   /* El velo se queda solo para atrapar el clic que cierra el panel: sin
      color y sin desenfoque. Oscurecer la pantalla es de una ventana que
      exige atención antes de dejar seguir; estos paneles no exigen nada,
-     se asoman y se van.
-
-     Va por DEBAJO del header (z-index 90) y no encima. El panel vive
-     dentro del header, que al ser fijo y con z-index arma su propio
-     contexto de apilado: por más que el panel pida 201, no puede
-     salirse de ahí, y el velo encima lo dejaba atenuado. */
+     se asoman y se van. */
   html.kw-riel .notif-backdrop {
-    z-index: 89;
+    z-index: 200;
     background: none;
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
