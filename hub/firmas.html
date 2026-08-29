@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829v">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829w">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260829v"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
@@ -968,6 +968,21 @@
      todo lo ancho (que es lo que hace de fábrica, para dejar lugar al
      campo) empujaba al botón de volver hasta la otra orilla. */
   html.kw-riel #header-firmas:not(.kw-buscando) .kw-header-capsula { flex: 0 0 auto; }
+
+  /* El nombre del documento, clavado al centro del renglón y no
+     centrado en lo que sobra: repartiéndose el hueco con lo de al lado
+     se recorría cada vez que el cuadro de búsqueda se abría o se
+     cerraba. Fuera del acomodo no le quita lugar a nadie ni nadie se lo
+     quita a él, y no recibe clics: es un rótulo, no un botón. */
+  @media (min-width: 901px) {
+    #header-firmas .kw-header-doc {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      max-width: min(38%, 440px);
+      flex: 0 0 auto; padding: 0;
+      pointer-events: none;
+    }
+  }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
