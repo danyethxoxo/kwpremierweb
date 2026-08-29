@@ -90,6 +90,8 @@ Es la regla que gobierna todo lo que se puede picar:
 | Botón que es nada más un ícono | `.kw-btn-icono` |
 | Menú que cuelga de un botón | `.kw-menu-ancla` + `.kw-menu` + `.kw-menu-op` |
 | Filtros | `.kw-filtros-caja` + `.kw-filtros` + `.kw-campo-filtro` |
+| Campo de fecha o número, y el par de un rango | `.kw-fecha` / `.kw-rango` + `.kw-campo-rango` |
+| Cuántos hay de cada cual, arriba, que además filtran | `.kw-resumen` + `.kw-conteo` |
 | Desplegables | `<select>` a secas: `kw-ui.js` lo convierte |
 | Pestañas | `.kw-tabs` / `.kw-tab` |
 | Lista vacía | `.kw-vacio` |
@@ -114,10 +116,17 @@ Detalles que se repiten y conviene no volver a discutir:
   deja verse lo que pasa por debajo.
 - **Nada de negritas para adornar.** Las etiquetas de estado ya saltan
   por su color; en negritas la lista entera grita.
-- **Lo que se queda pegado al rodar la pantalla** (el encabezado de una
-  tabla) se pega a `--tope-pegado` y se ve como parte de la tabla:
-  redondeado solo de arriba, sin sombra ni aire, y sin flotar como
-  cápsula. La sombra aparece solo cuando de veras se despegó.
+- **Nada se queda flotando encima del contenido.** En una pantalla que
+  es una lista larga, la que rueda es la lista y no la página: la tabla
+  se lleva el alto que sobra y se desplaza por dentro, así los filtros,
+  los botones y el encabezado se quedan quietos sin tener que encimarse
+  sobre nada. El alto sale del acomodo (`flex` desde el `<body>`), no de
+  una cuenta con números mágicos, y solo en pantalla ancha: en el
+  celular una zona con scroll propio dentro de una página que también
+  rueda es de lo peor que se puede hacer.
+- **Lo que sí tenga que pegarse** al rodar se pega a `--tope-pegado` y se
+  ve como parte de lo suyo: redondeado solo de arriba, sin sombra ni
+  aire. La sombra aparece solo cuando de veras se despegó.
 
 ## Archivos compartidos y el caché
 

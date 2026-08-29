@@ -694,6 +694,71 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
   .kw-filtros > .kw-campo-filtro.ancho { flex: 1 1 100%; }
 }
 
+/* ── El campo suelto de un filtro ──
+   El de una fecha, o el de un número. Va por clase y no por
+   input[type="date"] porque kw-ui.js le cambia el tipo a "text" mientras
+   está vacío, para poder enseñar adentro lo que dice data-texto. */
+.kw-fecha {
+  width: 100%; height: var(--control-h);
+  border: 1px solid var(--border); border-radius: var(--r-campo);
+  padding: 0 11px; background: #fff;
+  font-family: inherit; font-size: 13.5px; color: var(--text);
+}
+.kw-fecha:focus { outline: none; border-color: var(--red); }
+
+/* Dos casillas donde los demás filtros tienen una: un rango ("del 3 al
+   17", "de tres a cinco millones"). Van más pegadas entre sí que de los
+   filtros vecinos, para que se lea qué va con qué, y el par pide como el
+   doble de lugar: sin ese piso se encogen hasta dejar los rótulos
+   cortados. */
+.kw-rango { display: flex; gap: 4px; }
+.kw-rango .kw-fecha { min-width: 0; flex: 1; padding: 0 8px; }
+.kw-filtros > .kw-campo-rango { flex-basis: 236px; min-width: 216px; max-width: 270px; }
+@media (max-width: 700px) {
+  .kw-filtros > .kw-campo-rango { flex-basis: 100%; max-width: none; }
+}
+
+/* ── El resumen de arriba: cuántos hay de cada cual ──
+   Una hilera de tarjetas con un número grande y su rótulo, que además
+   son el filtro: picarle a una deja solo esos, y volver a picarle lo
+   quita. Es lo primero que se mira al entrar (cuántos hay de cada cual),
+   así que va antes que la lista y antes que los filtros de detalle.
+
+   El color de cada una sale de --tono (el borde y, puesta, el texto) y
+   --pastel (el relleno), de la paleta de kw-claro.css, para que sea el
+   mismo que el de su etiqueta en la lista.
+
+     <div class="kw-resumen">
+       <button class="kw-conteo" style="--tono:…;--pastel:…">
+         <span class="kw-conteo-num">7</span>
+         <span class="kw-conteo-txt">Esperando firmas</span>
+       </button>
+     </div> */
+.kw-resumen {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.kw-conteo {
+  flex: 1 1 130px; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px; justify-content: center;
+  padding: 11px 15px; border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--tono, #000) 38%, transparent);
+  background: #fff;
+  box-shadow: var(--sombra-1);
+  color: var(--text); font-family: inherit; text-align: left; cursor: pointer;
+  transition: background var(--t-medio), border-color var(--t-medio);
+}
+.kw-conteo:hover, .kw-conteo.activa { background: var(--pastel, #f5f5f5); }
+/* La elegida se pinta de su color y además engorda el borde, para que se
+   sepa cuál está puesta sin depender nada más del relleno. */
+.kw-conteo.activa {
+  box-shadow: var(--sombra-1), inset 0 0 0 1.5px currentColor;
+  color: var(--tono, var(--text));
+}
+.kw-conteo-num { font-size: 21px; font-weight: 700; line-height: 1.1; }
+.kw-conteo-txt { font-size: 11.5px; color: var(--muted); }
+.kw-conteo.activa .kw-conteo-txt { color: inherit; opacity: 0.85; }
+
 /* ── La tarjeta que los encierra ──
    Sueltos sobre el fondo, los filtros se leían como parte de la lista y
    eran media pantalla antes de llegar al primer renglón. Encerrados en

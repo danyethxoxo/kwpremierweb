@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829t">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829u">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
@@ -59,7 +59,7 @@
      escribe ahí (un folio, media calle) sobraba ancho, y ese ancho le
      sirve más a los tres números de al lado. */
   .dic-arriba > .dic-campo-buscar { flex: 0 1 230px; min-width: 0; }
-  .dic-arriba > .dic-resumen { flex: 1 1 460px; min-width: 0; margin: 0; }
+  .dic-arriba > .kw-resumen { flex: 1 1 460px; min-width: 0; margin: 0; }
   .dic-arriba .kw-buscador, .dic-arriba .kw-buscador input { height: 100%; }
   @media (max-width: 820px) {
     .dic-arriba { flex-wrap: wrap; }
@@ -75,31 +75,15 @@
      blancas y en hilera no se distinguían entre sí, y el color ya lo
      tienen asignado más abajo: devuelto rojo, condicionado amarillo,
      autorizado verde. Verlo aquí y en la lista es la misma clave. */
-  .dic-resumen { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
-  .dic-tarjeta {
-    flex: 1 1 130px; min-width: 0;
-    display: flex; flex-direction: column; gap: 2px; justify-content: center;
-    padding: 11px 15px; border-radius: 14px;
-    border: 1.5px solid var(--border); background: #fff;
-    box-shadow: var(--sombra-1);
-    color: var(--text); font-family: inherit; text-align: left; cursor: pointer;
-    transition: background var(--t-medio), border-color var(--t-medio);
-  }
-  .dic-tarjeta.devuelta     { border-color: rgba(176,42,42,0.42); }
-  .dic-tarjeta.condicionada { border-color: rgba(122,86,16,0.38); }
-  .dic-tarjeta.autorizada   { border-color: rgba(23,96,58,0.38); }
-  .dic-tarjeta.devuelta:hover,     .dic-tarjeta.devuelta.activa     { background: #fdeaea; }
-  .dic-tarjeta.condicionada:hover, .dic-tarjeta.condicionada.activa { background: var(--pastel-crema); }
-  .dic-tarjeta.autorizada:hover,   .dic-tarjeta.autorizada.activa   { background: var(--pastel-menta); }
-  /* La elegida se pinta de su color y además engorda el borde, para que
-     se sepa cuál está puesta sin depender nada más del relleno. */
-  .dic-tarjeta.activa { box-shadow: var(--sombra-1), inset 0 0 0 1.5px currentColor; }
-  .dic-tarjeta.devuelta.activa     { color: #b02a2a; }
-  .dic-tarjeta.condicionada.activa { color: var(--pastel-crema-txt); }
-  .dic-tarjeta.autorizada.activa   { color: var(--pastel-menta-txt); }
-  .dic-tarjeta-num { font-size: 21px; font-weight: 700; line-height: 1.1; }
-  .dic-tarjeta-txt { font-size: 11.5px; color: var(--muted); }
-  .dic-tarjeta.activa .dic-tarjeta-txt { color: inherit; opacity: 0.85; }
+  /* Las tarjetas de conteo son la pieza compartida (.kw-resumen y
+     .kw-conteo, en kw-ui.css). Aquí solo el color de cada una, que es el
+     mismo que el de su etiqueta en la lista. */
+  .kw-conteo.devuelta     { --tono: #b02a2a;                 --pastel: #fdeaea; }
+  .kw-conteo.condicionada { --tono: var(--pastel-crema-txt); --pastel: var(--pastel-crema); }
+  .kw-conteo.autorizada   { --tono: var(--pastel-menta-txt); --pastel: var(--pastel-menta); }
+  /* La hilera va dentro del renglón de arriba, junto al buscador, y ahí
+     no lleva el margen de abajo que trae de fábrica. */
+  .dic-arriba > .kw-resumen { margin-bottom: 0; }
 
   /* ── El estado del dictamen ──
      Cada uno con su color, porque es lo que se viene a mirar de un
@@ -534,41 +518,10 @@
     .dic-filtros-mas svg { transition: none; }
   }
 
-  /* Las dos fechas del rango. El estilo va por la clase y no por
-     input[type="date"] porque kw-ui.js le cambia el tipo a "text"
-     mientras está vacío, para poder enseñar el texto de adentro. */
-  .dic-fecha {
-    width: 100%; height: var(--control-h);
-    border: 1px solid var(--border); border-radius: var(--r-campo);
-    padding: 0 11px; background: #fff;
-    font-family: inherit; font-size: 13.5px; color: var(--text);
-  }
-  .dic-fecha:focus { outline: none; border-color: var(--red); }
-
-  /* Precio y comisión se piden por rango y no por un valor exacto:
-     nadie busca "los de 4,500,000", se busca "de tres a cinco millones".
-     Los dos campos caben en el lugar de un filtro para no estirar la
-     hilera a doce casillas. */
-  /* Los dos del par van más pegados entre sí que de los filtros vecinos:
-     con la misma separación de todos, "precio máx" y "comisión mín" se
-     leían tan juntos como los de un mismo rango, y no se veía qué va con
-     qué. Los dos campos caben en el lugar de un filtro para no estirar la
-     hilera a doce casillas. */
-  .dic-rango { display: flex; gap: 4px; }
-  .dic-rango .dic-fecha { min-width: 0; flex: 1; padding: 0 8px; }
-
-  /* Un rango son dos casillas donde los demás filtros tienen una, así
-     que pide como el doble de lugar. Sin este piso se encogía con los
-     demás hasta dejar "Precio mí" y "Comisión" cortados; con él, cuando
-     ya no cabe se pasa al siguiente renglón entero. */
-  .kw-filtros > .dic-campo-rango { flex-basis: 236px; min-width: 216px; max-width: 270px; }
-
-  /* En el celular caben dos filtros por renglón, y a medio renglón el
-     par de la comisión se quedaba sin lugar para decir "Comisión máx".
-     Con el renglón entero para él, cada mitad alcanza de sobra. */
-  @media (max-width: 700px) {
-    .kw-filtros > .dic-campo-rango { flex-basis: 100%; max-width: none; }
-  }
+  /* El campo suelto de un filtro y el par de un rango son piezas
+     compartidas (.kw-fecha, .kw-rango y .kw-campo-rango, en kw-ui.css).
+     Precio y comisión se piden por rango y no por un valor exacto: nadie
+     busca "los de 4,500,000", se busca "de tres a cinco millones". */
 
   /* El engrane es el puro dibujo, azul al pasar el mouse: la pieza
      .kw-btn-icono de kw-ui.css, que es la misma que usa el botón de
@@ -788,7 +741,7 @@
             <input type="text" id="f-buscar" class="kw-input" placeholder="Folio, dirección o asesor" autocomplete="off">
           </div>
         </div>
-        <div class="dic-resumen" id="resumen"></div>
+        <div class="kw-resumen" id="resumen"></div>
       </div>
 
       <!-- Los filtros viven en su propia tarjeta. De entrada se ve el
@@ -835,12 +788,12 @@
           <select id="f-tipo"><option value="todos">Tipo de inmueble</option></select>
         </div>
 
-        <div class="kw-campo-filtro dic-campo-rango">
+        <div class="kw-campo-filtro kw-campo-rango">
           <label for="f-precio-min">Precio del listado</label>
-          <div class="dic-rango">
-            <input type="text" id="f-precio-min" class="dic-fecha" inputmode="decimal"
+          <div class="kw-rango">
+            <input type="text" id="f-precio-min" class="kw-fecha" inputmode="decimal"
               placeholder="Precio mín" autocomplete="off">
-            <input type="text" id="f-precio-max" class="dic-fecha" inputmode="decimal"
+            <input type="text" id="f-precio-max" class="kw-fecha" inputmode="decimal"
               placeholder="Precio máx" autocomplete="off">
           </div>
         </div>
@@ -850,7 +803,7 @@
              lo que se busca es "los del 5", no "entre 4 y 6". -->
         <div class="kw-campo-filtro dic-f-chico">
           <label for="f-comision">Comisión</label>
-          <input type="text" id="f-comision" class="dic-fecha" inputmode="decimal"
+          <input type="text" id="f-comision" class="kw-fecha" inputmode="decimal"
             placeholder="Comisión %" autocomplete="off">
         </div>
 
@@ -859,12 +812,12 @@
              día y el mes de una vez. -->
         <div class="kw-campo-filtro dic-f-fecha">
           <label for="f-desde">Fecha desde</label>
-          <input type="date" id="f-desde" class="dic-fecha" data-texto="Fecha desde">
+          <input type="date" id="f-desde" class="kw-fecha" data-texto="Fecha desde">
         </div>
 
         <div class="kw-campo-filtro dic-f-fecha">
           <label for="f-hasta">Fecha hasta</label>
-          <input type="date" id="f-hasta" class="dic-fecha" data-texto="Fecha hasta">
+          <input type="date" id="f-hasta" class="kw-fecha" data-texto="Fecha hasta">
         </div>
 
         <div class="kw-campo-filtro dic-campo-limpiar">
@@ -1427,10 +1380,10 @@
     // Cada tarjeta lleva la clase de su estado, que es la que le pone el
     // color del borde: el mismo que su etiqueta en la lista.
     $('resumen').innerHTML = tarjetas.map(function (t) {
-      return '<button type="button" class="dic-tarjeta ' + t[0] +
+      return '<button type="button" class="kw-conteo ' + t[0] +
         (activo === t[0] ? ' activa' : '') + '" data-estado="' + t[0] + '">' +
-        '<span class="dic-tarjeta-num">' + t[1] + '</span>' +
-        '<span class="dic-tarjeta-txt">' + t[2] + '</span>' +
+        '<span class="kw-conteo-num">' + t[1] + '</span>' +
+        '<span class="kw-conteo-txt">' + t[2] + '</span>' +
       '</button>';
     }).join('');
 
