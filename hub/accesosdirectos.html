@@ -16,8 +16,8 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829b">
 <style>
   @view-transition { navigation: auto; }
   @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
@@ -243,22 +243,23 @@
 
     .card .card-big, .card .card-cta { color: var(--tono, var(--red)); }
 
-    /* El mismo baño de color que las tarjetas del portal: sale de la
-       esquina de abajo a la izquierda y se disuelve antes del centro. */
+    /* Igual que las tarjetas del portal: en reposo va limpia y con el
+       color solo en el filo; el baño entra al pasar el cursor. */
     .card {
-      background-image:
-        var(--puntos-tarjeta),
-        radial-gradient(118% 100% at -4% 104%, var(--tinte, var(--tinte-rojo)) 0%, transparent 66%),
-        var(--card-degradado);
-      background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%, 100% 100%;
-      background-repeat: repeat, no-repeat, no-repeat;
+      background-image: var(--puntos-tarjeta), var(--card-degradado);
+      background-size: var(--paso-tarjeta) var(--paso-tarjeta), 100% 100%;
+      background-repeat: repeat, no-repeat;
       background-color: var(--card);
+      border: 1px solid var(--border);
+      border-color: color-mix(in srgb, var(--tono, var(--red)) 34%, transparent);
+      transition: background-image 0.25s, border-color 0.25s, box-shadow 0.18s, transform 0.18s;
     }
     .card:hover {
       background-image:
         var(--puntos-tarjeta),
         radial-gradient(140% 122% at -4% 104%, var(--tinte, var(--tinte-rojo)) 0%, transparent 74%),
         var(--card-degradado);
+      border-color: color-mix(in srgb, var(--tono, var(--red)) 62%, transparent);
     }
 
 
