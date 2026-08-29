@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829t">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829u">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260822a"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
@@ -370,49 +370,55 @@
   }
   .tabla-fila { padding: 0 var(--sp-3) 0 var(--sp-4); }
 
-  /* ── El encabezado de la tabla, pegado arriba ──
-     Es una pieza aparte de las filas porque tiene que quedarse quieta
-     con position:sticky mientras el cuerpo de la tabla pasa por debajo.
-     Pero se ve como lo que es, el primer renglón de la tabla: pegado a
-     ella, redondeado nada más de arriba y sin sombra. Antes flotaba
-     encima como una cápsula suelta, con su propio aire y su sombra, y
-     al rodar la lista se le veía pasar los renglones por abajo como si
-     fuera otra cosa que nada tiene que ver con la tabla.
+  /* Las tarjetas de conteo son la pieza compartida (.kw-resumen y
+     .kw-conteo, en kw-ui.css). Aquí solo el color de cada una, que es el
+     mismo que el del punto de su estado en la lista: ámbar el que
+     espera firmas, verde el firmado, gris el borrador. */
+  .kw-conteo.espera   { --tono: var(--pastel-crema-txt); --pastel: var(--pastel-crema); }
+  .kw-conteo.firmado  { --tono: var(--pastel-menta-txt); --pastel: var(--pastel-menta); }
+  .kw-conteo.borrador { --tono: #5b5b5b;                 --pastel: rgba(0,0,0,0.05); }
 
-     La sombra aparece solo cuando de veras se despegó (cuando la lista
-     ya está corriendo por abajo), y de eso se encarga la clase .pegada
-     que le pone el JS de más abajo.
+  /* ── La que rueda es la tabla, no la página ──
+     El encabezado no flota ni se pega con sticky: se queda quieto porque
+     lo que se desplaza es nada más el cuerpo de la tabla, por dentro.
+     Así los filtros, los botones y el encabezado están siempre a la
+     vista, y no hay ningún elemento encimado sobre la lista.
+
+     El alto sale del acomodo, no de una cuenta: el <body> mide lo que la
+     pantalla, cada pieza de arriba ocupa lo suyo, y a la tabla le toca
+     lo que sobra. Así no hay un número mágico que corregir cada vez que
+     algo de arriba cambia de alto.
+
+     Solo en pantalla ancha. En el celular cada renglón se convierte en
+     tarjeta y la lista se lee de corrido: un área con scroll propio
+     adentro de una página que también rueda es de lo peor que se puede
+     hacer ahí.
 
      La franja de búsqueda usa la misma rejilla de columnas que el
      encabezado, para que el cuadro de texto mida justo lo mismo que las
      columnas de "Documento": desde donde arranca la tabla hasta la
      división antes de "Etiquetas". */
-  .tabla-fija {
-    position: sticky; top: var(--tope-pegado, 62px); z-index: 15;
-    border-radius: var(--r-tarjeta) var(--r-tarjeta) 0 0;
-    border-bottom: 0;
-    margin-bottom: 0;
-    box-shadow: none;
-    transition: box-shadow var(--t-medio);
+  @media (min-width: 901px) {
+    /* La clase la pone y la quita mostrarVista(): las otras dos vistas
+       (elegir archivos y el editor) sí ruedan como cualquier página. */
+    body.en-historial { height: 100vh; overflow: hidden; }
+    body.en-historial > main.kw-page,
+    body.en-historial #vista-historial,
+    body.en-historial .tabla-marco {
+      display: flex; flex-direction: column;
+      flex: 1; min-height: 0;
+    }
+    body.en-historial .tabla-cuerpo {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      /* Al llegar al final, la rueda del mouse no sigue moviendo lo de
+         atrás. */
+      overscroll-behavior: contain;
+    }
+    /* El último renglón pega con la orilla de abajo de la tarjeta, así
+       que su línea divisoria sobra. */
+    body.en-historial .tabla-cuerpo > .tabla-fila:last-child { border-bottom: none; }
   }
-  /* Despegado se le cuadran las esquinas: redondeadas, por las muescas
-     de arriba se asomaba el renglón que va pasando por detrás. */
-  .tabla-fija.pegada {
-    box-shadow: 0 10px 22px -14px rgba(0,0,0,0.45);
-    border-radius: 0;
-  }
-  /* El cuerpo de la tabla es la otra mitad de la misma tarjeta: se le
-     quitan las esquinas de arriba y su borde de ese lado, que si no
-     salía doble justo debajo del encabezado. */
-  #lista-envios > .tabla-envios {
-    border-radius: 0 0 var(--r-tarjeta) var(--r-tarjeta);
-    border-top: 0;
-  }
-  /* El vigía: un pelo de altura justo arriba del encabezado. Cuando deja
-     de verse es que el encabezado ya se despegó, y es lo que enciende su
-     sombra. Se mide con IntersectionObserver en vez de con el scroll
-     para no hacer cuentas en cada pixel que rueda la página. */
-  .tabla-vigia { height: 1px; margin: 0; }
   .tabla-buscar-fila {
     display: grid;
     grid-template-columns: 34px minmax(0,1.5fr) minmax(0,2fr) 76px;
@@ -1245,7 +1251,7 @@
   .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 </head>
-<body>
+<body class="en-historial">
 
   <!-- Tapa toda la pantalla mientras se trae el historial y se pone al
        día contra weetrust. Antes eso pasaba con la tabla ya visible: se
@@ -1335,6 +1341,11 @@
         </div>
       </div>
 
+      <!-- Cuántos hay de cada cual, que es lo primero que se mira al
+           entrar. Cada tarjeta es además el filtro de su estado: se le
+           pica y quedan solo esos. -->
+      <div class="kw-resumen" id="resumen"></div>
+
       <!-- Los filtros, en su tarjeta y debajo del título, como los de
            Dictámenes. Iban sueltos como pastillas de vidrio junto a los
            botones: se leían como parte de la lista, y eran los únicos
@@ -1367,6 +1378,19 @@
             <select id="f-etiqueta"></select>
           </div>
 
+          <!-- El rango de fechas, por la fecha que enseña la tabla
+               (cuándo se creó el documento). Los dos lados son
+               opcionales, así que sirve igual para "de tal día en
+               adelante" que para "hasta tal día", y es el mismo rango
+               que se lleva el Excel. -->
+          <div class="kw-campo-filtro kw-campo-rango">
+            <label for="f-desde">Fechas</label>
+            <div class="kw-rango">
+              <input type="date" id="f-desde" class="kw-fecha" data-texto="Desde">
+              <input type="date" id="f-hasta" class="kw-fecha" data-texto="Hasta">
+            </div>
+          </div>
+
           <div class="kw-campo-filtro">
             <label for="f-orden">Orden</label>
             <select id="f-orden">
@@ -1390,9 +1414,11 @@
 
       <div id="cupo" class="firma-cupo" style="display:none;"></div>
 
-      <!-- El encabezado de la tabla, pegado arriba: aparte de las filas
-           para que al hacer scroll se quede fijo mientras el cuerpo de la
-           tabla pasa por debajo.
+      <!-- La tabla completa: la franja de búsqueda, el encabezado y el
+           cuerpo, en una sola tarjeta. La que rueda es la tabla, no la
+           página: así los filtros, los botones y el encabezado se quedan
+           siempre a la vista y el encabezado no tiene que flotar encima
+           de nada para quedarse quieto.
 
            La búsqueda vive en la lupa del header, no aquí: drawer.js
            reconoce este campo como el buscador de la página, esconde esta
@@ -1400,8 +1426,7 @@
            HTML de todos modos porque es lo que hace que ese enlace
            funcione, y porque si drawer.js no cargara, la búsqueda seguiría
            estando a la mano en vez de desaparecer. -->
-      <div class="tabla-vigia" id="tabla-vigia" aria-hidden="true"></div>
-      <div class="tabla-envios tabla-fija" id="tabla-fija">
+      <div class="tabla-envios tabla-marco">
         <div class="tabla-buscar-fila">
           <label class="tabla-buscar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
@@ -1418,11 +1443,11 @@
           <span class="cab-info"><span>Etiquetas</span><span>Estado</span><span>Fecha</span></span>
           <span></span>
         </div>
-      </div>
 
-      <div class="kw-lista" id="lista-envios">
-        <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
-        <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
+        <div class="tabla-cuerpo" id="lista-envios">
+          <div class="tabla-fila"><div class="kw-skel kw-skel-line kw-skel-w70" style="margin:14px var(--sp-4);"></div></div>
+          <div class="tabla-fila"><div class="kw-skel kw-skel-line kw-skel-w50" style="margin:14px var(--sp-4);"></div></div>
+        </div>
       </div>
     </div>
 
@@ -1654,6 +1679,11 @@
   // lo eliminado y los borradores se quedan escondidos hasta que se
   // pidan a propósito con el filtro.
   let filtro = 'activos';
+  // El rango de fechas, en ISO (yyyy-mm-dd) y sin hora: es lo que
+  // devuelve el <input type="date"> y lo que se puede comparar como
+  // texto contra el created_at recortado.
+  let desde = null;
+  let hasta = null;
   // Los envíos ya cargados. El detalle los lee de aquí en vez de volver
   // a consultarlos: son los mismos datos que se acaban de pintar.
   let envios = [];
@@ -2142,8 +2172,14 @@
   // encendidas a la vez.
   function mostrarVista(cual) {
     ['historial', 'archivos', 'editor'].forEach((v) => {
-      $('vista-' + v).style.display = v === cual ? 'block' : 'none';
+      // Vacío y no 'block': el historial se acomoda con flex para que la
+      // tabla se quede con el alto que sobra, y un display en el estilo
+      // del elemento le ganaría a la hoja.
+      $('vista-' + v).style.display = v === cual ? '' : 'none';
     });
+    // En el historial la que rueda es la tabla y la página se queda
+    // quieta; en las otras dos vistas, al revés.
+    document.body.classList.toggle('en-historial', cual === 'historial');
     // El nombre del documento y "Cambiar documentos" solo tienen sentido
     // mientras se edita: el header los muestra en lugar del título de la
     // pantalla nada más en ese momento.
@@ -2946,18 +2982,51 @@
 
   // Armar el archivo vive en kw-xlsx.js, que es de todas las pantallas.
   // Aquí queda nada más lo de esta: qué columnas lleva y de dónde sale
-  // cada valor. Se baja lo que se está viendo, con los filtros puestos:
-  // quien filtra por "esperando firmas" quiere ese pedazo, no todo.
+  // cada valor.
+  //
+  // Se baja todo el historial, no solo lo que se está viendo. Lo único
+  // que lo recorta es el rango de fechas: sin fechas puestas salen
+  // todos los que existen, y con fechas salen nada más los de esos días.
+  // Los demás filtros (estado, etiqueta, quién falta) son para mirar la
+  // pantalla; el Excel se abre aparte y ahí se filtra con las flechitas
+  // de cada columna, que para eso vienen puestas.
+  const listaFirmantes = (f) => (Array.isArray(f.firmantes) ? f.firmantes : []);
+
+  // La fecha en que quedó firmado: la última que puso alguien. Solo si
+  // ya firmaron todos; con una firma de tres, el documento no está
+  // firmado y una fecha ahí se leería como que sí.
+  const fechaFirmado = (f) => {
+    const firmas = listaFirmantes(f).map((x) => x.firmado_at).filter(Boolean);
+    if (!firmas.length) return '';
+    const faltan = listaFirmantes(f).some((x) => !x.firmado);
+    if (faltan) return '';
+    return firmas.sort().slice(-1)[0];
+  };
+
   const COLUMNAS_EXCEL = [
     ['Documento', 'texto', 42, (f) => nombreDoc(f)],
     ['Estado', 'texto', 20, (f) => (PILL[f.estado] || ['', f.estado])[1]],
-    ['Firmas', 'texto', 10, (f) => {
-      const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
-      return firmantes.length
-        ? firmantes.filter((x) => x.firmado).length + '/' + firmantes.length
-        : '';
-    }],
-    ['Firmantes', 'parrafo', 40, (f) => (Array.isArray(f.firmantes) ? f.firmantes : [])
+    ['Firmas hechas', 'entero', 13, (f) => listaFirmantes(f).filter((x) => x.firmado).length],
+    ['Firmas pedidas', 'entero', 13, (f) => listaFirmantes(f).length],
+    ['Firmas que faltan', 'entero', 16, (f) => listaFirmantes(f).filter((x) => !x.firmado).length],
+    ['Ya está firmado', 'texto', 14, (f) => (listaFirmantes(f).length
+      && listaFirmantes(f).every((x) => x.firmado)) ? 'Sí' : 'No'],
+    // Las fechas van como fecha de verdad y no como texto: es lo que
+    // deja ordenar la columna en Excel.
+    ['Creado', 'fecha', 13, (f) => (f.created_at || '').slice(0, 10)],
+    ['Enviado a firmar', 'fecha', 16, (f) => (f.enviado_at || '').slice(0, 10)],
+    ['Firmado el', 'fecha', 13, (f) => fechaFirmado(f).slice(0, 10)],
+    // Quién firmó y cuándo, uno por renglón dentro de la misma celda:
+    // es lo que se pregunta cuando algo lleva días detenido.
+    ['Quién ya firmó', 'parrafo', 42, (f) => listaFirmantes(f)
+      .filter((x) => x.firmado)
+      .map((x) => (x.nombre || x.correo || '') + (x.firmado_at ? ' - ' + fecha(x.firmado_at) : ''))
+      .join('\n')],
+    ['Quién falta', 'parrafo', 42, (f) => listaFirmantes(f)
+      .filter((x) => !x.firmado)
+      .map((x) => (x.nombre || '') + (x.correo ? ' <' + x.correo + '>' : ''))
+      .join('\n')],
+    ['Todos los firmantes', 'parrafo', 44, (f) => listaFirmantes(f)
       .map((x) => (x.nombre || '') + (x.correo ? ' <' + x.correo + '>' : '')
         + (x.firmado ? ' - firmado' : ' - pendiente')).join('\n')],
     ['Observadores', 'parrafo', 30, (f) => (Array.isArray(f.observadores) ? f.observadores : [])
@@ -2966,43 +3035,43 @@
       .map((id) => { const e = etiquetas.find((x) => x.id === id); return e ? e.nombre : ''; })
       .filter(Boolean).join(', ')],
     ['Asesor', 'texto', 28, (f) => (f.autor && f.autor.nombre) || ''],
-    // Las dos fechas van como fecha de verdad y no como texto: es lo que
-    // deja ordenar la columna en Excel.
-    ['Creado', 'fecha', 13, (f) => (f.created_at || '').slice(0, 10)],
-    ['Enviado a firmar', 'fecha', 16, (f) => (f.enviado_at || '').slice(0, 10)],
     ['Error', 'texto', 30, (f) => f.error_mensaje || ''],
   ];
 
+  // Lo mismo que hace el rango de fechas en la pantalla, pero sobre todo
+  // el historial y sin los demás filtros.
+  function paraElExcel() {
+    return envios.filter((e) => {
+      if (!desde && !hasta) return true;
+      const dia = String(e.created_at || '').slice(0, 10);
+      if (!dia) return false;
+      if (desde && dia < desde) return false;
+      if (hasta && dia > hasta) return false;
+      return true;
+    });
+  }
+
   $('op-exportar').addEventListener('click', async () => {
     abrirEngrane(false);
-    const filas = envíosFiltrados();
+    const filas = paraElExcel();
     if (!filas.length) {
-      return await window.kwUI.alert('No hay nada que exportar: con los filtros '
-        + 'puestos no queda ningún documento en la lista.');
+      return await window.kwUI.alert(desde || hasta
+        ? 'No hay ningún documento entre esas fechas.'
+        : 'Todavía no hay documentos que exportar.');
     }
+    // El nombre dice qué trae: el rango, si se pidió uno, o el día en que
+    // se bajó. Así no se juntan tres archivos iguales en Descargas.
     const hoy = new Date().toISOString().slice(0, 10);
+    const cual = (desde || hasta)
+      ? (desde || 'inicio') + '_a_' + (hasta || hoy)
+      : hoy;
     window.kwXlsx.descargar({
       columnas: COLUMNAS_EXCEL,
       filas: filas,
       hoja: 'Firmas',
-      archivo: 'firmas-' + hoy + '.xlsx',
+      archivo: 'firmas-' + cual + '.xlsx',
     });
   });
-
-  // ── La sombra del encabezado de la tabla ──
-  // Solo cuando se despegó de veras. Quieto en su lugar es el primer
-  // renglón de la tabla y no lleva sombra; con la lista corriendo por
-  // debajo sí, que es lo que dice que hay algo pasando por abajo.
-  (function () {
-    var vigia = document.getElementById('tabla-vigia');
-    var cabeza = document.getElementById('tabla-fija');
-    if (!vigia || !cabeza || !window.IntersectionObserver) return;
-    new IntersectionObserver(function (entradas) {
-      cabeza.classList.toggle('pegada', !entradas[0].isIntersecting);
-    // El margen de arriba es justo lo que mide el hueco donde se pega:
-    // sin él, el vigía se daría por escondido un renglón antes de tiempo.
-    }, { rootMargin: '-63px 0px 0px 0px', threshold: 0 }).observe(vigia);
-  })();
 
   // La búsqueda es la de drawer.js, tal cual: el campo se abre desde la
   // lupa y él pone y quita su propia equis. Aquí vivían dos parches (uno
@@ -3319,7 +3388,42 @@
   // mismo y hacía falta un enlace de "ver todos los detalles" para
   // distinguirlo; partiéndolo, el enlace sobra.
 
+  // ── El resumen de arriba ────────────────────────────────────
+  // Cuántos hay de cada estado, y el filtro de un clic. Cuenta sobre
+  // todo lo que hay, no sobre lo que se está viendo: si contara lo
+  // filtrado, picarle a una tarjeta dejaría a las otras dos en cero y ya
+  // no habría cómo cambiar de una a otra.
+  const RESUMEN = [
+    ['pendiente',  'Esperando firmas', 'espera'],
+    ['completado', 'Firmados',         'firmado'],
+    ['borrador',   'Borradores',       'borrador'],
+  ];
+
+  function pintarResumen() {
+    const cuenta = (e) => envios.filter((x) => x.estado === e).length;
+    $('resumen').innerHTML = RESUMEN.map(([estado, texto, clase]) =>
+      '<button type="button" class="kw-conteo ' + clase +
+        (filtro === estado ? ' activa' : '') + '" data-estado="' + estado + '">' +
+        '<span class="kw-conteo-num">' + cuenta(estado) + '</span>' +
+        '<span class="kw-conteo-txt">' + texto + '</span>' +
+      '</button>').join('');
+
+    $('resumen').querySelectorAll('[data-estado]').forEach((b) => {
+      b.addEventListener('click', () => {
+        // La tarjeta y el desplegable de estado son el mismo filtro
+        // visto de dos maneras, así que la tarjeta mueve el desplegable
+        // y deja que su propio escucha haga el resto. Volver a picarle a
+        // la que ya está puesta la quita, y regresa a lo de siempre
+        // (esperando firmas y completados).
+        const sel = $('f-estado');
+        sel.value = (filtro === b.dataset.estado) ? 'activos' : b.dataset.estado;
+        sel.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
   function pintarEnvios() {
+    pintarResumen();
     // Si el panel del lápiz o el de los tres puntos estaba abierto,
     // queda pegado a un botón que está a punto de desaparecer (la tabla
     // se vuelve a armar completa). Sin esto se quedaba flotando huérfano
@@ -3348,16 +3452,15 @@
       // resultados, y con un solo mensaje uno cree que perdió sus
       // documentos.
       const hayFiltro = filtro !== 'todos' || buscaAsesor || faltaFirma || etiqueta;
-      cont.innerHTML = '<div class="tabla-envios"><div class="kw-vacio">' + (
+      cont.innerHTML = '<div class="kw-vacio">' + (
         hayFiltro
           ? 'No hay documentos que cumplan con lo que estás filtrando.'
           : (veTodo ? 'Todavía nadie ha mandado nada a firma.' : 'Todavía no has mandado nada a firma.')
-      ) + '</div></div>';
+      ) + '</div>';
       return;
     }
 
     cont.innerHTML =
-      '<div class="tabla-envios">' +
         filas.map((f, i) => {
           const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
           const yaFirmaron = firmantes.filter((x) => x.firmado).length;
@@ -3414,8 +3517,7 @@
               '</button>' +
             '</span>' +
           '</div>';
-        }).join('') +
-      '</div>';
+        }).join('');
 
     cont.querySelectorAll('[data-elegir]').forEach((c) => {
       c.addEventListener('click', (e) => e.stopPropagation());
@@ -4468,6 +4570,8 @@
     $('f-falta').addEventListener('change', (e) => { faltaFirma = e.target.value || null; pintarEnvios(); });
     $('f-etiqueta').addEventListener('change', (e) => { etiqueta = e.target.value || null; pintarEnvios(); });
     $('f-orden').addEventListener('change', (e) => { orden = e.target.value; pintarEnvios(); });
+    $('f-desde').addEventListener('change', (e) => { desde = e.target.value || null; pintarEnvios(); });
+    $('f-hasta').addEventListener('change', (e) => { hasta = e.target.value || null; pintarEnvios(); });
 
     // La búsqueda es un campo de texto y no un desplegable porque con
     // cien asesores el desplegable no se puede recorrer. Se filtra
@@ -4516,6 +4620,15 @@
       }
 
       if (etiqueta && !(e.etiquetas || []).includes(etiqueta)) return false;
+
+      // Por la misma fecha que enseña la tabla. Los dos extremos entran
+      // en el rango: quien pide "del 1 al 31" espera los del 31.
+      if (desde || hasta) {
+        const dia = String(e.created_at || '').slice(0, 10);
+        if (!dia) return false;
+        if (desde && dia < desde) return false;
+        if (hasta && dia > hasta) return false;
+      }
 
       if (faltaFirma) {
         const firmantes = Array.isArray(e.firmantes) ? e.firmantes : [];
