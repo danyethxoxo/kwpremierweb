@@ -14,10 +14,16 @@
 -- guarda nada: si el libro se cierra, se renombra una hoja o alguien le
 -- mueve una columna, el sitio se queda sin saber quién es quién.
 --
--- Esta tabla es esa lista, ya del lado de la casa. Nace copiando lo que
--- el libro tiene y se queda: de aquí en adelante los asesores nuevos se
--- capturan aquí, y repartirlos (activo, baja, back office, célula) es
--- cambiarles el grupo en su renglón.
+-- Esta tabla es esa lista, ya del lado de la casa, y es la raíz: el
+-- panel pinta sus pestañas de aquí, no del libro. Nace copiando lo que
+-- el libro tiene y se queda con el expediente completo de cada quien
+-- (CURP, sponsor, clasificación, contraseña de Command, contacto de
+-- emergencia). De aquí en adelante los asesores nuevos se capturan aquí,
+-- y repartirlos (activo, baja, back office, célula) es cambiarles el
+-- grupo en su renglón.
+--
+-- Si el libro desaparece mañana, el panel sigue trabajando: lo único que
+-- se pierde es de dónde venía la copia.
 --
 -- ─────────────────────────────────────────────────────────────
 -- MIENTRAS EL LIBRO SIGA VIVO
@@ -47,6 +53,11 @@
 -- le encuentra en profiles cuando entra. El KWID no sirve: llega vacío
 -- en media hoja y se repite en las bajas.
 --
+-- Llave, pero no obligatorio: a quien se captura aquí antes de tener su
+-- cuenta de KW se le llena después. Mientras no lo tenga, el libro no lo
+-- va a encontrar (busca por correo) y tampoco se le pueden dar accesos,
+-- que es justo lo que pasa en la vida real.
+--
 -- ─────────────────────────────────────────────────────────────
 -- POR QUÉ LAS FECHAS SON TEXTO
 -- ─────────────────────────────────────────────────────────────
@@ -65,8 +76,11 @@
 create table if not exists public.asesores (
   id uuid primary key default gen_random_uuid(),
 
-  -- Quién es
-  correo text not null,
+  -- Quién es. El correo puede faltar: un asesor recién capturado todavía
+  -- no tiene su cuenta de KW, y no por eso deja de existir. El índice
+  -- único de abajo va sobre el correo y Postgres deja repetir el nulo,
+  -- así que varios pendientes de correo conviven sin pelearse.
+  correo text,
   nombre text,
   telefono text,
   kwid text,
@@ -76,15 +90,21 @@ create table if not exists public.asesores (
   -- enum obligaría a una migración para poder guardarla.
   grupo text not null default 'activos',
 
-  -- Lo que el libro trae de cada quien
+  -- El expediente completo: lo que el libro trae de cada quien y lo que
+  -- se captura aquí en la ficha. Todo texto, por lo mismo que las fechas
+  -- (abajo): es lo que hay, tal como está escrito.
   fecha_ingreso text,
   cumpleanos text,
   puesto text,
   celula text,
   fecha_baja text,
+  curp text,
   usuario_command text,
+  contrasena text,
   correo_personal text,
   tipo_asociado text,
+  clasificacion text,
+  sponsor text,
   aniversario text,
   coach_asignado text,
   emergencia_nombre text,
@@ -118,9 +138,13 @@ alter table public.asesores
   add column if not exists puesto text,
   add column if not exists celula text,
   add column if not exists fecha_baja text,
+  add column if not exists curp text,
   add column if not exists usuario_command text,
+  add column if not exists contrasena text,
   add column if not exists correo_personal text,
   add column if not exists tipo_asociado text,
+  add column if not exists clasificacion text,
+  add column if not exists sponsor text,
   add column if not exists aniversario text,
   add column if not exists coach_asignado text,
   add column if not exists emergencia_nombre text,
@@ -133,6 +157,7 @@ alter table public.asesores
   add column if not exists fijado boolean,
   add column if not exists notas text;
 
+alter table public.asesores alter column correo drop not null;
 alter table public.asesores alter column grupo set default 'activos';
 alter table public.asesores alter column origen set default 'sitio';
 alter table public.asesores alter column fijado set default false;
@@ -249,8 +274,9 @@ begin
     if v_existe.id is null then
       insert into public.asesores (
         correo, nombre, telefono, kwid, grupo,
-        fecha_ingreso, cumpleanos, puesto, celula, fecha_baja,
-        usuario_command, correo_personal, tipo_asociado, aniversario, coach_asignado,
+        fecha_ingreso, cumpleanos, puesto, celula, fecha_baja, curp,
+        usuario_command, contrasena, correo_personal, tipo_asociado, clasificacion,
+        sponsor, aniversario, coach_asignado,
         emergencia_nombre, emergencia_telefono, emergencia_correo, emergencia_parentesco,
         origen, hoja, fila_hoja
       ) values (
@@ -264,9 +290,13 @@ begin
         nullif(v_persona->>'puesto', ''),
         nullif(v_persona->>'celula', ''),
         nullif(v_persona->>'fechaBaja', ''),
+        nullif(v_persona->>'curp', ''),
         nullif(v_persona->>'usuarioCommand', ''),
+        nullif(v_persona->>'contrasena', ''),
         nullif(v_persona->>'correoPersonal', ''),
         nullif(v_persona->>'tipoAsociado', ''),
+        nullif(v_persona->>'clasificacion', ''),
+        nullif(v_persona->>'sponsor', ''),
         nullif(v_persona->>'aniversario', ''),
         nullif(v_persona->>'coachAsignado', ''),
         nullif(v_persona->>'emergenciaNombre', ''),
@@ -296,9 +326,13 @@ begin
         puesto = coalesce(nullif(v_persona->>'puesto', ''), puesto),
         celula = coalesce(nullif(v_persona->>'celula', ''), celula),
         fecha_baja = coalesce(nullif(v_persona->>'fechaBaja', ''), fecha_baja),
+        curp = coalesce(nullif(v_persona->>'curp', ''), curp),
         usuario_command = coalesce(nullif(v_persona->>'usuarioCommand', ''), usuario_command),
+        contrasena = coalesce(nullif(v_persona->>'contrasena', ''), contrasena),
         correo_personal = coalesce(nullif(v_persona->>'correoPersonal', ''), correo_personal),
         tipo_asociado = coalesce(nullif(v_persona->>'tipoAsociado', ''), tipo_asociado),
+        clasificacion = coalesce(nullif(v_persona->>'clasificacion', ''), clasificacion),
+        sponsor = coalesce(nullif(v_persona->>'sponsor', ''), sponsor),
         aniversario = coalesce(nullif(v_persona->>'aniversario', ''), aniversario),
         coach_asignado = coalesce(nullif(v_persona->>'coachAsignado', ''), coach_asignado),
         emergencia_nombre = coalesce(nullif(v_persona->>'emergenciaNombre', ''), emergencia_nombre),

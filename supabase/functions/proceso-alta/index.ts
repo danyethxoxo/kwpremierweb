@@ -330,13 +330,16 @@ type Persona = {
   puesto: string
   celula: string
   fechaBaja: string
-  // Lo que trae el libro además de lo de arriba: el expediente del
-  // asesor mientras esto siga viviendo en el Excel. El día que se
-  // capture directo en el sitio, estos dejan de venir de aquí.
+  // El expediente del asesor. Todo esto se copia a la tabla `asesores`,
+  // que es de donde el panel pinta: el libro es de dónde se rescata, no
+  // dónde vive. Lo que el libro no traiga se captura en la ficha.
+  curp: string
   usuarioCommand: string
   contrasena: string
   correoPersonal: string
   tipoAsociado: string
+  clasificacion: string
+  sponsor: string
   aniversario: string
   coachAsignado: string
   emergenciaNombre: string
@@ -373,10 +376,13 @@ const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
   // El expediente del asesor. Vive en el mismo Excel mientras no haya
   // otra fuente; el día que se capture desde el sitio, esto se conecta
   // ahí en vez de leerlo de la hoja.
+  curp: { si: ['curp'] },
   usuarioCommand: { si: ['usuario command', 'usuario de command', 'usuario kw'] },
   contrasena: { si: ['contrasena'] },
   correoPersonal: { si: ['correo personal', 'correo particular', 'email personal'] },
   tipoAsociado: { si: ['tipo de asociado', 'tipo asociado'] },
+  clasificacion: { si: ['clasificacion'] },
+  sponsor: { si: ['sponsor', 'patrocinador'] },
   aniversario: { si: ['aniversario'] },
   coachAsignado: { si: ['coach asignado', 'coach'] },
   emergenciaNombre: { si: ['contacto de emergencia', 'nombre emergencia', 'emergencia'], no: ['cel', 'tel', 'correo', 'email', 'parentesco'] },
@@ -454,10 +460,13 @@ function parsearPersonas(filas: string[][]): Persona[] {
     puesto: dato(fila, 'puesto'),
     celula: dato(fila, 'celula'),
     fechaBaja: dato(fila, 'baja'),
+    curp: dato(fila, 'curp'),
     usuarioCommand: dato(fila, 'usuarioCommand'),
     contrasena: dato(fila, 'contrasena'),
     correoPersonal: dato(fila, 'correoPersonal'),
     tipoAsociado: dato(fila, 'tipoAsociado'),
+    clasificacion: dato(fila, 'clasificacion'),
+    sponsor: dato(fila, 'sponsor'),
     aniversario: dato(fila, 'aniversario'),
     coachAsignado: dato(fila, 'coachAsignado'),
     emergenciaNombre: dato(fila, 'emergenciaNombre'),
@@ -475,7 +484,8 @@ function parsearPersonas(filas: string[][]): Persona[] {
     if (p.correo) return true
     if (!p.nombre) return false
     return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja
-      || p.usuarioCommand || p.correoPersonal || p.tipoAsociado || p.aniversario || p.coachAsignado)
+      || p.curp || p.usuarioCommand || p.correoPersonal || p.tipoAsociado || p.clasificacion
+      || p.sponsor || p.aniversario || p.coachAsignado)
   })
 }
 

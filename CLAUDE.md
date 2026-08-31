@@ -87,6 +87,7 @@ Es la regla que gobierna todo lo que se puede picar:
 | Título de pantalla, con o sin botones | `.kw-page-encabezado` / `.con-acciones` / `.kw-page-acciones` |
 | Tarjeta que se pica | `.hover-card` |
 | Renglón de lista, con su cuadro de ícono | `.kw-fila` / `.kw-fila-icono.tipo-*` |
+| Los datos de adentro de un renglón | `.kw-datos` + `.kw-dato`, y `.en-columnas` si son muchos |
 | Botón que es nada más un ícono | `.kw-btn-icono` |
 | Menú que cuelga de un botón | `.kw-menu-ancla` + `.kw-menu` + `.kw-menu-op` |
 | Filtros | `.kw-filtros-caja` + `.kw-filtros` + `.kw-campo-filtro` |
