@@ -1057,6 +1057,17 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
 
 /* Los datos de adentro, con su iconito, igual que en prospectos. */
 .kw-datos { display: flex; flex-direction: column; gap: 7px; }
+/* Cuando lo de adentro no son cuatro datos sino un expediente entero (el
+   de un asesor pasa de veinte renglones), una sola columna deja la
+   tarjeta larguísima y media pantalla en blanco a la derecha. Se acomoda
+   en las columnas que quepan, sin decir cuántas: las que salgan a 250px.
+   En el celular se queda como estaba, que ahí solo cabe una. */
+@media (min-width: 720px) {
+  .kw-datos.en-columnas {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 7px var(--sp-5); align-items: start;
+  }
+}
 .kw-dato {
   display: flex; align-items: flex-start; gap: 9px;
   font-size: 13.5px; color: #444; line-height: 1.45;

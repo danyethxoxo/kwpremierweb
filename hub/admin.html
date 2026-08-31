@@ -255,7 +255,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260829z">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
@@ -383,9 +383,9 @@
      él y la línea aparecería abajo. */
   #modal-editar-usuario .kw-confirmar { margin-top: var(--sp-5); }
 
-  /* ── Modal: Nuevo Asesor ── */
-  #modal-ingreso .modal-box { max-width: 640px; max-height: 88vh; overflow-y: auto; }
-  #modal-ingreso h3 { margin-bottom: 4px; }
+  /* ── Modal: la ficha del asesor ── */
+  #modal-asesor .modal-box { max-width: 640px; max-height: 88vh; overflow-y: auto; }
+  #modal-asesor h3 { margin-bottom: 4px; }
   .ingreso-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-3);
   }
@@ -517,11 +517,14 @@
     background: var(--pastel, #f1f1f0); color: var(--tono, var(--muted));
     font-size: 11.5px; white-space: nowrap;
   }
-  /* Dos columnas para los campos que se leen de a pares (grupo y KWID,
-     teléfono y puesto): la ficha completa en una sola columna era un
-     cuadro larguísimo. */
-  .bd-par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-3); }
-  @media (max-width: 520px) { .bd-par { grid-template-columns: 1fr; } }
+  /* En la base, esta tarjeta se queda solo con su encabezado (la barra
+     del libro se esconde). Sin esto, el aire que el encabezado deja para
+     lo que venía abajo se queda ahí, como una franja vacía. */
+  .kw-card.solo-cabeza .kw-card-head { margin-bottom: 0; }
+
+  /* De dónde salió el renglón: es una nota al pie del expediente, no un
+     dato del asesor, así que va más callada que lo de arriba. */
+  .bd-origen { color: var(--muted); font-size: 12px; margin-top: var(--sp-3); }
   /* Solo el ícono, cuadrado en vez de alargado por texto que ya no lleva. */
   .btn-solo-icono { padding: 9px; width: 38px; justify-content: center; flex-shrink: 0; }
 
@@ -606,7 +609,7 @@
         -->
         <!-- Solo para quien puede dar de alta (Master/Admin); initAdmin()
              lo prende junto con la pestaña de Asesores. -->
-        <button type="button" class="btn-formatos" id="acceso-nuevo-asesor" style="display:none;" onclick="abrirModalIngreso()">
+        <button type="button" class="btn-formatos" id="acceso-nuevo-asesor" style="display:none;" onclick="abrirFichaAsesor(null)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
           Nuevo Asesor
         </button>
@@ -907,23 +910,30 @@
     </div>
   </div>
 
-  <!-- Modal: la ficha de un asesor de la base ──
-       El mismo cuadro para capturar uno nuevo y para corregir uno que ya
-       está: los campos son los mismos, y tener dos pantallas casi
-       iguales es tener dos lugares donde arreglar lo mismo. -->
+  <!-- Modal: la ficha del asesor ──
+       El mismo cuadro para dar de alta a alguien nuevo y para corregir a
+       quien ya está: el expediente completo, que es lo que la base
+       guarda. Es el único lugar donde se captura un asesor; antes había
+       otro cuadro igualito que escribía en otra tabla que nadie leía. -->
   <div id="modal-asesor" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3 id="asesor-titulo">Nuevo asesor</h3>
-      <p class="modal-sub" id="asesor-sub">El correo es lo que lo identifica en todo el sitio.</p>
+      <p class="modal-sub" id="asesor-sub">El correo de KW es lo que lo identifica en todo el sitio.</p>
 
-      <div class="field"><label>Correo</label>
-        <input type="email" id="asesor-correo" placeholder="nombre@kwmexico.mx" />
-      </div>
-      <div class="field"><label>Nombre</label>
+      <div class="field requerido"><label>Nombre completo</label>
         <input type="text" id="asesor-nombre" placeholder="Nombre y apellidos" />
       </div>
-      <div class="bd-par">
-        <div class="field"><label>Grupo</label>
+
+      <div class="ingreso-grid">
+        <div class="field"><label>Correo personal</label><input type="email" id="asesor-correo-personal" /></div>
+        <div class="field"><label>Cel</label><input type="tel" id="asesor-telefono" placeholder="10 dígitos" /></div>
+        <div class="field"><label>CURP</label><input type="text" id="asesor-curp" maxlength="18" style="text-transform:uppercase;" /></div>
+        <div class="field"><label>Cumpleaños</label><input type="text" id="asesor-cumpleanos" placeholder="Ej. 14 de marzo" /></div>
+      </div>
+
+      <h4 class="ingreso-subtitulo">En el Market Center</h4>
+      <div class="ingreso-grid">
+        <div class="field"><label>Dónde va</label>
           <select id="asesor-grupo">
             <option value="activos">Asesores Activos</option>
             <option value="bajas">Asesores de Baja</option>
@@ -931,34 +941,37 @@
             <option value="celulas">Células</option>
           </select>
         </div>
-        <div class="field"><label>KWID</label>
-          <input type="text" id="asesor-kwid" placeholder="Sin KWID" />
+        <div class="field"><label>Tipo de asociado</label><input type="text" id="asesor-tipo-asociado" placeholder="R0, R1, R2…" /></div>
+        <div class="field"><label>Sponsor</label><input type="text" id="asesor-sponsor" /></div>
+        <div class="field"><label>Usuario Command</label><input type="text" id="asesor-usuario-command" /></div>
+        <div class="field"><label>Correo KW</label><input type="email" id="asesor-correo" placeholder="nombre@kwmexico.mx" /></div>
+        <div class="field"><label>Contraseña</label>
+          <div class="password-wrap">
+            <input type="password" id="asesor-contrasena" />
+            <button type="button" class="password-toggle" aria-label="Mostrar contraseña" onclick="togglePasswordVisibility('asesor-contrasena', this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
+        <div class="field"><label>KW ID</label><input type="text" id="asesor-kwid" /></div>
+        <div class="field"><label>Aniversario</label><input type="text" id="asesor-aniversario" placeholder="Ej. 1 Septiembre" /></div>
+        <div class="field"><label>Clasificación</label><input type="text" id="asesor-clasificacion" placeholder="Full Agent, Solo Agent…" /></div>
+        <div class="field"><label>Coach asignado</label><input type="text" id="asesor-coach" /></div>
+        <div class="field"><label>Célula</label><input type="text" id="asesor-celula" placeholder="La del líder" /></div>
+        <div class="field"><label>Puesto</label><input type="text" id="asesor-puesto" placeholder="Asesor" /></div>
+        <div class="field"><label>Fecha de ingreso</label><input type="text" id="asesor-ingreso" placeholder="Como venga: 15/03/24" /></div>
+        <div class="field"><label>Fecha de baja</label><input type="text" id="asesor-baja" placeholder="Solo si ya no está" /></div>
       </div>
-      <div class="bd-par">
-        <div class="field"><label>Teléfono</label>
-          <input type="text" id="asesor-telefono" placeholder="10 dígitos" />
-        </div>
-        <div class="field"><label>Puesto</label>
-          <input type="text" id="asesor-puesto" placeholder="Asesor" />
-        </div>
+
+      <h4 class="ingreso-subtitulo">Emergencia y beneficiario</h4>
+      <div class="ingreso-grid">
+        <div class="field"><label>Nombre</label><input type="text" id="asesor-emer-nombre" /></div>
+        <div class="field"><label>Parentesco</label><input type="text" id="asesor-emer-parentesco" /></div>
+        <div class="field"><label>Cel</label><input type="tel" id="asesor-emer-celular" /></div>
+        <div class="field"><label>Correo</label><input type="email" id="asesor-emer-correo" /></div>
       </div>
-      <div class="bd-par">
-        <div class="field"><label>Célula</label>
-          <input type="text" id="asesor-celula" placeholder="Sin célula" />
-        </div>
-        <div class="field"><label>Fecha de ingreso</label>
-          <input type="text" id="asesor-ingreso" placeholder="Como venga: 15/03/24" />
-        </div>
-      </div>
-      <div class="bd-par">
-        <div class="field"><label>Fecha de baja</label>
-          <input type="text" id="asesor-baja" placeholder="Solo si ya no está" />
-        </div>
-        <div class="field"><label>Correo personal</label>
-          <input type="email" id="asesor-correo-personal" placeholder="Opcional" />
-        </div>
-      </div>
+
+      <h4 class="ingreso-subtitulo">Nada más</h4>
       <div class="field"><label>Notas</label>
         <input type="text" id="asesor-notas" placeholder="Lo que haga falta recordar" />
       </div>
@@ -966,7 +979,7 @@
       <div class="msg" id="asesor-msg"></div>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarFichaAsesor()">Cancelar</button>
-        <button type="button" class="btn-modal-confirmar" onclick="guardarFichaAsesor()">Guardar</button>
+        <button type="button" class="btn-modal-confirmar" id="asesor-btn-guardar" onclick="guardarFichaAsesor()">Guardar</button>
       </div>
       <button type="button" class="btn-eliminar-usuario" id="asesor-borrar" style="display:none;"
         data-kw-confirmar="¿Quitarlo de la base?" onclick="borrarFichaAsesor()">Quitar de la base</button>
@@ -1018,65 +1031,6 @@
 
       <div class="msg" id="verificar-msg"></div>
       <div id="verificar-cont" class="verif-scroll"></div>
-    </div>
-  </div>
-
-  <!-- Modal: Nuevo Asesor -->
-  <!-- Esto guarda en ingreso_asesores, NO en el Excel: la lectura de
-       Activos/Bajas/Células/Back Office sigue siendo del libro. Es el
-       primer paso para que el expediente empiece a vivir en el sitio. -->
-  <div id="modal-ingreso" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-      <h3>Nuevo Asesor</h3>
-      <p class="modal-sub">Se guarda como expediente en el sitio - no modifica el Excel del Market Center.</p>
-
-      <div class="field">
-        <label>Tipo de ingreso</label>
-        <div class="kw-chips">
-          <label class="kw-chip"><input type="radio" name="ingreso-tipo" value="asesor" checked /> Asesor</label>
-          <label class="kw-chip"><input type="radio" name="ingreso-tipo" value="back_office" /> Back Office</label>
-        </div>
-      </div>
-
-      <div class="field requerido"><label>Nombre completo</label><input type="text" id="ingreso-nombre" /></div>
-
-      <div class="ingreso-grid">
-        <div class="field"><label>Correo personal</label><input type="email" id="ingreso-correo-personal" /></div>
-        <div class="field"><label>Celular</label><input type="tel" id="ingreso-celular" /></div>
-        <div class="field"><label>CURP</label><input type="text" id="ingreso-curp" maxlength="18" style="text-transform:uppercase;" /></div>
-        <div class="field"><label>Cumpleaños</label><input type="date" id="ingreso-cumpleanos" /></div>
-        <div class="field"><label>Tipo de asociado</label><input type="text" id="ingreso-tipo-asociado" placeholder="R0, R1, R2…" /></div>
-        <div class="field"><label>Sponsor</label><input type="text" id="ingreso-sponsor" /></div>
-        <div class="field"><label>Usuario Command</label><input type="text" id="ingreso-usuario-command" /></div>
-        <div class="field"><label>Correo KW</label><input type="email" id="ingreso-correo-kw" /></div>
-        <div class="field"><label>KW ID</label><input type="text" id="ingreso-kwid" /></div>
-        <div class="field"><label>Aniversario KW</label><input type="text" id="ingreso-aniversario" placeholder="Ej. 1 Septiembre" /></div>
-        <div class="field"><label>Clasificación</label><input type="text" id="ingreso-clasificacion" placeholder="Full Agent, Solo Agent…" /></div>
-        <div class="field"><label>Coach asignado</label><input type="text" id="ingreso-coach" /></div>
-      </div>
-
-      <div class="field"><label>Contraseña (KW)</label>
-        <div class="password-wrap">
-          <input type="password" id="ingreso-contrasena" />
-          <button type="button" class="password-toggle" aria-label="Mostrar contraseña" onclick="togglePasswordVisibility('ingreso-contrasena', this)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <h4 class="ingreso-subtitulo">Emergencia y beneficiario</h4>
-      <div class="ingreso-grid">
-        <div class="field"><label>Nombre</label><input type="text" id="ingreso-emer-nombre" /></div>
-        <div class="field"><label>Parentesco</label><input type="text" id="ingreso-emer-parentesco" /></div>
-        <div class="field"><label>Celular</label><input type="tel" id="ingreso-emer-celular" /></div>
-        <div class="field"><label>Correo</label><input type="email" id="ingreso-emer-correo" /></div>
-      </div>
-
-      <div class="msg" id="ingreso-msg"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn-modal-cancelar" onclick="cerrarModalIngreso()">Cancelar</button>
-        <button type="button" class="btn-modal-confirmar" id="ingreso-btn-guardar" onclick="guardarIngreso()">Guardar</button>
-      </div>
     </div>
   </div>
 
@@ -1862,9 +1816,13 @@
       clave +
       datoHtml(I.correo, p.correoPersonal, p.correoPersonal ? 'mailto:' + p.correoPersonal : null) +
       datoHtml(I.calendario, p.cumpleanos ? 'Cumpleaños: ' + p.cumpleanos : '', null) +
+      datoHtml(I.etiqueta, p.curp ? 'CURP: ' + p.curp : '', null) +
       datoHtml(I.etiqueta, p.tipoAsociado ? 'Tipo de asociado: ' + p.tipoAsociado : '', null) +
+      datoHtml(I.etiqueta, p.clasificacion ? 'Clasificación: ' + p.clasificacion : '', null) +
       datoHtml(I.calendario, p.aniversario ? 'Aniversario KW: ' + p.aniversario : '', null) +
+      datoHtml(I.persona, p.sponsor ? 'Sponsor: ' + p.sponsor : '', null) +
       datoHtml(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
+      datoHtml(I.etiqueta, p.notas || '', null) +
       (emergencia || p.emergenciaTelefono || p.emergenciaCorreo
         ? '<div class="kw-dato kw-emergencia">' + I.persona +
             '<span class="kw-dato-txt">' +
@@ -1930,11 +1888,18 @@
     // tarjeta y enseña los datos del asesor; este botón, además, enseña
     // los accesos.
     const mostrando = mostrandoAccesos.has(p.correo);
-    const boton = (!esBaja && p.correo)
-      ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + (mostrando ? ' activo' : '') + '"' +
-          ' data-correo="' + escapeHtml(p.correo) + '">' +
-          (completo ? ICONO_LISTO : '') + 'Dar de alta</span>'
-      : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Dado de baja</span>';
+    // Tres estados y no dos: quien todavía no tiene correo de KW (se
+    // capturó en la ficha y su cuenta viene después) no está dado de
+    // baja, nada más no hay a qué darle accesos todavía. Decirle "dado
+    // de baja" a un asesor activo es de las peores confusiones que puede
+    // haber en esta pantalla.
+    const boton = esBaja
+      ? '<span class="estado-alta baja">' + ICONO_RELOJ + 'Dado de baja</span>'
+      : (p.correo
+        ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + (mostrando ? ' activo' : '') + '"' +
+            ' data-correo="' + escapeHtml(p.correo) + '">' +
+            (completo ? ICONO_LISTO : '') + 'Dar de alta</span>'
+        : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -1951,7 +1916,7 @@
         '</span>' + I.flecha +
       '</button>' +
       '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
-        '<div class="kw-datos">' +
+        '<div class="kw-datos en-columnas">' +
           (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
           (p.puesto ? '<div class="kw-dato">' + I.maletin + '<span class="kw-dato-txt">' + escapeHtml(p.puesto) + '</span></div>' : '') +
           (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
@@ -1962,6 +1927,15 @@
         // Los accesos van escondidos hasta que se pica "Dar de alta" a
         // propósito: picar la tarjeta nada más enseña los datos.
         (mostrando ? accesosHtml(p, g) : '') +
+        // Corregir el expediente o cambiar a alguien de grupo se hace en
+        // su ficha, y se llega desde donde se le está viendo. Solo sale
+        // si el renglón viene de la base (si viene del libro no hay qué
+        // editar: el libro se edita en el libro).
+        (p.id
+          ? '<div class="kw-fila-acciones">' +
+              '<button type="button" class="kw-fila-btn" data-editar="' + p.id + '">Editar ficha</button>' +
+            '</div>'
+          : '') +
       '</div></div></div>' +
     '</div>';
   }
@@ -2019,16 +1993,17 @@
 
       if (!g.personas.length) {
         // Una hoja con renglones pero sin columnas reconocidas no está
-        // vacía: es que sus encabezados se llaman de otra forma. Decirlo
-        // ahorra la adivinanza de por qué no sale nadie.
+        // vacía: es que sus encabezados se llaman de otra forma, y por
+        // eso de ahí no se rescató a nadie para la base. Decirlo ahorra
+        // la adivinanza de por qué no sale nadie.
         const sinColumnas = g.filasHoja > 1 && !(g.columnas || []).length;
         cont.innerHTML = '<div class="kw-vacio"><strong>' +
-          (sinColumnas ? 'No se reconocieron las columnas' : 'Esta hoja está vacía') + '</strong>' +
+          (sinColumnas ? 'No se reconocieron las columnas' : 'Aquí no hay nadie todavía') + '</strong>' +
           (sinColumnas
-            ? 'La hoja "' + escapeHtml(g.hoja) + '" trae ' + g.filasHoja + ' renglones, pero ninguno de sus ' +
-              'encabezados coincide con los que se buscan (Agente o Nombre, Correo, Celular, KW ID, ' +
-              'Fecha de ingreso). Revisa cómo se llaman las columnas de esa hoja.'
-            : 'La hoja "' + escapeHtml(g.hoja) + '" del libro no tiene a nadie capturado todavía.') +
+            ? 'La hoja "' + escapeHtml(g.hoja) + '" del libro trae ' + g.filasHoja + ' renglones, pero ninguno ' +
+              'de sus encabezados coincide con los que se buscan (Agente o Nombre, Correo, Celular, KW ID, ' +
+              'Fecha de ingreso), así que de ahí no se pudo guardar a nadie.'
+            : 'Nadie está en este grupo. Se pasa gente aquí desde su ficha, en la base de datos.') +
           '</div>';
         return;
       }
@@ -2217,41 +2192,78 @@
     return '<div class="kw-lista">' + hueco('w60') + hueco('w70') + hueco('w50') + '</div>';
   }
 
+  // Lo que el libro dijo de cada hoja la última vez que se leyó: cómo se
+  // llama la hoja y qué columnas se le reconocieron. Ya no es de donde
+  // sale la lista, pero sirve para poder explicar por qué una hoja no
+  // trajo a nadie.
+  let hojasDelLibro = {};
+
+  // El camino es: se lee el libro, se guarda en la base, y de la base
+  // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
+  // ya no deja al panel sin lista: lo que se ve es lo que la casa tiene
+  // guardado, y el libro nada más lo alimenta mientras siga vivo.
   async function cargarAsesores() {
     const btn = document.getElementById('btn-recargar');
     const paneles = document.getElementById('asesores-paneles');
     btn.disabled = true;
     if (!gruposAsesores.length) paneles.innerHTML = esqueletoAsesores();
+
+    let gruposLibro = null;
+    let fallaLibro = null;
     try {
       const data = await llamarAlta({ accion: 'listar' });
       // Mientras la Edge Function siga siendo la vieja (se publica a mano
       // desde Supabase, así que puede ir un rato atrás de esta pantalla)
-      // no manda `grupos`, solo la lista de siempre. En vez de quedarse en
-      // blanco sin decir por qué, se enseña esa lista como el único grupo.
-      gruposAsesores = data.grupos || (data.personas
+      // no manda `grupos`, solo la lista de siempre.
+      gruposLibro = data.grupos || (data.personas
         ? [{ clave: 'activos', titulo: 'Asesores Activos', hoja: 'Activos', personas: data.personas }]
         : []);
-      armarTabsAsesores();
-      pintarGrupos();
-      cargarEstadoGoogle();
-      // Y de paso se copia a la base, que es la que va a quedar cuando el
-      // libro se apague. Sin await: la pantalla ya está lista y esto es
-      // trabajo de fondo.
-      sincronizarBaseDesdeLibro(gruposAsesores);
+      hojasDelLibro = {};
+      gruposLibro.forEach(function (g) {
+        hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
+      });
+      await sincronizarBaseDesdeLibro(gruposLibro);
     } catch (err) {
+      fallaLibro = err;
+    }
+
+    const hayBase = await leerBaseDatos();
+    if (hayBase && bdAsesores.length) {
+      gruposAsesores = gruposDesdeBase();
+    } else if (gruposLibro && gruposLibro.length) {
+      // La base todavía no existe (falta correr 073_asesores.sql) o
+      // quedó vacía: mientras tanto se pinta lo que el libro trajo, que
+      // es como trabajaba el panel antes de que hubiera base.
+      gruposAsesores = gruposLibro;
+    } else {
       // Un "esta sección es solo para el equipo de altas" se queda aquí
       // dentro, no tumba el Panel entero: lo demás del Panel sí es suyo.
-      paneles.innerHTML = '<div class="kw-vacio"><strong>No se pudo leer el libro</strong>' +
-        escapeHtml(err.message || '') +
+      const err = fallaLibro || {};
+      paneles.innerHTML = '<div class="kw-vacio"><strong>No hay de dónde sacar la lista</strong>' +
+        'Ni la base tiene asesores ni se pudo leer el libro. ' + escapeHtml(err.message || '') +
         (err.diagnostico
           ? '<pre style="text-align:left;max-width:500px;margin:14px auto 0;font-size:11px;' +
             'background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;">' +
             escapeHtml(JSON.stringify(err.diagnostico, null, 2)) + '</pre>'
           : '') +
         '</div>';
-    } finally {
       btn.disabled = false;
+      return;
     }
+
+    armarTabsAsesores();
+    pintarGrupos();
+    if (enBaseDeDatos) pintarBaseDatos();
+    cargarEstadoGoogle();
+    // Que el libro falle ya no es una pantalla en blanco, pero sí algo
+    // que hay que decir: lo que se está viendo puede traer un día de
+    // retraso contra lo que allá se acaba de capturar.
+    avisoAsesores(
+      fallaLibro
+        ? 'No se pudo leer el libro (' + (fallaLibro.message || 'sin detalle') + '). Esto es lo que hay guardado en la base.'
+        : '',
+      fallaLibro ? 'error' : '');
+    btn.disabled = false;
   }
 
   // Lo que hay en Google se pide aparte y después de pintar la lista: son
@@ -2481,83 +2493,6 @@
     });
   })();
 
-  // ── Nuevo Asesor ──
-  // Guarda en ingreso_asesores vía la Edge Function (no toca el Excel).
-  // Es el primer paso para que el expediente empiece a vivir en el
-  // sitio; las pestañas de Asesores siguen leyendo del libro como
-  // siempre.
-  const CAMPOS_INGRESO = [
-    'ingreso-nombre', 'ingreso-correo-personal', 'ingreso-celular', 'ingreso-curp',
-    'ingreso-cumpleanos', 'ingreso-tipo-asociado', 'ingreso-sponsor', 'ingreso-usuario-command',
-    'ingreso-correo-kw', 'ingreso-kwid', 'ingreso-aniversario', 'ingreso-clasificacion',
-    'ingreso-coach', 'ingreso-contrasena',
-    'ingreso-emer-nombre', 'ingreso-emer-parentesco', 'ingreso-emer-celular', 'ingreso-emer-correo',
-  ];
-
-  function abrirModalIngreso() {
-    CAMPOS_INGRESO.forEach(function (id) { document.getElementById(id).value = ''; });
-    document.querySelector('input[name="ingreso-tipo"][value="asesor"]').checked = true;
-    document.getElementById('ingreso-msg').className = 'msg';
-    document.getElementById('ingreso-btn-guardar').disabled = false;
-    document.getElementById('ingreso-btn-guardar').textContent = 'Guardar';
-    document.getElementById('modal-ingreso').style.display = 'flex';
-    document.getElementById('ingreso-nombre').focus();
-  }
-
-  function cerrarModalIngreso() {
-    window.kwUI.cerrarModal('modal-ingreso');
-  }
-
-  async function guardarIngreso() {
-    const nombre = document.getElementById('ingreso-nombre').value.trim();
-    const msg = document.getElementById('ingreso-msg');
-    if (!nombre) {
-      msg.textContent = 'Falta el nombre del asesor.';
-      msg.className = 'msg error';
-      document.getElementById('ingreso-nombre').focus();
-      return;
-    }
-
-    const tipo = document.querySelector('input[name="ingreso-tipo"]:checked').value;
-    const datos = {
-      tipo: tipo,
-      nombre: nombre,
-      correo_personal: document.getElementById('ingreso-correo-personal').value.trim(),
-      celular: document.getElementById('ingreso-celular').value.trim(),
-      curp: document.getElementById('ingreso-curp').value.trim(),
-      cumpleanos: document.getElementById('ingreso-cumpleanos').value,
-      tipo_asociado: document.getElementById('ingreso-tipo-asociado').value.trim(),
-      sponsor: document.getElementById('ingreso-sponsor').value.trim(),
-      usuario_command: document.getElementById('ingreso-usuario-command').value.trim(),
-      correo_kw: document.getElementById('ingreso-correo-kw').value.trim(),
-      contrasena: document.getElementById('ingreso-contrasena').value,
-      kwid: document.getElementById('ingreso-kwid').value.trim(),
-      aniversario: document.getElementById('ingreso-aniversario').value.trim(),
-      clasificacion: document.getElementById('ingreso-clasificacion').value.trim(),
-      coach_asignado: document.getElementById('ingreso-coach').value.trim(),
-      emergencia_nombre: document.getElementById('ingreso-emer-nombre').value.trim(),
-      emergencia_celular: document.getElementById('ingreso-emer-celular').value.trim(),
-      emergencia_correo: document.getElementById('ingreso-emer-correo').value.trim(),
-      emergencia_parentesco: document.getElementById('ingreso-emer-parentesco').value.trim(),
-    };
-
-    const btn = document.getElementById('ingreso-btn-guardar');
-    btn.disabled = true;
-    btn.textContent = 'Guardando…';
-    msg.className = 'msg';
-    try {
-      await llamarAlta({ accion: 'crear_ingreso', datos: datos });
-      msg.textContent = 'Asesor guardado.';
-      msg.className = 'msg ok';
-      setTimeout(cerrarModalIngreso, 900);
-    } catch (err) {
-      msg.textContent = err.message || 'No se pudo guardar.';
-      msg.className = 'msg error';
-      btn.disabled = false;
-      btn.textContent = 'Guardar';
-    }
-  }
-
   // ── Inicio ──
   async function initAdmin() {
     try {
@@ -2659,9 +2594,15 @@
   ];
   const BD_TITULO = {};
   const BD_CORTO = {};
-  BD_GRUPOS.forEach(function (g) { BD_TITULO[g.clave] = g.titulo; BD_CORTO[g.clave] = g.corto; });
+  const BD_CLASE = {};
+  BD_GRUPOS.forEach(function (g) {
+    BD_TITULO[g.clave] = g.titulo;
+    BD_CORTO[g.clave] = g.corto;
+    BD_CLASE[g.clave] = g.clase;
+  });
 
   let bdAsesores = [];
+  let errorBase = '';
   let bdFiltroGrupo = '';
   let bdEditando = null;
   let enBaseDeDatos = false;
@@ -2671,15 +2612,22 @@
     document.getElementById('bd-asesores').style.display = enBaseDeDatos ? '' : 'none';
     document.getElementById('asesores-tabs').style.display = enBaseDeDatos ? 'none' : '';
     document.getElementById('asesores-paneles').style.display = enBaseDeDatos ? 'none' : '';
-    // Lo del libro se va mientras se está en la base: ese buscador busca
-    // en el libro, recargar recarga el libro y los accesos se dan sobre
-    // lo que el libro trae. El botón de la base se queda, que es por
-    // donde se regresa, y lo dice.
-    ['.barra .buscador', '#btn-verificar', '#btn-recargar'].forEach(function (sel) {
-      const el = document.querySelector(sel);
-      if (el) el.style.display = enBaseDeDatos ? 'none' : '';
-    });
+
+    // La barra del libro se va entera mientras se está en la base: su
+    // buscador filtra las pestañas y sus botones trabajan sobre ellas.
+    // Dejarla ahí, vacía salvo por un botón, era un renglón de nada
+    // arriba de la barra que sí sirve. El botón para regresar se muda a
+    // la barra de la base, que es donde la persona está mirando.
+    document.querySelector('.barra').style.display = enBaseDeDatos ? 'none' : '';
+    document.querySelector('.asesores-cabeza').closest('.kw-card')
+      .classList.toggle('solo-cabeza', enBaseDeDatos);
     const btn = document.getElementById('btn-bd');
+    if (enBaseDeDatos) {
+      document.querySelector('.bd-barra').appendChild(btn);
+    } else {
+      document.querySelector('.barra-botones').insertBefore(btn, document.getElementById('btn-recargar'));
+    }
+
     btn.classList.toggle('activo', enBaseDeDatos);
     btn.querySelector('.btn-txt').innerHTML = enBaseDeDatos
       ? 'Volver<span class="btn-txt-largo"> al libro</span>'
@@ -2687,20 +2635,97 @@
     if (enBaseDeDatos) cargarBaseDatos(); else actualizarBarra();
   }
 
-  async function cargarBaseDatos() {
-    const cont = document.getElementById('bd-lista');
-    if (!bdAsesores.length) cont.innerHTML = esqueletoAsesores();
+  // Leerla y pintarla van por separado: las pestañas de arriba también
+  // se arman de aquí, y esas no tienen por qué repintar la lista de la
+  // base para poder saber quién hay.
+  async function leerBaseDatos() {
     const { data, error } = await window.kwSupabase
       .from('asesores')
       .select('*')
       .order('nombre', { ascending: true });
     if (error) {
-      cont.innerHTML = '<div class="kw-vacio">No se pudo leer la base: ' + escapeHtml(error.message) +
-        '<br><br>Si dice que la tabla no existe, falta correr 073_asesores.sql en Supabase.</div>';
+      errorBase = error.message;
+      return false;
+    }
+    errorBase = '';
+    bdAsesores = data || [];
+    return true;
+  }
+
+  async function cargarBaseDatos() {
+    const cont = document.getElementById('bd-lista');
+    if (!bdAsesores.length) cont.innerHTML = esqueletoAsesores();
+    const ok = await leerBaseDatos();
+    if (!ok) {
+      cont.innerHTML = '<div class="kw-vacio"><strong>No se pudo leer la base</strong>' +
+        escapeHtml(errorBase) +
+        (/does not exist|relation|schema cache/i.test(errorBase)
+          ? '<br><br>Falta correr 073_asesores.sql en el SQL Editor de Supabase.'
+          : '') +
+        '</div>';
       return;
     }
-    bdAsesores = data || [];
     pintarBaseDatos();
+  }
+
+  // Las cuatro visualizaciones salen de aquí: un grupo por cada clave,
+  // más cualquier otra que la base traiga (si el libro estrena una hoja,
+  // su gente llega con esa clave y aparece su pestaña sola).
+  function gruposDesdeBase() {
+    const claves = BD_GRUPOS.map(function (g) { return g.clave; });
+    bdAsesores.forEach(function (a) {
+      if (a.grupo && claves.indexOf(a.grupo) === -1) claves.push(a.grupo);
+    });
+    return claves.map(function (clave) {
+      const delLibro = hojasDelLibro[clave] || {};
+      return {
+        clave: clave,
+        titulo: BD_TITULO[clave] || clave,
+        hoja: delLibro.hoja || '',
+        columnas: delLibro.columnas,
+        filasHoja: delLibro.filasHoja,
+        personas: bdAsesores
+          .filter(function (a) { return a.grupo === clave; })
+          .map(personaDesdeBase),
+      };
+    });
+  }
+
+  // La base guarda con nombres de columna (correo_personal) y la
+  // pantalla los pinta con los de siempre (correoPersonal), que son los
+  // que el libro mandaba. Se traduce en un solo lugar para que todo lo
+  // que ya sabía pintar a una persona siga sirviendo igual.
+  function personaDesdeBase(a) {
+    return {
+      id: a.id,
+      grupo: a.grupo,
+      origen: a.origen,
+      hoja: a.hoja,
+      fijado: a.fijado,
+      correo: a.correo || '',
+      nombre: a.nombre || '',
+      telefono: a.telefono || '',
+      kwid: a.kwid || '',
+      fechaIngreso: a.fecha_ingreso || '',
+      fechaBaja: a.fecha_baja || '',
+      cumpleanos: a.cumpleanos || '',
+      puesto: a.puesto || '',
+      celula: a.celula || '',
+      curp: a.curp || '',
+      usuarioCommand: a.usuario_command || '',
+      contrasena: a.contrasena || '',
+      correoPersonal: a.correo_personal || '',
+      tipoAsociado: a.tipo_asociado || '',
+      clasificacion: a.clasificacion || '',
+      sponsor: a.sponsor || '',
+      aniversario: a.aniversario || '',
+      coachAsignado: a.coach_asignado || '',
+      emergenciaNombre: a.emergencia_nombre || '',
+      emergenciaTelefono: a.emergencia_telefono || '',
+      emergenciaCorreo: a.emergencia_correo || '',
+      emergenciaParentesco: a.emergencia_parentesco || '',
+      notas: a.notas || '',
+    };
   }
 
   function pintarBaseDatos() {
@@ -2748,35 +2773,43 @@
 
     cont.innerHTML = '<div class="kw-lista">' + lista.map(function (a, i) {
       const I = window.kwUI.iconos;
+      const p = personaDesdeBase(a);
       const esBaja = a.grupo === 'bajas';
+      const clase = BD_CLASE[a.grupo] || 'otro';
       return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
         ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
         '<button type="button" class="kw-fila-cabeza">' +
           '<span class="kw-fila-punto ' + (esBaja ? 'gris' : 'verde') + '"></span>' +
           '<span class="kw-fila-texto">' +
-            '<span class="kw-fila-titulo">' + escapeHtml(a.nombre || 'Sin nombre') + '</span>' +
-            '<span class="kw-fila-sub">' + escapeHtml(a.correo) + '</span>' +
+            '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '</span>' +
+            '<span class="kw-fila-sub">' + escapeHtml(p.correo || 'Sin correo de KW') + '</span>' +
           '</span>' +
           '<span class="kw-fila-extra">' +
             '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' +
-              escapeHtml(a.kwid || 'Sin KWID') + '</span></span>' +
-            '<span class="kw-extra"><span class="bd-pill bd-' +
-              (BD_CORTO[a.grupo] ? BD_GRUPOS.find(function (g) { return g.clave === a.grupo; }).clase : 'otro') + '">' +
+              escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
+            '<span class="kw-extra"><span class="bd-pill bd-' + clase + '">' +
               escapeHtml(BD_CORTO[a.grupo] || a.grupo) + '</span></span>' +
           '</span>' + I.flecha +
         '</button>' +
         '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
-          '<div class="kw-datos">' +
-            (a.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(a.telefono) + '">' + I.telefono +
-              '<span class="kw-dato-txt">' + escapeHtml(a.telefono) + '</span></a>' : '') +
-            (a.puesto ? '<div class="kw-dato">' + I.maletin + '<span class="kw-dato-txt">' + escapeHtml(a.puesto) + '</span></div>' : '') +
-            (a.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(a.celula) + '</span></div>' : '') +
-            (a.fecha_ingreso ? '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Ingreso: ' + escapeHtml(a.fecha_ingreso) + '</span></div>' : '') +
-            (a.fecha_baja ? '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Baja: ' + escapeHtml(a.fecha_baja) + '</span></div>' : '') +
-            '<div class="kw-dato"><span class="kw-dato-txt">' +
-              (a.origen === 'excel' ? 'Vino del libro' + (a.hoja ? ' (' + escapeHtml(a.hoja) + ')' : '') : 'Capturado aquí') +
-              (a.fijado ? ' · su grupo se puso a mano' : '') +
-            '</span></div>' +
+          // El expediente entero, con las mismas piezas con las que se
+          // ve en las pestañas: es la misma persona, no se ve de dos
+          // formas según por dónde se llegue.
+          '<div class="kw-datos en-columnas">' +
+            (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono +
+              '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
+            (p.puesto ? '<div class="kw-dato">' + I.maletin + '<span class="kw-dato-txt">' + escapeHtml(p.puesto) + '</span></div>' : '') +
+            (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
+            (p.fechaIngreso ? '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Ingreso: ' + escapeHtml(p.fechaIngreso) + '</span></div>' : '') +
+            (p.fechaBaja ? '<div class="kw-dato">' + I.calendario + '<span class="kw-dato-txt">Baja: ' + escapeHtml(p.fechaBaja) + '</span></div>' : '') +
+            infoExtraHtml(p) +
+          '</div>' +
+          // De dónde salió el renglón: es una nota al pie del
+          // expediente, no un dato del asesor, así que va aparte de la
+          // rejilla y más callada.
+          '<div class="bd-origen">' +
+            (p.origen === 'excel' ? 'Vino del libro' + (p.hoja ? ' (' + escapeHtml(p.hoja) + ')' : '') : 'Capturado aquí') +
+            (p.fijado ? ' · su grupo se puso a mano, el libro ya no se lo mueve' : '') +
           '</div>' +
           '<div class="kw-fila-acciones">' +
             '<button type="button" class="kw-fila-btn" data-editar="' + a.id + '">Editar ficha</button>' +
@@ -2789,38 +2822,69 @@
       '</div>';
     }).join('') + '</div>';
 
-    cont.querySelectorAll('[data-editar]').forEach(function (b) {
-      b.addEventListener('click', function () { abrirFichaAsesor(b.dataset.editar); });
-    });
-    cont.querySelectorAll('[data-mover]').forEach(function (b) {
-      b.addEventListener('click', function () { moverDeGrupo(b.dataset.mover, b.dataset.a, b); });
-    });
     window.kwUI.acordeon(cont);
   }
 
+  // Un solo escuchador para las dos listas (las pestañas y la base): las
+  // dos se repintan seguido, y colgarle uno a cada botón en cada
+  // repintado los va acumulando.
+  document.addEventListener('click', function (e) {
+    const editar = e.target.closest('[data-editar]');
+    if (editar) { abrirFichaAsesor(editar.dataset.editar); return; }
+    const mover = e.target.closest('[data-mover]');
+    if (mover) moverDeGrupo(mover.dataset.mover, mover.dataset.a, mover);
+  });
+
+  // Repartir a alguien es cambiarle el grupo, y con eso queda repartido
+  // en las dos vistas: las pestañas salen de lo mismo que esta lista.
   async function moverDeGrupo(id, grupo, btn) {
     btn.disabled = true;
     const { error } = await window.kwSupabase
       .from('asesores').update({ grupo: grupo }).eq('id', id);
     btn.disabled = false;
     if (error) { await window.kwUI.alert('No se pudo mover: ' + error.message); return; }
-    await cargarBaseDatos();
+    await refrescarTodo();
+  }
+
+  // Lo que se guarda se ve en los dos lados sin tener que volver a
+  // molestar al libro (que es la parte lenta y la que puede fallar).
+  async function refrescarTodo() {
+    const ok = await leerBaseDatos();
+    if (!ok) return;
+    gruposAsesores = gruposDesdeBase();
+    armarTabsAsesores();
+    pintarGrupos();
+    if (enBaseDeDatos) pintarBaseDatos();
   }
 
   // ── La ficha ──
-  // El mismo cuadro para capturar uno nuevo y para corregir uno que ya
-  // está: los campos son los mismos.
+  // El mismo cuadro para capturar a alguien nuevo y para corregir a
+  // quien ya está: el expediente completo, en el orden en que se pide
+  // por teléfono. Cada renglón es [id del campo, columna de la base].
   const BD_CAMPOS = [
-    ['asesor-correo', 'correo'],
     ['asesor-nombre', 'nombre'],
-    ['asesor-grupo', 'grupo'],
-    ['asesor-kwid', 'kwid'],
+    ['asesor-correo-personal', 'correo_personal'],
     ['asesor-telefono', 'telefono'],
-    ['asesor-puesto', 'puesto'],
+    ['asesor-curp', 'curp'],
+    ['asesor-cumpleanos', 'cumpleanos'],
+    ['asesor-grupo', 'grupo'],
+    ['asesor-tipo-asociado', 'tipo_asociado'],
+    ['asesor-sponsor', 'sponsor'],
+    ['asesor-usuario-command', 'usuario_command'],
+    ['asesor-correo', 'correo'],
+    ['asesor-contrasena', 'contrasena'],
+    ['asesor-kwid', 'kwid'],
+    ['asesor-aniversario', 'aniversario'],
+    ['asesor-clasificacion', 'clasificacion'],
+    ['asesor-coach', 'coach_asignado'],
     ['asesor-celula', 'celula'],
+    ['asesor-puesto', 'puesto'],
     ['asesor-ingreso', 'fecha_ingreso'],
     ['asesor-baja', 'fecha_baja'],
-    ['asesor-correo-personal', 'correo_personal'],
+    ['asesor-emer-nombre', 'emergencia_nombre'],
+    ['asesor-emer-parentesco', 'emergencia_parentesco'],
+    ['asesor-emer-celular', 'emergencia_telefono'],
+    ['asesor-emer-correo', 'emergencia_correo'],
     ['asesor-notas', 'notas'],
   ];
 
@@ -2833,16 +2897,22 @@
     });
     // El desplegable del sitio se dibuja aparte del <select>; hay que
     // avisarle que su valor cambió.
-    const sel = document.getElementById('asesor-grupo');
-    sel.dispatchEvent(new Event('change'));
+    document.getElementById('asesor-grupo').dispatchEvent(new Event('change'));
+    // La contraseña siempre nace tapada, aunque el cuadro anterior se
+    // haya cerrado con ella a la vista.
+    document.getElementById('asesor-contrasena').type = 'password';
+
     document.getElementById('asesor-titulo').textContent = bdEditando ? 'Ficha del asesor' : 'Nuevo asesor';
     document.getElementById('asesor-sub').textContent = bdEditando
-      ? (a.origen === 'excel' ? 'Vino del libro. Lo que cambies aquí manda sobre lo que traiga el libro.' : 'Capturado en el sitio.')
-      : 'El correo es lo que lo identifica en todo el sitio.';
+      ? (a.origen === 'excel'
+        ? 'Vino del libro. Lo que cambies aquí manda sobre lo que el libro traiga.'
+        : 'Capturado en el sitio.')
+      : 'Con el nombre basta para guardarlo; lo demás se va llenando.';
     document.getElementById('asesor-borrar').style.display = bdEditando ? '' : 'none';
     const msg = document.getElementById('asesor-msg');
     msg.textContent = ''; msg.className = 'msg';
     document.getElementById('modal-asesor').style.display = 'flex';
+    document.getElementById('asesor-nombre').focus();
   }
 
   function cerrarFichaAsesor() {
@@ -2852,18 +2922,25 @@
 
   async function guardarFichaAsesor() {
     const msg = document.getElementById('asesor-msg');
+    const btn = document.getElementById('asesor-btn-guardar');
     const fila = {};
     BD_CAMPOS.forEach(function (par) {
       const v = String(document.getElementById(par[0]).value || '').trim();
       fila[par[1]] = v || null;
     });
-    if (!fila.correo) {
-      msg.className = 'msg error'; msg.textContent = 'Falta el correo, que es lo que lo identifica.';
+
+    // Lo único que de verdad hace falta es el nombre: el correo de KW se
+    // le asigna después, y hasta entonces la persona ya existe.
+    if (!fila.nombre) {
+      msg.className = 'msg error'; msg.textContent = 'Falta el nombre.';
+      document.getElementById('asesor-nombre').focus();
       return;
     }
-    fila.correo = fila.correo.toLowerCase();
+    if (fila.correo) fila.correo = fila.correo.toLowerCase();
+    if (fila.curp) fila.curp = fila.curp.toUpperCase();
     fila.grupo = fila.grupo || 'activos';
 
+    btn.disabled = true;
     msg.className = 'msg'; msg.textContent = 'Guardando...';
     let error;
     if (bdEditando) {
@@ -2872,15 +2949,16 @@
       fila.origen = 'sitio';
       ({ error } = await window.kwSupabase.from('asesores').insert(fila));
     }
+    btn.disabled = false;
     if (error) {
       msg.className = 'msg error';
       msg.textContent = String(error.message).includes('asesores_correo_unico')
-        ? 'Ese correo ya está en la base.'
+        ? 'Ese correo ya está en la base, es de alguien más.'
         : 'No se pudo guardar: ' + error.message;
       return;
     }
     cerrarFichaAsesor();
-    await cargarBaseDatos();
+    await refrescarTodo();
   }
 
   async function borrarFichaAsesor() {
@@ -2888,13 +2966,18 @@
     const { error } = await window.kwSupabase.from('asesores').delete().eq('id', bdEditando.id);
     if (error) { await window.kwUI.alert('No se pudo quitar: ' + error.message); return; }
     cerrarFichaAsesor();
-    await cargarBaseDatos();
+    await refrescarTodo();
   }
 
   // ── La copia del libro ──
-  // Se llama sola cada vez que el panel lee el libro. Va sin await desde
-  // quien la llama y se traga sus propios errores: que la copia falle no
-  // puede dejar sin lista al panel, que es lo que la persona vino a ver.
+  // Se llama cada vez que el panel lee el libro, y antes de pintar: lo
+  // que el libro traiga queda guardado en la base, y de la base sale lo
+  // que se ve. Así es como el libro deja de ser el origen sin tener que
+  // apagarlo de un día para otro.
+  //
+  // Se traga sus propios errores: que la copia falle (todavía no se
+  // corre la migración, se cayó la red) no puede dejar sin lista al
+  // panel, que es a lo que la persona vino.
   async function sincronizarBaseDesdeLibro(grupos) {
     const personas = [];
     (grupos || []).forEach(function (g) {
@@ -2907,8 +2990,6 @@
     try {
       const { error } = await window.kwSupabase.rpc('asesores_sincronizar', { p_personas: personas });
       if (error) throw error;
-      // Si la base está a la vista, que se vea al día de una vez.
-      if (enBaseDeDatos) await cargarBaseDatos();
     } catch (e) {
       console.error('No se pudo copiar el libro a la base de asesores:', e);
     }
