@@ -85,10 +85,14 @@ create table if not exists public.asesores (
   telefono text,
   kwid text,
 
-  -- Dónde está: 'activos', 'bajas', 'back_office', 'celulas'. Es texto y
-  -- no un enum porque el libro puede traer una hoja nueva mañana y un
-  -- enum obligaría a una migración para poder guardarla.
-  grupo text not null default 'activos',
+  -- El estatus: 'asesor_activo', 'asesor_baja', 'back_office_activo',
+  -- 'back_office_baja'. Es texto y no un enum porque el libro puede
+  -- traer una hoja nueva mañana y un enum obligaría a una migración
+  -- para poder guardarla.
+  --
+  -- La célula NO es un estatus: es un miembro del staff que se le asigna
+  -- a un asesor que no quiere coach, así que vive en su propia columna.
+  grupo text not null default 'asesor_activo',
 
   -- El expediente completo: lo que el libro trae de cada quien y lo que
   -- se captura aquí en la ficha. Todo texto, por lo mismo que las fechas
@@ -121,6 +125,13 @@ create table if not exists public.asesores (
   -- Lo tocó una persona desde el sitio: el libro ya no le mueve el grupo.
   fijado boolean not null default false,
 
+  -- Contacto de emergencia y beneficiario no son la misma persona, y
+  -- pueden ser varias: cada quien es {nombre, parentesco, telefono,
+  -- correo, emergencia, beneficiario}. Las cuatro columnas emergencia_*
+  -- de arriba se quedan porque son las que el libro llena; al abrir la
+  -- ficha, si no hay contactos capturados, se arma uno con ellas.
+  contactos jsonb not null default '[]'::jsonb,
+
   notas text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -151,6 +162,7 @@ alter table public.asesores
   add column if not exists emergencia_telefono text,
   add column if not exists emergencia_correo text,
   add column if not exists emergencia_parentesco text,
+  add column if not exists contactos jsonb,
   add column if not exists origen text,
   add column if not exists hoja text,
   add column if not exists fila_hoja int,
@@ -158,12 +170,40 @@ alter table public.asesores
   add column if not exists notas text;
 
 alter table public.asesores alter column correo drop not null;
-alter table public.asesores alter column grupo set default 'activos';
+alter table public.asesores alter column grupo set default 'asesor_activo';
 alter table public.asesores alter column origen set default 'sitio';
 alter table public.asesores alter column fijado set default false;
-update public.asesores set grupo = 'activos' where grupo is null;
+alter table public.asesores alter column contactos set default '[]'::jsonb;
+update public.asesores set contactos = '[]'::jsonb where contactos is null;
+update public.asesores set grupo = 'asesor_activo' where grupo is null;
+
+-- Los cuatro estatus de hoy. Las bases que corrieron una versión
+-- anterior traen los nombres de las hojas del libro; se traducen aquí y
+-- volver a correr el archivo ya no encuentra ninguno.
+--
+-- La hoja de Células son asesores activos a los que se les asignó una
+-- célula: lo que los distingue es la columna `celula`, no el estatus.
+update public.asesores set grupo = 'asesor_activo'      where grupo in ('activos', 'celulas');
+update public.asesores set grupo = 'asesor_baja'        where grupo = 'bajas';
+update public.asesores set grupo = 'back_office_activo' where grupo = 'back_office';
 update public.asesores set origen = 'sitio' where origen is null;
 update public.asesores set fijado = false where fijado is null;
+
+-- Lo que el libro dejó en las columnas de emergencia se convierte en el
+-- primer contacto de la lista. Solo para quien todavía no tenga
+-- contactos capturados, así que volver a correr el archivo no duplica
+-- nada ni pisa lo que se haya capturado en la ficha.
+update public.asesores set contactos = jsonb_build_array(jsonb_build_object(
+  'nombre', coalesce(emergencia_nombre, ''),
+  'parentesco', coalesce(emergencia_parentesco, ''),
+  'telefono', coalesce(emergencia_telefono, ''),
+  'correo', coalesce(emergencia_correo, ''),
+  'emergencia', true,
+  'beneficiario', false
+))
+where coalesce(jsonb_array_length(contactos), 0) = 0
+  and (emergencia_nombre is not null or emergencia_telefono is not null
+    or emergencia_correo is not null or emergencia_parentesco is not null);
 
 -- Una persona, un renglón. Va sobre el correo en minúsculas porque el
 -- libro lo escribe como se le ocurre a quien captura: "Ana@KW.com" y
@@ -240,6 +280,27 @@ create trigger asesores_marcar_manual
 --
 -- Recibe el arreglo completo de una sola vez (jsonb) para que doscientas
 -- personas sean una llamada y no doscientas.
+-- El libro manda el nombre corto de la hoja de donde salió cada quien;
+-- aquí adentro eso se llama estatus y son otros cuatro. Se traduce en un
+-- solo lugar para que la Edge Function no tenga que enterarse.
+create or replace function public.asesores_estatus_de_hoja(p_hoja text)
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  select case lower(coalesce(trim(p_hoja), ''))
+    when 'activos'     then 'asesor_activo'
+    when 'celulas'     then 'asesor_activo'
+    when 'bajas'       then 'asesor_baja'
+    when 'back_office' then 'back_office_activo'
+    when ''            then 'asesor_activo'
+    -- Una hoja que no se reconoce se queda con su nombre: así aparece
+    -- como su propia pestaña en vez de perderse entre los activos.
+    else lower(trim(p_hoja))
+  end;
+$$;
+
 create or replace function public.asesores_sincronizar(p_personas jsonb)
 returns jsonb
 language plpgsql
@@ -284,7 +345,7 @@ begin
         nullif(v_persona->>'nombre', ''),
         nullif(v_persona->>'telefono', ''),
         nullif(v_persona->>'kwid', ''),
-        coalesce(nullif(v_persona->>'grupo', ''), 'activos'),
+        public.asesores_estatus_de_hoja(v_persona->>'grupo'),
         nullif(v_persona->>'fechaIngreso', ''),
         nullif(v_persona->>'cumpleanos', ''),
         nullif(v_persona->>'puesto', ''),
@@ -319,7 +380,7 @@ begin
         kwid = coalesce(nullif(v_persona->>'kwid', ''), kwid),
         grupo = case
           when fijado then grupo
-          else coalesce(nullif(v_persona->>'grupo', ''), grupo)
+          else coalesce(public.asesores_estatus_de_hoja(v_persona->>'grupo'), grupo)
         end,
         fecha_ingreso = coalesce(nullif(v_persona->>'fechaIngreso', ''), fecha_ingreso),
         cumpleanos = coalesce(nullif(v_persona->>'cumpleanos', ''), cumpleanos),

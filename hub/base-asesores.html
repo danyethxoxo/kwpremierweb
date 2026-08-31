@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831c">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <style>
@@ -28,11 +28,11 @@
 
   /* El color de cada grupo, en un solo lugar: lo usan la tarjeta de
      conteo de arriba y la etiqueta del renglón. Salen de la paleta. */
-  .bd-activos { --tono: var(--pastel-menta-txt);   --pastel: var(--pastel-menta); }
-  .bd-bajas   { --tono: #5b5b5b;                   --pastel: rgba(0,0,0,0.05); }
-  .bd-back    { --tono: var(--pastel-cielo-txt);   --pastel: var(--pastel-cielo); }
-  .bd-celulas { --tono: var(--pastel-lavanda-txt); --pastel: var(--pastel-lavanda); }
-  .bd-otro    { --tono: #6b6b6b;                   --pastel: #f1f1f0; }
+  .bd-activos   { --tono: var(--pastel-menta-txt); --pastel: var(--pastel-menta); }
+  .bd-bajas     { --tono: #5b5b5b;                 --pastel: rgba(0,0,0,0.05); }
+  .bd-back      { --tono: var(--pastel-cielo-txt); --pastel: var(--pastel-cielo); }
+  .bd-back-baja { --tono: #5b5b5b;                 --pastel: rgba(0,0,0,0.05); }
+  .bd-otro      { --tono: #6b6b6b;                 --pastel: #f1f1f0; }
   .bd-pill {
     display: inline-flex; align-items: center;
     padding: 2px 10px; border-radius: 999px;
@@ -77,11 +77,49 @@
   }
   .ficha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-4); }
   .ficha-subtitulo {
-    font-size: 13px; font-weight: 700; color: var(--muted);
+    font-size: 13px; font-weight: 500; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.03em;
     margin: var(--sp-4) 0 var(--sp-3); padding-top: var(--sp-4);
     border-top: 1px solid var(--border);
   }
+  /* El primero abre la hoja: no separa nada de lo de arriba porque no
+     hay nada arriba. */
+  .ficha-subtitulo.primera { margin-top: 0; padding-top: 0; border-top: none; }
+
+  /* El cumpleaños, en tres pedazos. */
+  .fecha-partes { display: flex; gap: var(--sp-2); }
+  .fecha-partes select { min-width: 0; }
+  .fecha-partes select:first-child { flex: 0 0 78px; }
+  .fecha-partes select:last-child { flex: 0 0 92px; }
+  .fecha-partes select:nth-child(2) { flex: 1; }
+
+  /* Lo que el libro traía escrito a mano y no se pudo leer como fecha
+     ("marzo 2024", "pendiente"). Se dice en vez de tirarlo: el campo
+     queda vacío pero el dato sigue guardado hasta que se corrija. */
+  .campo-nota { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+  /* Cada contacto es su propia tarjetita: sin una línea que los separe,
+     cuatro campos seguidos de otros cuatro se leen como ocho. */
+  .contacto {
+    border: 1px solid var(--border); border-radius: var(--r-tarjeta);
+    padding: var(--sp-4); margin-bottom: var(--sp-3);
+    background: rgba(255,255,255,0.5);
+  }
+  .contacto .field:last-of-type { margin-bottom: 0; }
+  .contacto-pie {
+    display: flex; align-items: center; gap: var(--sp-3);
+    flex-wrap: wrap; margin-top: var(--sp-3);
+  }
+  .contacto-pie .crece { flex: 1; }
+  .contacto-quitar {
+    border: none; background: none; color: var(--muted);
+    font-family: inherit; font-size: 12px; cursor: pointer; padding: 4px 6px;
+  }
+  .contacto-quitar:hover { color: #a30000; }
+  .contacto-vacio { color: var(--muted); font-size: 13px; margin-bottom: var(--sp-3); }
+
+  #f-mas-contacto { margin-bottom: var(--sp-4); }
+  .ficha-notas { margin-top: var(--sp-4); }
   .ficha-acciones {
     display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
     margin-top: var(--sp-4); padding-top: var(--sp-4);
@@ -169,64 +207,123 @@
       <div id="vista-ficha" style="display:none;">
         <div class="kw-page-encabezado">
           <h1 class="kw-page-titulo" id="ficha-titulo">Nuevo asesor</h1>
-          <p class="kw-page-desc" id="ficha-sub"></p>
         </div>
 
         <div class="ficha-hoja">
+          <h2 class="ficha-subtitulo primera">Información del ingreso</h2>
+
           <div class="field requerido"><label for="f-nombre">Nombre completo</label>
-            <input type="text" id="f-nombre" placeholder="Nombre y apellidos" />
+            <input type="text" id="f-nombre" autocomplete="off" />
           </div>
 
           <div class="ficha-grid">
-            <div class="field"><label for="f-correo-personal">Correo personal</label><input type="email" id="f-correo-personal" /></div>
-            <div class="field"><label for="f-telefono">Cel</label><input type="tel" id="f-telefono" placeholder="10 dígitos" /></div>
-            <div class="field"><label for="f-curp">CURP</label><input type="text" id="f-curp" maxlength="18" style="text-transform:uppercase;" /></div>
-            <div class="field"><label for="f-cumpleanos">Cumpleaños</label><input type="text" id="f-cumpleanos" placeholder="Ej. 14 de marzo" /></div>
+            <div class="field"><label for="f-correo-personal">Correo personal</label>
+              <input type="email" id="f-correo-personal" autocomplete="off" /></div>
+            <div class="field"><label for="f-telefono">Cel</label>
+              <input type="tel" id="f-telefono" autocomplete="off" /></div>
+            <div class="field"><label for="f-curp">CURP</label>
+              <input type="text" id="f-curp" maxlength="18" style="text-transform:uppercase;" autocomplete="off" /></div>
+            <!-- El cumpleaños no se pide con el calendario del navegador:
+                 ese abre en el año que corre y para una fecha de
+                 nacimiento hay que caminar treinta años hacia atrás. Tres
+                 desplegables se llenan de un vistazo. -->
+            <div class="field"><label>Cumpleaños</label>
+              <div class="fecha-partes">
+                <select id="f-cumple-dia" aria-label="Día"></select>
+                <select id="f-cumple-mes" aria-label="Mes"></select>
+                <select id="f-cumple-anio" aria-label="Año"></select>
+              </div>
+              <p class="campo-nota" id="f-cumple-nota" hidden></p>
+            </div>
           </div>
 
-          <h2 class="ficha-subtitulo">En el Market Center</h2>
+          <h2 class="ficha-subtitulo">Datos para el MC</h2>
           <div class="ficha-grid">
-            <div class="field"><label for="f-grupo">Dónde va</label>
+            <div class="field"><label for="f-grupo">Estatus</label>
               <select id="f-grupo">
-                <option value="activos">Asesores Activos</option>
-                <option value="bajas">Asesores de Baja</option>
-                <option value="back_office">Back Office</option>
-                <option value="celulas">Células</option>
+                <option value="asesor_activo">Asesor activo</option>
+                <option value="asesor_baja">Asesor de baja</option>
+                <option value="back_office_activo">Back office activo</option>
+                <option value="back_office_baja">Back office de baja</option>
               </select>
             </div>
-            <div class="field"><label for="f-tipo-asociado">Tipo de asociado</label><input type="text" id="f-tipo-asociado" placeholder="R0, R1, R2…" /></div>
-            <div class="field"><label for="f-sponsor">Sponsor</label><input type="text" id="f-sponsor" /></div>
-            <div class="field"><label for="f-usuario-command">Usuario Command</label><input type="text" id="f-usuario-command" /></div>
-            <div class="field"><label for="f-correo">Correo KW</label><input type="email" id="f-correo" placeholder="nombre@kwmexico.mx" /></div>
+            <div class="field"><label for="f-tipo-asociado">Tipo de asociado</label>
+              <select id="f-tipo-asociado">
+                <option value="">Sin definir</option>
+                <option value="R0">R0</option>
+                <option value="R1">R1</option>
+                <option value="R2">R2</option>
+              </select>
+            </div>
+            <div class="field"><label for="f-sponsor">Sponsor</label>
+              <input type="text" id="f-sponsor" autocomplete="off" /></div>
+            <div class="field"><label for="f-correo">Correo KW</label>
+              <input type="email" id="f-correo" autocomplete="off" /></div>
+            <!-- El navegador quiere llenar estos dos con el correo y la
+                 contraseña de quien está capturando: para él son un
+                 usuario y una contraseña cualesquiera. new-password es lo
+                 único que respeta, y por si acaso se vuelven a vaciar al
+                 abrir la ficha (ver limpiarAutollenado). -->
+            <div class="field"><label for="f-usuario-command">Usuario Command</label>
+              <input type="text" id="f-usuario-command" name="kw-usuario-command"
+                autocomplete="new-password" data-lpignore="true" spellcheck="false" /></div>
             <div class="field"><label for="f-contrasena">Contraseña</label>
               <div class="password-wrap">
-                <input type="password" id="f-contrasena" />
+                <input type="password" id="f-contrasena" name="kw-clave-command"
+                  autocomplete="new-password" data-lpignore="true" />
                 <button type="button" class="password-toggle" id="f-ver-clave" aria-label="Mostrar contraseña">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
             </div>
-            <div class="field"><label for="f-kwid">KW ID</label><input type="text" id="f-kwid" /></div>
-            <div class="field"><label for="f-aniversario">Aniversario</label><input type="text" id="f-aniversario" placeholder="Ej. 1 Septiembre" /></div>
-            <div class="field"><label for="f-clasificacion">Clasificación</label><input type="text" id="f-clasificacion" placeholder="Full Agent, Solo Agent…" /></div>
-            <div class="field"><label for="f-coach">Coach asignado</label><input type="text" id="f-coach" /></div>
-            <div class="field"><label for="f-celula">Célula</label><input type="text" id="f-celula" placeholder="La del líder" /></div>
-            <div class="field"><label for="f-puesto">Puesto</label><input type="text" id="f-puesto" placeholder="Asesor" /></div>
-            <div class="field"><label for="f-ingreso">Fecha de ingreso</label><input type="text" id="f-ingreso" placeholder="Como venga: 15/03/24" /></div>
-            <div class="field"><label for="f-baja">Fecha de baja</label><input type="text" id="f-baja" placeholder="Solo si ya no está" /></div>
+            <div class="field"><label for="f-kwid">KW ID</label>
+              <input type="text" id="f-kwid" autocomplete="off" /></div>
+            <div class="field"><label for="f-clasificacion">Clasificación</label>
+              <select id="f-clasificacion">
+                <option value="">Sin definir</option>
+                <option value="Solo Agent">Solo Agent</option>
+                <option value="Team">Team</option>
+              </select>
+            </div>
+            <!-- Las PC todavía no son usuarios de la plataforma, así que
+                 la lista trae sus nombres puestos a mano. En cuanto
+                 existan con el rol de PC, la lista sale de ahí y estos
+                 nombres dejan de hacer falta (ver cargarListas). -->
+            <div class="field"><label for="f-coach">Coach asignado</label>
+              <select id="f-coach"></select>
+            </div>
+            <!-- La célula es un miembro del staff que se le asigna a
+                 quien no quiere coach, así que la lista sale de
+                 Liderazgo, quitando a las PC. -->
+            <div class="field"><label for="f-celula">Célula</label>
+              <select id="f-celula"></select>
+            </div>
+            <div class="field"><label for="f-ingreso">Fecha de ingreso</label>
+              <input type="date" id="f-ingreso" />
+              <p class="campo-nota" id="f-ingreso-nota" hidden></p>
+            </div>
+            <div class="field"><label for="f-aniversario">Aniversario</label>
+              <input type="date" id="f-aniversario" />
+              <p class="campo-nota" id="f-aniversario-nota" hidden></p>
+            </div>
+            <div class="field"><label for="f-baja">Fecha de baja</label>
+              <input type="date" id="f-baja" />
+              <p class="campo-nota" id="f-baja-nota" hidden></p>
+            </div>
           </div>
 
-          <h2 class="ficha-subtitulo">Emergencia y beneficiario</h2>
-          <div class="ficha-grid">
-            <div class="field"><label for="f-emer-nombre">Nombre</label><input type="text" id="f-emer-nombre" /></div>
-            <div class="field"><label for="f-emer-parentesco">Parentesco</label><input type="text" id="f-emer-parentesco" /></div>
-            <div class="field"><label for="f-emer-celular">Cel</label><input type="tel" id="f-emer-celular" /></div>
-            <div class="field"><label for="f-emer-correo">Correo</label><input type="email" id="f-emer-correo" /></div>
-          </div>
+          <!-- El contacto de emergencia y el beneficiario no son la misma
+               persona, y pueden ser varias: por eso es una lista donde
+               cada quien se marca como lo que sea, o como las dos. -->
+          <h2 class="ficha-subtitulo">Contactos de Emergencia y Beneficiarios</h2>
+          <div id="f-contactos"></div>
+          <button type="button" class="kw-fila-btn neutro" id="f-mas-contacto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Contacto
+          </button>
 
-          <h2 class="ficha-subtitulo">Nada más</h2>
-          <div class="field"><label for="f-notas">Notas</label>
-            <input type="text" id="f-notas" placeholder="Lo que haga falta recordar" />
+          <div class="field ficha-notas"><label for="f-notas">Notas</label>
+            <input type="text" id="f-notas" autocomplete="off" />
           </div>
 
           <div class="msg" id="ficha-msg"></div>
@@ -259,11 +356,14 @@
 
   const $ = function (id) { return document.getElementById(id); };
 
+  // Los cuatro estatus. La célula NO es uno: es un miembro del staff que
+  // se le asigna a quien no quiere coach, y por eso es un campo de la
+  // ficha y no un lugar donde estar.
   const GRUPOS = [
-    { clave: 'activos', titulo: 'Asesores Activos', corto: 'Activo', clase: 'activos' },
-    { clave: 'bajas', titulo: 'Asesores de Baja', corto: 'Baja', clase: 'bajas' },
-    { clave: 'back_office', titulo: 'Back Office', corto: 'Back office', clase: 'back' },
-    { clave: 'celulas', titulo: 'Células', corto: 'Célula', clase: 'celulas' },
+    { clave: 'asesor_activo', titulo: 'Asesores activos', corto: 'Activo', clase: 'activos' },
+    { clave: 'asesor_baja', titulo: 'Asesores de baja', corto: 'Baja', clase: 'bajas' },
+    { clave: 'back_office_activo', titulo: 'Back office activo', corto: 'Back office', clase: 'back' },
+    { clave: 'back_office_baja', titulo: 'Back office de baja', corto: 'Back office baja', clase: 'back-baja' },
   ];
   const TITULO = {}, CORTO = {}, CLASE = {};
   GRUPOS.forEach(function (g) { TITULO[g.clave] = g.titulo; CORTO[g.clave] = g.corto; CLASE[g.clave] = g.clase; });
@@ -273,6 +373,18 @@
   // pantalla que de todos modos no traería nada.
   const ROLES = ['master', 'admin'];
   const CORREOS = ['dani.guerrero@kwmexico.mx'];
+
+  // Las Productivity Coach del Market Center. Todavía no son usuarios de
+  // la plataforma, así que van puestas a mano; en cuanto existan con el
+  // rol de PC, cargarListas() las lee de profiles y estas se vuelven de
+  // adorno (se juntan sin repetir, por correo).
+  const PC = [
+    { nombre: 'Sheila Carol Silva Dritrit', correo: 'carol.silva@kwmexico.mx' },
+    { nombre: 'María Almendra Núñez Moreno', correo: 'almendra.nunez@kwmexico.mx' },
+    { nombre: 'Maricarmen Cortés Escalante', correo: 'maricarmen.cortes@kwmexico.mx' },
+    { nombre: 'Mónica Fernández Rodríguez', correo: 'moni.fernandez@kwmexico.mx' },
+  ];
+  const CORREOS_PC = PC.map(function (p) { return p.correo.toLowerCase(); });
 
   const ICONO_LLAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>';
 
@@ -318,8 +430,7 @@
       correoPersonal: a.correo_personal || '', tipoAsociado: a.tipo_asociado || '',
       clasificacion: a.clasificacion || '', sponsor: a.sponsor || '',
       aniversario: a.aniversario || '', coachAsignado: a.coach_asignado || '',
-      emergenciaNombre: a.emergencia_nombre || '', emergenciaTelefono: a.emergencia_telefono || '',
-      emergenciaCorreo: a.emergencia_correo || '', emergenciaParentesco: a.emergencia_parentesco || '',
+      contactos: contactosDe(a),
       notas: a.notas || '',
     };
   }
@@ -335,8 +446,6 @@
 
   function expedienteHtml(p) {
     const I = window.kwUI.iconos;
-    const emergencia = [p.emergenciaNombre, p.emergenciaParentesco ? '(' + p.emergenciaParentesco + ')' : '']
-      .filter(Boolean).join(' ');
     const visible = clavesVisibles.has(p.id);
     const clave = p.contrasena
       ? '<div class="kw-dato">' + ICONO_LLAVE +
@@ -363,16 +472,19 @@
       dato(I.persona, p.sponsor ? 'Sponsor: ' + p.sponsor : '', null) +
       dato(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
       dato(I.etiqueta, p.notas, null) +
-      (emergencia || p.emergenciaTelefono || p.emergenciaCorreo
-        ? '<div class="kw-dato kw-emergencia">' + I.persona +
-            '<span class="kw-dato-txt">' +
-              '<span class="kw-emergencia-titulo">Contacto de emergencia</span>' +
-              (emergencia ? '<span>' + escapar(emergencia) + '</span>' : '') +
-              (p.emergenciaTelefono ? '<a href="tel:' + escapar(p.emergenciaTelefono) + '">' + escapar(p.emergenciaTelefono) + '</a>' : '') +
-              (p.emergenciaCorreo ? '<a href="mailto:' + escapar(p.emergenciaCorreo) + '">' + escapar(p.emergenciaCorreo) + '</a>' : '') +
-            '</span>' +
-          '</div>'
-        : '');
+      p.contactos.map(function (c) {
+        const quien = [c.nombre, c.parentesco ? '(' + c.parentesco + ')' : ''].filter(Boolean).join(' ');
+        const que = [c.emergencia ? 'Contacto de emergencia' : '', c.beneficiario ? 'Beneficiario' : '']
+          .filter(Boolean).join(' y ') || 'Contacto';
+        return '<div class="kw-dato kw-emergencia">' + I.persona +
+          '<span class="kw-dato-txt">' +
+            '<span class="kw-emergencia-titulo">' + escapar(que) + '</span>' +
+            (quien ? '<span>' + escapar(quien) + '</span>' : '') +
+            (c.telefono ? '<a href="tel:' + escapar(c.telefono) + '">' + escapar(c.telefono) + '</a>' : '') +
+            (c.correo ? '<a href="mailto:' + escapar(c.correo) + '">' + escapar(c.correo) + '</a>' : '') +
+          '</span>' +
+        '</div>';
+      }).join('');
   }
 
   function pintar() {
@@ -410,7 +522,7 @@
     cont.innerHTML = '<div class="kw-lista">' + lista.map(function (a, i) {
       const I = window.kwUI.iconos;
       const p = persona(a);
-      const esBaja = a.grupo === 'bajas';
+      const esBaja = a.grupo === 'asesor_baja' || a.grupo === 'back_office_baja';
       return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
         ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
         '<button type="button" class="kw-fila-cabeza">' +
@@ -478,53 +590,326 @@
     if (await leer()) pintar();
   }
 
+  // ── Fechas ────────────────────────────────────────────────────
+  // El libro las trae escritas a mano y de mil formas: "15/03/24",
+  // "1 de enero", "marzo 2024", "pendiente". Se intenta leerlas para
+  // poder ponerlas en un calendario; lo que no se entienda NO se tira:
+  // el campo se queda vacío y debajo se dice qué decía, para que quien
+  // esté viendo la ficha lo corrija sabiendo qué había.
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  function sinAcentos(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // Devuelve {a, m, d} o null. El año puede faltar (un cumpleaños suele
+  // venir sin él).
+  function leerFecha(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return null;
+
+    let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return { a: +m[1], m: +m[2], d: +m[3] };
+
+    m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+    if (m) {
+      let a = +m[3];
+      // "24" es 2024 y no 1924: el libro no tiene a nadie de hace un
+      // siglo. Se corta en 70 por si algún día hay una fecha de
+      // nacimiento vieja capturada con dos dígitos.
+      if (a < 100) a += a > 70 ? 1900 : 2000;
+      return { a: a, m: +m[2], d: +m[1] };
+    }
+
+    m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+    if (m) return { a: null, m: +m[2], d: +m[1] };
+
+    // "1 de enero", "14 marzo 1990", "enero 1"
+    const limpio = sinAcentos(t);
+    const mes = MESES.findIndex(function (nombre) { return limpio.includes(sinAcentos(nombre)); });
+    if (mes !== -1) {
+      const numeros = limpio.match(/\d+/g) || [];
+      const dia = numeros.find(function (n) { return +n >= 1 && +n <= 31 && n.length <= 2; });
+      const anio = numeros.find(function (n) { return n.length === 4; });
+      if (dia) return { a: anio ? +anio : null, m: mes + 1, d: +dia };
+    }
+    return null;
+  }
+
+  function aISO(texto) {
+    const f = leerFecha(texto);
+    if (!f || !f.a) return '';
+    return f.a + '-' + String(f.m).padStart(2, '0') + '-' + String(f.d).padStart(2, '0');
+  }
+
+  // Pone la fecha en un campo de calendario. Si no se pudo leer, deja el
+  // campo vacío y enseña abajo lo que decía.
+  function ponerFecha(idCampo, idNota, valor) {
+    const campo = $(idCampo);
+    const nota = $(idNota);
+    const iso = aISO(valor);
+    campo.value = iso;
+    // El campo de fecha del sitio se enseña como texto mientras está
+    // vacío; hay que avisarle que su valor cambió.
+    campo.dispatchEvent(new Event('change', { bubbles: true }));
+    const hayTexto = String(valor || '').trim();
+    if (!iso && hayTexto) {
+      nota.textContent = 'En el libro dice: ' + hayTexto;
+      nota.hidden = false;
+    } else {
+      nota.textContent = '';
+      nota.hidden = true;
+    }
+  }
+
+  // Al guardar: lo que se eligió, o lo de antes si el campo sigue vacío
+  // porque no se pudo leer (así no se borra solo por abrir la ficha).
+  function sacarFecha(idCampo, idNota, original) {
+    const v = $(idCampo).value;
+    if (v) return v;
+    return $(idNota).hidden ? null : (original || null);
+  }
+
+  // ── El cumpleaños, en tres pedazos ──
+  function armarCumple() {
+    const dia = $('f-cumple-dia'), mes = $('f-cumple-mes'), anio = $('f-cumple-anio');
+    dia.innerHTML = '<option value="">Día</option>';
+    for (let i = 1; i <= 31; i++) dia.innerHTML += '<option value="' + i + '">' + i + '</option>';
+    mes.innerHTML = '<option value="">Mes</option>' + MESES.map(function (n, i) {
+      return '<option value="' + (i + 1) + '">' + n.charAt(0).toUpperCase() + n.slice(1) + '</option>';
+    }).join('');
+    // Del año que corre hacia abajo: nadie nace mañana.
+    const hoy = new Date().getFullYear();
+    anio.innerHTML = '<option value="">Año</option>';
+    for (let a = hoy; a >= hoy - 90; a--) anio.innerHTML += '<option value="' + a + '">' + a + '</option>';
+  }
+
+  function ponerCumple(valor) {
+    const f = leerFecha(valor);
+    $('f-cumple-dia').value = f ? String(f.d) : '';
+    $('f-cumple-mes').value = f ? String(f.m) : '';
+    $('f-cumple-anio').value = f && f.a ? String(f.a) : '';
+    ['f-cumple-dia', 'f-cumple-mes', 'f-cumple-anio'].forEach(function (id) {
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const nota = $('f-cumple-nota');
+    const hayTexto = String(valor || '').trim();
+    if (!f && hayTexto) { nota.textContent = 'En el libro dice: ' + hayTexto; nota.hidden = false; }
+    else { nota.textContent = ''; nota.hidden = true; }
+  }
+
+  function sacarCumple(original) {
+    const d = $('f-cumple-dia').value, m = $('f-cumple-mes').value, a = $('f-cumple-anio').value;
+    if (!d || !m) return $('f-cumple-nota').hidden ? null : (original || null);
+    const dd = String(d).padStart(2, '0'), mm = String(m).padStart(2, '0');
+    // Sin año se guarda día y mes, que es como viene la mitad del libro.
+    return a ? (a + '-' + mm + '-' + dd) : (dd + '/' + mm);
+  }
+
+  // ── Las listas de gente ───────────────────────────────────────
+  // El coach sale de las PC; la célula, de Liderazgo quitando a las PC.
+  // Las dos se arman una vez al entrar.
+  let listaCoaches = [], listaCelulas = [];
+
+  async function cargarListas() {
+    const { data } = await window.kwSupabase
+      .from('profiles').select('nombre, apellido, email, role');
+    const gente = data || [];
+    const nombreDe = function (u) {
+      return [u.nombre, u.apellido].filter(Boolean).join(' ') || u.email;
+    };
+
+    // Las PC de la plataforma, si ya existen, más las de la lista de
+    // arriba; sin repetir a nadie, que la llave es el correo.
+    const porCorreo = {};
+    PC.forEach(function (p) { porCorreo[p.correo.toLowerCase()] = p.nombre; });
+    gente.filter(function (u) { return u.role === 'pc'; })
+      .forEach(function (u) { porCorreo[String(u.email || '').toLowerCase()] = nombreDe(u); });
+    listaCoaches = Object.keys(porCorreo).map(function (c) { return porCorreo[c]; })
+      .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+
+    listaCelulas = gente
+      .filter(function (u) {
+        return u.role === 'staff' && !CORREOS_PC.includes(String(u.email || '').toLowerCase());
+      })
+      .map(nombreDe)
+      .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+
+    llenarLista('f-coach', listaCoaches, 'Sin coach');
+    llenarLista('f-celula', listaCelulas, 'Sin célula');
+  }
+
+  // Lo mismo para los desplegables de opciones fijas: el libro trae
+  // "Full Agent" y la lista de hoy es Solo Agent o Team. Se le agrega su
+  // valor para que se vea lo que tiene y guardar no se lo borre por su
+  // cuenta; se corrige eligiendo otro.
+  function asegurarOpcion(id, valor) {
+    const sel = $(id);
+    // Lo que se le agregó a la ficha anterior se va: si no, la lista se
+    // llena con los valores raros de todos los que se hayan abierto.
+    sel.querySelectorAll('option[data-extra]').forEach(function (o) { o.remove(); });
+    if (!valor) return;
+    const hay = Array.prototype.some.call(sel.options, function (o) { return o.value === valor; });
+    if (hay) return;
+    const op = document.createElement('option');
+    op.value = valor;
+    op.textContent = valor;
+    op.dataset.extra = '1';
+    sel.insertBefore(op, sel.options[1] || null);
+  }
+
+  // El valor que ya trae la persona se agrega a la lista aunque no esté:
+  // si el libro dice que su coach es alguien que ya no está, el
+  // desplegable no puede borrárselo por su cuenta.
+  function llenarLista(id, nombres, vacio, valorActual) {
+    const sel = $(id);
+    const todos = nombres.slice();
+    if (valorActual && !todos.includes(valorActual)) todos.unshift(valorActual);
+    sel.innerHTML = '<option value="">' + vacio + '</option>' + todos.map(function (n) {
+      return '<option value="' + escapar(n) + '">' + escapar(n) + '</option>';
+    }).join('');
+  }
+
+  // ── Los contactos ─────────────────────────────────────────────
+  // Emergencia y beneficiario no son la misma persona y pueden ser
+  // varias, así que es una lista: cada quien se marca como lo que sea, o
+  // como las dos cosas.
+  let contactos = [];
+
+  function contactosDe(a) {
+    if (Array.isArray(a.contactos) && a.contactos.length) {
+      return a.contactos.map(function (c) {
+        return {
+          nombre: c.nombre || '', parentesco: c.parentesco || '',
+          telefono: c.telefono || '', correo: c.correo || '',
+          emergencia: c.emergencia !== false, beneficiario: !!c.beneficiario,
+        };
+      });
+    }
+    // Mientras el libro siga llenando las cuatro columnas de siempre,
+    // con ellas se arma el primer contacto.
+    if (a.emergencia_nombre || a.emergencia_telefono || a.emergencia_correo || a.emergencia_parentesco) {
+      return [{
+        nombre: a.emergencia_nombre || '', parentesco: a.emergencia_parentesco || '',
+        telefono: a.emergencia_telefono || '', correo: a.emergencia_correo || '',
+        emergencia: true, beneficiario: false,
+      }];
+    }
+    return [];
+  }
+
+  function pintarContactos() {
+    const cont = $('f-contactos');
+    if (!contactos.length) {
+      cont.innerHTML = '<p class="contacto-vacio">Sin contactos capturados.</p>';
+      return;
+    }
+    cont.innerHTML = contactos.map(function (c, i) {
+      return '<div class="contacto" data-c="' + i + '">' +
+        '<div class="ficha-grid">' +
+          '<div class="field"><label>Nombre</label>' +
+            '<input type="text" data-campo="nombre" value="' + escapar(c.nombre) + '" autocomplete="off" /></div>' +
+          '<div class="field"><label>Parentesco</label>' +
+            '<input type="text" data-campo="parentesco" value="' + escapar(c.parentesco) + '" autocomplete="off" /></div>' +
+          '<div class="field"><label>Cel</label>' +
+            '<input type="tel" data-campo="telefono" value="' + escapar(c.telefono) + '" autocomplete="off" /></div>' +
+          '<div class="field"><label>Correo</label>' +
+            '<input type="email" data-campo="correo" value="' + escapar(c.correo) + '" autocomplete="off" /></div>' +
+        '</div>' +
+        '<div class="contacto-pie">' +
+          '<div class="kw-chips">' +
+            '<label class="kw-chip' + (c.emergencia ? ' elegido' : '') + '">' +
+              '<input type="checkbox" data-marca="emergencia"' + (c.emergencia ? ' checked' : '') + '>' +
+              'Marcar como contacto de emergencia</label>' +
+            '<label class="kw-chip' + (c.beneficiario ? ' elegido' : '') + '">' +
+              '<input type="checkbox" data-marca="beneficiario"' + (c.beneficiario ? ' checked' : '') + '>' +
+              'Marcar como beneficiario</label>' +
+          '</div>' +
+          '<span class="crece"></span>' +
+          '<button type="button" class="contacto-quitar" data-quitar="' + i + '">Quitar</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Lo que se escriba se guarda en el momento: repintar la lista al
+  // agregar otro contacto no puede borrar lo que ya se llevaba escrito.
+  $('f-contactos').addEventListener('input', function (e) {
+    const caja = e.target.closest('.contacto');
+    if (!caja || !e.target.dataset.campo) return;
+    contactos[+caja.dataset.c][e.target.dataset.campo] = e.target.value;
+  });
+  $('f-contactos').addEventListener('change', function (e) {
+    const caja = e.target.closest('.contacto');
+    if (!caja || !e.target.dataset.marca) return;
+    contactos[+caja.dataset.c][e.target.dataset.marca] = e.target.checked;
+  });
+  $('f-contactos').addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-quitar]');
+    if (!btn) return;
+    contactos.splice(+btn.dataset.quitar, 1);
+    pintarContactos();
+  });
+  $('f-mas-contacto').addEventListener('click', function () {
+    contactos.push({ nombre: '', parentesco: '', telefono: '', correo: '', emergencia: false, beneficiario: false });
+    pintarContactos();
+    const ultimo = $('f-contactos').querySelector('.contacto:last-child input');
+    if (ultimo) ultimo.focus();
+  });
+
   // ── La ficha ──────────────────────────────────────────────────
-  // Cada renglón es [id del campo, columna de la base], en el orden en
-  // que se pregunta por teléfono.
+  // Los campos que son un texto y ya. Las fechas, el cumpleaños y los
+  // contactos se leen y se guardan aparte, arriba.
   const CAMPOS = [
     ['f-nombre', 'nombre'],
     ['f-correo-personal', 'correo_personal'],
     ['f-telefono', 'telefono'],
     ['f-curp', 'curp'],
-    ['f-cumpleanos', 'cumpleanos'],
     ['f-grupo', 'grupo'],
     ['f-tipo-asociado', 'tipo_asociado'],
     ['f-sponsor', 'sponsor'],
-    ['f-usuario-command', 'usuario_command'],
     ['f-correo', 'correo'],
+    ['f-usuario-command', 'usuario_command'],
     ['f-contrasena', 'contrasena'],
     ['f-kwid', 'kwid'],
-    ['f-aniversario', 'aniversario'],
     ['f-clasificacion', 'clasificacion'],
     ['f-coach', 'coach_asignado'],
     ['f-celula', 'celula'],
-    ['f-puesto', 'puesto'],
-    ['f-ingreso', 'fecha_ingreso'],
-    ['f-baja', 'fecha_baja'],
-    ['f-emer-nombre', 'emergencia_nombre'],
-    ['f-emer-parentesco', 'emergencia_parentesco'],
-    ['f-emer-celular', 'emergencia_telefono'],
-    ['f-emer-correo', 'emergencia_correo'],
     ['f-notas', 'notas'],
   ];
 
   function abrirFicha(id) {
     editando = id ? asesores.find(function (a) { return a.id === id; }) : null;
     const a = editando || {};
+
+    // Las dos listas de gente pueden traer un nombre que ya no está en
+    // ellas (el coach de alguien que se fue): se le agrega el suyo.
+    llenarLista('f-coach', listaCoaches, 'Sin coach', a.coach_asignado || '');
+    llenarLista('f-celula', listaCelulas, 'Sin célula', a.celula || '');
+    asegurarOpcion('f-tipo-asociado', a.tipo_asociado || '');
+    asegurarOpcion('f-clasificacion', a.clasificacion || '');
+    asegurarOpcion('f-grupo', a.grupo || '');
+
     CAMPOS.forEach(function (par) {
-      $(par[0]).value = a[par[1]] || (par[1] === 'grupo' ? 'activos' : '');
+      $(par[0]).value = a[par[1]] || (par[1] === 'grupo' ? 'asesor_activo' : '');
     });
-    // El desplegable del sitio se dibuja aparte del <select>; hay que
-    // avisarle que su valor cambió.
-    $('f-grupo').dispatchEvent(new Event('change', { bubbles: true }));
+    ponerCumple(a.cumpleanos);
+    ponerFecha('f-ingreso', 'f-ingreso-nota', a.fecha_ingreso);
+    ponerFecha('f-aniversario', 'f-aniversario-nota', a.aniversario);
+    ponerFecha('f-baja', 'f-baja-nota', a.fecha_baja);
+    contactos = contactosDe(a);
+    pintarContactos();
+
+    // Los desplegables del sitio se dibujan aparte del <select>; hay que
+    // avisarles que su valor cambió.
+    ['f-grupo', 'f-tipo-asociado', 'f-clasificacion', 'f-coach', 'f-celula'].forEach(function (id2) {
+      $(id2).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    if (window.kwUI) window.kwUI.selects($('vista-ficha'));
     $('f-contrasena').type = 'password';
 
     $('ficha-titulo').textContent = editando ? (a.nombre || 'Ficha del asesor') : 'Nuevo asesor';
-    $('ficha-sub').textContent = editando
-      ? (a.origen === 'excel'
-        ? 'Vino del libro. Lo que cambies aquí manda sobre lo que el libro traiga.'
-        : 'Capturado en el sitio.')
-      : 'Con el nombre basta para guardarlo; lo demás se va llenando.';
     $('ficha-borrar').style.display = editando ? '' : 'none';
     aviso('', '');
 
@@ -532,10 +917,28 @@
     $('vista-ficha').style.display = '';
     window.scrollTo(0, 0);
     $('f-nombre').focus();
+    limpiarAutollenado(a);
+  }
+
+  // El navegador ve un campo de texto seguido de uno de contraseña y le
+  // mete el correo y la contraseña de quien está capturando. autocomplete
+  // ayuda pero no siempre gana, así que al ratito se revisa que sigan
+  // teniendo lo que se les puso y no lo que el navegador quiso.
+  function limpiarAutollenado(a) {
+    const quedar = { 'f-usuario-command': a.usuario_command || '', 'f-contrasena': a.contrasena || '' };
+    const revisar = function () {
+      Object.keys(quedar).forEach(function (id) {
+        const campo = $(id);
+        if (document.activeElement !== campo && campo.value !== quedar[id]) campo.value = quedar[id];
+      });
+    };
+    setTimeout(revisar, 60);
+    setTimeout(revisar, 400);
   }
 
   function cerrarFicha() {
     editando = null;
+    contactos = [];
     $('vista-ficha').style.display = 'none';
     $('vista-lista').style.display = '';
     window.scrollTo(0, 0);
@@ -548,6 +951,7 @@
   }
 
   async function guardarFicha() {
+    const a = editando || {};
     const fila = {};
     CAMPOS.forEach(function (par) {
       const v = String($(par[0]).value || '').trim();
@@ -563,7 +967,18 @@
     }
     if (fila.correo) fila.correo = fila.correo.toLowerCase();
     if (fila.curp) fila.curp = fila.curp.toUpperCase();
-    fila.grupo = fila.grupo || 'activos';
+    fila.grupo = fila.grupo || 'asesor_activo';
+
+    fila.cumpleanos = sacarCumple(a.cumpleanos);
+    fila.fecha_ingreso = sacarFecha('f-ingreso', 'f-ingreso-nota', a.fecha_ingreso);
+    fila.aniversario = sacarFecha('f-aniversario', 'f-aniversario-nota', a.aniversario);
+    fila.fecha_baja = sacarFecha('f-baja', 'f-baja-nota', a.fecha_baja);
+
+    // Un contacto sin nombre ni forma de localizarlo es un renglón que
+    // alguien abrió y no llenó.
+    fila.contactos = contactos.filter(function (c) {
+      return c.nombre || c.telefono || c.correo;
+    });
 
     const btn = $('ficha-guardar');
     btn.disabled = true;
@@ -618,6 +1033,9 @@
       if (!puede) { $('denegado').style.display = ''; return; }
 
       $('contenido').style.display = '';
+      armarCumple();
+      if (window.kwUI) window.kwUI.selects($('vista-ficha'));
+      await cargarListas();
       if (await leer()) pintar();
 
       // Se puede llegar directo a capturar a alguien (el botón del

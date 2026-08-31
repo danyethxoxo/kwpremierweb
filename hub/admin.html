@@ -255,7 +255,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831c">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
@@ -610,7 +610,7 @@
             <div class="barra-botones">
             <a href="base-asesores.html" class="btn" id="btn-bd">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-              <span class="btn-txt">Bases<span class="btn-txt-largo"> de datos</span></span>
+              <span class="btn-txt">Base<span class="btn-txt-largo"> de datos</span></span>
             </a>
             <div class="kw-menu-ancla">
               <button type="button" class="kw-btn-icono" id="btn-mas"
@@ -1565,8 +1565,15 @@
   }
 
   // Quien ya se fue del Market Center no recibe accesos nuevos, así que
-  // esa hoja va de solo lectura.
-  function grupoDaDeAlta(clave) { return clave !== 'bajas'; }
+  // esos dos estatus van de solo lectura.
+  function grupoDaDeAlta(clave) { return !esDeBaja(clave); }
+  // Aguanta los dos vocabularios: los estatus de la base
+  // ('asesor_baja', 'back_office_baja') y el nombre corto de la hoja que
+  // manda la Edge Function ('bajas'), que es lo que trae el modal de
+  // revisar accesos.
+  function esDeBaja(clave) {
+    return clave === 'asesor_baja' || clave === 'back_office_baja' || clave === 'bajas';
+  }
 
   function accesosDe(correo) {
     return estadoGoogle[String(correo || '').toLowerCase()] || null;
@@ -1678,8 +1685,15 @@
   // haber datos que falten - se dejan vacíos, no es un error.
   function infoExtraHtml(p) {
     const I = window.kwUI.iconos;
-    const emergencia = [p.emergenciaNombre, p.emergenciaParentesco ? '(' + p.emergenciaParentesco + ')' : '']
-      .filter(Boolean).join(' ');
+    // La lista puede venir de la base o armarse con lo que el libro dejó
+    // en sus cuatro columnas de siempre.
+    const contactos = p.contactos || ((p.emergenciaNombre || p.emergenciaTelefono || p.emergenciaCorreo)
+      ? [{
+        nombre: p.emergenciaNombre, parentesco: p.emergenciaParentesco,
+        telefono: p.emergenciaTelefono, correo: p.emergenciaCorreo,
+        emergencia: true, beneficiario: false,
+      }]
+      : []);
     const claveVisible = clavesVisibles.has(p.correo);
     const clave = p.contrasena
       ? '<div class="kw-dato">' + ICONO_LLAVE +
@@ -1700,16 +1714,19 @@
       datoHtml(I.persona, p.sponsor ? 'Sponsor: ' + p.sponsor : '', null) +
       datoHtml(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
       datoHtml(I.etiqueta, p.notas || '', null) +
-      (emergencia || p.emergenciaTelefono || p.emergenciaCorreo
-        ? '<div class="kw-dato kw-emergencia">' + I.persona +
-            '<span class="kw-dato-txt">' +
-              '<span class="kw-emergencia-titulo">Contacto de emergencia</span>' +
-              (emergencia ? '<span>' + escapeHtml(emergencia) + '</span>' : '') +
-              (p.emergenciaTelefono ? '<a href="tel:' + escapeHtml(p.emergenciaTelefono) + '">' + escapeHtml(p.emergenciaTelefono) + '</a>' : '') +
-              (p.emergenciaCorreo ? '<a href="mailto:' + escapeHtml(p.emergenciaCorreo) + '">' + escapeHtml(p.emergenciaCorreo) + '</a>' : '') +
-            '</span>' +
-          '</div>'
-        : '');
+      contactos.map(function (c) {
+        const quien = [c.nombre, c.parentesco ? '(' + c.parentesco + ')' : ''].filter(Boolean).join(' ');
+        const que = [c.emergencia ? 'Contacto de emergencia' : '', c.beneficiario ? 'Beneficiario' : '']
+          .filter(Boolean).join(' y ') || 'Contacto';
+        return '<div class="kw-dato kw-emergencia">' + I.persona +
+          '<span class="kw-dato-txt">' +
+            '<span class="kw-emergencia-titulo">' + escapeHtml(que) + '</span>' +
+            (quien ? '<span>' + escapeHtml(quien) + '</span>' : '') +
+            (c.telefono ? '<a href="tel:' + escapeHtml(c.telefono) + '">' + escapeHtml(c.telefono) + '</a>' : '') +
+            (c.correo ? '<a href="mailto:' + escapeHtml(c.correo) + '">' + escapeHtml(c.correo) + '</a>' : '') +
+          '</span>' +
+        '</div>';
+      }).join('');
   }
 
   function accesosHtml(p, g) {
@@ -1749,7 +1766,7 @@
 
   function filaAsesorHtml(p, g, i) {
     const I = window.kwUI.iconos;
-    const esBaja = g.clave === 'bajas';
+    const esBaja = esDeBaja(g.clave);
     const estado = accesosDe(p.correo);
     const completo = estado && ACCESOS.every(function (a) { return estado[a.clave]; });
     const alguno = estado && ACCESOS.some(function (a) { return estado[a.clave]; });
@@ -2502,14 +2519,18 @@
   // a la gente entre los grupos es lo que hace base-asesores.html, que
   // es su propia página.
 
-  // Los cuatro grupos y cómo se llama cada uno en pantalla. El mismo
-  // juego que base-asesores.html: son las claves con las que la Edge
-  // Function reconoce las hojas del libro.
+  // Los cuatro estatus, y cómo se llama cada uno en pantalla. El mismo
+  // juego que base-asesores.html.
+  //
+  // Células no está aquí a propósito: la célula es un miembro del staff
+  // que se le asigna a quien no quiere coach, no un lugar donde estar.
+  // Su pestaña se arma aparte, con quien tenga una asignada (ver
+  // gruposDesdeBase).
   const BD_GRUPOS = [
-    { clave: 'activos', titulo: 'Asesores Activos' },
-    { clave: 'bajas', titulo: 'Asesores de Baja' },
-    { clave: 'back_office', titulo: 'Back Office' },
-    { clave: 'celulas', titulo: 'Células' },
+    { clave: 'asesor_activo', titulo: 'Asesores activos' },
+    { clave: 'asesor_baja', titulo: 'Asesores de baja' },
+    { clave: 'back_office_activo', titulo: 'Back office activo' },
+    { clave: 'back_office_baja', titulo: 'Back office de baja' },
   ];
   const BD_TITULO = {};
   BD_GRUPOS.forEach(function (g) { BD_TITULO[g.clave] = g.titulo; });
@@ -2537,7 +2558,7 @@
     bdAsesores.forEach(function (a) {
       if (a.grupo && claves.indexOf(a.grupo) === -1) claves.push(a.grupo);
     });
-    return claves.map(function (clave) {
+    const grupos = claves.map(function (clave) {
       const delLibro = hojasDelLibro[clave] || {};
       return {
         clave: clave,
@@ -2550,6 +2571,19 @@
           .map(personaDesdeBase),
       };
     });
+
+    // Células no es un estatus: es quien tenga una célula asignada, esté
+    // donde esté. Va al final y se pinta agrupada por su líder.
+    const conCelula = bdAsesores.filter(function (a) { return a.celula; });
+    if (conCelula.length) {
+      grupos.push({
+        clave: 'celulas',
+        titulo: 'Células',
+        hoja: (hojasDelLibro.celulas || {}).hoja || '',
+        personas: conCelula.map(personaDesdeBase),
+      });
+    }
+    return grupos;
   }
 
   // La base guarda con nombres de columna (correo_personal) y la
@@ -2581,10 +2615,18 @@
       sponsor: a.sponsor || '',
       aniversario: a.aniversario || '',
       coachAsignado: a.coach_asignado || '',
-      emergenciaNombre: a.emergencia_nombre || '',
-      emergenciaTelefono: a.emergencia_telefono || '',
-      emergenciaCorreo: a.emergencia_correo || '',
-      emergenciaParentesco: a.emergencia_parentesco || '',
+      // Emergencia y beneficiario son una lista (se capturan en la
+      // ficha). Mientras el libro siga llenando las cuatro columnas de
+      // siempre, con ellas se arma el primero.
+      contactos: (a.contactos && a.contactos.length)
+        ? a.contactos
+        : ((a.emergencia_nombre || a.emergencia_telefono || a.emergencia_correo || a.emergencia_parentesco)
+          ? [{
+            nombre: a.emergencia_nombre || '', parentesco: a.emergencia_parentesco || '',
+            telefono: a.emergencia_telefono || '', correo: a.emergencia_correo || '',
+            emergencia: true, beneficiario: false,
+          }]
+          : []),
       notas: a.notas || '',
     };
   }
