@@ -432,12 +432,49 @@
      su propia tarjeta. */
   .asesores-lista .kw-vacio { color: var(--muted); }
 
-  /* El texto se lleva el ancho que sobra y el contador se queda pegado a
-     la derecha sin encogerse. */
-  .asesores-cabeza > div:nth-child(2) { flex: 1; min-width: 0; }
-  .resumen-activos { display: inline-flex; align-items: baseline; gap: 8px; margin-left: auto; flex-shrink: 0; }
+  /* El nombre de la tarjeta, arriba de la barra y sin adornos: el
+     título de la pantalla ya está más arriba. */
+  .asesores-titulo {
+    font-size: 15px; font-weight: 700; margin-bottom: var(--sp-3);
+  }
+  /* Cuántos hay, al final del mismo renglón que la barra. */
+  .resumen-activos { display: inline-flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
   .resumen-activos .num { font-size: 26px; font-weight: 700; color: var(--red); line-height: 1; }
   .resumen-activos .etiqueta { font-size: 12.5px; color: var(--muted); }
+
+  /* En la pestaña de Asesores la que rueda es la lista y no la página:
+     así el título, el buscador, los botones y las pestañas se quedan
+     quietos y no hay que subir hasta arriba para buscar a otro.
+
+     El alto sale del acomodo (flex desde el body) y no de una cuenta con
+     números mágicos; la clase la pone y la quita cambiarTabPanel(), para
+     que las otras pestañas rueden como cualquier página. Solo en
+     pantalla ancha: en el celular una zona con scroll propio dentro de
+     una página que también rueda es de lo peor que se puede hacer. */
+  @media (min-width: 901px) {
+    body.en-asesores { height: 100vh; overflow: hidden; }
+    body.en-asesores > main.kw-page,
+    body.en-asesores #contenido-panel,
+    body.en-asesores #panel-paneles,
+    body.en-asesores #panel-paneles > .kw-tabpanel.activo,
+    body.en-asesores #asesores-paneles,
+    body.en-asesores #asesores-paneles > .kw-tabpanel.activo {
+      display: flex; flex-direction: column;
+      flex: 1; min-height: 0;
+    }
+    /* El pie son tres iconos de redes: cuando la lista rueda por dentro
+       se le está quitando alto a lo que se vino a ver por un adorno que
+       en esta pantalla nadie va a picar. */
+    body.en-asesores > footer { display: none; }
+    body.en-asesores .asesores-lista {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      /* Al llegar al final, la rueda del mouse no sigue moviendo lo de
+         atrás. */
+      overscroll-behavior: contain;
+      padding-right: 4px;
+    }
+  }
 
   .barra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .barra .crece { flex: 1; }
@@ -496,10 +533,9 @@
   .estado-alta svg { width: 14px; height: 14px; }
 
   @media (max-width: 640px) {
-    /* El contador baja a su propio renglón: al lado del texto dejaba la
-       descripción en una columna de dos palabras de ancho. */
-    .asesores-cabeza { flex-wrap: wrap; }
-    .resumen-activos { flex-basis: 100%; margin-left: 0; align-items: center; order: 3; }
+    /* El contador baja a su propio renglón: al lado de los botones
+       quedaba en una columna de dos palabras de ancho. */
+    .resumen-activos { flex-basis: 100%; align-items: center; order: 3; }
     .resumen-activos .num { font-size: 20px; }
 
     /* El buscador se lleva un renglón completo y los botones el
@@ -548,7 +584,6 @@
       <div class="barra-superior">
         <div class="kw-page-encabezado">
           <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
-          <p class="kw-page-desc" id="panel-desc"></p>
         </div>
         <div class="kw-tabs planas" data-kw-tabs="panel-paneles" id="panel-tabs">
           <button type="button" class="kw-tab activo" data-tab="asesores">Asesores</button>
@@ -585,17 +620,12 @@
       <!-- El equipo de altas es el único que ve esto; initAdmin() quita
            la pestaña entera si quien entró no lo es. -->
       <section class="kw-tabpanel activo" data-panel="asesores">
-        <div class="kw-card">
-          <div class="kw-card-head asesores-cabeza">
-            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div>
-            <div>
-              <h2>Asesores del Market Center</h2>
-            </div>
-            <div class="resumen-activos">
-              <span class="num" id="asesores-num">·</span>
-              <span class="etiqueta" id="asesores-etiqueta">en la lista</span>
-            </div>
-          </div>
+        <!-- Todo lo de arriba en un renglón: buscar de un lado, y del
+             otro el menú, la base y cuántos hay. Antes el nombre y el
+             número iban en su propia franja arriba de la barra, y entre
+             las dos se comían el alto que la lista necesita. -->
+        <div class="kw-card asesores-card">
+          <h2 class="asesores-titulo">Asesores del Market Center</h2>
 
           <div class="barra">
             <div class="buscador">
@@ -608,10 +638,6 @@
                  todos los días, que es irse a la base. Revisar accesos y
                  recargar el libro se hacen cada tanto. -->
             <div class="barra-botones">
-            <a href="base-asesores.html" class="btn" id="btn-bd">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-              <span class="btn-txt">Base<span class="btn-txt-largo"> de datos</span></span>
-            </a>
             <div class="kw-menu-ancla">
               <button type="button" class="kw-btn-icono" id="btn-mas"
                 title="Más acciones" aria-label="Más acciones"
@@ -629,6 +655,14 @@
                 </button>
               </div>
             </div>
+            <a href="base-asesores.html" class="btn" id="btn-bd">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              <span class="btn-txt">Base<span class="btn-txt-largo"> de datos</span></span>
+            </a>
+            </div>
+            <div class="resumen-activos">
+              <span class="num" id="asesores-num">·</span>
+              <span class="etiqueta" id="asesores-etiqueta">en la lista</span>
             </div>
           </div>
 
@@ -959,6 +993,9 @@
 
   function cambiarTabPanel(tab) {
     window.kwUI.activarTab(tab, document.getElementById('panel-tabs'));
+    // Solo la de Asesores es una lista larga que conviene que ruede por
+    // dentro; las otras dos son formularios y ruedan como siempre.
+    document.body.classList.toggle('en-asesores', tab === 'asesores');
   }
 
   // Filas fantasma mientras llega la respuesta: ocupan el mismo lugar
@@ -2464,10 +2501,8 @@
       if (miRol === 'staff') {
         // Liderazgo no administra usuarios: se le quita esa pestaña en
         // vez de dejársela puesta y que le rebote.
-        document.getElementById('panel-desc').textContent = 'Consulta los documentos generados por todo el equipo.';
         quitarTabPanel('usuarios');
       } else {
-        document.getElementById('panel-desc').textContent = 'Da de alta asesores, agrega usuarios y revisa los documentos del equipo.';
         if (miRol !== 'master') {
           document.querySelector('#invite-rol option[value="admin"]').remove();
         }
@@ -2535,6 +2570,29 @@
   const BD_TITULO = {};
   BD_GRUPOS.forEach(function (g) { BD_TITULO[g.clave] = g.titulo; });
 
+  // El estatus, dicho como se dice hoy. Los renglones que se guardaron
+  // antes traen el nombre de la hoja del libro ('activos', 'bajas',
+  // 'back_office', 'celulas'), y la copia del libro los sigue mandando
+  // así hasta que se corra la migración. La pantalla no puede quedarse
+  // esperándola: se traduce también aquí, al leer, y así Back Office
+  // tiene a su gente el día uno.
+  function estatusDe(a) {
+    const g = String(a.grupo || '').toLowerCase();
+    if (g === 'activos' || g === 'celulas') return 'asesor_activo';
+    if (g === 'bajas') return 'asesor_baja';
+    if (g === 'back_office' || g === 'backoffice' || g === 'back') return 'back_office_activo';
+    return g || 'asesor_activo';
+  }
+
+  // Quién va en la pestaña de Células: a quien se le asignó una, y
+  // también quien vino de esa hoja del libro (que es de donde salían
+  // antes de que la célula fuera un campo).
+  function esDeCelula(a) {
+    return Boolean(a.celula)
+      || /celula/i.test(String(a.hoja || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+      || String(a.grupo || '').toLowerCase() === 'celulas';
+  }
+
   let bdAsesores = [];
 
   async function leerBaseDatos() {
@@ -2556,7 +2614,8 @@
   function gruposDesdeBase() {
     const claves = BD_GRUPOS.map(function (g) { return g.clave; });
     bdAsesores.forEach(function (a) {
-      if (a.grupo && claves.indexOf(a.grupo) === -1) claves.push(a.grupo);
+      const clave = estatusDe(a);
+      if (clave && claves.indexOf(clave) === -1) claves.push(clave);
     });
     const grupos = claves.map(function (clave) {
       const delLibro = hojasDelLibro[clave] || {};
@@ -2567,14 +2626,14 @@
         columnas: delLibro.columnas,
         filasHoja: delLibro.filasHoja,
         personas: bdAsesores
-          .filter(function (a) { return a.grupo === clave; })
+          .filter(function (a) { return estatusDe(a) === clave; })
           .map(personaDesdeBase),
       };
     });
 
     // Células no es un estatus: es quien tenga una célula asignada, esté
     // donde esté. Va al final y se pinta agrupada por su líder.
-    const conCelula = bdAsesores.filter(function (a) { return a.celula; });
+    const conCelula = bdAsesores.filter(esDeCelula);
     if (conCelula.length) {
       grupos.push({
         clave: 'celulas',
@@ -2593,7 +2652,7 @@
   function personaDesdeBase(a) {
     return {
       id: a.id,
-      grupo: a.grupo,
+      grupo: estatusDe(a),
       origen: a.origen,
       hoja: a.hoja,
       fijado: a.fijado,
