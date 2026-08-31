@@ -180,7 +180,6 @@
       <div id="vista-lista">
         <div class="kw-page-encabezado">
           <h1 class="kw-page-titulo">Base de asesores</h1>
-          <p class="kw-page-desc">Todos los asesores del Market Center, de aquí se reparten.</p>
         </div>
 
         <!-- El campo se queda en la página pero no se ve: drawer.js lo
@@ -368,6 +367,17 @@
   const TITULO = {}, CORTO = {}, CLASE = {};
   GRUPOS.forEach(function (g) { TITULO[g.clave] = g.titulo; CORTO[g.clave] = g.corto; CLASE[g.clave] = g.clase; });
 
+  // El estatus, dicho como se dice hoy. Los renglones que se guardaron
+  // antes traen el nombre de la hoja del libro; la migración los
+  // traduce, pero la pantalla no puede quedarse esperándola.
+  function estatusDe(a) {
+    const g = String(a.grupo || '').toLowerCase();
+    if (g === 'activos' || g === 'celulas') return 'asesor_activo';
+    if (g === 'bajas') return 'asesor_baja';
+    if (g === 'back_office' || g === 'backoffice' || g === 'back') return 'back_office_activo';
+    return g || 'asesor_activo';
+  }
+
   // Quién entra: lo mismo que la pestaña de Asesores del Panel. El
   // candado de verdad es la RLS de la tabla; esto solo evita enseñar una
   // pantalla que de todos modos no traería nada.
@@ -422,7 +432,7 @@
   // en un solo lugar.
   function persona(a) {
     return {
-      id: a.id, grupo: a.grupo, origen: a.origen, hoja: a.hoja, fijado: a.fijado,
+      id: a.id, grupo: estatusDe(a), origen: a.origen, hoja: a.hoja, fijado: a.fijado,
       correo: a.correo || '', nombre: a.nombre || '', telefono: a.telefono || '',
       kwid: a.kwid || '', fechaIngreso: a.fecha_ingreso || '', fechaBaja: a.fecha_baja || '',
       cumpleanos: a.cumpleanos || '', puesto: a.puesto || '', celula: a.celula || '',
@@ -494,7 +504,7 @@
     // contara lo filtrado, picarle a un grupo dejaría a los demás en
     // cero y ya no habría cómo cambiar de uno a otro.
     $('bd-resumen').innerHTML = GRUPOS.map(function (g) {
-      const cuantos = asesores.filter(function (a) { return a.grupo === g.clave; }).length;
+      const cuantos = asesores.filter(function (a) { return estatusDe(a) === g.clave; }).length;
       return '<button type="button" class="kw-conteo bd-' + g.clase +
         (filtroGrupo === g.clave ? ' activa' : '') + '" data-grupo="' + g.clave + '">' +
         '<span class="kw-conteo-num">' + cuantos + '</span>' +
@@ -502,7 +512,7 @@
     }).join('');
 
     const lista = asesores.filter(function (a) {
-      if (filtroGrupo && a.grupo !== filtroGrupo) return false;
+      if (filtroGrupo && estatusDe(a) !== filtroGrupo) return false;
       if (!q) return true;
       return [a.nombre, a.correo, a.kwid, a.celula, a.puesto]
         .some(function (x) { return String(x || '').toLowerCase().includes(q); });
@@ -522,7 +532,8 @@
     cont.innerHTML = '<div class="kw-lista">' + lista.map(function (a, i) {
       const I = window.kwUI.iconos;
       const p = persona(a);
-      const esBaja = a.grupo === 'asesor_baja' || a.grupo === 'back_office_baja';
+      const estatus = estatusDe(a);
+      const esBaja = estatus === 'asesor_baja' || estatus === 'back_office_baja';
       return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
         ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
         '<button type="button" class="kw-fila-cabeza">' +
@@ -534,8 +545,8 @@
           '<span class="kw-fila-extra">' +
             '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' +
               escapar(p.kwid || 'Sin KWID') + '</span></span>' +
-            '<span class="kw-extra"><span class="bd-pill bd-' + (CLASE[a.grupo] || 'otro') + '">' +
-              escapar(CORTO[a.grupo] || a.grupo) + '</span></span>' +
+            '<span class="kw-extra"><span class="bd-pill bd-' + (CLASE[estatus] || 'otro') + '">' +
+              escapar(CORTO[estatus] || estatus) + '</span></span>' +
           '</span>' + I.flecha +
         '</button>' +
         '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
@@ -889,10 +900,10 @@
     llenarLista('f-celula', listaCelulas, 'Sin célula', a.celula || '');
     asegurarOpcion('f-tipo-asociado', a.tipo_asociado || '');
     asegurarOpcion('f-clasificacion', a.clasificacion || '');
-    asegurarOpcion('f-grupo', a.grupo || '');
+    asegurarOpcion('f-grupo', editando ? estatusDe(a) : '');
 
     CAMPOS.forEach(function (par) {
-      $(par[0]).value = a[par[1]] || (par[1] === 'grupo' ? 'asesor_activo' : '');
+      $(par[0]).value = par[1] === 'grupo' ? estatusDe(a) : (a[par[1]] || '');
     });
     ponerCumple(a.cumpleanos);
     ponerFecha('f-ingreso', 'f-ingreso-nota', a.fecha_ingreso);
