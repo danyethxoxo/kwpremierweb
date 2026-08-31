@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Base de asesores</title>
+<link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/kwpremierweb/login.html');
+    }
+  }, 4000);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260831b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
+<script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
+<style>
+  /* ── Lo único que solo esta pantalla tiene ──────────────────────
+     El resto sale de las piezas compartidas: .kw-page-encabezado,
+     .kw-resumen/.kw-conteo, .kw-lista/.kw-fila, .kw-datos.en-columnas,
+     .kw-fila-acciones y .field. */
+
+  /* El color de cada grupo, en un solo lugar: lo usan la tarjeta de
+     conteo de arriba y la etiqueta del renglón. Salen de la paleta. */
+  .bd-activos { --tono: var(--pastel-menta-txt);   --pastel: var(--pastel-menta); }
+  .bd-bajas   { --tono: #5b5b5b;                   --pastel: rgba(0,0,0,0.05); }
+  .bd-back    { --tono: var(--pastel-cielo-txt);   --pastel: var(--pastel-cielo); }
+  .bd-celulas { --tono: var(--pastel-lavanda-txt); --pastel: var(--pastel-lavanda); }
+  .bd-otro    { --tono: #6b6b6b;                   --pastel: #f1f1f0; }
+  .bd-pill {
+    display: inline-flex; align-items: center;
+    padding: 2px 10px; border-radius: 999px;
+    background: var(--pastel, #f1f1f0); color: var(--tono, var(--muted));
+    font-size: 11.5px; white-space: nowrap;
+  }
+
+  /* De dónde salió el renglón: es una nota al pie del expediente, no un
+     dato del asesor, así que va más callada que lo de arriba. */
+  .bd-origen { color: var(--muted); font-size: 12px; margin-top: var(--sp-3); }
+
+  /* La contraseña de Command no se queda a la vista al abrir la tarjeta.
+     El texto real sigue en el DOM debajo del borrón, así que no es una
+     forma de esconderla de quien abra las herramientas del navegador:
+     es para que no se lea de reojo desde la silla de al lado. */
+  .kw-clave { display: inline-flex; align-items: center; gap: 8px; }
+  .clave-valor {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    letter-spacing: 0.02em;
+  }
+  .clave-valor.oculta { filter: blur(5px); user-select: none; }
+  .clave-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    border: none; background: none; color: var(--muted); cursor: pointer;
+    transition: background var(--t-rapido), color var(--t-rapido);
+  }
+  .clave-toggle:hover { background: #f0f0f0; color: var(--text); }
+  .clave-toggle svg { width: 14px; height: 14px; }
+
+  .kw-emergencia .kw-dato-txt { display: flex; flex-direction: column; gap: 1px; }
+  .kw-emergencia-titulo { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  /* ── La ficha, que es una página y no un cuadro encima ──────────
+     Un expediente de veinticuatro campos dentro de un modal es un
+     cuadrito con scroll propio; de página entera se llena como se
+     llena un formulario de papel. */
+  .ficha-hoja {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--r-tarjeta); padding: var(--sp-5);
+    max-width: 900px;
+  }
+  .ficha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-4); }
+  .ficha-subtitulo {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.03em;
+    margin: var(--sp-4) 0 var(--sp-3); padding-top: var(--sp-4);
+    border-top: 1px solid var(--border);
+  }
+  .ficha-acciones {
+    display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+    margin-top: var(--sp-4); padding-top: var(--sp-4);
+    border-top: 1px solid var(--border);
+  }
+  .ficha-acciones .crece { flex: 1; }
+  @media (max-width: 620px) {
+    .ficha-grid { grid-template-columns: 1fr; }
+    .ficha-hoja { padding: var(--sp-4); }
+  }
+
+  /* El botón principal de la pantalla, en guinda y con texto, como en
+     todas las demás. */
+  .btn-guardar {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 999px;
+    border: none; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(40,12,12,0.2);
+    transition: transform var(--t-medio), filter var(--t-rapido);
+  }
+  .btn-guardar:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+  .btn-guardar:disabled { opacity: 0.6; cursor: default; }
+
+  .btn-quitar {
+    padding: 8px 14px; border-radius: 999px;
+    border: 1px solid rgba(163,0,0,0.3); background: none; color: #a30000;
+    font-family: inherit; font-size: 12.5px; cursor: pointer;
+    transition: background var(--t-rapido), border-color var(--t-rapido);
+  }
+  .btn-quitar:hover { background: #fdeaea; border-color: #a30000; }
+</style>
+</head>
+<body>
+
+  <!-- El mismo header que las demás pantallas: la lupa de un lado y la
+       campanita del otro, que los pone drawer.js. -->
+  <header class="kw-header">
+    <span class="kw-header-title">Base de asesores</span>
+    <a href="admin.html#asesores" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
+  </header>
+
+  <main class="kw-page">
+
+    <div id="denegado" class="kw-vacio" style="display:none;">
+      <strong>Esta pantalla no es para tu cuenta</strong>
+      La base de asesores es de Máster, Admin y el equipo de altas.
+    </div>
+
+    <div id="contenido" style="display:none;">
+
+      <!-- ── Vista 1: la lista ───────────────────────────────────── -->
+      <div id="vista-lista">
+        <div class="kw-page-encabezado">
+          <h1 class="kw-page-titulo">Base de asesores</h1>
+          <p class="kw-page-desc">Todos los asesores del Market Center, de aquí se reparten.</p>
+        </div>
+
+        <!-- El campo se queda en la página pero no se ve: drawer.js lo
+             encuentra por su id, lo esconde y le pasa lo que se escriba
+             en la lupa de arriba. O sea que el buscador sigue siendo
+             este, nada más que se teclea allá. -->
+        <div class="kw-campo-filtro">
+          <label for="bd-buscar">Buscar</label>
+          <div class="kw-buscador">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
+            </svg>
+            <input type="text" id="bd-buscar" class="kw-input" placeholder="Nombre, correo o KWID" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Cuántos hay de cada cual, y el filtro de un clic. -->
+        <div class="kw-resumen" id="bd-resumen"></div>
+
+        <div id="bd-lista"></div>
+      </div>
+
+      <!-- ── Vista 2: la ficha ───────────────────────────────────── -->
+      <div id="vista-ficha" style="display:none;">
+        <div class="kw-page-encabezado">
+          <h1 class="kw-page-titulo" id="ficha-titulo">Nuevo asesor</h1>
+          <p class="kw-page-desc" id="ficha-sub"></p>
+        </div>
+
+        <div class="ficha-hoja">
+          <div class="field requerido"><label for="f-nombre">Nombre completo</label>
+            <input type="text" id="f-nombre" placeholder="Nombre y apellidos" />
+          </div>
+
+          <div class="ficha-grid">
+            <div class="field"><label for="f-correo-personal">Correo personal</label><input type="email" id="f-correo-personal" /></div>
+            <div class="field"><label for="f-telefono">Cel</label><input type="tel" id="f-telefono" placeholder="10 dígitos" /></div>
+            <div class="field"><label for="f-curp">CURP</label><input type="text" id="f-curp" maxlength="18" style="text-transform:uppercase;" /></div>
+            <div class="field"><label for="f-cumpleanos">Cumpleaños</label><input type="text" id="f-cumpleanos" placeholder="Ej. 14 de marzo" /></div>
+          </div>
+
+          <h2 class="ficha-subtitulo">En el Market Center</h2>
+          <div class="ficha-grid">
+            <div class="field"><label for="f-grupo">Dónde va</label>
+              <select id="f-grupo">
+                <option value="activos">Asesores Activos</option>
+                <option value="bajas">Asesores de Baja</option>
+                <option value="back_office">Back Office</option>
+                <option value="celulas">Células</option>
+              </select>
+            </div>
+            <div class="field"><label for="f-tipo-asociado">Tipo de asociado</label><input type="text" id="f-tipo-asociado" placeholder="R0, R1, R2…" /></div>
+            <div class="field"><label for="f-sponsor">Sponsor</label><input type="text" id="f-sponsor" /></div>
+            <div class="field"><label for="f-usuario-command">Usuario Command</label><input type="text" id="f-usuario-command" /></div>
+            <div class="field"><label for="f-correo">Correo KW</label><input type="email" id="f-correo" placeholder="nombre@kwmexico.mx" /></div>
+            <div class="field"><label for="f-contrasena">Contraseña</label>
+              <div class="password-wrap">
+                <input type="password" id="f-contrasena" />
+                <button type="button" class="password-toggle" id="f-ver-clave" aria-label="Mostrar contraseña">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="field"><label for="f-kwid">KW ID</label><input type="text" id="f-kwid" /></div>
+            <div class="field"><label for="f-aniversario">Aniversario</label><input type="text" id="f-aniversario" placeholder="Ej. 1 Septiembre" /></div>
+            <div class="field"><label for="f-clasificacion">Clasificación</label><input type="text" id="f-clasificacion" placeholder="Full Agent, Solo Agent…" /></div>
+            <div class="field"><label for="f-coach">Coach asignado</label><input type="text" id="f-coach" /></div>
+            <div class="field"><label for="f-celula">Célula</label><input type="text" id="f-celula" placeholder="La del líder" /></div>
+            <div class="field"><label for="f-puesto">Puesto</label><input type="text" id="f-puesto" placeholder="Asesor" /></div>
+            <div class="field"><label for="f-ingreso">Fecha de ingreso</label><input type="text" id="f-ingreso" placeholder="Como venga: 15/03/24" /></div>
+            <div class="field"><label for="f-baja">Fecha de baja</label><input type="text" id="f-baja" placeholder="Solo si ya no está" /></div>
+          </div>
+
+          <h2 class="ficha-subtitulo">Emergencia y beneficiario</h2>
+          <div class="ficha-grid">
+            <div class="field"><label for="f-emer-nombre">Nombre</label><input type="text" id="f-emer-nombre" /></div>
+            <div class="field"><label for="f-emer-parentesco">Parentesco</label><input type="text" id="f-emer-parentesco" /></div>
+            <div class="field"><label for="f-emer-celular">Cel</label><input type="tel" id="f-emer-celular" /></div>
+            <div class="field"><label for="f-emer-correo">Correo</label><input type="email" id="f-emer-correo" /></div>
+          </div>
+
+          <h2 class="ficha-subtitulo">Nada más</h2>
+          <div class="field"><label for="f-notas">Notas</label>
+            <input type="text" id="f-notas" placeholder="Lo que haga falta recordar" />
+          </div>
+
+          <div class="msg" id="ficha-msg"></div>
+
+          <div class="ficha-acciones">
+            <button type="button" class="kw-fila-btn neutro" id="ficha-volver">Volver a la lista</button>
+            <span class="crece"></span>
+            <button type="button" class="btn-quitar" id="ficha-borrar" style="display:none;"
+              data-kw-confirmar="¿Quitarlo de la base?">Quitar de la base</button>
+            <button type="button" class="btn-guardar" id="ficha-guardar">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // La base de asesores
+  // ═══════════════════════════════════════════════════════════════
+  //
+  // Es la raíz: aquí vive quién es asesor del Market Center. El Panel
+  // lee el libro de Excel y lo copia a esta tabla, y de esta tabla salen
+  // sus pestañas; esta pantalla es la tabla misma, para verla completa,
+  // corregir un expediente y repartir a la gente entre los grupos.
+  //
+  // Va en su propia página a propósito: entrar aquí y darle atrás en el
+  // navegador regresa al Panel, sin que haya que acordarse de un botón.
+
+  const $ = function (id) { return document.getElementById(id); };
+
+  const GRUPOS = [
+    { clave: 'activos', titulo: 'Asesores Activos', corto: 'Activo', clase: 'activos' },
+    { clave: 'bajas', titulo: 'Asesores de Baja', corto: 'Baja', clase: 'bajas' },
+    { clave: 'back_office', titulo: 'Back Office', corto: 'Back office', clase: 'back' },
+    { clave: 'celulas', titulo: 'Células', corto: 'Célula', clase: 'celulas' },
+  ];
+  const TITULO = {}, CORTO = {}, CLASE = {};
+  GRUPOS.forEach(function (g) { TITULO[g.clave] = g.titulo; CORTO[g.clave] = g.corto; CLASE[g.clave] = g.clase; });
+
+  // Quién entra: lo mismo que la pestaña de Asesores del Panel. El
+  // candado de verdad es la RLS de la tabla; esto solo evita enseñar una
+  // pantalla que de todos modos no traería nada.
+  const ROLES = ['master', 'admin'];
+  const CORREOS = ['dani.guerrero@kwmexico.mx'];
+
+  const ICONO_LLAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>';
+
+  let asesores = [];
+  let filtroGrupo = '';
+  let editando = null;
+  // Contraseñas que se pidieron ver. El texto siempre está en el DOM;
+  // esto solo decide si se ve borroso.
+  const clavesVisibles = new Set();
+
+  function escapar(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── Leer ──────────────────────────────────────────────────────
+  async function leer() {
+    const { data, error } = await window.kwSupabase
+      .from('asesores').select('*').order('nombre', { ascending: true });
+    if (error) {
+      $('bd-lista').innerHTML = '<div class="kw-vacio"><strong>No se pudo leer la base</strong>' +
+        escapar(error.message) +
+        (/does not exist|relation|schema cache/i.test(error.message)
+          ? '<br><br>Falta correr 073_asesores.sql en el SQL Editor de Supabase.'
+          : '') + '</div>';
+      return false;
+    }
+    asesores = data || [];
+    return true;
+  }
+
+  // La base guarda con nombres de columna (correo_personal) y la
+  // pantalla los pinta con los de siempre (correoPersonal). Se traduce
+  // en un solo lugar.
+  function persona(a) {
+    return {
+      id: a.id, grupo: a.grupo, origen: a.origen, hoja: a.hoja, fijado: a.fijado,
+      correo: a.correo || '', nombre: a.nombre || '', telefono: a.telefono || '',
+      kwid: a.kwid || '', fechaIngreso: a.fecha_ingreso || '', fechaBaja: a.fecha_baja || '',
+      cumpleanos: a.cumpleanos || '', puesto: a.puesto || '', celula: a.celula || '',
+      curp: a.curp || '', usuarioCommand: a.usuario_command || '', contrasena: a.contrasena || '',
+      correoPersonal: a.correo_personal || '', tipoAsociado: a.tipo_asociado || '',
+      clasificacion: a.clasificacion || '', sponsor: a.sponsor || '',
+      aniversario: a.aniversario || '', coachAsignado: a.coach_asignado || '',
+      emergenciaNombre: a.emergencia_nombre || '', emergenciaTelefono: a.emergencia_telefono || '',
+      emergenciaCorreo: a.emergencia_correo || '', emergenciaParentesco: a.emergencia_parentesco || '',
+      notas: a.notas || '',
+    };
+  }
+
+  // ── Pintar la lista ───────────────────────────────────────────
+  function dato(icono, texto, href) {
+    if (!texto) return '';
+    const dentro = icono + '<span class="kw-dato-txt">' + escapar(texto) + '</span>';
+    return href
+      ? '<a class="kw-dato" href="' + escapar(href) + '">' + dentro + '</a>'
+      : '<div class="kw-dato">' + dentro + '</div>';
+  }
+
+  function expedienteHtml(p) {
+    const I = window.kwUI.iconos;
+    const emergencia = [p.emergenciaNombre, p.emergenciaParentesco ? '(' + p.emergenciaParentesco + ')' : '']
+      .filter(Boolean).join(' ');
+    const visible = clavesVisibles.has(p.id);
+    const clave = p.contrasena
+      ? '<div class="kw-dato">' + ICONO_LLAVE +
+          '<span class="kw-dato-txt kw-clave">' +
+            '<span class="clave-valor' + (visible ? '' : ' oculta') + '">' + escapar(p.contrasena) + '</span>' +
+            '<button type="button" class="clave-toggle" data-clave="' + p.id + '" aria-label="' +
+              (visible ? 'Ocultar' : 'Mostrar') + ' contraseña">' + I.ojo + '</button>' +
+          '</span>' +
+        '</div>'
+      : '';
+    return dato(I.telefono, p.telefono, p.telefono ? 'tel:' + p.telefono : null) +
+      dato(I.maletin, p.puesto, null) +
+      dato(I.persona, p.celula ? 'Célula: ' + p.celula : '', null) +
+      dato(I.calendario, p.fechaIngreso ? 'Ingreso: ' + p.fechaIngreso : '', null) +
+      dato(I.calendario, p.fechaBaja ? 'Baja: ' + p.fechaBaja : '', null) +
+      dato(I.persona, p.usuarioCommand, null) +
+      clave +
+      dato(I.correo, p.correoPersonal, p.correoPersonal ? 'mailto:' + p.correoPersonal : null) +
+      dato(I.calendario, p.cumpleanos ? 'Cumpleaños: ' + p.cumpleanos : '', null) +
+      dato(I.etiqueta, p.curp ? 'CURP: ' + p.curp : '', null) +
+      dato(I.etiqueta, p.tipoAsociado ? 'Tipo de asociado: ' + p.tipoAsociado : '', null) +
+      dato(I.etiqueta, p.clasificacion ? 'Clasificación: ' + p.clasificacion : '', null) +
+      dato(I.calendario, p.aniversario ? 'Aniversario KW: ' + p.aniversario : '', null) +
+      dato(I.persona, p.sponsor ? 'Sponsor: ' + p.sponsor : '', null) +
+      dato(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
+      dato(I.etiqueta, p.notas, null) +
+      (emergencia || p.emergenciaTelefono || p.emergenciaCorreo
+        ? '<div class="kw-dato kw-emergencia">' + I.persona +
+            '<span class="kw-dato-txt">' +
+              '<span class="kw-emergencia-titulo">Contacto de emergencia</span>' +
+              (emergencia ? '<span>' + escapar(emergencia) + '</span>' : '') +
+              (p.emergenciaTelefono ? '<a href="tel:' + escapar(p.emergenciaTelefono) + '">' + escapar(p.emergenciaTelefono) + '</a>' : '') +
+              (p.emergenciaCorreo ? '<a href="mailto:' + escapar(p.emergenciaCorreo) + '">' + escapar(p.emergenciaCorreo) + '</a>' : '') +
+            '</span>' +
+          '</div>'
+        : '');
+  }
+
+  function pintar() {
+    const q = ($('bd-buscar').value || '').trim().toLowerCase();
+
+    // El resumen cuenta sobre todo lo que hay y no sobre lo filtrado: si
+    // contara lo filtrado, picarle a un grupo dejaría a los demás en
+    // cero y ya no habría cómo cambiar de uno a otro.
+    $('bd-resumen').innerHTML = GRUPOS.map(function (g) {
+      const cuantos = asesores.filter(function (a) { return a.grupo === g.clave; }).length;
+      return '<button type="button" class="kw-conteo bd-' + g.clase +
+        (filtroGrupo === g.clave ? ' activa' : '') + '" data-grupo="' + g.clave + '">' +
+        '<span class="kw-conteo-num">' + cuantos + '</span>' +
+        '<span class="kw-conteo-txt">' + escapar(g.titulo) + '</span></button>';
+    }).join('');
+
+    const lista = asesores.filter(function (a) {
+      if (filtroGrupo && a.grupo !== filtroGrupo) return false;
+      if (!q) return true;
+      return [a.nombre, a.correo, a.kwid, a.celula, a.puesto]
+        .some(function (x) { return String(x || '').toLowerCase().includes(q); });
+    });
+
+    const cont = $('bd-lista');
+    if (!lista.length) {
+      cont.innerHTML = '<div class="kw-vacio"><strong>' +
+        (asesores.length ? 'Nadie cumple con lo que estás buscando' : 'La base está vacía') + '</strong>' +
+        (asesores.length
+          ? 'Prueba con otro nombre, correo o KWID.'
+          : 'Se llena sola en cuanto el Panel lea el libro, o se captura desde ' +
+            '"Nuevo asesor", en el Panel.') + '</div>';
+      return;
+    }
+
+    cont.innerHTML = '<div class="kw-lista">' + lista.map(function (a, i) {
+      const I = window.kwUI.iconos;
+      const p = persona(a);
+      const esBaja = a.grupo === 'bajas';
+      return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
+        ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
+        '<button type="button" class="kw-fila-cabeza">' +
+          '<span class="kw-fila-punto ' + (esBaja ? 'gris' : 'verde') + '"></span>' +
+          '<span class="kw-fila-texto">' +
+            '<span class="kw-fila-titulo">' + escapar(p.nombre || 'Sin nombre') + '</span>' +
+            '<span class="kw-fila-sub">' + escapar(p.correo || 'Sin correo de KW') + '</span>' +
+          '</span>' +
+          '<span class="kw-fila-extra">' +
+            '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' +
+              escapar(p.kwid || 'Sin KWID') + '</span></span>' +
+            '<span class="kw-extra"><span class="bd-pill bd-' + (CLASE[a.grupo] || 'otro') + '">' +
+              escapar(CORTO[a.grupo] || a.grupo) + '</span></span>' +
+          '</span>' + I.flecha +
+        '</button>' +
+        '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
+          '<div class="kw-datos en-columnas">' + expedienteHtml(p) + '</div>' +
+          '<div class="bd-origen">' +
+            (p.origen === 'excel' ? 'Vino del libro' + (p.hoja ? ' (' + escapar(p.hoja) + ')' : '') : 'Capturado aquí') +
+            (p.fijado ? ' · su grupo se puso a mano, el libro ya no se lo mueve' : '') +
+          '</div>' +
+          '<div class="kw-fila-acciones">' +
+            '<button type="button" class="kw-fila-btn" data-editar="' + a.id + '">Editar ficha</button>' +
+            GRUPOS.filter(function (g) { return g.clave !== a.grupo; }).map(function (g) {
+              return '<button type="button" class="kw-fila-btn neutro" data-mover="' + a.id + '"' +
+                ' data-a="' + g.clave + '">Pasar a ' + escapar(g.titulo) + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div></div></div>' +
+      '</div>';
+    }).join('') + '</div>';
+
+    window.kwUI.acordeon(cont);
+  }
+
+  // Un solo escuchador para toda la lista: se repinta seguido y
+  // colgarle uno a cada botón en cada repintado los va acumulando.
+  document.addEventListener('click', function (e) {
+    const conteo = e.target.closest('#bd-resumen [data-grupo]');
+    if (conteo) {
+      filtroGrupo = filtroGrupo === conteo.dataset.grupo ? '' : conteo.dataset.grupo;
+      pintar();
+      return;
+    }
+    const clave = e.target.closest('[data-clave]');
+    if (clave) {
+      const id = clave.dataset.clave;
+      if (clavesVisibles.has(id)) clavesVisibles.delete(id); else clavesVisibles.add(id);
+      pintar();
+      return;
+    }
+    const editar = e.target.closest('[data-editar]');
+    if (editar) { abrirFicha(editar.dataset.editar); return; }
+    const mover = e.target.closest('[data-mover]');
+    if (mover) moverDeGrupo(mover.dataset.mover, mover.dataset.a, mover);
+  });
+
+  // Repartir a alguien es cambiarle el grupo. Con eso queda repartido
+  // también en las pestañas del Panel, que salen de esta misma tabla.
+  async function moverDeGrupo(id, grupo, btn) {
+    btn.disabled = true;
+    const { error } = await window.kwSupabase.from('asesores').update({ grupo: grupo }).eq('id', id);
+    btn.disabled = false;
+    if (error) { await window.kwUI.alert('No se pudo mover: ' + error.message); return; }
+    if (await leer()) pintar();
+  }
+
+  // ── La ficha ──────────────────────────────────────────────────
+  // Cada renglón es [id del campo, columna de la base], en el orden en
+  // que se pregunta por teléfono.
+  const CAMPOS = [
+    ['f-nombre', 'nombre'],
+    ['f-correo-personal', 'correo_personal'],
+    ['f-telefono', 'telefono'],
+    ['f-curp', 'curp'],
+    ['f-cumpleanos', 'cumpleanos'],
+    ['f-grupo', 'grupo'],
+    ['f-tipo-asociado', 'tipo_asociado'],
+    ['f-sponsor', 'sponsor'],
+    ['f-usuario-command', 'usuario_command'],
+    ['f-correo', 'correo'],
+    ['f-contrasena', 'contrasena'],
+    ['f-kwid', 'kwid'],
+    ['f-aniversario', 'aniversario'],
+    ['f-clasificacion', 'clasificacion'],
+    ['f-coach', 'coach_asignado'],
+    ['f-celula', 'celula'],
+    ['f-puesto', 'puesto'],
+    ['f-ingreso', 'fecha_ingreso'],
+    ['f-baja', 'fecha_baja'],
+    ['f-emer-nombre', 'emergencia_nombre'],
+    ['f-emer-parentesco', 'emergencia_parentesco'],
+    ['f-emer-celular', 'emergencia_telefono'],
+    ['f-emer-correo', 'emergencia_correo'],
+    ['f-notas', 'notas'],
+  ];
+
+  function abrirFicha(id) {
+    editando = id ? asesores.find(function (a) { return a.id === id; }) : null;
+    const a = editando || {};
+    CAMPOS.forEach(function (par) {
+      $(par[0]).value = a[par[1]] || (par[1] === 'grupo' ? 'activos' : '');
+    });
+    // El desplegable del sitio se dibuja aparte del <select>; hay que
+    // avisarle que su valor cambió.
+    $('f-grupo').dispatchEvent(new Event('change', { bubbles: true }));
+    $('f-contrasena').type = 'password';
+
+    $('ficha-titulo').textContent = editando ? (a.nombre || 'Ficha del asesor') : 'Nuevo asesor';
+    $('ficha-sub').textContent = editando
+      ? (a.origen === 'excel'
+        ? 'Vino del libro. Lo que cambies aquí manda sobre lo que el libro traiga.'
+        : 'Capturado en el sitio.')
+      : 'Con el nombre basta para guardarlo; lo demás se va llenando.';
+    $('ficha-borrar').style.display = editando ? '' : 'none';
+    aviso('', '');
+
+    $('vista-lista').style.display = 'none';
+    $('vista-ficha').style.display = '';
+    window.scrollTo(0, 0);
+    $('f-nombre').focus();
+  }
+
+  function cerrarFicha() {
+    editando = null;
+    $('vista-ficha').style.display = 'none';
+    $('vista-lista').style.display = '';
+    window.scrollTo(0, 0);
+  }
+
+  function aviso(texto, clase) {
+    const el = $('ficha-msg');
+    el.textContent = texto;
+    el.className = 'msg' + (clase ? ' ' + clase : '');
+  }
+
+  async function guardarFicha() {
+    const fila = {};
+    CAMPOS.forEach(function (par) {
+      const v = String($(par[0]).value || '').trim();
+      fila[par[1]] = v || null;
+    });
+
+    // Lo único que de verdad hace falta es el nombre: el correo de KW se
+    // asigna después, y hasta entonces la persona ya existe.
+    if (!fila.nombre) {
+      aviso('Falta el nombre.', 'error');
+      $('f-nombre').focus();
+      return;
+    }
+    if (fila.correo) fila.correo = fila.correo.toLowerCase();
+    if (fila.curp) fila.curp = fila.curp.toUpperCase();
+    fila.grupo = fila.grupo || 'activos';
+
+    const btn = $('ficha-guardar');
+    btn.disabled = true;
+    aviso('Guardando...', '');
+    let error;
+    if (editando) {
+      ({ error } = await window.kwSupabase.from('asesores').update(fila).eq('id', editando.id));
+    } else {
+      fila.origen = 'sitio';
+      ({ error } = await window.kwSupabase.from('asesores').insert(fila));
+    }
+    btn.disabled = false;
+    if (error) {
+      aviso(String(error.message).includes('asesores_correo_unico')
+        ? 'Ese correo ya está en la base, es de alguien más.'
+        : 'No se pudo guardar: ' + error.message, 'error');
+      return;
+    }
+    if (await leer()) pintar();
+    cerrarFicha();
+  }
+
+  async function borrarFicha() {
+    if (!editando) return;
+    const { error } = await window.kwSupabase.from('asesores').delete().eq('id', editando.id);
+    if (error) { aviso('No se pudo quitar: ' + error.message, 'error'); return; }
+    if (await leer()) pintar();
+    cerrarFicha();
+  }
+
+  $('bd-buscar').addEventListener('input', pintar);
+  $('ficha-volver').addEventListener('click', cerrarFicha);
+  $('ficha-guardar').addEventListener('click', guardarFicha);
+  $('ficha-borrar').addEventListener('click', borrarFicha);
+  $('f-ver-clave').addEventListener('click', function () {
+    const campo = $('f-contrasena');
+    campo.type = campo.type === 'password' ? 'text' : 'password';
+  });
+
+  // ── Inicio ────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const { data: userData } = await window.kwSupabase.auth.getUser();
+      if (!userData || !userData.user) throw new Error('sin sesión');
+
+      const { data: perfil, error } = await window.kwSupabase
+        .from('profiles').select('role').eq('id', userData.user.id).single();
+      if (error || !perfil) throw new Error('sin perfil');
+
+      const puede = ROLES.includes(perfil.role)
+        || CORREOS.includes(String(userData.user.email || '').toLowerCase());
+      if (!puede) { $('denegado').style.display = ''; return; }
+
+      $('contenido').style.display = '';
+      if (await leer()) pintar();
+
+      // Se puede llegar directo a capturar a alguien (el botón del
+      // Panel) o a la ficha de una persona.
+      const params = new URLSearchParams(location.search);
+      if (params.get('nuevo')) abrirFicha(null);
+      else if (params.get('id')) abrirFicha(params.get('id'));
+    } catch (err) {
+      $('denegado').style.display = '';
+    }
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) init();
+  else window.addEventListener('kw-auth-ready', init, { once: true });
+</script>
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260831a" data-menu="hub"></script>
+</body>
+</html>

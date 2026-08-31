@@ -415,6 +415,7 @@
     '#buscador-nombre',   // Alta de asesores
     '#buscador-input',    // Listas de acuerdos y contratos
     '#f-buscar',          // Firmas digitales
+    '#bd-buscar',         // Base de asesores
   ];
 
   // Se esconde el bloque entero, no nada más el campo: si se quita solo
