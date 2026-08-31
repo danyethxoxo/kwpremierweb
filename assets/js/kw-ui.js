@@ -745,8 +745,29 @@
     pintarChips(raiz);
   }
 
+  /* ── Colgar un menú de su botón sin que se salga de la pantalla ──
+     Los menús (.kw-menu) se pegan a la derecha de su botón, que es lo
+     que se quiere en escritorio. En el celular eso los saca por la
+     orilla: por la derecha si el botón está a la derecha, y por la
+     izquierda si está a la izquierda, así que no hay un lado bueno que
+     se pueda dejar fijo en la hoja de estilos. Se mide dónde quedó y se
+     corre lo que se haya salido, ni un pixel más.
+
+     Se llama al ABRIRLO, no antes: un menú escondido no tiene medidas. */
+  function colgarMenu(boton, menu) {
+    if (!boton || !menu) return;
+    menu.style.right = '';
+    var m = menu.getBoundingClientRect();
+    var margen = 10;
+    var corrimiento = 0;
+    if (m.left < margen) corrimiento = margen - m.left;
+    else if (m.right > global.innerWidth - margen) corrimiento = (global.innerWidth - margen) - m.right;
+    if (corrimiento) menu.style.right = (-corrimiento) + 'px';
+  }
+
   global.kwUI = {
     iniciar: iniciar,
+    colgarMenu: colgarMenu,
     selects: armarSelects,
     fechas: armarFechas,
     tabs: armarTodasLasTabs,
