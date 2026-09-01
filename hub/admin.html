@@ -393,6 +393,29 @@
   #documentos-cont .kw-vacio strong,
   #creados-cont .kw-vacio strong { color: var(--text); }
 
+  /* Las tarjetas de Asesores, Usuarios y Documentos comparten el mismo
+     alto compacto: menos relleno y menos separación entre renglones. */
+  #contenido-panel .kw-lista { gap: 6px; }
+  #contenido-panel .kw-fila-cabeza { padding: 9px 14px; min-height: 52px; }
+
+  /* En Asesores, nombre y correo aprovechan el mismo renglón. El correo
+     se recorta con puntos suspensivos si no cabe, sin empujar acciones. */
+  .asesores-lista .kw-fila-texto {
+    display: flex; align-items: baseline; gap: 10px; min-width: 0;
+  }
+  .asesores-lista .kw-fila-titulo { flex: 0 1 auto; max-width: 46%; }
+  .asesores-lista .kw-fila-sub {
+    flex: 1 1 auto; min-width: 0; margin-top: 0;
+  }
+
+  @media (max-width: 640px) {
+    /* En celulares angostos se prioriza que ambos datos sigan siendo
+       legibles; ahí vuelven a apilarse dentro de la tarjeta compacta. */
+    .asesores-lista .kw-fila-texto { display: block; }
+    .asesores-lista .kw-fila-titulo { max-width: none; }
+    .asesores-lista .kw-fila-sub { margin-top: 2px; }
+  }
+
   /* El encabezado de la lista de usuarios va sin el degradado guinda de
      las tarjetas plegables: pegado al de "Agregar nuevo usuario", dos
      encabezados con el mismo tono se leían como si fueran una sola
