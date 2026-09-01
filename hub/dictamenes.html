@@ -419,6 +419,41 @@
   .dic-campo textarea { min-height: 62px; }
   .dic-campo textarea:focus, .dic-campo input:focus { outline: none; border-color: var(--red); }
 
+  /* Fecha de escrituración sin calendario: día, mes y año se eligen por
+     separado para poder corregir una parte sin volver a capturar todo. */
+  .dic-fecha-partes { display: grid; grid-template-columns: 82px 1fr 104px; gap: 8px; }
+  .dic-fecha-partes select { width: 100%; }
+
+  /* Corrección particular de un dato: queda debajo del valor que copió
+     Gabriela del contrato y se distingue en rojo de la captura original. */
+  .dic-correccion { margin-top: 7px; }
+  .dic-correccion-btn {
+    border: none; background: none; padding: 2px 0; cursor: pointer;
+    color: var(--red); font: 700 12px/1.4 inherit;
+  }
+  .dic-correccion-campo { display: none; margin-top: 6px; }
+  .dic-correccion.abierta .dic-correccion-campo { display: block; }
+  .dic-correccion-campo textarea {
+    width: 100%; min-height: 48px; resize: vertical;
+    border: 1px solid rgba(176,42,42,.38); border-radius: var(--r-campo);
+    padding: 9px 11px; font-family: inherit; font-size: 13px;
+    color: #b02a2a; background: #fff7f7;
+  }
+  .dic-correccion-campo textarea::placeholder { color: rgba(176,42,42,.62); }
+  .dic-correccion-campo textarea:focus { outline: none; border-color: #b02a2a; }
+
+  /* Las observaciones existentes se editan en su propio campo sin perder
+     su id, estado ni historial. */
+  .dic-punto-edit-texto {
+    flex: 1; min-width: 0; min-height: 42px; resize: vertical;
+    border: 1px solid transparent; border-radius: 8px;
+    padding: 7px 9px; font-family: inherit; font-size: 13.5px; line-height: 1.45;
+    color: var(--text); background: transparent;
+  }
+  .dic-punto-edit-texto:hover { border-color: var(--border); background: #fff; }
+  .dic-punto-edit-texto:focus { outline: none; border-color: var(--red); background: #fff; }
+  @media (max-width: 520px) { .dic-fecha-partes { grid-template-columns: 72px 1fr 92px; } }
+
   /* Superficies: en el campo se teclea nada más el número y la unidad va
      pegada a la derecha, puesta por el sitio. Se dibuja encima del campo
      en vez de escribirse dentro para que no haya forma de borrarla ni de
@@ -975,8 +1010,13 @@
             <input type="text" id="e-esc-numero" name="dic-escritura-folio" data-lpignore="true" data-1p-ignore class="kw-input" placeholder="25,928" autocomplete="off">
           </div>
           <div class="dic-campo">
-            <label for="e-esc-fecha">Fecha de escrituración</label>
-            <input type="date" id="e-esc-fecha" class="kw-input">
+            <label for="e-esc-dia">Fecha de escrituración</label>
+            <div class="dic-fecha-partes">
+              <select id="e-esc-dia" aria-label="Día"></select>
+              <select id="e-esc-mes" aria-label="Mes"></select>
+              <select id="e-esc-anio" aria-label="Año"></select>
+            </div>
+            <input type="hidden" id="e-esc-fecha">
           </div>
         </div>
 
@@ -1155,6 +1195,58 @@
     return d.getFullYear() + '-' +
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
+  }
+
+  var MARCA_CORRECCIONES = '\\n\\n<!--KW_CORRECCIONES:';
+  function separarCorrecciones(texto) {
+    var s = String(texto || '');
+    var i = s.lastIndexOf(MARCA_CORRECCIONES);
+    if (i < 0 || !s.endsWith('-->')) return { texto: s, correcciones: {} };
+    try {
+      return {
+        texto: s.slice(0, i),
+        correcciones: JSON.parse(s.slice(i + MARCA_CORRECCIONES.length, -3)) || {},
+      };
+    } catch (e) { return { texto: s, correcciones: {} }; }
+  }
+  function juntarCorrecciones(texto, correcciones) {
+    var limpias = {};
+    Object.keys(correcciones || {}).forEach(function (k) {
+      var v = String(correcciones[k] || '').trim();
+      if (v) limpias[k] = v;
+    });
+    var base = String(texto || '').trim();
+    return Object.keys(limpias).length
+      ? base + MARCA_CORRECCIONES + JSON.stringify(limpias) + '-->'
+      : (base || null);
+  }
+
+  var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  function prepararFechaEscritura() {
+    $('e-esc-dia').innerHTML = '<option value="">Día</option>' +
+      Array.from({ length: 31 }, function (_, i) {
+        var n = String(i + 1).padStart(2, '0'); return '<option value="' + n + '">' + n + '</option>';
+      }).join('');
+    $('e-esc-mes').innerHTML = '<option value="">Mes</option>' +
+      MESES.map(function (m, i) {
+        var n = String(i + 1).padStart(2, '0'); return '<option value="' + n + '">' + m + '</option>';
+      }).join('');
+    var actual = new Date().getFullYear();
+    var anos = [];
+    for (var a = actual; a >= 1900; a--) anos.push('<option value="' + a + '">' + a + '</option>');
+    $('e-esc-anio').innerHTML = '<option value="">Año</option>' + anos.join('');
+  }
+  function ponerFechaEscritura(valor) {
+    var m = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(valor || ''));
+    $('e-esc-anio').value = m ? m[1] : '';
+    $('e-esc-mes').value = m ? m[2] : '';
+    $('e-esc-dia').value = m ? m[3] : '';
+    sincronizarFechaEscritura();
+  }
+  function sincronizarFechaEscritura() {
+    var a = $('e-esc-anio').value, m = $('e-esc-mes').value, d = $('e-esc-dia').value;
+    $('e-esc-fecha').value = a && m && d ? a + '-' + m + '-' + d : '';
   }
 
   function aviso(caja, texto, tipo) {
@@ -1738,8 +1830,9 @@
       dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
     '</div>';
 
-    var obs = d.observaciones
-      ? '<div class="kw-nota">' + escapar(d.observaciones) + '</div>' : '';
+    var obsTexto = separarCorrecciones(d.observaciones).texto;
+    var obs = obsTexto
+      ? '<div class="kw-nota">' + escapar(obsTexto) + '</div>' : '';
 
     var lista = mios.length
       ? mios.map(function (p, i) { return puntoHTML(p, i); }).join('')
@@ -2106,6 +2199,34 @@
     ['e-sup-construccion', 'superficie_construccion'],
   ];
 
+  function prepararCorrecciones() {
+    CAMPOS.forEach(function (c) {
+      var campo = $(c[0]);
+      var caja = campo && campo.closest('.dic-campo');
+      if (!caja || caja.querySelector('[data-correccion="' + c[1] + '"]')) return;
+      var bloque = document.createElement('div');
+      bloque.className = 'dic-correccion';
+      bloque.dataset.correccion = c[1];
+      bloque.innerHTML = '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
+        '<div class="dic-correccion-campo"><textarea placeholder="Escribe aquí el dato correcto"></textarea></div>';
+      caja.appendChild(bloque);
+      bloque.querySelector('button').addEventListener('click', function () {
+        bloque.classList.toggle('abierta');
+        if (bloque.classList.contains('abierta')) bloque.querySelector('textarea').focus();
+      });
+      bloque.querySelector('textarea').addEventListener('input', function () {
+        if (borrador) borrador.correcciones[c[1]] = this.value;
+      });
+    });
+  }
+  function pintarCorrecciones() {
+    document.querySelectorAll('[data-correccion]').forEach(function (bloque) {
+      var valor = (borrador.correcciones || {})[bloque.dataset.correccion] || '';
+      bloque.querySelector('textarea').value = valor;
+      bloque.classList.toggle('abierta', !!valor);
+    });
+  }
+
   // Las superficies se guardan como número pelón y la unidad se pone al
   // enseñarlas. Antes eran texto libre, así que en la base ya hay
   // "92.40", "92.40 m2" y "92.40 m²" queriendo decir lo mismo: al leer se
@@ -2304,6 +2425,8 @@
       condominio: d && d.condominio !== null && d.condominio !== undefined
         ? (d.condominio ? 'si' : 'no') : '',
       clientes: clientesDe(d),
+      observaciones_base: d ? separarCorrecciones(d.observaciones).texto : '',
+      correcciones: d ? separarCorrecciones(d.observaciones).correcciones : {},
       // El id viaja con cada observación: es lo que deja saber después
       // cuáles ya existían y cuáles se acaban de escribir, para no
       // borrarlas todas y volverlas a crear en cada guardada.
@@ -2331,13 +2454,13 @@
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
     CAMPOS.forEach(function (c) { $(c[0]).value = paraCampo(c[1], borrador[c[1]]); });
+    ponerFechaEscritura(borrador.escritura_fecha);
+    pintarCorrecciones();
     // kw-ui.js deja los campos de fecha como texto mientras están vacíos,
     // para poder enseñarles un rótulo de ejemplo. Ponerles el valor desde
     // el código no los regresa a fecha, y el expediente reabierto acababa
     // enseñando "2000-08-01" pelón en vez del formato de siempre.
-    ['e-fecha', 'e-esc-fecha'].forEach(function (x) {
-      if ($(x).value) $(x).type = 'date';
-    });
+    if ($('e-fecha').value) $('e-fecha').type = 'date';
     elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
 
     // Cuántos clientes son lo dice lo que ya trae capturado; uno nuevo
@@ -2375,14 +2498,19 @@
     $('e-puntos').innerHTML = borrador.puntos.map(function (p, i) {
       return '<div class="dic-punto-edit">' +
         '<span class="dic-punto-edit-num">' + (i + 1) + '</span>' +
-        '<span style="flex:1;min-width:0;font-size:13.5px;line-height:1.5;">' +
-          escapar(p.texto) + '</span>' +
+        '<textarea class="dic-punto-edit-texto" data-editar="' + i + '" ' +
+          'aria-label="Editar observación">' + escapar(p.texto) + '</textarea>' +
         '<button type="button" class="dic-quitar" data-quitar="' + i + '" aria-label="Quitar">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
         '</button>' +
       '</div>';
     }).join('');
 
+    $('e-puntos').querySelectorAll('[data-editar]').forEach(function (campo) {
+      campo.addEventListener('input', function () {
+        borrador.puntos[Number(campo.dataset.editar)].texto = campo.value;
+      });
+    });
     $('e-puntos').querySelectorAll('[data-quitar]').forEach(function (b) {
       b.addEventListener('click', function () {
         borrador.puntos.splice(Number(b.dataset.quitar), 1);
@@ -2392,6 +2520,7 @@
   }
 
   function leerEditor() {
+    sincronizarFechaEscritura();
     borrador.fecha_dictamen = $('e-fecha').value || hoy();
     borrador.operacion = $('e-operacion').value;
     borrador.uso = $('e-uso').value;
@@ -2453,6 +2582,15 @@
     if (borrador.inmueble.length < 3) {
       return await fallo('Falta la dirección del inmueble.', 'e-inmueble');
     }
+    if ($('e-esc-anio').value || $('e-esc-mes').value || $('e-esc-dia').value) {
+      if (!$('e-esc-fecha').value) return await fallo('Completa día, mes y año de la escrituración.', 'e-esc-dia');
+      var fesc = new Date(Number($('e-esc-anio').value), Number($('e-esc-mes').value) - 1, Number($('e-esc-dia').value));
+      if (fesc.getFullYear() !== Number($('e-esc-anio').value) ||
+          fesc.getMonth() + 1 !== Number($('e-esc-mes').value) ||
+          fesc.getDate() !== Number($('e-esc-dia').value)) {
+        return await fallo('La fecha de escrituración no es válida.', 'e-esc-dia');
+      }
+    }
 
     // De los clientes se guardan nada más los que traen nombre: las
     // casillas de más que hayan quedado abiertas por haber subido el
@@ -2483,6 +2621,7 @@
     // leen los reportes de antes, y dejarla congelada haría que un
     // expediente editado hoy siguiera diciendo el cliente de ayer.
     fila.cliente = losClientes.map(function (c) { return c.nombre; }).join(', ');
+    fila.observaciones = juntarCorrecciones(borrador.observaciones_base, borrador.correcciones);
     // Si el condominio quedó en no, la escritura que se hubiera escrito
     // antes deja de tener a qué referirse.
     if (borrador.condominio !== 'si') fila.escritura_condominio = null;
@@ -3081,7 +3220,8 @@
   function filaObservaciones(d) {
     var mios = puntos.filter(function (p) { return p.dictamen_id === d.id; });
     var parrafos = [];
-    if (d.observaciones) parrafos.push([{ t: d.observaciones, color: HOJA_NEGRO }]);
+    var obsBase = separarCorrecciones(d.observaciones).texto;
+    if (obsBase) parrafos.push([{ t: obsBase, color: HOJA_NEGRO }]);
     mios.forEach(function (p, i) {
       var partes = [{ t: (i + 1) + '. ' + p.texto, color: HOJA_NEGRO }];
       partes.push({
@@ -3361,6 +3501,12 @@
   });
 
   $('e-condominio').addEventListener('change', acomodarCondominio);
+
+  prepararFechaEscritura();
+  prepararCorrecciones();
+  ['e-esc-dia', 'e-esc-mes', 'e-esc-anio'].forEach(function (id) {
+    $(id).addEventListener('change', sincronizarFechaEscritura);
+  });
 
   // El precio y la comisión se acomodan al salirse del campo: lo que se
   // teclea con signos ("$4,500,000.00", "5.5%") queda escrito como se va
