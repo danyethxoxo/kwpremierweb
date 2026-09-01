@@ -2147,14 +2147,32 @@
   // Un solo escuchador para toda la pestaña: las listas se repintan cada
   // vez que cambia un acceso, y volver a colgarle un escuchador a cada
   // botón en cada repintado los va acumulando.
+  function actualizarAccionesAcceso(caja) {
+    const seleccionados = Array.from(caja.querySelectorAll('.acceso-check:checked'));
+    const hayParaDar = seleccionados.some(function (check) {
+      const acceso = check.closest('.acceso');
+      return acceso && acceso.classList.contains('no');
+    });
+    const hayParaQuitar = seleccionados.some(function (check) {
+      const acceso = check.closest('.acceso');
+      return acceso && acceso.classList.contains('si');
+    });
+    const dar = caja.querySelector('.acceso-seleccion-accion.dar');
+    const quitar = caja.querySelector('.acceso-seleccion-accion.quitar');
+    if (dar) {
+      dar.disabled = !hayParaDar;
+      dar.title = hayParaDar ? 'Dar accesos seleccionados' : 'Selecciona un acceso que todavía no tenga';
+    }
+    if (quitar) {
+      quitar.disabled = !hayParaQuitar;
+      quitar.title = hayParaQuitar ? 'Quitar accesos seleccionados' : 'Selecciona un acceso que ya tenga';
+    }
+  }
+
   document.addEventListener('change', function (e) {
     if (!e.target.matches('.acceso-check')) return;
     const caja = e.target.closest('.accesos');
-    if (!caja) return;
-    const haySeleccion = caja.querySelector('.acceso-check:checked') !== null;
-    Array.from(caja.querySelectorAll('.acceso-seleccion-accion')).forEach(function (b) {
-      b.disabled = !haySeleccion;
-    });
+    if (caja) actualizarAccionesAcceso(caja);
   });
 
   document.addEventListener('click', function (e) {
