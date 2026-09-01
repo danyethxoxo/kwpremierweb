@@ -1948,7 +1948,7 @@
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null || cuentaVista ? ' disabled' : '') + '>' +
+            (estado === null || (cuentaVista === 'kwpremier' && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
@@ -2169,10 +2169,10 @@
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
   });
 
-  // Picar una cuenta cambia las tarjetas a una vista de inspección.
-  // Contactos se consulta por cuenta; Drive y Calendario sólo existen
-  // desde la cuenta original de Dani. Picar la misma cuenta regresa a
-  // la vista general, donde vuelven a habilitarse las acciones.
+  // Picar una cuenta cambia las tarjetas y dirige las acciones a esa
+  // cuenta. En Dani se pueden administrar los tres accesos; en KW
+  // Premier sólo Contactos, porque Drive y Calendario pertenecen a Dani.
+  // Picar la misma cuenta regresa a la vista general.
   document.addEventListener('click', function (e) {
     const botonCuenta = e.target.closest('.acceso-cuenta[data-cuenta]');
     if (!botonCuenta) return;
@@ -2316,9 +2316,12 @@
     const encontrado = personaPorCorreo(correo);
     if (!encontrado) return;
     const { persona, grupo } = encontrado;
+    const cuentaVista = cuentaVistaPorCorreo.get(String(correo).toLowerCase()) || '';
+    const cuentaInfo = cuentasContactosInfo.find(function (c) { return c.clave === cuentaVista; });
+    const destino = cuentaInfo ? ' desde ' + cuentaInfo.nombre : '';
 
     const ok = await window.kwUI.confirm(
-      (quitar ? 'Quitar ' : 'Dar ') + textoDeAccesos(pasos) + ' a ' + (persona.nombre || correo) + '?');
+      (quitar ? 'Quitar ' : 'Dar ') + textoDeAccesos(pasos) + destino + ' a ' + (persona.nombre || correo) + '?');
     if (!ok) return;
 
     marcarAccesosOcupados(correo, true);
@@ -2328,6 +2331,7 @@
         accion: 'acceso',
         quitar: quitar,
         pasos: pasos || undefined,
+        cuentaContactos: cuentaVista || undefined,
         personas: [{
           correo: persona.correo, nombre: persona.nombre,
           telefono: persona.telefono, cumpleanos: persona.cumpleanos,
