@@ -1822,7 +1822,7 @@
 
   function actualizarBarra() {
     const g = grupoDe(grupoActivo);
-    document.getElementById('asesores-num').textContent = String(visiblesDe(g).length);
+    document.getElementById('asesores-num').textContent = String(g ? g.personas.length : 0);
     document.getElementById('asesores-etiqueta').textContent = g ? g.titulo.toLowerCase() : 'en la lista';
   }
 
@@ -2357,7 +2357,7 @@
       if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       aplicarEstado(data.estado);
       pintarGrupos();
-      avisoAsesores(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
+      data.ok ? avisoAsesores('', '') : avisoAsesores(mensajeDeResultado(data, quitar), 'error');
     } catch (err) {
       marcarAccesosOcupados(correo, false);
       avisoAsesores(err.message || 'No se pudo cambiar el acceso.', 'error');
@@ -2707,7 +2707,7 @@
       });
       pintarVerificacion();
       pintarGrupos();
-      mostrarMsgVerif(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
+      data.ok ? mostrarMsgVerif('', '') : mostrarMsgVerif(mensajeDeResultado(data, quitar), 'error');
     } catch (err) {
       mostrarMsgVerif(err.message || 'No se pudo cambiar el acceso.', 'error');
     } finally {
