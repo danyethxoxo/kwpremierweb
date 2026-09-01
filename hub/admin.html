@@ -2872,9 +2872,13 @@
   // tiene a su gente el día uno.
   function estatusDe(a) {
     const g = String(a.grupo || '').toLowerCase();
+    const hoja = String(a.hoja || '').toLowerCase();
+    const origen = (g + ' ' + hoja).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (/back[ _-]*office|backoffice/.test(origen)) {
+      return /baja/.test(origen) ? 'back_office_baja' : 'back_office_activo';
+    }
     if (g === 'activos' || g === 'celulas') return 'asesor_activo';
     if (g === 'bajas') return 'asesor_baja';
-    if (g === 'back_office' || g === 'backoffice' || g === 'back') return 'back_office_activo';
     return g || 'asesor_activo';
   }
 
