@@ -1713,16 +1713,12 @@
 
   let gruposAsesores = [];
   let grupoActivo = '';
-  // correo -> { contactos, drive, calendario, contactosPorCuenta }. Lo
-  // que Google contesta. contactosPorCuenta solo llega si quien entró es
-  // Master: es el desglose de en cuál cuenta de Contactos está cada
-  // quien, y Admin no lo necesita para su trabajo del día a día.
+  // Estado general y desglose por cuenta de Contactos, Drive y
+  // Calendario. El desglose sólo llega para Master.
   let estadoGoogle = {};
   let estadoGoogleListo = false;
-  // [{clave, nombre}] de las cuentas de Contactos configuradas. Solo
-  // llega para Master, y solo trae más de una cuando ya se configuró la
-  // segunda (GOOGLE_REFRESH_TOKEN_CONTACTOS); mientras tanto se queda
-  // vacío y el desglose no se enseña.
+  // [{clave, nombre, accesosCompletos}] de las cuentas configuradas.
+  // accesosCompletos indica si su token incluye Drive y Calendario.
   let cuentasContactosInfo = [];
   // Correos cuya tarjeta trae abierto el bloque de Accesos. Picar la
   // tarjeta (la flecha, el nombre, donde sea del encabezado) solo
@@ -1935,20 +1931,23 @@
     const estado = accesosDe(p.correo);
     const correoClave = String(p.correo || '').toLowerCase();
     const cuentaVista = cuentaVistaPorCorreo.get(correoClave) || '';
+    const cuentaInfoVista = cuentasContactosInfo.find(function (c) { return c.clave === cuentaVista; });
+    const cuentaPermiteTodos = !cuentaVista || Boolean(cuentaInfoVista && cuentaInfoVista.accesosCompletos);
     const filas = ACCESOS.map(function (a) {
       let tiene = estado ? estado[a.clave] : null;
       if (estado && cuentaVista) {
         if (a.clave === 'contactos') tiene = Boolean(estado.contactosPorCuenta && estado.contactosPorCuenta[cuentaVista]);
-        // Drive y Calendario se administran únicamente desde la cuenta
-        // original de Dani; KW Premier sólo duplica Contactos.
-        else tiene = cuentaVista === 'original' ? Boolean(estado[a.clave]) : false;
+        else {
+          const porCuenta = estado[a.clave + 'PorCuenta'];
+          tiene = Boolean(porCuenta && porCuenta[cuentaVista]);
+        }
       }
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null || (cuentaVista === 'kwpremier' && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
+            (estado === null || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
@@ -2188,9 +2187,8 @@
   });
 
   // Picar una cuenta cambia las tarjetas y dirige las acciones a esa
-  // cuenta. En Dani se pueden administrar los tres accesos; en KW
-  // Premier sólo Contactos, porque Drive y Calendario pertenecen a Dani.
-  // Picar la misma cuenta regresa a la vista general.
+  // cuenta. Las tres opciones quedan disponibles cuando su token tiene
+  // permisos completos. Picar la misma cuenta regresa a la vista general.
   document.addEventListener('click', function (e) {
     const botonCuenta = e.target.closest('.acceso-cuenta[data-cuenta]');
     if (!botonCuenta) return;
@@ -2393,6 +2391,8 @@
       estadoGoogle[String(e.correo).toLowerCase()] = {
         contactos: e.contactos, drive: e.drive, calendario: e.calendario,
         contactosPorCuenta: e.contactosPorCuenta || null,
+        drivePorCuenta: e.drivePorCuenta || null,
+        calendarioPorCuenta: e.calendarioPorCuenta || null,
       };
     });
   }
@@ -2544,6 +2544,8 @@
         estadoGoogle[String(p.correo).toLowerCase()] = {
           contactos: p.contactos, drive: p.drive, calendario: p.calendario,
           contactosPorCuenta: p.contactosPorCuenta || null,
+          drivePorCuenta: p.drivePorCuenta || null,
+          calendarioPorCuenta: p.calendarioPorCuenta || null,
         };
       });
       estadoGoogleListo = true;
