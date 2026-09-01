@@ -114,6 +114,7 @@
     margin-top: var(--sp-3); border-top: 1px solid var(--border);
     padding-top: var(--sp-3); overflow-x: auto;
   }
+  .accesos.ocultos { display: none; }
   .accesos-titulo {
     display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
     margin: 0; white-space: nowrap;
@@ -225,6 +226,23 @@
   }
   .asesor-menu-opcion:hover { background: #f6f6f6; color: var(--red); }
   .asesor-menu-opcion svg { width: 15px; height: 15px; }
+
+  /* Capa de espera para operaciones contra Google. Cubre la pantalla
+     completa para dejar claro que la acción sigue en curso. */
+  .accesos-carga {
+    position: fixed; inset: 0; z-index: 10000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .accesos-carga.visible { display: flex; }
+  .accesos-carga-caja {
+    min-width: 220px; padding: 22px 28px; border-radius: 16px;
+    border: 1px solid var(--border); background: #fff;
+    box-shadow: var(--sombra-2); text-align: center;
+  }
+  .accesos-carga-caja .kw-loader { margin-bottom: 12px; }
+  .accesos-carga-texto { font-size: 14px; font-weight: 700; color: var(--text); }
 
   /* ── Modal de Revisar Accesos ────────────────────────────────
      Arriba se quedan fijos el buscador, la selección y el aviso; solo
@@ -1062,6 +1080,13 @@
     </div>
   </div>
 
+<div class="accesos-carga" id="accesos-carga" role="status" aria-live="polite" aria-hidden="true">
+  <div class="accesos-carga-caja">
+    <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+    <div class="accesos-carga-texto" id="accesos-carga-texto">Otorgando accesos</div>
+  </div>
+</div>
+
 <script>
   const GESTIONAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/gestionar-usuario';
   const INVITAR_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/invitar-usuario';
@@ -1892,7 +1917,7 @@
       }).join('');
   }
 
-  function accesosHtml(p, g) {
+  function accesosHtml(p, g, visible) {
     if (!grupoDaDeAlta(g.clave)) return '';
 
     const estado = accesosDe(p.correo);
@@ -1917,7 +1942,7 @@
           '<div class="accesos-cuentas-deslizable">' + cuentas + '</div>' +
         '</div>'
       : '<div class="accesos-titulo"><span class="accesos-toggle">Accesos</span></div>';
-    return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
+    return '<div class="accesos' + (visible ? '' : ' ocultos') + '" data-correo="' + escapeHtml(p.correo) + '">' +
       titulo +
       '<div class="accesos-fila">' + filas +
         '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled title="Dar accesos seleccionados" aria-label="Dar accesos seleccionados">' + ICONO_SUBIR + '</button>' +
@@ -1992,7 +2017,7 @@
         '</div>' +
         // Los accesos van escondidos hasta que se pica "Dar de alta" a
         // propósito: picar la tarjeta nada más enseña los datos.
-        (mostrando ? accesosHtml(p, g) : '') +
+        accesosHtml(p, g, mostrando) +
       '</div></div></div>' +
     '</div>';
   }
@@ -2176,21 +2201,30 @@
     e.stopPropagation();
 
     const correo = boton.dataset.correo;
-    if (mostrandoAccesos.has(correo)) {
-      mostrandoAccesos.delete(correo);
-    } else {
+    const fila = boton.closest('.kw-fila');
+    const caja = fila ? fila.querySelector('.accesos') : null;
+    const abrir = !mostrandoAccesos.has(correo);
+
+    if (abrir) {
       mostrandoAccesos.add(correo);
-      // Se abre la tarjeta si estaba cerrada, para que los accesos que
-      // se acaban de pedir de verdad se alcancen a ver. Si ya estaba
-      // abierta (mostrando los datos), se queda como está.
-      const fila = boton.closest('.kw-fila');
+      // Se abre la tarjeta una sola vez, sin reconstruir la lista.
       if (fila && !fila.classList.contains('abierta')) {
         const lista = fila.closest('.kw-lista');
-        if (lista) Array.from(lista.querySelectorAll('.kw-fila.abierta')).forEach(function (f) { f.classList.remove('abierta'); });
+        if (lista) Array.from(lista.querySelectorAll('.kw-fila.abierta')).forEach(function (f) {
+          f.classList.remove('abierta');
+          const cabeza = f.querySelector('.kw-fila-cabeza');
+          if (cabeza) cabeza.setAttribute('aria-expanded', 'false');
+        });
         fila.classList.add('abierta');
+        const cabeza = fila.querySelector('.kw-fila-cabeza');
+        if (cabeza) cabeza.setAttribute('aria-expanded', 'true');
       }
+    } else {
+      mostrandoAccesos.delete(correo);
     }
-    pintarGrupos();
+
+    if (caja) caja.classList.toggle('ocultos', !abrir);
+    boton.classList.toggle('activo', abrir);
   }, true);
 
   // Mostrar/ocultar una contraseña del expediente. El texto real ya
@@ -2221,6 +2255,22 @@
     return pasos.map(function (p) { return NOMBRE_ACCESO[p] || p; }).join(', ');
   }
 
+  function mostrarCargaAccesos(quitar) {
+    const capa = document.getElementById('accesos-carga');
+    const texto = document.getElementById('accesos-carga-texto');
+    if (!capa || !texto) return;
+    texto.textContent = quitar ? 'Quitando accesos' : 'Otorgando accesos';
+    capa.classList.add('visible');
+    capa.setAttribute('aria-hidden', 'false');
+  }
+
+  function ocultarCargaAccesos() {
+    const capa = document.getElementById('accesos-carga');
+    if (!capa) return;
+    capa.classList.remove('visible');
+    capa.setAttribute('aria-hidden', 'true');
+  }
+
   async function moverAcceso(correo, pasos, quitar) {
     const encontrado = personaPorCorreo(correo);
     if (!encontrado) return;
@@ -2231,6 +2281,7 @@
     if (!ok) return;
 
     marcarAccesosOcupados(correo, true);
+    mostrarCargaAccesos(quitar);
     try {
       const data = await llamarAlta({
         accion: 'acceso',
@@ -2249,6 +2300,8 @@
     } catch (err) {
       marcarAccesosOcupados(correo, false);
       avisoAsesores(err.message || 'No se pudo cambiar el acceso.', 'error');
+    } finally {
+      ocultarCargaAccesos();
     }
   }
 
