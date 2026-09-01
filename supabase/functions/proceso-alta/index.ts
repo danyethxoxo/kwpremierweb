@@ -267,6 +267,13 @@ const GRUPOS: Grupo[] = [
 // se quedan como su propio apartado, con el nombre que traigan.
 function clasificarHoja(titulo: string): Grupo | null {
   const t = normalizar(titulo)
+
+  // “Back Office Activos” contiene tanto “activo” como “back office”.
+  // Back Office es la señal más específica y debe ganar; de otro modo
+  // la hoja queda como genérica y su gente no aparece en la pestaña.
+  const backOffice = GRUPOS.find((g) => g.clave === 'back_office')
+  if (backOffice && backOffice.palabras.some((p) => t.includes(p))) return backOffice
+
   const posibles = GRUPOS.filter((g) => g.palabras.some((p) => t.includes(p)))
   return posibles.length === 1 ? posibles[0] : null
 }
