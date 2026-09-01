@@ -1561,13 +1561,12 @@ Deno.serve(async (req: Request) => {
       const cuentasOperacion = cuentaElegida ? [cuentaElegida] : cuentasContactos
       const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
       const tokenOperacion = cuentaElegida?.token || tokenPrincipal
-      const estadoOperacion: EstadoGoogle = cuentaElegida
-        ? {
-            ...estado,
-            drive: estado.drivePorCuenta.get(cuentaElegida.clave) || new Map(),
-            calendario: estado.calendarioPorCuenta.get(cuentaElegida.clave) || new Map(),
-          }
-        : estado
+      const claveOperacion = cuentaElegida?.clave || 'original'
+      const estadoOperacion: EstadoGoogle = {
+        ...estado,
+        drive: estado.drivePorCuenta.get(claveOperacion) || new Map(),
+        calendario: estado.calendarioPorCuenta.get(claveOperacion) || new Map(),
+      }
 
       const hechas = []
       for (const persona of gente) {
