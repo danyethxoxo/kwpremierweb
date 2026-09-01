@@ -109,22 +109,45 @@
   .kw-emergencia .kw-dato-txt { display: flex; flex-direction: column; gap: 1px; }
   .kw-emergencia-titulo { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
-  .accesos { margin-top: var(--sp-3); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
+  .accesos {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: var(--sp-3); border-top: 1px solid var(--border);
+    padding-top: var(--sp-3); overflow-x: auto;
+  }
   .accesos-titulo {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    font-size: 12px; font-weight: 700; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px;
+    display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    margin: 0; white-space: nowrap;
+  }
+  .accesos-toggle {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 0; border: 0; background: transparent;
+    font-family: inherit; font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.04em; cursor: pointer;
+  }
+  .accesos-toggle svg {
+    width: 11px; height: 11px;
+    transition: transform var(--t-rapido);
+  }
+  .accesos-titulo.abierto .accesos-toggle svg { transform: rotate(180deg); }
+  .accesos-cuentas-deslizable {
+    max-width: 0; opacity: 0; overflow: hidden;
+    transform: translateX(-8px);
+    transition: max-width 0.28s ease, opacity 0.2s ease, transform 0.28s ease;
+  }
+  .accesos-titulo.abierto .accesos-cuentas-deslizable {
+    max-width: 430px; opacity: 1; transform: translateX(0);
   }
   .accesos-titulo .acceso-cuentas {
-    padding: 0; gap: 5px 12px;
+    padding: 0; gap: 5px 12px; flex-wrap: nowrap;
     text-transform: none; letter-spacing: normal;
   }
   /* Tres accesos y las dos acciones caben en un solo renglón. En
      pantallas angostas el renglón completo se desplaza horizontalmente. */
   .accesos-fila {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(135px, 1fr)) 34px 34px;
-    align-items: stretch; gap: 8px; overflow-x: auto; padding: 1px 1px 4px;
+    display: grid; flex: 1 0 360px; min-width: 360px;
+    grid-template-columns: repeat(3, minmax(72px, 1fr)) 34px 34px;
+    align-items: stretch; gap: 8px; padding: 1px 1px 4px;
   }
   .acceso-seleccion-accion {
     width: 34px; min-width: 34px; height: 100%; min-height: 38px;
@@ -147,8 +170,9 @@
   .acceso.si .acceso-icono { color: #1a7a1a; }
   .acceso.no .acceso-icono { color: #8d9299; }
   .acceso.esperando .acceso-icono { color: var(--muted); }
-  .acceso-texto { min-width: 0; }
-  .acceso-nombre { font-size: 13px; font-weight: 700; }
+  .acceso-google-icono {
+    width: 22px; height: 22px; object-fit: contain; display: block;
+  }
   .acceso.esperando .acceso-label { cursor: wait; }
 
   /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
@@ -167,7 +191,8 @@
   /* Menú de acciones del asesor: ocupa el lugar de la flecha que antes
      indicaba que la tarjeta se podía desplegar. */
   .kw-fila { position: relative; }
-  .kw-fila-cabeza { padding-right: 52px; }
+  .kw-fila .kw-fila-cabeza { padding-right: 76px; }
+  .kw-fila-extra { margin-right: 8px; }
   .asesor-menu { position: absolute; top: 11px; right: 12px; z-index: 4; }
   .asesor-menu-btn {
     width: 34px; height: 34px; border: 0; border-radius: 50%;
@@ -1639,6 +1664,12 @@
   const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
   const ICONO_SUBIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6-6 6 6"/><path d="M12 4v16"/></svg>';
   const ICONO_BAJAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6 6 6-6"/><path d="M12 20V4"/></svg>';
+  const ICONO_DERECHA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+  const ICONOS_GOOGLE = {
+    contactos: 'https://ssl.gstatic.com/images/branding/product/2x/contacts_48dp.png',
+    drive: 'https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png',
+    calendario: 'https://ssl.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png',
+  };
 
   let gruposAsesores = [];
   let grupoActivo = '';
@@ -1861,18 +1892,24 @@
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
       return '<div class="acceso ' + clase + '">' +
-        '<label class="acceso-label">' +
+        '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
             (estado === null ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
-          '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span></span>' +
+          '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
       '</div>';
     }).join('');
 
     const cuentas = desgloseContactosHtml(estado);
+    const titulo = cuentas
+      ? '<div class="accesos-titulo">' +
+          '<button type="button" class="accesos-toggle" aria-expanded="false">Accesos' + ICONO_DERECHA + '</button>' +
+          '<div class="accesos-cuentas-deslizable">' + cuentas + '</div>' +
+        '</div>'
+      : '<div class="accesos-titulo"><span class="accesos-toggle">Accesos</span></div>';
     return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
-      '<div class="accesos-titulo">Accesos' + cuentas + '</div>' +
+      titulo +
       '<div class="accesos-fila">' + filas +
         '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled title="Dar accesos seleccionados" aria-label="Dar accesos seleccionados">' + ICONO_SUBIR + '</button>' +
         '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Quitar accesos seleccionados" aria-label="Quitar accesos seleccionados">' + ICONO_BAJAR + '</button>' +
@@ -2074,6 +2111,19 @@
     const pasos = Array.from(caja.querySelectorAll('.acceso-check:checked')).map(function (check) { return check.value; });
     if (!pasos.length) return;
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
+  });
+
+  // Los correos de Contactos se guardan detrás de la flecha de Accesos.
+  // Se despliegan en el mismo renglón sin empujar las tarjetas hacia abajo.
+  document.addEventListener('click', function (e) {
+    const boton = e.target.closest('.accesos-toggle');
+    if (!boton || boton.tagName !== 'BUTTON') return;
+    e.preventDefault();
+    e.stopPropagation();
+    const titulo = boton.closest('.accesos-titulo');
+    const abrir = !titulo.classList.contains('abierto');
+    titulo.classList.toggle('abierto', abrir);
+    boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
   });
 
   // El menú de tres puntos vive fuera del botón que abre la tarjeta.
