@@ -165,12 +165,12 @@
     border: 1px solid var(--border); border-radius: 9px; background: #fff;
     transition: border-color var(--t-rapido), background var(--t-rapido);
   }
-  .acceso:has(.acceso-check:checked) { border-color: rgba(138,0,0,0.45); background: #fff7f7; }
+  .acceso:has(.acceso-check:checked) { border-color: rgba(26,115,232,0.55); background: #f3f8ff; }
   .acceso-label {
     display: flex; align-items: center; justify-content: center;
     gap: 5px; min-height: 34px; padding: 5px 6px; cursor: pointer;
   }
-  .acceso-check { width: 14px; height: 14px; flex-shrink: 0; accent-color: var(--red); cursor: pointer; }
+  .acceso-check { width: 14px; height: 14px; flex-shrink: 0; accent-color: #1a73e8; cursor: pointer; }
   .acceso-icono { flex-shrink: 0; display: flex; }
   .acceso-icono svg { width: 13px; height: 13px; }
   .acceso.si .acceso-icono { color: #1a7a1a; }
@@ -187,7 +187,14 @@
   .acceso-cuentas { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 0 10px 9px 34px; }
   .acceso-cuenta {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; font-weight: 700; white-space: nowrap;
+    padding: 3px 6px; border: 0; border-radius: 6px; background: transparent;
+    font-family: inherit; font-size: 11px; font-weight: 700;
+    white-space: nowrap; cursor: default;
+  }
+  button.acceso-cuenta { cursor: pointer; }
+  button.acceso-cuenta:hover { background: #f1f5fb; }
+  .acceso-cuenta.seleccionada {
+    color: #1557b0; background: #e8f0fe; box-shadow: inset 0 0 0 1px #b7d1f7;
   }
   .acceso-cuenta svg { width: 10px; height: 10px; }
   .acceso-cuenta.si { color: #1a7a1a; }
@@ -236,13 +243,12 @@
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   }
   .accesos-carga.visible { display: flex; }
-  .accesos-carga-caja {
-    min-width: 220px; padding: 22px 28px; border-radius: 16px;
-    border: 1px solid var(--border); background: #fff;
-    box-shadow: var(--sombra-2); text-align: center;
+  .accesos-carga-caja { text-align: center; }
+  .accesos-carga-caja .kw-loader { margin-bottom: 10px; }
+  .accesos-carga-texto {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    text-shadow: 0 1px 8px rgba(255,255,255,0.9);
   }
-  .accesos-carga-caja .kw-loader { margin-bottom: 12px; }
-  .accesos-carga-texto { font-size: 14px; font-weight: 700; color: var(--text); }
 
   /* ── Modal de Revisar Accesos ────────────────────────────────
      Arriba se quedan fijos el buscador, la selección y el aviso; solo
@@ -1723,6 +1729,10 @@
   // enseña los datos del asesor; los accesos se quedan escondidos hasta
   // que se pica el botón "Dar de alta" a propósito.
   const mostrandoAccesos = new Set();
+  // Cuenta elegida para inspeccionar por persona. Drive y Calendario
+  // pertenecen a la cuenta original de Dani; Contactos es el único
+  // acceso duplicado entre Dani y KW Premier.
+  const cuentaVistaPorCorreo = new Map();
   // Contraseñas del expediente que se pidieron mostrar (ver
   // infoExtraHtml). El texto real siempre vive en el DOM; esto solo
   // decide si se ve borroso o no.
@@ -1848,12 +1858,14 @@
   // en cuál de las dos está (o no está) el contacto de esta persona. Es
   // nada más informativo - el botón de Dar/Quitar de arriba sigue
   // aplicando a las dos cuentas de un jalón.
-  function desgloseContactosHtml(estado, claseExtra) {
+  function desgloseContactosHtml(estado, claseExtra, cuentaSeleccionada, interactivo) {
     if (!esMaster() || cuentasContactosInfo.length < 2 || !estado || !estado.contactosPorCuenta) return '';
     return '<div class="acceso-cuentas' + (claseExtra ? ' ' + claseExtra : '') + '">' + cuentasContactosInfo.map(function (cuenta) {
       const tiene = estado.contactosPorCuenta[cuenta.clave];
-      return '<span class="acceso-cuenta ' + (tiene ? 'si' : 'no') + '">' +
-        (tiene ? ICONO_LISTO : ICONO_EQUIS) + escapeHtml(cuenta.nombre) + '</span>';
+      const tag = interactivo ? 'button' : 'span';
+      return '<' + tag + (interactivo ? ' type="button" data-cuenta="' + escapeHtml(cuenta.clave) + '"' : '') +
+        ' class="acceso-cuenta ' + (tiene ? 'si' : 'no') + (cuentaSeleccionada === cuenta.clave ? ' seleccionada' : '') + '">' +
+        (tiene ? ICONO_LISTO : ICONO_EQUIS) + escapeHtml(cuenta.nombre) + '</' + tag + '>';
     }).join('') + '</div>';
   }
 
@@ -1921,24 +1933,32 @@
     if (!grupoDaDeAlta(g.clave)) return '';
 
     const estado = accesosDe(p.correo);
+    const correoClave = String(p.correo || '').toLowerCase();
+    const cuentaVista = cuentaVistaPorCorreo.get(correoClave) || '';
     const filas = ACCESOS.map(function (a) {
-      const tiene = estado ? estado[a.clave] : null;
+      let tiene = estado ? estado[a.clave] : null;
+      if (estado && cuentaVista) {
+        if (a.clave === 'contactos') tiene = Boolean(estado.contactosPorCuenta && estado.contactosPorCuenta[cuentaVista]);
+        // Drive y Calendario se administran únicamente desde la cuenta
+        // original de Dani; KW Premier sólo duplica Contactos.
+        else tiene = cuentaVista === 'original' ? Boolean(estado[a.clave]) : false;
+      }
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null ? ' disabled' : '') + '>' +
+            (estado === null || cuentaVista ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
       '</div>';
     }).join('');
 
-    const cuentas = desgloseContactosHtml(estado);
+    const cuentas = desgloseContactosHtml(estado, '', cuentaVista, true);
     const titulo = cuentas
-      ? '<div class="accesos-titulo">' +
-          '<button type="button" class="accesos-toggle" aria-expanded="false">Accesos' + ICONO_DERECHA + '</button>' +
+      ? '<div class="accesos-titulo' + (cuentaVista ? ' abierto' : '') + '">' +
+          '<button type="button" class="accesos-toggle" aria-expanded="' + (cuentaVista ? 'true' : 'false') + '">Accesos' + ICONO_DERECHA + '</button>' +
           '<div class="accesos-cuentas-deslizable">' + cuentas + '</div>' +
         '</div>'
       : '<div class="accesos-titulo"><span class="accesos-toggle">Accesos</span></div>';
@@ -2147,6 +2167,27 @@
     const pasos = Array.from(caja.querySelectorAll('.acceso-check:checked')).map(function (check) { return check.value; });
     if (!pasos.length) return;
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
+  });
+
+  // Picar una cuenta cambia las tarjetas a una vista de inspección.
+  // Contactos se consulta por cuenta; Drive y Calendario sólo existen
+  // desde la cuenta original de Dani. Picar la misma cuenta regresa a
+  // la vista general, donde vuelven a habilitarse las acciones.
+  document.addEventListener('click', function (e) {
+    const botonCuenta = e.target.closest('.acceso-cuenta[data-cuenta]');
+    if (!botonCuenta) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const caja = botonCuenta.closest('.accesos');
+    if (!caja) return;
+    const correo = String(caja.dataset.correo || '').toLowerCase();
+    const clave = botonCuenta.dataset.cuenta;
+    if (cuentaVistaPorCorreo.get(correo) === clave) cuentaVistaPorCorreo.delete(correo);
+    else cuentaVistaPorCorreo.set(correo, clave);
+
+    const encontrado = personaPorCorreo(correo);
+    if (encontrado) caja.outerHTML = accesosHtml(encontrado.persona, encontrado.grupo, true);
   });
 
   // Los correos de Contactos se guardan detrás de la flecha de Accesos.
