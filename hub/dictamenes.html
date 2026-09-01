@@ -387,6 +387,11 @@
     display: block; font-size: 10.5px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
   }
+  .dic-dato-correccion {
+    display: block; margin-top: 3px; color: #b02a2a;
+    font-size: 12.5px; font-weight: 700;
+  }
+  .dic-dato-correccion::before { content: 'Corrección: '; }
 
   /* ── El editor ── */
   .dic-editor {
@@ -1628,9 +1633,16 @@
     '</div>';
   }
 
-  function dato(rotulo, valor) {
-    if (!valor) return '';
-    return '<div class="dic-dato"><b>' + rotulo + '</b>' + escapar(valor) + '</div>';
+  function correccionDe(d, campo) {
+    return (separarCorrecciones(d.observaciones).correcciones || {})[campo] || '';
+  }
+
+  function dato(rotulo, valor, correccion) {
+    if (!valor && !correccion) return '';
+    return '<div class="dic-dato"><b>' + rotulo + '</b>' +
+      (valor ? escapar(valor) : '<span style="color:var(--muted);">Sin dato capturado</span>') +
+      (correccion ? '<span class="dic-dato-correccion">' + escapar(correccion) + '</span>' : '') +
+      '</div>';
   }
 
   // Un expediente trae la escritura desglosada o, si es de antes de que
@@ -1646,10 +1658,10 @@
     if (!tieneEscrituraDesglosada(d)) {
       return dato('Escrituras y fecha', d.escritura_propiedad);
     }
-    return dato('Número de escritura', d.escritura_numero) +
-      dato('Fecha de escrituración', fecha(d.escritura_fecha)) +
-      dato('Notario', d.notario_nombre) +
-      dato('Número de notaría', d.notaria_numero);
+    return dato('Número de escritura', d.escritura_numero, correccionDe(d, 'escritura_numero')) +
+      dato('Fecha de escrituración', fecha(d.escritura_fecha), correccionDe(d, 'escritura_fecha')) +
+      dato('Notario', d.notario_nombre, correccionDe(d, 'notario_nombre')) +
+      dato('Número de notaría', d.notaria_numero, correccionDe(d, 'notaria_numero'));
   }
 
   // ── La etiqueta del estado, que además lo cambia ─────────────
@@ -1813,20 +1825,21 @@
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
       dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d)) +
+      dato('Dirección del inmueble', d.inmueble, correccionDe(d, 'inmueble')) +
       dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
       dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
       dato('Tipo de inmueble', d.tipo_inmueble) +
-      dato('Precio del listado', conPesos(d.precio_listado)) +
-      dato('Comisión', conPorciento(d.comision_porcentaje)) +
+      dato('Precio del listado', conPesos(d.precio_listado), correccionDe(d, 'precio_listado')) +
+      dato('Comisión', conPorciento(d.comision_porcentaje), correccionDe(d, 'comision_porcentaje')) +
       datosEscritura(d) +
       dato('Condominio', siNo(d.condominio)) +
-      dato('Escritura del condominio', d.escritura_condominio) +
-      dato('CFDI', d.cfdi) +
-      dato('Superficie escritura', conUnidad(d.superficie_escritura)) +
-      dato('Cuenta predial', d.cuenta_predial) +
-      dato('Superficie terreno', conUnidad(d.superficie_terreno)) +
-      dato('Superficie construcción', conUnidad(d.superficie_construccion)) +
-      dato('Folio real', d.folio_real) +
+      dato('Escritura del condominio', d.escritura_condominio, correccionDe(d, 'escritura_condominio')) +
+      dato('CFDI', d.cfdi, correccionDe(d, 'cfdi')) +
+      dato('Superficie escritura', conUnidad(d.superficie_escritura), correccionDe(d, 'superficie_escritura')) +
+      dato('Cuenta predial', d.cuenta_predial, correccionDe(d, 'cuenta_predial')) +
+      dato('Superficie terreno', conUnidad(d.superficie_terreno), correccionDe(d, 'superficie_terreno')) +
+      dato('Superficie construcción', conUnidad(d.superficie_construccion), correccionDe(d, 'superficie_construccion')) +
+      dato('Folio real', d.folio_real, correccionDe(d, 'folio_real')) +
       dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
     '</div>';
 
