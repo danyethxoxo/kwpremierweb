@@ -96,6 +96,9 @@ const GOOGLE_CALENDAR_ID = Deno.env.get('GOOGLE_CALENDAR_ID')
 // como se hacía antes de esto: así la función no se detiene mientras se
 // consigue el token nuevo, nada más no duplica todavía en kwpremier.
 const GOOGLE_REFRESH_TOKEN_CONTACTOS = Deno.env.get('GOOGLE_REFRESH_TOKEN_CONTACTOS') || ''
+// Token nuevo de KW Premier con Contactos, Drive y Calendario. Cuando
+// existe reemplaza al token antiguo limitado a Contactos.
+const GOOGLE_REFRESH_TOKEN_KWPREMIER = Deno.env.get('GOOGLE_REFRESH_TOKEN_KWPREMIER') || ''
 
 const ALTA_SHEET_ID = Deno.env.get('ALTA_SHEET_ID')
 const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A1:Z500'
@@ -145,18 +148,38 @@ async function getAccessToken(refreshToken: string): Promise<string> {
 // En cuáles cuentas se guarda cada contacto. "original" siempre está
 // (es GOOGLE_REFRESH_TOKEN, que ya traía permiso de Contactos desde
 // antes de este cambio); "kwpremier" se suma en cuanto el secreto exista.
-type CuentaContactos = { clave: string; nombre: string; refreshToken: string }
+type CuentaContactos = {
+  clave: string
+  nombre: string
+  refreshToken: string
+  accesosCompletos: boolean
+}
 
 const CUENTAS_CONTACTOS: CuentaContactos[] = [
-  { clave: 'original', nombre: 'dani.guerrero@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN },
-  ...(GOOGLE_REFRESH_TOKEN_CONTACTOS
-    ? [{ clave: 'kwpremier', nombre: 'kwpremier@kwmexico.mx', refreshToken: GOOGLE_REFRESH_TOKEN_CONTACTOS }]
+  {
+    clave: 'original', nombre: 'dani.guerrero@kwmexico.mx',
+    refreshToken: GOOGLE_REFRESH_TOKEN, accesosCompletos: true,
+  },
+  ...((GOOGLE_REFRESH_TOKEN_KWPREMIER || GOOGLE_REFRESH_TOKEN_CONTACTOS)
+    ? [{
+        clave: 'kwpremier', nombre: 'kwpremier@kwmexico.mx',
+        refreshToken: GOOGLE_REFRESH_TOKEN_KWPREMIER || GOOGLE_REFRESH_TOKEN_CONTACTOS,
+        accesosCompletos: Boolean(GOOGLE_REFRESH_TOKEN_KWPREMIER),
+      }]
     : []),
 ]
 
-async function getTokensContactos(): Promise<{ clave: string; nombre: string; token: string }[]> {
+type CuentaConToken = {
+  clave: string
+  nombre: string
+  token: string
+  accesosCompletos: boolean
+}
+
+async function getTokensContactos(): Promise<CuentaConToken[]> {
   return await Promise.all(CUENTAS_CONTACTOS.map(async (c) => ({
     clave: c.clave, nombre: c.nombre, token: await getAccessToken(c.refreshToken),
+    accesosCompletos: c.accesosCompletos,
   })))
 }
 
@@ -1047,18 +1070,50 @@ type EstadoGoogle = {
   contactos: ContactosPorCuenta
   drive: PorCorreo
   calendario: PorCorreo
+  drivePorCuenta: Map<string, PorCorreo>
+  calendarioPorCuenta: Map<string, PorCorreo>
+}
+
+function unirEstadosPorCuenta(estados: Map<string, PorCorreo>): PorCorreo {
+  const unido: PorCorreo = new Map()
+  for (const porCorreo of estados.values()) {
+    for (const [correo, id] of porCorreo.entries()) unido.set(correo, id)
+  }
+  return unido
+}
+
+function desgloseAccesoPorCuenta(estados: Map<string, PorCorreo>, correo: string) {
+  const resultado: Record<string, boolean> = {}
+  for (const cuenta of CUENTAS_CONTACTOS) {
+    resultado[cuenta.clave] = Boolean(estados.get(cuenta.clave)?.has(correo))
+  }
+  return resultado
 }
 
 async function leerEstadoGoogle(
   tokenGoogle: string,
-  cuentasContactos: { clave: string; nombre: string; token: string }[],
+  cuentasContactos: CuentaConToken[],
 ): Promise<EstadoGoogle> {
-  const [contactos, drive, calendario] = await Promise.all([
-    listarContactosTodasCuentas(cuentasContactos),
-    listarPermisosDrive(tokenGoogle),
-    listarAclCalendario(tokenGoogle),
-  ])
-  return { contactos, drive, calendario }
+  const contactos = await listarContactosTodasCuentas(cuentasContactos)
+  const cuentasCompletas = cuentasContactos.filter((c) => c.accesosCompletos)
+  const pares = await Promise.all(cuentasCompletas.map(async (cuenta) => {
+    const [drive, calendario] = await Promise.all([
+      listarPermisosDrive(cuenta.token),
+      listarAclCalendario(cuenta.token),
+    ])
+    return { cuenta: cuenta.clave, drive, calendario }
+  }))
+  const drivePorCuenta = new Map<string, PorCorreo>()
+  const calendarioPorCuenta = new Map<string, PorCorreo>()
+  for (const par of pares) {
+    drivePorCuenta.set(par.cuenta, par.drive)
+    calendarioPorCuenta.set(par.cuenta, par.calendario)
+  }
+  // Compatibilidad con las vistas generales: cualquiera de las cuentas
+  // puede ser quien haya otorgado el acceso.
+  const drive = unirEstadosPorCuenta(drivePorCuenta)
+  const calendario = unirEstadosPorCuenta(calendarioPorCuenta)
+  return { contactos, drive, calendario, drivePorCuenta, calendarioPorCuenta }
 }
 
 // Da UN acceso, o lo quita. Sabiendo ya lo que hay en Google (el estado
@@ -1069,7 +1124,7 @@ async function moverAcceso(
   paso: Paso,
   quitar: boolean,
   tokenGoogle: string,
-  cuentasContactos: { clave: string; nombre: string; token: string }[],
+  cuentasContactos: CuentaConToken[],
   persona: DatosPersona,
   estado: EstadoGoogle,
   detalladoContactos: boolean,
@@ -1105,7 +1160,7 @@ async function moverAccesos(
   pasos: Paso[],
   quitar: boolean,
   tokenGoogle: string,
-  cuentasContactos: { clave: string; nombre: string; token: string }[],
+  cuentasContactos: CuentaConToken[],
   persona: DatosPersona,
   estado: EstadoGoogle,
   detalladoContactos: boolean,
@@ -1500,17 +1555,23 @@ Deno.serve(async (req: Request) => {
       if (cuentaContactosPedida && !cuentaElegida) {
         return respond({ error: 'La cuenta de Contactos seleccionada no existe.' }, 400)
       }
-      // KW Premier sólo tiene Contactos. Drive y Calendario pertenecen
-      // a la cuenta original de Dani y no se pueden mover desde KW.
-      if (cuentaContactosPedida === 'kwpremier' && pasos.some((p) => p !== 'contactos')) {
-        return respond({ error: 'KW Premier sólo administra Contactos.' }, 400)
+      if (cuentaElegida && pasos.some((p) => p !== 'contactos') && !cuentaElegida.accesosCompletos) {
+        return respond({ error: 'La cuenta seleccionada todavía no tiene permisos de Drive y Calendario.' }, 400)
       }
       const cuentasOperacion = cuentaElegida ? [cuentaElegida] : cuentasContactos
       const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
+      const tokenOperacion = cuentaElegida?.token || tokenPrincipal
+      const estadoOperacion: EstadoGoogle = cuentaElegida
+        ? {
+            ...estado,
+            drive: estado.drivePorCuenta.get(cuentaElegida.clave) || new Map(),
+            calendario: estado.calendarioPorCuenta.get(cuentaElegida.clave) || new Map(),
+          }
+        : estado
 
       const hechas = []
       for (const persona of gente) {
-        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasOperacion, persona, estado, soyMaster)
+        const resultados = await moverAccesos(pasos, quitar, tokenOperacion, cuentasOperacion, persona, estadoOperacion, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1540,8 +1601,10 @@ Deno.serve(async (req: Request) => {
           correo: p.correo,
           contactos: contactoCompleto(estado.contactos, c),
           contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
-          drive: estado.drive.has(c),
-          calendario: estado.calendario.has(c),
+          drive: Array.from(estado.drivePorCuenta.values()).some((m) => m.has(c)),
+          calendario: Array.from(estado.calendarioPorCuenta.values()).some((m) => m.has(c)),
+          drivePorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.drivePorCuenta, c) : undefined,
+          calendarioPorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.calendarioPorCuenta, c) : undefined,
         }
       })
 
@@ -1553,7 +1616,9 @@ Deno.serve(async (req: Request) => {
         // Con qué cuentas se está trabajando: solo Master la recibe, es
         // lo que la pantalla usa para ponerle nombre a cada columna del
         // desglose.
-        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({
+          clave: c.clave, nombre: c.nombre, accesosCompletos: c.accesosCompletos,
+        })) : undefined,
       })
     }
 
@@ -1599,6 +1664,8 @@ Deno.serve(async (req: Request) => {
             contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
             drive: estado.drive.has(c),
             calendario: estado.calendario.has(c),
+            drivePorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.drivePorCuenta, c) : undefined,
+            calendarioPorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.calendarioPorCuenta, c) : undefined,
             enSistema: completosBD.has(c),
           })
         }
@@ -1606,7 +1673,9 @@ Deno.serve(async (req: Request) => {
 
       return respond({
         personas,
-        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({ clave: c.clave, nombre: c.nombre })) : undefined,
+        cuentasContactos: soyMaster ? CUENTAS_CONTACTOS.map((c) => ({
+          clave: c.clave, nombre: c.nombre, accesosCompletos: c.accesosCompletos,
+        })) : undefined,
       })
     }
 
