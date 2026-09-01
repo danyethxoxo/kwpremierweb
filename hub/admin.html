@@ -435,7 +435,26 @@
   /* El nombre de la tarjeta, arriba de la barra y sin adornos: el
      título de la pantalla ya está más arriba. */
   .asesores-titulo {
-    font-size: 15px; font-weight: 700; margin-bottom: var(--sp-3);
+    font-size: 15px; font-weight: 700; margin-bottom: 0; flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  /* Esta tarjeta funciona como una sola barra de herramientas: título,
+     búsqueda, acciones y contador comparten renglón para liberar alto. */
+  .asesores-card {
+    padding: 12px 18px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .asesores-card .barra { flex: 1; min-width: 0; flex-wrap: nowrap; }
+  .asesores-card .buscador { height: 34px; }
+  .asesores-card .btn { padding-top: 7px; padding-bottom: 7px; }
+  .asesores-card .kw-btn-icono { width: 34px; height: 34px; }
+
+  /* En pantallas donde una sola fila ya no cabe, vuelve al acomodo de dos
+     renglones para conservar controles legibles y áreas táctiles cómodas. */
+  @media (max-width: 900px) {
+    .asesores-card { display: block; }
+    .asesores-card .asesores-titulo { margin-bottom: 8px; }
+    .asesores-card .barra { flex-wrap: wrap; }
   }
   /* Cuántos hay, al final del mismo renglón que la barra. */
   .resumen-activos { display: inline-flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
