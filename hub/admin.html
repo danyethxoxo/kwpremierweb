@@ -116,16 +116,27 @@
     text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px;
   }
   .accesos-acciones { display: flex; gap: 7px; margin-left: auto; }
-  .acceso-todos { gap: 5px; }
-  .acceso-todos svg { width: 12px; height: 12px; }
-  .acceso-todos.dar { color: #1a7a1a; }
-  .acceso-todos.quitar { color: var(--red); }
+  .acceso-seleccion-accion { gap: 5px; }
+  .acceso-seleccion-accion svg { width: 12px; height: 12px; }
+  .acceso-seleccion-accion.dar { color: #1a7a1a; }
+  .acceso-seleccion-accion.quitar { color: var(--red); }
+
+  /* Los tres accesos se leen y se eligen de un vistazo. Conservamos las
+     tres columnas incluso en pantallas angostas; ahí la fila puede
+     desplazarse horizontalmente en vez de volver a crecer hacia abajo. */
+  .accesos-fila {
+    display: grid; grid-template-columns: repeat(3, minmax(155px, 1fr));
+    gap: 8px; overflow-x: auto; padding: 1px 1px 4px;
+  }
 
   .acceso {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 0;
+    position: relative; min-width: 155px;
+    border: 1px solid var(--border); border-radius: 10px; background: #fff;
+    transition: border-color var(--t-rapido), background var(--t-rapido);
   }
-  .acceso + .acceso { border-top: 1px solid var(--border); }
+  .acceso:has(.acceso-check:checked) { border-color: rgba(138,0,0,0.45); background: #fff7f7; }
+  .acceso-label { display: flex; align-items: center; gap: 8px; padding: 10px; cursor: pointer; }
+  .acceso-check { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--red); cursor: pointer; }
   .acceso-icono { flex-shrink: 0; display: flex; }
   .acceso-icono svg { width: 15px; height: 15px; }
   .acceso.si .acceso-icono { color: #1a7a1a; }
@@ -134,14 +145,12 @@
   .acceso-texto { display: flex; flex-direction: column; min-width: 0; }
   .acceso-nombre { font-size: 13px; font-weight: 700; }
   .acceso-estado { font-size: 11.5px; color: var(--muted); }
-  .acceso-btn { margin-left: auto; flex-shrink: 0; }
-  .acceso-btn.quitar { color: var(--red); }
-  .acceso-btn.dar { color: #1a7a1a; }
+  .acceso.esperando .acceso-label { cursor: wait; }
 
   /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
      más de una cuenta configurada. Es solo información - el botón de
      Dar/Quitar de arriba sigue aplicando a las dos de un jalón. */
-  .acceso-cuentas { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 0 0 8px 25px; margin-top: -4px; }
+  .acceso-cuentas { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 0 10px 9px 34px; }
   .acceso-cuenta {
     display: inline-flex; align-items: center; gap: 4px;
     font-size: 11px; font-weight: 700; white-space: nowrap;
@@ -150,6 +159,12 @@
   .acceso-cuenta.si { color: #1a7a1a; }
   .acceso-cuenta.no { color: #8d9299; }
   .verif-cuentas.acceso-cuentas { padding-left: 0; margin-top: 2px; }
+
+  .kw-fila-btn.solo-icono {
+    width: 38px; height: 38px; padding: 0; display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .kw-fila-btn.solo-icono svg { width: 17px; height: 17px; }
 
   /* ── Modal de Revisar Accesos ────────────────────────────────
      Arriba se quedan fijos el buscador, la selección y el aviso; solo
@@ -1595,6 +1610,7 @@
   const ICONO_LISTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
   const ICONO_EQUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
   const ICONO_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+  const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
 
   let gruposAsesores = [];
   let grupoActivo = '';
@@ -1731,7 +1747,7 @@
 
   // ── La tarjeta de cada persona ──
   // Cerrada trae el nombre, el correo y el botón; abierta, sus datos y
-  // los tres accesos con su estado, cada uno con su propio botón.
+  // los tres accesos con su estado, en una sola fila seleccionable.
 
   // El bloque de accesos. Mientras Google no conteste se enseña
   // "Comprobando" en vez de un "no lo tiene" que sería mentira.
@@ -1817,29 +1833,25 @@
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
       const texto = estado === null ? 'Comprobando…' : (tiene ? 'Tiene acceso' : 'Sin acceso');
-      const accion = tiene ? 'quitar' : 'dar';
       return '<div class="acceso ' + clase + '">' +
-        '<span class="acceso-icono">' + icono + '</span>' +
-        '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span>' +
-          '<span class="acceso-estado">' + texto + '</span></span>' +
-        (estado === null ? '' :
-          '<button type="button" class="btn btn-mini acceso-btn ' + accion + '"' +
-            ' data-acceso="' + a.clave + '" data-hacer="' + accion + '">' +
-            (tiene ? 'Quitar' : 'Dar') + '</button>') +
-      '</div>' +
-      (a.clave === 'contactos' ? desgloseContactosHtml(estado) : '');
+        '<label class="acceso-label">' +
+          '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
+            (estado === null ? ' disabled' : '') + '>' +
+          '<span class="acceso-icono">' + icono + '</span>' +
+          '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span>' +
+            '<span class="acceso-estado">' + texto + '</span></span>' +
+        '</label>' +
+        (a.clave === 'contactos' ? desgloseContactosHtml(estado) : '') +
+      '</div>';
     }).join('');
-
-    const faltan = estado && ACCESOS.some(function (a) { return !estado[a.clave]; });
-    const tieneAlguno = estado && ACCESOS.some(function (a) { return estado[a.clave]; });
 
     return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
       '<div class="accesos-titulo">Accesos' +
         '<span class="accesos-acciones">' +
-          (faltan ? '<button type="button" class="btn btn-mini acceso-todos dar" data-hacer="dar" title="Dar los tres accesos">' + ICONO_LISTO + 'Dar los 3</button>' : '') +
-          (tieneAlguno ? '<button type="button" class="btn btn-mini acceso-todos quitar" data-hacer="quitar" title="Quitar los tres accesos">' + ICONO_EQUIS + 'Quitar los 3</button>' : '') +
+          '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled>' + ICONO_LISTO + 'Dar seleccionados</button>' +
+          '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled>' + ICONO_EQUIS + 'Quitar seleccionados</button>' +
         '</span>' +
-      '</div>' + filas +
+      '</div><div class="accesos-fila">' + filas + '</div>' +
     '</div>';
   }
 
@@ -1906,7 +1918,7 @@
         // editar: el libro se edita en el libro).
         (p.id
           ? '<div class="kw-fila-acciones">' +
-              '<a class="kw-fila-btn" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '">Editar ficha</a>' +
+              '<a class="kw-fila-btn solo-icono" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '" title="Editar ficha" aria-label="Editar ficha">' + ICONO_LAPIZ + '</a>' +
             '</div>'
           : '') +
       '</div></div></div>' +
@@ -2018,14 +2030,25 @@
   // Un solo escuchador para toda la pestaña: las listas se repintan cada
   // vez que cambia un acceso, y volver a colgarle un escuchador a cada
   // botón en cada repintado los va acumulando.
+  document.addEventListener('change', function (e) {
+    if (!e.target.matches('.acceso-check')) return;
+    const caja = e.target.closest('.accesos');
+    if (!caja) return;
+    const haySeleccion = caja.querySelector('.acceso-check:checked') !== null;
+    Array.from(caja.querySelectorAll('.acceso-seleccion-accion')).forEach(function (b) {
+      b.disabled = !haySeleccion;
+    });
+  });
+
   document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.acceso-btn, .acceso-todos');
+    const btn = e.target.closest('.acceso-seleccion-accion');
     if (!btn) return;
     const caja = btn.closest('.accesos');
     if (!caja) return;
     e.preventDefault();
     e.stopPropagation();
-    const pasos = btn.dataset.acceso ? [btn.dataset.acceso] : null;
+    const pasos = Array.from(caja.querySelectorAll('.acceso-check:checked')).map(function (check) { return check.value; });
+    if (!pasos.length) return;
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
   });
 
