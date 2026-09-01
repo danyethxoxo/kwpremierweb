@@ -1012,7 +1012,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <input type="text" id="e-esc-numero" name="dic-escritura-folio" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+            <input type="text" id="e-esc-numero" name="kw-escritura-numero-no-pago" data-lpignore="true" data-1p-ignore data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="new-password">
           </div>
           <div class="dic-campo">
             <label for="e-esc-dia">Fecha de escrituración</label>
@@ -1607,10 +1607,10 @@
     return '<div class="kw-fila" data-fila="' + d.id + '">' +
       '<button type="button" class="kw-fila-cabeza">' +
         '<span class="kw-fila-texto">' +
-          '<span class="kw-fila-titulo">' + escapar(d.inmueble) + '</span>' +
+          '<span class="kw-fila-titulo">' + escapar(d.inmueble || 'Borrador sin dirección') + '</span>' +
           '<span class="kw-fila-sub">' +
             (d.folio ? escapar(d.folio) + ' · ' : '') +
-            escapar(d.asesor_nombre || '') + ' · ' + fecha(d.fecha_dictamen) +
+            escapar(d.asesor_nombre || 'Sin asesor') + ' · ' + fecha(d.fecha_dictamen) +
           '</span>' +
         '</span>' +
         '<span class="kw-fila-extra">' +
@@ -2231,6 +2231,9 @@
         if (bloque.classList.contains('abierta')) bloque.querySelector('textarea').focus();
       });
       bloque.querySelector('textarea').addEventListener('input', function () {
+        if (CAMPOS_CON_COMAS.indexOf(c[1]) !== -1 && /^[\\d,]*$/.test(this.value)) {
+          this.value = conComasMientrasEscribe(this.value);
+        }
         if (borrador) borrador.correcciones[c[1]] = this.value;
       });
     });
@@ -2275,6 +2278,12 @@
     var n = soloCifra(v);
     return n ? n + ' %' : '';
   }
+
+  function conComasMientrasEscribe(v) {
+    var limpio = String(v == null ? '' : v).replace(/[^\\d]/g, '');
+    return limpio ? limpio.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',') : '';
+  }
+  var CAMPOS_CON_COMAS = ['precio_listado', 'escritura_numero', 'notaria_numero'];
 
   // Lo que se teclea en un campo se guarda ya limpio, según de qué campo
   // se trate. Está en un solo lugar porque el leer y el reabrir tienen
@@ -2591,13 +2600,9 @@
 
   async function guardar() {
     leerEditor();
-    if (!borrador.asesor_id) {
-      return await fallo('Falta elegir al asesor. Escribe su nombre y pícale a la opción '
-        + 'que aparece en la lista, para que quede seleccionado.', 'e-asesor-busca');
-    }
-    if (borrador.inmueble.length < 3) {
-      return await fallo('Falta la dirección del inmueble.', 'e-inmueble');
-    }
+    // Se puede guardar aunque el expediente esté incompleto. Mientras
+    // falten asesor, inmueble o cliente permanece como borrador y no se
+    // ofrece dictaminarlo todavía.
     if ($('e-esc-anio').value || $('e-esc-mes').value || $('e-esc-dia').value) {
       if (!$('e-esc-fecha').value) return await fallo('Completa día, mes y año de la escrituración.', 'e-esc-dia');
       var fesc = new Date(Number($('e-esc-anio').value), Number($('e-esc-mes').value) - 1, Number($('e-esc-dia').value));
@@ -2614,12 +2619,11 @@
     var losClientes = borrador.clientes
       .slice(0, cuantosClientes())
       .filter(function (c) { return c && c.nombre; });
-    if (!losClientes.length) {
-      return await fallo('Falta el nombre de por lo menos un cliente.', 'e-clientes');
-    }
+    borrador.completo_para_dictaminar = !!(borrador.asesor_id &&
+      borrador.inmueble && borrador.inmueble.length >= 3 && losClientes.length);
 
     var fila = {
-      asesor_id: borrador.asesor_id,
+      asesor_id: borrador.asesor_id || null,
       fecha_dictamen: borrador.fecha_dictamen,
       operacion: borrador.operacion,
       uso: borrador.uso,
@@ -2631,7 +2635,7 @@
     // misma ausencia, pero una cadena vacía se cuela en las búsquedas y en
     // los reportes como si fuera un dato.
     CAMPOS.forEach(function (c) { fila[c[1]] = borrador[c[1]] || null; });
-    fila.inmueble = borrador.inmueble;
+    fila.inmueble = borrador.inmueble || null;
     // La casilla vieja se mantiene al día con los nombres de la tabla
     // nueva. No es la fuente (esa es dictamen_clientes), pero sí lo que
     // leen los reportes de antes, y dejarla congelada haría que un
@@ -2657,14 +2661,16 @@
       borrador.id = id;
     }
 
-    var rc = await window.kwSupabase.from('dictamen_clientes').insert(
-      losClientes.map(function (x, i) {
-        return {
-          dictamen_id: id, orden: i + 1,
-          nombre: x.nombre, estado_civil: x.estado_civil || null,
-        };
-      }));
-    if (rc.error) return await fallo('No se pudieron guardar los clientes: ' + rc.error.message);
+    if (losClientes.length) {
+      var rc = await window.kwSupabase.from('dictamen_clientes').insert(
+        losClientes.map(function (x, i) {
+          return {
+            dictamen_id: id, orden: i + 1,
+            nombre: x.nombre, estado_civil: x.estado_civil || null,
+          };
+        }));
+      if (rc.error) return await fallo('No se pudieron guardar los clientes: ' + rc.error.message);
+    }
 
     var errPuntos = await guardarPuntosDe(id);
     if (errPuntos) return await fallo('No se pudieron guardar las observaciones: ' + errPuntos);
@@ -3524,6 +3530,13 @@
     $(id).addEventListener('change', sincronizarFechaEscritura);
   });
 
+  // Las cifras largas se separan con comas desde que se escriben.
+  ['e-precio', 'e-esc-numero', 'e-notaria'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      this.value = conComasMientrasEscribe(this.value);
+    });
+  });
+
   // El precio y la comisión se acomodan al salirse del campo: lo que se
   // teclea con signos ("$4,500,000.00", "5.5%") queda escrito como se va
   // a guardar, para que nadie tenga que adivinar si el símbolo cuenta.
@@ -3579,7 +3592,7 @@
     // expediente y se llegó a una conclusión. Preguntarlo aquí es lo que
     // hace que el folio y el PDF salgan en el mismo momento, en vez de
     // dejar el expediente en borrador esperando a que alguien se acuerde.
-    var quedo = await preguntarEstado();
+    var quedo = borrador.completo_para_dictaminar ? await preguntarEstado() : null;
     if (quedo) {
       var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
       if (r.error) {
