@@ -1012,7 +1012,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <input type="text" id="e-esc-numero" name="dic-escritura-folio" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+            <input type="text" id="e-esc-numero" name="kw-escritura-numero-no-pago" data-lpignore="true" data-1p-ignore data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="new-password">
           </div>
           <div class="dic-campo">
             <label for="e-esc-dia">Fecha de escrituración</label>
@@ -2231,6 +2231,9 @@
         if (bloque.classList.contains('abierta')) bloque.querySelector('textarea').focus();
       });
       bloque.querySelector('textarea').addEventListener('input', function () {
+        if (CAMPOS_CON_COMAS.indexOf(c[1]) !== -1 && /^[\\d,]*$/.test(this.value)) {
+          this.value = conComasMientrasEscribe(this.value);
+        }
         if (borrador) borrador.correcciones[c[1]] = this.value;
       });
     });
@@ -2266,10 +2269,1364 @@
   function conPesos(v) {
     var n = Number(soloCifra(v));
     if (!soloCifra(v) || isNaN(n)) return '';
-    return '$' + n.toLocaleString('es-MX', {
+    return '
+  function conPorciento(v) {
+    var n = soloCifra(v);
+    return n ? n + ' %' : '';
+  }
+
+  // Lo que se teclea en un campo se guarda ya limpio, según de qué campo
+  // se trate. Está en un solo lugar porque el leer y el reabrir tienen
+  // que estar de acuerdo: si uno limpia y el otro no, el campo se ve
+  // distinto cada vez que se abre el expediente.
+  function limpiar(col, v) {
+    if (SUPERFICIES.indexOf(col) !== -1) return soloNumero(v);
+    if (NUMERICOS.indexOf(col) !== -1) return soloCifra(v);
+    return v;
+  }
+
+  // Un precio de siete dígitos sin separadores se cuenta con el dedo.
+  // Las comas se ponen para verlo y se quitan al guardar, así que en la
+  // base sigue entrando el número pelón.
+  function conComas(v) {
+    var n = soloCifra(v);
+    if (!n) return '';
+    var p = n.split('.');
+    return Number(p[0]).toLocaleString('es-MX') + (p.length > 1 ? '.' + p[1] : '');
+  }
+
+  function paraCampo(col, v) {
+    return col === 'precio_listado' ? conComas(v) : limpiar(col, v);
+  }
+
+  var ESTADOS_CIVILES = [
+    'Soltero(a)',
+    'Casado(a) por sociedad conyugal',
+    'Casado(a) por separación de bienes',
+    'Divorciado(a)',
+  ];
+
+  function soloNumero(v) {
+    return String(v == null ? '' : v).replace(/\s*m\s*(2|²)\s*$/i, '').trim();
+  }
+
+  function conUnidad(v) {
+    var n = soloNumero(v);
+    return n ? n + ' m²' : '';
+  }
+
+  // ── Los clientes del expediente ─────────────────────────────
+
+  // Las opciones del estado civil de un cliente. Si el expediente venía
+  // con algo escrito a mano (de cuando era campo libre y estaba en el
+  // dictamen, no en cada persona) se le agrega su propia opción: dejarlo
+  // caer en "Sin especificar" le borraría un dato sin avisarle a nadie.
+  function opcionesEstadoCivil(valor) {
+    var lista = ESTADOS_CIVILES.slice();
+    if (valor && lista.indexOf(valor) === -1) lista.push(valor);
+    return '<option value="">Sin especificar</option>' +
+      lista.map(function (e) {
+        return '<option value="' + escapar(e) + '"' +
+          (e === valor ? ' selected' : '') + '>' + escapar(e) + '</option>';
+      }).join('');
+  }
+
+  // Cuántas casillas hay que enseñar. El desplegable llega hasta 5 y de
+  // ahí en adelante manda el número que se escriba, topado para que un
+  // teclazo no pinte trescientas tarjetas.
+  function cuantosClientes() {
+    var sel = $('e-clientes-cuantos').value;
+    if (sel !== '__mas__') return Number(sel) || 1;
+    var n = Number($('e-clientes-otros').value) || 6;
+    return Math.max(6, Math.min(30, n));
+  }
+
+  // Lo escrito se guarda en el borrador antes de volver a pintar, para
+  // que cambiar el número de clientes no borre lo que ya se había
+  // capturado en las casillas de arriba.
+  function leerClientes() {
+    $('e-clientes').querySelectorAll('[data-cliente]').forEach(function (caja) {
+      var i = Number(caja.dataset.cliente);
+      borrador.clientes[i] = {
+        nombre: caja.querySelector('[data-cliente-nombre]').value.trim(),
+        estado_civil: caja.querySelector('[data-cliente-estado]').value || null,
+      };
+    });
+  }
+
+  function pintarClientes() {
+    var n = cuantosClientes();
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      var c = borrador.clientes[i] || { nombre: '', estado_civil: '' };
+      html += '<div class="dic-cliente" data-cliente="' + i + '">' +
+        '<div class="dic-cliente-num">Cliente ' + (i + 1) + '</div>' +
+        '<div class="dic-dos">' +
+          '<div class="dic-campo">' +
+            '<label>Nombre</label>' +
+            '<input type="text" class="kw-input" data-cliente-nombre ' +
+              'autocomplete="off" ' +
+              'value="' + escapar(c.nombre || '') + '">' +
+          '</div>' +
+          '<div class="dic-campo">' +
+            '<label>Estado civil</label>' +
+            '<select data-cliente-estado>' + opcionesEstadoCivil(c.estado_civil) + '</select>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    $('e-clientes').innerHTML = html;
+    // Los desplegables recién pintados todavía son los grises del
+    // navegador hasta que kw-ui los arma.
+    if (window.kwUI) window.kwUI.selects($('e-clientes'));
+
+    // Lo que se teclee se va guardando solo: así cambiar el número de
+    // clientes, o guardar, no depende de que el campo haya perdido el foco.
+    $('e-clientes').querySelectorAll('[data-cliente-nombre]').forEach(function (inp) {
+      inp.addEventListener('input', leerClientes);
+    });
+    $('e-clientes').querySelectorAll('[data-cliente-estado]').forEach(function (sel) {
+      sel.addEventListener('change', leerClientes);
+    });
+  }
+
+  // El campo del número exacto solo estorba mientras no se elija "Más
+  // de 5", así que vive escondido hasta entonces.
+  function acomodarCuantos() {
+    var mas = $('e-clientes-cuantos').value === '__mas__';
+    $('e-clientes-otros-caja').style.display = mas ? '' : 'none';
+    if (mas && !$('e-clientes-otros').value) $('e-clientes-otros').value = '6';
+  }
+
+  // De dónde salen los clientes de un expediente que se abre. Los de la
+  // tabla nueva mandan; si no tiene (porque se capturó antes de que los
+  // clientes fueran varios), se arma uno solo con lo que traía el
+  // dictamen en sus casillas viejas, para no llegar con el formulario en
+  // blanco a un expediente que sí tenía cliente.
+  function clientesDe(d) {
+    if (!d) return [{ nombre: '', estado_civil: '' }];
+
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); })
+      .map(function (c) { return { nombre: c.nombre, estado_civil: c.estado_civil || '' }; });
+    if (suyos.length) return suyos;
+
+    if (d.cliente || d.estado_civil) {
+      return [{ nombre: d.cliente || '', estado_civil: d.estado_civil || '' }];
+    }
+    return [{ nombre: '', estado_civil: '' }];
+  }
+
+  // La escritura del condominio solo se pide si se dijo que sí.
+  function acomodarCondominio() {
+    $('e-esc-condominio-caja').style.display =
+      $('e-condominio').value === 'si' ? '' : 'none';
+  }
+
+  function abrirEditor(id) {
+    var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
+
+    borrador = {
+      id: d ? d.id : null,
+      asesor_id: d ? d.asesor_id : '',
+      operacion: d ? d.operacion : 'venta',
+      uso: d ? d.uso : 'residencial',
+      tipo_inmueble_id: (d && d.tipo_inmueble_id) || '',
+      fecha_dictamen: (d && d.fecha_dictamen) || hoy(),
+      tipo_contrato: (d && d.tipo_contrato) || '',
+      // En la base es booleano y aquí desplegable, así que viaja como
+      // texto: "" es que todavía no se contesta, que no es lo mismo que no.
+      condominio: d && d.condominio !== null && d.condominio !== undefined
+        ? (d.condominio ? 'si' : 'no') : '',
+      clientes: clientesDe(d),
+      observaciones_base: d ? separarCorrecciones(d.observaciones).texto : '',
+      correcciones: d ? separarCorrecciones(d.observaciones).correcciones : {},
+      // El id viaja con cada observación: es lo que deja saber después
+      // cuáles ya existían y cuáles se acaban de escribir, para no
+      // borrarlas todas y volverlas a crear en cada guardada.
+      puntos: d
+        ? puntos.filter(function (p) { return p.dictamen_id === d.id; })
+          .map(function (p) {
+            return { id: p.id, texto: p.texto, estado: p.estado, nota: p.nota };
+          })
+        : [],
+    };
+    CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
+
+    $('editor-titulo').textContent = d ? 'Editar dictamen' : 'Nuevo dictamen';
+    $('e-fecha').value = borrador.fecha_dictamen;
+    $('e-operacion').value = borrador.operacion;
+    $('e-uso').value = borrador.uso;
+    $('e-tipo').value = borrador.tipo_inmueble_id;
+    $('e-tipo-contrato').value = borrador.tipo_contrato;
+    $('e-condominio').value = borrador.condominio;
+    $('e-tipo-nuevo').style.display = 'none';
+    $('e-tipo-nuevo').value = '';
+    // El desplegable del sitio pinta su rótulo escuchando "change", y
+    // poner el valor desde el código no lo dispara.
+    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio'].forEach(function (x) {
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    CAMPOS.forEach(function (c) { $(c[0]).value = paraCampo(c[1], borrador[c[1]]); });
+    ponerFechaEscritura(borrador.escritura_fecha);
+    pintarCorrecciones();
+    // kw-ui.js deja los campos de fecha como texto mientras están vacíos,
+    // para poder enseñarles un rótulo de ejemplo. Ponerles el valor desde
+    // el código no los regresa a fecha, y el expediente reabierto acababa
+    // enseñando "2000-08-01" pelón en vez del formato de siempre.
+    if ($('e-fecha').value) $('e-fecha').type = 'date';
+    elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
+
+    // Cuántos clientes son lo dice lo que ya trae capturado; uno nuevo
+    // arranca en uno, que es el caso de todos los días.
+    var cuantos = Math.max(1, borrador.clientes.length);
+    $('e-clientes-cuantos').value = cuantos > 5 ? '__mas__' : String(cuantos);
+    $('e-clientes-otros').value = cuantos > 5 ? String(cuantos) : '';
+    $('e-clientes-cuantos').dispatchEvent(new Event('change', { bubbles: true }));
+    acomodarCuantos();
+    pintarClientes();
+    acomodarCondominio();
+
+    aviso('editor-msg', '', '');
+    $('e-listo').classList.remove('visible');
+    pintarPuntosEditor();
+
+    $('vista-lista').style.display = 'none';
+    $('vista-editor').style.display = '';
+    window.scrollTo(0, 0);
+  }
+
+  function cerrarEditor() {
+    borrador = null;
+    $('vista-editor').style.display = 'none';
+    $('vista-lista').style.display = '';
+  }
+
+  function pintarPuntosEditor() {
+    // Sin observaciones no se pinta nada: el renglón para agregarlas va
+    // aquí abajo y ya dice solo lo que hay que hacer.
+    if (!borrador.puntos.length) {
+      $('e-puntos').innerHTML = '';
+      return;
+    }
+    $('e-puntos').innerHTML = borrador.puntos.map(function (p, i) {
+      return '<div class="dic-punto-edit">' +
+        '<span class="dic-punto-edit-num">' + (i + 1) + '</span>' +
+        '<textarea class="dic-punto-edit-texto" data-editar="' + i + '" ' +
+          'aria-label="Editar observación">' + escapar(p.texto) + '</textarea>' +
+        '<button type="button" class="dic-quitar" data-quitar="' + i + '" aria-label="Quitar">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>';
+    }).join('');
+
+    $('e-puntos').querySelectorAll('[data-editar]').forEach(function (campo) {
+      campo.addEventListener('input', function () {
+        borrador.puntos[Number(campo.dataset.editar)].texto = campo.value;
+      });
+    });
+    $('e-puntos').querySelectorAll('[data-quitar]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        borrador.puntos.splice(Number(b.dataset.quitar), 1);
+        pintarPuntosEditor();
+      });
+    });
+  }
+
+  function leerEditor() {
+    sincronizarFechaEscritura();
+    borrador.fecha_dictamen = $('e-fecha').value || hoy();
+    borrador.operacion = $('e-operacion').value;
+    borrador.uso = $('e-uso').value;
+    borrador.tipo_contrato = $('e-tipo-contrato').value;
+    borrador.condominio = $('e-condominio').value;
+    leerClientes();
+    CAMPOS.forEach(function (c) { borrador[c[1]] = limpiar(c[1], $(c[0]).value.trim()); });
+  }
+
+  // Si se escribió un tipo nuevo, se guarda en el catálogo antes que nada
+  // y se usa el que quedó. Así la próxima vez ya sale en la lista, igual
+  // que las etiquetas de Firmas.
+  async function resolverTipo() {
+    var elegido = $('e-tipo').value;
+    if (elegido !== '__nuevo__') return elegido || null;
+
+    var nombre = $('e-tipo-nuevo').value.trim();
+    if (!nombre) return null;
+
+    var ya = tipos.find(function (t) {
+      return t.nombre.toLowerCase() === nombre.toLowerCase();
+    });
+    if (ya) return ya.id;
+
+    var r = await window.kwSupabase.from('dictamen_tipos_inmueble')
+      .insert({ nombre: nombre }).select('id, nombre').single();
+    if (r.error) { await fallo('No se pudo guardar el tipo de inmueble: ' + r.error.message); return null; }
+    tipos.push(r.data);
+    await cargarCatalogos();
+    return r.data.id;
+  }
+
+  // Guarda el dictamen y sus observaciones. Las observaciones se borran y
+  // se vuelven a escribir en vez de andar comparando cuál cambió: el
+  // editor es de quien dictamina y nadie más las está tocando mientras.
+  // Por qué no se guardó tiene que llegarle a quien le picó a Guardar. El
+  // mensaje de la tarjeta vive hasta arriba del formulario y el botón está
+  // hasta abajo: con la página abajo, ese renglón queda fuera de la
+  // pantalla y guardar se siente como que no hizo nada. Por eso el error
+  // va también en el aviso de en medio, y el campo que falta se trae a la
+  // vista para poder corregirlo de una vez.
+  async function fallo(texto, campo) {
+    aviso('editor-msg', texto, 'error');
+    await window.kwUI.alert(texto);
+    var el = campo && $(campo);
+    if (el) {
+      el.scrollIntoView({ block: 'center' });
+      try { el.focus(); } catch (e) { /* un desplegable armado no siempre lo acepta */ }
+    }
+    return null;
+  }
+
+  async function guardar() {
+    leerEditor();
+    // Se puede guardar aunque el expediente esté incompleto. Mientras
+    // falten asesor, inmueble o cliente permanece como borrador y no se
+    // ofrece dictaminarlo todavía.
+    if ($('e-esc-anio').value || $('e-esc-mes').value || $('e-esc-dia').value) {
+      if (!$('e-esc-fecha').value) return await fallo('Completa día, mes y año de la escrituración.', 'e-esc-dia');
+      var fesc = new Date(Number($('e-esc-anio').value), Number($('e-esc-mes').value) - 1, Number($('e-esc-dia').value));
+      if (fesc.getFullYear() !== Number($('e-esc-anio').value) ||
+          fesc.getMonth() + 1 !== Number($('e-esc-mes').value) ||
+          fesc.getDate() !== Number($('e-esc-dia').value)) {
+        return await fallo('La fecha de escrituración no es válida.', 'e-esc-dia');
+      }
+    }
+
+    // De los clientes se guardan nada más los que traen nombre: las
+    // casillas de más que hayan quedado abiertas por haber subido el
+    // número y luego bajarlo no son clientes, son casillas vacías.
+    var losClientes = borrador.clientes
+      .slice(0, cuantosClientes())
+      .filter(function (c) { return c && c.nombre; });
+    borrador.completo_para_dictaminar = !!(borrador.asesor_id &&
+      borrador.inmueble && borrador.inmueble.length >= 3 && losClientes.length);
+
+    var fila = {
+      asesor_id: borrador.asesor_id || null,
+      fecha_dictamen: borrador.fecha_dictamen,
+      operacion: borrador.operacion,
+      uso: borrador.uso,
+      tipo_contrato: borrador.tipo_contrato || null,
+      condominio: borrador.condominio === '' ? null : borrador.condominio === 'si',
+      tipo_inmueble_id: await resolverTipo(),
+    };
+    // Los vacíos van como nulo y no como cadena vacía: en la base son la
+    // misma ausencia, pero una cadena vacía se cuela en las búsquedas y en
+    // los reportes como si fuera un dato.
+    CAMPOS.forEach(function (c) { fila[c[1]] = borrador[c[1]] || null; });
+    fila.inmueble = borrador.inmueble || null;
+    // La casilla vieja se mantiene al día con los nombres de la tabla
+    // nueva. No es la fuente (esa es dictamen_clientes), pero sí lo que
+    // leen los reportes de antes, y dejarla congelada haría que un
+    // expediente editado hoy siguiera diciendo el cliente de ayer.
+    fila.cliente = losClientes.map(function (c) { return c.nombre; }).join(', ');
+    fila.observaciones = juntarCorrecciones(borrador.observaciones_base, borrador.correcciones);
+    // Si el condominio quedó en no, la escritura que se hubiera escrito
+    // antes deja de tener a qué referirse.
+    if (borrador.condominio !== 'si') fila.escritura_condominio = null;
+
+    var id = borrador.id;
+    if (id) {
+      var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
+      if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
+      // Los clientes sí se rehacen enteros: no llevan historial ni fechas
+      // propias, así que volver a escribirlos no pierde nada.
+      await window.kwSupabase.from('dictamen_clientes').delete().eq('dictamen_id', id);
+    } else {
+      fila.dictaminado_por = yo.id;
+      var c = await window.kwSupabase.from('dictamenes').insert(fila).select('id').single();
+      if (c.error) return await fallo('No se pudo guardar: ' + c.error.message);
+      id = c.data.id;
+      borrador.id = id;
+    }
+
+    if (losClientes.length) {
+      var rc = await window.kwSupabase.from('dictamen_clientes').insert(
+        losClientes.map(function (x, i) {
+          return {
+            dictamen_id: id, orden: i + 1,
+            nombre: x.nombre, estado_civil: x.estado_civil || null,
+          };
+        }));
+      if (rc.error) return await fallo('No se pudieron guardar los clientes: ' + rc.error.message);
+    }
+
+    var errPuntos = await guardarPuntosDe(id);
+    if (errPuntos) return await fallo('No se pudieron guardar las observaciones: ' + errPuntos);
+
+    return id;
+  }
+
+  // Las observaciones se comparan una por una en vez de borrarlas todas y
+  // volver a escribirlas. Borrar y rehacer era más corto, pero le cambiaba
+  // el id a cada observación en cada guardada: se perdía la fecha en que
+  // se marcó corregida, y el historial quedaba lleno de "se quitó" y "se
+  // pidió" cada vez que alguien corregía una coma del expediente.
+  async function guardarPuntosDe(id) {
+    var antes = puntos.filter(function (p) { return p.dictamen_id === id; });
+    var siguen = borrador.puntos
+      .filter(function (p) { return p.id; })
+      .map(function (p) { return p.id; });
+
+    var sobran = antes.filter(function (p) { return siguen.indexOf(p.id) === -1; });
+    if (sobran.length) {
+      var rb = await window.kwSupabase.from('dictamen_puntos').delete()
+        .in('id', sobran.map(function (p) { return p.id; }));
+      if (rb.error) return rb.error.message;
+    }
+
+    var nuevos = [];
+    for (var i = 0; i < borrador.puntos.length; i++) {
+      var p = borrador.puntos[i];
+      if (!p.id) {
+        nuevos.push({
+          dictamen_id: id, texto: p.texto, orden: i + 1,
+          estado: p.estado || 'pendiente', nota: p.nota || null,
+        });
+        continue;
+      }
+      // A las que ya estaban solo se les toca lo que de verdad cambió: un
+      // update que deja todo igual también dispara el historial.
+      var viejo = antes.find(function (x) { return x.id === p.id; });
+      if (viejo && viejo.texto === p.texto && viejo.orden === i + 1) continue;
+      var ru = await window.kwSupabase.from('dictamen_puntos')
+        .update({ texto: p.texto, orden: i + 1 }).eq('id', p.id);
+      if (ru.error) return ru.error.message;
+    }
+
+    if (nuevos.length) {
+      var rn = await window.kwSupabase.from('dictamen_puntos').insert(nuevos);
+      if (rn.error) return rn.error.message;
+    }
+    return null;
+  }
+
+  // ── Bajar la lista a Excel ──────────────────────────────────
+
+  // Armar el archivo (que es un zip con unos XML adentro) vive en
+  // kw-xlsx.js, que es de todas las pantallas. Aquí queda nada más lo
+  // de esta: qué columnas lleva y de dónde sale cada valor.
+
+  // Cada columna dice cómo se llama, de qué es, qué tan ancha va y de
+  // dónde sale su valor. El tipo es lo que hace que en Excel una fecha se
+  // pueda ordenar como fecha y un precio se pueda sumar.
+  var COLUMNAS = [
+    ['Folio', 'texto', 13, function (d) { return d.folio || 'Sin folio'; }],
+    ['Fecha del dictamen', 'fecha', 15, function (d) { return d.fecha_dictamen; }],
+    ['Asesor', 'texto', 30, function (d) { return d.asesor_nombre; }],
+    ['Cliente', 'texto', 30, function (d) { return d.clientes_nombres || d.cliente; }],
+    ['Inmueble', 'texto', 38, function (d) { return d.inmueble; }],
+    ['Tipo de contrato', 'texto', 15, function (d) { return CONTRATOS[d.tipo_contrato]; }],
+    ['Operación', 'texto', 11, function (d) { return OPERACIONES[d.operacion]; }],
+    ['Uso', 'texto', 13, function (d) { return USOS[d.uso]; }],
+    ['Tipo de inmueble', 'texto', 17, function (d) { return d.tipo_inmueble; }],
+    ['Precio del listado', 'moneda', 17, function (d) { return d.precio_listado; }],
+    ['Comisión %', 'decimal', 11, function (d) { return d.comision_porcentaje; }],
+    ['Número de escritura', 'texto', 18, function (d) { return d.escritura_numero; }],
+    ['Fecha de escrituración', 'fecha', 18, function (d) { return d.escritura_fecha; }],
+    ['Notario', 'texto', 26, function (d) { return d.notario_nombre; }],
+    ['Número de notaría', 'texto', 15, function (d) { return d.notaria_numero; }],
+    ['Escrituras (sin desglosar)', 'texto', 34, function (d) {
+      return tieneEscrituraDesglosada(d) ? '' : d.escritura_propiedad; }],
+    ['Condominio', 'texto', 11, function (d) { return siNo(d.condominio); }],
+    ['Escritura del condominio', 'texto', 30, function (d) { return d.escritura_condominio; }],
+    ['CFDI', 'texto', 10, function (d) { return d.cfdi; }],
+    ['Folio real', 'texto', 13, function (d) { return d.folio_real; }],
+    ['Cuenta predial', 'texto', 17, function (d) { return d.cuenta_predial; }],
+    ['Superficie escritura m2', 'decimal', 18, function (d) { return soloNumero(d.superficie_escritura); }],
+    ['Superficie terreno m2', 'decimal', 18, function (d) { return soloNumero(d.superficie_terreno); }],
+    ['Superficie construcción m2', 'decimal', 20, function (d) { return soloNumero(d.superficie_construccion); }],
+    ['Estado', 'texto', 24, function (d) {
+      return d.estado === 'borrador' ? 'Sin dictaminar' : ESTADOS[d.estado]; }],
+    ['Listado', 'texto', 24, function (d) { return LISTADOS[d.estatus_listado || 'pendiente']; }],
+    ['Observaciones pendientes', 'entero', 12, function (d) { return d.puntos_pendientes || 0; }],
+    ['Observaciones totales', 'entero', 12, function (d) { return d.puntos_total || 0; }],
+    ['Observaciones', 'parrafo', 50, function (d) {
+      return puntos.filter(function (p) { return p.dictamen_id === d.id; })
+        .map(function (p, i) {
+          return (i + 1) + '. ' + p.texto +
+            ' (' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')';
+        }).join('\n');
+    }],
+    ['Dictaminó', 'texto', 26, function (d) {
+      return ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim(); }],
+  ];
+
+  async function exportar() {
+    var filas = visibles();
+    if (!filas.length) {
+      return await window.kwUI.alert('No hay nada que exportar: con los filtros '
+        + 'puestos no queda ningún expediente en la lista.');
+    }
+
+    window.kwXlsx.descargar({
+      columnas: COLUMNAS,
+      filas: filas,
+      hoja: verArchivo ? 'Archivo' : 'Dictámenes',
+      archivo: (verArchivo ? 'archivo-expedientes-' : 'dictamenes-') + hoy() + '.xlsx',
+    });
+  }
+
+  // ── La hoja, armada como PDF ────────────────────────────────
+
+  // El PDF se arma aquí y se baja solo. Antes se pintaba la hoja en HTML
+  // y se llamaba a window.print(), que abre el cuadro de impresión: había
+  // que elegir "Guardar como PDF" y el archivo salía con el nombre que se
+  // le ocurriera al navegador, con encabezados y números de página
+  // encima. Escribiéndolo a mano el archivo sale ya con su nombre, con el
+  // mismo acomodo siempre y sin nada añadido.
+  //
+  // Un PDF es texto plano con unos objetos numerados y, al final, una
+  // tabla que dice en qué byte empieza cada uno. Se usan las tipografías
+  // que todo lector trae de fábrica (Helvetica), así que no hay que
+  // cargar ninguna.
+
+  var HOJA_ROJO = [0.808, 0.004, 0.122];   // #CE011F
+  var HOJA_GRIS = [0.29, 0.29, 0.29];
+  var HOJA_NEGRO = [0, 0, 0];
+
+  // ── Medir el texto ──
+
+  // Lo que mide cada letra en Helvetica, en milésimas del tamaño de
+  // letra. Hace falta para saber dónde cortar un renglón: sin esto, un
+  // inmueble largo se saldría de su celda.
+  var ANCHOS_NORMAL = (
+    '278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278 ' +
+    '556 556 556 556 556 556 556 556 556 556 278 278 584 584 584 556 ' +
+    '1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 ' +
+    '667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 ' +
+    '333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 ' +
+    '556 556 333 500 278 556 500 722 500 500 500 334 260 334 584'
+  ).split(' ').map(Number);
+
+  var ANCHOS_NEGRITA = (
+    '278 333 474 556 556 889 722 238 333 333 389 584 278 333 278 278 ' +
+    '556 556 556 556 556 556 556 556 556 556 333 333 584 584 584 611 ' +
+    '975 722 722 722 722 667 611 778 722 278 556 722 611 833 722 778 ' +
+    '667 778 722 667 611 722 667 944 667 667 611 333 278 333 584 556 ' +
+    '333 556 611 556 611 556 333 611 611 278 278 556 278 889 611 611 ' +
+    '611 611 389 556 333 611 556 778 556 556 500 389 280 389 584'
+  ).split(' ').map(Number);
+
+  // Las letras con acento miden lo mismo que la letra de abajo, así que
+  // en vez de una tabla aparte se le pregunta a esa. Los signos que no
+  // son letras van con su propio ancho.
+  var SIN_ACENTO = {
+    0xC0: 'A', 0xC1: 'A', 0xC2: 'A', 0xC3: 'A', 0xC4: 'A', 0xC5: 'A', 0xC6: 'AE',
+    0xC7: 'C', 0xC8: 'E', 0xC9: 'E', 0xCA: 'E', 0xCB: 'E',
+    0xCC: 'I', 0xCD: 'I', 0xCE: 'I', 0xCF: 'I', 0xD1: 'N',
+    0xD2: 'O', 0xD3: 'O', 0xD4: 'O', 0xD5: 'O', 0xD6: 'O', 0xD8: 'O',
+    0xD9: 'U', 0xDA: 'U', 0xDB: 'U', 0xDC: 'U', 0xDD: 'Y',
+    0xE0: 'a', 0xE1: 'a', 0xE2: 'a', 0xE3: 'a', 0xE4: 'a', 0xE5: 'a', 0xE6: 'ae',
+    0xE7: 'c', 0xE8: 'e', 0xE9: 'e', 0xEA: 'e', 0xEB: 'e',
+    0xEC: 'i', 0xED: 'i', 0xEE: 'i', 0xEF: 'i', 0xF1: 'n',
+    0xF2: 'o', 0xF3: 'o', 0xF4: 'o', 0xF5: 'o', 0xF6: 'o', 0xF8: 'o',
+    0xF9: 'u', 0xFA: 'u', 0xFB: 'u', 0xFC: 'u', 0xFD: 'y', 0xFF: 'y',
+  };
+  var OTROS_ANCHOS = {
+    0xA1: 333, 0xBF: 611, 0xB0: 400, 0xB2: 333, 0xB3: 333, 0xB9: 333,
+    0xB7: 278, 0xAB: 556, 0xBB: 556, 0xA9: 737, 0xAE: 737, 0xBA: 365, 0xAA: 370,
+  };
+
+  // Del texto de la pantalla a los bytes que entiende el PDF. Se usa
+  // WinAnsi, que es la codificación que traen las tipografías de fábrica:
+  // los acentos y la ñ caben en un byte. Lo que no cabe (una comilla
+  // curva pegada de Word, un emoji) se cambia por su versión derecha o
+  // por un signo de pregunta, en vez de romper el archivo.
+  var CAMBIOS_WINANSI = {
+    0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94,
+    0x2013: 0x96, 0x2014: 0x97, 0x2022: 0x95, 0x2026: 0x85, 0x20AC: 0x80,
+  };
+
+  function aWinAnsi(texto) {
+    var s = String(texto == null ? '' : texto);
+    var r = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (CAMBIOS_WINANSI[c] !== undefined) c = CAMBIOS_WINANSI[c];
+      r += String.fromCharCode(c > 0xFF ? 0x3F : c);
+    }
+    return r;
+  }
+
+  function anchoLetra(codigo, negrita) {
+    var tabla = negrita ? ANCHOS_NEGRITA : ANCHOS_NORMAL;
+    if (codigo >= 32 && codigo <= 126) return tabla[codigo - 32];
+    if (OTROS_ANCHOS[codigo] !== undefined) return OTROS_ANCHOS[codigo];
+    var base = SIN_ACENTO[codigo];
+    if (base) {
+      var n = 0;
+      for (var i = 0; i < base.length; i++) n += tabla[base.charCodeAt(i) - 32];
+      return n;
+    }
+    return tabla[0];
+  }
+
+  function anchoTexto(texto, tam, negrita) {
+    var s = aWinAnsi(texto);
+    var n = 0;
+    for (var i = 0; i < s.length; i++) n += anchoLetra(s.charCodeAt(i), negrita);
+    return n * tam / 1000;
+  }
+
+  // Un párrafo son pedazos de texto seguidos, cada uno con su color: el
+  // nombre de un cliente en negro y su estado civil en gris, por decir.
+  // Se acomodan palabra por palabra para que un párrafo que no cabe en un
+  // renglón conserve sus colores al partirse; juntando el texto y
+  // cortándolo después, la parte gris del final salía negra en cuanto la
+  // observación pasaba de un renglón.
+  function acomodarParrafo(partes, ancho, tam) {
+    var lineas = [];
+
+    // Un salto de línea escrito adentro de un pedazo corta el renglón
+    // donde está, sin esperar a que se llene.
+    var bloques = [[]];
+    partes.forEach(function (p) {
+      String(p.t == null ? '' : p.t).split('\n').forEach(function (trozo, i) {
+        if (i > 0) bloques.push([]);
+        bloques[bloques.length - 1].push({ t: trozo, color: p.color });
+      });
+    });
+
+    bloques.forEach(function (bloque) {
+      var palabras = [];
+      bloque.forEach(function (p) {
+        p.t.split(/\s+/).forEach(function (w) {
+          if (w !== '') palabras.push({ t: w, color: p.color });
+        });
+      });
+      if (!palabras.length) { lineas.push([{ t: '', color: HOJA_NEGRO }]); return; }
+
+      var actual = [], mide = 0;
+      function cerrar() { if (actual.length) { lineas.push(actual); actual = []; mide = 0; } }
+      function pegar(txt, color) {
+        var ult = actual[actual.length - 1];
+        if (ult && ult.color === color) ult.t += txt;
+        else actual.push({ t: txt, color: color });
+        mide += anchoTexto(txt, tam, false);
+      }
+
+      palabras.forEach(function (w) {
+        var pedazo = actual.length ? ' ' + w.t : w.t;
+        if (actual.length && mide + anchoTexto(pedazo, tam, false) > ancho) {
+          cerrar();
+          pedazo = w.t;
+        }
+        // Una palabra sola más ancha que la celda (una dirección sin
+        // espacios, una cuenta predial larga) se parte por letras: es
+        // preferible a dejarla salirse del cuadro.
+        while (anchoTexto(pedazo, tam, false) > ancho && pedazo.length > 1) {
+          var corte = 1;
+          while (corte < pedazo.length &&
+            anchoTexto(pedazo.slice(0, corte + 1), tam, false) <= ancho) corte++;
+          pegar(pedazo.slice(0, corte), w.color);
+          cerrar();
+          pedazo = pedazo.slice(corte);
+        }
+        pegar(pedazo, w.color);
+      });
+      cerrar();
+    });
+
+    return lineas.length ? lineas : [[{ t: '', color: HOJA_NEGRO }]];
+  }
+
+  // Parte un texto de un solo color en los renglones que caben en un
+  // ancho. Es la versión corta de lo de arriba, para el rótulo.
+  function cortar(texto, ancho, tam, negrita) {
+    var salida = [];
+    String(texto == null ? '' : texto).split('\n').forEach(function (parrafo) {
+      var palabras = parrafo.split(/\s+/).filter(function (p) { return p !== ''; });
+      if (!palabras.length) { salida.push(''); return; }
+      var linea = '';
+      palabras.forEach(function (p) {
+        var prueba = linea ? linea + ' ' + p : p;
+        if (anchoTexto(prueba, tam, negrita) <= ancho) { linea = prueba; return; }
+        if (linea) { salida.push(linea); linea = ''; }
+        while (anchoTexto(p, tam, negrita) > ancho && p.length > 1) {
+          var corte = 1;
+          while (corte < p.length && anchoTexto(p.slice(0, corte + 1), tam, negrita) <= ancho) corte++;
+          salida.push(p.slice(0, corte));
+          p = p.slice(corte);
+        }
+        linea = p;
+      });
+      if (linea) salida.push(linea);
+    });
+    return salida.length ? salida : [''];
+  }
+
+  // ── Escribir el archivo ──
+
+  function pdfTexto(s) {
+    return aWinAnsi(s).replace(/([\\()])/g, '\\$1');
+  }
+
+  function pdfNum(n) {
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  // El logo se mete como JPEG porque el PDF sabe leer ese formato tal
+  // cual, sin descomprimirlo nadie. El PNG habría que traducirlo a pixeles
+  // y volverlo a comprimir; además trae transparencia, que en papel no
+  // quiere decir nada, así que de todos modos habría que aplanarlo contra
+  // el blanco. Eso es justo lo que hace el lienzo aquí abajo.
+  function cargarLogo() {
+    return new Promise(function (listo) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var alto = 150;
+          var ancho = Math.round(img.naturalWidth * alto / img.naturalHeight);
+          var lienzo = document.createElement('canvas');
+          lienzo.width = ancho; lienzo.height = alto;
+          var cx = lienzo.getContext('2d');
+          cx.fillStyle = '#fff';
+          cx.fillRect(0, 0, ancho, alto);
+          cx.drawImage(img, 0, 0, ancho, alto);
+          var b64 = lienzo.toDataURL('image/jpeg', 0.92).split(',')[1];
+          listo({ ancho: ancho, alto: alto, datos: atob(b64) });
+        } catch (e) { listo(null); }
+      };
+      // Sin logo la hoja sale igual, nada más sin el dibujo: vale más un
+      // dictamen sin membrete que un botón que no hace nada.
+      img.onerror = function () { listo(null); };
+      img.src = '/kwpremierweb/assets/img/logo-kw-premier.png';
+    });
+  }
+
+  var PAG_ANCHO = 612, PAG_ALTO = 792;
+
+  function armarPDF(paginas, logo) {
+    var objetos = [];
+    function obj(cuerpo) { objetos.push(cuerpo); return objetos.length; }
+
+    var fuenteNormal = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ' +
+      '/Encoding /WinAnsiEncoding >>');
+    var fuenteNegrita = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold ' +
+      '/Encoding /WinAnsiEncoding >>');
+
+    var imagen = 0;
+    if (logo) {
+      imagen = obj('<< /Type /XObject /Subtype /Image /Width ' + logo.ancho +
+        ' /Height ' + logo.alto + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 ' +
+        '/Filter /DCTDecode /Length ' + logo.datos.length + ' >>\nstream\n' +
+        logo.datos + '\nendstream');
+    }
+
+    var recursos = '<< /Font << /F1 ' + fuenteNormal + ' 0 R /F2 ' + fuenteNegrita + ' 0 R >>' +
+      (imagen ? ' /XObject << /Im0 ' + imagen + ' 0 R >>' : '') + ' >>';
+
+    // El objeto de las páginas se aparta antes de llenarlo, porque cada
+    // página tiene que decir cuál es su padre y el padre cuáles son sus
+    // hijas: se necesitan los dos números de una vez.
+    var padre = obj('');
+    var hijas = paginas.map(function (contenido) {
+      var flujo = obj('<< /Length ' + contenido.length + ' >>\nstream\n' + contenido + '\nendstream');
+      return obj('<< /Type /Page /Parent ' + padre + ' 0 R /MediaBox [0 0 ' +
+        PAG_ANCHO + ' ' + PAG_ALTO + '] /Resources ' + recursos +
+        ' /Contents ' + flujo + ' 0 R >>');
+    });
+    objetos[padre - 1] = '<< /Type /Pages /Count ' + hijas.length + ' /Kids [' +
+      hijas.map(function (n) { return n + ' 0 R'; }).join(' ') + '] >>';
+
+    var raiz = obj('<< /Type /Catalog /Pages ' + padre + ' 0 R >>');
+
+    var salida = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    var donde = [];
+    objetos.forEach(function (cuerpo, i) {
+      donde.push(salida.length);
+      salida += (i + 1) + ' 0 obj\n' + cuerpo + '\nendobj\n';
+    });
+
+    // La tabla del final: en qué byte empieza cada objeto. Es lo que lee
+    // el programa que abre el archivo para llegar directo a lo que ocupa.
+    var inicioTabla = salida.length;
+    salida += 'xref\n0 ' + (objetos.length + 1) + '\n0000000000 65535 f \n';
+    donde.forEach(function (n) {
+      salida += ('0000000000' + n).slice(-10) + ' 00000 n \n';
+    });
+    salida += 'trailer\n<< /Size ' + (objetos.length + 1) + ' /Root ' + raiz + ' 0 R >>\n' +
+      'startxref\n' + inicioTabla + '\n%%EOF';
+
+    var bytes = new Uint8Array(salida.length);
+    for (var i = 0; i < salida.length; i++) bytes[i] = salida.charCodeAt(i) & 0xFF;
+    return new Blob([bytes], { type: 'application/pdf' });
+  }
+
+  // ── Dibujar la hoja ──
+
+  var MARGEN = 54;
+  var COL_ROTULO = 132;
+  var TAM_ROTULO = 7.5, TAM_DATO = 9.5;
+  var ALTO_LINEA = 12, RELLENO = 5;
+
+  // Un renglón de la hoja: el rótulo a la izquierda y el dato a la
+  // derecha. El dato puede venir en varios pedazos, cada uno con su color
+  // (el estado civil de un cliente va en gris junto a su nombre), y en
+  // varios renglones si es largo.
+  function hojaFila(rotulo, pedazos, altoMinimo) {
+    return { rotulo: rotulo, pedazos: pedazos || [], alto: altoMinimo || 0 };
+  }
+
+  function textoSimple(t) {
+    return t ? [[{ t: t, color: HOJA_NEGRO }]] : [];
+  }
+
+  function dibujarHoja(d, logo) {
+    var anchoUtil = PAG_ANCHO - MARGEN * 2;
+    var anchoDato = anchoUtil - COL_ROTULO;
+
+    var filas = [
+      hojaFila('Fecha de dictamen', textoSimple(fecha(d.fecha_dictamen))),
+      hojaFila('Asesor', textoSimple(d.asesor_nombre)),
+      filaClientes(d),
+      hojaFila('Inmueble', textoSimple(d.inmueble)),
+      hojaFila('Tipo de oportunidad', textoSimple(
+        (OPERACIONES[d.operacion] || '') + ' \xB7 ' + (USOS[d.uso] || '') +
+        (d.tipo_inmueble ? ' \xB7 ' + d.tipo_inmueble : ''))),
+      hojaFila('Tipo de contrato', textoSimple(CONTRATOS[d.tipo_contrato] || '')),
+      hojaFila('Precio del listado', textoSimple(conPesos(d.precio_listado))),
+      hojaFila('Comisión', textoSimple(conPorciento(d.comision_porcentaje))),
+    ];
+
+    if (tieneEscrituraDesglosada(d)) {
+      filas.push(hojaFila('Número de escritura', textoSimple(d.escritura_numero)));
+      filas.push(hojaFila('Fecha de escrituración', textoSimple(fecha(d.escritura_fecha))));
+      filas.push(hojaFila('Nombre del notario', textoSimple(d.notario_nombre)));
+      filas.push(hojaFila('Número de notaría', textoSimple(d.notaria_numero)));
+    } else {
+      filas.push(hojaFila('Escrituras y fecha', textoSimple(d.escritura_propiedad)));
+    }
+
+    filas.push(hojaFila('Condominio', textoSimple(siNo(d.condominio))));
+    filas.push(hojaFila('Escritura del condominio', textoSimple(d.escritura_condominio)));
+    filas.push(hojaFila('CFDI', textoSimple(d.cfdi)));
+    filas.push(hojaFila('Superficie escritura', textoSimple(conUnidad(d.superficie_escritura))));
+    filas.push(hojaFila('Cuenta predial', textoSimple(d.cuenta_predial)));
+    filas.push(hojaFila('Superficie de terreno', textoSimple(conUnidad(d.superficie_terreno))));
+    filas.push(hojaFila('Superficie de construcción', textoSimple(conUnidad(d.superficie_construccion))));
+    filas.push(hojaFila('Folio real', textoSimple(d.folio_real)));
+    filas.push(filaObservaciones(d));
+    filas.push(hojaFila('Autorización', textoSimple(
+      d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || '')), 34));
+
+    // Cada renglón se parte en las líneas que le caben antes de dibujar
+    // nada, porque de eso depende su altura y de la altura, en qué página
+    // cae.
+    filas.forEach(function (f) {
+      f.lineas = [];
+      f.pedazos.forEach(function (parrafo) {
+        acomodarParrafo(parrafo, anchoDato - RELLENO * 2, TAM_DATO)
+          .forEach(function (partes) { f.lineas.push({ partes: partes }); });
+      });
+      var rotuloLineas = cortar(f.rotulo, COL_ROTULO - RELLENO * 2, TAM_ROTULO, true).length;
+      f.altoFila = Math.max(
+        f.alto,
+        RELLENO * 2 + Math.max(f.lineas.length, 1) * ALTO_LINEA,
+        RELLENO * 2 + rotuloLineas * (ALTO_LINEA - 2));
+      f.rotuloLineas = cortar(f.rotulo, COL_ROTULO - RELLENO * 2, TAM_ROTULO, true);
+    });
+
+    // ── El dibujo ──
+    var paginas = [];
+    var c = '';
+    var y = 0;
+
+    function color(rgb, trazo) {
+      return pdfNum(rgb[0]) + ' ' + pdfNum(rgb[1]) + ' ' + pdfNum(rgb[2]) +
+        (trazo ? ' RG\n' : ' rg\n');
+    }
+    function escribir(txt, x, yArriba, tam, negrita, rgb) {
+      if (!txt) return '';
+      return 'BT\n' + color(rgb) + '/' + (negrita ? 'F2' : 'F1') + ' ' + tam + ' Tf\n' +
+        pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba) + ' Td\n(' + pdfTexto(txt) + ') Tj\nET\n';
+    }
+    function caja(x, yArriba, ancho, alto) {
+      return pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba - alto) + ' ' +
+        pdfNum(ancho) + ' ' + pdfNum(alto) + ' re S\n';
+    }
+
+    // El encabezado: el título y el folio a la izquierda, el logo a la
+    // derecha. Va nada más en la primera página; en las que siguen la
+    // tabla arranca desde arriba.
+    c = escribir('DICTAMEN DE EXPEDIENTE', MARGEN, MARGEN + 14, 15, true, HOJA_ROJO);
+    c += escribir(d.folio || 'Borrador, sin folio', MARGEN, MARGEN + 32, 10, false, HOJA_GRIS);
+    if (logo) {
+      var altoLogo = 34;
+      var anchoLogo = logo.ancho * altoLogo / logo.alto;
+      c += 'q\n' + pdfNum(anchoLogo) + ' 0 0 ' + pdfNum(altoLogo) + ' ' +
+        pdfNum(PAG_ANCHO - MARGEN - anchoLogo) + ' ' +
+        pdfNum(PAG_ALTO - MARGEN - altoLogo) + ' cm\n/Im0 Do\nQ\n';
+    }
+
+    y = MARGEN + 56;
+    c += '0.7 w\n' + color(HOJA_NEGRO, true);
+
+    filas.forEach(function (f) {
+      if (y + f.altoFila > PAG_ALTO - MARGEN) {
+        paginas.push(c);
+        c = '0.7 w\n' + color(HOJA_NEGRO, true);
+        y = MARGEN;
+      }
+      c += caja(MARGEN, y, COL_ROTULO, f.altoFila);
+      c += caja(MARGEN + COL_ROTULO, y, anchoDato, f.altoFila);
+
+      // El rótulo y el dato arrancan en la misma raya de abajo, aunque el
+      // rótulo sea de letra más chica: alineados por arriba se veían
+      // corridos uno del otro.
+      f.rotuloLineas.forEach(function (l, i) {
+        c += escribir(l.toUpperCase(), MARGEN + RELLENO,
+          y + RELLENO + TAM_DATO + i * (ALTO_LINEA - 2), TAM_ROTULO, true, HOJA_ROJO);
+      });
+
+      f.lineas.forEach(function (l, i) {
+        var x = MARGEN + COL_ROTULO + RELLENO;
+        l.partes.forEach(function (p) {
+          c += escribir(p.t, x, y + RELLENO + TAM_DATO + i * ALTO_LINEA,
+            TAM_DATO, false, p.color);
+          x += anchoTexto(p.t, TAM_DATO, false);
+        });
+      });
+
+      y += f.altoFila;
+    });
+
+    paginas.push(c);
+    return paginas;
+  }
+
+  // Los clientes van numerados, cada uno con su estado civil en gris al
+  // lado: en una sucesión con tres herederos, un solo estado civil para
+  // los tres no querría decir nada.
+  function filaClientes(d) {
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+
+    if (!suyos.length) {
+      return hojaFila('Cliente', textoSimple(d.clientes_nombres || d.cliente));
+    }
+    return hojaFila(suyos.length > 1 ? 'Clientes' : 'Cliente',
+      suyos.map(function (c, i) {
+        var partes = [{
+          t: (suyos.length > 1 ? (i + 1) + '. ' : '') + c.nombre,
+          color: HOJA_NEGRO,
+        }];
+        if (c.estado_civil) partes.push({ t: ' (' + c.estado_civil + ')', color: HOJA_GRIS });
+        return partes;
+      }));
+  }
+
+  function filaObservaciones(d) {
+    var mios = puntos.filter(function (p) { return p.dictamen_id === d.id; });
+    var parrafos = [];
+    var obsBase = separarCorrecciones(d.observaciones).texto;
+    if (obsBase) parrafos.push([{ t: obsBase, color: HOJA_NEGRO }]);
+    mios.forEach(function (p, i) {
+      var partes = [{ t: (i + 1) + '. ' + p.texto, color: HOJA_NEGRO }];
+      partes.push({
+        t: ' (' + (p.estado === 'corregida' ? 'Corregida' : 'Pendiente') + ')',
+        color: HOJA_GRIS,
+      });
+      parrafos.push(partes);
+      if (p.nota) parrafos.push([{ t: '   ' + p.nota, color: HOJA_GRIS }]);
+    });
+    return hojaFila('Observaciones', parrafos, 68);
+  }
+
+  async function imprimir(id) {
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    if (!d) return;
+
+    var logo = await cargarLogo();
+    var url = URL.createObjectURL(armarPDF(dibujarHoja(d, logo), logo));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'dictamen-' + (d.folio || 'borrador') + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Arranque ────────────────────────────────────────────────
+
+  async function iniciar() {
+    var s = await window.kwSupabase.auth.getSession();
+    var uid = s.data.session && s.data.session.user && s.data.session.user.id;
+    if (!uid) return;
+
+    var r = await window.kwSupabase
+      .from('profiles').select('id, role, puede_dictaminar').eq('id', uid).single();
+    yo = r.data || { id: uid, role: 'asociado', puede_dictaminar: false };
+
+    veTodo = ['master', 'admin', 'staff'].indexOf(yo.role) !== -1;
+    // Master y Admin entran siempre, igual que en la base.
+    puedoDictaminar = yo.puede_dictaminar === true || yo.role === 'master' || yo.role === 'admin';
+
+    if (puedoDictaminar) $('btn-nuevo').style.display = '';
+    // Sincronizar es del equipo de liderazgo, no de quien dictamina nada
+    // más: el candado de verdad vive en la Edge Function, esto solo
+    // esconde el botón para quien de todos modos no podría usarlo.
+    if (veTodo) { $('op-sync').hidden = false; $('op-sync-raya').hidden = false; }
+
+    await cargarCatalogos();
+    if (window.kwUI) window.kwUI.selects(document);
+    pintarAsesoresFiltro();
+    await cargar();
+    acomodarFiltros();
+  }
+
+  // Al escribir se repinta al momento; el "change" es para el calendario,
+  // que pone la fecha sin que se teclee nada.
+  ESCRITOS.forEach(function (x) {
+    $(x).addEventListener('input', pintar);
+    $(x).addEventListener('change', pintar);
+  });
+  DESPLEGABLES.forEach(function (x) { $(x).addEventListener('change', pintar); });
+
+  // ── La tarjeta de los filtros ───────────────────────────────
+
+  // Si el filtro que vive en esta casilla tiene algo puesto. Es lo que
+  // deja avisar, al plegar, que quedaron filtros prendidos fuera de la
+  // vista: sin ese aviso la lista salía recortada sin decir por qué.
+  function filtroPuesto(campo) {
+    var puesto = ESCRITOS.some(function (x) {
+      return campo.contains($(x)) && $(x).value.trim();
+    }) || DESPLEGABLES.some(function (x) {
+      return campo.contains($(x)) && $(x).value !== 'todos';
+    });
+    return puesto || (asesoresFiltro.length > 0 && campo.contains($('f-asesor-caja')));
+  }
+
+  // Plegada, la tarjeta deja a la vista nada más el primer renglón. Cuál
+  // es el primer renglón no se sabe de antemano (depende de lo ancha que
+  // esté la ventana), así que se pregunta: los que quedaron más abajo que
+  // el primero son los que se esconden.
+  function acomodarFiltros() {
+    var caja = $('filtros-caja');
+    var abierta = caja.classList.contains('abierta');
+    var campos = Array.prototype.slice.call($('filtros').children);
+
+    // Se miden con todos a la vista: uno escondido no tiene lugar que leer.
+    campos.forEach(function (c) { c.classList.remove('dic-filtro-oculto'); });
+
+    var escondidos = 0;
+    if (!abierta && campos.length) {
+      var primerRenglon = campos[0].offsetTop;
+      campos.forEach(function (c) {
+        if (c.offsetTop <= primerRenglon + 2) return;
+        c.classList.add('dic-filtro-oculto');
+        if (filtroPuesto(c)) escondidos++;
+      });
+    }
+
+    var btn = $('btn-mas-filtros');
+    btn.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+    var dice = abierta ? 'Ver solo el primer filtro' : 'Ver todos los filtros';
+    btn.title = dice;
+    btn.setAttribute('aria-label', dice);
+
+    var marca = $('filtros-cuantos');
+    marca.hidden = !escondidos;
+    // Vacío y no "0": escondido igual no se ve, pero un lector de
+    // pantalla sí lo lee, y "cero" ahí no quiere decir nada.
+    marca.textContent = escondidos || '';
+    marca.title = escondidos === 1
+      ? 'Hay 1 filtro puesto entre los que no se están viendo'
+      : 'Hay ' + escondidos + ' filtros puestos entre los que no se están viendo';
+  }
+
+  $('btn-mas-filtros').addEventListener('click', function () {
+    $('filtros-caja').classList.toggle('abierta');
+    acomodarFiltros();
+  });
+
+  // La cuenta se rehace cuando cambia un filtro y cuando cambia el ancho
+  // de la ventana, porque de eso depende cuántos caben en el renglón que
+  // sí se ve.
+  ESCRITOS.concat(DESPLEGABLES).forEach(function (x) {
+    $(x).addEventListener('input', acomodarFiltros);
+    $(x).addEventListener('change', acomodarFiltros);
+  });
+  window.addEventListener('resize', acomodarFiltros);
+
+  $('f-asesor-busca').addEventListener('input', pintarSugerenciasAsesor);
+  $('f-asesor-busca').addEventListener('focus', pintarSugerenciasAsesor);
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#f-asesor-caja')) $('f-asesor-lista').classList.remove('abierta');
+  });
+
+  $('f-limpiar').addEventListener('click', function () {
+    estadoFiltro = 'todos';
+    DESPLEGABLES.forEach(function (x) {
+      $(x).value = 'todos';
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    ESCRITOS.forEach(function (x) {
+      $(x).value = '';
+      $(x).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    asesoresFiltro = [];
+    $('f-asesor-busca').value = '';
+    $('f-asesor-lista').classList.remove('abierta');
+    pintarAsesoresFiltro();
+    pintar();
+    acomodarFiltros();
+  });
+
+  // ── El menú del engrane ─────────────────────────────────────
+
+  function abrirEngrane(abrir) {
+    var menu = $('engrane-menu');
+    var quiere = abrir === undefined ? menu.hidden : abrir;
+    menu.hidden = !quiere;
+    $('btn-engrane').setAttribute('aria-expanded', quiere ? 'true' : 'false');
+    // Ya abierto es cuando se puede medir: si se sale de la pantalla, se
+    // corre lo que haga falta (en el celular no cabe pegado al botón).
+    if (quiere) window.kwUI.colgarMenu($('btn-engrane'), menu);
+  }
+
+  $('btn-engrane').addEventListener('click', function (e) {
+    e.stopPropagation();
+    abrirEngrane();
+  });
+
+  // Se cierra al picarle a cualquier otro lado y con Escape. Lo que se
+  // elige adentro también lo cierra: dejarlo abierto encima de la lista
+  // que se acaba de recargar estorba para ver el resultado.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.kw-menu-ancla')) abrirEngrane(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('engrane-menu').hidden) {
+      abrirEngrane(false);
+      $('btn-engrane').focus();
+    }
+  });
+
+  $('op-exportar').addEventListener('click', function () {
+    abrirEngrane(false);
+    exportar();
+  });
+
+  $('op-archivo').addEventListener('click', function () {
+    abrirEngrane(false);
+    verArchivo = !verArchivo;
+    abierto = null;
+    pintar();
+  });
+
+  $('op-recargar').addEventListener('click', async function () {
+    abrirEngrane(false);
+    var op = $('op-recargar');
+    op.disabled = true;
+    op.classList.add('trabajando');
+    try {
+      await cargarCatalogos();
+      if (window.kwUI) window.kwUI.selects(document);
+      await cargar();
+    } finally {
+      op.disabled = false;
+      op.classList.remove('trabajando');
+    }
+  });
+
+  // Sincronizar es en dos tiempos: primero se pregunta sin escribir nada,
+  // y solo si se confirma se manda "aplicar". Así, si la hoja se leyó a
+  // medias (un permiso caído, un rango mal puesto), eso se ve en el
+  // resumen antes de dar de baja a medio equipo por error.
+  $('op-sync').addEventListener('click', async function () {
+    abrirEngrane(false);
+    var btn = $('op-sync');
+    var s = await window.kwSupabase.auth.getSession();
+    var token = s.data.session && s.data.session.access_token;
+    if (!token) return;
+
+    async function pedir(aplicar) {
+      var res = await fetch(FN_ALTA, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'dictamen_asesores_sync', aplicar: aplicar }),
+      });
+      var json = await res.json().catch(function () { return null; });
+      if (!res.ok) throw new Error((json && json.error) || ('Falló (' + res.status + ')'));
+      return json;
+    }
+
+    // Aquí sí hay letras que cambiar: el renglón del menú las dice, y
+    // además el dibujo da vueltas mientras tanto.
+    function avisa(t) { $('op-sync-txt').textContent = t; }
+
+    btn.disabled = true;
+    btn.classList.add('trabajando');
+    avisa('Revisando...');
+    try {
+      var previa = await pedir(false);
+      var mensaje = 'De la hoja del ABC:\n' +
+        '  Nuevos: ' + previa.nuevos.length + '\n' +
+        '  Reactivados: ' + previa.reactivados.length + '\n' +
+        '  Bajas: ' + previa.bajas.length + '\n\n' +
+        '¿Aplicar estos cambios al catálogo de asesores?';
+      if (!(await window.kwUI.confirm(mensaje))) return;
+
+      avisa('Aplicando...');
+      await pedir(true);
+      await cargarCatalogos();
+      if (window.kwUI) window.kwUI.selects(document);
+      await window.kwUI.alert('Catálogo actualizado.');
+    } catch (e) {
+      await window.kwUI.alert('No se pudo sincronizar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('trabajando');
+      avisa('Sincronizar asesores');
+    }
+  });
+
+  $('btn-nuevo').addEventListener('click', function () { abrirEditor(null); });
+  $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
+  $('e-volver').addEventListener('click', function () { cerrarEditor(); });
+
+  $('e-asesor-busca').addEventListener('input', pintarAsesores);
+  $('e-asesor-cambiar').addEventListener('click', function () { elegirAsesor(null); });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.dic-busca-asesor')) $('e-asesor-lista').classList.remove('abierta');
+  });
+
+  $('e-tipo').addEventListener('change', function () {
+    var nuevo = $('e-tipo').value === '__nuevo__';
+    $('e-tipo-nuevo').style.display = nuevo ? '' : 'none';
+    if (nuevo) $('e-tipo-nuevo').focus();
+  });
+
+  $('e-condominio').addEventListener('change', acomodarCondominio);
+
+  prepararFechaEscritura();
+  prepararCorrecciones();
+  ['e-esc-dia', 'e-esc-mes', 'e-esc-anio'].forEach(function (id) {
+    $(id).addEventListener('change', sincronizarFechaEscritura);
+  });
+
+  // Las cifras largas se separan con comas desde que se escriben. Además
+  // de hacer visible un cero de más, evita tener que salir del campo para
+  // comprobar si se capturó un millón o diez millones.
+  [['e-precio', 'precio_listado'], ['e-esc-numero', 'escritura_numero'],
+   ['e-notaria', 'notaria_numero']].forEach(function (par) {
+    $(par[0]).addEventListener('input', function () {
+      this.value = conComasMientrasEscribe(this.value);
+    });
+  });
+
+  // El precio y la comisión se acomodan al salirse del campo: lo que se
+  // teclea con signos ("$4,500,000.00", "5.5%") queda escrito como se va
+  // a guardar, para que nadie tenga que adivinar si el símbolo cuenta.
+  CAMPOS.filter(function (c) { return NUMERICOS.indexOf(c[1]) !== -1; })
+    .forEach(function (c) {
+      $(c[0]).addEventListener('blur', function () {
+        $(c[0]).value = paraCampo(c[1], $(c[0]).value);
+      });
+    });
+
+  // Cambiar el número de clientes repinta las casillas. Se lee antes lo
+  // que ya estaba escrito para no borrárselo a quien apenas se dio cuenta
+  // de que eran tres y no dos.
+  $('e-clientes-cuantos').addEventListener('change', function () {
+    if (!borrador) return;
+    leerClientes();
+    acomodarCuantos();
+    pintarClientes();
+  });
+  $('e-clientes-otros').addEventListener('input', function () {
+    if (!borrador) return;
+    leerClientes();
+    pintarClientes();
+  });
+
+  $('e-punto-agregar').addEventListener('click', function () {
+    var texto = $('e-punto-texto').value.trim();
+    if (!texto) return;
+    borrador.puntos.push({ texto: texto, estado: 'pendiente' });
+    $('e-punto-texto').value = '';
+    $('e-punto-texto').focus();
+    pintarPuntosEditor();
+  });
+  // Enter agrega, Shift+Enter salta de línea: se capturan varias
+  // observaciones seguidas y llevar la mano al botón cada vez estorba.
+  $('e-punto-texto').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      $('e-punto-agregar').click();
+    }
+  });
+
+  $('e-guardar').addEventListener('click', async function () {
+    var b = $('e-guardar');
+    b.disabled = true;
+    b.textContent = 'Guardando...';
+    var id = await guardar();
+    b.disabled = false;
+    b.textContent = 'Guardar';
+    if (!id) return;
+
+    // Un expediente incompleto sí se guarda, pero se queda como borrador.
+    // Dictaminar solo se ofrece cuando ya tiene asesor, dirección y por
+    // lo menos un cliente.
+    var quedo = borrador.completo_para_dictaminar ? await preguntarEstado() : null;
+    if (quedo) {
+      var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
+      if (r.error) {
+        await fallo('Se guardó el expediente, pero no se le pudo poner el dictamen: '
+          + r.error.message);
+      }
+    }
+
+    await cargar();
+    aviso('editor-msg', '', '');
+
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    $('e-listo-txt').textContent = (d && d.folio)
+      ? 'Listo. Quedó como ' + (ESTADOS[d.estado] || '').toLowerCase() +
+        ', con folio ' + d.folio + '.'
+      : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
+    $('e-listo').classList.add('visible');
+    $('e-descargar').onclick = function () { imprimir(id); };
+  });
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    iniciar();
+  } else {
+    window.addEventListener('kw-auth-ready', iniciar, { once: true });
+  }
+})();
+</script>
+
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260831a" data-menu="hub"></script>
+
+</body>
+</html>
+ + n.toLocaleString('es-MX', {
       minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2,
     });
   }
+
+  function conComasMientrasEscribe(v) {
+    var limpio = String(v == null ? '' : v).replace(/[^\\d]/g, '');
+    return limpio ? limpio.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',') : '';
+  }
+  var CAMPOS_CON_COMAS = ['precio_listado', 'escritura_numero', 'notaria_numero'];
 
   function conPorciento(v) {
     var n = soloCifra(v);
