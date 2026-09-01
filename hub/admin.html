@@ -119,19 +119,20 @@
     padding: 0; gap: 5px 12px;
     text-transform: none; letter-spacing: normal;
   }
-  .accesos-acciones { display: flex; gap: 7px; margin-left: auto; }
-  .acceso-seleccion-accion { gap: 5px; }
-  .acceso-seleccion-accion svg { width: 12px; height: 12px; }
+  /* Tres accesos y las dos acciones caben en un solo renglón. En
+     pantallas angostas el renglón completo se desplaza horizontalmente. */
+  .accesos-fila {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(135px, 1fr)) 34px 34px;
+    align-items: stretch; gap: 8px; overflow-x: auto; padding: 1px 1px 4px;
+  }
+  .acceso-seleccion-accion {
+    width: 34px; min-width: 34px; height: 100%; min-height: 38px;
+    padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .acceso-seleccion-accion svg { width: 16px; height: 16px; }
   .acceso-seleccion-accion.dar { color: #1a7a1a; }
   .acceso-seleccion-accion.quitar { color: var(--red); }
-
-  /* Los tres accesos se leen y se eligen de un vistazo. Conservamos las
-     tres columnas incluso en pantallas angostas; ahí la fila puede
-     desplazarse horizontalmente en vez de volver a crecer hacia abajo. */
-  .accesos-fila {
-    display: grid; grid-template-columns: repeat(3, minmax(155px, 1fr));
-    gap: 8px; overflow-x: auto; padding: 1px 1px 4px;
-  }
 
   .acceso {
     position: relative; min-width: 155px;
@@ -163,11 +164,33 @@
   .acceso-cuenta.no { color: #8d9299; }
   .verif-cuentas.acceso-cuentas { padding-left: 0; margin-top: 2px; }
 
-  .kw-fila-btn.solo-icono {
-    width: 38px; height: 38px; padding: 0; display: inline-flex;
-    align-items: center; justify-content: center;
+  /* Menú de acciones del asesor: ocupa el lugar de la flecha que antes
+     indicaba que la tarjeta se podía desplegar. */
+  .kw-fila { position: relative; }
+  .kw-fila-cabeza { padding-right: 52px; }
+  .asesor-menu { position: absolute; top: 11px; right: 12px; z-index: 4; }
+  .asesor-menu-btn {
+    width: 34px; height: 34px; border: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-size: 22px; font-weight: 700; line-height: 1;
   }
-  .kw-fila-btn.solo-icono svg { width: 17px; height: 17px; }
+  .asesor-menu-btn:hover, .asesor-menu.abierto .asesor-menu-btn {
+    background: #f2f2f2; color: var(--text);
+  }
+  .asesor-menu-lista {
+    display: none; position: absolute; top: 38px; right: 0;
+    min-width: 132px; padding: 5px; border: 1px solid var(--border);
+    border-radius: 10px; background: #fff; box-shadow: var(--sombra-2);
+  }
+  .asesor-menu.abierto .asesor-menu-lista { display: block; }
+  .asesor-menu-opcion {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 7px; color: var(--text); text-decoration: none;
+    font-size: 12.5px; font-weight: 700; white-space: nowrap;
+  }
+  .asesor-menu-opcion:hover { background: #f6f6f6; color: var(--red); }
+  .asesor-menu-opcion svg { width: 15px; height: 15px; }
 
   /* ── Modal de Revisar Accesos ────────────────────────────────
      Arriba se quedan fijos el buscador, la selección y el aviso; solo
@@ -1614,6 +1637,8 @@
   const ICONO_EQUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
   const ICONO_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
   const ICONO_LAPIZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
+  const ICONO_SUBIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6-6 6 6"/><path d="M12 4v16"/></svg>';
+  const ICONO_BAJAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6 6 6-6"/><path d="M12 20V4"/></svg>';
 
   let gruposAsesores = [];
   let grupoActivo = '';
@@ -1847,12 +1872,11 @@
 
     const cuentas = desgloseContactosHtml(estado);
     return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
-      '<div class="accesos-titulo">Accesos' + cuentas +
-        '<span class="accesos-acciones">' +
-          '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled>' + ICONO_LISTO + 'Dar seleccionados</button>' +
-          '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled>' + ICONO_EQUIS + 'Quitar seleccionados</button>' +
-        '</span>' +
-      '</div><div class="accesos-fila">' + filas + '</div>' +
+      '<div class="accesos-titulo">Accesos' + cuentas + '</div>' +
+      '<div class="accesos-fila">' + filas +
+        '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled title="Dar accesos seleccionados" aria-label="Dar accesos seleccionados">' + ICONO_SUBIR + '</button>' +
+        '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Quitar accesos seleccionados" aria-label="Quitar accesos seleccionados">' + ICONO_BAJAR + '</button>' +
+      '</div>' +
     '</div>';
   }
 
@@ -1884,7 +1908,7 @@
       : (p.correo
         ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + (mostrando ? ' activo' : '') + '"' +
             ' data-correo="' + escapeHtml(p.correo) + '">' +
-            (completo ? ICONO_LISTO : '') + 'Dar de alta</span>'
+            (completo ? ICONO_LISTO : '') + 'Alta</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
@@ -1899,8 +1923,16 @@
           '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' + escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
           '<span class="kw-extra">' + I.calendario + '<span>' + escapeHtml(fecha || 'Sin fecha') + '</span></span>' +
           '<span class="kw-extra">' + boton + '</span>' +
-        '</span>' + I.flecha +
+        '</span>' +
       '</button>' +
+      (p.id
+        ? '<div class="asesor-menu">' +
+            '<button type="button" class="asesor-menu-btn" aria-label="Abrir menú" aria-expanded="false">⋮</button>' +
+            '<div class="asesor-menu-lista">' +
+              '<a class="asesor-menu-opcion" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '">' + ICONO_LAPIZ + 'Editar</a>' +
+            '</div>' +
+          '</div>'
+        : '') +
       '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
         '<div class="kw-datos en-columnas">' +
           (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
@@ -1913,15 +1945,6 @@
         // Los accesos van escondidos hasta que se pica "Dar de alta" a
         // propósito: picar la tarjeta nada más enseña los datos.
         (mostrando ? accesosHtml(p, g) : '') +
-        // Corregir el expediente o cambiar a alguien de grupo se hace en
-        // su ficha, y se llega desde donde se le está viendo. Solo sale
-        // si el renglón viene de la base (si viene del libro no hay qué
-        // editar: el libro se edita en el libro).
-        (p.id
-          ? '<div class="kw-fila-acciones">' +
-              '<a class="kw-fila-btn solo-icono" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '" title="Editar ficha" aria-label="Editar ficha">' + ICONO_LAPIZ + '</a>' +
-            '</div>'
-          : '') +
       '</div></div></div>' +
     '</div>';
   }
@@ -2053,7 +2076,33 @@
     moverAcceso(caja.dataset.correo, pasos, btn.dataset.hacer === 'quitar');
   });
 
-  // El botón "Dar de alta" vive DENTRO del encabezado de la tarjeta, que
+  // El menú de tres puntos vive fuera del botón que abre la tarjeta.
+  // Solo contiene Editar por ahora y se cierra al picar en cualquier
+  // otro lugar.
+  document.addEventListener('click', function (e) {
+    const botonMenu = e.target.closest('.asesor-menu-btn');
+    if (botonMenu) {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = botonMenu.closest('.asesor-menu');
+      const abrir = !menu.classList.contains('abierto');
+      document.querySelectorAll('.asesor-menu.abierto').forEach(function (m) {
+        m.classList.remove('abierto');
+        const b = m.querySelector('.asesor-menu-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+      menu.classList.toggle('abierto', abrir);
+      botonMenu.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      return;
+    }
+    document.querySelectorAll('.asesor-menu.abierto').forEach(function (m) {
+      m.classList.remove('abierto');
+      const b = m.querySelector('.asesor-menu-btn');
+      if (b) b.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // El botón "Alta" vive DENTRO del encabezado de la tarjeta, que
   // es a su vez un <button> que abre/cierra la tarjeta entera (lo arma
   // kw-ui.js). Para que picar el botón NO dispare también el abrir/cerrar
   // de kw-ui (que llegaría primero si se frenara nada más al burbujear),
