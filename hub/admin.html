@@ -115,6 +115,10 @@
     font-size: 12px; font-weight: 700; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px;
   }
+  .accesos-titulo .acceso-cuentas {
+    padding: 0; gap: 5px 12px;
+    text-transform: none; letter-spacing: normal;
+  }
   .accesos-acciones { display: flex; gap: 7px; margin-left: auto; }
   .acceso-seleccion-accion { gap: 5px; }
   .acceso-seleccion-accion svg { width: 12px; height: 12px; }
@@ -142,9 +146,8 @@
   .acceso.si .acceso-icono { color: #1a7a1a; }
   .acceso.no .acceso-icono { color: #8d9299; }
   .acceso.esperando .acceso-icono { color: var(--muted); }
-  .acceso-texto { display: flex; flex-direction: column; min-width: 0; }
+  .acceso-texto { min-width: 0; }
   .acceso-nombre { font-size: 13px; font-weight: 700; }
-  .acceso-estado { font-size: 11.5px; color: var(--muted); }
   .acceso.esperando .acceso-label { cursor: wait; }
 
   /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
@@ -1832,21 +1835,19 @@
       const tiene = estado ? estado[a.clave] : null;
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
-      const texto = estado === null ? 'Comprobando…' : (tiene ? 'Tiene acceso' : 'Sin acceso');
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
             (estado === null ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
-          '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span>' +
-            '<span class="acceso-estado">' + texto + '</span></span>' +
+          '<span class="acceso-texto"><span class="acceso-nombre">' + a.nombre + '</span></span>' +
         '</label>' +
-        (a.clave === 'contactos' ? desgloseContactosHtml(estado) : '') +
       '</div>';
     }).join('');
 
+    const cuentas = desgloseContactosHtml(estado);
     return '<div class="accesos" data-correo="' + escapeHtml(p.correo) + '">' +
-      '<div class="accesos-titulo">Accesos' +
+      '<div class="accesos-titulo">Accesos' + cuentas +
         '<span class="accesos-acciones">' +
           '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled>' + ICONO_LISTO + 'Dar seleccionados</button>' +
           '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled>' + ICONO_EQUIS + 'Quitar seleccionados</button>' +
