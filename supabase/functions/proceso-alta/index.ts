@@ -1479,6 +1479,7 @@ Deno.serve(async (req: Request) => {
     if (accion === 'acceso') {
       const quitar = body.quitar === true
       const pasos = pasosPedidos(body.pasos)
+      const cuentaContactosPedida = String(body.cuentaContactos || '').trim()
       const gente = (Array.isArray(body.personas) ? body.personas : [body])
         .map((p: Record<string, unknown>) => ({
           nombre: String(p.nombre || '').trim(),
@@ -1493,11 +1494,23 @@ Deno.serve(async (req: Request) => {
 
       const soyMaster = miRol === 'master'
       const cuentasContactos = await getTokensContactos()
+      const cuentaElegida = cuentaContactosPedida
+        ? cuentasContactos.find((c) => c.clave === cuentaContactosPedida)
+        : null
+      if (cuentaContactosPedida && !cuentaElegida) {
+        return respond({ error: 'La cuenta de Contactos seleccionada no existe.' }, 400)
+      }
+      // KW Premier sólo tiene Contactos. Drive y Calendario pertenecen
+      // a la cuenta original de Dani y no se pueden mover desde KW.
+      if (cuentaContactosPedida === 'kwpremier' && pasos.some((p) => p !== 'contactos')) {
+        return respond({ error: 'KW Premier sólo administra Contactos.' }, 400)
+      }
+      const cuentasOperacion = cuentaElegida ? [cuentaElegida] : cuentasContactos
       const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
 
       const hechas = []
       for (const persona of gente) {
-        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasContactos, persona, estado, soyMaster)
+        const resultados = await moverAccesos(pasos, quitar, tokenPrincipal, cuentasOperacion, persona, estado, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1535,6 +1548,7 @@ Deno.serve(async (req: Request) => {
       return respond({
         ok: hechas.every((h) => h.ok),
         hechas,
+        cuentaContactos: cuentaContactosPedida || null,
         estado: estadoFinal,
         // Con qué cuentas se está trabajando: solo Master la recibe, es
         // lo que la pantalla usa para ponerle nombre a cada columna del
