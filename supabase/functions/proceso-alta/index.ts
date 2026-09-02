@@ -257,7 +257,8 @@ type Grupo = { clave: string; titulo: string; palabras: string[] }
 const GRUPOS: Grupo[] = [
   { clave: 'activos', titulo: 'Asesores Activos', palabras: ['activo'] },
   { clave: 'bajas', titulo: 'Asesores de Baja', palabras: ['baja'] },
-  { clave: 'back_office', titulo: 'Back Office', palabras: ['back office', 'backoffice', 'back'] },
+  { clave: 'back_office_activo', titulo: 'Back Office', palabras: ['back office', 'backoffice', 'back'] },
+  { clave: 'back_office_baja', titulo: 'Back Office de Baja', palabras: ['back office', 'backoffice', 'back'] },
   { clave: 'celulas', titulo: 'Células', palabras: ['celula'] },
 ]
 
@@ -268,11 +269,14 @@ const GRUPOS: Grupo[] = [
 function clasificarHoja(titulo: string): Grupo | null {
   const t = normalizar(titulo)
 
-  // “Back Office Activos” contiene tanto “activo” como “back office”.
-  // Back Office es la señal más específica y debe ganar; de otro modo
-  // la hoja queda como genérica y su gente no aparece en la pestaña.
-  const backOffice = GRUPOS.find((g) => g.clave === 'back_office')
-  if (backOffice && backOffice.palabras.some((p) => t.includes(p))) return backOffice
+  // Back Office es la señal más específica. Separa sus bajas antes de
+  // buscar los grupos genéricos: una hoja “Back Office de Baja” contiene
+  // también “baja”, y antes ambas hojas terminaban con la misma clave.
+  const esBackOffice = ['back office', 'backoffice', 'back'].some((p) => t.includes(p))
+  if (esBackOffice) {
+    const clave = t.includes('baja') ? 'back_office_baja' : 'back_office_activo'
+    return GRUPOS.find((g) => g.clave === clave) || null
+  }
 
   const posibles = GRUPOS.filter((g) => g.palabras.some((p) => t.includes(p)))
   return posibles.length === 1 ? posibles[0] : null
