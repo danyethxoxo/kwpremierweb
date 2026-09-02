@@ -260,7 +260,11 @@
       return;
     }
     caja.innerHTML = docs.map(function (d) {
-      return '<a href="' + escapar(d.href) + '" class="card hover-card documento-hub" data-doc-id="' + escapar(d.id) + '">' +
+      var href = String(d.href || '');
+      if (href.indexOf('dt/abc-tracker.html') >= 0) {
+        href += (href.indexOf('?') >= 0 ? '&' : '?') + 'v=20260902b';
+      }
+      return '<a href="' + escapar(href) + '" class="card hover-card documento-hub" data-doc-id="' + escapar(d.id) + '">' +
         '<div class="hover-card-icon">' + icono(d.icono) + '</div>' +
         '<div class="hover-card-title card-title">' + escapar(d.titulo) + '</div>' +
         '<div class="hover-card-arrow">' +
