@@ -2872,6 +2872,11 @@
   // tiene a su gente el día uno.
   function estatusDe(a) {
     const g = String(a.grupo || '').toLowerCase();
+    // Si la base ya trae un estatus canónico, ése manda. En especial,
+    // una persona movida manualmente de Back Office baja a activo puede
+    // conservar el nombre de su hoja original sin volver a aparecer de baja.
+    if (BD_GRUPOS.some(function (grupo) { return grupo.clave === g; })) return g;
+
     const hoja = String(a.hoja || '').toLowerCase();
     const origen = (g + ' ' + hoja).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (/back[ _-]*office|backoffice/.test(origen)) {
