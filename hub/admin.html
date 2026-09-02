@@ -462,7 +462,9 @@
   .denegado { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--muted); }
 
   /* Usuarios compactos: una fila, nombre enlazable, visibilidad y menú. */
-  .usuario-fila .kw-fila-cabeza { cursor: default; }
+  .usuario-fila { overflow: visible; position: relative; }
+  .usuario-fila:has(.documento-menu:not([hidden])) { z-index: 45; }
+  .usuario-fila .kw-fila-cabeza { cursor: default; overflow: visible; }
   .usuario-nombre { color: var(--text); text-decoration: none; }
   .usuario-nombre:hover { color: var(--red); text-decoration: underline; }
   .usuario-visibilidad {
@@ -473,6 +475,11 @@
   .usuario-visibilidad:hover { background: rgba(163,0,0,.06); color: var(--red); }
   .usuario-visibilidad svg { width: 17px; height: 17px; }
   .usuario-fila .documento-menu-ancla { margin-left: 2px; }
+  .usuario-fila .documento-menu { z-index: 60; }
+  .usuario-fila .documento-menu button {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .usuario-fila .documento-menu button svg { width: 17px; height: 17px; flex: 0 0 auto; }
 
   /* ── Modal: editar usuario ──
      Solo lo que cambia respecto al modal de kw-base.css: este es más
@@ -1332,10 +1339,13 @@
           ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 8 9 8a17 17 0 0 1-2.1 3.2M6.6 6.6C4.2 8.2 3 12 3 12s3.5 8 9 8c1 0 2-.3 2.9-.7"/></svg>'
           : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
         const menu = puedoEditar ? `<div class="documento-menu-ancla">
-          <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones">
+          <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
           </button>
-          <div class="documento-menu" hidden><button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button></div>
+          <div class="documento-menu" hidden>
+            <button type="button" class="btn-editar-usuario" data-idx="${i}">${ICONO_LAPIZ}Editar</button>
+            <button type="button" class="btn-toggle-oculto" data-idx="${i}">${ojo}${oculto ? 'Marcar como visible' : 'Ocultar usuario'}</button>
+          </div>
         </div>` : '';
         html += `<div class="kw-fila usuario-fila kw-aparece-fila${oculto ? ' apagada' : ''}" style="animation-delay:${Math.min(i * 30, 300)}ms">
           <div class="kw-fila-cabeza">
@@ -1348,7 +1358,6 @@
               <span class="kw-extra">${I.correo}<span>${escapeHtml(u.email || 'Sin correo')}</span></span>
               <span class="kw-extra">${I.escudo}<span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span>
             </span>
-            <button type="button" class="usuario-visibilidad btn-toggle-oculto" data-idx="${i}" ${puedoEditar ? '' : 'disabled'}>${ojo}<span>${oculto ? 'Oculto' : 'Visible'}</span></button>
             ${menu}
           </div>
         </div>`;
@@ -1363,7 +1372,10 @@
         });
       });
       cont.querySelectorAll('.btn-toggle-oculto').forEach(btn => {
-        btn.addEventListener('click', () => toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)], btn));
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)], btn);
+        });
       });
     } catch (err) {
       cont.innerHTML = `<div class="kw-vacio"><strong>No se pudieron cargar los usuarios</strong>${escapeHtml(err.message || '')}</div>`;
