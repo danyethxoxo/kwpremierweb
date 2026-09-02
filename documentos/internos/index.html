@@ -55,10 +55,12 @@
     .breadcrumb a:hover { color: var(--text); }
     .breadcrumb span { color: var(--text); font-weight: 500; }
 
-    .page { flex: 1;
-      max-width: 860px;
+    .page {
+      flex: 1;
+      width: 100%;
+      max-width: 920px;
       margin: 0 auto;
-      padding: 100px 24px 60px;
+      padding: 94px 20px 50px;
     }
 
     .page-eyebrow {
@@ -70,12 +72,20 @@
       margin-bottom: 10px;
     }
 
+    .cabecera-pagina {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
     .page-title {
       font-size: 30px;
+      line-height: 1.15;
       font-weight: 700;
       color: var(--text);
       letter-spacing: -0.5px;
-      margin-bottom: 8px;
+      margin: 0;
     }
 
     .page-desc {
@@ -286,7 +296,8 @@
 
     @media (max-width: 640px) {
     .page { padding: 82px 16px 40px; }
-    .page-title, .page-desc { display: none; }
+    .cabecera-pagina { min-height: 40px; margin-bottom: 24px; }
+    .page-title { font-size: 24px; }
   }
 </style>
 </head>
@@ -310,7 +321,9 @@
 
     <div id="contenido-interno">
 
-    <h1 class="page-title">Documentos Internos</h1>
+    <div class="cabecera-pagina">
+      <h1 class="page-title">Documentos Internos</h1>
+    </div>
 
     <!-- Las carpetas salen de roles_kw y se cuentan contra
          documentos_internos: así, cuando alguien cambia "Hacer visible
@@ -381,7 +394,7 @@
 
       caja.innerHTML = roles.map(function (rol) {
         var n = docs.filter(function (d) { return (d.roles || []).indexOf(rol.id) >= 0; }).length;
-        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '&v=20260902e" class="hover-card carpeta-hub"' +
+        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '&v=20260902f" class="hover-card carpeta-hub"' +
             ' style="--rol-rgb: ' + rgbDeHex(rol.color) + '; --card-color: rgb(' + rgbDeHex(rol.color) + ');">' +
           '<span class="hover-card-icon card-sigla">' + escapar(rol.id) + '</span>' +
           '<div class="hover-card-title">' + escapar(rol.nombre) + '</div>' +
