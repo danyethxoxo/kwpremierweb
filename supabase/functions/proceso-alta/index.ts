@@ -376,6 +376,7 @@ type Persona = {
   sponsor: string
   aniversario: string
   coachAsignado: string
+  asesorAsignado: string
   emergenciaNombre: string
   emergenciaTelefono: string
   emergenciaCorreo: string
@@ -419,6 +420,7 @@ const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
   sponsor: { si: ['sponsor', 'patrocinador'] },
   aniversario: { si: ['aniversario'] },
   coachAsignado: { si: ['coach asignado', 'coach'] },
+  asesorAsignado: { si: ['asesor asignado', 'asesor'] },
   emergenciaNombre: { si: ['contacto de emergencia', 'nombre emergencia', 'emergencia'], no: ['cel', 'tel', 'correo', 'email', 'parentesco'] },
   emergenciaTelefono: { si: ['cel emergencia', 'celular emergencia', 'tel emergencia', 'telefono emergencia'] },
   emergenciaCorreo: { si: ['correo emergencia', 'email emergencia'] },
@@ -503,6 +505,7 @@ function parsearPersonas(filas: string[][]): Persona[] {
     sponsor: dato(fila, 'sponsor'),
     aniversario: dato(fila, 'aniversario'),
     coachAsignado: dato(fila, 'coachAsignado'),
+    asesorAsignado: dato(fila, 'asesorAsignado'),
     emergenciaNombre: dato(fila, 'emergenciaNombre'),
     emergenciaTelefono: dato(fila, 'emergenciaTelefono'),
     emergenciaCorreo: dato(fila, 'emergenciaCorreo'),
