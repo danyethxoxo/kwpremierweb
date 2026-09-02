@@ -624,12 +624,26 @@
     white-space: nowrap; flex: 0 0 auto;
   }
   .panel-barra-usuario { flex-wrap: wrap; }
-  .panel-barra .invite-row { flex: 1; min-width: 0; }
+  .panel-barra .invite-row {
+    flex: 1; min-width: 0; align-items: center;
+  }
   .panel-barra-usuario #invite-msg { flex: 0 0 100%; margin: 0; }
   .panel-barra-usuario #invite-msg:empty { display: none; }
-  .panel-barra .invite-row .field input,
-  .panel-barra .invite-row .field select,
-  .panel-barra .btn-invite { height: 34px; }
+  /* Una sola caja de medida para que input, select y botón no hereden
+     alturas distintas de sus componentes base. */
+  #invite-form .field,
+  #invite-form .field input,
+  #invite-form .field select,
+  #invite-form .btn-invite {
+    height: 38px; min-height: 38px; box-sizing: border-box; margin: 0;
+  }
+  #invite-form .field { display: flex; align-items: center; }
+  #invite-form .field input,
+  #invite-form .field select { width: 100%; }
+  #invite-form .btn-invite {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 500; line-height: 1;
+  }
 
   .panel-barra-documentos { align-items: center; }
   .panel-barra-documentos .kw-filtros {
