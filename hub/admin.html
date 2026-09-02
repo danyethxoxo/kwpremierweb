@@ -810,6 +810,11 @@
   }
   .estado-alta svg { width: 14px; height: 14px; }
 
+  /* Información y accesos son dos vistas independientes de la tarjeta. */
+  .kw-fila.solo-accesos .kw-datos { display: none; }
+  .acceso.no .acceso-icono { color: #c62828; }
+  .acceso.no .acceso-icono svg { stroke: currentColor; }
+
   @media (max-width: 640px) {
     /* El contador baja a su propio renglón: al lado de los botones
        quedaba en una columna de dos palabras de ancho. */
@@ -2303,7 +2308,13 @@
     else cuentaVistaPorCorreo.set(correo, clave);
 
     const encontrado = personaPorCorreo(correo);
-    if (encontrado) caja.outerHTML = accesosHtml(encontrado.persona, encontrado.grupo, true);
+    if (encontrado) {
+      // Se sustituye el bloque completo para recalcular en ese instante
+      // los tres iconos con el estado específico de la cuenta elegida.
+      caja.outerHTML = accesosHtml(encontrado.persona, encontrado.grupo, true);
+      const renovada = document.querySelector('.accesos[data-correo="' + CSS.escape(encontrado.persona.correo) + '"]');
+      if (renovada) actualizarAccionesAcceso(renovada);
+    }
   });
 
   // Los correos de Contactos se guardan detrás de la flecha de Accesos.
@@ -2345,6 +2356,26 @@
     });
   });
 
+  // Si los accesos están abiertos, pulsar el resto de la tarjeta cambia
+  // a la información sin cerrar primero y sin mezclar ambas vistas.
+  document.addEventListener('click', function (e) {
+    const cabeza = e.target.closest('.kw-fila-cabeza');
+    if (!cabeza || e.target.closest('.btn-abrir-accesos')) return;
+    const fila = cabeza.closest('.kw-fila');
+    if (!fila || !fila.classList.contains('solo-accesos')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const caja = fila.querySelector('.accesos');
+    const correo = caja ? caja.dataset.correo : '';
+    if (correo) mostrandoAccesos.delete(correo);
+    if (caja) caja.classList.add('ocultos');
+    fila.classList.remove('solo-accesos');
+    fila.classList.add('abierta');
+    cabeza.setAttribute('aria-expanded', 'true');
+    const botonAlta = fila.querySelector('.btn-abrir-accesos');
+    if (botonAlta) botonAlta.classList.remove('activo');
+  }, true);
+
   // El botón "Alta" vive DENTRO del encabezado de la tarjeta, que
   // es a su vez un <button> que abre/cierra la tarjeta entera (lo arma
   // kw-ui.js). Para que picar el botón NO dispare también el abrir/cerrar
@@ -2364,20 +2395,29 @@
 
     if (abrir) {
       mostrandoAccesos.add(correo);
-      // Se abre la tarjeta una sola vez, sin reconstruir la lista.
-      if (fila && !fila.classList.contains('abierta')) {
+      // Alta abre exclusivamente los accesos; la información permanece
+      // escondida hasta que se pulse el resto de la tarjeta.
+      if (fila) {
         const lista = fila.closest('.kw-lista');
         if (lista) Array.from(lista.querySelectorAll('.kw-fila.abierta')).forEach(function (f) {
-          f.classList.remove('abierta');
+          if (f === fila) return;
+          f.classList.remove('abierta', 'solo-accesos');
+          const otraCaja = f.querySelector('.accesos');
+          if (otraCaja) otraCaja.classList.add('ocultos');
           const cabeza = f.querySelector('.kw-fila-cabeza');
           if (cabeza) cabeza.setAttribute('aria-expanded', 'false');
         });
-        fila.classList.add('abierta');
+        fila.classList.add('abierta', 'solo-accesos');
         const cabeza = fila.querySelector('.kw-fila-cabeza');
         if (cabeza) cabeza.setAttribute('aria-expanded', 'true');
       }
     } else {
       mostrandoAccesos.delete(correo);
+      if (fila) {
+        fila.classList.remove('abierta', 'solo-accesos');
+        const cabeza = fila.querySelector('.kw-fila-cabeza');
+        if (cabeza) cabeza.setAttribute('aria-expanded', 'false');
+      }
     }
 
     if (caja) caja.classList.toggle('ocultos', !abrir);
