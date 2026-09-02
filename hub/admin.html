@@ -492,6 +492,38 @@
   #documentos-cont .kw-vacio strong,
   #creados-cont .kw-vacio strong { color: var(--text); }
 
+  /* Documentos quedan siempre compactos. El nombre abre el archivo y
+     las acciones secundarias viven en el menú de tres puntos. */
+  .documento-fila { overflow: visible; }
+  .documento-fila .kw-fila-cabeza { cursor: default; }
+  .documento-titulo {
+    color: var(--text); text-decoration: none; font-weight: inherit;
+  }
+  .documento-titulo:hover { color: var(--red); text-decoration: underline; }
+  .documento-menu-ancla { position: relative; flex: 0 0 auto; }
+  .documento-menu-btn {
+    width: 34px; height: 34px; border: 0; border-radius: 10px;
+    background: transparent; color: var(--muted); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .documento-menu-btn:hover { background: rgba(163,0,0,.07); color: var(--red); }
+  .documento-menu-btn svg { width: 19px; height: 19px; }
+  .documento-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+    min-width: 170px; padding: 6px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: rgba(255,255,255,.97); box-shadow: var(--sombra-2);
+  }
+  .documento-menu button {
+    width: 100%; padding: 9px 11px; border: 0; border-radius: 8px;
+    background: transparent; color: var(--text); text-align: left;
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .documento-menu button:hover { background: rgba(163,0,0,.07); color: var(--red); }
+  @media (max-width: 700px) {
+    .documento-fila .kw-fila-extra { display: none; }
+  }
+
   /* Las tarjetas de Asesores, Usuarios y Documentos comparten el mismo
      alto compacto: menos relleno y menos separación entre renglones. */
   #contenido-panel .kw-lista { gap: 6px; }
@@ -888,20 +920,8 @@
           <div class="msg" id="invite-msg"></div>
         </div>
 
-        <!-- La lista cuelga del encabezado, no dentro de una tarjeta con
-             fondo: cada renglón ya es su propia tarjeta y meterlas todas
-             dentro de otra se ve como una caja dentro de otra caja. En
-             celular el encabezado se pliega para no gastar pantalla. -->
-        <div class="kw-card kw-card-plegable kw-card-solo-cabeza" id="card-usuarios">
-          <button type="button" class="kw-card-head kw-card-head-btn">
-            <div class="kw-card-head-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <div><h2>Usuarios</h2><div class="kw-card-sub">Todo el equipo registrado en la plataforma.</div></div>
-            <svg class="kw-card-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-          <div class="kw-card-cuerpo"><div>
-            <div id="usuarios-cont"></div>
-          </div></div>
-        </div>
+        <!-- Cada usuario es una tarjeta independiente, igual que en Asesores. -->
+        <div id="usuarios-cont"></div>
       </section>
 
       <section class="kw-tabpanel" data-panel="documentos">
@@ -1519,17 +1539,25 @@
       const nombreAsesor = [d.asesor_nombre, d.asesor_apellido].filter(Boolean).join(' ') || d.asesor_email || 'Sin nombre';
       const urlBase = TIPO_URLS[d.tipo_documento];
       const listo = d.estado === 'finalizado';
-      const acciones = (listo && urlBase)
-        ? `<div class="kw-fila-acciones">
-            <a class="kw-fila-btn" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">Ver</a>
-            <button type="button" class="kw-fila-btn neutro" onclick="copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Copiar</button>
+      const nombre = escapeHtml(d.nombre_archivo || 'Sin nombre');
+      const titulo = urlBase
+        ? `<a class="kw-fila-titulo documento-titulo" href="${urlBase}?doc=${d.id}" target="_blank" rel="noopener">${nombre}</a>`
+        : `<span class="kw-fila-titulo">${nombre}</span>`;
+      const menu = listo
+        ? `<div class="documento-menu-ancla">
+            <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <div class="documento-menu" hidden>
+              <button type="button" onclick="event.stopPropagation(); this.closest('.documento-menu').hidden=true; copiarDocumentoPanel('${d.id}', '${escapeHtml(nombreAsesor).replace(/'/g, "\\'")}', '${d.tipo_documento}')">Hacer una copia</button>
+            </div>
           </div>`
         : '';
-      html += `<div class="kw-fila kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
-        <button type="button" class="kw-fila-cabeza">
+      html += `<div class="kw-fila documento-fila kw-aparece-fila" style="animation-delay:${Math.min(i * 25, 300)}ms">
+        <div class="kw-fila-cabeza">
           <span class="kw-fila-punto ${listo ? 'verde' : 'ambar'}" title="${listo ? 'Finalizado' : 'Borrador'}"></span>
           <span class="kw-fila-texto">
-            <span class="kw-fila-titulo">${escapeHtml(d.nombre_archivo || 'Sin nombre')}</span>
+            ${titulo}
             <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
           </span>
           <span class="kw-fila-extra">
@@ -1537,21 +1565,29 @@
             <span class="kw-extra">${I.etiqueta}<span>${escapeHtml(d.folio || 'Sin folio')}</span></span>
             <span class="kw-extra"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>
           </span>
-          ${I.flecha}
-        </button>
-        <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
-          <div class="kw-datos">
-            <div class="kw-dato kw-solo-movil">${I.documento}<span class="kw-dato-txt">${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></div>
-            <div class="kw-dato kw-solo-movil">${I.etiqueta}<span class="kw-dato-txt">Folio: ${escapeHtml(d.folio || 'sin folio')}</span></div>
-            <div class="kw-dato con-acciones texto-solo-movil">${I.reloj}<span class="kw-dato-txt"><span class="kw-pill ${listo ? 'kw-pill-ok' : 'kw-pill-espera'}">${listo ? 'Finalizado' : 'Borrador'}</span></span>${acciones}</div>
-          </div>
-        </div></div></div>
+          ${menu}
+        </div>
       </div>`;
     });
     html += '</div>';
     cont.innerHTML = html;
-    window.kwUI.acordeon(cont);
   }
+
+  function toggleMenuDocumento(btn, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    const abrir = menu.hidden;
+    document.querySelectorAll('.documento-menu:not([hidden])').forEach(m => { m.hidden = true; });
+    menu.hidden = !abrir;
+    btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.documento-menu-ancla')) {
+      document.querySelectorAll('.documento-menu:not([hidden])').forEach(m => { m.hidden = true; });
+    }
+  });
 
   // ── Documentos hechos con el creador de formatos ──
   let documentosCreadosCache = [];
