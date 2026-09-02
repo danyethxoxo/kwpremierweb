@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260829p"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260902a">
 <!-- El tema claro va al final: es el que cambia el material y el fondo, y
      para eso tiene que ganarle a lo que traiga kw-base.css. Antes aquí
@@ -24,7 +25,7 @@
      vuelve a declarar --bg con el guinda oscuro, esta pantalla se
      quedaba en negro mientras el resto del sitio ya iba en claro.
      kw-ui.css no hace falta enlazarlo: kw-base.css ya lo trae. -->
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260902a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260902b">
 <style>
   /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
@@ -103,10 +104,19 @@
   .btn svg { width: 15px; height: 15px; }
   .btn:disabled { opacity: .55; cursor: default; }
 
+  .toolbar-menu-wrap { position: relative; flex: 0 0 auto; }
+  .toolbar-menu-btn { width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--sombra-1); }
+  .toolbar-menu-btn:hover, .toolbar-menu-btn[aria-expanded="true"] { color:var(--text); border-color:rgba(138,0,0,.28); }
+  .toolbar-menu-btn svg { width:17px; height:17px; }
+  .toolbar-menu { position:absolute; top:42px; right:0; z-index:60; min-width:190px; padding:5px; border:1px solid var(--border); border-radius:11px; background:#fff; box-shadow:var(--sombra-3); }
+  .toolbar-menu button { width:100%; padding:9px 10px; border:0; border-radius:8px; background:none; color:var(--text); font:inherit; font-size:13px; display:flex; align-items:center; gap:9px; cursor:pointer; text-align:left; }
+  .toolbar-menu button:hover { background:#f5f5f5; }
+  .toolbar-menu button:disabled { opacity:.55; cursor:default; }
+
   /* Pestañas universales: solo texto y subrayado, sin cápsula ni fondo. */
   .abc-tabs-texto {
     display: flex; align-items: center; gap: 20px;
-    margin-left: auto; align-self: stretch;
+    margin-left: 0; align-self: stretch;
   }
   .abc-tab {
     position: relative; border: 0; background: none; padding: 0 0 7px;
@@ -141,7 +151,8 @@
   /* ── Lista de asesores ── */
   .lista { display: flex; flex-direction: column; gap: 8px; }
   .fila {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-left: 4px solid transparent; border-radius: 12px;
+    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
+    border: 1px solid color-mix(in srgb, var(--dt-color, #8a0000) 34%, transparent); border-left: 4px solid var(--dt-color, #8a0000); border-radius: 12px;
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     transition: box-shadow .15s;
@@ -358,15 +369,21 @@
 
       <div class="toolbar-filtros">
         <select class="filtro" id="f-dt"><option value="">Todos los DT</option></select>
-        <button type="button" class="btn" id="btn-sync">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-          Sincronizar
-        </button>
       </div>
 
       <div class="abc-tabs-texto" id="abc-tabs" role="tablist" aria-label="Estado de asesores">
         <button type="button" class="abc-tab activo" data-tab="activos" role="tab" aria-selected="true">Activos</button>
         <button type="button" class="abc-tab" data-tab="inactivos" role="tab" aria-selected="false">Inactivos</button>
+      </div>
+
+      <div class="toolbar-menu-wrap">
+        <button type="button" class="toolbar-menu-btn" id="toolbar-menu-btn" aria-label="Más acciones" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+        </button>
+        <div class="toolbar-menu" id="toolbar-menu" hidden>
+          <button type="button" id="btn-sync"><span>↻</span> Sincronizar</button>
+          <button type="button" id="btn-exportar"><span>↓</span> Exportar a Excel</button>
+        </div>
       </div>
     </div>
 
@@ -588,7 +605,7 @@
   }
 
   function htmlFila(a) {
-    return '<div class="fila" data-kwid="' + esc(a.kwid) + '" style="border-left-color:' + colorDT(a.dt_asignado) + '">' +
+    return '<div class="fila" data-kwid="' + esc(a.kwid) + '" style="--dt-color:' + colorDT(a.dt_asignado) + '">' +
       htmlFilaMain(a) +
       '<div class="fila-checklist-outer"><div class="fila-checklist-inner"></div></div>' +
     '</div>';
@@ -603,7 +620,7 @@
     if (!fila || !a) return;
     var abierta = fila.querySelector('.fila-main').getAttribute('aria-expanded') === 'true';
     fila.querySelector('.fila-main').outerHTML = htmlFilaMain(a);
-    fila.style.borderLeftColor = colorDT(a.dt_asignado);
+    fila.style.setProperty('--dt-color', colorDT(a.dt_asignado));
     fila.querySelector('.fila-main').setAttribute('aria-expanded', abierta ? 'true' : 'false');
   }
 
@@ -948,6 +965,30 @@
     cont.innerHTML = '';
   }
 
+  function cerrarToolbarMenu() {
+    document.getElementById('toolbar-menu').hidden = true;
+    document.getElementById('toolbar-menu-btn').setAttribute('aria-expanded', 'false');
+  }
+  function alternarToolbarMenu() {
+    var menu = document.getElementById('toolbar-menu');
+    var abrir = menu.hidden;
+    menu.hidden = !abrir;
+    document.getElementById('toolbar-menu-btn').setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  }
+  function exportarExcel() {
+    if (!window.XLSX) { avisar('No se pudo cargar el exportador de Excel.', 'error'); return; }
+    var datos = filtrados().map(function (a) {
+      return { Nombre:a.nombre||'', KWID:a.kwid||'', DT:a.dt_asignado||'Sin DT asignado', Estado:a.activo?'Activo':'Inactivo', 'Avance ABC':pctDe(a.kwid)+'%' };
+    });
+    if (!datos.length) { avisar('No hay asesores visibles para exportar.', 'error'); return; }
+    var hoja = window.XLSX.utils.json_to_sheet(datos);
+    hoja['!cols'] = [{wch:38},{wch:16},{wch:24},{wch:12},{wch:14}];
+    var libro = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(libro, hoja, 'ABC Asesores');
+    window.XLSX.writeFile(libro, 'abc-asesores-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    cerrarToolbarMenu();
+  }
+
   // ── Sincronizar con la hoja de asesores ──
   //
   // Primero pide la vista previa (sin escribir) y enseña qué cambiaría.
@@ -1176,7 +1217,11 @@
     });
     pintar();
   });
-  document.getElementById('btn-sync').addEventListener('click', sincronizar);
+  document.getElementById('toolbar-menu-btn').addEventListener('click', function (e) { e.stopPropagation(); alternarToolbarMenu(); });
+  document.getElementById('toolbar-menu').addEventListener('click', function (e) { e.stopPropagation(); });
+  document.getElementById('btn-sync').addEventListener('click', function () { cerrarToolbarMenu(); sincronizar(); });
+  document.getElementById('btn-exportar').addEventListener('click', exportarExcel);
+  document.addEventListener('click', cerrarToolbarMenu);
 
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
