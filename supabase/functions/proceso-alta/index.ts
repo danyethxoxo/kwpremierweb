@@ -1498,7 +1498,16 @@ Deno.serve(async (req: Request) => {
         // Una fila sin nombre NI correo es una fila que nadie ha llenado
         // todavía, no una persona a medias: esa no se enseña ni se
         // reporta como omitida.
-        const personas = parsearPersonas(valores[i]).filter((p) => p.nombre || p.correo)
+        // Back Office normalmente no tiene correo institucional: su hoja
+        // trae “eMail Personal”. Para este grupo sí sirve como correo
+        // principal de sincronización cuando no exista uno de KW; de otro
+        // modo todas sus filas se descartaban aunque estuvieran completas.
+        const esBackOffice = h.clave === 'back_office_activo' || h.clave === 'back_office_baja'
+        const personas = parsearPersonas(valores[i])
+          .map((p) => esBackOffice && !p.correo && p.correoPersonal
+            ? { ...p, correo: limpiarCorreo(p.correoPersonal) }
+            : p)
+          .filter((p) => p.nombre || p.correo)
         return {
           clave: h.clave,
           titulo: h.titulo,
