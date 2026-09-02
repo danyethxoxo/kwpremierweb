@@ -383,12 +383,6 @@
       const { data: userData } = await window.kwSupabase.auth.getUser();
       if (!userData || !userData.user) return;
 
-      // "Perfil" lleva al perfil público de cada quien (el que se comparte
-      // con los clientes); desde ahí hay un botón para editarlo. Se arma
-      // aquí porque el id sale de la sesión.
-      document.getElementById('btn-perfil-header').href =
-        '/kwpremierweb/micrositio.html?id=' + encodeURIComponent(userData.user.id);
-
       const { data: perfil } = await window.kwSupabase
         .from('profiles')
         .select('role')
