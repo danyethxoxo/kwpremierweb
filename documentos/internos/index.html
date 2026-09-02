@@ -212,6 +212,21 @@
     }
     .card:hover .card-sigla { box-shadow: 0 5px 16px rgba(var(--rol-rgb), 0.28), inset 0 1px 0 rgba(255,255,255,0.95); }
 
+
+    /* Tarjetas iguales a las del Hub: limpias, con la flecha circular al
+       pasar el cursor. La sigla conserva el color configurado del rol. */
+    .grid .carpeta-hub { min-height: 156px; padding: 24px 20px; --card-color: rgb(var(--rol-rgb)); }
+    .carpeta-hub .card-sigla {
+      width: auto; min-width: 44px; height: 44px; padding: 0 10px;
+      color: rgb(var(--rol-rgb));
+      background: rgba(var(--rol-rgb), 0.10);
+      border: 1px solid rgba(var(--rol-rgb), 0.18);
+      box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+    .carpeta-hub:hover .card-sigla { color: #fff; box-shadow: none; }
+    .carpeta-hub .hover-card-title { padding-right: 38px; margin-bottom: 5px; }
+    .card-meta { font-size: 12px; color: var(--muted); }
+
     .cargando, .vacio-msg {
       grid-column: 1 / -1;
       text-align: center; padding: 40px 20px;
@@ -262,7 +277,6 @@
     <div id="contenido-interno">
 
     <h1 class="page-title">Documentos Internos</h1>
-    <p class="page-desc">Guías y formatos de uso interno para el equipo KW Premier</p>
 
     <!-- Las carpetas salen de roles_kw y se cuentan contra
          documentos_internos: así, cuando alguien cambia "Hacer visible
@@ -333,13 +347,13 @@
 
       caja.innerHTML = roles.map(function (rol) {
         var n = docs.filter(function (d) { return (d.roles || []).indexOf(rol.id) >= 0; }).length;
-        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '" class="card"' +
-            ' style="--rol-rgb: ' + rgbDeHex(rol.color) + ';">' +
-          '<span class="card-sigla">' + escapar(rol.id) + '</span>' +
-          '<div class="card-title">' + escapar(rol.nombre) + '</div>' +
-          '<div class="card-desc">' + escapar(rol.descripcion || '') + '</div>' +
-          '<div class="card-cta">' + n + (n === 1 ? ' documento' : ' documentos') +
-            ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
+        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '" class="hover-card carpeta-hub"' +
+            ' style="--rol-rgb: ' + rgbDeHex(rol.color) + '; --card-color: rgb(' + rgbDeHex(rol.color) + ');">' +
+          '<span class="hover-card-icon card-sigla">' + escapar(rol.id) + '</span>' +
+          '<div class="hover-card-title">' + escapar(rol.nombre) + '</div>' +
+          '<div class="card-meta">' + n + (n === 1 ? ' documento' : ' documentos') + '</div>' +
+          '<div class="hover-card-arrow">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
           '</div></a>';
       }).join('');
     } catch (err) {
