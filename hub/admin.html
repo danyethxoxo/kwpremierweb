@@ -461,11 +461,54 @@
 
   .denegado { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--muted); }
 
+  /* Usuarios compactos: una fila, nombre enlazable, visibilidad y menú. */
+  .usuario-fila .kw-fila-cabeza { cursor: default; }
+  .usuario-nombre { color: var(--text); text-decoration: none; }
+  .usuario-nombre:hover { color: var(--red); text-decoration: underline; }
+  .usuario-visibilidad {
+    border: 0; background: transparent; border-radius: 9px; padding: 6px 8px;
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--muted); font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .usuario-visibilidad:hover { background: rgba(163,0,0,.06); color: var(--red); }
+  .usuario-visibilidad svg { width: 17px; height: 17px; }
+  .usuario-fila .documento-menu-ancla { margin-left: 2px; }
+
   /* ── Modal: editar usuario ──
      Solo lo que cambia respecto al modal de kw-base.css: este es más
      ancho porque lleva formulario, y trae el botón de eliminar. */
-  #modal-editar-usuario .modal-box { max-width: 430px; max-height: 90vh; overflow-y: auto; }
-  #modal-editar-usuario h3 { margin-bottom: var(--sp-4); }
+  #modal-editar-usuario .modal-box {
+    max-width: 620px; max-height: 90vh; overflow-y: auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px;
+    padding: 24px;
+  }
+  #modal-editar-usuario h3,
+  #modal-editar-usuario .msg,
+  #modal-editar-usuario .editar-acciones { grid-column: 1 / -1; }
+  #modal-editar-usuario h3 { margin: 0 0 4px; }
+  #modal-editar-usuario .field { margin: 0; }
+  #modal-editar-usuario .field label { font-size: 11px; margin-bottom: 5px; }
+  #modal-editar-usuario input,
+  #modal-editar-usuario select { min-height: 40px; height: 40px; }
+  #modal-editar-usuario .field:has(#edit-email),
+  #modal-editar-usuario .field:has(#edit-password) { grid-column: 1 / -1; }
+  #modal-editar-usuario .editar-acciones {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;
+  }
+  #modal-editar-usuario .editar-acciones button {
+    width: auto; min-width: 92px; height: 36px; padding: 0 15px;
+    margin: 0; border-radius: 10px; font-size: 12.5px;
+  }
+  #modal-editar-usuario .editar-acciones .kw-confirmar {
+    margin: 0 auto 0 0;
+  }
+  #modal-editar-usuario .editar-acciones .btn-eliminar-usuario {
+    color: #a30000; border: 1px solid #d99; background: transparent;
+  }
+  @media (max-width: 620px) {
+    #modal-editar-usuario .modal-box { grid-template-columns: 1fr; padding: 20px; }
+    #modal-editar-usuario .field { grid-column: 1 / -1; }
+  }
   /* Eliminar no es una acción de la misma altura que Guardar: va más
      abajo, más chico y separado por una línea, para que no se pique de
      pasada al querer darle a los botones de arriba. */
@@ -652,7 +695,7 @@
   }
   .panel-barra-documentos .kw-campo-filtro,
   .panel-barra-documentos .kw-campo-filtro.ancho {
-    min-width: 0; flex: 1 1 0;
+    width: 100%; max-width: 320px; min-width: 220px; flex: 1 1 220px;
   }
   .panel-barra-documentos .kw-campo-filtro label { display: none; }
   .panel-barra-documentos .kw-input,
@@ -1060,11 +1103,11 @@
       <div class="field"><label>Apellido</label><input type="text" id="edit-apellido" /></div>
       <div class="field"><label>Correo</label><input type="email" id="edit-email" /></div>
       <div class="field">
-        <label>Rol</label>
+        <label>Permisos</label>
         <select id="edit-rol"></select>
       </div>
       <div class="field">
-        <label>Puesto (aparece en Liderazgo)</label>
+        <label>Rol</label>
         <select id="edit-puesto">
           <option value="">- Sin puesto -</option>
           <option value="Principal Operator">Principal Operator</option>
@@ -1077,19 +1120,6 @@
           <option value="Team Leader">Team Leader</option>
         </select>
       </div>
-      <!-- Master y Admin lo traen siempre. Para Liderazgo es un permiso
-           suelto que se prende persona por persona - no todo Liderazgo
-           dictamina. -->
-      <div class="field">
-        <label>Dictámenes</label>
-        <label class="kw-chip" style="width:100%;">
-          <input type="checkbox" id="edit-dictaminar">
-          Puede levantar dictámenes y darlos por subsanados
-        </label>
-        <p class="nota-dictaminar" style="display:none;margin-top:6px;font-size:12px;color:var(--muted);">
-          Master y Admin lo traen siempre y no se les puede quitar.
-        </p>
-      </div>
       <div class="field"><label>Nueva contraseña (opcional)</label>
         <div class="password-wrap">
           <input type="password" id="edit-password" placeholder="Dejar en blanco para no cambiarla" />
@@ -1099,11 +1129,11 @@
         </div>
       </div>
       <div class="msg" id="edit-msg"></div>
-      <div class="modal-actions">
+      <div class="modal-actions editar-acciones">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
         <button type="button" class="btn-modal-confirmar" onclick="guardarEdicionUsuario()">Guardar</button>
+        <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="¿Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar</button>
       </div>
-      <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="¿Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar usuario</button>
     </div>
   </div>
 
@@ -1213,6 +1243,15 @@
     // Solo la de Asesores es una lista larga que conviene que ruede por
     // dentro; las otras dos son formularios y ruedan como siempre.
     document.body.classList.toggle('en-asesores', tab === 'asesores');
+    if (tab !== 'asesores') {
+      document.body.style.height = 'auto';
+      document.body.style.overflowY = 'auto';
+      document.documentElement.style.overflowY = 'auto';
+    } else {
+      document.body.style.height = '';
+      document.body.style.overflowY = '';
+      document.documentElement.style.overflowY = '';
+    }
   }
 
   // Filas fantasma mientras llega la respuesta: ocupan el mismo lugar
@@ -1265,20 +1304,16 @@
     try {
       const { data, error } = await window.kwSupabase
         .from('profiles')
-        .select('id, nombre, apellido, email, role, created_at, oculto, puesto, foto_url, puede_dictaminar')
+        .select('id, nombre, apellido, email, role, created_at, oculto, puesto, foto_url')
         .order('created_at', { ascending: false });
       if (error) throw error;
       usuariosCache = data || [];
 
-      if (usuariosCache.length === 0) {
-        cont.innerHTML = '<div class="kw-vacio"><strong>Todavía no hay usuarios</strong>' +
-          'Agrega al primero con el formulario de arriba.</div>';
+      if (!usuariosCache.length) {
+        cont.innerHTML = '<div class="kw-vacio"><strong>Todavía no hay usuarios</strong>Agrega al primero con el formulario de arriba.</div>';
         return;
       }
 
-      // Cada usuario es su propia tarjeta: cerrada trae foto, nombre y
-      // correo, y al picarle se abre con puesto, rol, fecha de alta,
-      // visibilidad y los botones.
       const I = window.kwUI.iconos;
       let html = '<div class="kw-lista">';
       usuariosCache.forEach((u, i) => {
@@ -1288,40 +1323,41 @@
         const avatar = u.foto_url
           ? `<img src="${escapeHtml(u.foto_url)}" alt="" />`
           : escapeHtml(((u.nombre || '').trim().charAt(0) + (u.apellido || '').trim().charAt(0)).toUpperCase() || '?');
-        html += `<div class="kw-fila kw-aparece-fila${oculto ? ' apagada' : ''}" style="animation-delay:${Math.min(i * 30, 300)}ms">
-          <button type="button" class="kw-fila-cabeza">
+        const ojo = oculto
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 8 9 8a17 17 0 0 1-2.1 3.2M6.6 6.6C4.2 8.2 3 12 3 12s3.5 8 9 8c1 0 2-.3 2.9-.7"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const menu = puedoEditar ? `<div class="documento-menu-ancla">
+          <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+          </button>
+          <div class="documento-menu" hidden><button type="button" class="btn-editar-usuario" data-idx="${i}">Editar</button></div>
+        </div>` : '';
+        html += `<div class="kw-fila usuario-fila kw-aparece-fila${oculto ? ' apagada' : ''}" style="animation-delay:${Math.min(i * 30, 300)}ms">
+          <div class="kw-fila-cabeza">
             <span class="kw-fila-avatar">${avatar}</span>
             <span class="kw-fila-texto">
-              <span class="kw-fila-titulo">${escapeHtml(nombreCompleto)}</span>
+              <a class="kw-fila-titulo usuario-nombre" href="../micrositio.html?id=${encodeURIComponent(u.id)}">${escapeHtml(nombreCompleto)}</a>
               <span class="kw-fila-sub">${escapeHtml(u.puesto || ROLE_LABELS[u.role] || u.role)}</span>
             </span>
             <span class="kw-fila-extra">
               <span class="kw-extra">${I.correo}<span>${escapeHtml(u.email || 'Sin correo')}</span></span>
               <span class="kw-extra">${I.escudo}<span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span>
             </span>
-            ${I.flecha}
-          </button>
-          <div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">
-            <div class="kw-datos">
-              <a class="kw-dato kw-solo-movil" href="mailto:${escapeHtml(u.email || '')}">${I.correo}<span class="kw-dato-txt">${escapeHtml(u.email || 'Sin correo')}</span></a>
-              <div class="kw-dato kw-solo-movil">${I.escudo}<span class="kw-dato-txt"><span class="rol-badge rol-${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span></span></div>
-              <div class="kw-dato">${I.calendario}<span class="kw-dato-txt">Alta: ${fmtFechaCorta(u.created_at)}</span></div>
-              <div class="kw-dato con-acciones">${I.ojo}<span class="kw-dato-txt"><span class="kw-pill ${oculto ? 'kw-pill-alerta' : 'kw-pill-ok'}">${oculto ? 'Oculto' : 'Visible'}</span></span>${puedoEditar ? `<div class="kw-fila-acciones">
-                <button type="button" class="kw-fila-btn btn-editar-usuario" data-idx="${i}">Editar</button>
-                <button type="button" class="kw-fila-btn neutro btn-toggle-oculto" data-idx="${i}">${oculto ? 'Mostrar' : 'Ocultar'}</button>
-              </div>` : ''}</div>
-            </div>
-          </div></div></div>
+            <button type="button" class="usuario-visibilidad btn-toggle-oculto" data-idx="${i}" ${puedoEditar ? '' : 'disabled'}>${ojo}<span>${oculto ? 'Oculto' : 'Visible'}</span></button>
+            ${menu}
+          </div>
         </div>`;
       });
       html += '</div>';
       cont.innerHTML = html;
-      window.kwUI.acordeon(cont);
 
-      Array.from(cont.querySelectorAll('.btn-editar-usuario')).forEach(btn => {
-        btn.addEventListener('click', () => abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]));
+      cont.querySelectorAll('.btn-editar-usuario').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          abrirModalEditar(usuariosCache[Number(btn.dataset.idx)]);
+        });
       });
-      Array.from(cont.querySelectorAll('.btn-toggle-oculto')).forEach(btn => {
+      cont.querySelectorAll('.btn-toggle-oculto').forEach(btn => {
         btn.addEventListener('click', () => toggleOcultoUsuario(usuariosCache[Number(btn.dataset.idx)], btn));
       });
     } catch (err) {
@@ -1395,15 +1431,6 @@
     rolSelect.disabled = (u.id === miUserId);
 
     document.getElementById('edit-puesto').value = u.puesto || '';
-    // Master y Admin siempre pueden, así que su casilla va prendida y
-    // trabada: la base los deja pasar de todos modos, y dejarla apagable
-    // enseñaría un permiso quitado que en realidad sigue puesto.
-    const chkDictaminar = document.getElementById('edit-dictaminar');
-    const siempreDictamina = u.role === 'master' || u.role === 'admin';
-    chkDictaminar.checked = siempreDictamina || u.puede_dictaminar === true;
-    chkDictaminar.disabled = siempreDictamina;
-    chkDictaminar.closest('.field').querySelector('.nota-dictaminar').style.display =
-      siempreDictamina ? '' : 'none';
 
     const btnBorrar = document.getElementById('btn-eliminar-usuario');
     (btnBorrar.closest('.kw-confirmar') || btnBorrar).style.display = (u.id === miUserId) ? 'none' : '';
@@ -1444,19 +1471,6 @@
 
       await llamarFuncion(GESTIONAR_URL, payload);
 
-      // El permiso de dictaminar va por su cuenta, con una función de la
-      // base. No entra en el payload de arriba porque esa Edge Function
-      // se despliega a mano desde el dashboard, y un campo nuevo ahí
-      // significaría que nadie puede dar el permiso hasta que alguien se
-      // acuerde de republicarla.
-      const quiereDictaminar = document.getElementById('edit-dictaminar').checked;
-      if (quiereDictaminar !== (usuarioEnEdicion.puede_dictaminar === true)) {
-        const { error: errDic } = await window.kwSupabase.rpc('set_puede_dictaminar', {
-          p_user: usuarioEnEdicion.id,
-          p_valor: quiereDictaminar
-        });
-        if (errDic) throw new Error('Se guardó lo demás, pero el permiso de dictámenes no: ' + errDic.message);
-      }
 
       setEditMsg('Usuario actualizado.', 'ok');
       cargarUsuarios();
