@@ -25,7 +25,7 @@
      vuelve a declarar --bg con el guinda oscuro, esta pantalla se
      quedaba en negro mientras el resto del sitio ya iba en claro.
      kw-ui.css no hace falta enlazarlo: kw-base.css ya lo trae. -->
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260902b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260902c">
 <style>
   /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
@@ -105,8 +105,8 @@
   .btn:disabled { opacity: .55; cursor: default; }
 
   .toolbar-menu-wrap { position: relative; flex: 0 0 auto; }
-  .toolbar-menu-btn { width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--sombra-1); }
-  .toolbar-menu-btn:hover, .toolbar-menu-btn[aria-expanded="true"] { color:var(--text); border-color:rgba(138,0,0,.28); }
+  .toolbar-menu-btn { width: 28px; height: 36px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:none; }
+  .toolbar-menu-btn:hover, .toolbar-menu-btn[aria-expanded="true"] { color:var(--text); background:transparent; border:0; box-shadow:none; }
   .toolbar-menu-btn svg { width:17px; height:17px; }
   .toolbar-menu { position:absolute; top:42px; right:0; z-index:60; min-width:190px; padding:5px; border:1px solid var(--border); border-radius:11px; background:#fff; box-shadow:var(--sombra-3); }
   .toolbar-menu button { width:100%; padding:9px 10px; border:0; border-radius:8px; background:none; color:var(--text); font:inherit; font-size:13px; display:flex; align-items:center; gap:9px; cursor:pointer; text-align:left; }
@@ -116,7 +116,7 @@
   /* Pestañas universales: solo texto y subrayado, sin cápsula ni fondo. */
   .abc-tabs-texto {
     display: flex; align-items: center; gap: 20px;
-    margin-left: 0; align-self: stretch;
+    margin-left: auto; align-self: stretch;
   }
   .abc-tab {
     position: relative; border: 0; background: none; padding: 0 0 7px;
@@ -133,7 +133,7 @@
   @media (max-width: 900px) {
     .toolbar { flex-wrap: wrap; }
     .buscador { max-width: none; flex-basis: 100%; }
-    .abc-tabs-texto { margin-left: 0; }
+    .abc-tabs-texto { margin-left: auto; }
   }
   @media (max-width: 560px) {
     .toolbar-filtros { width: 100%; flex-wrap: wrap; }
@@ -294,8 +294,8 @@
 
   /* ── Casilla ── */
   .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; }
-  .chk:hover { border-color: var(--red); }
-  .chk:checked { background: var(--red); border-color: var(--red); }
+  .chk:hover { border-color: #2563eb; }
+  .chk:checked { background: #2563eb; border-color: #2563eb; }
   .chk:checked::after { content: ''; position: absolute; left: 5px; top: 1.5px; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   .chk:disabled { opacity: .45; cursor: default; }
   .chk.guardando { opacity: .5; }
@@ -403,7 +403,8 @@
   var dtsConocidos = []; // nombres de DT ya vistos en el padrón, para el filtro y el editor
   var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
   var pestana = 'activos'; // 'activos' | 'inactivos'
-  var statFiltro = null; // activos | adopcion | completos | temas
+  var statFiltro = null; // únicamente 'completos' filtra la lista
+  var statsMarcados = new Set(); // los demás conteos solo conservan estado visual
   var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
 
@@ -497,10 +498,7 @@
       if (pestana === 'inactivos' && a.activo) return false;
       if (dt && (a.dt_asignado || '') !== dt) return false;
       var pct = pctDe(a.kwid);
-      if (statFiltro === 'activos' && !a.activo) return false;
-      if (statFiltro === 'adopcion' && pct <= 0) return false;
       if (statFiltro === 'completos' && pct !== 100) return false;
-      if (statFiltro === 'temas' && pct >= 100) return false;
       if (q) {
         var texto = norm(a.nombre + ' ' + a.kwid);
         var palabras = q.split(/\s+/);
@@ -531,7 +529,9 @@
 
   function refrescarStatsActivos() {
     document.querySelectorAll('#stats-filtros [data-stat]').forEach(function (b) {
-      var activa = b.dataset.stat === statFiltro;
+      var activa = b.dataset.stat === 'completos'
+        ? statFiltro === 'completos'
+        : statsMarcados.has(b.dataset.stat);
       b.classList.toggle('activa', activa);
       b.setAttribute('aria-pressed', activa ? 'true' : 'false');
     });
@@ -1202,8 +1202,15 @@
   document.getElementById('stats-filtros').addEventListener('click', function (e) {
     var stat = e.target.closest('[data-stat]');
     if (!stat) return;
-    statFiltro = statFiltro === stat.dataset.stat ? null : stat.dataset.stat;
-    pintar();
+    var clave = stat.dataset.stat;
+    if (clave === 'completos') {
+      statFiltro = statFiltro === 'completos' ? null : 'completos';
+      pintar();
+      return;
+    }
+    if (statsMarcados.has(clave)) statsMarcados.delete(clave);
+    else statsMarcados.add(clave);
+    refrescarStatsActivos();
   });
 
   document.getElementById('abc-tabs').addEventListener('click', function (e) {
