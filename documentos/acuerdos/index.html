@@ -98,6 +98,10 @@
        la animación automática y se activa una sola vez al terminar,
        con el mismo ritmo escalonado que las tarjetas del Hub. */
     .grid > * { animation: none; }
+    /* No mostrar las tarjetas hasta que doc-menu haya terminado de envolverlas:
+       así el primer cuadro visible coincide con el inicio de la animación. */
+    .grid { visibility: hidden; }
+    .grid.kw-lista-para-entrada { visibility: visible; }
     .grid > .doc-wrap.kw-entrada-hub {
       animation: kw-aparece 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
@@ -327,9 +331,11 @@
     function arranca() {
       window.kwDocMenu.init().then(function () {
         requestAnimationFrame(function () {
+          var grid = document.querySelector('.grid');
           document.querySelectorAll('.grid > .doc-wrap').forEach(function (tarjeta) {
             tarjeta.classList.add('kw-entrada-hub');
           });
+          grid.classList.add('kw-lista-para-entrada');
         });
       });
     }
