@@ -1213,6 +1213,7 @@ function limpiarFormulario() {
 }
 
 function crearNuevoDocumento() {
+  if (!new URLSearchParams(location.search).has('nuevo')) { location.assign(location.pathname + '?nuevo=1'); return; }
   abrirConAnimacion('Preparando el documento…', function () {
     documentoActualId = null;
     folioActual = null;
@@ -1380,7 +1381,7 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
     }).join('') + '</div>';
 
   Array.from(cont.querySelectorAll('.lista-item')).forEach((el, i) => {
-    el.addEventListener('click', () => abrirDocumentoGuardado(rows[i]));
+    el.addEventListener('click', () => { location.assign(location.pathname + '?doc=' + encodeURIComponent(rows[i].id)); });
   });
   Array.from(cont.querySelectorAll('.lista-item-menu-trigger')).forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -1709,9 +1710,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
   // se salta la lista y abre ese documento directo.
-  const docIdDesdeURL = new URLSearchParams(location.search).get('doc');
+  const parametrosURL = new URLSearchParams(location.search);
+  const docIdDesdeURL = parametrosURL.get('doc');
+  const nuevoDesdeURL = parametrosURL.has('nuevo');
   function iniciarCarga() {
     if (docIdDesdeURL) abrirDocumentoPorId(docIdDesdeURL);
+    else if (nuevoDesdeURL) crearNuevoDocumento();
     else cargarListaDocumentos();
   }
 
