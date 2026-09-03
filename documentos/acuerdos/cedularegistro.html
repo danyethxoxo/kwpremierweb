@@ -540,6 +540,7 @@
   .lista-item-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
   .lista-item-menu-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text); }
   .lista-item-menu { position: fixed; right: auto; left: auto; z-index: 250; }
+  .vista-lista { overflow-x: hidden; }
   @media (min-width: 901px) {
     body.en-lista-documentos { height: 100vh; overflow: hidden; }
     body.en-lista-documentos #vista-lista { display: flex !important; flex: 1; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 26px 24px 20px; }
@@ -941,7 +942,7 @@ function mostrarVista(vista, marcar) {
   document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
   document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
   if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
-  if (marcar !== false) history.pushState({ kwVista: vista }, '', location.href);
+  // La URL, no un estado interno, define la pantalla: evita bucles al usar Atrás.
 }
 
 // Entrar al documento con su pantallita de "abriendo": antes se picaba
@@ -963,12 +964,6 @@ function abrirConAnimacion(texto, armar) {
     });
   });
 }
-
-window.addEventListener('popstate', function (ev) {
-  var vista = (ev.state && ev.state.kwVista) || 'lista';
-  mostrarVista(vista, false);
-  if (vista === 'lista') cargarListaDocumentos();
-});
 
 function actualizarVisibilidadBotones() {
   const finalizado = estadoActual === 'finalizado';
