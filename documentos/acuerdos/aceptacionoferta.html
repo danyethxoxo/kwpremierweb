@@ -427,19 +427,14 @@
   .vista-lista-title { font-size: 20px; font-weight: 700; color: var(--text); }
   .vista-lista-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .btn-nuevo-documento {
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-    color: var(--red);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%); border: none; border-radius: 40px;
-    padding: 11px 18px; font-size: 13.5px; font-weight: 700;
-    font-family: 'Poppins', Arial, sans-serif; cursor: pointer;
-    box-shadow: 0 4px 18px rgba(138,0,0,0.3);
-    transition: filter 0.18s, transform 0.12s;
+    display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px;
+    border-radius: 999px; border: none; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(40,12,12,0.2); transition: transform var(--t-medio);
     white-space: nowrap;
   }
-  .btn-nuevo-documento:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
-  .btn-nuevo-documento:active { transform: scale(0.96); }
+  .btn-nuevo-documento:hover { transform: translateY(-1px); }
+  .btn-nuevo-documento:active { transform: translateY(0); }
 
   /* El selector de Borradores/Finalizados es el mismo control de
      pestañas del Panel (kw-ui.css): la pastilla se desliza de una a
@@ -529,26 +524,27 @@
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
   .fab-label-nuevo { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
 
-  .lista-documentos { display: flex; flex-direction: column; gap: 10px; }
-  .lista-loading, .lista-vacio {
-    color: var(--muted); font-size: 13.5px; padding: 20px 4px;
-  }
-  /* ── Lista de guardados: las tarjetas compartidas (kw-ui.css) ──
-     Aquí la tarjeta no se abre hacia abajo, picarla abre el documento,
-     así que la cabeza no lleva flecha y los botones van a la derecha. */
-  .lista-item { cursor: pointer; transition: box-shadow 0.18s, transform 0.12s; }
-  .lista-item:hover { box-shadow: 0 10px 26px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.9); }
-  .lista-item:active { transform: scale(0.995); }
+  .lista-documentos { display: flex; flex-direction: column; gap: 6px; }
+  .lista-loading, .lista-vacio { color: var(--muted); font-size: 13.5px; padding: 20px 4px; }
+  .lista-item { cursor: pointer; transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s; }
+  .lista-item:hover { box-shadow: 0 5px 14px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.86); transform: scale(1.008); }
+  .lista-item:active { transform: scale(0.997); }
+  .lista-item .kw-fila-cabeza { padding-block: 10px; }
   .doc-fila { cursor: pointer; }
-  .lista-item-copiar, .lista-item-eliminar {
-    display: flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border);
-    background: #fff; color: var(--muted); cursor: pointer; flex-shrink: 0;
-    transition: border-color 0.15s, color 0.15s, transform 0.12s;
+  .lista-item-texto { display: flex; align-items: baseline; gap: 8px; }
+  .lista-item-texto .kw-fila-titulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lista-item-meta { flex-shrink: 0; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .lista-item-menu-ancla { position: relative; display: flex; }
+  .lista-item-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+  .lista-item-menu-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+  .lista-item-menu { right: 0; left: auto; }
+  @media (min-width: 901px) {
+    body.en-lista-documentos { height: 100vh; overflow: hidden; }
+    body.en-lista-documentos #vista-lista { display: flex !important; flex: 1; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 26px 24px 20px; }
+    body.en-lista-documentos .lista-columnas { flex: 1; min-height: 0; }
+    body.en-lista-documentos .lista-columna { display: flex; flex-direction: column; min-height: 0; }
+    body.en-lista-documentos .lista-documentos { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 5px 8px 0; }
   }
-  .lista-item-copiar:hover { border-color: var(--red); color: var(--red); }
-  .lista-item-eliminar:hover { border-color: #a30000; color: #a30000; }
-  .lista-item-copiar:active, .lista-item-eliminar:active { transform: scale(0.92); }
 
   /* ── Modal: nombre del documento ── */
   .modal-overlay {
@@ -994,6 +990,7 @@ function setGuardarMsg(text, kind) {
 // vista aquí adentro no tocaba el historial, así que el navegador no
 // tenía nada que deshacer ahí adentro.
 function mostrarVista(vista, marcar) {
+  document.body.classList.toggle('en-lista-documentos', vista === 'lista');
   document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
   document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
   if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
