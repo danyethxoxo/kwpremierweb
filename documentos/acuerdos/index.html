@@ -94,9 +94,22 @@
       margin-top: 32px;
     }
 
-    /* doc-menu envuelve cada enlace después del primer pintado. En esta
-       pantalla la entrada se deja estática para evitar un salto tardío. */
+    /* doc-menu crea el contenedor de cada tarjeta tras cargar. Se evita
+       la animación automática y se activa una sola vez al terminar,
+       con el mismo ritmo escalonado que las tarjetas del Hub. */
     .grid > * { animation: none; }
+    .grid > .doc-wrap.kw-entrada-hub {
+      animation: kw-aparece 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(2) { animation-delay: 90ms; }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(3) { animation-delay: 180ms; }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(4) { animation-delay: 270ms; }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(5) { animation-delay: 360ms; }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(6) { animation-delay: 450ms; }
+    .grid > .doc-wrap.kw-entrada-hub:nth-child(n+7) { animation-delay: 500ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .grid > .doc-wrap.kw-entrada-hub { animation: none; }
+    }
 
     @media (max-width: 780px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
@@ -311,7 +324,15 @@
   // "Hacer visible para" se muestra únicamente en documentos internos
   // registrados en la base (los que traen data-doc-id).
   (function () {
-    function arranca() { window.kwDocMenu.init(); }
+    function arranca() {
+      window.kwDocMenu.init().then(function () {
+        requestAnimationFrame(function () {
+          document.querySelectorAll('.grid > .doc-wrap').forEach(function (tarjeta) {
+            tarjeta.classList.add('kw-entrada-hub');
+          });
+        });
+      });
+    }
     if (document.documentElement.classList.contains('kw-auth-ok')) arranca();
     else window.addEventListener('kw-auth-ready', arranca, { once: true });
   })();
