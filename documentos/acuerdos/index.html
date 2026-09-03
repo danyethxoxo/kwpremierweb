@@ -94,22 +94,9 @@
       margin-top: 32px;
     }
 
-    /* Entrada al abrir Acuerdos: el contenido aparece con una elevación
-       sutil. Se anima el contenedor, no cada tarjeta, para que doc-menu
-       pueda envolver los enlaces sin provocar saltos visuales. */
-    @keyframes acuerdos-entrada {
-      from { opacity: 0; transform: translateY(18px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .page-title {
-      animation: acuerdos-entrada 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    .grid {
-      animation: acuerdos-entrada 460ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .page-title, .grid { animation: none; }
-    }
+    /* doc-menu envuelve cada enlace después del primer pintado. En esta
+       pantalla la entrada se deja estática para evitar un salto tardío. */
+    .grid > * { animation: none; }
 
     @media (max-width: 780px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
