@@ -78,6 +78,7 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
+      margin-top: 32px;
     }
 
     @media (max-width: 640px) {
@@ -157,8 +158,6 @@
   <main class="page">
 
     <h1 class="page-title">Acuerdos & Contratos</h1>
-    <p class="page-desc" id="page-desc">Selecciona la sección que necesitas</p>
-
     <!-- Mientras no se sabe qué rol tiene quien entró, no se enseña
          ninguna de las dos vistas: si el liderazgo viera la parrilla
          asomarse un instante antes de las dos puertas, se leería como un
@@ -283,14 +282,12 @@
     var selector = document.getElementById('selector');
     var grid = document.getElementById('grid');
     var cargando = document.getElementById('cargando');
-    var desc = document.getElementById('page-desc');
     var esLiderazgo = false;
 
     function verSelector(marcar) {
       cargando.hidden = true;
       grid.hidden = true;
       selector.hidden = false;
-      desc.hidden = true;
       if (marcar) history.replaceState({ kwVista: 'selector' }, '', location.href);
     }
 
@@ -298,8 +295,6 @@
       cargando.hidden = true;
       selector.hidden = true;
       grid.hidden = false;
-      desc.hidden = false;
-      desc.textContent = 'Selecciona la sección que necesitas';
       if (marcar) history.pushState({ kwVista: 'parrilla' }, '', location.href);
     }
 
