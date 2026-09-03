@@ -538,7 +538,7 @@
   .lista-item-menu-ancla { position: relative; display: flex; }
   .lista-item-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
   .lista-item-menu-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text); }
-  .lista-item-menu { right: 0; left: auto; }
+  .lista-item-menu { position: fixed; right: auto; left: auto; z-index: 250; }
   @media (min-width: 901px) {
     body.en-lista-documentos { height: 100vh; overflow: hidden; }
     body.en-lista-documentos #vista-lista { display: flex !important; flex: 1; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 26px 24px 20px; }
@@ -1073,7 +1073,7 @@ function crearNuevoDocumento() {
     bloquearFormulario(false);
     actualizarVisibilidadBotones();
     setGuardarMsg('');
-    mostrarVista('formulario');
+    mostrarVista('formulario', false);
   });
 }
 
@@ -1091,13 +1091,12 @@ function abrirDocumentoGuardado(row) {
     bloquearFormulario(estadoActual === 'finalizado');
     actualizarVisibilidadBotones();
     setGuardarMsg('');
-    mostrarVista('formulario');
+    mostrarVista('formulario', false);
   });
 }
 
 function volverALista() {
-  mostrarVista('lista');
-  cargarListaDocumentos();
+  location.replace(location.pathname);
 }
 
 function escapeHtml(str) {
@@ -1236,7 +1235,15 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
       const menu = btn.parentElement.querySelector('.lista-item-menu');
       const abrir = menu.hidden;
       cerrarMenusLista();
-      menu.hidden = !abrir;
+      if (abrir) {
+        menu.hidden = false;
+        const rect = btn.getBoundingClientRect();
+        const alto = menu.offsetHeight;
+        menu.style.top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - alto - 8)) + 'px';
+        menu.style.left = Math.max(8, Math.min(rect.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+      } else {
+        menu.hidden = true;
+      }
       btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
     });
   });
