@@ -79,6 +79,9 @@
     var menu = caja.querySelector('.kw-select-menu');
     if (!menu) return;
     menu.innerHTML = Array.prototype.map.call(select.options, function (op, i) {
+      // Una opción hidden es el texto que se ve antes de elegir, no una
+      // respuesta posible. El menú enseña únicamente opciones reales.
+      if (op.hidden) return '';
       return '<button type="button" role="option" class="kw-select-opcion' +
         (i === select.selectedIndex ? ' elegida' : '') + '" data-i="' + i + '"' +
         ' aria-selected="' + (i === select.selectedIndex ? 'true' : 'false') + '"' +
@@ -103,16 +106,16 @@
   function resaltar(caja, i) {
     var ops = caja.querySelectorAll('.kw-select-opcion');
     ops.forEach(function (o) { o.classList.remove('resaltada'); });
-    if (ops[i]) {
-      ops[i].classList.add('resaltada');
-      ops[i].scrollIntoView({ block: 'nearest' });
+    var op = caja.querySelector('.kw-select-opcion[data-i="' + i + '"]');
+    if (op) {
+      op.classList.add('resaltada');
+      op.scrollIntoView({ block: 'nearest' });
     }
   }
 
   function indiceResaltado(caja) {
-    var ops = Array.prototype.slice.call(caja.querySelectorAll('.kw-select-opcion'));
-    var i = ops.findIndex(function (o) { return o.classList.contains('resaltada'); });
-    return i;
+    var op = caja.querySelector('.kw-select-opcion.resaltada');
+    return op ? Number(op.dataset.i) : -1;
   }
 
   function abrir(caja, select) {
@@ -220,10 +223,15 @@
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         if (!abiertoYa) return abrir(caja, select);
-        var n = select.options.length;
+        var visibles = Array.prototype.map.call(
+          caja.querySelectorAll('.kw-select-opcion:not([disabled])'),
+          function (op) { return Number(op.dataset.i); });
+        if (!visibles.length) return;
         var i = indiceResaltado(caja);
-        if (i < 0) i = select.selectedIndex;
-        resaltar(caja, (i + (e.key === 'ArrowDown' ? 1 : -1) + n) % n);
+        var pos = visibles.indexOf(i);
+        if (pos < 0) pos = e.key === 'ArrowDown' ? -1 : 0;
+        pos = (pos + (e.key === 'ArrowDown' ? 1 : -1) + visibles.length) % visibles.length;
+        resaltar(caja, visibles[pos]);
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         if (!abiertoYa) return abrir(caja, select);
@@ -336,47 +344,176 @@
   }
 
   // ═════════════════════════════════════════════════════════════
-  // Campos de fecha
+  // Campos de fecha y calendario propio
   // ═════════════════════════════════════════════════════════════
-  // Un <input type="date"> vacío enseña "dd/mm/aaaa", que se lee como
-  // si el campo ya trajera algo. No se le puede poner un texto de
-  // ejemplo propio porque ese formato lo dibuja el navegador.
-  //
-  // Así que mientras está vacío el campo es de texto y dice "Fecha";
-  // al picarlo se vuelve de fecha y abre el calendario de siempre. Con
-  // una fecha puesta se queda como fecha, para que se vea con el
-  // formato de acá y siga valiendo como fecha para el código.
+  // El input conserva hacia el código el valor ISO (aaaa-mm-dd), pero
+  // enseña la fecha como dd/mm/aaaa. Así las pantallas no cambian cómo
+  // guardan sus datos y el usuario deja de ver el calendario del navegador.
+
+  var calendarioAbierto = null;
+  var calendarioInput = null;
+  var MESES_CAL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  function isoFecha(f) {
+    return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' +
+      String(f.getDate()).padStart(2, '0');
+  }
+
+  function leerISO(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+    if (!m) return null;
+    var f = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(f) ? null : f;
+  }
+
+  function fechaVisible(v) {
+    var f = leerISO(v);
+    return f ? String(f.getDate()).padStart(2, '0') + '/' +
+      String(f.getMonth() + 1).padStart(2, '0') + '/' + f.getFullYear() : '';
+  }
+
+  function cerrarCalendario(devolverFoco) {
+    if (!calendarioAbierto) return;
+    calendarioAbierto.remove();
+    if (calendarioInput) calendarioInput.setAttribute('aria-expanded', 'false');
+    var anterior = calendarioInput;
+    calendarioAbierto = null;
+    calendarioInput = null;
+    if (devolverFoco && anterior) anterior.focus();
+  }
+
+  function abrirCalendario(inp) {
+    if (calendarioInput === inp) return;
+    cerrarCalendario(false);
+
+    var elegida = leerISO(inp.value);
+    var vista = elegida || new Date();
+    vista = new Date(vista.getFullYear(), vista.getMonth(), 1);
+    var caja = document.createElement('div');
+    caja.className = 'kw-calendario';
+    caja.setAttribute('role', 'dialog');
+    caja.setAttribute('aria-label', 'Elegir fecha');
+    document.body.appendChild(caja);
+    calendarioAbierto = caja;
+    calendarioInput = inp;
+    inp.setAttribute('aria-expanded', 'true');
+
+    function mover(meses) {
+      vista = new Date(vista.getFullYear(), vista.getMonth() + meses, 1);
+      pintar();
+    }
+
+    function pintar() {
+      var anio = vista.getFullYear(), mes = vista.getMonth();
+      var primero = (new Date(anio, mes, 1).getDay() + 6) % 7;
+      var cuantos = new Date(anio, mes + 1, 0).getDate();
+      var hoy = isoFecha(new Date());
+      var min = inp.getAttribute('min') || '';
+      var max = inp.getAttribute('max') || '';
+      var dias = '';
+      for (var vacio = 0; vacio < primero; vacio++) dias += '<span class="kw-cal-vacio"></span>';
+      for (var dia = 1; dia <= cuantos; dia++) {
+        var valor = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+        var apagado = (min && valor < min) || (max && valor > max);
+        dias += '<button type="button" class="kw-cal-dia' +
+          (valor === hoy ? ' hoy' : '') + (valor === inp.value ? ' elegido' : '') +
+          '" data-fecha="' + valor + '"' + (apagado ? ' disabled' : '') + '>' + dia + '</button>';
+      }
+      caja.innerHTML =
+        '<div class="kw-cal-cabeza">' +
+          '<button type="button" data-mover="-12" aria-label="Año anterior">«</button>' +
+          '<button type="button" data-mover="-1" aria-label="Mes anterior">‹</button>' +
+          '<strong>' + MESES_CAL[mes] + ' ' + anio + '</strong>' +
+          '<button type="button" data-mover="1" aria-label="Mes siguiente">›</button>' +
+          '<button type="button" data-mover="12" aria-label="Año siguiente">»</button>' +
+        '</div>' +
+        '<div class="kw-cal-semana"><span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span></div>' +
+        '<div class="kw-cal-dias">' + dias + '</div>' +
+        '<div class="kw-cal-pie"><button type="button" data-limpiar>Limpiar</button><button type="button" data-hoy>Hoy</button></div>';
+
+      caja.querySelectorAll('[data-mover]').forEach(function (b) {
+        b.addEventListener('click', function () { mover(Number(b.dataset.mover)); });
+      });
+      caja.querySelectorAll('[data-fecha]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          inp.value = b.dataset.fecha;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+          cerrarCalendario(true);
+        });
+      });
+      caja.querySelector('[data-hoy]').addEventListener('click', function () {
+        inp.value = isoFecha(new Date());
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        cerrarCalendario(true);
+      });
+      caja.querySelector('[data-limpiar]').addEventListener('click', function () {
+        inp.value = '';
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        cerrarCalendario(true);
+      });
+    }
+
+    pintar();
+    var r = inp.getBoundingClientRect();
+    var arriba = r.bottom + 7;
+    if (arriba + caja.offsetHeight > window.innerHeight - 8 && r.top > caja.offsetHeight + 15) {
+      arriba = r.top - caja.offsetHeight - 7;
+    }
+    caja.style.top = Math.max(8, arriba) + 'px';
+    caja.style.left = Math.max(8, Math.min(r.left, window.innerWidth - caja.offsetWidth - 8)) + 'px';
+  }
 
   function armarFecha(inp) {
     if (inp.dataset.kwFecha) return;
     inp.dataset.kwFecha = '1';
-    var texto = inp.getAttribute('data-texto') || 'Fecha';
+    var texto = inp.getAttribute('data-texto') || 'Elige una fecha';
+    var descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    var valor = descriptor.get.call(inp);
 
-    function aTexto() {
-      if (inp.value) return;
-      inp.type = 'text';
-      inp.placeholder = texto;
-    }
-    function aFecha() {
-      if (inp.type !== 'date') inp.type = 'date';
-    }
+    inp.type = 'text';
+    inp.readOnly = true;
+    inp.classList.add('kw-fecha-personalizada');
+    inp.setAttribute('role', 'button');
+    inp.setAttribute('aria-haspopup', 'dialog');
+    inp.setAttribute('aria-expanded', 'false');
+    inp.placeholder = texto;
 
-    inp.addEventListener('focus', function () {
-      aFecha();
-      // Cambiar el tipo puede soltar el foco en algunos navegadores.
-      if (document.activeElement !== inp) inp.focus();
-      try { if (inp.showPicker) inp.showPicker(); } catch (e) { /* sin gesto válido */ }
+    function pintarValor() {
+      descriptor.set.call(inp, fechaVisible(valor));
+    }
+    Object.defineProperty(inp, 'value', {
+      configurable: true,
+      get: function () { return valor; },
+      set: function (v) { valor = String(v || ''); pintarValor(); },
     });
-    inp.addEventListener('blur', aTexto);
-    inp.addEventListener('change', function () { if (!inp.value) aTexto(); });
+    pintarValor();
 
-    aTexto();
+    inp.addEventListener('click', function (e) { e.stopPropagation(); abrirCalendario(inp); });
+    inp.addEventListener('focus', function () { abrirCalendario(inp); });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault(); abrirCalendario(inp);
+      } else if (e.key === 'Escape') cerrarCalendario(false);
+    });
   }
 
   function armarFechas(raiz) {
     (raiz || document).querySelectorAll('input[type="date"]:not([data-kw-fecha]):not([data-kw-no])')
       .forEach(armarFecha);
   }
+
+  document.addEventListener('click', function (e) {
+    if (calendarioAbierto && !e.target.closest('.kw-calendario')) cerrarCalendario(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') cerrarCalendario(true);
+  });
+  window.addEventListener('resize', function () { cerrarCalendario(false); });
+  window.addEventListener('scroll', function () { cerrarCalendario(false); }, true);
 
   // ═════════════════════════════════════════════════════════════
   // Confirmar sin salirse (el botón se voltea y pregunta)
