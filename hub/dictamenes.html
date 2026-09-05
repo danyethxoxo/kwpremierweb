@@ -356,7 +356,24 @@
   .dic-punto-acciones {
     display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-top: 0;
   }
-  .dic-punto-acciones .kw-btn-mini { white-space: nowrap; }
+  .dic-punto-acciones .kw-btn-mini { white-space: nowrap; font-weight: 400; }
+  /* Corregir usa verde solo al pasar encima; una vez confirmado se queda
+     verde para que el cambio sea evidente sin releer el estatus. */
+  .dic-punto:not(.corregida) [data-mover]:hover { color: #157a41; border-color: #1f9d55; background: #f0faf3; }
+  .dic-punto.corregida [data-mover] { color: #157a41; border-color: #1f9d55; background: #f0faf3; }
+  .dic-punto.corregida [data-mover]:hover { background: #def4e5; }
+  /* La nota es una acción informativa, por eso se diferencia en azul. */
+  .dic-punto [data-nota] { color: #2463b5; border-color: #8eb6ea; }
+  .dic-punto [data-nota]:hover { color: #164a91; border-color: #2463b5; background: #f1f7ff; }
+  /* El indicador evita el vacío visual mientras llega la actualización. */
+  .dic-punto.guardando { opacity: 0.72; transition: opacity 0.15s ease; }
+  .dic-punto-acciones .actualizando { cursor: wait; }
+  .dic-punto-acciones .actualizando::after {
+    content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 5px;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    animation: dic-girar 0.65s linear infinite; vertical-align: -1px;
+  }
+  @keyframes dic-girar { to { transform: rotate(360deg); } }
   /* Quitar y archivar no son acciones del mismo peso que las de al lado:
      se van hasta la derecha, separadas, para no picarles de pasada. */
   .dic-punto-acciones .a-la-derecha,
@@ -2046,11 +2063,26 @@
   function cablear() {
     var raiz = $('lista');
 
+    function mostrarActualizando(b) {
+      b.disabled = true;
+      b.classList.add('actualizando');
+      var punto = b.closest('.dic-punto');
+      if (punto) punto.classList.add('guardando');
+      return function () {
+        b.disabled = false;
+        b.classList.remove('actualizando');
+        if (punto) punto.classList.remove('guardando');
+      };
+    }
+
     raiz.querySelectorAll('[data-mover]').forEach(function (b) {
       b.addEventListener('click', async function () {
         var p = puntos.find(function (x) { return x.id === b.dataset.mover; });
         if (!p) return;
-        await guardarPunto(p.id, { estado: p.estado === 'corregida' ? 'pendiente' : 'corregida' });
+        var terminar = mostrarActualizando(b);
+        try {
+          await guardarPunto(p.id, { estado: p.estado === 'corregida' ? 'pendiente' : 'corregida' });
+        } finally { terminar(); }
       });
     });
 
@@ -2074,8 +2106,11 @@
       b.addEventListener('click', async function () {
         var caja = raiz.querySelector('[data-form-de="' + b.dataset.guardarNota + '"]');
         if (!caja) return;
-        await guardarPunto(b.dataset.guardarNota,
-          { nota: caja.querySelector('textarea').value.trim() || null });
+        var terminar = mostrarActualizando(b);
+        try {
+          await guardarPunto(b.dataset.guardarNota,
+            { nota: caja.querySelector('textarea').value.trim() || null });
+        } finally { terminar(); }
       });
     });
 
