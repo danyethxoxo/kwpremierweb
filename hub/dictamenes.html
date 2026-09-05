@@ -322,11 +322,28 @@
     border: 1px solid var(--border);
     border-left: 3px solid #e0a218;
     border-radius: 11px; background: #fff;
-    padding: 11px 13px; margin-bottom: 9px;
+    padding: 8px 12px; margin-bottom: 7px;
   }
   .dic-punto.corregida { border-left-color: #1f9d55; }
-  .dic-punto-cabeza { display: flex; align-items: flex-start; gap: 10px; }
-  .dic-punto-texto { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.5; color: var(--text); }
+  .dic-punto-cabeza { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .dic-punto-texto { flex: 1 1 auto; min-width: 0; font-size: 13.5px; line-height: 1.4; color: var(--text); }
+  .dic-punto-acciones { flex: 0 0 auto; }
+  .dic-punto-menu-trigger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; padding: 0; border: 1px solid var(--border);
+    border-radius: 9px; background: #fff; color: var(--muted); cursor: pointer;
+  }
+  .dic-punto-menu-trigger:hover { color: var(--text); background: #f7f7f7; }
+  .dic-punto-menu-trigger svg { width: 16px; height: 16px; }
+  .dic-menu-punto { position: fixed; z-index: 121; min-width: 188px; padding: 5px; }
+  .dic-menu-punto button {
+    display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 8px;
+    padding: 8px 10px; background: transparent; color: var(--text); font: inherit; font-size: 13px;
+    text-align: left; cursor: pointer;
+  }
+  .dic-menu-punto button:hover { background: #f5f5f5; }
+  .dic-menu-punto .peligro { color: #b02a2a; }
+  .dic-menu-punto svg { width: 14px; height: 14px; }
   .dic-punto-nota {
     margin-top: 8px; padding: 8px 10px; border-radius: 9px;
     background: rgba(0,0,0,0.035); font-size: 12.5px; color: #444;
@@ -1807,7 +1824,7 @@
 
   document.addEventListener('click', function (e) {
     if (!menuEstado) return;
-    if (e.target.closest('.dic-menu-estado, [data-estado-de], [data-listado-de]')) return;
+    if (e.target.closest('.dic-menu-estado, [data-estado-de], [data-listado-de], [data-menu-punto]')) return;
     cerrarMenuEstado();
   });
   document.addEventListener('keydown', function (e) {
@@ -1986,35 +2003,40 @@
   var ICONO_REGRESAR = dibujo('<polyline points="1 4 1 10 7 10"/>' +
     '<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>');
 
+  var ICONO_MAS = dibujo('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>');
+
   function puntoHTML(p, i) {
     var corregida = p.estado === 'corregida';
 
-    // Un solo renglón de acciones. Los de la nota viven aquí también,
-    // escondidos hasta que se abre: así no aparece una segunda hilera
-    // encima de la primera cuando alguien va a escribir.
+    // Las acciones viven junto al texto: la tarjeta se lee de izquierda a
+    // derecha y ya no necesita una segunda fila para operar la observación.
     var btns = puedoDictaminar
       ? '<div class="dic-punto-acciones">' +
           '<button type="button" class="kw-btn-mini" data-mover="' + p.id + '">' +
-            (corregida ? 'Marcar pendiente' : 'Marcar corregida') + '</button>' +
-          '<button type="button" class="kw-btn-mini oculto-notando" data-nota="' + p.id + '">Nota</button>' +
+            (corregida ? '✓ Corregido' : '✓ Corregido') + '</button>' +
+          '<button type="button" class="kw-btn-mini oculto-notando" data-nota="' + p.id + '">+ Nota</button>' +
           '<button type="button" class="kw-btn-mini verde solo-notando" data-guardar-nota="' + p.id + '">Enviar nota</button>' +
           '<button type="button" class="kw-btn-mini rojo solo-notando" data-cerrar-form="' + p.id + '">Cancelar</button>' +
-          '<button type="button" class="dic-punto-tirar a-la-derecha" data-quitar-punto="' + p.id + '" ' +
-            'title="Eliminar esta observación" aria-label="Eliminar esta observación">' + BOTE + '</button>' +
         '</div>'
+      : '';
+
+    var menu = puedoDictaminar
+      ? '<button type="button" class="dic-punto-menu-trigger" data-menu-punto="' + p.id + '" ' +
+          'title="Más acciones" aria-label="Más acciones">' + ICONO_MAS + '</button>'
       : '';
 
     return '<div class="dic-punto' + (corregida ? ' corregida' : '') + '" data-punto="' + p.id + '">' +
       '<div class="dic-punto-cabeza">' +
         '<span class="dic-punto-texto">' + (i + 1) + '. ' + escapar(p.texto) + '</span>' +
+        btns +
         '<span class="dic-estado ' + (corregida ? 'autorizada' : 'condicionada') + '">' +
           (corregida ? 'Corregida' : 'Pendiente') + '</span>' +
+        menu +
       '</div>' +
       (p.nota ? '<div class="dic-punto-nota">' + escapar(p.nota) + '</div>' : '') +
       '<div class="dic-punto-form" data-form-de="' + p.id + '">' +
         '<textarea placeholder="Una nota sobre esta observación">' + escapar(p.nota || '') + '</textarea>' +
       '</div>' +
-      btns +
     '</div>';
   }
 
@@ -2056,12 +2078,37 @@
       });
     });
 
-    raiz.querySelectorAll('[data-quitar-punto]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        if (!(await window.kwUI.confirm('¿Deseas eliminar esta observación?',
-          { textoConfirmar: 'Sí', textoCancelar: 'No' }))) return;
-        await window.kwSupabase.from('dictamen_puntos').delete().eq('id', b.dataset.quitarPunto);
-        await cargar();
+    raiz.querySelectorAll('[data-menu-punto]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (menuEstado) { cerrarMenuEstado(); return; }
+        var p = puntos.find(function (x) { return x.id === b.dataset.menuPunto; });
+        if (!p) return;
+        var menu = document.createElement('div');
+        menu.className = 'dic-menu-estado dic-menu-punto';
+        menu.innerHTML = '<button type="button" data-editar-punto="' + p.id + '">' + ICONO_LAPIZ + 'Editar observación</button>' +
+          '<button type="button" class="peligro" data-quitar-punto="' + p.id + '">' + BOTE + 'Eliminar observación</button>';
+        document.body.appendChild(menu);
+        var r = b.getBoundingClientRect();
+        menu.style.top = Math.min(window.innerHeight - menu.offsetHeight - 8, r.bottom + 6) + 'px';
+        menu.style.left = Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+        menuEstado = menu;
+        menuAbiertoEn = Date.now();
+        menu.querySelector('[data-editar-punto]').addEventListener('click', async function () {
+          cerrarMenuEstado();
+          var texto = window.prompt('Editar observación:', p.texto);
+          if (texto === null || texto.trim() === p.texto) return;
+          if (!texto.trim()) { await window.kwUI.alert('La observación no puede quedar vacía.'); return; }
+          await guardarPunto(p.id, { texto: texto.trim() });
+        });
+        menu.querySelector('[data-quitar-punto]').addEventListener('click', async function () {
+          cerrarMenuEstado();
+          if (!(await window.kwUI.confirm('¿Deseas eliminar esta observación?',
+            { textoConfirmar: 'Sí', textoCancelar: 'No' }))) return;
+          var r2 = await window.kwSupabase.from('dictamen_puntos').delete().eq('id', p.id);
+          if (r2.error) { await window.kwUI.alert('No se pudo eliminar: ' + r2.error.message); return; }
+          await cargar();
+        });
       });
     });
 
