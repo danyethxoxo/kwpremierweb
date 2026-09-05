@@ -996,8 +996,18 @@ function mostrarVista(vista, marcar) {
   document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
   document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
   if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
-  // La URL, no un estado interno, define la pantalla: evita bucles al usar Atrás.
+  // Solo entrar al formulario agrega una entrada. Volver a la lista nunca
+  // escribe historial: así Atrás y Adelante no pueden rebotar entre vistas.
+  if (vista === 'formulario' && marcar !== false) {
+    history.pushState({ kwVista: 'formulario' }, '', location.href);
+  }
 }
+
+window.addEventListener('popstate', function (ev) {
+  var vista = (ev.state && ev.state.kwVista) || 'lista';
+  mostrarVista(vista, false);
+  if (vista === 'lista') cargarListaDocumentos();
+});
 
 // Entrar al documento con su pantallita de "abriendo": antes se picaba
 // y de golpe ya estabas en otra vista, sin nada que avisara que algo
@@ -1157,7 +1167,7 @@ function crearNuevoDocumento() {
   });
 }
 
-function abrirDocumentoGuardado(row) {
+function abrirDocumentoGuardado(row, marcar) {
   abrirConAnimacion('Abriendo documento…', function () {
     documentoActualId = row.id;
     folioActual = row.folio || null;
@@ -1171,7 +1181,7 @@ function abrirDocumentoGuardado(row) {
     bloquearFormulario(estadoActual === 'finalizado');
     actualizarVisibilidadBotones();
     setGuardarMsg('');
-    mostrarVista('formulario', false);
+    mostrarVista('formulario', marcar !== false);
   });
 }
 
@@ -1512,7 +1522,7 @@ async function abrirDocumentoPorId(id) {
       .eq('id', id)
       .single();
     if (error || !data) throw new Error('No se encontró el documento, o no tienes permiso para verlo.');
-    abrirDocumentoGuardado(data);
+    abrirDocumentoGuardado(data, false);
   } catch (err) {
     await window.kwUI.alert(err.message || 'No se pudo abrir el documento.');
     mostrarVista('lista');
@@ -1713,7 +1723,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updatePreview();
   mostrarVista('lista', false);
-  history.replaceState({ kwVista: 'lista' }, '', location.href);
   initSlideFinalizar();
 
   // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
@@ -1721,6 +1730,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const parametrosURL = new URLSearchParams(location.search);
   const docIdDesdeURL = parametrosURL.get('doc');
   const nuevoDesdeURL = parametrosURL.has('nuevo');
+  // Una URL directa a nuevo/documento ya representa el formulario; la
+  // lista normal representa su propia entrada para que Atrás sea estable.
+  history.replaceState({ kwVista: (docIdDesdeURL || nuevoDesdeURL) ? 'formulario' : 'lista' }, '', location.href);
   function iniciarCarga() {
     if (docIdDesdeURL) abrirDocumentoPorId(docIdDesdeURL);
     else if (nuevoDesdeURL) crearNuevoDocumento();
