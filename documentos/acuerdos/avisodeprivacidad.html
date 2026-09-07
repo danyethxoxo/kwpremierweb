@@ -611,7 +611,8 @@
     }
   }
 </style>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260906a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260906b">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="doc-borrador">
 
@@ -977,7 +978,7 @@ let revisionActual = 0;
 function folioRevisionActual() {
   return window.kwRevisiones
     ? window.kwRevisiones.folio(folioActual, revisionActual)
-    : (folioActual ? folioRevisionActual() : '');
+    : (folioActual ? 'Folio: ' + folioActual : '');
 }
 
 function setGuardarMsg(text, kind) {
@@ -1678,7 +1679,11 @@ function downloadPDF() {
     </div>`;
   }).join('');
 
-  const printWin = window.open('', '_blank', 'width=850,height=1100');
+  const marcoPDF = document.createElement('iframe');
+  marcoPDF.setAttribute('aria-hidden', 'true');
+  marcoPDF.style.cssText = 'position:fixed;left:-10000px;top:0;width:816px;height:1056px;border:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(marcoPDF);
+  const printWin = marcoPDF.contentWindow;
   printWin.document.write(`<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1734,8 +1739,23 @@ ${pagesHTML}
 </html>`);
   printWin.document.close();
   printWin.document.title = nombreArchivo;
-  printWin.focus();
-  setTimeout(() => { printWin.document.title = nombreArchivo; printWin.print(); }, 500);
+  const nombrePDF = /\.pdf$/i.test(nombreArchivo) ? nombreArchivo : nombreArchivo + '.pdf';
+  setTimeout(async () => {
+    try {
+      if (!window.html2pdf) throw new Error('El generador de PDF no terminó de cargar.');
+      await window.html2pdf().set({
+        margin: 0, filename: nombrePDF,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(printWin.document.body).save();
+    } catch (err) {
+      if (window.kwUI && window.kwUI.alert) await window.kwUI.alert(err.message || 'No se pudo descargar el PDF.');
+    } finally {
+      marcoPDF.remove();
+    }
+  }, 120);
 }
 
 // Inicializar preview al cargar
@@ -1845,7 +1865,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
-<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906a"></script>
+<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906b"></script>
 <script>
 window.kwRevisiones.iniciar({
   id: function () { return documentoActualId; },
