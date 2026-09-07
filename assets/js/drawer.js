@@ -126,7 +126,7 @@
 
     { label: 'Acuerdo de Renta', href: `${BASE}/documentos/contratos/renta.html`, cat: 'Contratos', alias: 'renta arrendamiento contrato' },
     { label: 'Contrato de Compraventa PROFECO', href: `${BASE}/documentos/contratos/profeco.html`, cat: 'Contratos', alias: 'profeco compraventa venta residencial' },
-    { label: 'Operatividad', href: `${BASE}/documentos/operatividad.html`, cat: 'Contratos', alias: 'captaciones control hoja registro exclusivas comisiones command' },
+    { label: 'Operatividad', href: `${BASE}/hub/admin.html#operatividad`, cat: 'Panel', alias: 'captaciones control hoja registro exclusivas comisiones command' },
 
     { label: 'ABC · Seguimiento de asesores', href: `${BASE}/documentos/internos/dt/abc-tracker.html`, cat: 'Internos (DT)', alias: 'abc tracker adopcion tecnologia avance palomear checklist dt' },
     { label: 'GPS · Programa Trimestral', href: `${BASE}/documentos/internos/gps.html`, cat: 'Internos (Liderazgo)', alias: 'gps trimestral seguimiento pc program' },
