@@ -610,7 +610,8 @@
   }
 </style>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260906b">
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="/kwpremierweb/assets/js/kw-pdf-vector.js?v=20260906a"></script>
 </head>
 <body class="doc-borrador">
 
@@ -1693,14 +1694,10 @@ ${pagesHTML}
   const nombrePDF = /\.pdf$/i.test(nombreArchivo) ? nombreArchivo : nombreArchivo + '.pdf';
   setTimeout(async () => {
     try {
-      if (!window.html2pdf) throw new Error('El generador de PDF no terminó de cargar.');
-      await window.html2pdf().set({
-        margin: [8, 19, 2.7, 19], filename: nombrePDF,
-        image: { type: 'png', quality: 1 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      }).from(printWin.document.body).save();
+      if (!window.kwPDFVector) throw new Error('El generador vectorial de PDF no terminó de cargar.');
+      await window.kwPDFVector.descargar(printWin.document, nombrePDF, {
+        top: 8, right: 19, bottom: 2.7, left: 19
+      });
     } catch (err) {
       if (window.kwUI && window.kwUI.alert) await window.kwUI.alert(err.message || 'No se pudo descargar el PDF.');
     } finally {
