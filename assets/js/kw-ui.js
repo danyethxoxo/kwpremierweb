@@ -395,6 +395,10 @@
     caja.setAttribute('role', 'dialog');
     caja.setAttribute('aria-label', 'Elegir fecha');
     document.body.appendChild(caja);
+    // El calendario repinta sus botones al cambiar de mes. Detener aquí
+    // el clic evita que llegue al listener del documento con el botón
+    // anterior ya separado del DOM y parezca un clic exterior.
+    caja.addEventListener('click', function (e) { e.stopPropagation(); });
     calendarioAbierto = caja;
     calendarioInput = inp;
     inp.setAttribute('aria-expanded', 'true');
@@ -440,14 +444,14 @@
           inp.value = b.dataset.fecha;
           inp.dispatchEvent(new Event('input', { bubbles: true }));
           inp.dispatchEvent(new Event('change', { bubbles: true }));
-          cerrarCalendario(true);
+          cerrarCalendario(false);
         });
       });
       caja.querySelector('[data-hoy]').addEventListener('click', function () {
         inp.value = isoFecha(new Date());
         inp.dispatchEvent(new Event('input', { bubbles: true }));
         inp.dispatchEvent(new Event('change', { bubbles: true }));
-        cerrarCalendario(true);
+        cerrarCalendario(false);
       });
       caja.querySelector('[data-limpiar]').addEventListener('click', function () {
         inp.value = '';
@@ -510,10 +514,50 @@
     if (calendarioAbierto && !e.target.closest('.kw-calendario')) cerrarCalendario(false);
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') cerrarCalendario(true);
+    if (e.key === 'Escape') cerrarCalendario(false);
   });
   window.addEventListener('resize', function () { cerrarCalendario(false); });
   window.addEventListener('scroll', function () { cerrarCalendario(false); }, true);
+
+  // ═════════════════════════════════════════════════════════════
+  // Campos numéricos
+  // ═════════════════════════════════════════════════════════════
+  // Los spinners verticales del navegador cambian entre sistemas y son
+  // muy pequeños. Se sustituyen por menos/más, alineados horizontalmente.
+  function armarNumero(inp) {
+    if (inp.dataset.kwNumero) return;
+    inp.dataset.kwNumero = '1';
+
+    var caja = document.createElement('div');
+    caja.className = 'kw-numero';
+    inp.parentNode.insertBefore(caja, inp);
+    caja.appendChild(inp);
+
+    var controles = document.createElement('span');
+    controles.className = 'kw-numero-controles';
+    controles.innerHTML =
+      '<button type="button" data-restar aria-label="Disminuir">−</button>' +
+      '<button type="button" data-sumar aria-label="Aumentar">+</button>';
+    caja.appendChild(controles);
+
+    function mover(sube) {
+      try { sube ? inp.stepUp() : inp.stepDown(); }
+      catch (e) {
+        var paso = Number(inp.step) || 1;
+        inp.value = (Number(inp.value) || 0) + (sube ? paso : -paso);
+      }
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.focus();
+    }
+    controles.querySelector('[data-restar]').addEventListener('click', function () { mover(false); });
+    controles.querySelector('[data-sumar]').addEventListener('click', function () { mover(true); });
+  }
+
+  function armarNumeros(raiz) {
+    (raiz || document).querySelectorAll('input[type="number"]:not([data-kw-numero]):not([data-kw-no])')
+      .forEach(armarNumero);
+  }
 
   // ═════════════════════════════════════════════════════════════
   // Confirmar sin salirse (el botón se voltea y pregunta)
@@ -877,6 +921,7 @@
     plegables(raiz);
     armarSelects(raiz);
     armarFechas(raiz);
+    armarNumeros(raiz);
     armarTodasLasTabs(raiz);
     armarConfirmaciones(raiz);
     pintarChips(raiz);
@@ -907,6 +952,7 @@
     colgarMenu: colgarMenu,
     selects: armarSelects,
     fechas: armarFechas,
+    numeros: armarNumeros,
     tabs: armarTodasLasTabs,
     confirmaciones: armarConfirmaciones,
     chips: pintarChips,
