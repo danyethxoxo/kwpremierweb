@@ -1302,7 +1302,9 @@ function pintarColumnaLista(cont, rows, vacioTexto) {
   cont.innerHTML = '<div class="kw-lista">'
     + rows.map((row, i) => {
       const listo = row.estado === 'finalizado';
-      const meta = (listo && row.folio ? 'Folio ' + escapeHtml(row.folio) + ' · ' : '') + fmtFechaCorta(row.updated_at);
+      const numeroRevision = Number(row.revision) || 0;
+      const nombreRevision = numeroRevision === 0 ? 'Original' : 'Revisión ' + numeroRevision;
+      const meta = (row.folio ? 'Folio ' + escapeHtml(row.folio) + ' · ' + nombreRevision + ' · ' : '') + fmtFechaCorta(row.updated_at);
       return `
     <div class="kw-fila lista-item kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i,8)*30}ms;">
       <div class="kw-fila-cabeza doc-fila">
