@@ -1000,7 +1000,7 @@ function downloadPDF() {
 
   const marcoPDF = document.createElement('iframe');
   marcoPDF.setAttribute('aria-hidden', 'true');
-  marcoPDF.style.cssText = 'position:fixed;left:-10000px;top:0;width:673px;height:1056px;border:0;opacity:0;pointer-events:none;';
+  marcoPDF.style.cssText = 'position:fixed;left:-10000px;top:0;width:673px;height:1056px;border:0;background:#fff;pointer-events:none;';
   document.body.appendChild(marcoPDF);
   const win = marcoPDF.contentWindow;
   win.document.write(`<!DOCTYPE html>
@@ -1039,8 +1039,8 @@ function downloadPDF() {
       if (!window.html2pdf) throw new Error('El generador de PDF no terminó de cargar.');
       await window.html2pdf().set({
         margin: [16, 19, 16, 19], filename: nombrePDF,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        image: { type: 'png', quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
       }).from(win.document.body).save();
