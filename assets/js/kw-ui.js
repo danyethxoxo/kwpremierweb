@@ -541,6 +541,7 @@
     caja.appendChild(controles);
 
     function mover(sube) {
+      if (inp.disabled || inp.readOnly) return;
       try { sube ? inp.stepUp() : inp.stepDown(); }
       catch (e) {
         var paso = Number(inp.step) || 1;
