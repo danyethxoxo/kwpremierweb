@@ -1024,25 +1024,7 @@ function downloadPDF() {
   .r-firma-linea { border-top:1px solid #000; padding-top:4px; }
   .r-firma-rol { font-size:8pt; }
 </style></head>
-<body>${clone.innerHTML}<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906a"></script>
-<script>
-window.kwRevisiones.iniciar({
-  id: function () { return documentoActualId; },
-  estado: function () { return estadoActual; },
-  folio: function () { return folioActual; },
-  revision: function () { return revisionActual; },
-  abrir: function (row) { abrirDocumentoGuardado(row, false); },
-  revisionCreada: function (numero) {
-    revisionActual = numero;
-    estadoActual = 'borrador';
-    bloquearFormulario(false);
-    actualizarVisibilidadBotones();
-    updatePreview();
-    setGuardarMsg('Revisión ' + numero + ' iniciada. Realiza los cambios, guarda y finaliza nuevamente.', 'ok');
-  }
-});
-</script>
-</body></html>`);
+<body>${clone.innerHTML}</body></html>`);
   win.document.close();
   win.document.title = nombreArchivo;
   win.focus();
@@ -1819,6 +1801,24 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
+</script>
+<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906a"></script>
+<script>
+window.kwRevisiones.iniciar({
+  id: function () { return documentoActualId; },
+  estado: function () { return estadoActual; },
+  folio: function () { return folioActual; },
+  revision: function () { return revisionActual; },
+  abrir: function (row) { abrirDocumentoGuardado(row, false); },
+  revisionCreada: function (numero) {
+    revisionActual = numero;
+    estadoActual = 'borrador';
+    bloquearFormulario(false);
+    actualizarVisibilidadBotones();
+    updatePreview();
+    setGuardarMsg('Revisión ' + numero + ' iniciada. Realiza los cambios, guarda y finaliza nuevamente.', 'ok');
+  }
+});
 </script>
 </body>
 </html>
