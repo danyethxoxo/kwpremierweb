@@ -457,7 +457,7 @@
         inp.value = '';
         inp.dispatchEvent(new Event('input', { bubbles: true }));
         inp.dispatchEvent(new Event('change', { bubbles: true }));
-        cerrarCalendario(true);
+        cerrarCalendario(false);
       });
     }
 
