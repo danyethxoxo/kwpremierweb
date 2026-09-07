@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  if (new URLSearchParams(location.search).has('embebida')) {
+    document.documentElement.classList.add('kw-embebida');
+  }
+</script>
 <title>Operatividad</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -33,6 +38,15 @@
   .page { flex: 1; width: 100%; margin: 0 auto; padding: 94px 22px 60px; }
   .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
   .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
+
+  /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
+     conserva únicamente la herramienta: barra, resumen, tabla y editor. */
+  html.kw-embebida .kw-header { display: none; }
+  html.kw-embebida body { min-height: 100vh; }
+  html.kw-embebida .page { padding: 8px 4px 18px; }
+  html.kw-embebida .page-title,
+  html.kw-embebida .page-desc { display: none; }
+  html.kw-embebida .tabla-caja { max-height: calc(100vh - 126px); }
 
   /* ── Barra de arriba: buscar, filtrar, agregar ── */
   /* El vidrio translúcido blanco sobre blanco (el de Prospectos, que es
