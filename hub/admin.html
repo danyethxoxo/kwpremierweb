@@ -343,6 +343,18 @@
     .verif-item { flex-wrap: wrap; }
     .verif-acciones { margin-left: auto; }
   }
+
+  /* Operatividad conserva su tabla y editor aislados dentro del Panel.
+     El iframe es del mismo sitio y se presenta sin marco, como parte de
+     la pestaña; aislarlo evita colisiones entre sus filtros y los del Panel. */
+  .panel-operatividad { width: 100%; }
+  .panel-operatividad-frame {
+    display: block; width: 100%; height: calc(100vh - 138px); min-height: 650px;
+    border: 0; border-radius: var(--r-card); background: transparent;
+  }
+  @media (max-width: 700px) {
+    .panel-operatividad-frame { height: calc(100vh - 126px); min-height: 590px; }
+  }
 </style>
 <script>
   setTimeout(function () {
@@ -877,6 +889,7 @@
           <button type="button" class="kw-tab activo" data-tab="asesores">Asesores</button>
           <button type="button" class="kw-tab" data-tab="usuarios">Agregar usuarios</button>
           <button type="button" class="kw-tab" data-tab="documentos">Documentos</button>
+          <button type="button" class="kw-tab" data-tab="operatividad">Operatividad</button>
         </div>
         <!-- Documentos creados y el Creador de formatos están apagados a
              propósito: por ahora no se usan y no se quieren a la vista.
@@ -1033,6 +1046,15 @@
              tarjeta y meterlas todas dentro de otra se ve como una caja
              dentro de otra caja. -->
         <div id="documentos-cont"></div>
+      </section>
+
+      <section class="kw-tabpanel panel-operatividad" data-panel="operatividad">
+        <iframe
+          id="operatividad-frame"
+          class="panel-operatividad-frame"
+          src="../documentos/operatividad.html?embebida=1"
+          title="Operatividad del Market Center"
+          loading="lazy"></iframe>
       </section>
 
       <!-- Sin pestaña que lleve aquí mientras el Creador de formatos
