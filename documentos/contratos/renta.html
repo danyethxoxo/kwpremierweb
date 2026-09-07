@@ -615,6 +615,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260906a">
 </head>
 <body class="doc-borrador">
 
@@ -993,7 +994,7 @@ function renderPaginated() {
     <div class="page">
       ${html}
       <div class="page-footer">
-        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>${folioActual ? folioRevisionActual() : ''}</span>
         <span>Página ${i + 1} de ${pagesHTML.length}</span>
       </div>
     </div>
@@ -1137,6 +1138,13 @@ const TIPO_DOCUMENTO = 'acuerdo_renta';
 let documentoActualId = null;
 let folioActual = null;
 let estadoActual = 'borrador';
+let revisionActual = 0;
+
+function folioRevisionActual() {
+  return window.kwRevisiones
+    ? window.kwRevisiones.folio(folioActual, revisionActual)
+    : (folioActual ? folioRevisionActual() : '');
+}
 
 function setGuardarMsg(text, kind) {
   const el = document.getElementById('guardar-msg');
@@ -1198,6 +1206,7 @@ function actualizarVisibilidadBotones() {
   document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
   actualizarFAB();
+  if (window.kwRevisiones) window.kwRevisiones.refrescar();
 }
 
 function actualizarFAB() {
@@ -1325,6 +1334,7 @@ function crearNuevoDocumento() {
   abrirConAnimacion('Preparando el documento…', function () {
     documentoActualId = null;
     folioActual = null;
+    revisionActual = 0;
     estadoActual = 'borrador';
     limpiarFormulario();
     bloquearFormulario(false);
@@ -1339,6 +1349,7 @@ function abrirDocumentoGuardado(row, marcar) {
     documentoActualId = row.id;
     folioActual = row.folio || null;
     estadoActual = row.estado || 'borrador';
+    revisionActual = Number(row.revision) || 0;
     const datos = row.datos || {};
     CAMPOS_GUARDABLES.forEach(id => {
       const el = document.getElementById(id);
@@ -1389,7 +1400,7 @@ async function cargarListaDocumentos() {
 
     const { data, error } = await window.kwSupabase
       .from('documentos_guardados')
-      .select('id, nombre_archivo, updated_at, datos, folio, estado')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
       .eq('user_id', userData.user.id)
       .eq('tipo_documento', TIPO_DOCUMENTO)
       .order('updated_at', { ascending: false });
@@ -1697,7 +1708,7 @@ async function abrirDocumentoPorId(id) {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data, error } = await window.kwSupabase
       .from('documentos_guardados')
-      .select('id, nombre_archivo, updated_at, datos, folio, estado')
+      .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
       .eq('id', id)
       .single();
     if (error || !data) throw new Error('No se encontró el documento, o no tienes permiso para verlo.');
@@ -1833,7 +1844,7 @@ function downloadPDF() {
     return `<div class="print-page"${isLast ? '' : ' style="page-break-after:always;"'}>
       ${wrapper.innerHTML}
       <div class="print-page-footer">
-        <span>${folioActual ? 'Folio: ' + folioActual : ''}</span>
+        <span>${folioActual ? folioRevisionActual() : ''}</span>
         <span>Página ${i + 1} de ${pages.length}</span>
       </div>
     </div>`;
@@ -1889,6 +1900,24 @@ function downloadPDF() {
 </head>
 <body>
 ${pagesHTML}
+<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906a"></script>
+<script>
+window.kwRevisiones.iniciar({
+  id: function () { return documentoActualId; },
+  estado: function () { return estadoActual; },
+  folio: function () { return folioActual; },
+  revision: function () { return revisionActual; },
+  abrir: function (row) { abrirDocumentoGuardado(row, false); },
+  revisionCreada: function (numero) {
+    revisionActual = numero;
+    estadoActual = 'borrador';
+    bloquearFormulario(false);
+    actualizarVisibilidadBotones();
+    updatePreview();
+    setGuardarMsg('Revisión ' + numero + ' iniciada. Realiza los cambios, guarda y finaliza nuevamente.', 'ok');
+  }
+});
+</script>
 </body>
 </html>`);
   printWin.document.close();
