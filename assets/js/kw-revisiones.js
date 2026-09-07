@@ -72,21 +72,26 @@
         versiones.map(function (v) {
           var actual = v.es_actual === true;
           var estado = v.estado === 'finalizado' ? 'Finalizada' : 'En edición';
-          return '<article class="kw-revision-item' + (actual ? ' actual' : '') + '">' +
+          return '<article class="kw-revision-item' + (actual ? ' actual' : '') +
+            '" data-revision="' + Number(v.revision || 0) + '" role="button" tabindex="0">' +
             '<div class="kw-revision-linea"><strong>' + esc(nombreRevision(v.revision)) + '</strong>' +
             (actual ? '<span class="kw-revision-actual">Última versión</span>' : '') + '</div>' +
             '<div class="kw-revision-meta">' + esc(fecha(v.finalizado_at || v.updated_at)) +
             ' · ' + esc(estado) + '</div>' +
-            '<button type="button" class="kw-revision-ver" data-revision="' + Number(v.revision || 0) + '">' +
-            (actual ? 'Ver documento' : 'Ver esta versión') + '</button>' +
           '</article>';
         }).join('') + '</div>';
 
-      panel.querySelectorAll('[data-revision]').forEach(function (boton) {
-        boton.addEventListener('click', function () {
-          var numero = Number(boton.dataset.revision);
+      panel.querySelectorAll('.kw-revision-item[data-revision]').forEach(function (tarjeta) {
+        function abrir() {
+          var numero = Number(tarjeta.dataset.revision);
           var version = versiones.find(function (v) { return Number(v.revision) === numero; });
           if (version) abrirVersion(version);
+        }
+        tarjeta.addEventListener('click', abrir);
+        tarjeta.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          abrir();
         });
       });
     } catch (err) {
