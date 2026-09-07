@@ -40,13 +40,51 @@
   .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
-     conserva únicamente la herramienta: barra, resumen, tabla y editor. */
+     conserva únicamente la herramienta y se usan las mismas tarjetas,
+     campos y acciones que en Asesores y Documentos. */
   html.kw-embebida .kw-header { display: none; }
-  html.kw-embebida body { min-height: 100vh; }
+  html.kw-embebida,
+  html.kw-embebida body { min-height: 100%; background: transparent; }
   html.kw-embebida .page { padding: 8px 4px 18px; }
   html.kw-embebida .page-title,
   html.kw-embebida .page-desc { display: none; }
-  html.kw-embebida .tabla-caja { max-height: calc(100vh - 126px); }
+  html.kw-embebida .barra {
+    padding: 14px; margin-bottom: 12px; border: 1px solid var(--border);
+    border-radius: var(--r-card); background: #fff; box-shadow: var(--sombra-1);
+  }
+  html.kw-embebida .buscador input {
+    height: 38px; border-radius: var(--r-campo); background: #fff;
+  }
+  html.kw-embebida .filtros {
+    height: 38px; padding: 3px; border-radius: var(--r-campo);
+  }
+  html.kw-embebida .filtro { height: 30px; border-radius: calc(var(--r-campo) - 3px); }
+  html.kw-embebida .barra-btn { height: 38px; border-radius: var(--r-campo); font-weight: 600; }
+  html.kw-embebida .barra-btn:not(.tenue) {
+    border-color: var(--red); background: var(--red); color: #fff;
+    box-shadow: 0 4px 12px rgba(138,0,0,0.16);
+  }
+  html.kw-embebida .barra-btn:not(.tenue):hover { background: #760000; }
+  html.kw-embebida .resumen {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px; margin-bottom: 12px;
+  }
+  html.kw-embebida .resumen-dato {
+    min-width: 0; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: var(--r-card); background: #fff; box-shadow: var(--sombra-1);
+  }
+  html.kw-embebida .resumen-valor { font-size: 18px; }
+  html.kw-embebida .tabla-caja {
+    max-height: calc(100vh - 224px); border: 1px solid var(--border);
+    background: #fff; box-shadow: var(--sombra-1); border-radius: var(--r-card);
+  }
+  html.kw-embebida thead th { background: #faf8f8; }
+  @media (max-width: 760px) {
+    html.kw-embebida .barra { align-items: stretch; }
+    html.kw-embebida .buscador { flex-basis: 100%; }
+    html.kw-embebida .resumen { grid-template-columns: 1fr; }
+    html.kw-embebida .tabla-caja { max-height: calc(100vh - 330px); }
+  }
 
   /* ── Barra de arriba: buscar, filtrar, agregar ── */
   /* El vidrio translúcido blanco sobre blanco (el de Prospectos, que es
@@ -773,6 +811,15 @@ document.getElementById('modal-editar').addEventListener('click', function (e) {
 if (document.documentElement.classList.contains('kw-auth-ok')) arrancar();
 else window.addEventListener('kw-auth-ready', arrancar, { once: true });
 </script>
-<script src="/kwpremierweb/assets/js/drawer.js?v=20260906a" data-menu="hub"></script>
+<script>
+  // El Panel ya tiene su propio riel. La página independiente conserva
+  // el suyo, pero el modo integrado no debe dibujar una navegación doble.
+  if (!document.documentElement.classList.contains('kw-embebida')) {
+    var drawerScript = document.createElement('script');
+    drawerScript.src = '/kwpremierweb/assets/js/drawer.js?v=20260906a';
+    drawerScript.dataset.menu = 'hub';
+    document.body.appendChild(drawerScript);
+  }
+</script>
 </body>
 </html>
