@@ -80,7 +80,7 @@
 
   function textos(pdf, pagina, paginaRect, margen) {
     var doc = pagina.ownerDocument;
-    var walker = doc.createTreeWalker(pagina, NodeFilter.SHOW_TEXT);
+    var walker = doc.createTreeWalker(pagina, doc.defaultView.NodeFilter.SHOW_TEXT);
     var nodo;
     while ((nodo = walker.nextNode())) {
       var padre = nodo.parentElement;
