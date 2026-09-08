@@ -731,6 +731,42 @@
   .dic-listo.visible { display: flex; }
   .dic-listo span { flex: 1; min-width: 200px; font-size: 13.5px; }
 
+
+  /* Documento enlazado: una tercera pestaña del expediente, no una copia. */
+  .dic-documentos { display:grid; gap:12px; }
+  .dic-documento {
+    padding:15px; border:1px solid #e4dddd; border-radius:15px; background:#fff;
+    box-shadow:0 3px 13px rgba(35,18,18,.05);
+  }
+  .dic-documento-cabecera {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+    padding-bottom:12px; border-bottom:1px solid #eee8e8;
+  }
+  .dic-documento-cabecera > div { display:flex; flex-direction:column; min-width:0; }
+  .dic-documento-cabecera strong { font-size:13px; color:#201b1b; }
+  .dic-documento-cabecera span { margin-top:3px; font-size:11px; color:#817979; }
+  .dic-documento-cabecera a {
+    flex:0 0 auto; color:#8a0000; font-size:11.5px; font-weight:600;
+    text-decoration:none; padding:6px 9px; border-radius:9px;
+  }
+  .dic-documento-cabecera a:hover { background:#fbe9e9; }
+  .dic-documento-datos {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; margin-top:13px;
+  }
+  .dic-documento-dato { display:flex; flex-direction:column; min-width:0; }
+  .dic-documento-dato span {
+    color:#8a0000; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.035em;
+  }
+  .dic-documento-dato strong {
+    margin-top:2px; color:#2a2424; font-size:11.5px; font-weight:500;
+    overflow-wrap:anywhere; white-space:pre-wrap;
+  }
+  @media(max-width:640px) {
+    .dic-documento-datos { grid-template-columns:1fr; }
+    .dic-documento-cabecera { align-items:stretch; flex-direction:column; }
+    .dic-documento-cabecera a { align-self:flex-start; }
+  }
+
 </style>
 </head>
 <body>
@@ -1173,6 +1209,7 @@
   var puntos = [];
   var clientes = [];
   var historial = [];
+  var documentosEnlazados = [];
   var asesores = [];
   var tipos = [];
   var abierto = null;
@@ -1322,6 +1359,15 @@
       .from('dictamen_historial_con_quien').select('*')
       .order('created_at', { ascending: false }).limit(5000);
     historial = hi.data || [];
+
+    // Los documentos se leen por referencia: así una revisión nueva se
+    // refleja en el expediente sin copiar ni desincronizar información.
+    var de = await window.kwSupabase
+      .from('documentos_guardados')
+      .select('id, dictamen_id, tipo_documento, nombre_archivo, folio, revision, estado, datos, updated_at')
+      .not('dictamen_id', 'is', null)
+      .limit(1000);
+    documentosEnlazados = de.error ? [] : (de.data || []);
 
     pintar();
   }
@@ -1853,6 +1899,85 @@
   window.addEventListener('scroll', cerrarMenuSiSeMovio, true);
   window.addEventListener('resize', cerrarMenuSiSeMovio);
 
+  function rutaDocumento(tipo) {
+    var rutas = {
+      aceptacion_oferta: 'acuerdos/aceptacionoferta.html',
+      aviso_privacidad: 'acuerdos/avisodeprivacidad.html',
+      carta_terminacion: 'acuerdos/cartaterminacion.html',
+      cedula_registro: 'acuerdos/cedularegistro.html',
+      checklist: 'acuerdos/checklist.html',
+      colaboracion: 'acuerdos/colaboracion.html',
+      contrapropuesta: 'acuerdos/contrapropuesta.html',
+      referido: 'acuerdos/referido.html',
+      acuerdo_renta: 'contratos/renta.html',
+      contrato_profeco: 'contratos/profeco.html'
+    };
+    return rutas[tipo] ? '/kwpremierweb/documentos/' + rutas[tipo] : '';
+  }
+
+  function etiquetaDatoDocumento(clave) {
+    var conocidas = {
+      inmueble: 'Inmueble', direccion: 'Dirección', cliente: 'Cliente',
+      precio: 'Precio', comision: 'Comisión', operacion: 'Operación',
+      fecha: 'Fecha', propietario: 'Propietario'
+    };
+    var limpia = String(clave || '')
+      .replace(/^(pv|ct|co|ref|ao|cr|cp|ren|pro)[-_]/i, '')
+      .replace(/[-_]+/g, ' ').trim();
+    var conocida = conocidas[limpia.toLowerCase()];
+    if (conocida) return conocida;
+    return limpia ? limpia.charAt(0).toUpperCase() + limpia.slice(1) : 'Dato';
+  }
+
+  function valorDatoDocumento(valor) {
+    if (valor == null || valor === '') return '';
+    if (Array.isArray(valor)) {
+      return valor.map(function (v) {
+        if (v && typeof v === 'object') {
+          return Object.keys(v).map(function (k) {
+            var x = valorDatoDocumento(v[k]);
+            return x ? etiquetaDatoDocumento(k) + ': ' + x : '';
+          }).filter(Boolean).join(' · ');
+        }
+        return valorDatoDocumento(v);
+      }).filter(Boolean).join(' | ');
+    }
+    if (typeof valor === 'object') {
+      return Object.keys(valor).map(function (k) {
+        var x = valorDatoDocumento(valor[k]);
+        return x ? etiquetaDatoDocumento(k) + ': ' + x : '';
+      }).filter(Boolean).join(' · ');
+    }
+    if (valor === true) return 'Sí';
+    if (valor === false) return 'No';
+    return String(valor);
+  }
+
+  function documentosHTML(d) {
+    var docs = documentosEnlazados.filter(function (x) { return x.dictamen_id === d.id; });
+    if (!docs.length) {
+      return '<div class="kw-vacio" style="padding:var(--sp-4);">No hay documentos enlazados a este expediente.</div>';
+    }
+    return '<div class="dic-documentos">' + docs.map(function (doc) {
+      var campos = Object.keys(doc.datos || {}).map(function (clave) {
+        var valor = valorDatoDocumento(doc.datos[clave]);
+        if (!valor) return '';
+        return '<div class="dic-documento-dato"><span>' + escapar(etiquetaDatoDocumento(clave)) +
+          '</span><strong>' + escapar(valor) + '</strong></div>';
+      }).filter(Boolean).join('');
+      var ruta = rutaDocumento(doc.tipo_documento);
+      return '<article class="dic-documento">' +
+        '<div class="dic-documento-cabecera"><div><strong>' +
+          escapar(doc.nombre_archivo || 'Documento enlazado') + '</strong><span>' +
+          escapar((doc.folio || 'Sin folio') + ' · ' +
+            ((Number(doc.revision) || 0) ? 'Revisión ' + Number(doc.revision) : 'Original')) +
+          '</span></div>' +
+          (ruta ? '<a href="' + ruta + '?doc=' + encodeURIComponent(doc.id) + '">Abrir documento</a>' : '') +
+        '</div><div class="dic-documento-datos">' + campos + '</div>' +
+      '</article>';
+    }).join('') + '</div>';
+  }
+
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
       dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d)) +
@@ -1929,6 +2054,7 @@
         '<div class="kw-tabs dic-tabs" data-kw-tabs="paneles-' + d.id + '">' +
           '<button type="button" class="kw-tab activo" data-tab="exp-' + d.id + '">Expediente</button>' +
           '<button type="button" class="kw-tab" data-tab="hist-' + d.id + '">Historial</button>' +
+          '<button type="button" class="kw-tab" data-tab="docs-' + d.id + '">Documentos</button>' +
         '</div>' +
         acciones +
       '</div>' +
@@ -1940,6 +2066,9 @@
         '</section>' +
         '<section class="kw-tabpanel" data-panel="hist-' + d.id + '">' +
           historialHTML(d) +
+        '</section>' +
+        '<section class="kw-tabpanel" data-panel="docs-' + d.id + '">' +
+          documentosHTML(d) +
         '</section>' +
       '</div>';
   }
