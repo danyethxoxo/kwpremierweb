@@ -453,19 +453,71 @@
 
   /* ── Los datos del expediente dentro de la tarjeta ── */
   .dic-datos {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 9px var(--sp-4); margin: var(--sp-3) 0;
+    display: flex; flex-direction: column; gap: 12px;
+    margin: var(--sp-3) 0 var(--sp-5);
   }
-  .dic-dato { font-size: 13px; line-height: 1.45; }
+  .dic-grupo-datos {
+    border: 1px solid #e7e2e2; border-radius: 14px;
+    padding: 14px 16px; background: #fff;
+    box-shadow: 0 3px 12px rgba(39,22,22,.035);
+  }
+  .dic-grupo-datos-titulo {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 11px; padding-bottom: 8px;
+    border-bottom: 1px solid #eee9e9;
+    color: #272222; font-size: 12px; font-weight: 650;
+    letter-spacing: .015em;
+  }
+  .dic-grupo-datos-titulo::before {
+    content: ''; width: 4px; height: 15px; border-radius: 999px;
+    background: var(--red); flex: 0 0 auto;
+  }
+  .dic-grupo-datos-rejilla {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+    gap: 0 22px;
+  }
+  .dic-grupo-operacion .dic-dato:first-child { grid-column: 1 / -1; }
+  .dic-dato {
+    min-width: 0; padding: 9px 0 10px;
+    border-bottom: 1px solid #f2eeee;
+    font-size: 14px; line-height: 1.45;
+  }
+  .dic-dato:last-child { border-bottom-color: transparent; }
   .dic-dato b {
-    display: block; font-size: 10.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+    display: block; margin-bottom: 4px;
+    font-size: 9.5px; line-height: 1.25; font-weight: 650;
+    text-transform: uppercase; letter-spacing: .065em; color: #8a7f7f;
   }
+  .dic-dato-valor {
+    display: block; color: #211d1d; font-size: 14px; font-weight: 500;
+    overflow-wrap: anywhere; white-space: pre-line;
+  }
+  .dic-dato-valor.vacio { color: #9b9494; font-weight: 400; font-style: italic; }
   .dic-dato-correccion {
-    display: block; margin-top: 3px; color: #b02a2a;
-    font-size: 12.5px; font-weight: 700;
+    display: block; margin-top: 7px; padding: 6px 8px;
+    border-left: 2px solid #c52a36; border-radius: 0 7px 7px 0;
+    background: #fff6f6; color: #a4212d;
+    font-size: 12.5px; line-height: 1.4; font-weight: 400;
+    overflow-wrap: anywhere;
   }
-  .dic-dato-correccion::before { content: 'Corrección: '; }
+  .dic-dato-correccion::before {
+    content: 'Corrección · '; font-size: 9px; font-weight: 650;
+    text-transform: uppercase; letter-spacing: .055em; opacity: .72;
+  }
+  .dic-observaciones-seccion {
+    margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .dic-observaciones-titulo {
+    margin: 0 0 10px; color: #302a2a; font-size: 12.5px; font-weight: 650;
+  }
+  .dic-sin-observaciones {
+    padding: 9px 11px; border: 1px dashed #ddd5d5; border-radius: 10px;
+    color: var(--muted); font-size: 12.5px; background: #fcfbfb;
+  }
+  @media (max-width: 620px) {
+    .dic-grupo-datos { padding: 12px; }
+    .dic-grupo-datos-rejilla { grid-template-columns: 1fr; }
+  }
 
   /* ── El editor ── */
   .dic-editor {
@@ -1868,9 +1920,19 @@
   function dato(rotulo, valor, correccion) {
     if (!valor && !correccion) return '';
     return '<div class="dic-dato"><b>' + rotulo + '</b>' +
-      (valor ? escapar(valor) : '<span style="color:var(--muted);">Sin dato capturado</span>') +
+      (valor
+        ? '<span class="dic-dato-valor">' + escapar(valor) + '</span>'
+        : '<span class="dic-dato-valor vacio">Sin dato capturado</span>') +
       (correccion ? '<span class="dic-dato-correccion">' + escapar(correccion) + '</span>' : '') +
       '</div>';
+  }
+
+  function grupoDatos(titulo, contenido, clase) {
+    if (!contenido) return '';
+    return '<section class="dic-grupo-datos ' + (clase || '') + '">' +
+      '<h4 class="dic-grupo-datos-titulo">' + escapar(titulo) + '</h4>' +
+      '<div class="dic-grupo-datos-rejilla">' + contenido + '</div>' +
+    '</section>';
   }
 
   // Un expediente trae la escritura desglosada o, si es de antes de que
@@ -2190,25 +2252,47 @@
   });
 
   function cuerpoHTML(d, mios) {
-    var datos = '<div class="dic-datos">' +
-      dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d), correccionesClientesTexto(d)) +
+    var personas =
+      dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente',
+        clientesTexto(d), correccionesClientesTexto(d)) +
+      dato('Asesor responsable', d.asesor_nombre || '') +
+      dato('Dictaminó',
+        ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim());
+
+    var operacion =
       dato('Dirección del inmueble', d.inmueble, correccionDe(d, 'inmueble')) +
-      dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '', correccionDe(d, 'tipo_contrato')) +
+      dato('Tipo de inmueble', d.tipo_inmueble, correccionDe(d, 'tipo_inmueble')) +
+      dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '',
+        correccionDe(d, 'tipo_contrato')) +
       dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || ''),
         [correccionDe(d, 'operacion'), correccionDe(d, 'uso')].filter(Boolean).join(' · ')) +
-      dato('Tipo de inmueble', d.tipo_inmueble, correccionDe(d, 'tipo_inmueble')) +
-      dato('Precio del listado', conPesos(d.precio_listado), correccionDe(d, 'precio_listado')) +
-      dato('Comisión', conPorciento(d.comision_porcentaje), correccionDe(d, 'comision_porcentaje')) +
+      dato('Precio del listado', conPesos(d.precio_listado),
+        correccionDe(d, 'precio_listado')) +
+      dato('Comisión', conPorciento(d.comision_porcentaje),
+        correccionDe(d, 'comision_porcentaje'));
+
+    var escritura =
       datosEscritura(d) +
       dato('Condominio', siNo(d.condominio), correccionDe(d, 'condominio')) +
-      dato('Escritura del condominio', d.escritura_condominio, correccionDe(d, 'escritura_condominio')) +
+      dato('Escritura del condominio', d.escritura_condominio,
+        correccionDe(d, 'escritura_condominio')) +
       dato('CFDI', d.cfdi, correccionDe(d, 'cfdi')) +
-      dato('Superficie escritura', conUnidad(d.superficie_escritura), correccionDe(d, 'superficie_escritura')) +
+      dato('Folio real', d.folio_real, correccionDe(d, 'folio_real'));
+
+    var medidas =
+      dato('Superficie escritura', conUnidad(d.superficie_escritura),
+        correccionDe(d, 'superficie_escritura')) +
       dato('Cuenta predial', d.cuenta_predial, correccionDe(d, 'cuenta_predial')) +
-      dato('Superficie terreno', conUnidad(d.superficie_terreno), correccionDe(d, 'superficie_terreno')) +
-      dato('Superficie construcción', conUnidad(d.superficie_construccion), correccionDe(d, 'superficie_construccion')) +
-      dato('Folio real', d.folio_real, correccionDe(d, 'folio_real')) +
-      dato('Dictaminó', ((d.dictaminador_nombre || '') + ' ' + (d.dictaminador_apellido || '')).trim()) +
+      dato('Superficie terreno', conUnidad(d.superficie_terreno),
+        correccionDe(d, 'superficie_terreno')) +
+      dato('Superficie construcción', conUnidad(d.superficie_construccion),
+        correccionDe(d, 'superficie_construccion'));
+
+    var datos = '<div class="dic-datos">' +
+      grupoDatos('Personas', personas, 'dic-grupo-personas') +
+      grupoDatos('Inmueble y operación', operacion, 'dic-grupo-operacion') +
+      grupoDatos('Escritura y registro', escritura, 'dic-grupo-escritura') +
+      grupoDatos('Superficies y predial', medidas, 'dic-grupo-medidas') +
     '</div>';
 
     var obsTexto = separarCorrecciones(d.observaciones).texto;
@@ -2217,7 +2301,7 @@
 
     var lista = mios.length
       ? mios.map(function (p, i) { return puntoHTML(p, i); }).join('')
-      : '<div class="kw-vacio" style="padding:var(--sp-4);">Sin observaciones por atender.</div>';
+      : '<div class="dic-sin-observaciones">Sin observaciones por atender.</div>';
 
     var agregar = (puedoDictaminar && !d.archivado_at)
       ? '<div class="dic-nuevo-punto" data-agregar-en="' + d.id + '">' +
@@ -2276,8 +2360,11 @@
       '</div>' +
       '<div class="kw-tabpanels dic-tabpanels" id="paneles-' + d.id + '">' +
         '<section class="kw-tabpanel activo" data-panel="exp-' + d.id + '">' +
-          datos + obs +
-          '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
+          datos +
+          '<section class="dic-observaciones-seccion">' +
+            '<h4 class="dic-observaciones-titulo">Observaciones</h4>' +
+            obs + '<div>' + lista + agregar + '</div>' +
+          '</section>' +
           enCuerpo +
         '</section>' +
         '<section class="kw-tabpanel" data-panel="mkt-' + d.id + '">' +
