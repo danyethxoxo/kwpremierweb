@@ -513,8 +513,10 @@
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
+      if (enRiel(riel)) riel.classList.add('sin-hover');
       riel.classList.remove('buscando', 'open');
     }
+    buscarInput.blur();
     buscarResultados.hidden = true;
     buscarInput.value = '';
     // Al cerrar se limpia también el filtro de la página, para no dejarla
@@ -579,14 +581,13 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && busquedaAbierta()) cerrarBuscar();
   });
-  // Picar fuera cierra la búsqueda, salvo que se haya escrito algo: en
-  // las páginas con buscador propio la lista de abajo ES el resultado, y
-  // cerrarla al tocarla borraría el filtro que se acaba de escribir.
+  // Picar fuera cierra la búsqueda y devuelve el riel a su ancho angosto.
+  // Los resultados viven dentro del área de búsqueda, así que se pueden
+  // seleccionar sin activar este cierre.
   document.addEventListener('click', (e) => {
     if (!busquedaAbierta()) return;
     if ((header && header.contains(e.target)) ||
         (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
-    if (buscarInput.value.trim()) return;
     cerrarBuscar();
   });
 
@@ -655,7 +656,6 @@
   // fuera de él.
   document.addEventListener('click', (e) => {
     if (!drawerIzq.classList.contains('open') || !enRiel(drawerIzq)) return;
-    if (drawerIzq.classList.contains('buscando')) return;
     if (e.target instanceof Element && e.target.closest('#drawer, #kw-drawer-toggle')) return;
     cerrarPaneles();
   });
