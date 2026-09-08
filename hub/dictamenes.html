@@ -494,13 +494,47 @@
     color: #b02a2a; background: #fff7f7;
   }
   .dic-correccion-campo input[data-correccion-libre] {
-    min-height: var(--control-h, 44px); margin-top: 7px; resize: none;
+    min-height: 40px; margin: 0; resize: none;
   }
-  .dic-correccion-campo .kw-select { width: 100%; }
+  .dic-correccion-campo,
+  .dic-correccion-campo textarea,
+  .dic-correccion-campo input,
+  .dic-correccion-campo button { color: #b02a2a; }
   .dic-correccion-campo textarea::placeholder,
   .dic-correccion-campo input::placeholder { color: rgba(176,42,42,.62); }
   .dic-correccion-campo textarea:focus,
   .dic-correccion-campo input:focus { outline: none; border-color: #b02a2a; }
+
+  /* Desplegable de corrección: las opciones y la escritura libre viven
+     dentro del mismo menú, sin abrir un segundo campo debajo. */
+  .dic-correccion-combo { position: relative; }
+  .dic-correccion-combo-btn {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; min-height: var(--control-h, 44px); padding: 9px 12px;
+    border: 1px solid rgba(176,42,42,.38); border-radius: var(--r-campo);
+    background: #fff7f7; color: #b02a2a; font: 400 13px/1.35 inherit;
+    text-align: left; cursor: pointer;
+  }
+  .dic-correccion-combo-btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
+  .dic-correccion-combo.abierto .dic-correccion-combo-btn {
+    border-color: #b02a2a; border-radius: var(--r-campo) var(--r-campo) 0 0;
+  }
+  .dic-correccion-menu {
+    display: none; position: absolute; z-index: 145; top: calc(100% - 1px);
+    left: 0; right: 0; max-height: 260px; overflow-y: auto; padding: 6px;
+    border: 1px solid rgba(176,42,42,.38); border-radius: 0 0 12px 12px;
+    background: #fff; box-shadow: 0 12px 26px rgba(75,24,24,.16);
+  }
+  .dic-correccion-combo.abierto .dic-correccion-menu { display: block; }
+  .dic-correccion-opcion {
+    display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px;
+    background: transparent; color: #b02a2a; font: 400 13px/1.35 inherit;
+    text-align: left; cursor: pointer;
+  }
+  .dic-correccion-opcion:hover { background: #fff0f0; }
+  .dic-correccion-escribir {
+    margin-top: 5px; padding-top: 6px; border-top: 1px solid #f0d8d8;
+  }
 
   /* Las observaciones existentes se editan en su propio campo sin perder
      su id, estado ni historial. */
@@ -2516,11 +2550,12 @@
   ]);
 
   function opcionesParaCorreccion(campo) {
-    var opciones = Array.prototype.map.call(campo.options || [], function (o) {
+    return Array.prototype.map.call(campo.options || [], function (o) {
       if (o.value === '__nuevo__') return '';
-      return '<option value="' + escapar(o.value) + '">' + escapar(o.textContent) + '</option>';
+      return '<button type="button" class="dic-correccion-opcion" ' +
+        'data-correccion-opcion data-valor="' + escapar(o.value) + '">' +
+        escapar(o.textContent) + '</button>';
     }).join('');
-    return opciones + '<option value="__libre__">Escribir libremente</option>';
   }
 
   function crearBloqueCorreccion(campo, llave) {
@@ -2537,8 +2572,14 @@
         '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
         '<div class="dic-correccion-campo">' +
           (esSelect
-            ? '<select data-correccion-select></select>' +
-              '<input type="text" data-correccion-libre placeholder="Escribe otra opción" autocomplete="off" style="display:none;">'
+            ? '<div class="dic-correccion-combo">' +
+                '<button type="button" class="dic-correccion-combo-btn" data-correccion-abrir ' +
+                  'aria-haspopup="listbox" aria-expanded="false">' +
+                  '<span data-correccion-valor>Elige una opción</span>' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
+                '</button>' +
+                '<div class="dic-correccion-menu" data-correccion-menu role="listbox"></div>' +
+              '</div>'
             : '<textarea data-correccion-texto placeholder="Escribe aquí el dato correcto"></textarea>') +
         '</div>';
       caja.appendChild(bloque);
@@ -2546,7 +2587,12 @@
 
     if (esSelect) {
       bloque.dataset.origenSelect = campo.id || '';
-      bloque.querySelector('[data-correccion-select]').innerHTML = opcionesParaCorreccion(campo);
+      var menu = bloque.querySelector('[data-correccion-menu]');
+      menu.innerHTML = opcionesParaCorreccion(campo) +
+        '<div class="dic-correccion-escribir">' +
+          '<input type="text" data-correccion-libre ' +
+            'placeholder="Escribe aquí otra opción" autocomplete="off">' +
+        '</div>';
     }
     return bloque;
   }
@@ -2558,78 +2604,107 @@
     if (borrador) pintarCorrecciones(document);
   }
 
-  function valorCorreccionBloque(bloque) {
-    var selector = bloque.querySelector('[data-correccion-select]');
-    if (selector) {
-      var libre = bloque.querySelector('[data-correccion-libre]');
-      if (selector.value === '__libre__') return libre.value;
-      return selector.value
-        ? selector.options[selector.selectedIndex].textContent
-        : '';
-    }
-    var texto = bloque.querySelector('[data-correccion-texto]');
-    return texto ? texto.value : '';
+  function cerrarCombosCorreccion(salvo) {
+    document.querySelectorAll('.dic-correccion-combo.abierto').forEach(function (combo) {
+      if (combo === salvo) return;
+      combo.classList.remove('abierto');
+      var boton = combo.querySelector('[data-correccion-abrir]');
+      if (boton) boton.setAttribute('aria-expanded', 'false');
+    });
   }
 
-  function guardarCorreccionBloque(bloque) {
+  function ponerValorCorreccion(bloque, valor, libre) {
     if (!borrador || !bloque) return;
     var llave = bloque.dataset.correccion;
-    var selector = bloque.querySelector('[data-correccion-select]');
-    var libre = bloque.querySelector('[data-correccion-libre]');
-    if (selector && libre) {
-      libre.style.display = selector.value === '__libre__' ? '' : 'none';
-      if (selector.value === '__libre__') libre.focus();
+    var texto = String(valor || '');
+    if (CAMPOS_CON_COMAS.indexOf(llave) !== -1 && /^[\d,]*$/.test(texto)) {
+      texto = conComasMientrasEscribe(texto);
     }
-    var valor = valorCorreccionBloque(bloque);
-    if (CAMPOS_CON_COMAS.indexOf(llave) !== -1 && /^[\d,]*$/.test(valor)) {
-      valor = conComasMientrasEscribe(valor);
-      var texto = bloque.querySelector('[data-correccion-texto]');
-      if (texto) texto.value = valor;
-    }
-    borrador.correcciones[llave] = valor;
+    borrador.correcciones[llave] = texto;
+
+    var etiqueta = bloque.querySelector('[data-correccion-valor]');
+    if (etiqueta) etiqueta.textContent = texto || 'Elige una opción';
+    bloque.dataset.valorCorreccion = texto;
+    var campoLibre = bloque.querySelector('[data-correccion-libre]');
+    if (campoLibre && libre && campoLibre.value !== texto) campoLibre.value = texto;
   }
 
   function pintarCorrecciones(raiz) {
     (raiz || document).querySelectorAll('[data-correccion]').forEach(function (bloque) {
       var valor = (borrador && borrador.correcciones || {})[bloque.dataset.correccion] || '';
-      var selector = bloque.querySelector('[data-correccion-select]');
+      var opciones = bloque.querySelectorAll('[data-correccion-opcion]');
       var libre = bloque.querySelector('[data-correccion-libre]');
       var texto = bloque.querySelector('[data-correccion-texto]');
+      var etiqueta = bloque.querySelector('[data-correccion-valor]');
 
-      if (selector) {
-        var encontrada = Array.prototype.find.call(selector.options, function (o) {
-          return o.value !== '__libre__' &&
-            (o.value === valor || o.textContent.toLowerCase() === String(valor).toLowerCase());
+      if (opciones.length) {
+        var encontrada = Array.prototype.find.call(opciones, function (o) {
+          return o.dataset.valor === valor ||
+            o.textContent.trim().toLowerCase() === String(valor).toLowerCase();
         });
-        selector.value = encontrada ? encontrada.value : (valor ? '__libre__' : '');
-        libre.value = encontrada ? '' : valor;
-        libre.style.display = selector.value === '__libre__' ? '' : 'none';
-        selector.dispatchEvent(new Event('change', { bubbles: true }));
+        bloque.dataset.valorCorreccion = valor;
+        if (etiqueta) etiqueta.textContent = valor || 'Elige una opción';
+        if (libre) libre.value = encontrada ? '' : valor;
       } else if (texto) {
         texto.value = valor;
       }
       bloque.classList.toggle('abierta', !!valor);
     });
-    if (window.kwUI) window.kwUI.selects(raiz || document);
   }
 
   document.addEventListener('click', function (e) {
-    var boton = e.target.closest('.dic-correccion-btn');
-    if (!boton) return;
-    var bloque = boton.closest('[data-correccion]');
-    bloque.classList.toggle('abierta');
-    if (bloque.classList.contains('abierta')) {
-      var control = bloque.querySelector('[data-correccion-select], [data-correccion-texto], [data-correccion-libre]');
-      if (control) control.focus();
+    var botonCorreccion = e.target.closest('.dic-correccion-btn');
+    if (botonCorreccion) {
+      var bloque = botonCorreccion.closest('[data-correccion]');
+      bloque.classList.toggle('abierta');
+      if (bloque.classList.contains('abierta')) {
+        var control = bloque.querySelector('[data-correccion-abrir], [data-correccion-texto]');
+        if (control) control.focus();
+      }
+      return;
+    }
+
+    var abrir = e.target.closest('[data-correccion-abrir]');
+    if (abrir) {
+      var combo = abrir.closest('.dic-correccion-combo');
+      var seAbre = !combo.classList.contains('abierto');
+      cerrarCombosCorreccion(seAbre ? combo : null);
+      combo.classList.toggle('abierto', seAbre);
+      abrir.setAttribute('aria-expanded', seAbre ? 'true' : 'false');
+      if (seAbre) {
+        var libre = combo.querySelector('[data-correccion-libre]');
+        if (libre) setTimeout(function () { libre.focus(); }, 0);
+      }
+      return;
+    }
+
+    var opcion = e.target.closest('[data-correccion-opcion]');
+    if (opcion) {
+      var bloqueOpcion = opcion.closest('[data-correccion]');
+      ponerValorCorreccion(bloqueOpcion, opcion.textContent.trim(), false);
+      cerrarCombosCorreccion();
+      return;
+    }
+
+    if (!e.target.closest('.dic-correccion-combo')) cerrarCombosCorreccion();
+  });
+
+  document.addEventListener('input', function (e) {
+    if (e.target.matches('[data-correccion-texto]')) {
+      ponerValorCorreccion(e.target.closest('[data-correccion]'), e.target.value, false);
+    } else if (e.target.matches('[data-correccion-libre]')) {
+      ponerValorCorreccion(e.target.closest('[data-correccion]'), e.target.value, true);
     }
   });
-  document.addEventListener('change', function (e) {
-    if (!e.target.matches('[data-correccion-select]')) return;
-    guardarCorreccionBloque(e.target.closest('[data-correccion]'));
-  });
-  document.addEventListener('input', function (e) {
-    if (!e.target.matches('[data-correccion-texto], [data-correccion-libre]')) return;
-    guardarCorreccionBloque(e.target.closest('[data-correccion]'));
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && e.target.closest('.dic-correccion-combo')) {
+      cerrarCombosCorreccion();
+    }
+    if (e.key === 'Enter' && e.target.matches('[data-correccion-libre]')) {
+      e.preventDefault();
+      cerrarCombosCorreccion();
+    }
   });
 
   // Las superficies se guardan como número pelón y la unidad se pone al
