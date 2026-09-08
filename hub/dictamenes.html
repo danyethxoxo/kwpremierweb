@@ -1722,7 +1722,7 @@
 
   function resumenContrato(doc) {
     var nombres = clientesDelContrato(doc).map(function (x) { return x.nombre; }).join(', ');
-    return [doc.folio, nombres, direccionDelContrato(doc), doc.nombre_archivo]
+    return [nombres, direccionDelContrato(doc)]
       .filter(Boolean).join(' · ');
   }
 
@@ -1790,7 +1790,8 @@
             '<span class="dic-contrato-texto"><strong>' +
               escapar(doc.nombre_archivo || TIPOS_CONTRATO_ORIGEN[tipo]) +
             '</strong><span>' +
-              escapar([doc.folio || 'Sin folio', resumenContrato(doc)].filter(Boolean).join(' · ')) +
+              escapar([doc.folio || 'Sin folio', doc.asesor_nombre, resumenContrato(doc)]
+                .filter(Boolean).join(' · ')) +
             '</span></span></button>';
         }).join('') + '</div></section>';
     }).join('');
