@@ -144,7 +144,7 @@
     });
   }
 
-  async function descargar(documento, nombre, opciones) {
+  async function crear(documento, opciones) {
     var JsPDF = global.jspdf && global.jspdf.jsPDF;
     if (!JsPDF) throw new Error('El generador vectorial de PDF no terminó de cargar.');
 
@@ -178,8 +178,18 @@
       textos(pdf, pagina, paginaRect, margen);
     });
 
+    return pdf;
+  }
+
+  async function generar(documento, opciones) {
+    var pdf = await crear(documento, opciones);
+    return pdf.output('blob');
+  }
+
+  async function descargar(documento, nombre, opciones) {
+    var pdf = await crear(documento, opciones);
     pdf.save(nombre);
   }
 
-  global.kwPDFVector = { descargar: descargar };
+  global.kwPDFVector = { crear: crear, generar: generar, descargar: descargar };
 })(window);
