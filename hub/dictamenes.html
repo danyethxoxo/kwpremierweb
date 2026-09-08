@@ -288,6 +288,73 @@
     .dic-acciones-iconos { margin-left: 0; }
   }
 
+  /* ── Checklist de Marketing ── */
+  .dic-mkt-checklist {
+    border: 1px solid var(--border); border-radius: 13px;
+    background: #fff; overflow: hidden;
+  }
+  .dic-mkt-encabezado {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 13px; border-bottom: 1px solid var(--border);
+    background: #fcfbfb;
+  }
+  .dic-mkt-encabezado h4 { margin: 0; font-size: 13.5px; color: var(--text); }
+  .dic-mkt-progreso { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .dic-mkt-lista { display: flex; flex-direction: column; }
+  .dic-mkt-fila {
+    display: grid; grid-template-columns: minmax(190px, .75fr) auto minmax(210px, 1.25fr);
+    align-items: center; gap: 10px; padding: 8px 12px;
+    border-bottom: 1px solid #f0ecec;
+  }
+  .dic-mkt-fila:last-child { border-bottom: none; }
+  .dic-mkt-fila.correcto { background: #f6fbf7; }
+  .dic-mkt-fila.incorrecto { background: #fff7f7; }
+  .dic-mkt-nombre { min-width: 0; font-size: 13px; color: var(--text); }
+  .dic-mkt-opciones { display: flex; gap: 5px; }
+  .dic-mkt-opcion {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 29px; height: 29px; padding: 0; border-radius: 8px;
+    border: 1px solid var(--border); background: #fff; color: #8a8585;
+    font: inherit; font-size: 16px; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s, transform .15s;
+  }
+  .dic-mkt-opcion:hover { transform: translateY(-1px); }
+  .dic-mkt-opcion.correcto:hover,
+  .dic-mkt-opcion.correcto.activo {
+    color: #157a41; border-color: #8bc9a3; background: #eaf8ef;
+  }
+  .dic-mkt-opcion.incorrecto:hover,
+  .dic-mkt-opcion.incorrecto.activo {
+    color: #b02a2a; border-color: #e2a1a1; background: #fdecec;
+  }
+  .dic-mkt-comentario,
+  .dic-mkt-general textarea {
+    width: 100%; min-height: 34px; resize: vertical;
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 7px 9px; background: #fff; color: var(--text);
+    font: inherit; font-size: 12.5px; line-height: 1.35;
+  }
+  .dic-mkt-comentario:focus,
+  .dic-mkt-general textarea:focus {
+    outline: none; border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(198,32,39,.07);
+  }
+  .dic-mkt-general {
+    padding: 11px 12px; border-top: 1px solid var(--border); background: #fcfbfb;
+  }
+  .dic-mkt-general label {
+    display: block; margin-bottom: 6px; font-size: 12px; font-weight: 650; color: #302a2a;
+  }
+  .dic-mkt-pie {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    padding: 0 12px 12px; background: #fcfbfb;
+  }
+  .dic-mkt-guardar { min-width: 150px; }
+  @media (max-width: 760px) {
+    .dic-mkt-fila { grid-template-columns: 1fr auto; }
+    .dic-mkt-comentario { grid-column: 1 / -1; }
+  }
+
   /* ── El historial ──
      Un renglón por movimiento, con su punto de color a la izquierda y la
      hora a la derecha. Se lee de arriba abajo como una conversación: lo
@@ -1974,6 +2041,15 @@
   };
   var ORDEN_MARKETING = ['pendiente', 'corregir', 'aprobado'];
 
+  var MARKETING_PUNTOS = [
+    { clave: 'titulo', nombre: 'Título' },
+    { clave: 'precio_moneda', nombre: 'Precio y moneda' },
+    { clave: 'metrajes', nombre: 'Metrajes' },
+    { clave: 'comisiones', nombre: 'Comisiones' },
+    { clave: 'descripcion_nom247', nombre: 'Descripción con leyenda de la NOM-247' },
+    { clave: 'fotos', nombre: 'Fotos' },
+  ];
+
   var LISTADOS = {
     pendiente: 'Pendiente',
     sin_listado: 'No tiene cargado el listado',
@@ -2258,6 +2334,72 @@
     });
   });
 
+  function datosMarketing(d) {
+    var valor = d.marketing_checklist || {};
+    if (typeof valor === 'string') {
+      try { valor = JSON.parse(valor); } catch (e) { valor = {}; }
+    }
+    return valor && typeof valor === 'object' ? valor : {};
+  }
+
+  function marketingHTML(d) {
+    var datos = datosMarketing(d);
+    var editable = puedoDictaminar && !d.archivado_at;
+    var correctos = 0;
+
+    var filas = MARKETING_PUNTOS.map(function (p, i) {
+      var guardado = datos[p.clave] || {};
+      var estado = ['correcto', 'incorrecto'].indexOf(guardado.estado) !== -1
+        ? guardado.estado : 'pendiente';
+      if (estado === 'correcto') correctos++;
+
+      function opcion(valor, simbolo, titulo) {
+        return '<button type="button" class="dic-mkt-opcion ' + valor +
+          (estado === valor ? ' activo' : '') + '" data-marketing-marcar="' + valor +
+          '" aria-label="' + titulo + '" title="' + titulo + '" aria-pressed="' +
+          (estado === valor ? 'true' : 'false') + '"' + (editable ? '' : ' disabled') + '>' +
+          simbolo + '</button>';
+      }
+
+      return '<div class="dic-mkt-fila ' + estado + '" data-marketing-punto="' + p.clave +
+        '" data-estado="' + estado + '">' +
+          '<span class="dic-mkt-nombre">' + (i + 1) + '. ' + escapar(p.nombre) + '</span>' +
+          '<div class="dic-mkt-opciones">' +
+            opcion('correcto', '✓', 'Marcar como correcto') +
+            opcion('incorrecto', '×', 'Marcar para corregir') +
+          '</div>' +
+          '<textarea class="dic-mkt-comentario" rows="1" placeholder="Comentario particular"' +
+            (editable ? '' : ' readonly') + '>' + escapar(guardado.comentario || '') + '</textarea>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="dic-mkt-checklist" data-marketing-checklist="' + d.id + '">' +
+      '<div class="dic-mkt-encabezado">' +
+        '<h4>Checklist de calidad del listado</h4>' +
+        '<span class="dic-mkt-progreso" data-marketing-progreso>' +
+          correctos + ' de ' + MARKETING_PUNTOS.length + ' correctos</span>' +
+      '</div>' +
+      '<div class="dic-mkt-lista">' + filas + '</div>' +
+      '<div class="dic-mkt-general">' +
+        '<label>Comentario general</label>' +
+        '<textarea rows="2" data-marketing-general placeholder="Comentario general del listado"' +
+          (editable ? '' : ' readonly') + '>' + escapar(d.marketing_comentario_general || '') + '</textarea>' +
+      '</div>' +
+      (editable
+        ? '<div class="dic-mkt-pie"><button type="button" class="btn-nuevo dic-mkt-guardar" ' +
+            'data-marketing-guardar="' + d.id + '">Guardar checklist</button></div>'
+        : '') +
+    '</div>';
+  }
+
+  function actualizarProgresoMarketing(panel) {
+    if (!panel) return;
+    var filas = panel.querySelectorAll('[data-marketing-punto]');
+    var correctos = panel.querySelectorAll('[data-marketing-punto][data-estado="correcto"]').length;
+    var progreso = panel.querySelector('[data-marketing-progreso]');
+    if (progreso) progreso.textContent = correctos + ' de ' + filas.length + ' correctos';
+  }
+
   function cuerpoHTML(d, mios) {
     var personas =
       dato('Asesor responsable', d.asesor_nombre || '') +
@@ -2373,10 +2515,7 @@
           enCuerpo +
         '</section>' +
         '<section class="kw-tabpanel" data-panel="mkt-' + d.id + '">' +
-          '<div class="kw-vacio" style="padding:var(--sp-4);">' +
-            '<b>Checklist de calidad del listado</b><br>' +
-            'La sección está lista. Aquí agregaremos los campos del checklist de Marketing.' +
-          '</div>' +
+          marketingHTML(d) +
         '</section>' +
         '<section class="kw-tabpanel" data-panel="docs-' + d.id + '">' +
           documentosHTML(d) +
@@ -2393,6 +2532,7 @@
     creado: 'Se levantó el expediente',
     estado: 'Dictamen',
     marketing: 'Marketing',
+    marketing_checklist: 'Checklist de Marketing',
     listado: 'Listado',
     revision: 'Revisión',
     archivado: 'Archivado',
@@ -2611,6 +2751,59 @@
       btn.addEventListener('click', agregar);
       txt.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agregar(); }
+      });
+    });
+
+    raiz.querySelectorAll('[data-marketing-marcar]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var fila = b.closest('[data-marketing-punto]');
+        var panel = b.closest('[data-marketing-checklist]');
+        if (!fila || !panel) return;
+        var siguiente = b.dataset.marketingMarcar;
+        var actual = fila.dataset.estado || 'pendiente';
+        fila.dataset.estado = actual === siguiente ? 'pendiente' : siguiente;
+        fila.classList.remove('pendiente', 'correcto', 'incorrecto');
+        fila.classList.add(fila.dataset.estado);
+        fila.querySelectorAll('[data-marketing-marcar]').forEach(function (op) {
+          var activo = op.dataset.marketingMarcar === fila.dataset.estado;
+          op.classList.toggle('activo', activo);
+          op.setAttribute('aria-pressed', activo ? 'true' : 'false');
+        });
+        actualizarProgresoMarketing(panel);
+      });
+    });
+
+    raiz.querySelectorAll('[data-marketing-guardar]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        var id = b.dataset.marketingGuardar;
+        var panel = b.closest('[data-marketing-checklist]');
+        if (!panel) return;
+
+        var checklist = {};
+        panel.querySelectorAll('[data-marketing-punto]').forEach(function (fila) {
+          checklist[fila.dataset.marketingPunto] = {
+            estado: fila.dataset.estado || 'pendiente',
+            comentario: fila.querySelector('.dic-mkt-comentario').value.trim(),
+          };
+        });
+
+        b.disabled = true;
+        b.textContent = 'Guardando...';
+        var r = await window.kwSupabase.rpc('dictamen_guardar_checklist_marketing', {
+          p_id: id,
+          p_checklist: checklist,
+          p_comentario_general: panel.querySelector('[data-marketing-general]').value.trim(),
+        });
+        if (r.error) {
+          b.disabled = false;
+          b.textContent = 'Guardar checklist';
+          await window.kwUI.alert('No se pudo guardar el checklist: ' + r.error.message);
+          return;
+        }
+
+        await cargar();
+        var tab = $('lista').querySelector('[data-tab="mkt-' + id + '"]');
+        if (tab) tab.click();
       });
     });
 
