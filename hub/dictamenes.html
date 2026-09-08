@@ -237,17 +237,36 @@
      texto era ancho gastado en decir lo que el dibujo ya dice. */
   .dic-acciones-iconos { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
   .dic-icono-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; padding: 0;
-    border: 1px solid var(--border); border-radius: 9px;
-    background: #fff; color: var(--muted); cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    --accion-color: #696969;
+    display: inline-flex; align-items: center; justify-content: flex-start; gap: 7px;
+    width: auto; max-width: 32px; height: 32px; padding: 0 8px;
+    overflow: hidden; white-space: nowrap;
+    border: 1px solid var(--accion-color); border-radius: 9px;
+    background: #fff; color: var(--accion-color); cursor: pointer;
+    transition: max-width .28s ease, padding .28s ease, background .18s ease,
+      color .18s ease, box-shadow .18s ease, transform .18s ease;
   }
-  .dic-icono-btn svg { width: 15px; height: 15px; }
-  .dic-icono-btn:hover { color: var(--red); border-color: rgba(138,0,0,0.34); background: #fffafa; }
-  /* Archivar y borrar sacan el expediente de la lista: se pintan al
-     pasar encima para que no se confundan con los de todos los días. */
-  .dic-icono-btn.saca:hover { color: #b02a2a; border-color: rgba(176,42,42,0.42); }
+  .dic-icono-btn svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  .dic-icono-texto {
+    max-width: 0; opacity: 0; transform: translateX(-8px);
+    overflow: hidden; font-size: 12px; font-weight: 500;
+    transition: max-width .28s ease, opacity .18s ease, transform .28s ease;
+  }
+  .dic-icono-btn.preparado {
+    max-width: 210px; padding: 0 11px; background: color-mix(in srgb, var(--accion-color) 8%, white);
+    box-shadow: 0 5px 13px color-mix(in srgb, var(--accion-color) 18%, transparent);
+    transform: translateX(-2px);
+  }
+  .dic-icono-btn.preparado .dic-icono-texto {
+    max-width: 170px; opacity: 1; transform: translateX(0);
+  }
+  .dic-icono-btn:hover { background: color-mix(in srgb, var(--accion-color) 7%, white); }
+  .dic-icono-btn.accion-imprimir { --accion-color: #a30d22; }
+  .dic-icono-btn.accion-imprimir-correcciones { --accion-color: #7540a8; }
+  .dic-icono-btn.accion-editar { --accion-color: #2463a8; }
+  .dic-icono-btn.accion-archivar { --accion-color: #9a6710; }
+  .dic-icono-btn.accion-restaurar { --accion-color: #197142; }
+  .dic-icono-btn.accion-borrar { --accion-color: #b02a2a; }
 
   @media (max-width: 560px) {
     .dic-barra-tarjeta { flex-wrap: wrap; }
@@ -576,7 +595,7 @@
      se separan con este rótulo. La línea de abajo es la que hace que se
      lean como bloques y no como un solo chorro de campos. */
   .dic-subtitulo {
-    font-size: 15px; color: var(--text);
+    width: 100%; font-size: 15px; color: var(--text); text-align: left;
     margin: var(--sp-5) 0 var(--sp-3);
     padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
@@ -2094,6 +2113,35 @@
     }).join('') + '</div>';
   }
 
+  function confirmarIcono(boton, evento) {
+    if (evento) {
+      evento.preventDefault();
+      evento.stopPropagation();
+    }
+    if (!boton.classList.contains('preparado')) {
+      document.querySelectorAll('.dic-icono-btn.preparado').forEach(function (otro) {
+        if (otro !== boton) otro.classList.remove('preparado');
+      });
+      boton.classList.add('preparado');
+      return false;
+    }
+    boton.classList.remove('preparado');
+    return true;
+  }
+
+  function navegarEditor(id) {
+    var destino = new URL(location.href);
+    destino.search = id ? '?editar=' + encodeURIComponent(id) : '?nuevo=1';
+    location.href = destino.href;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.dic-icono-btn')) return;
+    document.querySelectorAll('.dic-icono-btn.preparado').forEach(function (b) {
+      b.classList.remove('preparado');
+    });
+  });
+
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
       dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d), correccionesClientesTexto(d)) +
@@ -2143,9 +2191,11 @@
     // que las pestañas, hasta la derecha: son tres dibujos conocidos y el
     // texto era ancho gastado en decir lo que el dibujo ya dice.
     function iconoBtn(marca, id, titulo, dibujo, saca) {
-      return '<button type="button" class="dic-icono-btn' + (saca ? ' saca' : '') + '" ' +
+      var claseAccion = ' accion-' + marca.replace(/^data-/, '');
+      return '<button type="button" class="dic-icono-btn' + claseAccion +
+        (saca ? ' saca' : '') + '" ' +
         marca + '="' + id + '" title="' + titulo + '" aria-label="' + titulo + '">' +
-        dibujo + '</button>';
+        dibujo + '<span class="dic-icono-texto">' + escapar(titulo) + '</span></button>';
     }
 
     var acciones = '<div class="dic-acciones-iconos">' +
@@ -2432,17 +2482,27 @@
     });
 
     raiz.querySelectorAll('[data-imprimir]').forEach(function (b) {
-      b.addEventListener('click', function () { imprimir(b.dataset.imprimir, false); });
+      b.addEventListener('click', function (e) {
+        if (!confirmarIcono(b, e)) return;
+        imprimir(b.dataset.imprimir, false);
+      });
     });
     raiz.querySelectorAll('[data-imprimir-correcciones]').forEach(function (b) {
-      b.addEventListener('click', function () { imprimir(b.dataset.imprimirCorrecciones, true); });
+      b.addEventListener('click', function (e) {
+        if (!confirmarIcono(b, e)) return;
+        imprimir(b.dataset.imprimirCorrecciones, true);
+      });
     });
     raiz.querySelectorAll('[data-editar]').forEach(function (b) {
-      b.addEventListener('click', function () { abrirEditor(b.dataset.editar); });
+      b.addEventListener('click', function (e) {
+        if (!confirmarIcono(b, e)) return;
+        navegarEditor(b.dataset.editar);
+      });
     });
 
     raiz.querySelectorAll('[data-archivar]').forEach(function (b) {
-      b.addEventListener('click', async function () {
+      b.addEventListener('click', async function (e) {
+        if (!confirmarIcono(b, e)) return;
         await window.kwSupabase.from('dictamenes')
           .update({ archivado_at: new Date().toISOString() }).eq('id', b.dataset.archivar);
         abierto = null;
@@ -2450,7 +2510,8 @@
       });
     });
     raiz.querySelectorAll('[data-restaurar]').forEach(function (b) {
-      b.addEventListener('click', async function () {
+      b.addEventListener('click', async function (e) {
+        if (!confirmarIcono(b, e)) return;
         await window.kwSupabase.from('dictamenes')
           .update({ archivado_at: null }).eq('id', b.dataset.restaurar);
         abierto = null;
@@ -2458,7 +2519,8 @@
       });
     });
     raiz.querySelectorAll('[data-borrar]').forEach(function (b) {
-      b.addEventListener('click', async function () {
+      b.addEventListener('click', async function (e) {
+        if (!confirmarIcono(b, e)) return;
         if (!(await window.kwUI.confirm('Se va a borrar este dictamen para siempre, con sus observaciones. No se puede deshacer.\n\n¿Seguimos?'))) return;
         var r = await window.kwSupabase.from('dictamenes').delete().eq('id', b.dataset.borrar);
         if (r.error) { await window.kwUI.alert('No se pudo borrar: ' + r.error.message); return; }
@@ -2976,6 +3038,10 @@
 
   function cerrarEditor() {
     borrador = null;
+    if (location.search) {
+      location.replace(location.pathname);
+      return;
+    }
     $('vista-editor').style.display = 'none';
     $('vista-lista').style.display = '';
   }
@@ -3819,6 +3885,15 @@
     pintarAsesoresFiltro();
     await cargar();
     acomodarFiltros();
+
+    var ruta = new URLSearchParams(location.search);
+    if (ruta.has('nuevo')) {
+      document.querySelector('.back-btn').href = location.pathname;
+      abrirEditor(null);
+    } else if (ruta.get('editar')) {
+      document.querySelector('.back-btn').href = location.pathname;
+      abrirEditor(ruta.get('editar'));
+    }
   }
 
   // Al escribir se repinta al momento; el "change" es para el calendario,
@@ -4004,7 +4079,7 @@
     }
   });
 
-  $('btn-nuevo').addEventListener('click', function () { abrirEditor(null); });
+  $('btn-nuevo').addEventListener('click', function () { navegarEditor(null); });
   $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
   $('e-volver').addEventListener('click', function () { cerrarEditor(); });
 
