@@ -241,7 +241,6 @@
       <div class="drawer-header">
         <button type="button" class="drawer-hamburguesa" id="drawer-hamburguesa" aria-label="Menú">${ICONS.menu}</button>
         <a href="${homeHref}" class="logo" aria-label="KW Premier">
-          <span class="drawer-logo-compacto" aria-hidden="true">kw</span>
           <img src="${LOGO}" alt="KW Premier" />
         </a>
         <button type="button" class="drawer-close" id="drawer-close" aria-label="Cerrar menú">${ICONS.close}</button>
@@ -656,6 +655,7 @@
   // fuera de él.
   document.addEventListener('click', (e) => {
     if (!drawerIzq.classList.contains('open') || !enRiel(drawerIzq)) return;
+    if (drawerIzq.classList.contains('buscando')) return;
     if (e.target instanceof Element && e.target.closest('#drawer, #kw-drawer-toggle')) return;
     cerrarPaneles();
   });
