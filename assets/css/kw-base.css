@@ -991,6 +991,12 @@ header > *:last-child { margin-left: auto; }
      no se veía porque el :hover volvía a ensancharlo de inmediato. */
   html.kw-riel .drawer:not(.drawer-der).sin-hover,
   html.kw-riel .drawer:not(.drawer-der).sin-hover:hover { width: var(--riel-ancho); }
+  /* Una búsqueda activa nunca puede quedarse dentro del riel angosto:
+     el campo y los resultados necesitan el ancho completo hasta cerrar. */
+  html.kw-riel .drawer:not(.drawer-der).buscando,
+  html.kw-riel .drawer:not(.drawer-der).buscando.sin-hover {
+    width: 292px;
+  }
 
   /* El velo oscuro es para cuando el menú tapa la página. El riel no la
      tapa: vive en su propia franja. */
@@ -1001,38 +1007,31 @@ header > *:last-child { margin-left: auto; }
      necesita su manera visible de cerrarse. */
   html.kw-riel .drawer:not(.drawer-der) .drawer-close { display: none; }
 
-  /* La marca abre el riel: angosto se ve el monograma y, cuando hay
-     espacio, entra el logotipo completo. */
+  /* El logo no ocupa lugar cuando el riel está cerrado. Al abrirse entra
+     con el tamaño discreto que tenía el panel original. */
   html.kw-riel .drawer:not(.drawer-der) .drawer-header {
-    display: flex; order: -3; min-height: 82px;
-    padding: 14px 12px; justify-content: flex-start; overflow: hidden;
+    display: flex; order: -3; height: 0; min-height: 0;
+    padding: 0 18px; justify-content: flex-start; overflow: hidden;
+    opacity: 0; border-bottom-color: transparent;
+    transition: height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+                min-height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+                padding 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
   }
   html.kw-riel .drawer:not(.drawer-der) .drawer-hamburguesa,
   html.kw-riel .drawer:not(.drawer-der) .drawer-close { display: none; }
   html.kw-riel .drawer:not(.drawer-der) .drawer-header .logo {
-    display: flex; align-items: center; min-width: 250px;
+    display: flex; align-items: center;
     text-decoration: none; overflow: hidden;
   }
   html.kw-riel .drawer:not(.drawer-der) .drawer-header img {
-    display: block; width: 218px; height: auto; max-width: none;
-    opacity: 0; transform: translateX(-10px);
-    transition: opacity 220ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+    display: block; width: auto; height: 32px; max-width: none;
+    opacity: 1;
   }
-  .drawer-logo-compacto {
-    width: 44px; flex: 0 0 44px;
-    color: #b40119; font-size: 22px; font-weight: 800;
-    letter-spacing: -0.08em; text-align: center;
-    transition: opacity 160ms ease, width 240ms ease;
-  }
-  html.kw-riel .drawer:not(.drawer-der):hover .drawer-logo-compacto,
-  html.kw-riel .drawer:not(.drawer-der).open .drawer-logo-compacto,
-  html.kw-riel .drawer:not(.drawer-der):focus-within .drawer-logo-compacto {
-    width: 0; flex-basis: 0; opacity: 0;
-  }
-  html.kw-riel .drawer:not(.drawer-der):hover .drawer-header img,
-  html.kw-riel .drawer:not(.drawer-der).open .drawer-header img,
-  html.kw-riel .drawer:not(.drawer-der):focus-within .drawer-header img {
-    opacity: 1; transform: translateX(0);
+  html.kw-riel .drawer:not(.drawer-der):hover .drawer-header,
+  html.kw-riel .drawer:not(.drawer-der).open .drawer-header,
+  html.kw-riel .drawer:not(.drawer-der):focus-within .drawer-header {
+    height: 64px; min-height: 64px; padding: 12px 18px;
+    opacity: 1; border-bottom-color: rgba(0,0,0,0.06);
   }
 
   /* Angosto no se recorta nada a media palabra: dos letras sueltas al
@@ -1285,7 +1284,6 @@ header > *:last-child { margin-left: auto; }
 
 @media (max-width: 1023px) {
   .drawer-buscar { display: none; }
-  .drawer-logo-compacto { display: none; }
 }
 
 /* ── Panel de la derecha: los accesos que cada quien se guarda ──
