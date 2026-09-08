@@ -291,12 +291,17 @@
   /* Las tres respuestas del aviso de "en qué estatus quedó". Van una
      debajo de otra y no en hilera: leídas en columna se comparan, que es
      lo que uno está haciendo justo en ese momento. */
-  .dic-preguntar { display: flex; flex-direction: column; gap: 7px; }
+  .dic-modal-estado h3 { margin: 0; line-height: 1.35; }
+  .dic-modal-estado .dic-preguntar {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+  }
+  .dic-modal-estado .modal-actions { margin-top: 14px; }
+  .dic-modal-estado .modal-actions button { min-height: 46px; }
   .dic-preguntar-op {
-    display: flex; align-items: center; gap: 10px; width: 100%;
-    border: 1px solid var(--border); border-radius: 10px; background: #fff;
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px;
+    border: 1px solid var(--border); border-radius: 12px; background: #fff;
     font-family: inherit; font-size: 13.5px; font-weight: 400; color: var(--text);
-    padding: 11px 13px; cursor: pointer; text-align: left;
+    padding: 13px 15px; cursor: pointer; text-align: left;
     transition: border-color 0.15s, background 0.15s, transform 0.12s;
   }
   .dic-preguntar-op:hover { background: #fafafa; border-color: #c9c9c9; }
@@ -457,6 +462,10 @@
     color: var(--text); background: #fff;
   }
   .dic-campo textarea { min-height: 62px; }
+  .dic-campo textarea.dic-numero-linea {
+    min-height: var(--control-h, 44px); height: var(--control-h, 44px);
+    resize: none; overflow: hidden; white-space: nowrap; line-height: 20px;
+  }
   .dic-campo textarea:focus, .dic-campo input:focus { outline: none; border-color: var(--red); }
 
   /* Fecha de escrituración sin calendario: día, mes y año se eligen por
@@ -500,14 +509,19 @@
      capturarla de tres maneras distintas. El relleno de la derecha le
      abre el lugar para que el número no se le encime al llegar. */
   .dic-conunidad { position: relative; }
-  .dic-conunidad input { width: 100%; padding-right: 40px; }
+  .dic-conunidad input, .dic-conunidad textarea.dic-numero-linea {
+    width: 100%; padding-right: 40px;
+  }
   .dic-conunidad span {
     position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
     font-size: 13px; font-weight: 700; color: var(--muted); pointer-events: none;
   }
   /* El peso va del otro lado, que es donde se escribe en una cifra. */
   .dic-conunidad span.dic-unidad-izq { right: auto; left: 12px; }
-  .dic-conunidad:has(.dic-unidad-izq) input { padding-right: 12px; padding-left: 26px; }
+  .dic-conunidad:has(.dic-unidad-izq) input,
+  .dic-conunidad:has(.dic-unidad-izq) textarea.dic-numero-linea {
+    padding-right: 12px; padding-left: 26px;
+  }
   .dic-dos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
   .dic-tres { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
   @media (max-width: 700px) {
@@ -730,21 +744,25 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
-  #e-descargar, #e-volver {
+  #e-descargar, #e-descargar-correcciones, #e-volver {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
   }
-  #e-descargar {
+  #e-descargar, #e-descargar-correcciones {
     border-color: var(--red); background: var(--red); color: #fff;
     font-weight: 500; box-shadow: 0 4px 12px rgba(138,0,0,0.18);
   }
+  #e-descargar-correcciones { background: #222; border-color: #222; }
   #e-descargar:hover { background: #6e0000; border-color: #6e0000; }
+  #e-descargar-correcciones:hover { background: #000; border-color: #000; }
   #e-volver {
     padding: 7px 2px; border: 0; border-radius: 0; background: transparent;
     color: var(--pastel-menta-txt); font-weight: 400; box-shadow: none;
   }
   #e-volver:hover { background: transparent; color: #111; transform: none; }
-  #e-descargar svg, #e-volver svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  #e-descargar svg, #e-descargar-correcciones svg, #e-volver svg {
+    width: 15px; height: 15px; flex: 0 0 auto;
+  }
 
 
   /* Documento enlazado: una tercera pestaña del expediente, no una copia. */
@@ -1080,7 +1098,7 @@
             <label for="e-precio">Precio del listado</label>
             <div class="dic-conunidad">
               <span class="dic-unidad-izq">$</span>
-              <input type="text" id="e-precio" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="decimal" autocomplete="off" spellcheck="false">
+              <textarea id="e-precio" rows="1" class="dic-numero-linea" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Precio del listado"></textarea>
             </div>
           </div>
           <div class="dic-campo">
@@ -1098,7 +1116,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <input type="text" id="e-esc-numero" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="off" spellcheck="false">
+            <textarea id="e-esc-numero" rows="1" class="dic-numero-linea" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Número de escritura"></textarea>
           </div>
           <div class="dic-campo">
             <label for="e-esc-dia">Fecha de escrituración</label>
@@ -1118,7 +1136,7 @@
           </div>
           <div class="dic-campo">
             <label for="e-notaria">Número de notaría</label>
-            <input type="text" id="e-notaria" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="off" spellcheck="false">
+            <textarea id="e-notaria" rows="1" class="dic-numero-linea" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Número de notaría"></textarea>
           </div>
         </div>
 
@@ -1199,7 +1217,11 @@
           <span id="e-listo-txt">Guardado.</span>
           <button type="button" class="kw-fila-btn" id="e-descargar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            Descargar PDF
+            PDF solo datos
+          </button>
+          <button type="button" class="kw-fila-btn" id="e-descargar-correcciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            PDF con correcciones
           </button>
           <button type="button" class="kw-fila-btn neutro" id="e-volver">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>
@@ -1611,7 +1633,7 @@
       overlay.className = 'modal-overlay';
 
       var caja = document.createElement('div');
-      caja.className = 'modal-box';
+      caja.className = 'modal-box dic-modal-estado';
       caja.setAttribute('role', 'alertdialog');
       caja.setAttribute('aria-modal', 'true');
       caja.innerHTML =
@@ -2059,7 +2081,8 @@
     }
 
     var acciones = '<div class="dic-acciones-iconos">' +
-      iconoBtn('data-imprimir', d.id, 'Descargar PDF', ICONO_BAJAR) +
+      iconoBtn('data-imprimir', d.id, 'PDF solo datos', ICONO_BAJAR) +
+      iconoBtn('data-imprimir-correcciones', d.id, 'PDF con correcciones', ICONO_BAJAR) +
       (puedoDictaminar && !d.archivado_at
         ? iconoBtn('data-editar', d.id, 'Editar', ICONO_LAPIZ) +
           iconoBtn('data-archivar', d.id, 'Archivar', ICONO_CAJA, true)
@@ -2341,7 +2364,10 @@
     });
 
     raiz.querySelectorAll('[data-imprimir]').forEach(function (b) {
-      b.addEventListener('click', function () { imprimir(b.dataset.imprimir); });
+      b.addEventListener('click', function () { imprimir(b.dataset.imprimir, false); });
+    });
+    raiz.querySelectorAll('[data-imprimir-correcciones]').forEach(function (b) {
+      b.addEventListener('click', function () { imprimir(b.dataset.imprimirCorrecciones, true); });
     });
     raiz.querySelectorAll('[data-editar]').forEach(function (b) {
       b.addEventListener('click', function () { abrirEditor(b.dataset.editar); });
@@ -3331,7 +3357,7 @@
     return t ? [[{ t: t, color: HOJA_NEGRO }]] : [];
   }
 
-  function dibujarHoja(d, logo) {
+  function dibujarHoja(d, logo, incluirCorrecciones) {
     var anchoUtil = PAG_ANCHO - MARGEN * 2;
     var anchoDato = anchoUtil - COL_ROTULO;
 
@@ -3365,7 +3391,10 @@
     filas.push(hojaFila('Superficie de terreno', textoSimple(conUnidad(d.superficie_terreno))));
     filas.push(hojaFila('Superficie de construcción', textoSimple(conUnidad(d.superficie_construccion))));
     filas.push(hojaFila('Folio real', textoSimple(d.folio_real)));
-    filas.push(filaObservaciones(d));
+    if (incluirCorrecciones) {
+      filas.push(filaCorrecciones(d));
+      filas.push(filaObservaciones(d));
+    }
     filas.push(hojaFila('Autorización', textoSimple(
       d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || '')), 34));
 
@@ -3476,6 +3505,40 @@
       }));
   }
 
+  var ROTULOS_CORRECCION = {
+    inmueble: 'Inmueble',
+    precio_listado: 'Precio del listado',
+    comision_porcentaje: 'Comisión',
+    escritura_numero: 'Número de escritura',
+    escritura_fecha: 'Fecha de escrituración',
+    notario_nombre: 'Nombre del notario',
+    notaria_numero: 'Número de notaría',
+    escritura_condominio: 'Escritura del condominio',
+    cfdi: 'CFDI',
+    folio_real: 'Folio real',
+    superficie_escritura: 'Superficie escritura',
+    cuenta_predial: 'Cuenta predial',
+    superficie_terreno: 'Superficie de terreno',
+    superficie_construccion: 'Superficie de construcción',
+    tipo_inmueble: 'Tipo de inmueble',
+    operacion: 'Operación',
+    uso: 'Uso',
+    condominio: 'Condominio',
+  };
+
+  function filaCorrecciones(d) {
+    var correcciones = separarCorrecciones(d.observaciones).correcciones;
+    var parrafos = Object.keys(correcciones).filter(function (k) {
+      return String(correcciones[k] || '').trim();
+    }).map(function (k) {
+      return [
+        { t: (ROTULOS_CORRECCION[k] || k) + ': ', color: HOJA_GRIS },
+        { t: String(correcciones[k]), color: HOJA_NEGRO },
+      ];
+    });
+    return hojaFila('Correcciones', parrafos, parrafos.length ? 44 : 30);
+  }
+
   function filaObservaciones(d) {
     var mios = puntos.filter(function (p) { return p.dictamen_id === d.id; });
     var parrafos = [];
@@ -3493,15 +3556,19 @@
     return hojaFila('Observaciones', parrafos, 68);
   }
 
-  async function imprimir(id) {
+  async function imprimir(id, conCorrecciones) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
 
     var logo = await cargarLogo();
-    var url = URL.createObjectURL(armarPDF(dibujarHoja(d, logo), logo));
+    var url = URL.createObjectURL(armarPDF(
+      dibujarHoja(d, logo, conCorrecciones === true),
+      logo
+    ));
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'dictamen-' + (d.folio || 'borrador') + '.pdf';
+    a.download = 'dictamen-' + (d.folio || 'borrador') +
+      (conCorrecciones ? '-con-correcciones' : '-solo-datos') + '.pdf';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -3754,6 +3821,9 @@
       this.disabled = false;
       this.readOnly = false;
     });
+    campo.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+    });
     campo.addEventListener('input', function () {
       this.value = id === 'e-precio'
         ? conComas(this.value)
@@ -3834,7 +3904,8 @@
         ', con folio ' + d.folio + '.'
       : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
     $('e-listo').classList.add('visible');
-    $('e-descargar').onclick = function () { imprimir(id); };
+    $('e-descargar').onclick = function () { imprimir(id, false); };
+    $('e-descargar-correcciones').onclick = function () { imprimir(id, true); };
   });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
