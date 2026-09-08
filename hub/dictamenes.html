@@ -462,10 +462,14 @@
     color: var(--text); background: #fff;
   }
   .dic-campo textarea { min-height: 62px; }
-  .dic-campo textarea.dic-numero-linea {
-    min-height: var(--control-h, 44px); height: var(--control-h, 44px);
-    resize: none; overflow: hidden; white-space: nowrap; line-height: 20px;
+  .dic-campo .dic-numero-linea {
+    display: block; width: 100%; min-height: var(--control-h, 44px);
+    height: var(--control-h, 44px); resize: none; overflow: hidden;
+    white-space: nowrap; line-height: 20px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--r-campo);
+    font-family: inherit; font-size: 13.5px; color: var(--text); background: #fff;
   }
+  .dic-campo .dic-numero-linea:focus { outline: none; border-color: var(--red); }
   .dic-campo textarea:focus, .dic-campo input:focus { outline: none; border-color: var(--red); }
 
   /* Fecha de escrituración sin calendario: día, mes y año se eligen por
@@ -482,14 +486,21 @@
   }
   .dic-correccion-campo { display: none; margin-top: 6px; }
   .dic-correccion.abierta .dic-correccion-campo { display: block; }
-  .dic-correccion-campo textarea {
+  .dic-correccion-campo textarea,
+  .dic-correccion-campo input[data-correccion-libre] {
     width: 100%; min-height: 48px; resize: vertical;
     border: 1px solid rgba(176,42,42,.38); border-radius: var(--r-campo);
     padding: 9px 11px; font-family: inherit; font-size: 13px;
     color: #b02a2a; background: #fff7f7;
   }
-  .dic-correccion-campo textarea::placeholder { color: rgba(176,42,42,.62); }
-  .dic-correccion-campo textarea:focus { outline: none; border-color: #b02a2a; }
+  .dic-correccion-campo input[data-correccion-libre] {
+    min-height: var(--control-h, 44px); margin-top: 7px; resize: none;
+  }
+  .dic-correccion-campo .kw-select { width: 100%; }
+  .dic-correccion-campo textarea::placeholder,
+  .dic-correccion-campo input::placeholder { color: rgba(176,42,42,.62); }
+  .dic-correccion-campo textarea:focus,
+  .dic-correccion-campo input:focus { outline: none; border-color: #b02a2a; }
 
   /* Las observaciones existentes se editan en su propio campo sin perder
      su id, estado ni historial. */
@@ -1116,7 +1127,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <textarea id="e-esc-numero" rows="1" class="dic-numero-linea" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Número de escritura"></textarea>
+            <div id="e-esc-numero" class="dic-numero-linea" contenteditable="plaintext-only" role="textbox" aria-label="Número de escritura" spellcheck="false"></div>
           </div>
           <div class="dic-campo">
             <label for="e-esc-dia">Fecha de escrituración</label>
@@ -1136,7 +1147,7 @@
           </div>
           <div class="dic-campo">
             <label for="e-notaria">Número de notaría</label>
-            <textarea id="e-notaria" rows="1" class="dic-numero-linea" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Número de notaría"></textarea>
+            <div id="e-notaria" class="dic-numero-linea" contenteditable="plaintext-only" role="textbox" aria-label="Número de notaría" spellcheck="false"></div>
           </div>
         </div>
 
@@ -1436,6 +1447,10 @@
         return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
       }).join('') +
       '<option value="__nuevo__">Otro (escribirlo)</option>';
+
+    // El tipo de inmueble llega de la base; su campo de corrección debe
+    // recibir exactamente ese mismo catálogo más la captura libre.
+    prepararCorrecciones();
 
     $('f-tipo').innerHTML = '<option value="todos">Tipo de inmueble</option>' +
       tipos.map(function (x) {
@@ -1763,6 +1778,24 @@
     return (separarCorrecciones(d.observaciones).correcciones || {})[campo] || '';
   }
 
+  function correccionesClientesTexto(d) {
+    var correcciones = separarCorrecciones(d.observaciones).correcciones || {};
+    var suyos = clientes
+      .filter(function (c) { return c.dictamen_id === d.id; })
+      .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+    var n = Math.max(suyos.length, d.clientes_total || 1);
+    var partes = [];
+    for (var i = 0; i < n; i++) {
+      var nombre = correcciones['cliente_' + i + '_nombre'];
+      var civil = correcciones['cliente_' + i + '_estado_civil'];
+      if (nombre || civil) {
+        partes.push((n > 1 ? 'Cliente ' + (i + 1) + ': ' : '') +
+          [nombre, civil].filter(Boolean).join(' · '));
+      }
+    }
+    return partes.join(' | ');
+  }
+
   function dato(rotulo, valor, correccion) {
     if (!valor && !correccion) return '';
     return '<div class="dic-dato"><b>' + rotulo + '</b>' +
@@ -2029,15 +2062,16 @@
 
   function cuerpoHTML(d, mios) {
     var datos = '<div class="dic-datos">' +
-      dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d)) +
+      dato(d.clientes_total > 1 ? 'Clientes' : 'Cliente', clientesTexto(d), correccionesClientesTexto(d)) +
       dato('Dirección del inmueble', d.inmueble, correccionDe(d, 'inmueble')) +
-      dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '') +
-      dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || '')) +
-      dato('Tipo de inmueble', d.tipo_inmueble) +
+      dato('Tipo de contrato', CONTRATOS[d.tipo_contrato] || '', correccionDe(d, 'tipo_contrato')) +
+      dato('Operación', (OPERACIONES[d.operacion] || '') + ' · ' + (USOS[d.uso] || ''),
+        [correccionDe(d, 'operacion'), correccionDe(d, 'uso')].filter(Boolean).join(' · ')) +
+      dato('Tipo de inmueble', d.tipo_inmueble, correccionDe(d, 'tipo_inmueble')) +
       dato('Precio del listado', conPesos(d.precio_listado), correccionDe(d, 'precio_listado')) +
       dato('Comisión', conPorciento(d.comision_porcentaje), correccionDe(d, 'comision_porcentaje')) +
       datosEscritura(d) +
-      dato('Condominio', siNo(d.condominio)) +
+      dato('Condominio', siNo(d.condominio), correccionDe(d, 'condominio')) +
       dato('Escritura del condominio', d.escritura_condominio, correccionDe(d, 'escritura_condominio')) +
       dato('CFDI', d.cfdi, correccionDe(d, 'cfdi')) +
       dato('Superficie escritura', conUnidad(d.superficie_escritura), correccionDe(d, 'superficie_escritura')) +
@@ -2474,42 +2508,129 @@
   ];
 
   var CAMPOS_CORRECCION = CAMPOS.concat([
+    ['e-tipo-contrato', 'tipo_contrato'],
     ['e-tipo', 'tipo_inmueble'],
     ['e-operacion', 'operacion'],
     ['e-uso', 'uso'],
     ['e-condominio', 'condominio'],
   ]);
 
+  function opcionesParaCorreccion(campo) {
+    var opciones = Array.prototype.map.call(campo.options || [], function (o) {
+      if (o.value === '__nuevo__') return '';
+      return '<option value="' + escapar(o.value) + '">' + escapar(o.textContent) + '</option>';
+    }).join('');
+    return opciones + '<option value="__libre__">Escribir libremente</option>';
+  }
+
+  function crearBloqueCorreccion(campo, llave) {
+    var caja = campo && campo.closest('.dic-campo');
+    if (!caja) return null;
+    var bloque = caja.querySelector('[data-correccion="' + llave + '"]');
+    var esSelect = campo.tagName === 'SELECT';
+
+    if (!bloque) {
+      bloque = document.createElement('div');
+      bloque.className = 'dic-correccion';
+      bloque.dataset.correccion = llave;
+      bloque.innerHTML =
+        '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
+        '<div class="dic-correccion-campo">' +
+          (esSelect
+            ? '<select data-correccion-select></select>' +
+              '<input type="text" data-correccion-libre placeholder="Escribe otra opción" autocomplete="off" style="display:none;">'
+            : '<textarea data-correccion-texto placeholder="Escribe aquí el dato correcto"></textarea>') +
+        '</div>';
+      caja.appendChild(bloque);
+    }
+
+    if (esSelect) {
+      bloque.dataset.origenSelect = campo.id || '';
+      bloque.querySelector('[data-correccion-select]').innerHTML = opcionesParaCorreccion(campo);
+    }
+    return bloque;
+  }
+
   function prepararCorrecciones() {
     CAMPOS_CORRECCION.forEach(function (c) {
-      var campo = $(c[0]);
-      var caja = campo && campo.closest('.dic-campo');
-      if (!caja || caja.querySelector('[data-correccion="' + c[1] + '"]')) return;
-      var bloque = document.createElement('div');
-      bloque.className = 'dic-correccion';
-      bloque.dataset.correccion = c[1];
-      bloque.innerHTML = '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
-        '<div class="dic-correccion-campo"><textarea placeholder="Escribe aquí el dato correcto"></textarea></div>';
-      caja.appendChild(bloque);
-      bloque.querySelector('button').addEventListener('click', function () {
-        bloque.classList.toggle('abierta');
-        if (bloque.classList.contains('abierta')) bloque.querySelector('textarea').focus();
-      });
-      bloque.querySelector('textarea').addEventListener('input', function () {
-        if (CAMPOS_CON_COMAS.indexOf(c[1]) !== -1 && /^[\\d,]*$/.test(this.value)) {
-          this.value = conComasMientrasEscribe(this.value);
-        }
-        if (borrador) borrador.correcciones[c[1]] = this.value;
-      });
+      crearBloqueCorreccion($(c[0]), c[1]);
     });
+    if (borrador) pintarCorrecciones(document);
   }
-  function pintarCorrecciones() {
-    document.querySelectorAll('[data-correccion]').forEach(function (bloque) {
-      var valor = (borrador.correcciones || {})[bloque.dataset.correccion] || '';
-      bloque.querySelector('textarea').value = valor;
+
+  function valorCorreccionBloque(bloque) {
+    var selector = bloque.querySelector('[data-correccion-select]');
+    if (selector) {
+      var libre = bloque.querySelector('[data-correccion-libre]');
+      if (selector.value === '__libre__') return libre.value;
+      return selector.value
+        ? selector.options[selector.selectedIndex].textContent
+        : '';
+    }
+    var texto = bloque.querySelector('[data-correccion-texto]');
+    return texto ? texto.value : '';
+  }
+
+  function guardarCorreccionBloque(bloque) {
+    if (!borrador || !bloque) return;
+    var llave = bloque.dataset.correccion;
+    var selector = bloque.querySelector('[data-correccion-select]');
+    var libre = bloque.querySelector('[data-correccion-libre]');
+    if (selector && libre) {
+      libre.style.display = selector.value === '__libre__' ? '' : 'none';
+      if (selector.value === '__libre__') libre.focus();
+    }
+    var valor = valorCorreccionBloque(bloque);
+    if (CAMPOS_CON_COMAS.indexOf(llave) !== -1 && /^[\d,]*$/.test(valor)) {
+      valor = conComasMientrasEscribe(valor);
+      var texto = bloque.querySelector('[data-correccion-texto]');
+      if (texto) texto.value = valor;
+    }
+    borrador.correcciones[llave] = valor;
+  }
+
+  function pintarCorrecciones(raiz) {
+    (raiz || document).querySelectorAll('[data-correccion]').forEach(function (bloque) {
+      var valor = (borrador && borrador.correcciones || {})[bloque.dataset.correccion] || '';
+      var selector = bloque.querySelector('[data-correccion-select]');
+      var libre = bloque.querySelector('[data-correccion-libre]');
+      var texto = bloque.querySelector('[data-correccion-texto]');
+
+      if (selector) {
+        var encontrada = Array.prototype.find.call(selector.options, function (o) {
+          return o.value !== '__libre__' &&
+            (o.value === valor || o.textContent.toLowerCase() === String(valor).toLowerCase());
+        });
+        selector.value = encontrada ? encontrada.value : (valor ? '__libre__' : '');
+        libre.value = encontrada ? '' : valor;
+        libre.style.display = selector.value === '__libre__' ? '' : 'none';
+        selector.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (texto) {
+        texto.value = valor;
+      }
       bloque.classList.toggle('abierta', !!valor);
     });
+    if (window.kwUI) window.kwUI.selects(raiz || document);
   }
+
+  document.addEventListener('click', function (e) {
+    var boton = e.target.closest('.dic-correccion-btn');
+    if (!boton) return;
+    var bloque = boton.closest('[data-correccion]');
+    bloque.classList.toggle('abierta');
+    if (bloque.classList.contains('abierta')) {
+      var control = bloque.querySelector('[data-correccion-select], [data-correccion-texto], [data-correccion-libre]');
+      if (control) control.focus();
+    }
+  });
+  document.addEventListener('change', function (e) {
+    if (!e.target.matches('[data-correccion-select]')) return;
+    guardarCorreccionBloque(e.target.closest('[data-correccion]'));
+  });
+  document.addEventListener('input', function (e) {
+    if (!e.target.matches('[data-correccion-texto], [data-correccion-libre]')) return;
+    guardarCorreccionBloque(e.target.closest('[data-correccion]'));
+  });
 
   // Las superficies se guardan como número pelón y la unidad se pone al
   // enseñarlas. Antes eran texto libre, así que en la base ya hay
@@ -2548,7 +2669,7 @@
     var limpio = String(v == null ? '' : v).replace(/[^\\d]/g, '');
     return limpio ? limpio.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',') : '';
   }
-  var CAMPOS_CON_COMAS = ['precio_listado', 'escritura_numero', 'notaria_numero'];
+  var CAMPOS_CON_COMAS = ['precio_listado'];
 
   // Lo que se teclea en un campo se guarda ya limpio, según de qué campo
   // se trate. Está en un solo lugar porque el leer y el reabrir tienen
@@ -2651,6 +2772,18 @@
       '</div>';
     }
     $('e-clientes').innerHTML = html;
+    $('e-clientes').querySelectorAll('[data-cliente]').forEach(function (caja) {
+      var i = Number(caja.dataset.cliente);
+      crearBloqueCorreccion(
+        caja.querySelector('[data-cliente-nombre]'),
+        'cliente_' + i + '_nombre'
+      );
+      crearBloqueCorreccion(
+        caja.querySelector('[data-cliente-estado]'),
+        'cliente_' + i + '_estado_civil'
+      );
+    });
+    pintarCorrecciones($('e-clientes'));
     // Los desplegables recién pintados todavía son los grises del
     // navegador hasta que kw-ui los arma.
     if (window.kwUI) window.kwUI.selects($('e-clientes'));
@@ -3357,6 +3490,18 @@
     return t ? [[{ t: t, color: HOJA_NEGRO }]] : [];
   }
 
+  function textoPDF(d, valor, campos, incluirCorrecciones) {
+    var parrafos = textoSimple(valor);
+    if (!incluirCorrecciones) return parrafos;
+    (campos || []).forEach(function (campo) {
+      var correccion = correccionDe(d, campo);
+      if (correccion) {
+        parrafos.push([{ t: 'Corrección: ' + correccion, color: HOJA_ROJO }]);
+      }
+    });
+    return parrafos;
+  }
+
   function dibujarHoja(d, logo, incluirCorrecciones) {
     var anchoUtil = PAG_ANCHO - MARGEN * 2;
     var anchoDato = anchoUtil - COL_ROTULO;
@@ -3364,37 +3509,49 @@
     var filas = [
       hojaFila('Fecha de dictamen', textoSimple(fecha(d.fecha_dictamen))),
       hojaFila('Asesor', textoSimple(d.asesor_nombre)),
-      filaClientes(d),
-      hojaFila('Inmueble', textoSimple(d.inmueble)),
-      hojaFila('Tipo de oportunidad', textoSimple(
+      filaClientes(d, incluirCorrecciones),
+      hojaFila('Inmueble', textoPDF(d, d.inmueble, ['inmueble'], incluirCorrecciones)),
+      hojaFila('Tipo de oportunidad', textoPDF(d,
         (OPERACIONES[d.operacion] || '') + ' \xB7 ' + (USOS[d.uso] || '') +
-        (d.tipo_inmueble ? ' \xB7 ' + d.tipo_inmueble : ''))),
-      hojaFila('Tipo de contrato', textoSimple(CONTRATOS[d.tipo_contrato] || '')),
-      hojaFila('Precio del listado', textoSimple(conPesos(d.precio_listado))),
-      hojaFila('Comisión', textoSimple(conPorciento(d.comision_porcentaje))),
+        (d.tipo_inmueble ? ' \xB7 ' + d.tipo_inmueble : ''),
+        ['operacion', 'uso', 'tipo_inmueble'], incluirCorrecciones)),
+      hojaFila('Tipo de contrato', textoPDF(d, CONTRATOS[d.tipo_contrato] || '',
+        ['tipo_contrato'], incluirCorrecciones)),
+      hojaFila('Precio del listado', textoPDF(d, conPesos(d.precio_listado),
+        ['precio_listado'], incluirCorrecciones)),
+      hojaFila('Comisión', textoPDF(d, conPorciento(d.comision_porcentaje),
+        ['comision_porcentaje'], incluirCorrecciones)),
     ];
 
     if (tieneEscrituraDesglosada(d)) {
-      filas.push(hojaFila('Número de escritura', textoSimple(d.escritura_numero)));
-      filas.push(hojaFila('Fecha de escrituración', textoSimple(fecha(d.escritura_fecha))));
-      filas.push(hojaFila('Nombre del notario', textoSimple(d.notario_nombre)));
-      filas.push(hojaFila('Número de notaría', textoSimple(d.notaria_numero)));
+      filas.push(hojaFila('Número de escritura', textoPDF(d, d.escritura_numero,
+        ['escritura_numero'], incluirCorrecciones)));
+      filas.push(hojaFila('Fecha de escrituración', textoPDF(d, fecha(d.escritura_fecha),
+        ['escritura_fecha'], incluirCorrecciones)));
+      filas.push(hojaFila('Nombre del notario', textoPDF(d, d.notario_nombre,
+        ['notario_nombre'], incluirCorrecciones)));
+      filas.push(hojaFila('Número de notaría', textoPDF(d, d.notaria_numero,
+        ['notaria_numero'], incluirCorrecciones)));
     } else {
       filas.push(hojaFila('Escrituras y fecha', textoSimple(d.escritura_propiedad)));
     }
 
-    filas.push(hojaFila('Condominio', textoSimple(siNo(d.condominio))));
-    filas.push(hojaFila('Escritura del condominio', textoSimple(d.escritura_condominio)));
-    filas.push(hojaFila('CFDI', textoSimple(d.cfdi)));
-    filas.push(hojaFila('Superficie escritura', textoSimple(conUnidad(d.superficie_escritura))));
-    filas.push(hojaFila('Cuenta predial', textoSimple(d.cuenta_predial)));
-    filas.push(hojaFila('Superficie de terreno', textoSimple(conUnidad(d.superficie_terreno))));
-    filas.push(hojaFila('Superficie de construcción', textoSimple(conUnidad(d.superficie_construccion))));
-    filas.push(hojaFila('Folio real', textoSimple(d.folio_real)));
-    if (incluirCorrecciones) {
-      filas.push(filaCorrecciones(d));
-      filas.push(filaObservaciones(d));
-    }
+    filas.push(hojaFila('Condominio', textoPDF(d, siNo(d.condominio),
+      ['condominio'], incluirCorrecciones)));
+    filas.push(hojaFila('Escritura del condominio', textoPDF(d, d.escritura_condominio,
+      ['escritura_condominio'], incluirCorrecciones)));
+    filas.push(hojaFila('CFDI', textoPDF(d, d.cfdi, ['cfdi'], incluirCorrecciones)));
+    filas.push(hojaFila('Superficie escritura', textoPDF(d, conUnidad(d.superficie_escritura),
+      ['superficie_escritura'], incluirCorrecciones)));
+    filas.push(hojaFila('Cuenta predial', textoPDF(d, d.cuenta_predial,
+      ['cuenta_predial'], incluirCorrecciones)));
+    filas.push(hojaFila('Superficie de terreno', textoPDF(d, conUnidad(d.superficie_terreno),
+      ['superficie_terreno'], incluirCorrecciones)));
+    filas.push(hojaFila('Superficie de construcción', textoPDF(d, conUnidad(d.superficie_construccion),
+      ['superficie_construccion'], incluirCorrecciones)));
+    filas.push(hojaFila('Folio real', textoPDF(d, d.folio_real,
+      ['folio_real'], incluirCorrecciones)));
+    if (incluirCorrecciones) filas.push(filaObservaciones(d));
     filas.push(hojaFila('Autorización', textoSimple(
       d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || '')), 34));
 
@@ -3486,57 +3643,47 @@
   // Los clientes van numerados, cada uno con su estado civil en gris al
   // lado: en una sucesión con tres herederos, un solo estado civil para
   // los tres no querría decir nada.
-  function filaClientes(d) {
+  function filaClientes(d, incluirCorrecciones) {
     var suyos = clientes
       .filter(function (c) { return c.dictamen_id === d.id; })
       .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+    var correcciones = separarCorrecciones(d.observaciones).correcciones || {};
 
     if (!suyos.length) {
-      return hojaFila('Cliente', textoSimple(d.clientes_nombres || d.cliente));
+      var parrafos = textoSimple(d.clientes_nombres || d.cliente);
+      var nombreViejo = correcciones.cliente_0_nombre;
+      var civilViejo = correcciones.cliente_0_estado_civil;
+      if (incluirCorrecciones && (nombreViejo || civilViejo)) {
+        parrafos.push([{
+          t: 'Corrección: ' + [nombreViejo, civilViejo].filter(Boolean).join(' · '),
+          color: HOJA_ROJO,
+        }]);
+      }
+      return hojaFila('Cliente', parrafos);
     }
-    return hojaFila(suyos.length > 1 ? 'Clientes' : 'Cliente',
-      suyos.map(function (c, i) {
-        var partes = [{
-          t: (suyos.length > 1 ? (i + 1) + '. ' : '') + c.nombre,
-          color: HOJA_NEGRO,
-        }];
-        if (c.estado_civil) partes.push({ t: ' (' + c.estado_civil + ')', color: HOJA_GRIS });
-        return partes;
-      }));
-  }
 
-  var ROTULOS_CORRECCION = {
-    inmueble: 'Inmueble',
-    precio_listado: 'Precio del listado',
-    comision_porcentaje: 'Comisión',
-    escritura_numero: 'Número de escritura',
-    escritura_fecha: 'Fecha de escrituración',
-    notario_nombre: 'Nombre del notario',
-    notaria_numero: 'Número de notaría',
-    escritura_condominio: 'Escritura del condominio',
-    cfdi: 'CFDI',
-    folio_real: 'Folio real',
-    superficie_escritura: 'Superficie escritura',
-    cuenta_predial: 'Cuenta predial',
-    superficie_terreno: 'Superficie de terreno',
-    superficie_construccion: 'Superficie de construcción',
-    tipo_inmueble: 'Tipo de inmueble',
-    operacion: 'Operación',
-    uso: 'Uso',
-    condominio: 'Condominio',
-  };
+    var parrafos = [];
+    suyos.forEach(function (cliente, i) {
+      var partes = [{
+        t: (suyos.length > 1 ? (i + 1) + '. ' : '') + cliente.nombre,
+        color: HOJA_NEGRO,
+      }];
+      if (cliente.estado_civil) partes.push({
+        t: ' (' + cliente.estado_civil + ')',
+        color: HOJA_GRIS,
+      });
+      parrafos.push(partes);
 
-  function filaCorrecciones(d) {
-    var correcciones = separarCorrecciones(d.observaciones).correcciones;
-    var parrafos = Object.keys(correcciones).filter(function (k) {
-      return String(correcciones[k] || '').trim();
-    }).map(function (k) {
-      return [
-        { t: (ROTULOS_CORRECCION[k] || k) + ': ', color: HOJA_GRIS },
-        { t: String(correcciones[k]), color: HOJA_NEGRO },
-      ];
+      var nombre = correcciones['cliente_' + i + '_nombre'];
+      var civil = correcciones['cliente_' + i + '_estado_civil'];
+      if (incluirCorrecciones && (nombre || civil)) {
+        parrafos.push([{
+          t: 'Corrección: ' + [nombre, civil].filter(Boolean).join(' · '),
+          color: HOJA_ROJO,
+        }]);
+      }
     });
-    return hojaFila('Correcciones', parrafos, parrafos.length ? 44 : 30);
+    return hojaFila(suyos.length > 1 ? 'Clientes' : 'Cliente', parrafos);
   }
 
   function filaObservaciones(d) {
@@ -3810,24 +3957,31 @@
     $(id).addEventListener('change', sincronizarFechaEscritura);
   });
 
-  // Los tres campos son referencias numéricas comunes, no datos de pago.
-  // Se fuerzan editables porque algunos administradores de contraseñas
-  // intentan apropiarse de ellos al reconocer palabras como "número".
-  ['e-precio', 'e-esc-numero', 'e-notaria'].forEach(function (id) {
+  // Precio conserva el formato monetario. Escritura y notaría aceptan
+  // letras, diagonales y guiones y se implementan como editores neutros:
+  // así ningún gestor de pagos puede apropiarse de ellos.
+  var precioCampo = $('e-precio');
+  precioCampo.addEventListener('input', function () {
+    this.value = conComas(this.value);
+  });
+  precioCampo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+  });
+
+  ['e-esc-numero', 'e-notaria'].forEach(function (id) {
     var campo = $(id);
-    campo.disabled = false;
-    campo.readOnly = false;
-    campo.addEventListener('focus', function () {
-      this.disabled = false;
-      this.readOnly = false;
+    Object.defineProperty(campo, 'value', {
+      configurable: true,
+      get: function () { return this.textContent || ''; },
+      set: function (v) { this.textContent = String(v == null ? '' : v); },
     });
     campo.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
     });
-    campo.addEventListener('input', function () {
-      this.value = id === 'e-precio'
-        ? conComas(this.value)
-        : conComasMientrasEscribe(this.value);
+    campo.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var texto = (e.clipboardData || window.clipboardData).getData('text');
+      document.execCommand('insertText', false, texto);
     });
   });
 
