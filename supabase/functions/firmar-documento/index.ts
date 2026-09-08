@@ -504,6 +504,18 @@ Deno.serve(async (req: Request) => {
       if (!['subido', 'guardado', 'plantilla'].includes(origen)) {
         return respond({ error: 'Origen de documento no reconocido.' }, 400)
       }
+      const documentoId = String(body.documentoId || '').trim() || null
+      if (origen === 'guardado') {
+        if (!documentoId) return respond({ error: 'Falta identificar el documento de origen.' }, 400)
+        const { data: docOrigen } = await admin
+          .from('documentos_guardados').select('id, user_id').eq('id', documentoId).single()
+        const { data: perfilOrigen } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        const liderazgo = ['master', 'admin', 'staff'].includes(String(perfilOrigen?.role || ''))
+        if (!docOrigen || (docOrigen.user_id !== userId && !liderazgo)) {
+          return respond({ error: 'No tienes permiso para enviar ese documento.' }, 403)
+        }
+      }
 
       const rutaArchivo = String(body.archivoRuta || '').trim()
       if (!rutaArchivo) return respond({ error: 'Falta el archivo.' }, 400)
@@ -566,7 +578,7 @@ Deno.serve(async (req: Request) => {
 
       const datosFila = {
         origen,
-        documento_guardado_id: origen === 'guardado' ? body.documentoId : null,
+        documento_guardado_id: origen === 'guardado' ? documentoId : null,
         documento_plantilla_id: origen === 'plantilla' ? body.documentoId : null,
         archivo_ruta: rutaArchivo,
         nombre_archivo: String(body.nombreArchivo || 'documento.pdf'),
@@ -695,6 +707,15 @@ Deno.serve(async (req: Request) => {
     // Por lo mismo aquí NO se revisa el tope del mes: un borrador no
     // gasta. El tope se revisa al mandarlo, que es cuando cuenta.
     if (accion === 'guardar_borrador') {
+      const origen = String(body.origen || 'subido')
+      const documentoId = String(body.documentoId || '').trim() || null
+      if (!['subido', 'guardado'].includes(origen)) {
+        return respond({ error: 'Origen de documento no reconocido.' }, 400)
+      }
+      if (origen === 'guardado' && !documentoId) {
+        return respond({ error: 'Falta identificar el documento de origen.' }, 400)
+      }
+
       const rutaArchivo = String(body.archivoRuta || '').trim()
       if (!rutaArchivo) return respond({ error: 'Falta el archivo.' }, 400)
 
@@ -734,7 +755,9 @@ Deno.serve(async (req: Request) => {
       }))
 
       const datos = {
-        origen: 'subido',
+        origen,
+        documento_guardado_id: origen === 'guardado' ? documentoId : null,
+        documento_plantilla_id: null,
         archivo_ruta: rutaArchivo,
         nombre_archivo: String(body.nombreArchivo || 'documento.pdf'),
         user_id: userId,
