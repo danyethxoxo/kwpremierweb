@@ -704,9 +704,9 @@
   .doc-bloque { margin-bottom: 6pt; }
   .doc-bloque > .doc-seccion:first-child { margin-top: 0; }
 </style>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260906c">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-revisiones.css?v=20260907a">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script defer src="/kwpremierweb/assets/js/kw-pdf-vector.js?v=20260906a"></script>
+<script defer src="/kwpremierweb/assets/js/kw-pdf-vector.js?v=20260907a"></script>
 </head>
 <body class="doc-borrador">
 
@@ -1356,7 +1356,7 @@
       </button>
       <button class="btn-download btn-outline-green" onclick="guardarDocumento()" id="btn-guardar">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Guardar
+        Guardar borrador
       </button>
       <button class="btn-download btn-outline-purple" id="btn-finalizar" style="display:none;" onclick="abrirModalFinalizar()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -1383,8 +1383,8 @@
   <!-- Boton flotante de guardado -->
   <div class="fab-wrap" id="fab-wrap">
     <div class="fab-item-principal">
-      <span class="fab-label fab-label-guardar">Guardar</span>
-      <button type="button" class="fab-principal" id="fab-guardar" onclick="onFabGuardarClick()" title="Guardar">
+      <span class="fab-label fab-label-guardar">Guardar borrador</span>
+      <button type="button" class="fab-principal" id="fab-guardar" onclick="onFabGuardarClick()" title="Guardar borrador">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </button>
     </div>
@@ -2945,7 +2945,7 @@ function initSlideFinalizar() {
   thumb.addEventListener('pointercancel', finishDrag);
 }
 
-function downloadPDF() {
+function downloadPDF(opciones) {
   const pages = computePages();
   const nombreArchivo = nombreArchivoDoc();
 
@@ -3032,9 +3032,19 @@ ${pagesHTML}
   setTimeout(async () => {
     try {
       if (!window.kwPDFVector) throw new Error('El generador vectorial de PDF no terminó de cargar.');
-      await window.kwPDFVector.descargar(printWin.document, nombrePDF, {
+      const opcionesPDF = {
         top: 8, right: 19, bottom: 2.7, left: 19
-      });
+      };
+      if (opciones && opciones.destino === 'firma') {
+        if (!window.kwFirmaPuente || !window.kwPDFVector.generar) throw new Error('No se pudo abrir el enlace con Firma digital.');
+        const blob = await window.kwPDFVector.generar(printWin.document, opcionesPDF);
+        await window.kwFirmaPuente.guardar(blob, nombrePDF, {
+          documentoId: documentoActualId, revision: revisionActual, folio: folioActual
+        });
+        location.assign('/kwpremierweb/hub/firmas.html?desde=documento');
+      } else {
+        await window.kwPDFVector.descargar(printWin.document, nombrePDF, opcionesPDF);
+      }
     } catch (err) {
       if (window.kwUI && window.kwUI.alert) await window.kwUI.alert(err.message || 'No se pudo descargar el PDF.');
     } finally {
@@ -3154,7 +3164,8 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
-<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260906c"></script>
+<script src="/kwpremierweb/assets/js/kw-firma-puente.js?v=20260907a"></script>
+<script src="/kwpremierweb/assets/js/kw-revisiones.js?v=20260907a"></script>
 <script>
 window.kwRevisiones.iniciar({
   id: function () { return documentoActualId; },
