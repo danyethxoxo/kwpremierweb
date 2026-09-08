@@ -121,9 +121,24 @@
   .dic-listado.sin_listado { background: #fdeaea;          color: #b02a2a; }
   .dic-listado.aprobado    { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
 
+  .dic-marketing {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 500; white-space: nowrap;
+    max-width: 190px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dic-marketing::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+  .dic-marketing.pendiente { background: rgba(0,0,0,.05); color: #5b5b5b; }
+  .dic-marketing.corregir  { background: var(--pastel-crema); color: var(--pastel-crema-txt); }
+  .dic-marketing.aprobado  { background: var(--pastel-menta); color: var(--pastel-menta-txt); }
+
   .dic-menu-op i.pendiente   { background: #5b5b5b; }
   .dic-menu-op i.sin_listado { background: #b02a2a; }
   .dic-menu-op i.aprobado    { background: var(--pastel-menta-txt); }
+  .dic-menu-op i.corregir     { background: var(--pastel-crema-txt); }
 
   /* Las dos etiquetas juntas, para el celular. */
   .dic-etiquetas-movil { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -141,12 +156,12 @@
      la flecha misma (17px). */
   .dic-cabecera { display: none; }
   @media (min-width: 901px) {
-    .dic-col { width: 200px; flex-shrink: 0; }
-    .dic-col-listado {
+    .dic-col { width: 175px; flex-shrink: 0; }
+    .dic-col-separada {
       border-left: 1px solid var(--border);
-      padding-left: 20px; margin-left: -4px;
+      padding-left: 16px; margin-left: -4px;
     }
-    .dic-col .dic-estado, .dic-col .dic-listado { max-width: 100%; }
+    .dic-col .dic-estado, .dic-col .dic-marketing, .dic-col .dic-listado { max-width: 100%; }
 
     .dic-cabecera {
       display: flex; justify-content: flex-end; gap: 20px;
@@ -156,11 +171,11 @@
       margin-bottom: 2px;
     }
     .dic-cabecera-col {
-      width: 200px; flex-shrink: 0;
+      width: 175px; flex-shrink: 0;
       font-size: 10.5px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--muted);
     }
-    .dic-cabecera-col:last-child { padding-left: 20px; margin-left: -4px; }
+    .dic-cabecera-col:not(:first-child) { padding-left: 16px; margin-left: -4px; }
   }
 
   /* La misma etiqueta, pero se le puede picar para cambiar el estado. Se
@@ -1046,11 +1061,10 @@
         </button>
       </div>
 
-      <!-- Los rótulos de las dos autorizaciones. Van una sola vez arriba y
-           no repetidos en cada tarjeta: son las mismas dos columnas para
-           todos los renglones, y repetirlos treinta veces sería ruido. -->
+      <!-- Los tres estados independientes del flujo. -->
       <div class="dic-cabecera" id="dic-cabecera">
         <span class="dic-cabecera-col">Expediente</span>
+        <span class="dic-cabecera-col">Marketing</span>
         <span class="dic-cabecera-col">Listado</span>
       </div>
 
@@ -1807,7 +1821,8 @@
         '<span class="kw-fila-texto">' +
           '<span class="kw-fila-titulo">' + escapar(d.inmueble || 'Borrador sin dirección') + '</span>' +
           '<span class="kw-fila-sub">' +
-            (d.folio ? escapar(d.folio) + ' · ' : '') +
+            (d.folio ? escapar(d.folio) +
+              (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '') + ' · ' : '') +
             escapar(d.asesor_nombre || 'Sin asesor') + ' · ' + fecha(d.fecha_dictamen) +
           '</span>' +
         '</span>' +
@@ -1817,7 +1832,8 @@
               '<span class="kw-extra"><span>' + listas + ' de ' + total + '</span></span>'
             : '') +
           '<span class="kw-extra dic-col">' + etiquetaEstado(d) + '</span>' +
-          '<span class="kw-extra dic-col dic-col-listado">' + etiquetaListado(d) + '</span>' +
+          '<span class="kw-extra dic-col dic-col-separada">' + etiquetaMarketing(d) + '</span>' +
+          '<span class="kw-extra dic-col dic-col-separada">' + etiquetaListado(d) + '</span>' +
         '</span>' +
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
@@ -1882,6 +1898,13 @@
   // se sale, no a donde se llega, y el folio se gasta al salir de ahí.
   var ORDEN_ESTADOS = ['devuelta', 'condicionada', 'autorizada'];
 
+  var MARKETING = {
+    pendiente: 'Pendiente',
+    corregir: 'Corregir',
+    aprobado: 'Aprobado para promoción',
+  };
+  var ORDEN_MARKETING = ['pendiente', 'corregir', 'aprobado'];
+
   var LISTADOS = {
     pendiente: 'Pendiente',
     sin_listado: 'No tiene cargado el listado',
@@ -1909,6 +1932,19 @@
     var dentro = (ESTADOS[d.estado] || '') + (mueve ? FLECHITA : '');
     var attr = mueve ? ' data-estado-de="' + d.id + '"' : '';
 
+    return enCuerpo
+      ? '<button type="button" class="' + clases + '"' + attr + '>' + dentro + '</button>'
+      : '<span class="' + clases + '"' + attr + '>' + dentro + '</span>';
+  }
+
+  function etiquetaMarketing(d, enCuerpo) {
+    var v = d.estatus_marketing || 'pendiente';
+    var mueve = puedoDictaminar && !d.archivado_at;
+    var clases = 'dic-marketing ' + v +
+      (mueve ? ' dic-estado-btn' : '') +
+      (enCuerpo ? ' dic-estado-movil' : '');
+    var dentro = (MARKETING[v] || '') + (mueve ? FLECHITA : '');
+    var attr = mueve ? ' data-marketing-de="' + d.id + '"' : '';
     return enCuerpo
       ? '<button type="button" class="' + clases + '"' + attr + '>' + dentro + '</button>'
       : '<span class="' + clases + '"' + attr + '>' + dentro + '</span>';
@@ -1967,6 +2003,17 @@
       },
       error: 'No se pudo dictaminar: ',
     },
+    marketing: {
+      opciones: ORDEN_MARKETING,
+      nombres: MARKETING,
+      puesta: function (d) { return d.estatus_marketing || 'pendiente'; },
+      poner: function (id, valor) {
+        return window.kwSupabase.rpc('dictamen_cambiar_marketing', {
+          p_id: id, p_estado: valor
+        });
+      },
+      error: 'No se pudo cambiar el estatus de Marketing: ',
+    },
     listado: {
       opciones: ORDEN_LISTADOS,
       nombres: LISTADOS,
@@ -2023,7 +2070,7 @@
 
   document.addEventListener('click', function (e) {
     if (!menuEstado) return;
-    if (e.target.closest('.dic-menu-estado, [data-estado-de], [data-listado-de], [data-menu-punto]')) return;
+    if (e.target.closest('.dic-menu-estado, [data-estado-de], [data-marketing-de], [data-listado-de], [data-menu-punto]')) return;
     cerrarMenuEstado();
   });
   document.addEventListener('keydown', function (e) {
@@ -2179,11 +2226,11 @@
         '</div>'
       : '';
 
-    // Las dos etiquetas se mueven desde el encabezado. En el celular ese
+    // Los tres estados se repiten dentro del expediente en el celular.
     // renglón no las enseña, así que aquí adentro van las mismas.
     var enCuerpo = (puedoDictaminar && !d.archivado_at)
       ? '<div class="dic-etiquetas-movil">' +
-          etiquetaEstado(d, true) + etiquetaListado(d, true) +
+          etiquetaEstado(d, true) + etiquetaMarketing(d, true) + etiquetaListado(d, true) +
         '</div>'
       : '';
 
@@ -2221,8 +2268,9 @@
     return '<div class="dic-barra-tarjeta">' +
         '<div class="kw-tabs dic-tabs" data-kw-tabs="paneles-' + d.id + '">' +
           '<button type="button" class="kw-tab activo" data-tab="exp-' + d.id + '">Expediente</button>' +
+          '<button type="button" class="kw-tab" data-tab="mkt-' + d.id + '">Marketing</button>' +
+          '<button type="button" class="kw-tab" data-tab="docs-' + d.id + '">Contrato</button>' +
           '<button type="button" class="kw-tab" data-tab="hist-' + d.id + '">Historial</button>' +
-          '<button type="button" class="kw-tab" data-tab="docs-' + d.id + '">Documentos</button>' +
         '</div>' +
         acciones +
       '</div>' +
@@ -2232,11 +2280,17 @@
           '<div style="margin-top:var(--sp-3);">' + lista + agregar + '</div>' +
           enCuerpo +
         '</section>' +
-        '<section class="kw-tabpanel" data-panel="hist-' + d.id + '">' +
-          historialHTML(d) +
+        '<section class="kw-tabpanel" data-panel="mkt-' + d.id + '">' +
+          '<div class="kw-vacio" style="padding:var(--sp-4);">' +
+            '<b>Checklist de calidad del listado</b><br>' +
+            'La sección está lista. Aquí agregaremos los campos del checklist de Marketing.' +
+          '</div>' +
         '</section>' +
         '<section class="kw-tabpanel" data-panel="docs-' + d.id + '">' +
           documentosHTML(d) +
+        '</section>' +
+        '<section class="kw-tabpanel" data-panel="hist-' + d.id + '">' +
+          historialHTML(d) +
         '</section>' +
       '</div>';
   }
@@ -2246,7 +2300,9 @@
   var COMO = {
     creado: 'Se levantó el expediente',
     estado: 'Dictamen',
+    marketing: 'Marketing',
     listado: 'Listado',
+    revision: 'Revisión',
     archivado: 'Archivado',
     restaurado: 'Restaurado',
     punto_nuevo: 'Observación nueva',
@@ -2467,6 +2523,7 @@
     });
 
     [['data-estado-de', 'estadoDe', 'estado'],
+     ['data-marketing-de', 'marketingDe', 'marketing'],
      ['data-listado-de', 'listadoDe', 'listado']].forEach(function (t) {
       raiz.querySelectorAll('[' + t[0] + ']').forEach(function (b) {
         b.addEventListener('click', function (e) {
@@ -2995,7 +3052,9 @@
     };
     CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
 
-    $('editor-titulo').textContent = d ? 'Editar dictamen' : 'Nuevo dictamen';
+    $('editor-titulo').textContent = d
+      ? 'Editar dictamen' + (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '')
+      : 'Nuevo dictamen';
     $('e-fecha').value = borrador.fecha_dictamen;
     $('e-operacion').value = borrador.operacion;
     $('e-uso').value = borrador.uso;
@@ -3180,6 +3239,7 @@
     if (borrador.condominio !== 'si') fila.escritura_condominio = null;
 
     var id = borrador.id;
+    var eraEdicion = !!id;
     if (id) {
       var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
       if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
@@ -3207,6 +3267,14 @@
 
     var errPuntos = await guardarPuntosDe(id);
     if (errPuntos) return await fallo('No se pudieron guardar las observaciones: ' + errPuntos);
+
+    if (eraEdicion) {
+      var revision = await window.kwSupabase.rpc('registrar_revision_dictamen', { p_id: id });
+      if (revision.error) {
+        await window.kwUI.alert('Los cambios se guardaron, pero no se pudo crear la revisión: ' +
+          revision.error.message);
+      }
+    }
 
     return id;
   }
@@ -3732,7 +3800,9 @@
     // derecha. Va nada más en la primera página; en las que siguen la
     // tabla arranca desde arriba.
     c = escribir('DICTAMEN DE EXPEDIENTE', MARGEN, MARGEN + 14, 15, true, HOJA_ROJO);
-    c += escribir(d.folio || 'Borrador, sin folio', MARGEN, MARGEN + 32, 10, false, HOJA_GRIS);
+    c += escribir((d.folio || 'Borrador, sin folio') +
+      (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : ''),
+      MARGEN, MARGEN + 32, 10, false, HOJA_GRIS);
     if (logo) {
       var altoLogo = 34;
       var anchoLogo = logo.ancho * altoLogo / logo.alto;
@@ -3852,6 +3922,7 @@
     var a = document.createElement('a');
     a.href = url;
     a.download = 'dictamen-' + (d.folio || 'borrador') +
+      (Number(d.revision) > 0 ? '-rev-' + Number(d.revision) : '') +
       (conCorrecciones ? '-con-correcciones' : '-solo-datos') + '.pdf';
     document.body.appendChild(a);
     a.click();
@@ -4201,7 +4272,8 @@
     var d = dictamenes.find(function (x) { return x.id === id; });
     $('e-listo-txt').textContent = (d && d.folio)
       ? 'Listo. Quedó como ' + (ESTADOS[d.estado] || '').toLowerCase() +
-        ', con folio ' + d.folio + '.'
+        ', con folio ' + d.folio +
+        (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '') + '.'
       : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
     $('e-listo').classList.add('visible');
     $('e-descargar').onclick = function () { imprimir(id, false); };
