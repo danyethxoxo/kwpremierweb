@@ -6,6 +6,8 @@
   var panel = null;
   var btnDocumento = null;
   var btnHistorial = null;
+  var btnFirma = null;
+  var btnDictamen = null;
   var viendoHistorica = false;
 
   function esc(valor) {
@@ -172,9 +174,13 @@
   function refrescar() {
     if (!adaptador || !raiz) return;
     prepararBotonCambios();
+    prepararAccionesExternas();
     var terminado = adaptador.estado() === 'finalizado';
     btnHistorial.hidden = !adaptador.id() || !terminado;
     if (!terminado && raiz.classList.contains('kw-revision-modo-historial')) activar('documento');
+
+    if (btnFirma) btnFirma.style.display = terminado && !viendoHistorica ? 'inline-flex' : 'none';
+    if (btnDictamen) btnDictamen.style.display = terminado && !viendoHistorica ? 'inline-flex' : 'none';
 
     var boton = document.getElementById('btn-copia');
     if (boton) {
@@ -186,6 +192,159 @@
       insignia.textContent = adaptador.folio() ?
         adaptador.folio() + ' · ' + nombreRevision(adaptador.revision()) : '';
       insignia.hidden = !adaptador.folio();
+    }
+  }
+
+  function iconoFirma() {
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M13 5H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7"/>' +
+      '<path d="M7 16c2-3 3 2 5-1 1.2-1.8 2.2.5 4-1"/></svg>';
+  }
+
+  function iconoEnlace() {
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/>' +
+      '<path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>';
+  }
+
+  function prepararAccionesExternas() {
+    var fila = raiz && raiz.querySelector('.desktop-btn-row');
+    var cambios = document.getElementById('btn-copia');
+    if (!fila || !cambios) return;
+
+    if (!document.getElementById('btn-firma-digital')) {
+      btnFirma = document.createElement('button');
+      btnFirma.type = 'button';
+      btnFirma.id = 'btn-firma-digital';
+      btnFirma.className = 'btn-download kw-btn-firma';
+      btnFirma.innerHTML = iconoFirma() + '<span>Firma digital</span>';
+      btnFirma.addEventListener('click', function () {
+        if (!global.downloadPDF || btnFirma.disabled) return;
+        btnFirma.disabled = true;
+        btnFirma.classList.add('cargando');
+        btnFirma.querySelector('span').textContent = 'Preparando…';
+        try {
+          global.downloadPDF({ destino: 'firma' });
+        } catch (err) {
+          btnFirma.disabled = false;
+          btnFirma.classList.remove('cargando');
+          btnFirma.querySelector('span').textContent = 'Firma digital';
+          if (global.kwUI && global.kwUI.alert) global.kwUI.alert(err.message || 'No se pudo preparar el documento.');
+        }
+        setTimeout(function () {
+          if (!document.body.contains(btnFirma)) return;
+          btnFirma.disabled = false;
+          btnFirma.classList.remove('cargando');
+          btnFirma.querySelector('span').textContent = 'Firma digital';
+        }, 8000);
+      });
+      fila.insertBefore(btnFirma, cambios);
+    } else {
+      btnFirma = document.getElementById('btn-firma-digital');
+    }
+
+    if (!document.getElementById('btn-enlazar-dictamen')) {
+      btnDictamen = document.createElement('button');
+      btnDictamen.type = 'button';
+      btnDictamen.id = 'btn-enlazar-dictamen';
+      btnDictamen.className = 'btn-download kw-btn-dictamen';
+      btnDictamen.innerHTML = iconoEnlace() + '<span>Enlazar dictamen</span>';
+      btnDictamen.addEventListener('click', abrirSelectorDictamen);
+      fila.insertBefore(btnDictamen, cambios);
+    } else {
+      btnDictamen = document.getElementById('btn-enlazar-dictamen');
+    }
+  }
+
+  function asegurarModalDictamen() {
+    var modal = document.getElementById('kw-modal-dictamen');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'kw-modal-dictamen';
+    modal.className = 'kw-enlace-modal';
+    modal.hidden = true;
+    modal.innerHTML =
+      '<div class="kw-enlace-dialogo" role="dialog" aria-modal="true" aria-labelledby="kw-enlace-titulo">' +
+        '<div class="kw-enlace-cabecera"><div><h3 id="kw-enlace-titulo">Enlazar con un dictamen</h3>' +
+        '<p>El expediente mostrará la información actual de este documento.</p></div>' +
+        '<button type="button" class="kw-enlace-cerrar" aria-label="Cerrar">×</button></div>' +
+        '<div class="kw-enlace-busqueda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+        '<input type="search" placeholder="Buscar por folio, inmueble, cliente o asesor"></div>' +
+        '<div class="kw-enlace-lista"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelector('.kw-enlace-cerrar').addEventListener('click', function () { modal.hidden = true; });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.hidden = true; });
+    return modal;
+  }
+
+  function pintarDictamenes(modal, filas, filtro) {
+    var q = String(filtro || '').trim().toLowerCase();
+    var visibles = filas.filter(function (d) {
+      return !q || [d.folio, d.inmueble, d.cliente, d.asesor_nombre].join(' ').toLowerCase().indexOf(q) !== -1;
+    });
+    var lista = modal.querySelector('.kw-enlace-lista');
+    if (!visibles.length) {
+      lista.innerHTML = '<div class="kw-enlace-vacio">No hay dictámenes que coincidan.</div>';
+      return;
+    }
+    lista.innerHTML = visibles.map(function (d) {
+      return '<button type="button" class="kw-enlace-item' + (d.enlazado ? ' actual' : '') + '" data-id="' + esc(d.id) + '">' +
+        '<span class="kw-enlace-item-titulo">' + esc(d.inmueble || 'Expediente sin dirección') + '</span>' +
+        '<span class="kw-enlace-item-meta">' + esc(d.folio || 'Borrador sin folio') + ' · ' +
+          esc(d.cliente || 'Sin cliente') + ' · ' + esc(d.asesor_nombre || 'Sin asesor') + '</span>' +
+        (d.enlazado ? '<span class="kw-enlace-actual">Enlazado actualmente</span>' : '') +
+      '</button>';
+    }).join('');
+    lista.querySelectorAll('[data-id]').forEach(function (item) {
+      item.addEventListener('click', async function () {
+        lista.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+        try {
+          var r = await global.kwSupabase.rpc('enlazar_documento_dictamen', {
+            p_documento_id: adaptador.id(),
+            p_dictamen_id: item.dataset.id
+          });
+          if (r.error) throw r.error;
+          modal.hidden = true;
+          btnDictamen.classList.add('enlazado');
+          btnDictamen.querySelector('span').textContent = 'Dictamen enlazado';
+          if (global.kwUI && global.kwUI.alert) {
+            await global.kwUI.alert('El documento quedó enlazado. Su información ya aparece dentro del expediente.');
+          }
+        } catch (err) {
+          lista.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+          if (global.kwUI && global.kwUI.alert) {
+            await global.kwUI.alert(err.message || 'No se pudo enlazar el dictamen.');
+          }
+        }
+      });
+    });
+  }
+
+  async function abrirSelectorDictamen() {
+    if (!adaptador || !adaptador.id() || adaptador.estado() !== 'finalizado') return;
+    var modal = asegurarModalDictamen();
+    var lista = modal.querySelector('.kw-enlace-lista');
+    var input = modal.querySelector('input');
+    modal.hidden = false;
+    input.value = '';
+    lista.innerHTML = '<div class="kw-enlace-vacio"><span class="kw-revision-spinner"></span>Cargando dictámenes…</div>';
+    try {
+      var r = await global.kwSupabase.rpc('listar_dictamenes_para_enlazar', {
+        p_documento_id: adaptador.id()
+      });
+      if (r.error) throw r.error;
+      var filas = Array.isArray(r.data) ? r.data : [];
+      pintarDictamenes(modal, filas, '');
+      input.oninput = function () { pintarDictamenes(modal, filas, input.value); };
+      input.focus();
+      if (btnDictamen) {
+        var ligado = filas.some(function (d) { return d.enlazado === true; });
+        btnDictamen.classList.toggle('enlazado', ligado);
+        btnDictamen.querySelector('span').textContent = ligado ? 'Dictamen enlazado' : 'Enlazar dictamen';
+      }
+    } catch (err) {
+      lista.innerHTML = '<div class="kw-enlace-vacio error">' + esc(err.message || 'No se pudieron cargar los dictámenes.') + '</div>';
     }
   }
 
