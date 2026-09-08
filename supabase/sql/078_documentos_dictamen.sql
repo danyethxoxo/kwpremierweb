@@ -8,6 +8,13 @@ create index if not exists idx_documentos_guardados_dictamen
   on public.documentos_guardados(dictamen_id)
   where dictamen_id is not null;
 
+-- El equipo que dictamina puede leer el documento vinculado desde el
+-- expediente, aunque haya sido creado por el asesor.
+drop policy if exists "select_documentos_en_dictamen" on public.documentos_guardados;
+create policy "select_documentos_en_dictamen" on public.documentos_guardados
+  for select to authenticated
+  using (dictamen_id is not null and public.puede_dictaminar());
+
 -- Conserva los enlaces que Operatividad ya hubiera resuelto o capturado.
 update public.documentos_guardados d
 set dictamen_id = o.dictamen_id
