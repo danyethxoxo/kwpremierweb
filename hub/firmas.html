@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
+<script src="/kwpremierweb/assets/js/kw-firma-puente.js?v=20260907a"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -1861,6 +1862,10 @@
   // captura aparte: cuando se podía escribir, el mismo documento
   // terminaba con un nombre en el sitio y otro en weetrust.
   let tituloDoc = '';
+  // Cuando el PDF viene de Acuerdos o Contratos, el envío conserva el
+  // vínculo con el documento que lo originó.
+  let origenEnvio = 'subido';
+  let documentoGuardadoId = null;
   // Índice del archivo que se está arrastrando en la lista del paso 1.
   let arrastrando = null;
   // Si quien mira es liderazgo, el historial trae los envíos de todos y
@@ -2559,6 +2564,8 @@
     paginas = [];
     borradorId = null;
     rutaSubida = null;
+    origenEnvio = 'subido';
+    documentoGuardadoId = null;
     pintarArchivos();
     avisoArchivos('', '');
     mostrarVista('archivos');
@@ -3436,6 +3443,8 @@
       const { ruta, nombre } = await asegurarSubido();
       const r = await llamarFuncion({
         accion: 'guardar_borrador',
+        origen: origenEnvio,
+        documentoId: documentoGuardadoId,
         borradorId: borradorId,
         archivoRuta: ruta,
         nombreArchivo: nombre,
@@ -3523,7 +3532,8 @@
 
       await llamarFuncion({
         accion: 'enviar',
-        origen: 'subido',
+        origen: origenEnvio,
+        documentoId: documentoGuardadoId,
         borradorId: borradorId,
         archivoRuta: ruta,
         nombreArchivo: nombreFinal,
@@ -4148,6 +4158,8 @@
 
     borradorId = f.id;
     rutaSubida = f.archivo_ruta;
+    origenEnvio = f.origen === 'guardado' ? 'guardado' : 'subido';
+    documentoGuardadoId = f.documento_guardado_id || null;
     // No se juntaron archivos: se está retomando uno ya unido. La lista
     // se deja vacía y el nombre del guardado es el que manda.
     archivos = [];
@@ -5069,6 +5081,31 @@
     });
   }
 
+  async function importarDocumentoFinalizado() {
+    if (new URLSearchParams(location.search).get('desde') !== 'documento') return false;
+    if (!window.kwFirmaPuente) return false;
+    var pendiente = await window.kwFirmaPuente.consumir();
+    if (!pendiente || !pendiente.blob) return false;
+
+    archivos = [];
+    pdfUnido = null;
+    marcas = [];
+    paginas = [];
+    borradorId = null;
+    rutaSubida = null;
+    origenEnvio = 'guardado';
+    documentoGuardadoId = pendiente.documentoId || null;
+
+    var archivo = new File([pendiente.blob], pendiente.nombre || 'documento.pdf', {
+      type: 'application/pdf',
+      lastModified: Date.now()
+    });
+    agregarArchivos([archivo]);
+    mostrarVista('archivos');
+    avisoArchivos('Documento finalizado cargado. Puedes agregar anexos o continuar para colocar las firmas.', 'ok');
+    return true;
+  }
+
   async function iniciar() {
     try {
       await iniciarDeVerdad();
@@ -5138,6 +5175,7 @@
     // mayoría de las veces esto ya es lo correcto.
     await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
+    await importarDocumentoFinalizado();
 
     // La sincronización completa contra weetrust se hace aparte y no
     // bloquea la pantalla: si no ha pasado una hora desde la última, ni
