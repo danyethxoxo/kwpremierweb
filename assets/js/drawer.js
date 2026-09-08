@@ -192,8 +192,7 @@
         // Si la búsqueda se sigue viendo, se repinta con lo que ya se
         // tenía escrito para que los resultados nuevos aparezcan sin que
         // la persona tenga que volver a teclear.
-        const h = document.querySelector('header.kw-header');
-        if (h && h.classList.contains('kw-buscando')) pintarResultados(buscarInput.value);
+        if (busquedaAbierta()) pintarResultados(buscarInput.value);
       });
     }).catch(() => {});
   }
@@ -241,7 +240,10 @@
     <div class="drawer" id="drawer">
       <div class="drawer-header">
         <button type="button" class="drawer-hamburguesa" id="drawer-hamburguesa" aria-label="Menú">${ICONS.menu}</button>
-        <a href="${homeHref}" class="logo" aria-label="KW Premier"><img src="${LOGO}" alt="KW Premier" /></a>
+        <a href="${homeHref}" class="logo" aria-label="KW Premier">
+          <span class="drawer-logo-compacto" aria-hidden="true">kw</span>
+          <img src="${LOGO}" alt="KW Premier" />
+        </a>
         <button type="button" class="drawer-close" id="drawer-close" aria-label="Cerrar menú">${ICONS.close}</button>
       </div>
       ${esPublico ? '' : `
@@ -253,9 +255,11 @@
         </span>
       </a>`}
       ${esPublico ? '' : `
-      <button type="button" class="drawer-link drawer-buscar" id="drawer-buscar">
-        ${ICONS.search}<span>Buscar</span>
-      </button>`}
+      <div class="drawer-buscar" id="drawer-buscar">
+        <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar">
+          ${ICONS.search}<span>Buscar</span>
+        </button>
+      </div>`}
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
@@ -440,6 +444,7 @@
   const capsula = header
     ? (header.querySelector('.kw-header-capsula') || header)
     : null;
+  const areaBuscarRiel = document.getElementById('drawer-buscar');
 
   const buscarInput = document.createElement('input');
   buscarInput.type = 'text';
@@ -464,15 +469,34 @@
   buscarResultados.id = 'kw-buscar-resultados';
   buscarResultados.hidden = true;
 
-  if (capsula) {
-    capsula.appendChild(buscarInput);
-    capsula.appendChild(buscarCerrar);
-    (header || capsula).appendChild(buscarResultados);
+  function buscadorVaEnRiel() {
+    return Boolean(areaBuscarRiel && window.matchMedia('(min-width: 1024px)').matches);
+  }
+
+  function colocarBuscador() {
+    const destino = buscadorVaEnRiel() ? areaBuscarRiel : capsula;
+    if (!destino) return;
+    destino.appendChild(buscarInput);
+    destino.appendChild(buscarCerrar);
+    destino.appendChild(buscarResultados);
+  }
+  colocarBuscador();
+  window.addEventListener('resize', colocarBuscador);
+
+  function busquedaAbierta() {
+    return Boolean((header && header.classList.contains('kw-buscando')) ||
+      (areaBuscarRiel && areaBuscarRiel.closest('.drawer').classList.contains('buscando')));
   }
 
   function abrirBuscar() {
-    if (!capsula) return;
-    header.classList.add('kw-buscando');
+    if (!capsula && !areaBuscarRiel) return;
+    if (buscadorVaEnRiel()) {
+      const riel = areaBuscarRiel.closest('.drawer');
+      riel.classList.remove('sin-hover');
+      riel.classList.add('open', 'buscando');
+    } else if (header) {
+      header.classList.add('kw-buscando');
+    }
     if (!campoLocal) {
       buscarResultados.hidden = true;
       buscarResultados.innerHTML = '';
@@ -486,8 +510,12 @@
     requestAnimationFrame(() => buscarInput.focus());
   }
   function cerrarBuscar() {
-    if (!capsula) return;
-    header.classList.remove('kw-buscando');
+    if (!capsula && !areaBuscarRiel) return;
+    if (header) header.classList.remove('kw-buscando');
+    if (areaBuscarRiel) {
+      const riel = areaBuscarRiel.closest('.drawer');
+      riel.classList.remove('buscando', 'open');
+    }
     buscarResultados.hidden = true;
     buscarInput.value = '';
     // Al cerrar se limpia también el filtro de la página, para no dejarla
@@ -527,7 +555,7 @@
   }
 
   searchBtn.addEventListener('click', () => {
-    if (header && header.classList.contains('kw-buscando')) cerrarBuscar();
+    if (busquedaAbierta()) cerrarBuscar();
     else abrirBuscar();
   });
   buscarCerrar.addEventListener('click', cerrarBuscar);
@@ -550,14 +578,15 @@
     }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && header && header.classList.contains('kw-buscando')) cerrarBuscar();
+    if (e.key === 'Escape' && busquedaAbierta()) cerrarBuscar();
   });
   // Picar fuera cierra la búsqueda, salvo que se haya escrito algo: en
   // las páginas con buscador propio la lista de abajo ES el resultado, y
   // cerrarla al tocarla borraría el filtro que se acaba de escribir.
   document.addEventListener('click', (e) => {
-    if (!header || !header.classList.contains('kw-buscando')) return;
-    if (header.contains(e.target)) return;
+    if (!busquedaAbierta()) return;
+    if ((header && header.contains(e.target)) ||
+        (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
     if (buscarInput.value.trim()) return;
     cerrarBuscar();
   });
@@ -566,13 +595,12 @@
   const drawerDer = document.getElementById('drawer-accesos');
   const velo = document.getElementById('drawer-overlay');
 
-  // En escritorio la lupa vive dentro del riel. Al picarla, el riel se
-  // recoge para dejar a la vista el campo que se abre junto a él.
-  const buscarRiel = document.getElementById('drawer-buscar');
+  // En escritorio la lupa abre el campo dentro del propio riel.
+  const buscarRiel = document.getElementById('drawer-buscar-toggle');
   if (buscarRiel) buscarRiel.addEventListener('click', (e) => {
     e.stopPropagation();
-    drawerIzq.classList.add('sin-hover');
-    abrirBuscar();
+    if (busquedaAbierta()) cerrarBuscar();
+    else abrirBuscar();
   });
 
   // Los dos paneles se manejan igual, solo cambia de qué lado entran.
