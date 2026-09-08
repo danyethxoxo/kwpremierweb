@@ -295,7 +295,7 @@
   .dic-preguntar-op {
     display: flex; align-items: center; gap: 10px; width: 100%;
     border: 1px solid var(--border); border-radius: 10px; background: #fff;
-    font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--text);
+    font-family: inherit; font-size: 13.5px; font-weight: 400; color: var(--text);
     padding: 11px 13px; cursor: pointer; text-align: left;
     transition: border-color 0.15s, background 0.15s, transform 0.12s;
   }
@@ -729,7 +729,22 @@
     background: var(--pastel-menta); color: var(--pastel-menta-txt);
   }
   .dic-listo.visible { display: flex; }
-  .dic-listo span { flex: 1; min-width: 200px; font-size: 13.5px; }
+  .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
+  #e-descargar, #e-volver {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    font-family: inherit;
+  }
+  #e-descargar {
+    border-color: var(--red); background: var(--red); color: #fff;
+    font-weight: 500; box-shadow: 0 4px 12px rgba(138,0,0,0.18);
+  }
+  #e-descargar:hover { background: #6e0000; border-color: #6e0000; }
+  #e-volver {
+    padding: 7px 2px; border: 0; border-radius: 0; background: transparent;
+    color: var(--pastel-menta-txt); font-weight: 400; box-shadow: none;
+  }
+  #e-volver:hover { background: transparent; color: #111; transform: none; }
+  #e-descargar svg, #e-volver svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
 
   /* Documento enlazado: una tercera pestaña del expediente, no una copia. */
@@ -821,7 +836,7 @@
               <div class="kw-menu-raya" id="op-sync-raya" hidden></div>
               <button type="button" class="kw-menu-op" role="menuitem" id="op-sync" hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 20 8 23 11"/><path d="M20 8v6"/></svg>
-                <span id="op-sync-txt">Sincronizar asesores</span>
+                <span id="op-sync-txt">Actualizar asesores</span>
               </button>
             </div>
           </div>
@@ -1065,7 +1080,7 @@
             <label for="e-precio">Precio del listado</label>
             <div class="dic-conunidad">
               <span class="dic-unidad-izq">$</span>
-              <input type="text" id="e-precio" name="dic-monto-listado" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" autocomplete="off">
+              <input type="text" id="e-precio" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="decimal" autocomplete="off" spellcheck="false">
             </div>
           </div>
           <div class="dic-campo">
@@ -1083,7 +1098,7 @@
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-esc-numero">Número de escritura</label>
-            <input type="text" id="e-esc-numero" name="kw-escritura-numero-no-pago" data-lpignore="true" data-1p-ignore data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="new-password">
+            <input type="text" id="e-esc-numero" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="off" spellcheck="false">
           </div>
           <div class="dic-campo">
             <label for="e-esc-dia">Fecha de escrituración</label>
@@ -1103,7 +1118,7 @@
           </div>
           <div class="dic-campo">
             <label for="e-notaria">Número de notaría</label>
-            <input type="text" id="e-notaria" name="dic-notaria-id" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+            <input type="text" id="e-notaria" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" class="kw-input" inputmode="numeric" autocomplete="off" spellcheck="false">
           </div>
         </div>
 
@@ -1182,8 +1197,14 @@
 
         <div class="dic-listo" id="e-listo">
           <span id="e-listo-txt">Guardado.</span>
-          <button type="button" class="kw-fila-btn" id="e-descargar">Descargar PDF</button>
-          <button type="button" class="kw-fila-btn neutro" id="e-volver">Volver a la lista</button>
+          <button type="button" class="kw-fila-btn" id="e-descargar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            Descargar PDF
+          </button>
+          <button type="button" class="kw-fila-btn neutro" id="e-volver">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>
+            Volver a la lista
+          </button>
         </div>
       </div>
     </div>
@@ -1196,10 +1217,8 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  // La misma función que usa la pantalla de Proceso de Alta: ya sabe leer
-  // la hoja de asesores y traer un token de Google, y el catálogo de
-  // Dictámenes se nutre de esa misma hoja.
-  var FN_ALTA = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
+  // El catálogo de Dictámenes conserva sus identificadores históricos,
+  // pero sus personas se reflejan desde la base central de asesores.
 
   var yo = null;
   var veTodo = false;
@@ -1373,8 +1392,17 @@
   }
 
   async function cargarCatalogos() {
+    // Liderazgo fuerza una conciliación antes de leer. Si la migración aún
+    // no se ha aplicado, se conserva el catálogo anterior y la pantalla
+    // sigue funcionando mientras se muestra el error en la consola.
+    if (veTodo) {
+      var sincronizacion = await window.kwSupabase.rpc('dictamen_asesores_actualizar_desde_base');
+      if (sincronizacion.error) console.warn('No se pudo actualizar el catálogo central:', sincronizacion.error.message);
+    }
+
     var a = await window.kwSupabase
       .from('dictamen_asesores').select('id, nombre, correo, activo').order('nombre');
+    if (a.error) console.error('No se pudo cargar el catálogo de asesores:', a.error.message);
     asesores = a.data || [];
 
     var t = await window.kwSupabase
@@ -1588,7 +1616,6 @@
       caja.setAttribute('aria-modal', 'true');
       caja.innerHTML =
         '<h3>¿En qué estatus quedó este expediente?</h3>' +
-        '<p class="modal-sub">Al elegirlo se le asigna su folio y ya se puede descargar.</p>' +
         '<div class="dic-preguntar">' +
           ORDEN_ESTADOS.map(function (e) {
             return '<button type="button" class="dic-preguntar-op" data-elige="' + e + '">' +
@@ -2693,11 +2720,9 @@
     CAMPOS.forEach(function (c) { $(c[0]).value = paraCampo(c[1], borrador[c[1]]); });
     ponerFechaEscritura(borrador.escritura_fecha);
     pintarCorrecciones();
-    // kw-ui.js deja los campos de fecha como texto mientras están vacíos,
-    // para poder enseñarles un rótulo de ejemplo. Ponerles el valor desde
-    // el código no los regresa a fecha, y el expediente reabierto acababa
-    // enseñando "2000-08-01" pelón en vez del formato de siempre.
-    if ($('e-fecha').value) $('e-fecha').type = 'date';
+    // kw-ui.js mantiene el campo como texto visible y guarda el ISO en su
+    // descriptor interno. No se cambia de nuevo a type=date: hacerlo
+    // mezclaba el calendario nativo con el personalizado y borraba la fecha.
     elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
 
     // Cuántos clientes son lo dice lo que ya trae capturado; uno nuevo
@@ -3666,55 +3691,31 @@
     }
   });
 
-  // Sincronizar es en dos tiempos: primero se pregunta sin escribir nada,
-  // y solo si se confirma se manda "aplicar". Así, si la hoja se leyó a
-  // medias (un permiso caído, un rango mal puesto), eso se ve en el
-  // resumen antes de dar de baja a medio equipo por error.
+  // La lista se reconcilia directamente con la tabla central de asesores.
+  // Ya no depende del archivo del ABC ni de una función externa.
   $('op-sync').addEventListener('click', async function () {
     abrirEngrane(false);
     var btn = $('op-sync');
-    var s = await window.kwSupabase.auth.getSession();
-    var token = s.data.session && s.data.session.access_token;
-    if (!token) return;
-
-    async function pedir(aplicar) {
-      var res = await fetch(FN_ALTA, {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'dictamen_asesores_sync', aplicar: aplicar }),
-      });
-      var json = await res.json().catch(function () { return null; });
-      if (!res.ok) throw new Error((json && json.error) || ('Falló (' + res.status + ')'));
-      return json;
-    }
-
-    // Aquí sí hay letras que cambiar: el renglón del menú las dice, y
-    // además el dibujo da vueltas mientras tanto.
-    function avisa(t) { $('op-sync-txt').textContent = t; }
-
     btn.disabled = true;
     btn.classList.add('trabajando');
-    avisa('Revisando...');
+    $('op-sync-txt').textContent = 'Actualizando...';
     try {
-      var previa = await pedir(false);
-      var mensaje = 'De la hoja del ABC:\n' +
-        '  Nuevos: ' + previa.nuevos.length + '\n' +
-        '  Reactivados: ' + previa.reactivados.length + '\n' +
-        '  Bajas: ' + previa.bajas.length + '\n\n' +
-        '¿Aplicar estos cambios al catálogo de asesores?';
-      if (!(await window.kwUI.confirm(mensaje))) return;
-
-      avisa('Aplicando...');
-      await pedir(true);
+      var r = await window.kwSupabase.rpc('dictamen_asesores_actualizar_desde_base');
+      if (r.error) throw r.error;
       await cargarCatalogos();
+      pintarAsesoresFiltro();
       if (window.kwUI) window.kwUI.selects(document);
-      await window.kwUI.alert('Catálogo actualizado.');
+      var datos = r.data || {};
+      await window.kwUI.alert(
+        'Asesores actualizados desde la base de datos.' +
+        (datos.activos != null ? '\nActivos: ' + datos.activos : '')
+      );
     } catch (e) {
-      await window.kwUI.alert('No se pudo sincronizar: ' + e.message);
+      await window.kwUI.alert('No se pudo actualizar el catálogo: ' + e.message);
     } finally {
       btn.disabled = false;
       btn.classList.remove('trabajando');
-      avisa('Sincronizar asesores');
+      $('op-sync-txt').textContent = 'Actualizar asesores';
     }
   });
 
@@ -3742,10 +3743,21 @@
     $(id).addEventListener('change', sincronizarFechaEscritura);
   });
 
-  // Las cifras largas se separan con comas desde que se escriben.
+  // Los tres campos son referencias numéricas comunes, no datos de pago.
+  // Se fuerzan editables porque algunos administradores de contraseñas
+  // intentan apropiarse de ellos al reconocer palabras como "número".
   ['e-precio', 'e-esc-numero', 'e-notaria'].forEach(function (id) {
-    $(id).addEventListener('input', function () {
-      this.value = conComasMientrasEscribe(this.value);
+    var campo = $(id);
+    campo.disabled = false;
+    campo.readOnly = false;
+    campo.addEventListener('focus', function () {
+      this.disabled = false;
+      this.readOnly = false;
+    });
+    campo.addEventListener('input', function () {
+      this.value = id === 'e-precio'
+        ? conComas(this.value)
+        : conComasMientrasEscribe(this.value);
     });
   });
 
