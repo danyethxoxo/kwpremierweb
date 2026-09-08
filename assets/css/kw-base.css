@@ -930,6 +930,10 @@ header > *:last-child { margin-left: auto; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 3px 12px rgba(138,0,0,0.14);
 }
 .drawer-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+.drawer-buscar {
+  width: calc(100% - 24px); margin: 10px 12px 0;
+  border: 0; font: inherit; cursor: pointer; text-align: left;
+}
 .drawer-footer { padding: 14px 20px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
 .drawer-footer .drawer-link { color: #a30000; }
 
@@ -954,22 +958,37 @@ header > *:last-child { margin-left: auto; }
    Debajo de 1024px no aplica nada de esto: en celular y tableta el menú
    sigue siendo el panel de siempre, que aparece sobre el contenido. */
 @media (min-width: 1024px) {
-  html.kw-riel body { padding-left: var(--riel-hueco, 84px); }
-  html.kw-riel header.kw-header { left: calc(var(--riel-hueco, 84px) + 12px); }
+  html.kw-riel {
+    --riel-ancho: 68px;
+    --riel-hueco: 68px;
+  }
+  html.kw-riel body { padding-left: var(--riel-hueco); }
+  html.kw-riel header.kw-header { left: calc(var(--riel-hueco) + 12px); }
 
   html.kw-riel .drawer:not(.drawer-der) {
+    top: 0; left: 0; bottom: 0;
     transform: none;
-    width: var(--riel-ancho, 64px);
+    width: var(--riel-ancho);
     max-width: none;
-    transition: width var(--t-lento) var(--curva);
+    border: 0; border-right: 1px solid var(--border, rgba(0,0,0,0.1));
+    border-radius: 0;
+    background: #fff;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    box-shadow: 8px 0 24px rgba(35, 27, 27, 0.08);
+    transition: width 360ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 360ms ease;
   }
   html.kw-riel .drawer:not(.drawer-der):hover,
-  html.kw-riel .drawer:not(.drawer-der).open { width: 280px; }
+  html.kw-riel .drawer:not(.drawer-der).open,
+  html.kw-riel .drawer:not(.drawer-der):focus-within {
+    width: 292px;
+    box-shadow: 14px 0 34px rgba(35, 27, 27, 0.13);
+  }
   /* El freno de un instante: se pone al soltar el riel con el cursor
      todavía encima, y se quita en cuanto el cursor sale. Sin él, cerrar
      no se veía porque el :hover volvía a ensancharlo de inmediato. */
   html.kw-riel .drawer:not(.drawer-der).sin-hover,
-  html.kw-riel .drawer:not(.drawer-der).sin-hover:hover { width: var(--riel-ancho, 64px); }
+  html.kw-riel .drawer:not(.drawer-der).sin-hover:hover { width: var(--riel-ancho); }
 
   /* El velo oscuro es para cuando el menú tapa la página. El riel no la
      tapa: vive en su propia franja. */
@@ -982,7 +1001,7 @@ header > *:last-child { margin-left: auto; }
 
   /* Angosto, el renglón del logo se queda con la marca "kw" (la parte
      izquierda del archivo), que es justo lo que se quiere ver ahí. */
-  html.kw-riel .drawer-header { padding: 18px 14px; justify-content: flex-start; }
+  html.kw-riel .drawer-header { display: none; }
   html.kw-riel .drawer-header .logo { overflow: hidden; }
   html.kw-riel .drawer-header img { max-width: none; }
 
@@ -991,16 +1010,24 @@ header > *:last-child { margin-left: auto; }
      texto se desvanece y quedan solo los íconos; al ensancharse vuelve.
      El desvanecido va un poco más rápido que el ancho para que las
      letras no se vean arrastradas mientras la gaveta se mueve. */
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-link > span,
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-section-label,
-  html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario-txt,
+  html.kw-riel .drawer:not(:hover):not(.open):not(:focus-within) .drawer-link > span,
+  html.kw-riel .drawer:not(:hover):not(.open):not(:focus-within) .drawer-section-label,
+  html.kw-riel .drawer:not(:hover):not(.open):not(:focus-within) .drawer-usuario-txt,
   html.kw-riel .drawer.sin-hover .drawer-link > span,
   html.kw-riel .drawer.sin-hover .drawer-section-label,
   html.kw-riel .drawer.sin-hover .drawer-usuario-txt { opacity: 0; }
   .drawer-link > span,
   .drawer-section-label,
   .drawer-usuario-txt { transition: opacity var(--t-rapido); }
-  html.kw-riel .drawer-usuario { margin: 12px 8px 0; padding: 13px 12px; }
+  html.kw-riel .drawer-usuario {
+    order: -2; min-height: 68px;
+    margin: 10px 8px 0; padding: 13px 7px;
+  }
+
+  html.kw-riel .drawer-buscar {
+    order: -1; width: calc(100% - 16px); min-height: 46px;
+    margin: 2px 8px 8px; padding: 11px 17px;
+  }
 
   /* Angosto, ese renglón es la hamburguesa; ancho, es el logo. Antes el
      logo se recortaba a la marca "kw" y quedaba como un adorno cortado
@@ -1024,6 +1051,24 @@ header > *:last-child { margin-left: auto; }
   html.kw-riel .drawer:not(:hover):not(.open) .drawer-header .logo,
   html.kw-riel .drawer.sin-hover .drawer-header .logo {
     opacity: 0; width: 0; overflow: hidden;
+  }
+
+  /* El Dock inspira el movimiento, no una copia literal: el ícono que
+     recibe el cursor crece y avanza un poco, mientras su nombre aparece
+     con el ensanchado del riel. Los vecinos se mantienen estables para
+     que el menú no salte al recorrerlo. */
+  html.kw-riel .drawer-link svg,
+  html.kw-riel .drawer-usuario-foto {
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 180ms ease, box-shadow 260ms ease;
+    transform-origin: center;
+  }
+  html.kw-riel .drawer-link:hover svg {
+    transform: translateX(3px) scale(1.22);
+  }
+  html.kw-riel .drawer-usuario:hover .drawer-usuario-foto {
+    transform: translateX(3px) scale(1.1);
+    box-shadow: 0 5px 14px rgba(40,12,12,0.2);
   }
 
   /* ── El header se queda sin barra ──
@@ -1141,6 +1186,7 @@ header > *:last-child { margin-left: auto; }
   /* La hamburguesa del header sobra: la del riel hace lo mismo y está
      junto a lo que abre. */
   html.kw-riel #kw-drawer-toggle { display: none; }
+  html.kw-riel header.kw-header:not(.kw-buscando) #kw-buscar-toggle { display: none; }
 
   /* Y el "Atrás" también. Servía cuando llegar a otro lado era volver
      sobre los pasos; con el riel siempre a la vista, cualquier destino
@@ -1186,8 +1232,15 @@ header > *:last-child { margin-left: auto; }
      empujan el ícono fuera de la franja mientras está angosta. */
   html.kw-riel .drawer-link,
   html.kw-riel .drawer-usuario { white-space: nowrap; }
-  html.kw-riel .drawer-nav { padding: 14px 8px; }
-  html.kw-riel .drawer-footer { padding: 14px 12px 18px; }
+  html.kw-riel .drawer-nav { padding: 6px 8px 14px; }
+  html.kw-riel .drawer-link { min-height: 46px; padding: 11px 17px; }
+  html.kw-riel .drawer-link svg { width: 20px; height: 20px; }
+  html.kw-riel .drawer-footer { padding: 10px 8px 12px; background: #fff; }
+  html.kw-riel .drawer-footer .drawer-link { padding: 11px 17px; }
+}
+
+@media (max-width: 1023px) {
+  .drawer-buscar { display: none; }
 }
 
 /* ── Panel de la derecha: los accesos que cada quien se guarda ──

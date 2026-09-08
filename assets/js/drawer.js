@@ -58,26 +58,16 @@
   ];
 
   const NAV_HUB = [
-    { section: 'Hub' },
-    { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
-    { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
-    { href: `${BASE}/hub/calendario.html`, label: 'Calendario', icon: 'calendar' },
-    { href: `${BASE}/documentos/documentos.html`, label: 'Documentos', icon: 'carpeta' },
-    { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
-    { href: `${BASE}/hub/plantillas.html`, label: 'Creador de formatos', icon: 'plantilla' },
-    { href: `${BASE}/hub/firmas.html`, label: 'Firmas Digitales', icon: 'pluma' },
-    { href: `${BASE}/hub/dictamenes.html`, label: 'Dictámenes', icon: 'dictamen' },
-    { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto' },
-    { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
-    { section: 'Sitio público' },
-    { href: `${BASE}/index.html`, label: 'Inicio', icon: 'globo' },
     { href: `${BASE}/propiedades.html`, label: 'Propiedades', icon: 'llave' },
-    { href: `${BASE}/asesores.html`, label: 'Asesores', icon: 'users' },
-    { href: `${BASE}/staff.html`, label: 'Liderazgo', icon: 'liderazgo' },
-    { href: `${BASE}/market-center.html`, label: 'Nuestro Market Center', icon: 'building' },
-    { section: 'Cuenta' },
-    { href: `${BASE}/hub/admin.html`, label: 'Panel de Admin', icon: 'tablero' },
-    { href: `${BASE}/perfil.html`, label: 'Mi Perfil', icon: 'persona' },
+    { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto' },
+    { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
+    { href: `${BASE}/hub/calendario.html`, label: 'Calendario KW Premier', icon: 'calendar' },
+    { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
+    { href: `${BASE}/documentos/documentos.html`, label: 'Acuerdos y Contratos', icon: 'carpeta' },
+    { href: `${BASE}/hub/firmas.html`, label: 'Firmas Digitales', icon: 'pluma' },
+    { href: `${BASE}/hub/dictamenes.html`, label: 'Dictaminación de Expedientes', icon: 'dictamen' },
+    { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
+    { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo' },
   ];
 
   function estaActivo(href) {
@@ -262,6 +252,10 @@
           <span class="drawer-usuario-rol" id="drawer-usuario-rol"></span>
         </span>
       </a>`}
+      ${esPublico ? '' : `
+      <button type="button" class="drawer-link drawer-buscar" id="drawer-buscar">
+        ${ICONS.search}<span>Buscar</span>
+      </button>`}
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
@@ -571,6 +565,15 @@
   const drawerIzq = document.getElementById('drawer');
   const drawerDer = document.getElementById('drawer-accesos');
   const velo = document.getElementById('drawer-overlay');
+
+  // En escritorio la lupa vive dentro del riel. Al picarla, el riel se
+  // recoge para dejar a la vista el campo que se abre junto a él.
+  const buscarRiel = document.getElementById('drawer-buscar');
+  if (buscarRiel) buscarRiel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    drawerIzq.classList.add('sin-hover');
+    abrirBuscar();
+  });
 
   // Los dos paneles se manejan igual, solo cambia de qué lado entran.
   // "signo" es hacia dónde se sale de la pantalla: -1 el de la izquierda,
@@ -964,7 +967,7 @@
   // de Editar. Como el id sale de la sesión, se resuelve al vuelo; si no
   // hay sesión se queda apuntando a perfil.html, que manda al login.
   if (!esPublico) {
-    const enlacePerfil = document.querySelector(`.drawer-nav a[href="${BASE}/perfil.html"]`);
+    const enlacePerfil = document.getElementById('drawer-usuario');
     if (enlacePerfil && window.kwSupabase) {
       window.kwSupabase.auth.getSession().then(({ data }) => {
         const yo = data && data.session && data.session.user;
