@@ -715,6 +715,16 @@ Deno.serve(async (req: Request) => {
       if (origen === 'guardado' && !documentoId) {
         return respond({ error: 'Falta identificar el documento de origen.' }, 400)
       }
+      if (origen === 'guardado') {
+        const { data: docOrigen } = await admin
+          .from('documentos_guardados').select('id, user_id').eq('id', documentoId).single()
+        const { data: perfilOrigen } = await admin
+          .from('profiles').select('role').eq('id', userId).single()
+        const liderazgo = ['master', 'admin', 'staff'].includes(String(perfilOrigen?.role || ''))
+        if (!docOrigen || (docOrigen.user_id !== userId && !liderazgo)) {
+          return respond({ error: 'No tienes permiso para guardar ese documento.' }, 403)
+        }
+      }
 
       const rutaArchivo = String(body.archivoRuta || '').trim()
       if (!rutaArchivo) return respond({ error: 'Falta el archivo.' }, 400)
