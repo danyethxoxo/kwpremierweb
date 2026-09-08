@@ -593,6 +593,68 @@
     .dic-grupo-datos-rejilla { grid-template-columns: 1fr; }
   }
 
+  /* ── Elegir un contrato como origen del dictamen ── */
+  .dic-origen {
+    margin-bottom: var(--sp-4); padding: 13px;
+    border: 1px solid #e7e2e2; border-radius: 13px;
+    background: linear-gradient(145deg, #fff 0%, #fffaf1 100%);
+  }
+  .dic-origen-cabeza { margin-bottom: 10px; }
+  .dic-origen-cabeza h2 { margin: 0; color: var(--text); font-size: 14px; line-height: 1.35; }
+  .dic-origen-cabeza p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .dic-contratos-origen { margin-top: 10px; }
+  .dic-contrato-ayuda {
+    padding: 10px 11px; border: 1px dashed #dcd4ca; border-radius: 10px;
+    background: rgba(255,255,255,.65); color: var(--muted); font-size: 12.5px;
+  }
+  .dic-contrato-grupo + .dic-contrato-grupo { margin-top: 11px; }
+  .dic-contrato-grupo-titulo {
+    margin: 0 0 6px; color: #746b63; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .dic-contrato-opciones {
+    display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px;
+  }
+  .dic-contrato-opcion {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0;
+    padding: 9px 10px; border: 1px solid #e1d9cf; border-radius: 11px;
+    background: #fff; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s, background .15s;
+  }
+  .dic-contrato-opcion:hover {
+    border-color: #c79d43; box-shadow: 0 4px 12px rgba(126,86,14,.09);
+    transform: translateY(-1px);
+  }
+  .dic-contrato-opcion.seleccionado {
+    border-color: #b17a10; background: #fff7e6;
+    box-shadow: 0 0 0 2px rgba(177,122,16,.10);
+  }
+  .dic-contrato-marca {
+    width: 10px; height: 10px; border: 2px solid #b9afa4; border-radius: 50%; flex: 0 0 auto;
+  }
+  .dic-contrato-opcion.seleccionado .dic-contrato-marca {
+    border-color: #99680d; background: #c58a18; box-shadow: inset 0 0 0 2px #fff7e6;
+  }
+  .dic-contrato-texto { min-width: 0; flex: 1; }
+  .dic-contrato-texto strong {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .dic-contrato-texto span {
+    display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: var(--muted); font-size: 11px;
+  }
+  .dic-contrato-seleccion {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    padding: 8px 10px; border-radius: 10px; background: #eef9f1;
+    color: #17683c; font-size: 12px;
+  }
+  .dic-contrato-seleccion::before {
+    content: '✓'; display: grid; place-items: center; width: 19px; height: 19px;
+    border-radius: 50%; background: #d9f1df; font-weight: 700;
+  }
+  @media (max-width: 720px) { .dic-contrato-opciones { grid-template-columns: 1fr; } }
+
   /* ── El editor ── */
   .dic-editor {
     background: #fff; border: 1px solid var(--border);
@@ -1225,6 +1287,28 @@
       <div class="dic-editor">
         <div class="dic-msg" id="editor-msg"></div>
 
+        <section class="dic-origen" id="e-origen">
+          <div class="dic-origen-cabeza">
+            <h2>Crear desde un contrato <span style="font-weight:400;color:var(--muted);">(opcional)</span></h2>
+            <p>Elige al asesor o busca directamente por cliente, dirección, nombre o folio.</p>
+          </div>
+          <div class="dic-dos">
+            <div class="dic-campo">
+              <label for="e-contrato-asesor">Asesor que creó el contrato</label>
+              <select id="e-contrato-asesor">
+                <option value="">Selecciona un asesor</option>
+              </select>
+            </div>
+            <div class="dic-campo">
+              <label for="e-contrato-buscar">Buscar contrato</label>
+              <input type="search" id="e-contrato-buscar" class="kw-input"
+                placeholder="Cliente, dirección, nombre o folio" autocomplete="off">
+            </div>
+          </div>
+          <div class="dic-contratos-origen" id="e-contratos-origen"></div>
+          <div class="dic-contrato-seleccion" id="e-contrato-seleccion" hidden></div>
+        </section>
+
         <div class="dic-dos">
           <div class="dic-campo">
             <label for="e-fecha">Fecha del dictamen</label>
@@ -1474,6 +1558,8 @@
   var abierto = null;
   var verArchivo = false;
   var borrador = null;
+  var contratosDisponibles = [];
+  var contratoSeleccionado = null;
 
   var ESTADOS = {
     borrador:     'Borrador',
@@ -1585,6 +1671,227 @@
     var el = $(caja);
     el.className = 'dic-msg' + (texto ? ' ' + tipo : '');
     el.textContent = texto || '';
+  }
+
+  var TIPOS_CONTRATO_ORIGEN = {
+    acuerdo_renta: 'Contratos de renta',
+    contrato_profeco: 'Contratos PROFECO',
+    contrato_comercial: 'Contratos de venta comercial',
+  };
+
+  function datoContrato(datos, claves) {
+    for (var i = 0; i < claves.length; i++) {
+      var valor = datos && datos[claves[i]];
+      if (valor !== undefined && valor !== null && String(valor).trim() !== '') return valor;
+    }
+    return '';
+  }
+
+  function clientesDelContrato(doc) {
+    var datos = doc.datos || {};
+    if (Array.isArray(datos.clientes)) {
+      return datos.clientes.map(function (x) {
+        if (typeof x === 'string') return { nombre: x.trim(), estado_civil: '' };
+        return {
+          nombre: String((x && (x.nombre || x.name)) || '').trim(),
+          estado_civil: String((x && (x.civil || x.estado_civil)) || '').trim(),
+        };
+      }).filter(function (x) { return x.nombre; });
+    }
+    var salida = [];
+    Object.keys(datos).forEach(function (k) {
+      var m = /^f-cli(\d+)-nombre$/.exec(k);
+      if (!m || !datos[k]) return;
+      salida[Number(m[1])] = {
+        nombre: String(datos[k]).trim(),
+        estado_civil: String(datos['f-cli' + m[1] + '-civil'] || '').trim(),
+      };
+    });
+    return salida.filter(Boolean);
+  }
+
+  function direccionDelContrato(doc) {
+    var datos = doc.datos || {};
+    var direccion = datoContrato(datos, ['f-inm-direccion', 'f-inmueble', 'direccion', 'inmueble']);
+    var alcaldia = datoContrato(datos, ['f-inm-alcaldia']);
+    if (alcaldia && String(direccion).toLowerCase().indexOf(String(alcaldia).toLowerCase()) === -1) {
+      direccion = [direccion, alcaldia].filter(Boolean).join(', ');
+    }
+    return String(direccion || '').trim();
+  }
+
+  function resumenContrato(doc) {
+    var nombres = clientesDelContrato(doc).map(function (x) { return x.nombre; }).join(', ');
+    return [doc.folio, nombres, direccionDelContrato(doc), doc.nombre_archivo]
+      .filter(Boolean).join(' · ');
+  }
+
+  async function cargarContratosOrigen() {
+    var r = await window.kwSupabase.rpc('listar_contratos_para_nuevo_dictamen');
+    if (r.error) {
+      contratosDisponibles = [];
+      console.warn('No se pudieron cargar contratos para el nuevo dictamen:', r.error.message);
+    } else {
+      contratosDisponibles = r.data || [];
+    }
+    var porAsesor = {};
+    contratosDisponibles.forEach(function (doc) {
+      var clave = doc.creador_id || doc.asesor_correo || doc.asesor_nombre;
+      if (!clave || porAsesor[clave]) return;
+      porAsesor[clave] = doc.asesor_nombre || doc.asesor_correo || 'Asesor';
+    });
+    $('e-contrato-asesor').innerHTML = '<option value="">Selecciona un asesor</option>' +
+      Object.keys(porAsesor).sort(function (a, b) {
+        return porAsesor[a].localeCompare(porAsesor[b], 'es');
+      }).map(function (id) {
+        return '<option value="' + escapar(id) + '">' + escapar(porAsesor[id]) + '</option>';
+      }).join('');
+  }
+
+  function pintarContratosOrigen() {
+    var caja = $('e-contratos-origen');
+    if (!caja) return;
+    var asesor = $('e-contrato-asesor').value;
+    var busca = $('e-contrato-buscar').value.trim().toLowerCase();
+    if (!contratosDisponibles.length) {
+      caja.innerHTML = '<div class="dic-contrato-ayuda">No hay contratos finalizados disponibles para enlazar.</div>';
+      return;
+    }
+    if (!asesor && !busca) {
+      caja.innerHTML = '<div class="dic-contrato-ayuda">Selecciona un asesor para ver sus contratos o escribe una búsqueda.</div>';
+      return;
+    }
+    var hallados = contratosDisponibles.filter(function (doc) {
+      var claveAsesor = doc.creador_id || doc.asesor_correo || doc.asesor_nombre;
+      if (asesor && String(claveAsesor) !== asesor) return false;
+      if (!busca) return true;
+      return [doc.asesor_nombre, doc.asesor_correo, doc.folio, doc.nombre_archivo, resumenContrato(doc)]
+        .filter(Boolean).join(' ').toLowerCase().indexOf(busca) !== -1;
+    });
+    if (!hallados.length) {
+      caja.innerHTML = '<div class="dic-contrato-ayuda">No encontramos contratos con esos filtros.</div>';
+      return;
+    }
+    var grupos = {};
+    hallados.forEach(function (doc) {
+      (grupos[doc.tipo_documento] || (grupos[doc.tipo_documento] = [])).push(doc);
+    });
+    caja.innerHTML = Object.keys(TIPOS_CONTRATO_ORIGEN).map(function (tipo) {
+      var docs = grupos[tipo] || [];
+      if (!docs.length) return '';
+      return '<section class="dic-contrato-grupo">' +
+        '<h3 class="dic-contrato-grupo-titulo">' + TIPOS_CONTRATO_ORIGEN[tipo] + '</h3>' +
+        '<div class="dic-contrato-opciones">' + docs.map(function (doc) {
+          var seleccionado = contratoSeleccionado &&
+            contratoSeleccionado.documento_id === doc.documento_id;
+          return '<button type="button" class="dic-contrato-opcion' +
+            (seleccionado ? ' seleccionado' : '') + '" data-elegir-contrato="' +
+            doc.documento_id + '"><span class="dic-contrato-marca"></span>' +
+            '<span class="dic-contrato-texto"><strong>' +
+              escapar(doc.nombre_archivo || TIPOS_CONTRATO_ORIGEN[tipo]) +
+            '</strong><span>' +
+              escapar([doc.folio || 'Sin folio', resumenContrato(doc)].filter(Boolean).join(' · ')) +
+            '</span></span></button>';
+        }).join('') + '</div></section>';
+    }).join('');
+    caja.querySelectorAll('[data-elegir-contrato]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var doc = contratosDisponibles.find(function (x) {
+          return x.documento_id === b.dataset.elegirContrato;
+        });
+        if (doc) seleccionarContratoOrigen(doc);
+      });
+    });
+  }
+
+  function normalizarSiNoContrato(valor) {
+    if (valor === true) return 'si';
+    if (valor === false) return 'no';
+    var s = String(valor || '').trim().toLowerCase();
+    if (['si', 'sí', 's', 'yes', '1', 'true'].indexOf(s) !== -1) return 'si';
+    if (['no', 'n', '0', 'false'].indexOf(s) !== -1) return 'no';
+    return '';
+  }
+
+  function normalizarUsoContrato(valor) {
+    var s = String(valor || '').toLowerCase();
+    if (s.indexOf('mixt') !== -1) return 'mixto';
+    if (s.indexOf('comer') !== -1 || s.indexOf('oficina') !== -1 ||
+        s.indexOf('industrial') !== -1) return 'comercial';
+    return s ? 'residencial' : '';
+  }
+
+  function ponerCampoDesdeContrato(llave, valor) {
+    if (valor === undefined || valor === null || String(valor).trim() === '') return;
+    var campo = CAMPOS.find(function (x) { return x[1] === llave; });
+    if (!campo) return;
+    borrador[llave] = String(valor).trim();
+    $(campo[0]).value = paraCampo(llave, borrador[llave]);
+  }
+
+  function seleccionarContratoOrigen(doc) {
+    if (!borrador || borrador.id) return;
+    contratoSeleccionado = doc;
+    borrador.documento_origen_id = doc.documento_id;
+    var datos = doc.datos || {};
+    var asesor = asesores.find(function (a) {
+      return (doc.dictamen_asesor_id && a.id === doc.dictamen_asesor_id) ||
+        (doc.asesor_correo && a.correo && a.correo.toLowerCase() === doc.asesor_correo.toLowerCase()) ||
+        (doc.asesor_nombre && a.nombre && a.nombre.toLowerCase() === doc.asesor_nombre.toLowerCase());
+    });
+    if (asesor) elegirAsesor(asesor);
+
+    var clientesContrato = clientesDelContrato(doc);
+    if (clientesContrato.length) {
+      borrador.clientes = clientesContrato;
+      var cuantos = clientesContrato.length;
+      $('e-clientes-cuantos').value = cuantos > 5 ? '__mas__' : String(cuantos);
+      $('e-clientes-otros').value = cuantos > 5 ? String(cuantos) : '';
+      $('e-clientes-cuantos').dispatchEvent(new Event('change', { bubbles: true }));
+      acomodarCuantos();
+      pintarClientes();
+    }
+
+    ponerCampoDesdeContrato('inmueble', direccionDelContrato(doc));
+    if (doc.tipo_documento === 'acuerdo_renta') {
+      borrador.operacion = 'renta';
+      borrador.uso = 'residencial';
+      ponerCampoDesdeContrato('precio_listado', datoContrato(datos, ['f-monto']));
+      if (String(datos['f-tipo'] || '').toLowerCase() === 'exclusiva') borrador.tipo_contrato = 'exclusiva';
+    } else {
+      borrador.operacion = 'venta';
+      ponerCampoDesdeContrato('precio_listado', datoContrato(datos, ['f-con-precio']));
+      ponerCampoDesdeContrato('comision_porcentaje', datoContrato(datos, ['f-con-contraprestacion']));
+      ponerCampoDesdeContrato('escritura_numero', datoContrato(datos, ['f-inm-escritura']));
+      var fechaEsc = datoContrato(datos, ['f-inm-escritura-fecha']);
+      if (fechaEsc) { borrador.escritura_fecha = fechaEsc; ponerFechaEscritura(fechaEsc); }
+      ponerCampoDesdeContrato('notario_nombre', datoContrato(datos, ['f-inm-notario']));
+      ponerCampoDesdeContrato('notaria_numero', datoContrato(datos, ['f-inm-notario-num']));
+      ponerCampoDesdeContrato('folio_real', datoContrato(datos, ['f-inm-folio']));
+      ponerCampoDesdeContrato('superficie_terreno', datoContrato(datos, ['f-car-terreno']));
+      ponerCampoDesdeContrato('superficie_construccion', datoContrato(datos, ['f-car-construccion']));
+      var condominio = normalizarSiNoContrato(datoContrato(datos, ['f-inm-condominio']));
+      if (condominio) borrador.condominio = condominio;
+      var uso = normalizarUsoContrato(datoContrato(datos, ['f-car-uso-suelo']));
+      if (uso) borrador.uso = uso;
+      var exclusiva = normalizarSiNoContrato(datoContrato(datos, ['f-con-exclusividad']));
+      if (exclusiva === 'si') borrador.tipo_contrato = 'exclusiva';
+      if (exclusiva === 'no') borrador.tipo_contrato = 'abierto';
+    }
+
+    $('e-operacion').value = borrador.operacion;
+    $('e-uso').value = borrador.uso;
+    $('e-tipo-contrato').value = borrador.tipo_contrato;
+    $('e-condominio').value = borrador.condominio;
+    ['e-operacion', 'e-uso', 'e-tipo-contrato', 'e-condominio'].forEach(function (id) {
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    acomodarCondominio();
+    $('e-contrato-seleccion').hidden = false;
+    $('e-contrato-seleccion').textContent =
+      'Contrato seleccionado: ' + (doc.folio || doc.nombre_archivo || 'sin folio') +
+      '. Se precargaron los datos disponibles.';
+    pintarContratosOrigen();
   }
 
   // ── Traer los datos ─────────────────────────────────────────
@@ -2549,6 +2856,7 @@
     marketing_checklist: 'Checklist de Marketing',
     listado: 'Listado',
     revision: 'Revisión',
+    contrato_enlazado: 'Contrato enlazado',
     archivado: 'Archivado',
     restaurado: 'Restaurado',
     punto_nuevo: 'Observación nueva',
@@ -3324,8 +3632,10 @@
   function abrirEditor(id) {
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
+    contratoSeleccionado = null;
     borrador = {
       id: d ? d.id : null,
+      documento_origen_id: null,
       asesor_id: d ? d.asesor_id : '',
       operacion: d ? d.operacion : 'venta',
       uso: d ? d.uso : 'residencial',
@@ -3387,6 +3697,12 @@
 
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
+    $('e-origen').style.display = d ? 'none' : '';
+    $('e-contrato-asesor').value = '';
+    $('e-contrato-buscar').value = '';
+    $('e-contrato-seleccion').hidden = true;
+    $('e-contrato-seleccion').textContent = '';
+    pintarContratosOrigen();
     pintarPuntosEditor();
 
     $('vista-lista').style.display = 'none';
@@ -3566,6 +3882,18 @@
 
     var errPuntos = await guardarPuntosDe(id);
     if (errPuntos) return await fallo('No se pudieron guardar las observaciones: ' + errPuntos);
+
+    if (borrador.documento_origen_id) {
+      var enlace = await window.kwSupabase.rpc('enlazar_contrato_a_nuevo_dictamen', {
+        p_documento_id: borrador.documento_origen_id,
+        p_dictamen_id: id,
+      });
+      if (enlace.error) {
+        return await fallo('El dictamen se guardó, pero no se pudo enlazar el contrato: ' +
+          enlace.error.message);
+      }
+      borrador.documento_origen_id = null;
+    }
 
     if (eraEdicion) {
       var revision = await window.kwSupabase.rpc('registrar_revision_dictamen', { p_id: id });
@@ -4251,6 +4579,7 @@
     if (veTodo) { $('op-sync').hidden = false; $('op-sync-raya').hidden = false; }
 
     await cargarCatalogos();
+    await cargarContratosOrigen();
     if (window.kwUI) window.kwUI.selects(document);
     pintarAsesoresFiltro();
     await cargar();
@@ -4452,6 +4781,9 @@
   $('btn-nuevo').addEventListener('click', function () { navegarEditor(null); });
   $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
   $('e-volver').addEventListener('click', function () { cerrarEditor(); });
+
+  $('e-contrato-asesor').addEventListener('change', pintarContratosOrigen);
+  $('e-contrato-buscar').addEventListener('input', pintarContratosOrigen);
 
   $('e-asesor-busca').addEventListener('input', pintarAsesores);
   $('e-asesor-cambiar').addEventListener('click', function () { elegirAsesor(null); });
