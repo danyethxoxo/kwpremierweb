@@ -970,39 +970,53 @@
   }
 
 
-  /* Documento enlazado: una tercera pestaña del expediente, no una copia. */
-  .dic-documentos { display:grid; gap:12px; }
+  /* Los contratos enlazados usan la misma jerarquía visual que los
+     datos del expediente: rótulo discreto arriba y valor legible abajo. */
+  .dic-documentos {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  }
   .dic-documento {
-    padding:15px; border:1px solid #e4dddd; border-radius:15px; background:#fff;
-    box-shadow:0 3px 13px rgba(35,18,18,.05);
+    min-width: 0; padding: 11px 13px;
+    border: 1px solid #e7e2e2; border-radius: 12px; background: #fff;
+    box-shadow: 0 3px 12px rgba(39,22,22,.035);
   }
   .dic-documento-cabecera {
-    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
-    padding-bottom:12px; border-bottom:1px solid #eee8e8;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee9e9;
   }
-  .dic-documento-cabecera > div { display:flex; flex-direction:column; min-width:0; }
-  .dic-documento-cabecera strong { font-size:13px; color:#201b1b; }
-  .dic-documento-cabecera span { margin-top:3px; font-size:11px; color:#817979; }
+  .dic-documento-cabecera > div {
+    display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center;
+    column-gap: 8px; min-width: 0;
+  }
+  .dic-documento-cabecera > div::before {
+    content: ''; grid-row: 1 / span 2; width: 4px; height: 15px;
+    border-radius: 999px; background: var(--red);
+  }
+  .dic-documento-cabecera strong {
+    min-width: 0; color: #272222; font-size: 12px; font-weight: 650;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dic-documento-cabecera span {
+    margin-top: 1px; color: #817979; font-size: 10.5px;
+  }
   .dic-documento-cabecera a {
-    flex:0 0 auto; color:#8a0000; font-size:11.5px; font-weight:600;
-    text-decoration:none; padding:6px 9px; border-radius:9px;
+    flex: 0 0 auto; padding: 6px 9px; border-radius: 8px;
+    color: #8a0000; background: #fff5f5;
+    font-size: 11.5px; font-weight: 500; text-decoration: none;
+    transition: background .15s, transform .15s;
   }
-  .dic-documento-cabecera a:hover { background:#fbe9e9; }
+  .dic-documento-cabecera a:hover { background: #fbe5e5; transform: translateY(-1px); }
   .dic-documento-datos {
-    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; margin-top:13px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 0 16px;
   }
-  .dic-documento-dato { display:flex; flex-direction:column; min-width:0; }
-  .dic-documento-dato span {
-    color:#8a0000; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.035em;
-  }
-  .dic-documento-dato strong {
-    margin-top:2px; color:#2a2424; font-size:11.5px; font-weight:500;
-    overflow-wrap:anywhere; white-space:pre-wrap;
+  @media(max-width:900px) {
+    .dic-documentos { grid-template-columns: 1fr; }
   }
   @media(max-width:640px) {
-    .dic-documento-datos { grid-template-columns:1fr; }
-    .dic-documento-cabecera { align-items:stretch; flex-direction:column; }
-    .dic-documento-cabecera a { align-self:flex-start; }
+    .dic-documento-datos { grid-template-columns: 1fr; }
+    .dic-documento-cabecera { align-items: stretch; flex-direction: column; }
+    .dic-documento-cabecera a { align-self: flex-start; }
   }
 
 </style>
@@ -2289,8 +2303,7 @@
       var campos = Object.keys(doc.datos || {}).map(function (clave) {
         var valor = valorDatoDocumento(doc.datos[clave]);
         if (!valor) return '';
-        return '<div class="dic-documento-dato"><span>' + escapar(etiquetaDatoDocumento(clave)) +
-          '</span><strong>' + escapar(valor) + '</strong></div>';
+        return dato(escapar(etiquetaDatoDocumento(clave)), valor);
       }).filter(Boolean).join('');
       var ruta = rutaDocumento(doc.tipo_documento);
       return '<article class="dic-documento">' +
@@ -2299,7 +2312,8 @@
           escapar((doc.folio || 'Sin folio') + ' · ' +
             ((Number(doc.revision) || 0) ? 'Revisión ' + Number(doc.revision) : 'Original')) +
           '</span></div>' +
-          (ruta ? '<a href="' + ruta + '?doc=' + encodeURIComponent(doc.id) + '">Abrir documento</a>' : '') +
+          (ruta ? '<a href="' + ruta + '?doc=' + encodeURIComponent(doc.id) +
+            '" target="_blank" rel="noopener noreferrer">Abrir documento</a>' : '') +
         '</div><div class="dic-documento-datos">' + campos + '</div>' +
       '</article>';
     }).join('') + '</div>';
