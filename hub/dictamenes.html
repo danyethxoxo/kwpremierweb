@@ -24,6 +24,143 @@
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
+  /* ── Preparando un dictamen nuevo ──────────────────────────────
+     Abrir el formulario trae catálogos y contratos antes de pintar los
+     campos. Esta capa nombra esa espera para que no parezca que volvió a
+     cargar toda la pantalla de expedientes. */
+  .dic-carga-nuevo {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    display: none;
+    overflow-y: auto;
+    background: #f7f6f4;
+    color: var(--text);
+  }
+  body.cargando-nuevo .dic-carga-nuevo { display: flex; }
+  .dic-carga-nuevo-aviso {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.72);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+  .dic-carga-nuevo-aviso .kw-loader {
+    width: 56px;
+    height: 56px;
+    min-height: 0;
+    padding: 0;
+  }
+  .dic-carga-nuevo-aviso .kw-loader .circle { border-top-color: var(--red); }
+  .dic-carga-nuevo-contenido {
+    width: 100%;
+    max-width: var(--ancho-pagina);
+    margin: 0 auto;
+    padding: 90px var(--sp-4) var(--sp-6);
+  }
+  .dic-carga-nuevo-titulo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+  .dic-carga-nuevo-texto { font-size: 14px; font-weight: 600; color: var(--text); }
+  .dic-carga-nuevo-editor {
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--r-tarjeta);
+    background: #fff;
+    box-shadow: var(--sombra-1);
+  }
+  .dic-carga-nuevo-origen {
+    padding: 13px;
+    border: 1px solid #e7e2e2;
+    border-radius: 13px;
+    background: #fffaf1;
+  }
+  .dic-carga-nuevo-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+    margin-top: var(--sp-3);
+  }
+  .dic-carga-nuevo-campo .kw-skel-line:first-child { margin-bottom: 8px; }
+  .dic-carga-nuevo-control { height: var(--control-h); border-radius: var(--r-campo); }
+  .dic-carga-nuevo-seccion { margin-top: var(--sp-5); }
+  .dic-carga-nuevo-seccion > .kw-skel-line { margin-bottom: var(--sp-3); }
+  @media (max-width: 640px) {
+    .dic-carga-nuevo-contenido { padding: 82px var(--sp-3) var(--sp-5); }
+    .dic-carga-nuevo-campos { grid-template-columns: 1fr; }
+  }
+
+  /* ── La lista aprovecha la pantalla ────────────────────────────
+     Igual que el historial de Firmas digitales, en escritorio la página
+     mide la pantalla: el encabezado, los conteos y filtros ocupan solo lo
+     necesario y la lista recibe el alto restante. Así los expedientes
+     ruedan dentro de su propia zona sin mover los controles de arriba.
+     En celular se conserva el desplazamiento normal de la página. */
+  @media (min-width: 901px) {
+    html.kw-riel body.en-lista > main.kw-page {
+      padding-top: 18px !important;
+      padding-bottom: 18px;
+    }
+    body.en-lista .kw-page-encabezado { margin-bottom: 12px; }
+    /* Los conteos usan el mismo bloque compacto de tres tarjetas que el
+       historial de Firmas: primero se entiende la carga de trabajo y
+       después se filtra. */
+    body.en-lista .dic-arriba { margin-bottom: 8px; }
+    body.en-lista .kw-resumen {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 0;
+    }
+    body.en-lista .kw-conteo {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      min-height: 42px;
+      padding: 8px 14px;
+    }
+    body.en-lista .kw-conteo-num { font-size: 18px; }
+    body.en-lista .kw-conteo-txt { font-size: 12px; white-space: nowrap; }
+    body.en-lista { height: 100vh; overflow: hidden; }
+    body.en-lista > main.kw-page,
+    body.en-lista #vista-lista {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body.en-lista #lista {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 2px;
+    }
+    /* Firmas usa superficies blancas y bordes discretos para que cada
+       documento se lea como un renglón de trabajo. Los expedientes
+       conservan su acordeón, pero con la misma escala y limpieza visual. */
+    body.en-lista .kw-fila {
+      border-radius: var(--r-tarjeta);
+      background: #fff;
+      border-color: var(--border);
+      box-shadow: var(--sombra-1);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    body.en-lista .kw-fila-cabeza { padding: 12px 16px; }
+  }
+
   /* ── La barra de arriba ─────────────────────────────────────── */
   .dic-barra {
     display: flex; align-items: center; justify-content: space-between;
@@ -602,58 +739,55 @@
   .dic-origen-cabeza { margin-bottom: 10px; }
   .dic-origen-cabeza h2 { margin: 0; color: var(--text); font-size: 14px; line-height: 1.35; }
   .dic-origen-cabeza p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
-  .dic-contratos-origen { margin-top: 10px; }
+  .dic-contratos-panel { margin-top: 12px; }
+  .dic-contratos-filtros {
+    display: grid; grid-template-columns: minmax(220px, 1.6fr) minmax(145px, .7fr) minmax(155px, .8fr);
+    gap: 8px; margin-bottom: 10px;
+  }
+  .dic-contratos-filtros .dic-campo { margin-bottom: 0; }
+  .dic-contratos-origen {
+    max-height: 330px; overflow: auto; border: 1px solid #e1d9cf;
+    border-radius: 11px; background: #fff;
+  }
   .dic-contrato-ayuda {
     padding: 10px 11px; border: 1px dashed #dcd4ca; border-radius: 10px;
     background: rgba(255,255,255,.65); color: var(--muted); font-size: 12.5px;
   }
-  .dic-contrato-grupo + .dic-contrato-grupo { margin-top: 11px; }
-  .dic-contrato-grupo-titulo {
-    margin: 0 0 6px; color: #746b63; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .06em;
+  .dic-contrato-tabla { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dic-contrato-tabla th {
+    position: sticky; top: 0; z-index: 1; padding: 9px 10px;
+    background: #f8f5f0; border-bottom: 1px solid #e1d9cf;
+    color: #746b63; font-size: 10px; font-weight: 700;
+    text-align: left; text-transform: uppercase; letter-spacing: .05em;
   }
-  .dic-contrato-opciones {
-    display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px;
-  }
-  .dic-contrato-opcion {
-    display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0;
-    padding: 9px 10px; border: 1px solid #e1d9cf; border-radius: 11px;
-    background: #fff; color: var(--text); font: inherit; text-align: left; cursor: pointer;
-    transition: border-color .15s, box-shadow .15s, transform .15s, background .15s;
-  }
-  .dic-contrato-opcion:hover {
-    border-color: #c79d43; box-shadow: 0 4px 12px rgba(126,86,14,.09);
-    transform: translateY(-1px);
-  }
-  .dic-contrato-opcion.seleccionado {
-    border-color: #b17a10; background: #fff7e6;
-    box-shadow: 0 0 0 2px rgba(177,122,16,.10);
-  }
-  .dic-contrato-marca {
-    width: 10px; height: 10px; border: 2px solid #b9afa4; border-radius: 50%; flex: 0 0 auto;
-  }
-  .dic-contrato-opcion.seleccionado .dic-contrato-marca {
-    border-color: #99680d; background: #c58a18; box-shadow: inset 0 0 0 2px #fff7e6;
-  }
-  .dic-contrato-texto { min-width: 0; flex: 1; }
-  .dic-contrato-texto strong {
-    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 12.5px; font-weight: 600;
-  }
-  .dic-contrato-texto span {
-    display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis;
-    white-space: nowrap; color: var(--muted); font-size: 11px;
-  }
+  .dic-contrato-tabla td { padding: 10px; border-bottom: 1px solid #eee9e3; vertical-align: middle; }
+  .dic-contrato-tabla tr:last-child td { border-bottom: none; }
+  .dic-contrato-tabla tbody tr:hover { background: #fffaf1; }
+  .dic-contrato-tabla tbody tr.seleccionado { background: #fff3d8; }
+  .dic-contrato-principal { display: block; font-weight: 600; color: var(--text); }
+  .dic-contrato-secundario { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+  .dic-contrato-elegir { white-space: nowrap; }
   .dic-contrato-seleccion {
     display: flex; align-items: center; gap: 8px; margin-top: 10px;
     padding: 8px 10px; border-radius: 10px; background: #eef9f1;
     color: #17683c; font-size: 12px;
   }
+  .dic-contrato-seleccion[hidden] { display: none; }
   .dic-contrato-seleccion::before {
     content: '✓'; display: grid; place-items: center; width: 19px; height: 19px;
     border-radius: 50%; background: #d9f1df; font-weight: 700;
   }
-  @media (max-width: 720px) { .dic-contrato-opciones { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) {
+    .dic-contratos-filtros { grid-template-columns: 1fr; }
+    .dic-contrato-tabla thead { display: none; }
+    .dic-contrato-tabla, .dic-contrato-tabla tbody, .dic-contrato-tabla tr, .dic-contrato-tabla td { display: block; }
+    .dic-contrato-tabla tr { padding: 9px 10px; border-bottom: 1px solid #e1d9cf; }
+    .dic-contrato-tabla td { padding: 3px 0; border: none; }
+    .dic-contrato-tabla td::before {
+      content: attr(data-label); display: block; margin-bottom: 2px;
+      color: #746b63; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    }
+  }
 
   /* ── El editor ── */
   .dic-editor {
@@ -667,17 +801,11 @@
     font-size: 11.5px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; color: var(--muted);
   }
-  /* El campo de fecha se apunta también por su id: kw-ui.js lo cambia a
-     type="text" mientras está vacío (para poder enseñar un placeholder),
-     y con el selector amarrado a type="date" se quedaba sin estilo justo
-     en ese rato, viéndose como una caja suelta del navegador.
-
-     Los que ya traen .kw-input quedan fuera: esos se visten con esa clase
-     en los dos tipos, y agregarles este otro juego de medidas los hacía
-     cambiar de alto y de borde al picarlos. */
+  /* Los que ya traen .kw-input quedan fuera: esos se visten con esa clase
+     y agregarles este otro juego de medidas los haría cambiar de alto y
+     de borde al picarlos. */
   .dic-campo textarea,
-  .dic-campo input[type="date"]:not(.kw-input),
-  .dic-campo input#e-fecha {
+  .dic-campo input[type="date"]:not(.kw-input) {
     width: 100%; resize: vertical;
     border: 1px solid var(--border); border-radius: var(--r-campo);
     padding: 10px 12px; font-family: inherit; font-size: 13.5px;
@@ -1083,7 +1211,47 @@
 
 </style>
 </head>
-<body>
+<body class="en-lista">
+  <script>
+    if (new URLSearchParams(location.search).has('nuevo')) {
+      document.body.classList.add('cargando-nuevo');
+    }
+  </script>
+  <div class="dic-carga-nuevo" role="status" aria-live="polite" aria-label="Cargando nuevo dictamen">
+    <div class="dic-carga-nuevo-contenido" aria-hidden="true">
+      <div class="dic-carga-nuevo-titulo">
+        <div class="kw-skel kw-skel-line" style="width:220px;height:28px;"></div>
+        <div class="kw-skel dic-carga-nuevo-control" style="width:112px;"></div>
+      </div>
+      <div class="dic-carga-nuevo-editor">
+        <div class="dic-carga-nuevo-origen">
+          <div class="kw-skel kw-skel-line kw-skel-w40"></div>
+          <div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w70" style="margin-top:8px;"></div>
+          <div class="dic-carga-nuevo-campos">
+            <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w30"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+            <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w40"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+          </div>
+        </div>
+        <div class="dic-carga-nuevo-campos">
+          <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w30"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+          <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w30"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+        </div>
+        <div class="dic-carga-nuevo-seccion">
+          <div class="kw-skel kw-skel-line kw-skel-w30" style="height:18px;"></div>
+          <div class="dic-carga-nuevo-campos">
+            <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w40"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+            <div class="dic-carga-nuevo-campo"><div class="kw-skel kw-skel-line kw-skel-w40"></div><div class="kw-skel dic-carga-nuevo-control"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dic-carga-nuevo-aviso">
+      <div class="kw-loader" aria-hidden="true">
+        <div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>
+      </div>
+      <div class="dic-carga-nuevo-texto">Cargando nuevo dictamen...</div>
+    </div>
+  </div>
 
   <!-- El mismo header que las demás pantallas: quieto arriba, sin barra,
        con la lupa de un lado y la campanita del otro. La campanita y el
@@ -1287,45 +1455,52 @@
       <div class="dic-editor">
         <div class="dic-msg" id="editor-msg"></div>
 
-        <section class="dic-origen" id="e-origen">
-          <div class="dic-origen-cabeza">
-            <h2>Crear desde un contrato <span style="font-weight:400;color:var(--muted);">(opcional)</span></h2>
-            <p>Elige al asesor o busca directamente por cliente, dirección, nombre o folio.</p>
+        <div class="dic-campo">
+          <label for="e-asesor-busca">Asesor</label>
+          <div class="dic-busca-asesor">
+            <input type="text" id="e-asesor-busca" class="kw-input" autocomplete="off">
+            <div class="dic-asesor-lista" id="e-asesor-lista"></div>
           </div>
-          <div class="dic-dos">
-            <div class="dic-campo">
-              <label for="e-contrato-asesor">Asesor que creó el contrato</label>
-              <select id="e-contrato-asesor">
-                <option value="">Selecciona un asesor</option>
-              </select>
-            </div>
-            <div class="dic-campo">
-              <label for="e-contrato-buscar">Buscar contrato</label>
-              <input type="search" id="e-contrato-buscar" class="kw-input"
-                placeholder="Cliente, dirección, nombre o folio" autocomplete="off">
-            </div>
-          </div>
-          <div class="dic-contratos-origen" id="e-contratos-origen"></div>
-          <div class="dic-contrato-seleccion" id="e-contrato-seleccion" hidden></div>
-        </section>
-
-        <div class="dic-dos">
-          <div class="dic-campo">
-            <label for="e-fecha">Fecha del dictamen</label>
-            <input type="date" id="e-fecha">
-          </div>
-          <div class="dic-campo">
-            <label for="e-asesor-busca">Asesor</label>
-            <div class="dic-busca-asesor">
-              <input type="text" id="e-asesor-busca" class="kw-input" autocomplete="off">
-              <div class="dic-asesor-lista" id="e-asesor-lista"></div>
-            </div>
-            <div class="dic-asesor-puesto" id="e-asesor-puesto" style="display:none;">
-              <span id="e-asesor-nombre"></span>
-              <button type="button" class="kw-btn-mini" id="e-asesor-cambiar">Cambiar</button>
-            </div>
+          <div class="dic-asesor-puesto" id="e-asesor-puesto" style="display:none;">
+            <span id="e-asesor-nombre"></span>
+            <button type="button" class="kw-btn-mini" id="e-asesor-cambiar">Cambiar</button>
           </div>
         </div>
+
+        <section class="dic-origen" id="e-origen" hidden>
+          <div class="dic-contratos-panel" id="e-contratos-panel">
+            <div class="dic-origen-cabeza">
+              <h2>Contratos del asesor <span style="font-weight:400;color:var(--muted);">(opcional)</span></h2>
+              <p>Elige un contrato finalizado para reutilizar la información que ya fue capturada.</p>
+            </div>
+            <div class="dic-contratos-filtros">
+              <div class="dic-campo">
+                <label for="e-contrato-buscar">Buscar</label>
+                <input type="search" id="e-contrato-buscar" class="kw-input"
+                  placeholder="Cliente, dirección, nombre o folio" autocomplete="off">
+              </div>
+              <div class="dic-campo">
+                <label for="e-contrato-operacion">Operación</label>
+                <select id="e-contrato-operacion">
+                  <option value="todos">Venta y renta</option>
+                  <option value="venta">Venta</option>
+                  <option value="renta">Renta</option>
+                </select>
+              </div>
+              <div class="dic-campo">
+                <label for="e-contrato-uso">Uso</label>
+                <select id="e-contrato-uso">
+                  <option value="todos">Todos los usos</option>
+                  <option value="residencial">Residencial</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="mixto">Mixto</option>
+                </select>
+              </div>
+            </div>
+            <div class="dic-contratos-origen" id="e-contratos-origen"></div>
+            <div class="dic-contrato-seleccion" id="e-contrato-seleccion" hidden></div>
+          </div>
+        </section>
 
         <h2 class="kw-page-titulo dic-subtitulo">Datos del cliente</h2>
 
@@ -1726,6 +1901,19 @@
       .filter(Boolean).join(' · ');
   }
 
+  function operacionContrato(doc) {
+    if (doc.tipo_documento === 'acuerdo_renta') return 'renta';
+    var valor = String(datoContrato(doc.datos || {},
+      ['operacion', 'f-operacion', 'f-tipo-operacion']) || '').toLowerCase();
+    return valor.indexOf('renta') !== -1 ? 'renta' : 'venta';
+  }
+
+  function usoContrato(doc) {
+    var uso = normalizarUsoContrato(datoContrato(doc.datos || {},
+      ['uso', 'f-uso', 'f-car-uso-suelo']));
+    return uso || 'residencial';
+  }
+
   async function cargarContratosOrigen() {
     var r = await window.kwSupabase.rpc('listar_contratos_para_nuevo_dictamen');
     if (r.error) {
@@ -1734,67 +1922,81 @@
     } else {
       contratosDisponibles = r.data || [];
     }
-    var porAsesor = {};
-    contratosDisponibles.forEach(function (doc) {
-      var clave = doc.creador_id || doc.asesor_correo || doc.asesor_nombre;
-      if (!clave || porAsesor[clave]) return;
-      porAsesor[clave] = doc.asesor_nombre || doc.asesor_correo || 'Asesor';
-    });
-    $('e-contrato-asesor').innerHTML = '<option value="">Selecciona un asesor</option>' +
-      Object.keys(porAsesor).sort(function (a, b) {
-        return porAsesor[a].localeCompare(porAsesor[b], 'es');
-      }).map(function (id) {
-        return '<option value="' + escapar(id) + '">' + escapar(porAsesor[id]) + '</option>';
-      }).join('');
+  }
+
+  function comparableAsesor(valor) {
+    return String(valor || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function contratoEsDelAsesor(doc, asesor) {
+    if (!doc || !asesor) return false;
+    var datos = doc.datos || {};
+    var nombreCapturado = datoContrato(datos, ['f-agente', 'f-asesor']);
+    var correoCapturado = datoContrato(datos, ['f-agente-correo']);
+    if (nombreCapturado && comparableAsesor(nombreCapturado) === comparableAsesor(asesor.nombre)) return true;
+    if (correoCapturado && comparableAsesor(correoCapturado) === comparableAsesor(asesor.correo)) return true;
+    if (doc.dictamen_asesor_id && doc.dictamen_asesor_id === asesor.id) return true;
+    if (doc.creador_id && doc.creador_id === asesor.id) return true;
+    if (doc.asesor_correo && comparableAsesor(doc.asesor_correo) === comparableAsesor(asesor.correo)) return true;
+    return !!(doc.asesor_nombre && asesor.nombre &&
+      comparableAsesor(doc.asesor_nombre) === comparableAsesor(asesor.nombre));
   }
 
   function pintarContratosOrigen() {
     var caja = $('e-contratos-origen');
-    if (!caja) return;
-    var asesor = $('e-contrato-asesor').value;
+    var panel = $('e-origen');
+    if (!caja || !panel) return;
+    var asesor = borrador && asesores.find(function (a) { return a.id === borrador.asesor_id; });
+    panel.hidden = !asesor || !!borrador.id;
+    if (!asesor || borrador.id) {
+      caja.innerHTML = '';
+      return;
+    }
     var busca = $('e-contrato-buscar').value.trim().toLowerCase();
+    var operacion = $('e-contrato-operacion').value;
+    var uso = $('e-contrato-uso').value;
     if (!contratosDisponibles.length) {
       caja.innerHTML = '<div class="dic-contrato-ayuda">No hay contratos finalizados disponibles para enlazar.</div>';
       return;
     }
-    if (!asesor && !busca) {
-      caja.innerHTML = '<div class="dic-contrato-ayuda">Selecciona un asesor para ver sus contratos o escribe una búsqueda.</div>';
+    var delAsesor = contratosDisponibles.filter(function (doc) {
+      return contratoEsDelAsesor(doc, asesor);
+    });
+    if (!delAsesor.length) {
+      caja.innerHTML = '<div class="dic-contrato-ayuda">Este asesor no tiene contratos finalizados disponibles.</div>';
       return;
     }
-    var hallados = contratosDisponibles.filter(function (doc) {
-      var claveAsesor = doc.creador_id || doc.asesor_correo || doc.asesor_nombre;
-      if (asesor && String(claveAsesor) !== asesor) return false;
-      if (!busca) return true;
-      return [doc.asesor_nombre, doc.asesor_correo, doc.folio, doc.nombre_archivo, resumenContrato(doc)]
+    var hallados = delAsesor.filter(function (doc) {
+      if (operacion !== 'todos' && operacionContrato(doc) !== operacion) return false;
+      if (uso !== 'todos' && usoContrato(doc) !== uso) return false;
+      return !busca || [doc.folio, doc.nombre_archivo, resumenContrato(doc)]
         .filter(Boolean).join(' ').toLowerCase().indexOf(busca) !== -1;
     });
     if (!hallados.length) {
       caja.innerHTML = '<div class="dic-contrato-ayuda">No encontramos contratos con esos filtros.</div>';
       return;
     }
-    var grupos = {};
-    hallados.forEach(function (doc) {
-      (grupos[doc.tipo_documento] || (grupos[doc.tipo_documento] = [])).push(doc);
-    });
-    caja.innerHTML = Object.keys(TIPOS_CONTRATO_ORIGEN).map(function (tipo) {
-      var docs = grupos[tipo] || [];
-      if (!docs.length) return '';
-      return '<section class="dic-contrato-grupo">' +
-        '<h3 class="dic-contrato-grupo-titulo">' + TIPOS_CONTRATO_ORIGEN[tipo] + '</h3>' +
-        '<div class="dic-contrato-opciones">' + docs.map(function (doc) {
-          var seleccionado = contratoSeleccionado &&
-            contratoSeleccionado.documento_id === doc.documento_id;
-          return '<button type="button" class="dic-contrato-opcion' +
-            (seleccionado ? ' seleccionado' : '') + '" data-elegir-contrato="' +
-            doc.documento_id + '"><span class="dic-contrato-marca"></span>' +
-            '<span class="dic-contrato-texto"><strong>' +
-              escapar(doc.nombre_archivo || TIPOS_CONTRATO_ORIGEN[tipo]) +
-            '</strong><span>' +
-              escapar([doc.folio || 'Sin folio', doc.asesor_nombre, resumenContrato(doc)]
-                .filter(Boolean).join(' · ')) +
-            '</span></span></button>';
-        }).join('') + '</div></section>';
-    }).join('');
+    caja.innerHTML = '<table class="dic-contrato-tabla"><thead><tr>' +
+      '<th>Contrato</th><th>Cliente e inmueble</th><th>Operación</th><th>Uso</th><th>Actualizado</th><th></th>' +
+      '</tr></thead><tbody>' + hallados.map(function (doc) {
+        var seleccionado = contratoSeleccionado &&
+          contratoSeleccionado.documento_id === doc.documento_id;
+        var clientes = clientesDelContrato(doc).map(function (x) { return x.nombre; }).join(', ');
+        return '<tr' + (seleccionado ? ' class="seleccionado"' : '') + '>' +
+          '<td data-label="Contrato"><span class="dic-contrato-principal">' +
+            escapar(doc.folio || 'Sin folio') + '</span><span class="dic-contrato-secundario">' +
+            escapar(doc.nombre_archivo || TIPOS_CONTRATO_ORIGEN[doc.tipo_documento] || 'Contrato') + '</span></td>' +
+          '<td data-label="Cliente e inmueble"><span class="dic-contrato-principal">' +
+            escapar(clientes || 'Cliente sin capturar') + '</span><span class="dic-contrato-secundario">' +
+            escapar(direccionDelContrato(doc) || 'Dirección sin capturar') + '</span></td>' +
+          '<td data-label="Operación">' + escapar(OPERACIONES[operacionContrato(doc)]) + '</td>' +
+          '<td data-label="Uso">' + escapar(USOS[usoContrato(doc)]) + '</td>' +
+          '<td data-label="Actualizado">' + escapar(fecha(doc.updated_at)) + '</td>' +
+          '<td data-label="Acción"><button type="button" class="kw-btn-mini dic-contrato-elegir" ' +
+            'data-elegir-contrato="' + doc.documento_id + '">' +
+            (seleccionado ? 'Elegido' : 'Elegir') + '</button></td></tr>';
+      }).join('') + '</tbody></table>';
     caja.querySelectorAll('[data-elegir-contrato]').forEach(function (b) {
       b.addEventListener('click', function () {
         var doc = contratosDisponibles.find(function (x) {
@@ -1835,8 +2037,12 @@
     contratoSeleccionado = doc;
     borrador.documento_origen_id = doc.documento_id;
     var datos = doc.datos || {};
+    var nombreCapturado = datoContrato(datos, ['f-agente', 'f-asesor']);
+    var correoCapturado = datoContrato(datos, ['f-agente-correo']);
     var asesor = asesores.find(function (a) {
-      return (doc.dictamen_asesor_id && a.id === doc.dictamen_asesor_id) ||
+      return (nombreCapturado && comparableAsesor(a.nombre) === comparableAsesor(nombreCapturado)) ||
+        (correoCapturado && comparableAsesor(a.correo) === comparableAsesor(correoCapturado)) ||
+        (doc.dictamen_asesor_id && a.id === doc.dictamen_asesor_id) ||
         (doc.asesor_correo && a.correo && a.correo.toLowerCase() === doc.asesor_correo.toLowerCase()) ||
         (doc.asesor_nombre && a.nombre && a.nombre.toLowerCase() === doc.asesor_nombre.toLowerCase());
     });
@@ -1844,11 +2050,14 @@
 
     var clientesContrato = clientesDelContrato(doc);
     if (clientesContrato.length) {
-      borrador.clientes = clientesContrato;
       var cuantos = clientesContrato.length;
       $('e-clientes-cuantos').value = cuantos > 5 ? '__mas__' : String(cuantos);
       $('e-clientes-otros').value = cuantos > 5 ? String(cuantos) : '';
+      // El cambio actualiza el selector personalizado, pero también lee
+      // las casillas que estaban en pantalla. Los datos del contrato se
+      // asignan después para que esa lectura no los borre.
       $('e-clientes-cuantos').dispatchEvent(new Event('change', { bubbles: true }));
+      borrador.clientes = clientesContrato;
       acomodarCuantos();
       pintarClientes();
     }
@@ -2644,6 +2853,7 @@
   }
 
   function navegarEditor(id) {
+    if (!id) document.body.classList.add('cargando-nuevo');
     var destino = new URL(location.href);
     destino.search = id ? '?editar=' + encodeURIComponent(id) : '?nuevo=1';
     location.href = destino.href;
@@ -3204,7 +3414,17 @@
   // ── El buscador de asesor ───────────────────────────────────
 
   function elegirAsesor(a) {
-    borrador.asesor_id = a ? a.id : '';
+    var siguiente = a ? a.id : '';
+    if (borrador.asesor_id !== siguiente && !borrador.id) {
+      contratoSeleccionado = null;
+      borrador.documento_origen_id = null;
+      $('e-contrato-buscar').value = '';
+      $('e-contrato-operacion').value = 'todos';
+      $('e-contrato-uso').value = 'todos';
+      $('e-contrato-seleccion').hidden = true;
+      $('e-contrato-seleccion').textContent = '';
+    }
+    borrador.asesor_id = siguiente;
     if (a) {
       $('e-asesor-nombre').innerHTML = escapar(a.nombre) +
         (a.correo ? '<small>' + escapar(a.correo) + '</small>' : '');
@@ -3216,6 +3436,7 @@
       $('e-asesor-busca').value = '';
       $('e-asesor-lista').classList.remove('abierta');
     }
+    pintarContratosOrigen();
   }
 
   function pintarAsesores() {
@@ -3665,7 +3886,6 @@
     $('editor-titulo').textContent = d
       ? 'Editar dictamen' + (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '')
       : 'Nuevo dictamen';
-    $('e-fecha').value = borrador.fecha_dictamen;
     $('e-operacion').value = borrador.operacion;
     $('e-uso').value = borrador.uso;
     $('e-tipo').value = borrador.tipo_inmueble_id;
@@ -3699,8 +3919,9 @@
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
     $('e-origen').style.display = d ? 'none' : '';
-    $('e-contrato-asesor').value = '';
     $('e-contrato-buscar').value = '';
+    $('e-contrato-operacion').value = 'todos';
+    $('e-contrato-uso').value = 'todos';
     $('e-contrato-seleccion').hidden = true;
     $('e-contrato-seleccion').textContent = '';
     pintarContratosOrigen();
@@ -3708,6 +3929,8 @@
 
     $('vista-lista').style.display = 'none';
     $('vista-editor').style.display = '';
+    document.body.classList.remove('en-lista');
+    document.body.classList.remove('cargando-nuevo');
     window.scrollTo(0, 0);
   }
 
@@ -3719,6 +3942,7 @@
     }
     $('vista-editor').style.display = 'none';
     $('vista-lista').style.display = '';
+    document.body.classList.add('en-lista');
   }
 
   function pintarPuntosEditor() {
@@ -3754,7 +3978,9 @@
 
   function leerEditor() {
     sincronizarFechaEscritura();
-    borrador.fecha_dictamen = $('e-fecha').value || hoy();
+    // En uno nuevo la fecha pertenece al día en que se guarda; al editar
+    // se conserva la fecha con la que el dictamen fue creado.
+    if (!borrador.id) borrador.fecha_dictamen = hoy();
     borrador.operacion = $('e-operacion').value;
     borrador.uso = $('e-uso').value;
     borrador.tipo_contrato = $('e-tipo-contrato').value;
@@ -4783,8 +5009,9 @@
   $('e-cancelar').addEventListener('click', function () { cerrarEditor(); });
   $('e-volver').addEventListener('click', function () { cerrarEditor(); });
 
-  $('e-contrato-asesor').addEventListener('change', pintarContratosOrigen);
   $('e-contrato-buscar').addEventListener('input', pintarContratosOrigen);
+  $('e-contrato-operacion').addEventListener('change', pintarContratosOrigen);
+  $('e-contrato-uso').addEventListener('change', pintarContratosOrigen);
 
   $('e-asesor-busca').addEventListener('input', pintarAsesores);
   $('e-asesor-cambiar').addEventListener('click', function () { elegirAsesor(null); });
