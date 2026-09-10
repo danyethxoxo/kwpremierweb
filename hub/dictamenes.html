@@ -766,17 +766,17 @@
   .dic-contrato-tabla tbody tr.seleccionado { background: var(--pastel-menta); }
   .dic-contrato-principal { display: block; font-weight: 600; color: var(--text); }
   .dic-contrato-secundario { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
-  .dic-contrato-elegir { white-space: nowrap; }
-  .dic-contrato-seleccion {
-    display: flex; align-items: center; gap: 8px; margin-top: 10px;
-    padding: 8px 10px; border-radius: 10px; background: #eef9f1;
-    color: #17683c; font-size: 12px;
+  .dic-contrato-elegir {
+    white-space: nowrap; border-color: var(--pastel-menta-txt);
+    background: var(--pastel-menta); color: var(--pastel-menta-txt);
   }
-  .dic-contrato-seleccion[hidden] { display: none; }
-  .dic-contrato-seleccion::before {
-    content: '✓'; display: grid; place-items: center; width: 19px; height: 19px;
-    border-radius: 50%; background: #d9f1df; font-weight: 700;
+  .dic-contrato-elegir:hover {
+    border-color: var(--pastel-menta-txt); background: var(--pastel-menta-txt); color: #fff;
   }
+  .dic-contrato-tabla tr.seleccionado .dic-contrato-elegir {
+    border-color: var(--pastel-menta-txt); background: var(--pastel-menta-txt); color: #fff;
+  }
+
   @media (max-width: 720px) {
     .dic-contratos-filtros { grid-template-columns: 1fr; }
     .dic-contrato-tabla thead { display: none; }
@@ -1497,7 +1497,6 @@
               </div>
             </div>
             <div class="dic-contratos-origen" id="e-contratos-origen"></div>
-            <div class="dic-contrato-seleccion" id="e-contrato-seleccion" hidden></div>
           </div>
         </section>
 
@@ -2096,10 +2095,6 @@
       $(id).dispatchEvent(new Event('change', { bubbles: true }));
     });
     acomodarCondominio();
-    $('e-contrato-seleccion').hidden = false;
-    $('e-contrato-seleccion').textContent =
-      'Contrato seleccionado: ' + (doc.folio || doc.nombre_archivo || 'sin folio') +
-      '. Se precargaron los datos disponibles.';
     pintarContratosOrigen();
   }
 
@@ -3420,8 +3415,6 @@
       $('e-contrato-buscar').value = '';
       $('e-contrato-operacion').value = 'todos';
       $('e-contrato-uso').value = 'todos';
-      $('e-contrato-seleccion').hidden = true;
-      $('e-contrato-seleccion').textContent = '';
     }
     borrador.asesor_id = siguiente;
     if (a) {
@@ -3921,8 +3914,6 @@
     $('e-contrato-buscar').value = '';
     $('e-contrato-operacion').value = 'todos';
     $('e-contrato-uso').value = 'todos';
-    $('e-contrato-seleccion').hidden = true;
-    $('e-contrato-seleccion').textContent = '';
     pintarContratosOrigen();
     pintarPuntosEditor();
 
