@@ -352,6 +352,15 @@
     if (!raiz || raiz.dataset.kwFormularioFijo) return;
     var acciones = raiz.querySelector('.desktop-btn-row');
     if (!acciones) return;
+
+    var descarga = acciones.querySelector('#btn-pdf');
+    if (descarga) {
+      descarga.setAttribute('aria-label', 'Descargar');
+      descarga.setAttribute('title', 'Descargar');
+      Array.prototype.slice.call(descarga.childNodes).forEach(function (nodo) {
+        if (nodo.nodeType === Node.TEXT_NODE) nodo.nodeValue = ' Descargar';
+      });
+    }
     raiz.dataset.kwFormularioFijo = '1';
     raiz.classList.add('kw-form-fija');
 
@@ -413,3 +422,4 @@
     folio: folio
   };
 })(window);
+
