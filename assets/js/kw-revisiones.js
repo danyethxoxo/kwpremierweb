@@ -357,9 +357,8 @@
     if (descarga) {
       descarga.setAttribute('aria-label', 'Descargar');
       descarga.setAttribute('title', 'Descargar');
-      Array.prototype.slice.call(descarga.childNodes).forEach(function (nodo) {
-        if (nodo.nodeType === Node.TEXT_NODE) nodo.nodeValue = ' Descargar';
-      });
+      var icono = descarga.querySelector('svg');
+      descarga.innerHTML = (icono ? icono.outerHTML : '') + ' Descargar';
     }
     raiz.dataset.kwFormularioFijo = '1';
     raiz.classList.add('kw-form-fija');
