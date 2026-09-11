@@ -401,6 +401,98 @@
   .kw-conteo.firmado  { --tono: var(--pastel-menta-txt); --pastel: var(--pastel-menta); }
   .kw-conteo.borrador { --tono: #5b5b5b;                 --pastel: rgba(0,0,0,0.05); }
 
+  /* ── Panel propio del historial ────────────────────────────
+     En escritorio ocupa exactamente el lugar del menú global. La tabla
+     conserva siempre el mismo inicio; abrir la hamburguesa sustituye el
+     contenido de la franja, no empuja ni cubre los documentos. */
+  .firmas-panel-pagina, .firmas-historial-principal { min-width: 0; }
+  .firmas-panel-cabecera { display: none; }
+
+  @media (min-width: 1024px) {
+    html.kw-riel body.en-historial { padding-left: 0; }
+    html.kw-riel body.en-historial > main.kw-page {
+      width: 100%; max-width: none; padding: 0 !important;
+    }
+    body.en-historial #vista-historial {
+      display: grid !important;
+      grid-template-columns: 292px minmax(0,1fr);
+      height: 100vh;
+      background: transparent;
+    }
+    body.en-historial .firmas-panel-pagina {
+      grid-column: 1; grid-row: 1;
+      height: 100vh; min-height: 0;
+      display: flex; flex-direction: column;
+      padding: 0 14px 16px;
+      overflow-y: auto; overscroll-behavior: contain;
+      background: #fff;
+      border-right: 1px solid var(--border, rgba(0,0,0,0.1));
+      box-shadow: 8px 0 24px rgba(35,27,27,0.08);
+      transition: opacity 150ms ease, visibility 150ms ease;
+    }
+    body.en-historial .firmas-panel-cabecera {
+      min-height: 58px; display: flex; align-items: center; gap: 11px;
+      margin: 0 -14px 14px; padding: 0 18px;
+      border-bottom: 1px solid rgba(0,0,0,0.07);
+    }
+    .firmas-panel-menu {
+      width: 34px; height: 34px; flex: 0 0 auto;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0; border: 0; border-radius: 9px;
+      background: transparent; color: var(--text); cursor: pointer;
+    }
+    .firmas-panel-menu:hover { background: var(--pastel-rojo); color: var(--red); }
+    .firmas-panel-menu svg { width: 21px; height: 21px; }
+    .firmas-panel-cabecera strong { font-size: 15px; }
+
+    body.en-historial .firmas-panel-pagina .kw-resumen {
+      display: flex; flex-direction: column; gap: 8px;
+      margin: 0 0 16px;
+    }
+    body.en-historial .firmas-panel-pagina .kw-conteo {
+      width: 100%; min-height: 48px;
+      flex-direction: row; justify-content: flex-start; align-items: center;
+      gap: 9px; padding: 9px 13px;
+    }
+    body.en-historial .firmas-panel-pagina .kw-conteo-num { font-size: 20px; }
+    body.en-historial .firmas-panel-pagina .kw-conteo-txt { font-size: 12px; }
+    body.en-historial .firmas-panel-pagina .kw-filtros-caja {
+      margin: 0; padding: 0; border: 0; background: transparent;
+      box-shadow: none; overflow: visible;
+    }
+    body.en-historial .firmas-panel-pagina .kw-filtros {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    body.en-historial .firmas-panel-pagina .kw-campo-filtro { width: 100%; flex: none; }
+    body.en-historial .firmas-panel-pagina .kw-rango { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    body.en-historial .firmas-historial-principal {
+      grid-column: 2; grid-row: 1;
+      height: 100vh; min-height: 0;
+      display: flex; flex-direction: column;
+      padding: 18px;
+    }
+    body.en-historial .firmas-historial-principal .tabla-marco {
+      flex: 1; min-height: 0;
+    }
+
+    /* Cerrado, el drawer no deja un segundo riel encima del panel local.
+       Abierto vuelve a ocupar sus 292 px y el panel propio se desvanece. */
+    html.kw-riel body.en-historial:not(.menu-global-abierto) #drawer {
+      visibility: hidden; pointer-events: none;
+    }
+    html.kw-riel body.en-historial.menu-global-abierto #drawer {
+      visibility: visible; width: 292px;
+    }
+    body.en-historial.menu-global-abierto .firmas-panel-pagina {
+      opacity: 0; visibility: hidden; pointer-events: none;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .firmas-panel-cabecera { display: none; }
+    .firmas-panel-pagina, .firmas-historial-principal { display: contents; }
+  }
   /* ── La que rueda es la tabla, no la página ──
      El encabezado no flota ni se pega con sticky: se queda quieto porque
      lo que se desplaza es nada más el cuerpo de la tabla, por dentro.
@@ -459,6 +551,11 @@
     /* El último renglón pega con la orilla de abajo de la tarjeta, así
        que su línea divisoria sobra. */
     body.en-historial .tabla-cuerpo > .tabla-fila:last-child { border-bottom: none; }
+  }
+  @media (min-width: 1024px) {
+    /* Gana a la regla histórica de 18 px: el panel compartido sí toca
+       las cuatro orillas de su franja. */
+    html.kw-riel body.en-historial > main.kw-page { padding: 0 !important; }
   }
   .tabla-buscar-fila {
     display: grid;
@@ -1085,6 +1182,7 @@
   .zoom-ajustar:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
   .zoom-ajustar:disabled { opacity: 0.35; cursor: default; }
 
+
   .editor-doc {
     position: relative;
     flex: 1 1 auto; min-width: 0;
@@ -1464,6 +1562,19 @@
     <!-- Vista 1: el historial -->
     <div id="vista-historial">
 
+      <!-- En escritorio, resumen y filtros se montan aquí como el panel
+           propio de la página. Comparte la misma franja con el menú global:
+           la hamburguesa intercambia uno por otro sin mover el contenido. -->
+      <aside class="firmas-panel-pagina" id="firmas-panel-pagina" aria-label="Resumen y filtros de firmas">
+        <div class="firmas-panel-cabecera">
+          <button type="button" class="firmas-panel-menu" id="firmas-panel-menu" aria-label="Abrir menú principal" title="Abrir menú principal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+          <strong>Firmas</strong>
+        </div>
+      </aside>
+      <section class="firmas-historial-principal" id="firmas-historial-principal"></section>
+
       <!-- El título va donde va en todas (el bloque de encabezado de la
            página), con los botones de la pantalla a su derecha. Vivía
            nada más en el header, que en pantalla grande no lo enseña:
@@ -1671,6 +1782,7 @@
                   </button>
                   <span class="zoom-pct" id="zoom-pct">100 %</span>
                   <button type="button" class="zoom-ajustar" id="zoom-ajustar">Ajustar al ancho</button>
+
                 </div>
                 <div class="editor-doc barra-oscura" id="editor-doc">
                   <!-- Los tres aros van escritos: .kw-loader es nada más
@@ -1886,6 +1998,62 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // Monta los controles existentes en el panel propio sin duplicarlos:
+  // los mismos selects y contadores conservan todos sus manejadores. Si
+  // la ventana pasa a tamaño móvil, vuelven a su orden natural.
+  function prepararPanelHistorial() {
+    const vista = $('vista-historial');
+    const panel = $('firmas-panel-pagina');
+    const principal = $('firmas-historial-principal');
+    if (!vista || !panel || !principal) return;
+
+    const piezas = {
+      encabezado: vista.querySelector('.kw-page-encabezado'),
+      resumen: vista.querySelector('.kw-resumen'),
+      filtros: vista.querySelector('.kw-filtros-caja'),
+      seleccion: $('barra-seleccion'),
+      cupo: Array.from(vista.querySelectorAll('#cupo'))[0],
+      tabla: vista.querySelector('.tabla-envios'),
+    };
+    const mq = window.matchMedia('(min-width: 1024px)');
+
+    function acomodar() {
+      if (mq.matches) {
+        panel.append(piezas.resumen, piezas.filtros);
+        principal.append(
+          piezas.encabezado, piezas.seleccion, piezas.cupo, piezas.tabla
+        );
+      } else {
+        [piezas.encabezado, piezas.resumen, piezas.filtros,
+          piezas.seleccion, piezas.cupo, piezas.tabla].forEach((pieza) => {
+          if (pieza) vista.insertBefore(pieza, panel);
+        });
+      }
+    }
+    acomodar();
+    mq.addEventListener('change', acomodar);
+
+    // drawer.js sigue siendo quien abre y cierra el menú. Este botón solo
+    // acciona su hamburguesa; el observador refleja el estado para hacer
+    // el intercambio visual entre ambos contenidos de la misma franja.
+    const drawer = $('drawer');
+    const menuLocal = $('firmas-panel-menu');
+    const menuDrawer = $('drawer-hamburguesa');
+    if (!drawer || !menuLocal || !menuDrawer) return;
+
+    function sincronizar() {
+      document.body.classList.toggle(
+        'menu-global-abierto', drawer.classList.contains('open')
+      );
+    }
+    menuLocal.addEventListener('click', () => menuDrawer.click());
+    new MutationObserver(sincronizar).observe(drawer, {
+      attributes: true, attributeFilter: ['class']
+    });
+    sincronizar();
+  }
+
+  document.addEventListener('DOMContentLoaded', prepararPanelHistorial, { once: true });
   // Los modal-overlay de esta pantalla (documento, detalle, editar) no
   // bloqueaban el fondo: con la rueda o el teclado, el scroll se iba al
   // historial de atrás en vez de quedarse dentro del modal. Se cuenta
