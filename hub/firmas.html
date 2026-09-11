@@ -911,38 +911,6 @@
      Documento a la izquierda, campos a la derecha. En pantallas
      angostas se apilan, con el documento arriba: la firma se coloca
      mirando la hoja, así que la hoja va primero. */
-  /* El renglón que tenía el botón de volver ya no existe: ese botón se
-     fue al header, junto a la lupa, para que los dos de esta pantalla
-     estén siempre en el mismo lugar. */
-  /* Vive en el header, junto a la lupa, y cada uno se enseña en su
-     vista: "Historial" al elegir los archivos, "Cambiar documentos" en
-     el editor. Van en el mismo lugar y con la misma forma a propósito:
-     un botón de regresar que cambia de sitio entre una pantalla y la
-     siguiente se acaba buscando dos veces.
-
-     Va fuera del cuadro de la lupa (lo saca acomodarHeader(), abajo):
-     adentro, los dos se repartían el mismo ancho y al abrir la búsqueda
-     se estorbaban. Afuera, cada pieza del renglón mide lo suyo y no le
-     quita nada a la de al lado. */
-  .btn-volver-paso {
-    display: none;
-    align-items: center; gap: 6px; flex: 0 0 auto;
-    padding: 7px 13px; border-radius: 999px;
-    border: 1px solid var(--border);
-    background: #fff; color: var(--text);
-    font-family: inherit; font-size: 12.5px; font-weight: 500;
-    cursor: pointer;
-  }
-  .btn-volver-paso:hover { background: var(--pastel-rojo); color: var(--red); }
-  #header-firmas.modo-archivos #btn-volver-historial,
-  #header-firmas.modo-editor #btn-volver-archivos { display: inline-flex; }
-  @media (max-width: 640px) {
-    /* En el celular el header ya trae el título y el Atrás; el texto del
-       botón se va y queda la flecha. */
-    .btn-volver-paso { padding: 7px 9px; }
-    #btn-volver-archivos { font-size: 0; gap: 0; }
-  }
-
   /* ── El nombre del documento, en el header ──
      Solo aparece mientras se edita (el header le pone .modo-editor):
      toma el lugar del título de la pantalla, centrado, para no repetirlo
@@ -998,7 +966,10 @@
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
      de campos: que los dos midan lo mismo es justo lo que evita que
      agregar firmantes alargue la página entera. */
-  :root { --alto-editor: calc(100vh - 170px); }
+  :root { --alto-editor: calc(100vh - var(--tope-pegado, 62px) - 18px); }
+  @supports (height: 100dvh) {
+    :root { --alto-editor: calc(100dvh - var(--tope-pegado, 62px) - 18px); }
+  }
 
   /* El editor se sale del ancho de página del sitio (1180px). Ese ancho
      está bien para el historial, pero aquí lo tiene que repartir entre
@@ -1015,7 +986,7 @@
          editor se pasaba de la pantalla por la derecha y la columna de
          los firmantes salía cortada. */
       --hueco-riel: 0px;
-      --ancho-editor: min(1560px, calc(100vw - var(--hueco-riel) - 48px));
+      --ancho-editor: calc(100vw - var(--hueco-riel) - 24px);
       width: var(--ancho-editor);
       margin-left: calc(50% - var(--ancho-editor) / 2);
     }
@@ -1394,6 +1365,11 @@
     border-radius: 999px; background: rgba(0,0,0,0.06);
     font-size: 10.5px; font-weight: 500; color: var(--muted);
   }
+  .firma-quien-verif.icono {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; padding: 4px; vertical-align: middle;
+  }
+  .firma-quien-verif.icono svg { width: 16px; height: 16px; }
 
   /* La liga personal de firma. weetrust cobra su propio envío por
      WhatsApp; copiarla y mandarla uno mismo hace lo mismo sin costo. */
@@ -1465,19 +1441,6 @@
        campanita del otro, y nada más. El hueco de la campanita lo pone
        drawer.js, igual que en todas. -->
   <header class="kw-header" id="header-firmas">
-    <!-- Los dos botones de regreso, en el mismo lugar y con la misma
-         forma: junto a la lupa, que es la esquina de donde se viene. No
-         llevan .back-btn a propósito, que es la clase que drawer.js
-         manda hasta la otra punta: el "Atrás" al portal sí va allá, pero
-         estos dos son de aquí adentro. Cada uno se enseña en su vista. -->
-    <button type="button" class="btn-volver-paso" id="btn-volver-historial">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      Historial
-    </button>
-    <button type="button" class="btn-volver-paso" id="btn-volver-archivos">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      Cambiar documentos
-    </button>
     <span class="kw-header-title">Firmas Digitales</span>
     <!-- Solo se ve mientras se edita un documento: el nombre del archivo
          en el lugar del título, para no repetirlo también allá abajo y
@@ -2384,10 +2347,32 @@
     return limpiarNombre(archivos[0].name.replace(/\.pdf$/i, '')) + '-y-anexos.pdf';
   }
 
+  // Cada paso tiene una URL propia. Se usa el historial del navegador
+  // para conservar en memoria los PDF elegidos mientras se avanza entre
+  // documentos y firmantes.
+  const URL_VISTAS = {
+    historial: 'historial',
+    archivos: 'nuevo-documento',
+    editor: 'preparar-firmas',
+  };
+  let vistaActual = 'historial';
+
+  function vistaDesdeURL() {
+    const valor = new URLSearchParams(location.search).get('vista') || URL_VISTAS.historial;
+    return Object.keys(URL_VISTAS).find((v) => URL_VISTAS[v] === valor) || 'historial';
+  }
+
+  function actualizarURLVista(cual, reemplazar) {
+    const url = new URL(location.href);
+    url.searchParams.set('vista', URL_VISTAS[cual] || URL_VISTAS.historial);
+    history[reemplazar ? 'replaceState' : 'pushState']({ vistaFirmas: cual }, '', url);
+  }
+
   // Las tres vistas se prenden y apagan desde un solo lugar: repartir
   // los display por cada manejador es como se acaba con dos vistas
   // encendidas a la vez.
-  function mostrarVista(cual) {
+  function mostrarVista(cual, opciones) {
+    opciones = opciones || {};
     ['historial', 'archivos', 'editor'].forEach((v) => {
       // Vacío y no 'block': el historial se acomoda con flex para que la
       // tabla se quede con el alto que sobra, y un display en el estilo
@@ -2402,8 +2387,38 @@
     // pantalla nada más en ese momento.
     $('header-firmas').classList.toggle('modo-editor', cual === 'editor');
     $('header-firmas').classList.toggle('modo-archivos', cual === 'archivos');
+    vistaActual = cual;
+    if (!opciones.desdeURL) actualizarURLVista(cual, opciones.reemplazar);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function abrirVistaDeURL() {
+    let cual = vistaDesdeURL();
+
+    // Los navegadores no permiten reconstruir un File después de una
+    // recarga. Un enlace directo al editor vuelve al paso de carga sin
+    // mostrar una pantalla vacía o rota.
+    if (cual === 'editor' && !pdfUnido) {
+      mostrarVista('archivos', { reemplazar: true });
+      return;
+    }
+
+    if (cual === 'historial' && vistaActual !== 'historial') {
+      archivos = [];
+      pdfUnido = null;
+      marcas = [];
+      paginas = [];
+      pintarArchivos();
+      avisoArchivos('', '');
+    } else if (cual === 'archivos' && vistaActual === 'editor') {
+      marcas = [];
+      rutaSubida = null;
+      desarmar();
+    }
+    mostrarVista(cual, { desdeURL: true });
+  }
+
+  window.addEventListener('popstate', abrirVistaDeURL);
 
   // Traer el historial de weetrust. Solo liderazgo, y con confirmación:
   // recorre toda la cuenta y en una con muchos documentos se tarda.
@@ -2589,13 +2604,6 @@
     mostrarVista('archivos');
   });
 
-  $('btn-volver-historial').addEventListener('click', () => {
-    archivos = [];
-    pintarArchivos();
-    avisoArchivos('', '');
-    mostrarVista('historial');
-  });
-
   $('btn-continuar').addEventListener('click', async () => {
     if (!archivos.length) return;
 
@@ -2636,17 +2644,6 @@
       btn.disabled = false;
       btn.textContent = 'Continuar';
     }
-  });
-
-  $('btn-volver-archivos').addEventListener('click', () => {
-    // Las marcas se tiran a propósito: si cambian los documentos, cambia
-    // la paginación, y una firma en la página 4 del documento anterior
-    // no significa nada en el nuevo.
-    marcas = [];
-    // El PDF que estaba subido correspondía a los documentos anteriores.
-    rutaSubida = null;
-    desarmar();
-    mostrarVista('archivos');
   });
 
   // ── Colocar las firmas sobre el documento ───────────────────
@@ -3303,22 +3300,15 @@
   });
 
   // ── Cada pieza del renglón de arriba, por su cuenta ──
-  // drawer.js mete todo lo que había en el header dentro de una misma
-  // cápsula, que es la que se convierte en el cuadro de búsqueda al
-  // picar la lupa. Ahí adentro, el botón de volver y el nombre del
-  // documento se repartían el ancho con el campo de escribir: al abrir
-  // la búsqueda el nombre se encimaba con el campo y el botón se
-  // partía en dos renglones.
-  //
-  // Aquí se sacan los dos de la cápsula y se dejan como piezas sueltas
-  // del renglón, entre el cuadro de la lupa y la campanita. Así cada uno
-  // mide lo suyo y nada de lo que le pase a uno mueve a los demás.
+  // drawer.js mete el contenido del header dentro de la cápsula de
+  // búsqueda. El nombre del documento se saca de ahí para mantenerlo
+  // centrado y visible mientras se preparan las firmas.
   function acomodarHeader() {
     const h = document.getElementById('header-firmas');
     const capsula = h && h.querySelector('.kw-header-capsula');
     if (!capsula) return;
     const sueltos = h.querySelector('.kw-header-sueltos');
-    ['btn-volver-historial', 'btn-volver-archivos', 'editor-nombre'].forEach((id) => {
+    ['editor-nombre'].forEach((id) => {
       const el = document.getElementById(id);
       if (el && capsula.contains(el)) h.insertBefore(el, sueltos || null);
     });
@@ -3577,7 +3567,7 @@
       desarmar();
       $('paginas').innerHTML = '';
       pintarArchivos();
-      mostrarVista('historial');
+      mostrarVista('historial', { reemplazar: true });
 
       // Los firmantes se vacían y la pregunta vuelve a salir en el
       // siguiente documento: que el asesor firme uno no quiere decir que
@@ -3611,6 +3601,18 @@
     ocr: 'OCR',
     face_login: 'facial con registro',
   };
+
+  function iconoVerificacion(id) {
+    const clave = id === 'face_login' ? 'face' : id;
+    const verificacion = VERIFICACIONES.find((v) => v.id === clave);
+    if (!verificacion) {
+      return '<span class="firma-quien-verif">' + escapar(NOMBRE_VERIF[id] || id) + '</span>';
+    }
+    return '<span class="firma-quien-verif icono" role="img"' +
+      ' title="' + escapar(verificacion.rotulo) + '"' +
+      ' aria-label="' + escapar(verificacion.rotulo) + '">' +
+      verificacion.icono + '</span>';
+  }
 
   const PILL = {
     preparando: ['kw-pill-neutro', 'Preparando'],
@@ -4652,24 +4654,14 @@
         '<span class="det-datos">' +
           '<span class="det-nom">' + escapar(x.nombre) + '</span>' +
           '<span class="det-mail">' + escapar(x.correo) + '</span>' +
-          (x.identificacion ? '<span class="firma-quien-verif">' + escapar(NOMBRE_VERIF[x.identificacion] || x.identificacion) + '</span>' : '') +
-          (x.check ? '<span class="firma-quien-verif">background check</span>' : '') +
+          (x.identificacion ? iconoVerificacion(x.identificacion) : '') +
+          (x.check ? iconoVerificacion('check') : '') +
         '</span>' +
         '<span class="det-derecha">' + derecha + '</span>' +
       '</div>';
     }).join('');
 
-    // Solo se puede cancelar lo que todavía no se firma del todo: los
-    // completados weetrust los sella y ya no se tocan.
-    const puedeCancelar = ['preparando', 'borrador', 'pendiente'].includes(f.estado);
     const acciones =
-      // "Cancelar documento" y no "Cancelar" a secas: al lado de la equis
-      // de cerrar, "Cancelar" se lee como "cerrar sin hacer nada", que es
-      // justo lo contrario de lo que hace (retira el documento de
-      // weetrust y nadie más lo puede firmar).
-      (puedeCancelar
-        ? '<button type="button" class="det-btn peligro" data-accion="cancelar" data-id="' + f.id + '">Cancelar documento</button>'
-        : '') +
       // Le pide a weetrust ligas nuevas para los que todavía no firman.
       // Es lo que se viene a hacer aquí: las ligas caducan, y cuando una
       // ya venció no hay otra manera de darle a esa persona por dónde
@@ -4737,15 +4729,10 @@
     if ($('modal-editar').style.display === 'flex') cerrarEditar();
   });
 
-  // Copiar liga, actualizar y cancelar. Vive aparte porque ahora estos
+  // Copiar liga y actualizar. Vive aparte porque estos
   // botones nacen dentro del modal y no en la lista.
   // Qué dice cada botón mientras trabaja, y qué se hace al terminar.
   const ACCIONES = {
-    cancelar: {
-      confirmar: '¿Cancelar este envío? Se retira de weetrust y los firmantes ya no podrán firmarlo.',
-      trabajando: 'Cancelando...',
-      cierra: true,
-    },
     regenerar_enlaces: {
       trabajando: 'Pidiendo ligas...',
       // No se cierra: las ligas nuevas se copian de aquí mismo, así que
@@ -4784,8 +4771,7 @@
         try {
           await llamarFuncion({ accion: accion, id: id });
           if (cual.cierra) cerrarDetalle();
-          // Cancelar libera un lugar del tope, así que el contador
-          // también se vuelve a calcular.
+          // El contador también se vuelve a calcular al refrescar.
           await Promise.all([cargarEnvios(), cargarCupo()]);
           // El cuadro que se queda abierto tiene que volver a pintarse:
           // si no, sigue enseñando las ligas viejas. Se busca por id
@@ -5037,6 +5023,16 @@
     });
   }
 
+  const NOMBRES_FRECUENTES_CORTOS = {
+    'gustavo.solares@kwmexico.mx': 'Gustavo Solares',
+    'fernanda.pacheco@kwmexico.mx': 'Fernanda Pacheco',
+  };
+
+  function nombreFrecuenteVisible(f) {
+    const corto = NOMBRES_FRECUENTES_CORTOS[String(f.correo || '').toLowerCase()];
+    return corto || (f.nombre + (f.puesto ? ' (' + f.puesto + ')' : ''));
+  }
+
   async function cargarFrecuentes() {
     const { data, error } = await window.kwSupabase
       .from('firmas_frecuentes')
@@ -5052,7 +5048,7 @@
       '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
         ' data-nombre="' + escapar(f.nombre) + '">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-        '<span>' + escapar(f.nombre) + (f.puesto ? ' (' + escapar(f.puesto) + ')' : '') + '</span>' +
+        '<span>' + escapar(nombreFrecuenteVisible(f)) + '</span>' +
       '</button>').join('');
     caja.style.display = 'flex';
 
@@ -5119,7 +5115,7 @@
       lastModified: Date.now()
     });
     agregarArchivos([archivo]);
-    mostrarVista('archivos');
+    mostrarVista('archivos', { reemplazar: true });
     avisoArchivos('Documento finalizado cargado. Puedes agregar anexos o continuar para colocar las firmas.', 'ok');
     return true;
   }
@@ -5193,7 +5189,11 @@
     // mayoría de las veces esto ya es lo correcto.
     await Promise.all([cargarCupo(), cargarEnvios()]);
     marcarFrecuentesPuestos();
-    await importarDocumentoFinalizado();
+    const importado = await importarDocumentoFinalizado();
+    if (!importado) {
+      const solicitada = vistaDesdeURL();
+      mostrarVista(solicitada === 'editor' ? 'archivos' : solicitada, { reemplazar: true });
+    }
 
     // La sincronización completa contra weetrust se hace aparte y no
     // bloquea la pantalla: si no ha pasado una hora desde la última, ni
