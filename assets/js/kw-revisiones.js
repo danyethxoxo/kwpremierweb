@@ -23,7 +23,9 @@
 
   function folio(folioValor, revision) {
     if (!folioValor) return '';
-    return 'Folio: ' + folioValor + ' · ' + nombreRevision(revision);
+    var valor = String(folioValor).replace(/&#x20;|&nbsp;/gi, ' ').trim();
+    var numero = Number(revision) || 0;
+    return 'Folio: ' + valor + (numero > 0 ? ' Rev. ' + numero : '');
   }
 
   function fecha(valor) {
