@@ -3,18 +3,14 @@
 // id="notif-bell-slot" en el header; este script se encarga de dibujar
 // el ícono, el contador y el desplegable ahí adentro.
 //
-// En celular no se abre un desplegable (no hay espacio y se sentía
-// encimado con el header): la campanita es un enlace que lleva a
-// hub/notificaciones.html, una página completa con la misma lista.
+// En cualquier tamaño se abre como panel lateral, igual que el menu de
+// navegacion. Asi conserva el mismo comportamiento sin encimarse en el
+// encabezado.
 (function () {
   const BASE = '/kwpremierweb';
   let notificaciones = [];
   let abierta = false;
   let backdropEl = null;
-
-  function esMovil() {
-    return window.matchMedia('(max-width: 700px)').matches;
-  }
 
   function fmtRelativo(iso) {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -54,18 +50,6 @@
     const noLeidas = notificaciones.filter(n => !n.leido).length;
     const badge = noLeidas > 0 ? `<span class="notif-bell-badge">${noLeidas > 9 ? '9+' : noLeidas}</span>` : '';
 
-    if (esMovil()) {
-      // En celular no hay desplegable que animar ni fondo que oscurecer:
-      // la campanita manda derecho a su propia página.
-      slot.innerHTML = `
-        <a href="${BASE}/hub/notificaciones.html" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          ${badge}
-        </a>`;
-      if (backdropEl) backdropEl.classList.remove('abierto');
-      return;
-    }
-
     slot.innerHTML = `
       <button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="${abierta}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -89,6 +73,9 @@
         <div class="notif-dropdown-head">
           <span>Notificaciones</span>
           ${noLeidas > 0 ? `<button type="button" class="notif-marcar-todas" id="notif-marcar-todas">Marcar todas como leídas</button>` : ''}
+          <button type="button" class="notif-cerrar" id="notif-cerrar" aria-label="Cerrar notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
         <div class="notif-dropdown-list">
           ${notificaciones.length === 0
@@ -107,6 +94,8 @@
     });
     const btnTodas = document.getElementById('notif-marcar-todas');
     if (btnTodas) btnTodas.addEventListener('click', marcarTodasLeidas);
+    const btnCerrar = document.getElementById('notif-cerrar');
+    if (btnCerrar) btnCerrar.addEventListener('click', cerrarDropdown);
     Array.from(panel.querySelectorAll('.notif-item')).forEach(function (btn) {
       btn.addEventListener('click', function () { abrirNotificacion(btn.dataset.id, btn.dataset.url); });
     });
@@ -202,7 +191,9 @@
   document.addEventListener('click', function (e) {
     if (!abierta) return;
     const slot = document.getElementById('notif-bell-slot');
-    if (slot && !slot.contains(e.target)) cerrarDropdown();
+    const panel = document.getElementById('notif-dropdown');
+    if ((slot && slot.contains(e.target)) || (panel && panel.contains(e.target))) return;
+    cerrarDropdown();
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && abierta) cerrarDropdown();

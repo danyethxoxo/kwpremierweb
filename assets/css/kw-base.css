@@ -1016,7 +1016,6 @@ header > *:last-child { margin-left: auto; }
     opacity: 0; border-bottom-color: transparent;
     transition: opacity 160ms ease, border-color 160ms ease;
   }
-  html.kw-riel .drawer:not(.drawer-der) .drawer-hamburguesa,
   html.kw-riel .drawer:not(.drawer-der) .drawer-close { display: none; }
   html.kw-riel .drawer:not(.drawer-der) .drawer-header .logo {
     display: flex; align-items: center;
@@ -1084,9 +1083,10 @@ header > *:last-child { margin-left: auto; }
      logo se recortaba a la marca "kw" y quedaba como un adorno cortado
      que además no se podía picar. Ahora el espacio sirve para algo: es
      el botón que deja el menú abierto sin tener que sostener el cursor. */
-  html.kw-riel .drawer-hamburguesa {
+  html.kw-riel .drawer:not(.drawer-der) .drawer-hamburguesa {
     display: flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; flex-shrink: 0;
+    order: 2; margin-left: auto;
     border: 0; background: none; padding: 0;
     color: var(--text); cursor: pointer;
     transition: color var(--t-rapido), opacity var(--t-medio);
@@ -1376,13 +1376,37 @@ header > *:last-child { margin-left: auto; }
   opacity: 1; visibility: visible; pointer-events: auto;
   transform: translateY(0) scale(1);
 }
+
+/* El panel vive directamente en body, asi que se mide contra la ventana.
+   En celular entra como el menu principal, solo que desde la derecha. */
+@media (max-width: 1023px) {
+  .notif-dropdown {
+    position: fixed; top: 10px; right: 12px; bottom: 10px; left: auto;
+    width: var(--panel-ancho, 280px); max-width: calc(100vw - 24px); max-height: none;
+    border-radius: 22px; z-index: 201;
+    transform: translateX(calc(100% + 16px));
+    transform-origin: center right;
+    transition: transform var(--t-lento) var(--curva), visibility var(--t-lento);
+  }
+  .notif-dropdown.abierto { transform: translateX(0); }
+  .notif-backdrop { z-index: 200; }
+}
 .notif-dropdown-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
   padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700;
 }
+.notif-dropdown-head > span:first-child { min-width: 0; flex: 1; }
+.notif-cerrar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex: 0 0 32px; padding: 0;
+  border: 0; border-radius: 50%; background: rgba(255,255,255,0.7);
+  color: var(--muted); cursor: pointer;
+}
+.notif-cerrar:hover { color: var(--red); }
+.notif-cerrar svg { width: 18px; height: 18px; }
 .notif-marcar-todas {
   border: none; background: none; color: var(--red); font-size: 11px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
+  cursor: pointer; font-family: inherit; order: 3; width: 100%; text-align: left; padding: 0;
 }
 .notif-dropdown-list { overflow-y: auto; overscroll-behavior: contain; }
 .notif-item {
@@ -1398,6 +1422,24 @@ header > *:last-child { margin-left: auto; }
 .notif-item-msg { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .notif-item-fecha { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .notif-vacio { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* Caja estable para la campana y contador anclado a su esquina. */
+#notif-bell-slot { position: relative; flex: 0 0 44px; overflow: visible; }
+#notif-bell-slot .notif-bell-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-width: 44px; padding: 0;
+  line-height: 1; text-decoration: none;
+}
+#notif-bell-slot .notif-bell-btn svg {
+  display: block; width: 21px; height: 21px; flex: none;
+}
+#notif-bell-slot .notif-bell-badge {
+  position: absolute; top: 3px; right: 1px;
+  min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red); color: #fff; border: 2px solid #fff;
+  font-size: 9px; font-weight: 700; line-height: 1;
+}
 
 /* ══════════════════════════════════════════════════════════════
    Las notificaciones, en panel lateral

@@ -329,7 +329,7 @@
       }
       if (!document.querySelector('script[src*="notif-bell.js"]')) {
         const sc = document.createElement('script');
-        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260829p`;
+        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260915a`;
         document.head.appendChild(sc);
       } else {
         // Ya estaba cargado. Se le avisa de todos modos, sin importar si
