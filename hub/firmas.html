@@ -886,6 +886,22 @@
      renglón. Ahora es una tarjeta como la de "Estatus": aparece igual
      sin importar de qué renglón se abrió. */
   #editar-cuerpo { max-height: 60vh; overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
+  .editar-columnas {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
+  }
+  .editar-col { min-width: 0; padding: 0 10px 4px; }
+  .editar-col + .editar-col {
+    border-left: 1px solid rgba(0,0,0,0.08);
+  }
+  .editar-col:only-child { grid-column: 1 / -1; border-left: 0; }
+  @media (max-width: 640px) {
+    .editar-columnas { grid-template-columns: 1fr; }
+    .editar-col + .editar-col {
+      margin-top: 8px; padding-top: 8px;
+      border-left: 0; border-top: 1px solid rgba(0,0,0,0.08);
+    }
+  }
 
   /* ── El aire del recuadro ──
      Los tres bloques (el título con su etiqueta, los datos del documento
@@ -4625,20 +4641,23 @@
     const f = visibles[i];
     if (!f) return;
 
-    $('editar-cuerpo').innerHTML =
+    $('editar-cuerpo').innerHTML = '<div class="editar-columnas">' +
       (veTodo
-        ? '<div class="env-menu-titulo">Asesor</div>' +
+        ? '<section class="editar-col editar-col-asesor">' +
+          '<div class="env-menu-titulo">Asesor</div>' +
           '<div class="env-menu-busca">' +
             '<input type="text" id="bus-asesor" placeholder="Buscar asesor" autocomplete="off">' +
           '</div>' +
           '<div id="lista-asesores"></div>' +
-          '<div class="env-menu-sep"></div>'
+          '</section>'
         : '') +
-      '<div class="env-menu-titulo">Etiquetas</div>' +
-      '<div class="env-menu-busca">' +
-        '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
-      '</div>' +
-      '<div id="lista-etiquetas"></div>';
+      '<section class="editar-col editar-col-etiquetas">' +
+        '<div class="env-menu-titulo">Etiquetas</div>' +
+        '<div class="env-menu-busca">' +
+          '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
+        '</div>' +
+        '<div id="lista-etiquetas"></div>' +
+      '</section></div>';
     $('modal-editar').style.display = 'flex';
     bloquearFondo(true);
 
