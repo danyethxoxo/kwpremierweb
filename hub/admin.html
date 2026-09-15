@@ -785,6 +785,26 @@
   }
 
   @media (min-width: 1024px) {
+    /* En Asesores, la regla historica que mantiene fija la cabecera
+       convertia todo #contenido-panel en una columna. Ahora ese nodo es
+       la cuadrícula de la barra lateral, así que debe conservar sus dos
+       columnas y trasladar el flex únicamente al contenido principal. */
+    body.en-asesores #contenido-panel.kw-lateral-shell {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      flex: 1;
+      min-height: 0;
+    }
+    body.en-asesores #contenido-panel > .kw-lateral {
+      display: flex;
+      flex: none;
+    }
+    body.en-asesores #contenido-panel > .kw-lateral-principal {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
     #contenido-panel #panel-tabs,
     #contenido-panel .asesores-card > .barra > .buscador,
     #contenido-panel .panel-barra-documentos .kw-buscador { display: none; }
