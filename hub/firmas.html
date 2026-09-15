@@ -435,16 +435,25 @@
       margin: 0 -14px 14px; padding: 0 18px;
       border-bottom: 1px solid rgba(0,0,0,0.07);
     }
+    .firmas-panel-logo {
+      display: flex; align-items: center; min-width: 0;
+      text-decoration: none;
+    }
+    .firmas-panel-logo img {
+      display: block; width: auto; height: 31px; max-width: 165px;
+    }
     .firmas-panel-menu {
       width: 34px; height: 34px; flex: 0 0 auto;
       display: inline-flex; align-items: center; justify-content: center;
+      margin-left: auto;
       padding: 0; border: 0; border-radius: 9px;
       background: transparent; color: var(--text); cursor: pointer;
     }
     .firmas-panel-menu:hover { background: var(--pastel-rojo); color: var(--red); }
     .firmas-panel-menu svg { width: 21px; height: 21px; }
-    body.en-historial .firmas-panel-cabecera .tabla-buscar {
-      flex: 1; min-width: 0; grid-column: auto;
+    body.en-historial .firmas-panel-pagina > .tabla-buscar {
+      width: 100%; flex: none; min-width: 0; grid-column: auto;
+      margin: 0 0 14px;
       padding: 7px 10px; background: #f7f7f7;
     }
 
@@ -1586,6 +1595,9 @@
            la hamburguesa intercambia uno por otro sin mover el contenido. -->
       <aside class="firmas-panel-pagina" id="firmas-panel-pagina" aria-label="Resumen y filtros de firmas">
         <div class="firmas-panel-cabecera">
+          <a class="firmas-panel-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
+            <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
+          </a>
           <button type="button" class="firmas-panel-menu" id="firmas-panel-menu" aria-label="Abrir menú principal" title="Abrir menú principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
@@ -2040,8 +2052,7 @@
     function acomodar() {
       if (mq.matches) {
         panel.append(piezas.resumen, piezas.filtros);
-        const cabeceraPanel = panel.querySelector('.firmas-panel-cabecera');
-        if (cabeceraPanel && piezas.buscar) cabeceraPanel.append(piezas.buscar);
+        if (piezas.buscar && piezas.resumen) panel.insertBefore(piezas.buscar, piezas.resumen);
         principal.append(
           piezas.encabezado, piezas.seleccion, piezas.cupo, piezas.tabla
         );
