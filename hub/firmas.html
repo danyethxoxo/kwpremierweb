@@ -19,6 +19,7 @@
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260915a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260915a">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/kwpremierweb/assets/js/kw-firma-puente.js?v=20260907a"></script>
@@ -1609,12 +1610,12 @@
       <!-- En escritorio, resumen y filtros se montan aquí como el panel
            propio de la página. Comparte la misma franja con el menú global:
            la hamburguesa intercambia uno por otro sin mover el contenido. -->
-      <aside class="firmas-panel-pagina" id="firmas-panel-pagina" aria-label="Resumen y filtros de firmas">
-        <div class="firmas-panel-cabecera">
-          <a class="firmas-panel-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
+      <aside class="firmas-panel-pagina kw-lateral" id="firmas-panel-pagina" aria-label="Resumen y filtros de firmas">
+        <div class="firmas-panel-cabecera kw-lateral-cabecera">
+          <a class="firmas-panel-logo kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="firmas-panel-menu" id="firmas-panel-menu" aria-label="Abrir menú principal" title="Abrir menú principal">
+          <button type="button" class="firmas-panel-menu kw-lateral-menu" id="firmas-panel-menu" data-kw-menu-principal aria-label="Abrir menú principal" title="Abrir menú principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
         </div>
@@ -2090,29 +2091,6 @@
     acomodar();
     mq.addEventListener('change', acomodar);
 
-    // drawer.js sigue siendo quien abre y cierra el menú. Este botón solo
-    // acciona su hamburguesa; el observador refleja el estado para hacer
-    // el intercambio visual entre ambos contenidos de la misma franja.
-    const drawer = $('drawer');
-    const menuLocal = $('firmas-panel-menu');
-    const menuDrawer = $('drawer-hamburguesa');
-    if (!drawer || !menuLocal || !menuDrawer) return;
-
-    function sincronizar() {
-      document.body.classList.toggle(
-        'menu-global-abierto', drawer.classList.contains('open')
-      );
-    }
-    menuLocal.addEventListener('click', (evento) => {
-      // Evita que el mismo clic llegue al cierre global de drawer.js y
-      // deshaga la apertura apenas un instante después.
-      evento.stopPropagation();
-      menuDrawer.click();
-    });
-    new MutationObserver(sincronizar).observe(drawer, {
-      attributes: true, attributeFilter: ['class']
-    });
-    sincronizar();
   }
 
   document.addEventListener('DOMContentLoaded', prepararPanelHistorial, { once: true });
@@ -5455,6 +5433,7 @@
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260915a" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260915a"></script>
 
 </body>
 </html>

@@ -1,0 +1,113 @@
+/* Barra lateral de pagina compartida.
+   Cada pantalla aporta su contenido; esta pieza conserva el logo, el
+   acceso al menu global, el buscador y la navegacion en el mismo lugar. */
+.kw-lateral,
+.kw-lateral-principal { min-width: 0; }
+
+.kw-lateral-cabecera {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 -14px 14px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+}
+.kw-lateral-logo { display: flex; align-items: center; min-width: 0; text-decoration: none; }
+.kw-lateral-logo img { display: block; width: auto; height: 31px; max-width: 165px; }
+.kw-lateral-menu {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text, #211d1d);
+  cursor: pointer;
+}
+.kw-lateral-menu:hover { background: var(--pastel-rojo, #fff0f0); color: var(--red, #a30000); }
+.kw-lateral-menu svg { width: 21px; height: 21px; }
+
+.kw-lateral-buscador {
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 0 11px;
+  border: 1px solid var(--border, rgba(0,0,0,.14));
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+.kw-lateral-buscador svg { width: 16px; height: 16px; flex: none; color: var(--muted, #777); }
+.kw-lateral-buscador input {
+  width: 100%; min-width: 0; border: 0; outline: 0;
+  background: transparent; color: var(--text, #211d1d); font: inherit; font-size: 13px;
+}
+.kw-lateral-buscador:has(input:disabled) { opacity: .55; }
+
+.kw-lateral-nav { display: flex; flex-direction: column; gap: 7px; }
+.kw-lateral-nav button {
+  width: 100%; min-height: 38px; padding: 8px 11px;
+  border: 1px solid var(--border, rgba(0,0,0,.14)); border-radius: 10px;
+  background: #fff; color: var(--text, #211d1d); text-align: left;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.kw-lateral-nav button:hover { background: #fafafa; border-color: rgba(163,0,0,.28); }
+.kw-lateral-nav button.activo {
+  background: var(--pastel-rojo, #fff0f0); color: var(--red, #a30000);
+  border-color: rgba(163,0,0,.28);
+}
+
+@media (min-width: 1024px) {
+  html.kw-riel body:has(.kw-lateral-shell) { padding-left: 0; }
+  body:has(.kw-lateral-shell) > .kw-header,
+  body:has(.kw-lateral-shell) > footer { display: none; }
+  body:has(.kw-lateral-shell) > main.kw-page {
+    width: 100%; max-width: none; min-height: 100vh; padding: 0 !important;
+  }
+  .kw-lateral-shell {
+    display: grid;
+    grid-template-columns: 292px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+  .kw-lateral {
+    grid-column: 1;
+    height: 100vh;
+    min-height: 0;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0 14px 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border-right: 1px solid var(--border, rgba(0,0,0,.1));
+    box-shadow: 8px 0 24px rgba(35,27,27,.08);
+    transition: opacity 150ms ease, visibility 150ms ease;
+  }
+  .kw-lateral-principal { grid-column: 2; padding: 18px; }
+
+  html.kw-riel body:has(.kw-lateral-shell):not(.menu-global-abierto) #drawer {
+    visibility: hidden; pointer-events: none;
+  }
+  html.kw-riel body:has(.kw-lateral-shell).menu-global-abierto #drawer {
+    visibility: visible; width: 292px;
+  }
+  body.menu-global-abierto .kw-lateral-shell > .kw-lateral {
+    opacity: 0; visibility: hidden; pointer-events: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .kw-lateral-shell { display: contents; }
+  .kw-lateral-shell > .kw-lateral { display: none; }
+  .kw-lateral-shell > .kw-lateral-principal { display: contents; }
+}

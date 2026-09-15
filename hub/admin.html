@@ -368,6 +368,7 @@
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260915a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260915a">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
@@ -500,7 +501,8 @@
      Solo lo que cambia respecto al modal de kw-base.css: este es más
      ancho porque lleva formulario, y trae el botón de eliminar. */
   #modal-editar-usuario .modal-box {
-    max-width: 620px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;
+    width: min(760px, calc(100vw - 32px)); max-width: 760px;
+    max-height: none; overflow: visible;
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px;
     padding: 24px;
   }
@@ -515,7 +517,7 @@
   #modal-editar-usuario .kw-select-menu {
     left: 0 !important; right: auto !important;
     width: 100%; min-width: 100%; max-width: 100%;
-    max-height: min(240px, 42vh);
+    max-height: none; overflow-y: visible;
   }
   #modal-editar-usuario .field:has(#edit-email),
   #modal-editar-usuario .field:has(#edit-password) { grid-column: 1 / -1; }
@@ -532,8 +534,11 @@
   #modal-editar-usuario .editar-acciones .btn-eliminar-usuario {
     color: #a30000; border: 1px solid #d99; background: transparent;
   }
-  @media (max-width: 620px) {
-    #modal-editar-usuario .modal-box { grid-template-columns: 1fr; padding: 20px; }
+  @media (max-width: 620px), (max-height: 560px) {
+    #modal-editar-usuario .modal-box {
+      grid-template-columns: 1fr; padding: 20px;
+      max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden;
+    }
     #modal-editar-usuario .field { grid-column: 1 / -1; }
   }
   /* Eliminar no es una acción de la misma altura que Guardar: va más
@@ -779,6 +784,13 @@
     }
   }
 
+  @media (min-width: 1024px) {
+    #contenido-panel #panel-tabs,
+    #contenido-panel .asesores-card > .barra > .buscador,
+    #contenido-panel .panel-barra-documentos .kw-buscador { display: none; }
+    #contenido-panel .kw-lateral-principal { min-height: 100vh; }
+  }
+
   .barra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .barra .crece { flex: 1; }
   .barra-botones { display: flex; align-items: center; gap: 10px; }
@@ -888,7 +900,23 @@
   </header>
 
   <main class="kw-page">
-    <div id="contenido-panel" style="display:none;">
+    <div id="contenido-panel" class="kw-lateral-shell" style="display:none;">
+      <aside class="kw-lateral" aria-label="Navegación del Panel Master">
+        <div class="kw-lateral-cabecera">
+          <a class="kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
+            <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
+          </a>
+          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Abrir menú principal" title="Abrir menú principal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+        </div>
+        <label class="kw-lateral-buscador" aria-label="Buscar en la sección actual">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="panel-lateral-buscar" placeholder="Buscar" oninput="buscarDesdePanelLateral(this.value)">
+        </label>
+        <nav class="kw-lateral-nav" id="panel-lateral-nav" aria-label="Secciones del panel"></nav>
+      </aside>
+      <div class="kw-lateral-principal">
       <div class="barra-superior">
         <div class="kw-page-encabezado">
           <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
@@ -1128,6 +1156,7 @@
         <div id="creados-cont"></div>
       </section>
       </div>
+      </div>
     </div>
 
     <div id="denegado" class="denegado" style="display:none;">
@@ -1162,7 +1191,7 @@
       <div class="field">
         <label>Puesto</label>
         <select id="edit-puesto">
-          <option value="">- Sin puesto -</option>
+          <option value="">Sin puesto</option>
           <option value="Principal Operator">Principal Operator</option>
           <option value="Director of First Impressions">Director of First Impressions</option>
           <option value="Technology Director">Technology Director</option>
@@ -1293,6 +1322,7 @@
 
   function cambiarTabPanel(tab) {
     window.kwUI.activarTab(tab, document.getElementById('panel-tabs'));
+    sincronizarPanelLateral(tab);
     // Solo la de Asesores es una lista larga que conviene que ruede por
     // dentro; las otras dos son formularios y ruedan como siempre.
     document.body.classList.toggle('en-asesores', tab === 'asesores');
@@ -1304,6 +1334,49 @@
       document.body.style.height = '';
       document.body.style.overflowY = '';
       document.documentElement.style.overflowY = '';
+    }
+  }
+
+  function prepararPanelLateral() {
+    const nav = document.getElementById('panel-lateral-nav');
+    const tabs = document.querySelectorAll('#panel-tabs .kw-tab');
+    if (!nav) return;
+    nav.replaceChildren();
+    tabs.forEach((tab) => {
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.dataset.panel = tab.dataset.tab;
+      boton.textContent = tab.textContent.trim();
+      boton.addEventListener('click', () => cambiarTabPanel(tab.dataset.tab));
+      nav.appendChild(boton);
+    });
+  }
+
+  function sincronizarPanelLateral(tab) {
+    document.querySelectorAll('#panel-lateral-nav button').forEach((boton) => {
+      boton.classList.toggle('activo', boton.dataset.panel === tab);
+    });
+    const buscador = document.getElementById('panel-lateral-buscar');
+    if (!buscador) return;
+    buscador.disabled = tab === 'operatividad';
+    buscador.placeholder = tab === 'operatividad' ? 'Sin búsqueda' : 'Buscar';
+    buscador.value = '';
+    buscarDesdePanelLateral('');
+  }
+
+  function buscarDesdePanelLateral(valor) {
+    const tab = document.querySelector('#panel-tabs .kw-tab.activo')?.dataset.tab || 'asesores';
+    if (tab === 'asesores') {
+      const buscador = document.getElementById('asesores-buscador');
+      if (buscador) { buscador.value = valor; pintarGrupos(); }
+    } else if (tab === 'documentos') {
+      const buscador = document.getElementById('doc-buscador');
+      if (buscador) { buscador.value = valor; filtrarDocumentosPanel(); }
+    } else if (tab === 'usuarios') {
+      const consulta = String(valor || '').trim().toLowerCase();
+      document.querySelectorAll('#usuarios-cont .usuario-fila').forEach((fila) => {
+        fila.style.display = !consulta || fila.textContent.toLowerCase().includes(consulta) ? '' : 'none';
+      });
     }
   }
 
@@ -1527,6 +1600,10 @@
     document.getElementById('modal-editar-usuario').style.display = 'none';
     usuarioEnEdicion = null;
   }
+
+  document.getElementById('modal-editar-usuario').addEventListener('click', function (evento) {
+    if (evento.target === this) cerrarModalEditar();
+  });
 
   function togglePasswordVisibility(id, btn) {
     const input = document.getElementById(id);
@@ -3035,6 +3112,7 @@
       const pedida = (location.hash || '').replace('#', '');
       const inicial = document.querySelector('#panel-tabs [data-tab="' + pedida + '"]')
         || document.querySelector('#panel-tabs .kw-tab');
+      prepararPanelLateral();
       if (inicial) cambiarTabPanel(inicial.dataset.tab);
 
       document.getElementById('contenido-panel').style.display = '';
@@ -3251,5 +3329,6 @@
   }
 </script>
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260915a" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260915a"></script>
 </body>
 </html>
