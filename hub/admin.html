@@ -450,6 +450,9 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     align-items: end;
   }
+  .invite-row.con-puesto {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, .75fr) minmax(190px, 1fr) auto;
+  }
   .invite-row .field { margin-bottom: 0; }
   .invite-row .field input { height: var(--control-h); padding: 0 var(--sp-3); }
   .btn-invite {
@@ -497,7 +500,7 @@
      Solo lo que cambia respecto al modal de kw-base.css: este es más
      ancho porque lleva formulario, y trae el botón de eliminar. */
   #modal-editar-usuario .modal-box {
-    max-width: 620px; max-height: 90vh; overflow-y: auto;
+    max-width: 620px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px;
     padding: 24px;
   }
@@ -509,6 +512,11 @@
   #modal-editar-usuario .field label { font-size: 11px; margin-bottom: 5px; }
   #modal-editar-usuario input,
   #modal-editar-usuario select { min-height: 40px; height: 40px; }
+  #modal-editar-usuario .kw-select-menu {
+    left: 0 !important; right: auto !important;
+    width: 100%; min-width: 100%; max-width: 100%;
+    max-height: min(240px, 42vh);
+  }
   #modal-editar-usuario .field:has(#edit-email),
   #modal-editar-usuario .field:has(#edit-password) { grid-column: 1 / -1; }
   #modal-editar-usuario .editar-acciones {
@@ -989,10 +997,23 @@
               <input type="email" id="invite-email" placeholder="Correo" aria-label="Correo" required />
             </div>
             <div class="field">
-              <select id="invite-rol" aria-label="Rol">
+              <select id="invite-rol" aria-label="Rol" onchange="actualizarPuestoInvitacion()">
                 <option value="admin">Admin</option>
                 <option value="staff">Liderazgo</option>
                 <option value="asociado" selected>Asociado</option>
+              </select>
+            </div>
+            <div class="field" id="invite-puesto-wrap" hidden>
+              <select id="invite-puesto" aria-label="Puesto de Liderazgo">
+                <option value="">- Selecciona puesto -</option>
+                <option value="Principal Operator">Principal Operator</option>
+                <option value="Director of First Impressions">Director of First Impressions</option>
+                <option value="Technology Director">Technology Director</option>
+                <option value="Productivity Coach">Productivity Coach</option>
+                <option value="Transaction Manager">Transaction Manager</option>
+                <option value="Market Center Administrator Assistant">Market Center Administrator Assistant</option>
+                <option value="Market Center Administrator">Market Center Administrator</option>
+                <option value="Team Leader">Team Leader</option>
               </select>
             </div>
             <button type="submit" class="btn-invite" id="invite-btn">Agregar</button>
@@ -1139,7 +1160,7 @@
         <select id="edit-rol"></select>
       </div>
       <div class="field">
-        <label>Rol</label>
+        <label>Puesto</label>
         <select id="edit-puesto">
           <option value="">- Sin puesto -</option>
           <option value="Principal Operator">Principal Operator</option>
@@ -1423,19 +1444,46 @@
     el.className = 'msg ' + kind;
   }
 
+  function actualizarPuestoInvitacion() {
+    const form = document.getElementById('invite-form');
+    const wrap = document.getElementById('invite-puesto-wrap');
+    const select = document.getElementById('invite-puesto');
+    const esLiderazgo = document.getElementById('invite-rol').value === 'staff';
+    wrap.hidden = !esLiderazgo;
+    form.classList.toggle('con-puesto', esLiderazgo);
+    if (!esLiderazgo) {
+      select.value = '';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
   async function enviarInvitacion(e) {
     e.preventDefault();
     const btn = document.getElementById('invite-btn');
     const email = document.getElementById('invite-email').value.trim();
     const rol = document.getElementById('invite-rol').value;
+    const puesto = rol === 'staff' ? document.getElementById('invite-puesto').value : '';
+    if (rol === 'staff' && !puesto) {
+      setInviteMsg('Selecciona el puesto de Liderazgo.', 'error');
+      return;
+    }
     btn.disabled = true;
     const textoInvite = btn.textContent;
     btn.textContent = 'Agregando…';
     setInviteMsg('', '');
     try {
-      await llamarFuncion(INVITAR_URL, { email, rol });
+      const invitado = await llamarFuncion(INVITAR_URL, { email, rol });
+      if (rol === 'staff' && invitado && invitado.user_id) {
+        await llamarFuncion(GESTIONAR_URL, {
+          accion: 'actualizar',
+          user_id: invitado.user_id,
+          puesto: puesto
+        });
+      }
       setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
       document.getElementById('invite-email').value = '';
+      document.getElementById('invite-puesto').value = '';
+      document.getElementById('invite-puesto').dispatchEvent(new Event('change', { bubbles: true }));
       cargarUsuarios();
     } catch (err) {
       setInviteMsg((err && err.message) || 'Ocurrió un error, intenta de nuevo.', 'error');
@@ -1499,10 +1547,13 @@
         user_id: usuarioEnEdicion.id,
         nombre: document.getElementById('edit-nombre').value.trim(),
         apellido: document.getElementById('edit-apellido').value.trim(),
-        email: document.getElementById('edit-email').value.trim(),
         role: document.getElementById('edit-rol').value,
         puesto: document.getElementById('edit-puesto').value
       };
+      const emailEditado = document.getElementById('edit-email').value.trim();
+      if (emailEditado.toLowerCase() !== String(usuarioEnEdicion.email || '').toLowerCase()) {
+        payload.email = emailEditado;
+      }
       const nuevaPassword = document.getElementById('edit-password').value;
       if (nuevaPassword) payload.password = nuevaPassword;
 
@@ -2973,6 +3024,7 @@
           document.querySelector('#invite-rol option[value="admin"]').remove();
         }
         document.getElementById('invite-form').addEventListener('submit', enviarInvitacion);
+        actualizarPuestoInvitacion();
         cargarUsuarios();
       }
 

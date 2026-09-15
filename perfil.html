@@ -294,6 +294,10 @@
           </button>
         </div>
       </div>
+      <div class="field" id="password-codigo-wrap" style="display:none;">
+        <label>Código de seguridad enviado a tu correo</label>
+        <input type="text" id="password-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+      </div>
       <button type="button" class="btn-guardar" id="btn-cambiar-password" onclick="cambiarPasswordPerfil()">Actualizar contraseña</button>
       <div class="msg" id="password-msg"></div>
     </div>
@@ -801,13 +805,32 @@
 
     btn.disabled = true;
     try {
-      const { error } = await window.kwSupabase.auth.updateUser({ password });
+      const codigoWrap = document.getElementById('password-codigo-wrap');
+      const codigo = document.getElementById('password-codigo').value.trim();
+      const cambios = { password };
+      if (codigo) cambios.nonce = codigo;
+      const { error } = await window.kwSupabase.auth.updateUser(cambios);
       if (error) throw error;
       setMsg('password-msg', 'Contraseña actualizada.', 'ok');
       document.getElementById('nueva-password').value = '';
       document.getElementById('nueva-password2').value = '';
+      document.getElementById('password-codigo').value = '';
+      codigoWrap.style.display = 'none';
     } catch (err) {
-      setMsg('password-msg', err.message || 'Ocurrió un error al actualizar.', 'error');
+      const detalle = String((err && (err.code || err.message)) || '');
+      if (!codigo && /reauth|nonce|security purposes|recent/i.test(detalle)) {
+        try {
+          const { error: reauthError } = await window.kwSupabase.auth.reauthenticate();
+          if (reauthError) throw reauthError;
+          document.getElementById('password-codigo-wrap').style.display = '';
+          document.getElementById('password-codigo').focus();
+          setMsg('password-msg', 'Te enviamos un código de seguridad. Escríbelo y vuelve a pulsar Actualizar contraseña.', 'ok');
+        } catch (reauthErr) {
+          setMsg('password-msg', reauthErr.message || 'No se pudo enviar el código de seguridad.', 'error');
+        }
+      } else {
+        setMsg('password-msg', err.message || 'Ocurrió un error al actualizar.', 'error');
+      }
     } finally {
       btn.disabled = false;
     }
