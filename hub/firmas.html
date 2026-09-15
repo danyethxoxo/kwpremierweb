@@ -443,7 +443,10 @@
     }
     .firmas-panel-menu:hover { background: var(--pastel-rojo); color: var(--red); }
     .firmas-panel-menu svg { width: 21px; height: 21px; }
-    .firmas-panel-cabecera strong { font-size: 15px; }
+    body.en-historial .firmas-panel-cabecera .tabla-buscar {
+      flex: 1; min-width: 0; grid-column: auto;
+      padding: 7px 10px; background: #f7f7f7;
+    }
 
     body.en-historial .firmas-panel-pagina .kw-resumen {
       display: flex; flex-direction: column; gap: 8px;
@@ -522,7 +525,29 @@
       padding-top: 18px !important;
       padding-bottom: 18px;
     }
-    body.en-historial .kw-page-encabezado { margin-bottom: 12px; }
+    body.en-historial .kw-page-encabezado {
+      position: relative; min-height: 40px; margin-bottom: 12px;
+    }
+    body.en-historial .kw-page-encabezado > .kw-page-titulo {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: max-content; max-width: calc(100% - 260px);
+      margin: 0; text-align: center;
+    }
+    body.en-historial .kw-page-encabezado > .kw-page-acciones {
+      margin-left: auto;
+    }
+    body.en-historial .kw-page-acciones > #notif-bell-slot {
+      width: 40px; flex-basis: 40px;
+    }
+    body.en-historial .kw-page-acciones > #notif-bell-slot .notif-bell-btn {
+      width: 40px; min-width: 40px; height: 40px;
+      padding: 0; border: 0; background: transparent; color: var(--muted);
+      cursor: pointer;
+    }
+    body.en-historial .kw-page-acciones > #notif-bell-slot .notif-bell-btn:hover {
+      color: var(--red);
+    }
     body.en-historial .kw-resumen {
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px; margin-bottom: 8px;
@@ -1572,7 +1597,6 @@
           <button type="button" class="firmas-panel-menu" id="firmas-panel-menu" aria-label="Abrir menú principal" title="Abrir menú principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
-          <strong>Firmas</strong>
         </div>
       </aside>
       <section class="firmas-historial-principal" id="firmas-historial-principal"></section>
@@ -2013,6 +2037,8 @@
       encabezado: vista.querySelector('.kw-page-encabezado'),
       resumen: vista.querySelector('.kw-resumen'),
       filtros: vista.querySelector('.kw-filtros-caja'),
+      buscar: vista.querySelector('.tabla-buscar'),
+      buscarFila: vista.querySelector('.tabla-buscar-fila'),
       seleccion: $('barra-seleccion'),
       cupo: Array.from(vista.querySelectorAll('#cupo'))[0],
       tabla: vista.querySelector('.tabla-envios'),
@@ -2022,14 +2048,24 @@
     function acomodar() {
       if (mq.matches) {
         panel.append(piezas.resumen, piezas.filtros);
+        const cabeceraPanel = panel.querySelector('.firmas-panel-cabecera');
+        if (cabeceraPanel && piezas.buscar) cabeceraPanel.append(piezas.buscar);
         principal.append(
           piezas.encabezado, piezas.seleccion, piezas.cupo, piezas.tabla
         );
+        const acciones = piezas.encabezado && piezas.encabezado.querySelector('.kw-page-acciones');
+        const campana = document.getElementById('notif-bell-slot');
+        const nuevo = document.getElementById('btn-nuevo');
+        if (acciones && campana) acciones.insertBefore(campana, nuevo || null);
       } else {
+        if (piezas.buscarFila && piezas.buscar) piezas.buscarFila.append(piezas.buscar);
         [piezas.encabezado, piezas.resumen, piezas.filtros,
           piezas.seleccion, piezas.cupo, piezas.tabla].forEach((pieza) => {
           if (pieza) vista.insertBefore(pieza, panel);
         });
+        const sueltos = document.querySelector('#header-firmas .kw-header-sueltos');
+        const campana = document.getElementById('notif-bell-slot');
+        if (sueltos && campana) sueltos.append(campana);
       }
     }
     acomodar();
