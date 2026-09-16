@@ -19,7 +19,7 @@
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260915a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916a">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/kwpremierweb/assets/js/kw-firma-puente.js?v=20260907a"></script>
@@ -4340,4 +4340,1151 @@
     // de catorce hojas es la diferencia entre esperar y no esperar.
     // La pantalla de carga es una sola, la que se puso al abrir: bajar y
     // dibujar el PDF es la parte larga de lo mismo, y cambiarla a medio
-    // camino por otra cosa se ve como si al[Truncated]
+    // camino por otra cosa se ve como si algo hubiera fallado y vuelto a
+    // empezar. Aquí solo se usa el hueco que ya está puesto.
+
+    // Bajar y dibujar el PDF va en su propio try: es lo único que puede
+    // fallar por algo de afuera (el archivo no se deja leer, la librería
+    // no cargó), y es lo único que justifica caer al visor del navegador.
+    // Pintar los recuadros, que viene después, es cuenta nuestra: si
+    // estuviera aquí dentro, un descuido pintando una marca tiraría
+    // también el documento ya dibujado y se vería exactamente igual que
+    // no poder abrirlo, sin manera de distinguir un problema del otro.
+    let hojas;
+    try {
+      await cargarLibs();
+      const res = await fetch(urlVista);
+      if (!res.ok) throw new Error('no se pudo bajar');
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
+      $('doc-cargando')?.remove();
+      // Las hojas ya dibujadas entran con un fundido corto, en vez de
+      // aparecer de golpe donde estaban los aros.
+      $('doc-paginas').classList.add('aparece');
+    } catch {
+      // Si el archivo no se deja leer desde aquí, al menos se abre en el
+      // visor del navegador. Ahí ya no se pueden pintar los recuadros
+      // encima, así que se dice: mejor eso que dejar creer que el
+      // documento no tiene ninguna firma colocada.
+      $('doc-cuerpo').innerHTML =
+        ((f.posiciones || []).length
+          ? '<div class="kw-nota">Este documento se está viendo con el visor del navegador, '
+            + 'así que no se pueden dibujar encima los recuadros de firma.</div>'
+          : '') +
+        '<iframe class="doc-visor" src="' + escapar(urlVista) + '"></iframe>';
+      return;
+    }
+
+    // Encima, dónde va la firma de cada quien. Sin esto la vista previa
+    // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
+    // que es justo lo que uno viene a revisar.
+    //
+    // Las que faltan llevan su recuadro de color. Las que ya se firmaron
+    // llevan el mismo recuadro pero en verde, con el nombre y "Firmado"
+    // adentro: weetrust solo entrega el trazo dibujado en el documento
+    // completo (su api regresa vacío el campo de la firma suelta mientras
+    // falte alguien), así que hasta entonces no hay un trazo real que
+    // mostrar y el recuadro verde es lo más honesto.
+    (f.posiciones || []).forEach((pz) => {
+      const pag = hojas[pz.pagina - 1];
+      if (!pag) return;
+      const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
+        .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
+
+      const el = document.createElement('div');
+      el.style.position = 'absolute';
+      el.style.left = ((pz.x / pz.pagAncho) * 100) + '%';
+      el.style.top = ((pz.y / pz.pagAlto) * 100) + '%';
+      el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
+      el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
+
+      if (quien && quien.firmado && quien.imagen) {
+        el.className = 'firma-trazo';
+        el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
+          escapar(quien.nombre || quien.correo) + '">';
+      } else if (quien && quien.firmado) {
+        // Firmó, pero no tenemos su trazo: el mismo recuadro de siempre,
+        // ya no del color que se eligió al colocarlo sino en verde, con
+        // su nombre y la palabra "Firmado" adentro, más la palomita en la
+        // esquina para distinguirlo de un vistazo.
+        el.className = 'marca-firma vista firmada';
+        el.innerHTML = '<span class="marca-rotulo">' +
+          escapar(quien.nombre || quien.correo) + ' · Firmado</span>' +
+          '<span class="firma-hecha-check" title="Firmado por ' +
+          escapar(quien.nombre || quien.correo) + '">' +
+          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+          '</span>';
+      } else {
+        el.className = 'marca-firma vista';
+        el.style.setProperty('--marca-color', pz.color || '#FFD247');
+        el.innerHTML = '<span class="marca-rotulo">' +
+          escapar(quien ? (quien.nombre || quien.correo) : pz.correo) + '</span>';
+      }
+      pag.capa.appendChild(el);
+    });
+  }
+
+
+
+  // ── Retomar un borrador ─────────────────────────────────────
+  // Reconstruye el editor tal como se dejó: el PDF que se había subido,
+  // los firmantes capturados y los recuadros de firma en su lugar.
+  async function retomarBorrador(f) {
+    mostrarVista('editor');
+    $('editor-cargando').style.display = 'flex';
+    $('paginas').innerHTML = '';
+    aviso('', '');
+
+    borradorId = f.id;
+    rutaSubida = f.archivo_ruta;
+    origenEnvio = f.origen === 'guardado' ? 'guardado' : 'subido';
+    documentoGuardadoId = f.documento_guardado_id || null;
+    // No se juntaron archivos: se está retomando uno ya unido. La lista
+    // se deja vacía y el nombre del guardado es el que manda.
+    archivos = [];
+    marcas = [];
+    paginas = [];
+    desarmar();
+
+    // El nombre del guardado es el que manda: aquí no hay archivos que
+    // volver a leer, el PDF ya vive en el bucket.
+    tituloDoc = (f.nombre_archivo || '').replace(/\.pdf$/i, '').trim()
+      || f.titulo || 'Documento';
+    $('editor-nombre').textContent = f.nombre_archivo || 'Borrador guardado';
+
+    // Los firmantes, como se dejaron. La pregunta de "¿yo también
+    // firmo?" no aplica: eso ya se contestó cuando se armó.
+    $('firmantes').innerHTML = '';
+    $('pregunta-firmo').style.display = 'none';
+    const guardados = Array.isArray(f.firmantes) ? f.firmantes : [];
+    if (guardados.length) {
+      guardados.forEach((x) => agregarFirmante(x.nombre || '', x.correo || ''));
+      // Las verificaciones que traía cada uno.
+      const filas = $('firmantes').querySelectorAll('.firmante-fila');
+      guardados.forEach((x, n) => {
+        const fila = filas[n];
+        if (!fila) return;
+        if (x.identificacion) {
+          const b = fila.querySelector('[data-verif="' + x.identificacion + '"]');
+          if (b) b.classList.add('activo');
+        }
+        if (x.check) {
+          const b = fila.querySelector('[data-verif="check"]');
+          if (b) b.classList.add('activo');
+        }
+      });
+    } else {
+      agregarFirmante('', '');
+    }
+    marcarUnico();
+    marcarFrecuentesPuestos();
+
+    // Los observadores, igual que se dejaron. Si el borrador se guardó
+    // sin la TM, fue a propósito: no se vuelve a poner sola al reabrirlo.
+    $('observadores').innerHTML = '';
+    $('aviso-tm').style.display = 'none';
+    const observadoresGuardados = Array.isArray(f.observadores) ? f.observadores : [];
+    observadoresGuardados.forEach((o) => agregarObservador(o.correo || ''));
+    tmQuitadaAMano = !hayObservador(CORREO_TM);
+    asegurarFilaObservador();
+
+    try {
+      // El PDF se baja del bucket. Es el mismo que se subió al guardar,
+      // así que la paginación coincide con las coordenadas guardadas.
+      const { data: firmada, error } = await window.kwSupabase
+        .storage.from('firmas').createSignedUrl(f.archivo_ruta, 3600);
+      if (error || !firmada?.signedUrl) throw new Error('No se pudo leer el archivo guardado.');
+
+      const res = await fetch(firmada.signedUrl);
+      if (!res.ok) throw new Error('No se pudo bajar el archivo guardado.');
+      pdfUnido = new Uint8Array(await res.arrayBuffer());
+
+      await cargarLibs();
+      await pintarDocumento(pdfUnido);
+      $('editor-cargando').style.display = 'none';
+
+      // Y de vuelta los recuadros. Se guardaron en puntos del PDF; aquí
+      // se convierten otra vez a porcentaje de la página, que es como
+      // los maneja el editor para que aguanten el zoom.
+      const filas = Array.from($('firmantes').querySelectorAll('.firmante-fila'));
+      marcas = (f.posiciones || []).map((p) => {
+        const pag = paginas[p.pagina - 1];
+        if (!pag) return null;
+        // Se vuelve a casar con su renglón por correo: es lo único que
+        // no cambia entre guardar y retomar.
+        const fila = filas.find((x) =>
+          x.querySelector('.firmante-mail').value.trim().toLowerCase() === String(p.correo).toLowerCase());
+        if (!fila) return null;
+        return {
+          id: crypto.randomUUID(),
+          fila,
+          nombre: fila.querySelector('.firmante-nom').value.trim() || p.correo,
+          correo: String(p.correo).toLowerCase(),
+          pagina: p.pagina,
+          x: (p.x / p.pagAncho) * 100,
+          y: (p.y / p.pagAlto) * 100,
+          anchoPct: (p.ancho / p.pagAncho) * 100,
+          altoPct: (p.alto / p.pagAlto) * 100,
+          color: p.color || COLORES[0],
+        };
+      }).filter(Boolean);
+      pintarMarcas();
+    } catch (e) {
+      $('editor-cargando').style.display = 'none';
+      aviso(e.message || 'No se pudo abrir el borrador.', 'error');
+    }
+  }
+
+  // ── Los dos menús de cada renglón ───────────────────────────
+  // Están separados a propósito. El de los tres puntos hace cosas que
+  // salen del sitio (le vuelve a llegar un correo a un cliente, se
+  // retira un documento); el del lápiz solo ordena lo nuestro (de quién
+  // es, cómo está etiquetado). Mezclarlos deja "reenviar a los
+  // firmantes" pegado a "cambiar color de etiqueta", y ahí es fácil
+  // picarle al que no era.
+
+  let flotante = null;
+  // Qué etiqueta tiene abierto su panel de color y borrado. Vive fuera
+  // del menú para que sobreviva a que la lista se vuelva a pintar.
+  let tagAbierta = null;
+
+  // Qué botón abrió el menú que está abierto. Sirve para que volver a
+  // picarle lo cierre en vez de cerrarlo y abrirlo otra vez, que desde
+  // fuera se ve como que el botón no hace nada.
+  let botonAbierto = null;
+
+  function cerrarFlotante() {
+    if (flotante) { flotante.remove(); flotante = null; }
+    botonAbierto = null;
+    tagAbierta = null;
+  }
+
+  // Siempre pegado al botón, hacia abajo. Antes "volteaba" hacia arriba
+  // cuando no cabía abajo, pero eso es justo lo que lo hacía salir en un
+  // lugar distinto según el renglón: a veces arriba, a veces abajo, a
+  // veces recortado contra el tope de la pantalla tapando el
+  // encabezado. Así siempre es el mismo comportamiento.
+  //
+  // Para que nunca se salga por abajo, su propio alto se limita al
+  // hueco real que quede hasta el fondo de la pantalla: si el contenido
+  // no cabe entero, se desplaza solo por dentro (ya trae su barra).
+  function colocar(caja, boton, ancho) {
+    const r = boton.getBoundingClientRect();
+    const top = r.bottom + 4;
+    caja.style.top = top + 'px';
+    caja.style.maxHeight = Math.max(160, window.innerHeight - top - 8) + 'px';
+    caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
+  }
+
+  function abrirFlotante(boton, ancho, html) {
+    // Si ya estaba abierto por este mismo botón, se cierra y ya.
+    if (botonAbierto === boton) { cerrarFlotante(); return null; }
+
+    cerrarFlotante();
+    botonAbierto = boton;
+    const caja = document.createElement('div');
+    caja.className = 'env-menu';
+    caja.style.width = ancho + 'px';
+    caja.innerHTML = html;
+    document.body.appendChild(caja);
+    flotante = caja;
+    colocar(caja, boton, ancho);
+    caja.addEventListener('click', (e) => e.stopPropagation());
+    return caja;
+  }
+
+  document.addEventListener('click', cerrarFlotante);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarFlotante(); });
+  // Van pegados a la pantalla y no al renglón: si algo se mueve debajo
+  // se quedarían flotando en el lugar equivocado.
+  // Solo cuando se mueve algo de FUERA del menú. Con la captura pelada,
+  // rodar la rueda dentro del propio menú lo cerraba, así que la lista
+  // de asesores y la de etiquetas no se podían recorrer.
+  window.addEventListener('scroll', (e) => {
+    if (flotante && e.target instanceof Node && flotante.contains(e.target)) return;
+    cerrarFlotante();
+  }, true);
+
+  // ── Tres puntos: acciones sobre el envío ──
+  function abrirMenu(boton, i) {
+    const f = visibles[i];
+    if (!f) return;
+
+    // Reenviar y recordar solo tienen sentido mientras alguien deba
+    // firmar. En un completado no hay a quién insistirle.
+    const enCurso = f.estado === 'pendiente';
+    const puedeBorrar = f.estado !== 'completado';
+
+    const caja = abrirFlotante(boton, 220,
+      (enCurso
+        ? '<button type="button" class="env-menu-op" data-accion="reenviar">' +
+            '<span>Reenviar el correo</span></button>'
+        : '') +
+      (enCurso
+        ? '<button type="button" class="env-menu-op" data-accion="regenerar_enlaces">' +
+            '<span>Regenerar ligas de firma</span></button>'
+        : '') +
+      (enCurso && puedeBorrar ? '<div class="env-menu-sep"></div>' : '') +
+      (puedeBorrar
+        ? '<button type="button" class="env-menu-op peligro" data-accion="borrar">' +
+            '<span>Eliminar</span></button>'
+        : '') +
+      (!enCurso && !puedeBorrar
+        ? '<div class="env-menu-nada">Un documento ya firmado no se puede cambiar.</div>'
+        : ''));
+    // Vino null: era el mismo botón y lo que se hizo fue cerrarlo.
+    if (!caja) return;
+
+    caja.querySelectorAll('[data-accion]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const accion = b.dataset.accion;
+        cerrarFlotante();
+
+        if (accion === 'borrar' && !(await window.kwUI.confirm('¿Eliminar "' + nombreDoc(f) + '" del historial?\n\n'
+          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.'))) return;
+
+        try {
+          const r = await llamarFuncion({ accion, id: f.id });
+          if (r.aviso) await window.kwUI.alert(r.aviso);
+          await Promise.all([cargarEnvios(), cargarCupo()]);
+        } catch (e) {
+          await window.kwUI.alert(e.message || 'No se pudo completar la acción.');
+        }
+      });
+    });
+  }
+
+  // ── Lápiz: asesor y etiquetas ──
+  // Es una tarjeta como la de "Estatus" (mismo modal, mismo botón de
+  // cerrar) y no un menú pegado al icono: eso era justo lo que la hacía
+  // salir en lugares distintos según qué renglón fuera. Así se ve igual
+  // siempre, sin importar de dónde se abrió.
+  function cerrarEditar() {
+    $('modal-editar').style.display = 'none';
+    $('editar-cuerpo').innerHTML = '';
+    tagAbierta = null;
+    bloquearFondo(false);
+  }
+
+  function abrirEditar(i) {
+    const f = visibles[i];
+    if (!f) return;
+
+    $('editar-cuerpo').innerHTML = '<div class="editar-columnas">' +
+      (veTodo
+        ? '<section class="editar-col editar-col-asesor">' +
+          '<div class="env-menu-titulo">Asesor</div>' +
+          '<div class="env-menu-busca">' +
+            '<input type="text" id="bus-asesor" placeholder="Buscar asesor" autocomplete="off">' +
+          '</div>' +
+          '<div id="lista-asesores"></div>' +
+          '</section>'
+        : '') +
+      '<section class="editar-col editar-col-etiquetas">' +
+        '<div class="env-menu-titulo">Etiquetas</div>' +
+        '<div class="env-menu-busca">' +
+          '<input type="text" id="bus-etiqueta" placeholder="Buscar o crear etiqueta" maxlength="40" autocomplete="off">' +
+        '</div>' +
+        '<div id="lista-etiquetas"></div>' +
+      '</section></div>';
+    $('modal-editar').style.display = 'flex';
+    bloquearFondo(true);
+
+    // ── Asesores ──
+    // Solo cuatro a la vez: con cien asesores la lista completa se hace
+    // eterna de recorrer. Para llegar al que no se ve, se escribe.
+    function pintarAsesores(busca) {
+      const q = (busca || '').trim().toLowerCase();
+      const hallados = asesores
+        .filter((a) => !q || String(a.nombre || a.email).toLowerCase().includes(q))
+        .slice(0, 4);
+
+      $('lista-asesores').innerHTML =
+        '<button type="button" class="env-menu-op' + (!f.user_id ? ' elegida' : '') + '" data-asesor="">' +
+          '<span>Sin identificar</span></button>' +
+        hallados.map((a) =>
+          '<button type="button" class="env-menu-op' + (f.user_id === a.id ? ' elegida' : '') + '"' +
+            ' data-asesor="' + a.id + '"><span>' + escapar(a.nombre || a.email) + '</span></button>').join('') +
+        (!hallados.length && q ? '<div class="env-menu-nada">Nadie con ese nombre</div>' : '');
+
+      $('lista-asesores').querySelectorAll('[data-asesor]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          cerrarEditar();
+          const { error } = await window.kwSupabase.rpc('firmas_asignar_asesor', {
+            p_documento: f.id, p_asesor: b.dataset.asesor || null,
+          });
+          if (error) { await window.kwUI.alert('No se pudo cambiar el asesor: ' + error.message); return; }
+          await cargarEnvios();
+        });
+      });
+    }
+
+    if (veTodo) {
+      pintarAsesores('');
+      $('bus-asesor').addEventListener('input', (e) => pintarAsesores(e.target.value));
+    }
+
+    // ── Etiquetas ──
+    const puestas = new Set(f.etiquetas || []);
+
+    async function ponerEtiquetas(ids) {
+      const { error } = await window.kwSupabase.rpc('firmas_etiquetar', {
+        p_documento: f.id, p_etiquetas: ids,
+      });
+      if (error) { await window.kwUI.alert('No se pudo etiquetar: ' + error.message); return false; }
+      return true;
+    }
+
+    function pintarEtiquetas(busca) {
+      const q = (busca || '').trim();
+      const ql = q.toLowerCase();
+      const hallados = etiquetas
+        .filter((e) => !ql || e.nombre.toLowerCase().includes(ql))
+        .slice(0, 4);
+
+      // Si lo que se escribió no existe todavía, se ofrece crearlo desde
+      // ahí mismo: es el momento en que uno se da cuenta de que le falta
+      // una etiqueta, y mandarlo a otra pantalla a crearla rompe el hilo.
+      const exacta = etiquetas.some((e) => e.nombre.toLowerCase() === ql);
+      const crear = (q && !exacta)
+        ? '<button type="button" class="env-menu-op crear" data-crear="1">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+            '<span>Crear "' + escapar(q) + '"</span></button>' +
+          '<div class="env-menu-colores" id="colores-nueva">' +
+            COLORES_TAG.map((c, n) =>
+              '<button type="button" class="tag-color' + (n === 0 ? ' elegido' : '') + '"' +
+                ' data-color="' + c + '" style="background:' + c + '"></button>').join('') +
+          '</div>'
+        : '';
+
+      $('lista-etiquetas').innerHTML = crear + hallados.map((e) =>
+        '<div class="env-menu-fila">' +
+          '<button type="button" class="env-menu-op' + (puestas.has(e.id) ? ' elegida' : '') + '"' +
+            ' data-etiqueta="' + e.id + '">' +
+            '<i style="background:' + escapar(e.color) + '"></i><span>' + escapar(e.nombre) + '</span>' +
+          '</button>' +
+          '<button type="button" class="tag-menu-btn' + (tagAbierta === e.id ? ' abierto' : '') + '"' +
+            ' data-tagmenu="' + e.id + '" aria-label="Opciones de la etiqueta">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">' +
+              '<circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+        (tagAbierta === e.id
+          ? '<div class="tag-panel">' +
+              '<div class="env-menu-colores">' +
+                COLORES_TAG.map((c) =>
+                  '<button type="button" class="tag-color' + (c === e.color ? ' elegido' : '') + '"' +
+                    ' data-recolor="' + e.id + '" data-color="' + c + '" style="background:' + c + '"></button>').join('') +
+              '</div>' +
+              '<button type="button" class="env-menu-op peligro" data-borrar-tag="' + e.id + '">' +
+                '<span>Borrar etiqueta</span></button>' +
+            '</div>'
+          : '')).join('') +
+        (!hallados.length && !q ? '<div class="env-menu-nada">Todavía no hay etiquetas. Escribe una para crearla.</div>' : '');
+
+      // Poner o quitar. Se manda la lista completa como debe quedar y no
+      // "agrega esta": así dos clics seguidos no dejan la etiqueta
+      // repetida ni dependen del orden en que lleguen.
+      $('lista-etiquetas').querySelectorAll('[data-etiqueta]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.etiqueta;
+          const nuevas = puestas.has(id)
+            ? [...puestas].filter((x) => x !== id)
+            : [...puestas, id];
+          cerrarEditar();
+          if (await ponerEtiquetas(nuevas)) await cargarEnvios();
+        });
+      });
+
+      // El color elegido para la etiqueta nueva.
+      const paleta = $('colores-nueva');
+      if (paleta) {
+        paleta.querySelectorAll('[data-color]').forEach((b) => {
+          b.addEventListener('click', () => {
+            paleta.querySelectorAll('[data-color]').forEach((x) => x.classList.remove('elegido'));
+            b.classList.add('elegido');
+          });
+        });
+      }
+
+      $('lista-etiquetas').querySelectorAll('[data-recolor]').forEach((b) => {
+        b.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const { error } = await window.kwSupabase.rpc('firmas_actualizar_etiqueta', {
+            p_etiqueta: b.dataset.recolor, p_nombre: null, p_color: b.dataset.color,
+          });
+          if (error) { await window.kwUI.alert('No se pudo cambiar el color: ' + error.message); return; }
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          // El panel se queda abierto: casi siempre se prueban dos o
+          // tres colores antes de quedarse con uno.
+          pintarEtiquetas($('bus-etiqueta').value);
+          pintarEnvios();
+        });
+      });
+
+      $('lista-etiquetas').querySelectorAll('[data-borrar-tag]').forEach((b) => {
+        b.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const et = etiquetas.find((x) => x.id === b.dataset.borrarTag);
+          if (!(await window.kwUI.confirm('¿Borrar la etiqueta "' + (et ? et.nombre : '') + '"?\n\n'
+            + 'Se quita de todos los documentos que la tuvieran.'))) return;
+          const { error } = await window.kwSupabase.rpc('firmas_borrar_etiqueta', {
+            p_etiqueta: b.dataset.borrarTag,
+          });
+          if (error) { await window.kwUI.alert('No se pudo borrar: ' + error.message); return; }
+          tagAbierta = null;
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          pintarEtiquetas($('bus-etiqueta').value);
+          await cargarEnvios();
+        });
+      });
+
+      const btnCrear = $('lista-etiquetas').querySelector('[data-crear]');
+      if (btnCrear) {
+        btnCrear.addEventListener('click', async () => {
+          const color = paleta?.querySelector('.elegido')?.dataset.color || COLORES_TAG[0];
+          const { data, error } = await window.kwSupabase.rpc('firmas_crear_etiqueta', {
+            p_nombre: q, p_color: color,
+          });
+          if (error) { await window.kwUI.alert('No se pudo crear la etiqueta: ' + error.message); return; }
+          cerrarEditar();
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          // Se le pone de una vez al documento desde el que se creó:
+          // quien la crea ahí es porque la quiere en ese documento.
+          if (await ponerEtiquetas([...puestas, data.id])) await cargarEnvios();
+        });
+      }
+
+      // Cambiar color o borrar. Se despliega dentro del mismo panel, no
+      // como otro menú flotante: el anterior se posicionaba desde el
+      // botón que lo abrió, y como ese botón desaparecía al cerrar el
+      // panel padre, acababa siempre en la esquina de arriba.
+      $('lista-etiquetas').querySelectorAll('[data-tagmenu]').forEach((b) => {
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = b.dataset.tagmenu;
+          tagAbierta = tagAbierta === id ? null : id;
+          pintarEtiquetas($('bus-etiqueta').value);
+        });
+      });
+    }
+
+    pintarEtiquetas('');
+    $('bus-etiqueta').addEventListener('input', (e) => pintarEtiquetas(e.target.value));
+  }
+
+  const COLORES_TAG = ['#6b7280', '#16a34a', '#2563eb', '#e0a218', '#c62027', '#7c3aed', '#0891b2', '#db2777'];
+
+  // ── El detalle de un envío ──────────────────────────────────
+
+  function abrirDetalle(i) {
+    const f = visibles[i];
+    if (!f) return;
+
+    const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+    const observadores = Array.isArray(f.observadores) ? f.observadores : [];
+    const pill = PILL[f.estado] || PILL.pendiente;
+
+    const quienes = firmantes.map((x) => {
+      // La liga solo sirve mientras esa persona no haya firmado. Si ya
+      // firmó, enseñarla invita a mandársela a alguien que se va a topar
+      // con un documento donde ya no puede hacer nada.
+      const caducada = x.url_expira && Number(x.url_expira) < Date.now();
+      const derecha = x.firmado
+        ? '<span class="det-firmo">Ya firmó' +
+            (x.firmado_at ? '<span class="det-firmo-fecha">' + fecha(x.firmado_at) + '</span>' : '') +
+          '</span>'
+        : (x.url_firma && !caducada
+            ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
+                  '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
+                '</svg>Copiar liga</button>' +
+              (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
+            : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
+
+      return '<div class="det-firmante">' +
+        '<span class="det-punto' + (x.firmado ? ' ok' : '') + '">' +
+          (x.firmado
+            ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '') +
+        '</span>' +
+        '<span class="det-datos">' +
+          '<span class="det-nom">' + escapar(x.nombre) + '</span>' +
+          '<span class="det-mail">' + escapar(x.correo) + '</span>' +
+          (x.identificacion ? iconoVerificacion(x.identificacion) : '') +
+          (x.check ? iconoVerificacion('check') : '') +
+        '</span>' +
+        '<span class="det-derecha">' + derecha + '</span>' +
+      '</div>';
+    }).join('');
+
+    const acciones =
+      // Le pide a weetrust ligas nuevas para los que todavía no firman.
+      // Es lo que se viene a hacer aquí: las ligas caducan, y cuando una
+      // ya venció no hay otra manera de darle a esa persona por dónde
+      // firmar. De paso trae el estado más reciente de cada firmante,
+      // que es lo que hacía el botón de antes.
+      (f.estado === 'pendiente'
+        ? '<button type="button" class="det-btn principal" data-accion="regenerar_enlaces" data-id="' + f.id + '">Actualizar ligas</button>'
+        : '') +
+      (f.estado === 'completado' && f.pdf_firmado_url
+        ? '<a class="det-btn principal" href="' + escapar(f.pdf_firmado_url) + '" target="_blank" rel="noopener">Descargar firmado</a>'
+        : '');
+
+    $('det-cuerpo').innerHTML =
+      '<div class="det-encabezado">' +
+        '<div class="det-meta">' +
+          (veTodo && f.autor && f.autor.nombre
+            ? '<div><b>Creado por:</b> ' + escapar(f.autor.nombre) + '</div>' : '') +
+          '<div><b>Documento:</b> ' + escapar(nombreDoc(f)) + '</div>' +
+          (f.weetrust_document_id
+            ? '<div><b>ID:</b> <span class="det-id">' + escapar(f.weetrust_document_id) + '</span></div>' : '') +
+          '<div><b>Fecha de envío:</b> ' + fecha(f.enviado_at || f.created_at) + '</div>' +
+          (observadores.length
+            ? '<div><b>Observadores:</b> ' + escapar(observadores.map((o) => o.correo).join(', ')) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
+      '<div class="det-firmantes">' + (quienes || '<div class="env-vacio">Este documento no llegó a tener firmantes.</div>') + '</div>' +
+      (acciones ? '<div class="det-acciones">' + acciones + '</div>' : '');
+
+    // La etiqueta del estatus vive fuera del cuerpo, en el renglón del
+    // título.
+    $('det-estatus').className = 'kw-pill ' + pill[0];
+    $('det-estatus').textContent = pill[1];
+
+    cablearAcciones($('det-cuerpo'));
+    $('modal-detalle').style.display = 'flex';
+    bloquearFondo(true);
+  }
+
+  function cerrarDetalle() {
+    $('modal-detalle').style.display = 'none';
+    bloquearFondo(false);
+  }
+
+  function cerrarDoc() { $('modal-doc').style.display = 'none'; $('doc-cuerpo').innerHTML = ''; bloquearFondo(false); }
+  $('doc-cerrar').addEventListener('click', cerrarDoc);
+  $('modal-doc').addEventListener('click', (e) => { if (e.target === $('modal-doc')) cerrarDoc(); });
+
+  $('det-cerrar').addEventListener('click', cerrarDetalle);
+  $('modal-detalle').addEventListener('click', (e) => {
+    // Solo cuando se pica el fondo, no cuando el clic viene de la
+    // tarjeta: si no, arrastrar para seleccionar texto lo cierra.
+    if (e.target === $('modal-detalle')) cerrarDetalle();
+  });
+
+  $('editar-cerrar').addEventListener('click', cerrarEditar);
+  $('modal-editar').addEventListener('click', (e) => {
+    if (e.target === $('modal-editar')) cerrarEditar();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if ($('modal-detalle').style.display === 'flex') cerrarDetalle();
+    if ($('modal-doc').style.display === 'flex') cerrarDoc();
+    if ($('modal-editar').style.display === 'flex') cerrarEditar();
+  });
+
+  // Copiar liga y actualizar. Vive aparte porque estos
+  // botones nacen dentro del modal y no en la lista.
+  // Qué dice cada botón mientras trabaja, y qué se hace al terminar.
+  const ACCIONES = {
+    regenerar_enlaces: {
+      trabajando: 'Pidiendo ligas...',
+      // No se cierra: las ligas nuevas se copian de aquí mismo, así que
+      // el cuadro se queda abierto y se vuelve a pintar con ellas.
+      cierra: false,
+    },
+  };
+
+  function cablearAcciones(raiz) {
+    raiz.querySelectorAll('[data-liga]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const original = b.innerHTML;
+        try {
+          await navigator.clipboard.writeText(b.dataset.liga);
+          b.textContent = 'Copiada';
+        } catch {
+          // navigator.clipboard no existe fuera de https ni en algunos
+          // navegadores viejos. Ahí se enseña para copiar a mano, que es
+          // peor pero deja seguir.
+          window.prompt('Copia la liga de firma:', b.dataset.liga);
+        }
+        setTimeout(() => { b.innerHTML = original; }, 1600);
+      });
+    });
+
+    raiz.querySelectorAll('[data-accion]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const accion = b.dataset.accion;
+        const cual = ACCIONES[accion] || {};
+        if (cual.confirmar && !(await window.kwUI.confirm(cual.confirmar))) return;
+
+        const id = b.dataset.id;
+        const textoOriginal = b.textContent;
+        b.disabled = true;
+        b.textContent = cual.trabajando || 'Un momento...';
+        try {
+          await llamarFuncion({ accion: accion, id: id });
+          if (cual.cierra) cerrarDetalle();
+          // El contador también se vuelve a calcular al refrescar.
+          await Promise.all([cargarEnvios(), cargarCupo()]);
+          // El cuadro que se queda abierto tiene que volver a pintarse:
+          // si no, sigue enseñando las ligas viejas. Se busca por id
+          // porque la lista se acaba de recargar y el lugar que ocupaba
+          // pudo cambiar.
+          if (!cual.cierra) {
+            const i = visibles.findIndex((x) => x.id === id);
+            if (i >= 0) abrirDetalle(i); else cerrarDetalle();
+          }
+        } catch (err) {
+          await window.kwUI.alert(err.message || 'No se pudo completar la acción.');
+          b.disabled = false;
+          b.textContent = textoOriginal;
+        }
+      });
+    });
+  }
+
+  // Los filtros del historial. 'todos' primero porque es lo que uno
+  // quiere ver al entrar; los demás sirven para buscar algo concreto.
+  // ── Filtros ─────────────────────────────────────────────────
+  // Se traen todos los envíos de una sola vez y el filtrado y el orden
+  // se hacen aquí. Así combinar cuatro filtros es instantáneo y no hay
+  // que volver a preguntarle a la base por cada cambio.
+
+  // Cómo ordenar. "Pendientes primero" y "completados primero" existen
+  // porque son dos formas distintas de trabajar: una es perseguir lo que
+  // falta, la otra es revisar lo que ya cerró.
+  const ORDENES = {
+    'fecha-desc': (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    'fecha-asc': (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    'asesor': (a, b) => {
+      const na = (a.autor && a.autor.nombre) || 'zzz';
+      const nb = (b.autor && b.autor.nombre) || 'zzz';
+      // Dentro de cada asesor, lo más nuevo arriba.
+      return na.localeCompare(nb) || new Date(b.created_at) - new Date(a.created_at);
+    },
+    'pendientes': (a, b) =>
+      (a.estado === 'pendiente' ? 0 : 1) - (b.estado === 'pendiente' ? 0 : 1)
+      || new Date(b.created_at) - new Date(a.created_at),
+    'completados': (a, b) =>
+      (a.estado === 'completado' ? 0 : 1) - (b.estado === 'completado' ? 0 : 1)
+      || new Date(b.created_at) - new Date(a.created_at),
+  };
+
+  // kw-ui convierte cada <select> en su propio componente y lo marca
+  // como listo, así que cambiarle las opciones después no se refleja: el
+  // menú que se ve lo armó con las de antes. Para cambiarlas hay que
+  // deshacer el envoltorio, quitarle la marca y dejar que lo vuelva a
+  // armar.
+  function rehacerSelect(id, html, valor) {
+    const sel = $(id);
+    const caja = sel.closest('.kw-select');
+    sel.innerHTML = html;
+    if (valor != null) sel.value = valor;
+    if (caja) {
+      caja.parentNode.insertBefore(sel, caja);
+      caja.remove();
+    }
+    delete sel.dataset.kwListo;
+    if (window.kwUI) window.kwUI.selects(sel.parentNode);
+  }
+
+  function pintarOpcionesFiltros() {
+    // Quién falta de firmar, armado con los firmantes frecuentes: son
+    // los que se repiten en todos los contratos y por eso vale la pena
+    // preguntarlo con un clic.
+    if (frecuentes.length >= 2) {
+      const a = frecuentes[0], b = frecuentes[1];
+      rehacerSelect('f-falta',
+        '<option value="">Firmas de cualquiera</option>' +
+        '<option value="' + escapar(a.correo) + '">Sin firma de ' + escapar(a.puesto || a.nombre.split(' ')[0]) + '</option>' +
+        '<option value="' + escapar(b.correo) + '">Sin firma de ' + escapar(b.puesto || b.nombre.split(' ')[0]) + '</option>' +
+        '<option value="__ambos__">Falta firma de ambos</option>', faltaFirma || '');
+      $('w-falta').style.display = '';
+    } else {
+      $('w-falta').style.display = 'none';
+    }
+
+    // Las etiquetas que de verdad existen. Sin ninguna creada el
+    // desplegable se esconde en vez de quedarse vacío.
+    if (etiquetas.length) {
+      rehacerSelect('f-etiqueta',
+        '<option value="">Todas las etiquetas</option>' +
+        etiquetas.map((e) =>
+          '<option value="' + e.id + '">' + escapar(e.nombre) + '</option>').join(''), etiqueta || '');
+      $('w-etiqueta').style.display = '';
+    } else {
+      $('w-etiqueta').style.display = 'none';
+    }
+  }
+
+  function armarFiltros() {
+    $('f-estado').addEventListener('change', (e) => { filtro = e.target.value; pintarEnvios(); });
+    $('f-falta').addEventListener('change', (e) => { faltaFirma = e.target.value || null; pintarEnvios(); });
+    $('f-etiqueta').addEventListener('change', (e) => { etiqueta = e.target.value || null; pintarEnvios(); });
+    $('f-orden').addEventListener('change', (e) => { orden = e.target.value; pintarEnvios(); });
+    $('f-desde').addEventListener('change', (e) => { desde = e.target.value || null; pintarEnvios(); });
+    $('f-hasta').addEventListener('change', (e) => { hasta = e.target.value || null; pintarEnvios(); });
+
+    // La búsqueda es un campo de texto y no un desplegable porque con
+    // cien asesores el desplegable no se puede recorrer. Se filtra
+    // mientras se escribe, por asesor o por nombre del documento.
+    $('f-buscar').addEventListener('input', (e) => {
+      buscaAsesor = e.target.value.trim().toLowerCase();
+      pintarEnvios();
+    });
+
+    // El campo del header (el que arma drawer.js) queda siempre a la
+    // vista en esta pantalla, así que su botón de limpiar solo aparece
+    // cuando hay algo escrito. drawer.js le pasa lo que se teclea a
+    // '#f-buscar', que es el que filtra de verdad.
+
+    // El checkbox de "todos" vive pegado arriba de la tabla, fuera de lo
+    // que pintarEnvios() vuelve a dibujar en cada filtrada, así que su
+    // manejador se pone una sola vez aquí. Usa "visibles" (lo último que
+    // se pintó) y no la lista completa: marcar "todos" con un filtro
+    // puesto no debería alcanzar a lo que el filtro está escondiendo.
+    const todos = $('elegir-todos');
+    todos.addEventListener('click', (e) => e.stopPropagation());
+    todos.addEventListener('change', () => {
+      visibles.forEach((x) => {
+        if (todos.checked) elegidos.add(x.id);
+        else elegidos.delete(x.id);
+      });
+      pintarEnvios();
+    });
+  }
+
+  function envíosFiltrados() {
+    const lista = envios.filter((e) => {
+      if (filtro === 'activos') {
+        if (!['pendiente', 'completado'].includes(e.estado)) return false;
+      } else if (filtro !== 'todos' && e.estado !== filtro) return false;
+
+      if (buscaAsesor) {
+        const nombreAsesor = ((e.autor && e.autor.nombre) || '').toLowerCase();
+        // "sin" encuentra los que no se pudieron atribuir a nadie, que
+        // son justo los que hay que repartir.
+        const coincideAsesor = nombreAsesor
+          ? nombreAsesor.includes(buscaAsesor)
+          : 'sin identificar'.includes(buscaAsesor);
+        const coincideDoc = nombreDoc(e).toLowerCase().includes(buscaAsesor);
+        if (!coincideAsesor && !coincideDoc) return false;
+      }
+
+      if (etiqueta && !(e.etiquetas || []).includes(etiqueta)) return false;
+
+      // Por la misma fecha que enseña la tabla. Los dos extremos entran
+      // en el rango: quien pide "del 1 al 31" espera los del 31.
+      if (desde || hasta) {
+        const dia = String(e.created_at || '').slice(0, 10);
+        if (!dia) return false;
+        if (desde && dia < desde) return false;
+        if (hasta && dia > hasta) return false;
+      }
+
+      if (faltaFirma) {
+        const firmantes = Array.isArray(e.firmantes) ? e.firmantes : [];
+        const faltaDe = (correo) => {
+          const suyo = firmantes.find((x) => String(x.correo).toLowerCase() === correo);
+          // Tiene que estar invitado Y no haber firmado: un documento
+          // donde esa persona ni participa no es uno al que le "falte"
+          // su firma.
+          return !!suyo && !suyo.firmado;
+        };
+        if (faltaFirma === '__ambos__') {
+          if (frecuentes.length < 2) return false;
+          if (!faltaDe(frecuentes[0].correo) || !faltaDe(frecuentes[1].correo)) return false;
+        } else if (!faltaDe(faltaFirma)) return false;
+      }
+      return true;
+    });
+
+    return lista.sort(ORDENES[orden] || ORDENES['fecha-desc']);
+  }
+
+  async function cargarEtiquetas() {
+    const { data } = await window.kwSupabase
+      .from('firmas_etiquetas').select('id, nombre, color').order('nombre');
+    etiquetas = data || [];
+  }
+
+  // Solo para el liderazgo: es el único que puede reasignar, y traerse
+  // la lista completa de usuarios para quien no la va a usar es gastar
+  // una consulta en balde.
+  async function cargarAsesores() {
+    if (!veTodo) return;
+    const { data } = await window.kwSupabase
+      .from('profiles').select('id, nombre, email').order('nombre');
+    asesores = data || [];
+  }
+
+  async function cargarEnvios() {
+    // Quien es Staff o más ve los envíos de todo el equipo, así que en su
+    // caso hay que traer también de quién es cada uno. Para el asesor esa
+    // consulta extra no aporta nada: todos son suyos.
+    const campos = 'id, titulo, estado, firmantes, observadores, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
+      + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
+
+    const { data, error } = await window.kwSupabase
+      .from('firmas_documentos')
+      .select(campos)
+      .order('created_at', { ascending: false })
+      .limit(300);
+
+    if (error) {
+      $('lista-envios').innerHTML =
+        '<div class="kw-vacio">No se pudieron cargar los envíos: ' + escapar(error.message) + '</div>';
+      return;
+    }
+    envios = data || [];
+    // Lo que ya no está (se borró, o cambió de estado y el filtro lo
+    // esconde) deja de contar como seleccionado.
+    const vivos = new Set(envios.map((x) => x.id));
+    [...elegidos].forEach((id) => { if (!vivos.has(id)) elegidos.delete(id); });
+    pintarEnvios();
+  }
+
+
+  // ── Arranque ────────────────────────────────────────────────
+
+  // Enseña cuánto le queda del mes y, si ya se acabó, apaga el botón.
+  // El freno de verdad está en la Edge Function; esto es para que nadie
+  // llene el formulario completo para enterarse hasta el final.
+  async function cargarCupo() {
+    const caja = $('cupo');
+    const { data, error } = await window.kwSupabase.rpc('firmas_disponibles', { p_user: miUserId });
+    if (error || !data || data.sin_tope) { caja.style.display = 'none'; return; }
+
+    const quedan = Number(data.restantes);
+    caja.classList.toggle('agotado', quedan <= 0);
+    caja.innerHTML = quedan > 0
+      ? 'Te quedan <strong>' + quedan + '</strong> de ' + data.limite + ' documentos este mes.'
+      : 'Ya usaste tus <strong>' + data.limite + '</strong> documentos de este mes. '
+        + 'Pídele al equipo de liderazgo que te suba el tope si necesitas más.';
+    caja.style.display = 'block';
+
+    $('btn-enviar').disabled = quedan <= 0;
+  }
+
+  // Los que firman casi siempre, de un clic. Se apaga el botón del que
+  // ya está puesto en vez de esconderlo, para que se vea que esa persona
+  // ya quedó y no que la opción desapareció.
+  function marcarFrecuentesPuestos() {
+    const puestos = leerFirmantes().map((f) => f.correo.toLowerCase());
+    $('frecuentes').querySelectorAll('.firma-frecuente').forEach((b) => {
+      b.disabled = puestos.includes(b.dataset.correo);
+    });
+  }
+
+  const NOMBRES_FRECUENTES_CORTOS = {
+    'gustavo.solares@kwmexico.mx': 'Gustavo Solares',
+    'fernanda.pacheco@kwmexico.mx': 'Fernanda Pacheco',
+  };
+
+  function nombreFrecuenteVisible(f) {
+    const corto = NOMBRES_FRECUENTES_CORTOS[String(f.correo || '').toLowerCase()];
+    return corto || (f.nombre + (f.puesto ? ' (' + f.puesto + ')' : ''));
+  }
+
+  async function cargarFrecuentes() {
+    const { data, error } = await window.kwSupabase
+      .from('firmas_frecuentes')
+      .select('nombre, correo, puesto')
+      .eq('activo', true)
+      .order('orden');
+
+    if (error || !data || !data.length) return;
+    frecuentes = data;
+
+    const caja = $('frecuentes');
+    caja.innerHTML = data.map((f) =>
+      '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
+        ' data-nombre="' + escapar(f.nombre) + '">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+        '<span>' + escapar(nombreFrecuenteVisible(f)) + '</span>' +
+      '</button>').join('');
+    caja.style.display = 'flex';
+
+    caja.querySelectorAll('.firma-frecuente').forEach((b) => {
+      b.addEventListener('click', () => {
+        // Si el primer renglón está vacío se aprovecha en vez de dejar
+        // un hueco arriba del que se acaba de agregar.
+        const vacia = Array.from($('firmantes').querySelectorAll('.firmante-fila')).find((f) =>
+          !f.querySelector('.firmante-nom').value.trim() && !f.querySelector('.firmante-mail').value.trim());
+        if (vacia) {
+          vacia.querySelector('.firmante-nom').value = b.dataset.nombre;
+          vacia.querySelector('.firmante-mail').value = b.dataset.correo;
+        } else {
+          agregarFirmante(b.dataset.nombre, b.dataset.correo);
+        }
+        marcarFrecuentesPuestos();
+      });
+    });
+  }
+
+  // ── Que la tabla se mantenga al día sola ────────────────────
+  // Dos mecanismos, a propósito. Realtime avisa al instante cuando algo
+  // cambia en la base (que es cuando llega un webhook de weetrust), pero
+  // depende de una conexión abierta que se puede caer sin avisar: el
+  // portátil se durmió, cambió el wifi, el navegador congeló la pestaña.
+  // Por eso además se recarga al volver a la pestaña, que es justo
+  // cuando la persona va a mirar y cuando más importa que esté al día.
+  function escucharCambios() {
+    window.kwSupabase
+      .channel('firmas-en-vivo')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'firmas_documentos' },
+        () => {
+          // Solo se repinta si el historial está a la vista. Recargar
+          // mientras alguien arma un envío no sirve de nada y le mueve
+          // la pantalla debajo de las manos.
+          if ($('vista-historial').style.display !== 'none') cargarEnvios();
+        })
+      .subscribe();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible'
+        && $('vista-historial').style.display !== 'none') cargarEnvios();
+    });
+  }
+
+  async function importarDocumentoFinalizado() {
+    if (new URLSearchParams(location.search).get('desde') !== 'documento') return false;
+    if (!window.kwFirmaPuente) return false;
+    var pendiente = await window.kwFirmaPuente.consumir();
+    if (!pendiente || !pendiente.blob) return false;
+
+    archivos = [];
+    pdfUnido = null;
+    marcas = [];
+    paginas = [];
+    borradorId = null;
+    rutaSubida = null;
+    origenEnvio = 'guardado';
+    documentoGuardadoId = pendiente.documentoId || null;
+
+    var archivo = new File([pendiente.blob], pendiente.nombre || 'documento.pdf', {
+      type: 'application/pdf',
+      lastModified: Date.now()
+    });
+    agregarArchivos([archivo]);
+    mostrarVista('archivos', { reemplazar: true });
+    avisoArchivos('Documento finalizado cargado. Puedes agregar anexos o continuar para colocar las firmas.', 'ok');
+    return true;
+  }
+
+  async function iniciar() {
+    try {
+      await iniciarDeVerdad();
+    } finally {
+      // Pase lo que pase (que todo salga bien, que algo truene a medio
+      // camino), la pantalla de carga no se puede quedar tapando todo
+      // para siempre.
+      $('pantalla-carga').style.display = 'none';
+    }
+  }
+
+  async function iniciarDeVerdad() {
+    const { data: userData } = await window.kwSupabase.auth.getUser();
+    if (!userData || !userData.user) return;
+    miUserId = userData.user.id;
+
+    const { data: perfil } = await window.kwSupabase
+      .from('profiles').select('nombre, email, role').eq('id', miUserId).single();
+    miPerfil = { nombre: perfil?.nombre || '', correo: perfil?.email || '' };
+
+    // El liderazgo ve el historial de todo el equipo. Esto solo decide
+    // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
+    // políticas de la base, que es donde no se puede hacer trampa.
+    veTodo = ['master', 'admin', 'staff'].includes(String(perfil?.role));
+    // El botón de traer de weetrust ya no hace falta en el día a día: el
+    // webhook crea solo los documentos que se mandan desde su panel. Se
+    // queda escondido y solo aparece al abrir la pantalla con
+    // ?importar=1, para cuando haya que forzar una resincronización.
+    const pedido = new URLSearchParams(location.search).get('importar') === '1';
+    if (pedido && ['master', 'admin'].includes(String(perfil?.role))) {
+      $('btn-importar').hidden = false;
+      $('btn-limpiar').hidden = false;
+      // La raya que los separa del resto del menú solo tiene sentido si
+      // hay algo debajo de ella.
+      $('op-mantenimiento-raya').hidden = false;
+    }
+
+    // Cada vez que alguien teclea puede coincidir (o dejar de coincidir)
+    // con un frecuente, así que los botones se revisan al vuelo.
+    $('firmantes').addEventListener('input', () => {
+      marcarFrecuentesPuestos();
+      // Para que el botón de fijar se pinte en cuanto el correo queda
+      // completo, mientras se escribe.
+      refrescarBotonesFijar();
+      // Los recuadros ya colocados llevan el nombre del firmante escrito
+      // encima, así que se redibujan al corregirlo.
+      if (marcas.length) pintarMarcas();
+      // Por si el correo que se acaba de teclear es el del MCA o la OP.
+      revisarObservadorTM();
+    });
+
+    escucharCambios();
+    // Los frecuentes primero: los botones de "falta la firma de" se
+    // arman con ellos, así que pintar los filtros antes los dejaría sin
+    // esa mitad.
+    await cargarFrecuentes();
+    armarFiltros();
+    // Las etiquetas y los asesores antes de pintar la tabla: los
+    // renglones enseñan los nombres y colores de las etiquetas, y sin el
+    // catálogo saldrían en blanco hasta la siguiente recarga.
+    await Promise.all([cargarEtiquetas(), cargarAsesores()]);
+    pintarOpcionesFiltros();
+
+    // Se pinta de inmediato con lo que ya hay en la base: la pantalla de
+    // carga no tiene por qué esperar a preguntarle a weetrust, que es lo
+    // lento. El webhook mantiene la base al día casi siempre, así que la
+    // mayoría de las veces esto ya es lo correcto.
+    await Promise.all([cargarCupo(), cargarEnvios()]);
+    marcarFrecuentesPuestos();
+    const importado = await importarDocumentoFinalizado();
+    if (!importado) {
+      const solicitada = vistaDesdeURL();
+      mostrarVista(solicitada === 'editor' ? 'archivos' : solicitada, { reemplazar: true });
+    }
+
+    // La sincronización completa contra weetrust se hace aparte y no
+    // bloquea la pantalla: si no ha pasado una hora desde la última, ni
+    // siquiera se dispara. Si sí corre y trae algo nuevo, la tabla se
+    // vuelve a pintar sola.
+    if (debeSincronizarAuto()) {
+      actualizarSilencioso().then((r) => {
+        marcarSincronizado();
+        if (r && (r.actualizados || r.importados || r.eliminadosEnWeetrust)) {
+          cargarEnvios();
+          cargarCupo();
+        }
+      });
+    }
+  }
+
+  if (document.documentElement.classList.contains('kw-auth-ok')) {
+    iniciar();
+  } else {
+    window.addEventListener('kw-auth-ready', iniciar, { once: true });
+  }
+})();
+</script>
+
+<!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
+     arma el menú lateral. Faltaba: por eso el header de esta pantalla
+     solo tenía el botón de Atrás. -->
+<script src="/kwpremierweb/assets/js/drawer.js?v=20260915a" data-menu="hub"></script>
+<script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916a"></script>
+
+</body>
+</html>
