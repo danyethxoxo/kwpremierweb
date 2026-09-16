@@ -5,6 +5,7 @@
 .kw-lateral-principal { min-width: 0; }
 
 .kw-lateral-cabecera {
+  height: 58px;
   min-height: 58px;
   display: flex;
   align-items: center;
@@ -66,6 +67,33 @@
 }
 
 @media (min-width: 1024px) {
+  /* La cabecera del menú global y la de la página comparten la misma
+     geometría. Al intercambiarlas, logo y botón quedan en el mismo píxel. */
+  html.kw-riel body:has(.kw-lateral) #drawer .drawer-header {
+    height: 58px; min-height: 58px;
+    padding: 0 18px;
+  }
+  html.kw-riel body:has(.kw-lateral) #drawer .drawer-header img {
+    width: auto; height: 31px; max-width: 165px;
+  }
+  html.kw-riel body:has(.kw-lateral) #drawer .drawer-hamburguesa {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+  }
+  html.kw-riel body:has(.kw-lateral) #drawer {
+    transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1),
+                box-shadow 220ms ease;
+  }
+  html.kw-riel body:has(.kw-lateral).menu-global-abierto #drawer .drawer-usuario,
+  html.kw-riel body:has(.kw-lateral).menu-global-cerrando #drawer .drawer-usuario {
+    justify-content: flex-start;
+    padding: 13px 7px;
+  }
+  html.kw-riel body:has(.kw-lateral).menu-global-abierto #drawer .drawer-usuario-txt,
+  html.kw-riel body:has(.kw-lateral).menu-global-cerrando #drawer .drawer-usuario-txt {
+    opacity: 1;
+  }
+
   html.kw-riel body:has(.kw-lateral-shell) { padding-left: 0; }
   body:has(.kw-lateral-shell) > .kw-header,
   body:has(.kw-lateral-shell) > footer { display: none; }
@@ -96,19 +124,34 @@
   .kw-lateral-principal { grid-column: 2; padding: 18px; }
 
   html.kw-riel body:has(.kw-lateral-shell):not(.menu-global-abierto) #drawer {
+    width: 292px;
     visibility: hidden; pointer-events: none;
+    opacity: 0;
+    transform: translateX(-8px);
   }
   html.kw-riel body:has(.kw-lateral-shell).menu-global-abierto #drawer,
   html.kw-riel body:has(.kw-lateral-shell).menu-global-cerrando #drawer {
+    width: 292px;
     visibility: visible;
   }
   html.kw-riel body:has(.kw-lateral-shell).menu-global-abierto #drawer {
-    width: 292px;
+    opacity: 1;
+    transform: translateX(0);
   }
-  body.menu-global-abierto .kw-lateral-shell > .kw-lateral,
-  body.menu-global-cerrando .kw-lateral-shell > .kw-lateral {
+  html.kw-riel body:has(.kw-lateral-shell).menu-global-cerrando #drawer {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  body.menu-global-abierto .kw-lateral-shell > .kw-lateral {
     opacity: 0; visibility: hidden; pointer-events: none;
+    transform: translateX(-8px);
   }
+  .kw-lateral-shell > .kw-lateral {
+    transform: translateX(0);
+    transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1),
+                visibility 0s linear 180ms;
+  }
+
 }
 
 @media (max-width: 1023px) {
