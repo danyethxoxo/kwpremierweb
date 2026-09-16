@@ -491,21 +491,23 @@
       flex: 1; min-height: 0;
     }
 
-    /* Cerrado, el drawer no deja un segundo riel encima del panel local.
-       Abierto vuelve a ocupar sus 292 px y el panel propio se desvanece. */
-    html.kw-riel body.en-historial:not(.menu-global-abierto):not(.menu-global-cerrando) #drawer {
+    /* Una sola franja lateral fija: el switch alterna entre los filtros
+       de Firmas y el contenido del Hub, sin overlays ni cierres externos. */
+    html.kw-riel body.en-historial #drawer {
       visibility: hidden; pointer-events: none;
     }
-    html.kw-riel body.en-historial.menu-global-abierto #drawer,
-    html.kw-riel body.en-historial.menu-global-cerrando #drawer {
-      visibility: visible;
+    html.kw-riel body.en-historial.firmas-muestra-hub #drawer {
+      visibility: visible; pointer-events: auto; width: 292px;
+      transform: translateX(0);
     }
-    html.kw-riel body.en-historial.menu-global-abierto #drawer {
-      width: 292px;
-    }
-    body.en-historial.menu-global-abierto .firmas-panel-pagina,
-    body.en-historial.menu-global-cerrando .firmas-panel-pagina {
+    body.en-historial.firmas-muestra-hub .firmas-panel-pagina {
       opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    body.en-historial #drawer-overlay { display: none !important; }
+    body.en-historial.firmas-muestra-hub #drawer .drawer-link > span,
+    body.en-historial.firmas-muestra-hub #drawer .drawer-section-label,
+    body.en-historial.firmas-muestra-hub #drawer .drawer-usuario-txt {
+      opacity: 1;
     }
   }
 
@@ -1620,8 +1622,8 @@
           <a class="firmas-panel-logo kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="firmas-panel-menu kw-lateral-menu" id="firmas-panel-menu" data-kw-menu-principal aria-label="Abrir menú principal" title="Abrir menú principal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <button type="button" class="firmas-panel-menu kw-lateral-menu" id="firmas-panel-menu" aria-label="Mostrar menú del Hub" title="Mostrar menú del Hub" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
           </button>
         </div>
       </aside>
@@ -2099,6 +2101,46 @@
   }
 
   document.addEventListener('DOMContentLoaded', prepararPanelHistorial, { once: true });
+
+  function prepararSwitchLateral() {
+    const boton = $('firmas-panel-menu');
+    const botonHub = $('drawer-hamburguesa');
+    const drawer = $('drawer');
+    if (!boton || !botonHub || !drawer) return;
+
+    const iconoSwitch = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>';
+
+    function mostrarHub(mostrar) {
+      document.body.classList.toggle('firmas-muestra-hub', mostrar);
+      document.body.classList.remove('menu-global-abierto', 'menu-global-cerrando');
+      drawer.classList.remove('open', 'sin-hover');
+
+      boton.setAttribute('aria-pressed', String(mostrar));
+      boton.setAttribute('aria-label', mostrar ? 'Mostrar filtros' : 'Mostrar menú del Hub');
+      boton.title = mostrar ? 'Mostrar filtros' : 'Mostrar menú del Hub';
+
+      botonHub.innerHTML = iconoSwitch;
+      botonHub.setAttribute('aria-label', 'Mostrar filtros');
+      botonHub.title = 'Mostrar filtros';
+    }
+
+    boton.addEventListener('click', (evento) => {
+      evento.preventDefault();
+      evento.stopPropagation();
+      mostrarHub(!document.body.classList.contains('firmas-muestra-hub'));
+    });
+
+    botonHub.addEventListener('click', (evento) => {
+      if (!document.body.classList.contains('firmas-muestra-hub')) return;
+      evento.preventDefault();
+      evento.stopImmediatePropagation();
+      mostrarHub(false);
+    }, true);
+
+    mostrarHub(false);
+  }
+
+  document.addEventListener('DOMContentLoaded', prepararSwitchLateral, { once: true });
   // Los modal-overlay de esta pantalla (documento, detalle, editar) no
   // bloqueaban el fondo: con la rueda o el teclado, el scroll se iba al
   // historial de atrás en vez de quedarse dentro del modal. Se cuenta
