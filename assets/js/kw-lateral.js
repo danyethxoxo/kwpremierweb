@@ -14,8 +14,23 @@
       });
     });
 
+    let cierrePendiente = 0;
     const sincronizar = () => {
-      document.body.classList.toggle('menu-global-abierto', drawer.classList.contains('open'));
+      const abierto = drawer.classList.contains('open');
+      window.clearTimeout(cierrePendiente);
+
+      if (abierto) {
+        document.body.classList.remove('menu-global-cerrando');
+        document.body.classList.add('menu-global-abierto');
+        return;
+      }
+
+      if (!document.body.classList.contains('menu-global-abierto')) return;
+      document.body.classList.remove('menu-global-abierto');
+      document.body.classList.add('menu-global-cerrando');
+      cierrePendiente = window.setTimeout(() => {
+        document.body.classList.remove('menu-global-cerrando');
+      }, 360);
     };
     new MutationObserver(sincronizar).observe(drawer, {
       attributes: true,
