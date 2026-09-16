@@ -79,6 +79,11 @@
   html.kw-riel body:has(.kw-lateral) #drawer .drawer-hamburguesa {
     width: 34px; height: 34px;
     border-radius: 9px;
+    transition: color var(--t-rapido, 150ms), background 150ms ease;
+  }
+  html.kw-riel body:has(.kw-lateral) #drawer .drawer-hamburguesa:hover {
+    color: var(--red, #a30000);
+    background: var(--pastel-rojo, #fff0f0);
   }
   html.kw-riel body:has(.kw-lateral) #drawer {
     transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1),
@@ -143,13 +148,40 @@
     transform: translateX(-8px);
   }
   body.menu-global-abierto .kw-lateral-shell > .kw-lateral {
-    opacity: 0; visibility: hidden; pointer-events: none;
+    opacity: 0; pointer-events: none;
     transform: translateX(-8px);
   }
   .kw-lateral-shell > .kw-lateral {
     transform: translateX(0);
-    transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1),
-                visibility 0s linear 180ms;
+    transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1);
+  }
+
+  /* Firmas conserva su panel dentro de #vista-historial en vez de usar
+     .kw-lateral-shell. Estas reglas garantizan el mismo cruce animado
+     aunque sus estilos de página se hayan cargado después. */
+  html.kw-riel body.en-historial:not(.menu-global-abierto) #drawer {
+    width: 292px !important;
+    visibility: hidden; pointer-events: none;
+    opacity: 0; transform: translateX(-8px);
+  }
+  html.kw-riel body.en-historial.menu-global-abierto #drawer,
+  html.kw-riel body.en-historial.menu-global-cerrando #drawer {
+    width: 292px !important;
+    visibility: visible !important;
+  }
+  html.kw-riel body.en-historial.menu-global-abierto #drawer {
+    opacity: 1; transform: translateX(0);
+  }
+  html.kw-riel body.en-historial.menu-global-cerrando #drawer {
+    opacity: 0; transform: translateX(-8px);
+  }
+  body.en-historial .firmas-panel-pagina {
+    visibility: visible !important;
+    transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1) !important;
+  }
+  body.en-historial.menu-global-abierto .firmas-panel-pagina {
+    opacity: 0; pointer-events: none;
+    transform: translateX(-8px);
   }
 
 }
