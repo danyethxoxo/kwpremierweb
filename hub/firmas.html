@@ -429,7 +429,7 @@
       background: #fff;
       border-right: 1px solid var(--border, rgba(0,0,0,0.1));
       box-shadow: 8px 0 24px rgba(35,27,27,0.08);
-      transition: opacity 150ms ease, visibility 150ms ease;
+      transition: none;
     }
     body.en-historial .firmas-panel-cabecera {
       min-height: 58px; display: flex; align-items: center; gap: 11px;
@@ -491,23 +491,27 @@
       flex: 1; min-height: 0;
     }
 
-    /* Una sola franja lateral fija: el switch alterna entre los filtros
-       de Firmas y el contenido del Hub, sin overlays ni cierres externos. */
+    /* Una sola franja lateral fija. Los dos contenidos se intercambian
+       sin transiciones cruzadas para que nunca se vean al mismo tiempo. */
     html.kw-riel body.en-historial #drawer {
+      display: none !important;
       visibility: hidden; pointer-events: none;
+      width: 292px !important; transform: none !important;
+      transition: none !important;
     }
     html.kw-riel body.en-historial.firmas-muestra-hub #drawer {
-      visibility: visible; pointer-events: auto; width: 292px;
-      transform: translateX(0);
+      display: flex !important;
+      visibility: visible; pointer-events: auto;
     }
     body.en-historial.firmas-muestra-hub .firmas-panel-pagina {
-      opacity: 0; visibility: hidden; pointer-events: none;
+      display: none !important;
     }
     body.en-historial #drawer-overlay { display: none !important; }
+    body.en-historial.firmas-muestra-hub #drawer .drawer-header,
     body.en-historial.firmas-muestra-hub #drawer .drawer-link > span,
     body.en-historial.firmas-muestra-hub #drawer .drawer-section-label,
     body.en-historial.firmas-muestra-hub #drawer .drawer-usuario-txt {
-      opacity: 1;
+      opacity: 1 !important;
     }
   }
 
