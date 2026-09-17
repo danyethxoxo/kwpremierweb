@@ -255,7 +255,6 @@
         </span>
       </a>`}
       ${esPublico ? '' : `
-      ${esPublico ? '' : `
       <div class="drawer-buscar" id="drawer-buscar">
         <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
           ${ICONS.search}<span>Buscar en la página</span>
