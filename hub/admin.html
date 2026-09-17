@@ -784,6 +784,35 @@
     }
   }
 
+  /* La barra lateral cambió la geometría de esta pantalla. Mantener la
+     antigua cadena de flex + overflow:hidden podía calcular la lista con
+     altura cero: los datos sí se pintaban, pero quedaban recortados.
+     Asesores vuelve al flujo natural de la página; sólo la barra lateral
+     permanece fija por medio de sus estilos compartidos. */
+  @media (min-width: 901px) {
+    body.en-asesores {
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+    body.en-asesores > main.kw-page {
+      display: block;
+      min-height: 100vh;
+    }
+    body.en-asesores #panel-paneles,
+    body.en-asesores #panel-paneles > .kw-tabpanel.activo,
+    body.en-asesores #asesores-paneles,
+    body.en-asesores #asesores-paneles > .kw-tabpanel.activo {
+      display: block;
+      min-height: 0;
+    }
+    body.en-asesores .asesores-lista {
+      min-height: 120px;
+      overflow: visible;
+      padding-right: 0;
+    }
+  }
+
   @media (min-width: 1024px) {
     /* En Asesores, la regla historica que mantiene fija la cabecera
        convertia todo #contenido-panel en una columna. Ahora ese nodo es
@@ -800,10 +829,9 @@
       flex: none;
     }
     body.en-asesores #contenido-panel > .kw-lateral-principal {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      overflow: hidden;
+      display: block;
+      min-height: 100vh;
+      overflow: visible;
     }
     #contenido-panel #panel-tabs,
     #contenido-panel .asesores-card > .barra > .buscador,
