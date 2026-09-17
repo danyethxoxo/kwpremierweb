@@ -402,6 +402,23 @@
   /* El bloque de título ya no lleva el aire de abajo que traía cuando
      vivía en su propio renglón. */
   .barra-superior .kw-page-encabezado { margin-bottom: 0; min-width: 0; }
+  .barra-superior .panel-encabezado {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .panel-encabezado-acciones {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .panel-encabezado-acciones .kw-menu-ancla { flex: 0 0 auto; }
+  .panel-encabezado-acciones .btn-nuevo-asesor { flex: 0 0 auto; }
+  @media (max-width: 640px) {
+    .panel-encabezado { align-items: center; }
+    .panel-encabezado-acciones { gap: 7px; }
+    .panel-encabezado-acciones .btn-nuevo-asesor { padding-inline: 12px; }
+  }
   .barra-superior .kw-tabs { margin-left: auto; }
   /* Cuando el renglón se parte (pantallas medianas), el título se lleva
      uno completo y las pestañas con su botón el siguiente, en vez de
@@ -996,8 +1013,31 @@
       </aside>
       <div class="kw-lateral-principal">
       <div class="barra-superior">
-        <div class="kw-page-encabezado">
+        <div class="kw-page-encabezado con-acciones panel-encabezado">
           <h1 class="kw-page-titulo" id="panel-title">Panel</h1>
+          <div class="kw-page-acciones panel-encabezado-acciones">
+          <div class="kw-menu-ancla">
+            <button type="button" class="kw-btn-icono" id="btn-mas"
+              title="Configuración y acciones" aria-label="Configuración y acciones"
+              aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/></svg>
+            </button>
+            <div class="kw-menu" id="mas-menu" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-verificar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>Revisar accesos</span>
+              </button>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-recargar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Recargar el libro</span>
+              </button>
+            </div>
+          </div>
+          <a href="base-asesores.html?nuevo=1" class="btn-nuevo-asesor" id="acceso-nuevo-asesor" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+            Nuevo Asesor
+          </a>
+          </div>
         </div>
         <div class="kw-tabs planas" data-kw-tabs="panel-paneles" id="panel-tabs">
           <button type="button" class="kw-tab activo" data-tab="asesores">Asesores</button>
@@ -1025,10 +1065,7 @@
              Lleva al formulario de la base, que es una página y no un
              cuadro encima: un expediente de veinticuatro campos dentro
              de un modal es un cuadrito con scroll propio. -->
-        <a href="base-asesores.html?nuevo=1" class="btn-nuevo-asesor" id="acceso-nuevo-asesor" style="display:none;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-          Nuevo Asesor
-        </a>
+
       </div>
 
       <div class="kw-tabpanels" id="panel-paneles">
@@ -1053,23 +1090,6 @@
                  todos los días, que es irse a la base. Revisar accesos y
                  recargar el libro se hacen cada tanto. -->
             <div class="barra-botones">
-            <div class="kw-menu-ancla">
-              <button type="button" class="kw-btn-icono" id="btn-mas"
-                title="Más acciones" aria-label="Más acciones"
-                aria-haspopup="true" aria-expanded="false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </button>
-              <div class="kw-menu" id="mas-menu" role="menu" hidden>
-                <button type="button" class="kw-menu-op" role="menuitem" id="op-verificar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-                  <span>Revisar accesos</span>
-                </button>
-                <button type="button" class="kw-menu-op" role="menuitem" id="op-recargar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  <span>Recargar el libro</span>
-                </button>
-              </div>
-            </div>
             <a href="base-asesores.html" class="btn" id="btn-bd">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
               <span class="btn-txt">Base<span class="btn-txt-largo"> de datos</span></span>
