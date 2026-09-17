@@ -384,6 +384,75 @@
       }
     }
   </style>
+
+  <style>
+    /* Restaurar el comportamiento normal del riel en Nuevo asesor.
+       La pantalla usa el menú Hub, pero inicia contraído y solo se abre
+       al pasar el mouse/foco, sin reservar un bloque blanco de 292px. */
+    @media (min-width: 1024px) {
+      html.kw-riel body.en-ficha-asesor,
+      html.kw-riel body.cargando-nuevo {
+        padding-left: 68px !important;
+      }
+      html.kw-riel body.en-ficha-asesor #drawer,
+      html.kw-riel body.cargando-nuevo #drawer {
+        width: 68px !important;
+        min-width: 68px !important;
+        max-width: 68px !important;
+        transition: width 360ms cubic-bezier(0.22,1,0.36,1), box-shadow 360ms ease !important;
+      }
+      html.kw-riel body.en-ficha-asesor #drawer:hover,
+      html.kw-riel body.cargando-nuevo #drawer:hover,
+      html.kw-riel body.en-ficha-asesor #drawer.open,
+      html.kw-riel body.cargando-nuevo #drawer.open,
+      html.kw-riel body.en-ficha-asesor #drawer:focus-within,
+      html.kw-riel body.cargando-nuevo #drawer:focus-within,
+      html.kw-riel body.en-ficha-asesor #drawer.buscando,
+      html.kw-riel body.cargando-nuevo #drawer.buscando {
+        width: 292px !important;
+        min-width: 292px !important;
+        max-width: 292px !important;
+      }
+
+      /* Contraído: solo iconos y la lupa visible. */
+      html.kw-riel body.en-ficha-asesor #drawer:not(:hover):not(.open):not(:focus-within) .drawer-link > span,
+      html.kw-riel body.cargando-nuevo #drawer:not(:hover):not(.open):not(:focus-within) .drawer-link > span,
+      html.kw-riel body.en-ficha-asesor #drawer:not(:hover):not(.open):not(:focus-within) .drawer-usuario-txt,
+      html.kw-riel body.cargando-nuevo #drawer:not(:hover):not(.open):not(:focus-within) .drawer-usuario-txt {
+        opacity: 0 !important;
+      }
+      html.kw-riel body.en-ficha-asesor #drawer:not(:hover):not(.open):not(:focus-within) .drawer-buscar,
+      html.kw-riel body.cargando-nuevo #drawer:not(:hover):not(.open):not(:focus-within) .drawer-buscar {
+        width: 40px !important;
+        height: 46px !important;
+        min-height: 46px !important;
+        margin: 2px 14px 8px !important;
+      }
+      html.kw-riel body.en-ficha-asesor #drawer:not(:hover):not(.open):not(:focus-within) .drawer-buscar-toggle,
+      html.kw-riel body.cargando-nuevo #drawer:not(:hover):not(.open):not(:focus-within) .drawer-buscar-toggle {
+        width: 40px !important;
+        height: 46px !important;
+        min-height: 46px !important;
+        padding: 0 !important;
+        justify-content: center;
+      }
+
+      /* Abierto: buscador estrecho, centrado y de altura constante. */
+      html.kw-riel body.en-ficha-asesor #drawer:hover .drawer-buscar,
+      html.kw-riel body.cargando-nuevo #drawer:hover .drawer-buscar,
+      html.kw-riel body.en-ficha-asesor #drawer.open .drawer-buscar,
+      html.kw-riel body.cargando-nuevo #drawer.open .drawer-buscar,
+      html.kw-riel body.en-ficha-asesor #drawer:focus-within .drawer-buscar,
+      html.kw-riel body.cargando-nuevo #drawer:focus-within .drawer-buscar,
+      html.kw-riel body.en-ficha-asesor #drawer.buscando .drawer-buscar,
+      html.kw-riel body.cargando-nuevo #drawer.buscando .drawer-buscar {
+        width: 220px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        margin: 2px auto 8px !important;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="ficha-carga" hidden role="status" aria-live="polite">
