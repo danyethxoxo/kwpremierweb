@@ -255,14 +255,13 @@
         </span>
       </a>`}
       ${esPublico ? '' : `
-      <nav class="drawer-nav">${navHtml}
-        ${esPublico ? '' : `
-        <div class="drawer-buscar" id="drawer-buscar">
-          <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
-            ${ICONS.search}<span>Buscar en la página</span>
-          </button>
-        </div>`}
-      </nav>
+      ${esPublico ? '' : `
+      <div class="drawer-buscar" id="drawer-buscar">
+        <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
+          ${ICONS.search}<span>Buscar en la página</span>
+        </button>
+      </div>`}
+      <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
     ${esPublico ? '' : `
