@@ -1443,16 +1443,10 @@
              sino un buscador que va juntando los elegidos. Va primero y
              más ancho: es el que más se usa. -->
         <div class="kw-campo-filtro dic-f-asesor">
-          <label for="f-asesor-busca">Asesor</label>
-          <div class="dic-multi" id="f-asesor-caja">
-            <div class="dic-multi-elegidos" id="f-asesor-elegidos"></div>
-            <input type="text" id="f-asesor-busca" class="kw-input"
-              placeholder="Buscar asesor" autocomplete="off">
-            <button type="button" class="dic-asesor-toggle-zona" id="f-asesor-toggle"
-              data-asesor-toggle aria-label="Mostrar u ocultar lista de asesores"
-              aria-controls="f-asesor-lista" aria-expanded="false"></button>
-            <div class="dic-asesor-lista" id="f-asesor-lista"></div>
-          </div>
+          <label for="f-asesor">Asesor</label>
+          <select id="f-asesor">
+            <option value="todos">Asesor</option>
+          </select>
         </div>
 
         <div class="kw-campo-filtro dic-f-lista">
@@ -2277,7 +2271,7 @@
 
   // ── Filtrar ─────────────────────────────────────────────────
 
-  var DESPLEGABLES = ['f-listado', 'f-contrato', 'f-tipo'];
+  var DESPLEGABLES = ['f-asesor', 'f-listado', 'f-contrato', 'f-tipo'];
 
   // Los filtros que se escriben: el buscador, el rango de fechas, el de
   // precio y el de comisión. Se enumeran una sola vez porque los tres
@@ -2306,6 +2300,7 @@
 
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
+    var asesor = $('f-asesor').value;
     var listado = $('f-listado').value;
     var contrato = $('f-contrato').value;
     var tipo = $('f-tipo').value;
@@ -2324,9 +2319,7 @@
       if (contrato !== 'todos' && d.tipo_contrato !== contrato) return false;
       if (tipo !== 'todos' && d.tipo_inmueble_id !== tipo) return false;
 
-      // Sin asesores elegidos no se filtra por asesor: la lista vacía
-      // quiere decir "todos", no "ninguno".
-      if (asesoresFiltro.length && asesoresFiltro.indexOf(d.asesor_id) === -1) return false;
+      if (asesor !== 'todos' && d.asesor_id !== asesor) return false;
 
       // Las fechas viajan como aaaa-mm-dd, y en ese formato compararlas
       // como texto da el mismo resultado que compararlas como fechas.
@@ -2350,76 +2343,19 @@
     });
   }
 
-  // ── El filtro de asesor, que admite varios ──────────────────
-
-  var asesoresFiltro = [];
+  // ── El filtro de asesor ──────────────────────────────────────
 
   function pintarAsesoresFiltro() {
-    var caja = $('f-asesor-elegidos');
-    caja.innerHTML = asesoresFiltro.map(function (id) {
-      var a = asesores.find(function (x) { return x.id === id; });
-      return '<span class="dic-multi-chip"><span>' +
-        escapar(a ? a.nombre : 'Asesor') + '</span>' +
-        '<button type="button" data-quitar-asesor="' + id + '" aria-label="Quitar">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">' +
-            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-        '</button></span>';
-    }).join('');
-
-    $('f-asesor-busca').placeholder = asesoresFiltro.length
-      ? 'Agregar otro' : 'Buscar asesor';
-
-    caja.querySelectorAll('[data-quitar-asesor]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        asesoresFiltro = asesoresFiltro.filter(function (x) {
-          return x !== b.dataset.quitarAsesor;
-        });
-        pintarAsesoresFiltro();
-        pintar();
-      });
-    });
-
-    // El campo de asesor crece hacia abajo con cada elegido, así que
-    // agregar uno puede empujar filtros fuera del renglón que se ve. La
-    // cuenta se rehace aquí y no en cada lugar que toca los asesores,
-    // porque todos pasan por esta función.
-    acomodarFiltros();
-  }
-
-  function pintarSugerenciasAsesor() {
-    var q = $('f-asesor-busca').value.trim().toLowerCase();
-    var caja = $('f-asesor-lista');
-
-    // Al abrir sin texto se muestra el catálogo completo. La caja deja
-    // visibles unos diez nombres y el resto se recorre con su propio scroll.
-    var hallados = asesores.filter(function (a) {
-      if (!a.activo) return false;
-      if (asesoresFiltro.indexOf(a.id) !== -1) return false;
-      if (!q) return true;
-      return (a.nombre + ' ' + (a.correo || '')).toLowerCase().indexOf(q) !== -1;
-    }).sort(function (a, b) {
-      return String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' });
-    });
-
-    caja.innerHTML = hallados.length
-      ? hallados.map(function (a) {
-        return '<button type="button" class="dic-asesor-op" data-mas-asesor="' + a.id + '">' +
-          escapar(a.nombre) + '</button>';
-      }).join('')
-      : '<div class="dic-asesor-vacio">Ningún asesor con ese nombre.</div>';
-    caja.classList.add('abierta');
-    $('f-asesor-toggle').setAttribute('aria-expanded', 'true');
-
-    caja.querySelectorAll('[data-mas-asesor]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        asesoresFiltro.push(b.dataset.masAsesor);
-        $('f-asesor-busca').value = '';
-        caja.classList.remove('abierta');
-        $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
-        pintarAsesoresFiltro();
-        pintar();
-      });
-    });
+    var select = $('f-asesor');
+    var anterior = select.value || 'todos';
+    select.innerHTML = '<option value="todos">Asesor</option>' +
+      asesores.filter(function (a) { return a.activo; }).map(function (a) {
+        return '<option value="' + a.id + '">' + escapar(a.nombre) + '</option>';
+      }).join('');
+    select.value = Array.prototype.some.call(select.options, function (op) {
+      return op.value === anterior;
+    }) ? anterior : 'todos';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   // ── El resumen ──────────────────────────────────────────────
@@ -2528,7 +2464,7 @@
     $('dic-cabecera').style.display = filas.length ? '' : 'none';
 
     if (!filas.length) {
-      var hayFiltro = asesoresFiltro.length || estadoFiltro !== 'todos' ||
+      var hayFiltro = estadoFiltro !== 'todos' ||
         ESCRITOS.some(function (x) { return $(x).value.trim(); }) ||
         DESPLEGABLES.some(function (x) { return $(x).value !== 'todos'; });
       $('lista').innerHTML = '<div class="kw-vacio">' + (
@@ -4935,7 +4871,7 @@
     }) || DESPLEGABLES.some(function (x) {
       return campo.contains($(x)) && $(x).value !== 'todos';
     });
-    return puesto || (asesoresFiltro.length > 0 && campo.contains($('f-asesor-caja')));
+    return puesto;
   }
 
   // Plegada, la tarjeta deja a la vista nada más el primer renglón. Cuál
@@ -4990,38 +4926,6 @@
   });
   window.addEventListener('resize', acomodarFiltros);
 
-  $('f-asesor-busca').addEventListener('input', pintarSugerenciasAsesor);
-  $('f-asesor-busca').addEventListener('focus', pintarSugerenciasAsesor);
-  $('f-asesor-busca').addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape') return;
-    $('f-asesor-lista').classList.remove('abierta');
-    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
-  });
-  $('f-asesor-toggle').addEventListener('click', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var lista = $('f-asesor-lista');
-    if (lista.classList.contains('abierta')) {
-      lista.classList.remove('abierta');
-      this.setAttribute('aria-expanded', 'false');
-      return;
-    }
-    $('f-asesor-busca').focus();
-    pintarSugerenciasAsesor();
-    this.setAttribute('aria-expanded', 'true');
-  });
-  $('f-asesor-caja').addEventListener('click', function (e) {
-    if (e.target.closest('[data-quitar-asesor], [data-asesor-toggle], .dic-asesor-lista')) return;
-    if (e.target !== $('f-asesor-busca')) $('f-asesor-busca').focus();
-    pintarSugerenciasAsesor();
-    $('f-asesor-toggle').setAttribute('aria-expanded', 'true');
-  });
-  document.addEventListener('click', function (e) {
-    if (e.target.closest('#f-asesor-caja')) return;
-    $('f-asesor-lista').classList.remove('abierta');
-    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
-  });
-
   $('f-limpiar').addEventListener('click', function () {
     estadoFiltro = 'todos';
     DESPLEGABLES.forEach(function (x) {
@@ -5032,12 +4936,8 @@
       $(x).value = '';
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
-    asesoresFiltro = [];
-    $('f-asesor-busca').value = '';
-    $('f-asesor-lista').classList.remove('abierta');
-    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
-    pintarAsesoresFiltro();
     pintar();
+
     acomodarFiltros();
   });
 
