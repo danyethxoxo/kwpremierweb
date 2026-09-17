@@ -2750,7 +2750,22 @@
     const paneles = document.getElementById('asesores-paneles');
     op.disabled = true;
     op.classList.add('trabajando');
-    if (!gruposAsesores.length) paneles.innerHTML = esqueletoAsesores();
+
+    // Las tablas no dependen de que primero respondan el libro o la base:
+    // aparecen desde el primer instante y cada una conserva su carga.
+    // Antes, una petición lenta o un error de red dejaba toda esta zona
+    // vacía porque ni siquiera se alcanzaban a crear las pestañas.
+    if (!gruposAsesores.length) {
+      gruposAsesores = BD_GRUPOS.map(function (g) {
+        return { clave: g.clave, titulo: g.titulo, hoja: '', personas: [] };
+      });
+      armarTabsAsesores();
+      gruposAsesores.forEach(function (g) {
+        const lista = document.getElementById('lista-' + g.clave);
+        if (lista) lista.innerHTML = esqueletoAsesores();
+      });
+      actualizarBarra();
+    }
 
     let gruposLibro = null;
     let fallaLibro = null;
@@ -2783,14 +2798,16 @@
       // Un "esta sección es solo para el equipo de altas" se queda aquí
       // dentro, no tumba el Panel entero: lo demás del Panel sí es suyo.
       const err = fallaLibro || {};
-      paneles.innerHTML = '<div class="kw-vacio"><strong>No hay de dónde sacar la lista</strong>' +
-        'Ni la base tiene asesores ni se pudo leer el libro. ' + escapeHtml(err.message || '') +
-        (err.diagnostico
-          ? '<pre style="text-align:left;max-width:500px;margin:14px auto 0;font-size:11px;' +
-            'background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;">' +
-            escapeHtml(JSON.stringify(err.diagnostico, null, 2)) + '</pre>'
-          : '') +
-        '</div>';
+      // Las cuatro tablas permanecen disponibles aunque ambas fuentes
+      // fallen. Cada una explica que no pudo cargarse, en vez de borrar
+      // también la navegación entre Activos, Bajas y Back Office.
+      gruposAsesores.forEach(function (g) {
+        const lista = document.getElementById('lista-' + g.clave);
+        if (!lista) return;
+        lista.innerHTML = '<div class="kw-vacio"><strong>No se pudo cargar esta lista</strong>' +
+          'Ni la base ni el libro respondieron. ' + escapeHtml(err.message || '') + '</div>';
+      });
+      avisoAsesores('No se pudieron cargar los asesores. Puedes intentar de nuevo desde Más acciones.', 'error');
       terminarRecarga();
       return;
     }
@@ -3221,16 +3238,21 @@
   let bdAsesores = [];
 
   async function leerBaseDatos() {
-    const { data, error } = await window.kwSupabase
-      .from('asesores')
-      .select('*')
-      .order('nombre', { ascending: true });
-    if (error) {
-      console.error('No se pudo leer la base de asesores:', error.message);
+    try {
+      const { data, error } = await window.kwSupabase
+        .from('asesores')
+        .select('*')
+        .order('nombre', { ascending: true });
+      if (error) throw error;
+      bdAsesores = data || [];
+      return true;
+    } catch (error) {
+      // Una falla de red también puede lanzar antes de que Supabase
+      // devuelva { error }. Se contiene aquí para que las pestañas que
+      // ya están en pantalla no desaparezcan ni se queden cargando.
+      console.error('No se pudo leer la base de asesores:', error && error.message);
       return false;
     }
-    bdAsesores = data || [];
-    return true;
   }
 
   // Las cuatro visualizaciones salen de aquí: un grupo por cada clave,
