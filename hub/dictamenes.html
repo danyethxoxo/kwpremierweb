@@ -1068,7 +1068,8 @@
   .dic-busca-asesor { position: relative; }
   .dic-asesor-lista {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
-    max-height: 260px; overflow-y: auto;
+    max-height: 360px; overflow-y: auto;
+    overscroll-behavior: contain;
     background: #fff; border: 1px solid var(--border);
     border-radius: 12px; box-shadow: var(--sombra-3);
     padding: 5px; display: none;
@@ -2367,13 +2368,17 @@
   function pintarSugerenciasAsesor() {
     var q = $('f-asesor-busca').value.trim().toLowerCase();
     var caja = $('f-asesor-lista');
-    if (!q) { caja.classList.remove('abierta'); return; }
 
+    // Al abrir sin texto se muestra el catálogo completo. La caja deja
+    // visibles unos diez nombres y el resto se recorre con su propio scroll.
     var hallados = asesores.filter(function (a) {
       if (!a.activo) return false;
       if (asesoresFiltro.indexOf(a.id) !== -1) return false;
+      if (!q) return true;
       return (a.nombre + ' ' + (a.correo || '')).toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 30);
+    }).sort(function (a, b) {
+      return String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' });
+    });
 
     caja.innerHTML = hallados.length
       ? hallados.map(function (a) {
