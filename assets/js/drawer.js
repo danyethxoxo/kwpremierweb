@@ -519,6 +519,7 @@
 
   function abrirBuscar() {
     if (!capsula && !areaBuscarRiel) return;
+    if (document.body.classList.contains('en-ficha-asesor')) buscarInput.placeholder = 'Buscar en la página';
     if (searchCheck) searchCheck.checked = true;
     if (buscadorVaEnRiel()) {
       const riel = areaBuscarRiel.closest('.drawer');
