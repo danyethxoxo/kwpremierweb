@@ -414,6 +414,25 @@
   }
   .panel-encabezado-acciones .kw-menu-ancla { flex: 0 0 auto; }
   .panel-encabezado-acciones .btn-nuevo-asesor { flex: 0 0 auto; }
+  #panel-lateral-nav .kw-lateral-enlace {
+    width: 100%;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  #panel-lateral-nav .kw-lateral-enlace:hover {
+    background: #fafafa;
+    color: var(--red);
+    border-color: rgba(163,0,0,.28);
+  }
   @media (max-width: 640px) {
     .panel-encabezado { align-items: center; }
     .panel-encabezado-acciones { gap: 7px; }
@@ -671,7 +690,16 @@
      su contenido. Planas es al revés: la raya de abajo es la que separa
      las pestañas de la lista, y cortada a la mitad de la tarjeta se veía
      como un subrayado suelto. */
-  #asesores-tabs { margin: var(--sp-4) 0; }
+  #asesores-tabs {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+  }
+  .asesores-card .asesores-grupos {
+    max-width: min(620px, 58vw);
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
   #asesores-tabs:empty { display: none; }
   /* Mientras todavía no existen pestañas, el skeleton es hijo directo
      del contenedor y necesita el mismo aire que después aporta la barra. */
@@ -1077,7 +1105,8 @@
              número iban en su propia franja arriba de la barra, y entre
              las dos se comían el alto que la lista necesita. -->
         <div class="kw-card asesores-card">
-          <h2 class="asesores-titulo">Asesores del Market Center</h2>
+          <!-- Las categorías viven en la misma barra que el conteo. -->
+          <div class="kw-tabs planas asesores-grupos" id="asesores-tabs"></div>
 
           <div class="barra">
             <div class="buscador">
@@ -1089,12 +1118,6 @@
                  tres botones al hilo tapaban al único al que se le pica
                  todos los días, que es irse a la base. Revisar accesos y
                  recargar el libro se hacen cada tanto. -->
-            <div class="barra-botones">
-            <a href="base-asesores.html" class="btn" id="btn-bd">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-              <span class="btn-txt">Base<span class="btn-txt-largo"> de datos</span></span>
-            </a>
-            </div>
             <div class="resumen-activos">
               <span class="num" id="asesores-num">·</span>
               <span class="etiqueta" id="asesores-etiqueta">en la lista</span>
@@ -1108,7 +1131,6 @@
              lo que de verdad venga, así que aquí nacen vacías; el
              data-kw-tabs también lo pone el JS, porque kw-ui arma cada
              barra una sola vez y armarla sin botones la dejaría muerta. -->
-        <div class="kw-tabs planas" id="asesores-tabs"></div>
         <div class="kw-tabpanels" id="asesores-paneles">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -1448,6 +1470,12 @@
       boton.addEventListener('click', () => cambiarTabPanel(tab.dataset.tab));
       nav.appendChild(boton);
     });
+
+    const base = document.createElement('a');
+    base.className = 'kw-lateral-enlace';
+    base.href = 'base-asesores.html';
+    base.textContent = 'Base de datos';
+    nav.appendChild(base);
   }
 
   function sincronizarPanelLateral(tab) {
