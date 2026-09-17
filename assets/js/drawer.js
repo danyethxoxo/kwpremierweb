@@ -256,8 +256,8 @@
       </a>`}
       ${esPublico ? '' : `
       <div class="drawer-buscar" id="drawer-buscar">
-        <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar">
-          ${ICONS.search}<span>Buscar</span>
+        <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
+          ${ICONS.search}<span>Buscar en la página</span>
         </button>
       </div>`}
       <nav class="drawer-nav">${navHtml}</nav>
@@ -561,12 +561,8 @@
   buscarCerrar.addEventListener('click', cerrarBuscar);
 
   buscarInput.addEventListener('input', () => {
-    if (campoLocal) {
-      // El filtro de la página sigue funcionando, pero no cancela la
-      // búsqueda general del Hub.
-      campoLocal.value = buscarInput.value;
-      campoLocal.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    // La búsqueda del riel es universal. Los filtros particulares de
+    // cada pantalla viven en su propia barra y no reciben este texto.
     pintarResultados(buscarInput.value);
   });
   buscarInput.addEventListener('keydown', (e) => {
