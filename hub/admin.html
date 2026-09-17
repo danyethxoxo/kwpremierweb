@@ -954,8 +954,8 @@
           <a class="kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Abrir menú principal" title="Abrir menú principal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar al menú del Hub" title="Cambiar al menú del Hub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
           </button>
         </div>
         <label class="kw-lateral-buscador" aria-label="Buscar en la sección actual">
@@ -2099,6 +2099,35 @@
   // detector de tamaño colgado por cada vez.
   let clavesPintadas = '';
 
+  // Visibilidad explícita de los grupos. No depende de transiciones ni
+  // de reglas compartidas de pestañas: el panel elegido queda visible
+  // por DOM y los demás quedan realmente ocultos.
+  function mostrarGrupoAsesores(clave) {
+    const paneles = document.getElementById('asesores-paneles');
+    if (!paneles) return;
+    Array.from(paneles.children).forEach(function (panel) {
+      if (!panel.classList.contains('kw-tabpanel')) return;
+      const visible = panel.dataset.panel === clave;
+      panel.hidden = !visible;
+      panel.classList.toggle('activo', visible);
+      panel.style.display = visible ? 'block' : 'none';
+      panel.style.visibility = visible ? 'visible' : 'hidden';
+      panel.style.opacity = visible ? '1' : '0';
+      if (visible) {
+        panel.style.height = 'auto';
+        panel.style.maxHeight = 'none';
+        const lista = panel.querySelector('.asesores-lista');
+        if (lista) {
+          lista.style.display = 'block';
+          lista.style.visibility = 'visible';
+          lista.style.opacity = '1';
+          lista.style.height = 'auto';
+          lista.style.maxHeight = 'none';
+        }
+      }
+    });
+  }
+
   function armarTabsAsesores() {
     const claves = gruposAsesores.map(function (g) { return g.clave; }).join('|');
     if (claves === clavesPintadas) return;
@@ -2124,10 +2153,12 @@
     window.kwUI.tabs(document.querySelector('[data-panel="asesores"]'));
 
     grupoActivo = gruposAsesores.length ? gruposAsesores[0].clave : '';
+    mostrarGrupoAsesores(grupoActivo);
     tabs.addEventListener('click', function (e) {
       const b = e.target.closest('.kw-tab');
       if (!b) return;
       grupoActivo = b.dataset.tab;
+      mostrarGrupoAsesores(grupoActivo);
       actualizarBarra();
     });
   }
@@ -2487,6 +2518,7 @@
       }
     });
 
+    mostrarGrupoAsesores(grupoActivo);
     actualizarBarra();
   }
 
