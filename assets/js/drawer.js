@@ -257,10 +257,11 @@
       <nav class="drawer-nav">
         ${esPublico ? '' : `
         <div class="drawer-buscar-acceso" id="drawer-buscar">
-          <a href="#" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
-            ${ICONS.search}<span>Buscar en la página</span>
-          </a>
-        </div>`}
+          <input id="search-btn" type="checkbox" aria-label="Mostrar búsqueda">
+          <label for="search-btn" class="drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
+            <span class="drawer-buscar-icono">${ICONS.search}</span><span>Buscar en la página</span>
+          </label>
+        </div>`}}
         ${navHtml}
       </nav>
       <div class="drawer-footer">${footerHtml}</div>
