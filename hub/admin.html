@@ -2195,13 +2195,30 @@
     const I = window.kwUI.iconos;
     // La lista puede venir de la base o armarse con lo que el libro dejó
     // en sus cuatro columnas de siempre.
-    const contactos = p.contactos || ((p.emergenciaNombre || p.emergenciaTelefono || p.emergenciaCorreo)
-      ? [{
+    // Supabase guarda este campo como JSON, pero registros antiguos
+    // pueden traer un objeto único o incluso el JSON serializado. Nunca
+    // se asume que tiene .map(): una ficha irregular no debe cancelar
+    // el render de toda la lista.
+    let contactos = [];
+    if (Array.isArray(p.contactos)) {
+      contactos = p.contactos;
+    } else if (typeof p.contactos === 'string' && p.contactos.trim()) {
+      try {
+        const leidos = JSON.parse(p.contactos);
+        contactos = Array.isArray(leidos) ? leidos : (leidos && typeof leidos === 'object' ? [leidos] : []);
+      } catch (e) {
+        console.warn('Contactos con formato no válido para', p.correo || p.nombre);
+      }
+    } else if (p.contactos && typeof p.contactos === 'object') {
+      contactos = [p.contactos];
+    }
+    if (!contactos.length && (p.emergenciaNombre || p.emergenciaTelefono || p.emergenciaCorreo)) {
+      contactos = [{
         nombre: p.emergenciaNombre, parentesco: p.emergenciaParentesco,
         telefono: p.emergenciaTelefono, correo: p.emergenciaCorreo,
         emergencia: true, beneficiario: false,
-      }]
-      : []);
+      }];
+    }
     const claveVisible = clavesVisibles.has(p.correo);
     const clave = p.contrasena
       ? '<div class="kw-dato">' + ICONO_LLAVE +
@@ -2440,9 +2457,26 @@
       const abierta = cont.querySelector('.kw-fila.abierta .kw-fila-sub');
       const correoAbierto = abierta ? abierta.textContent : null;
 
-      cont.innerHTML = '<div class="kw-lista">' + visibles.map(function (p, i) {
-        return filaAsesorHtml(p, g, i);
-      }).join('') + '</div>';
+      const filas = visibles.map(function (p, i) {
+        try {
+          return filaAsesorHtml(p, g, i);
+        } catch (error) {
+          // Un expediente incompleto se enseña en versión básica. Antes,
+          // cualquier dato con formato inesperado detenía el .map() y
+          // dejaba en blanco también a todos los demás asesores.
+          console.error('No se pudo pintar la ficha de asesor:', p && (p.correo || p.nombre), error);
+          return '<div class="kw-fila kw-aparece-fila">' +
+            '<div class="kw-fila-barra"><div class="kw-fila-cabeza">' +
+              '<span class="kw-fila-punto ambar"></span>' +
+              '<span class="kw-fila-texto">' +
+                '<span class="kw-fila-titulo">' + escapeHtml((p && p.nombre) || 'Sin nombre') + '</span>' +
+                '<span class="kw-fila-sub">' + escapeHtml((p && p.correo) || 'Expediente incompleto') + '</span>' +
+              '</span>' +
+            '</div></div>' +
+          '</div>';
+        }
+      });
+      cont.innerHTML = '<div class="kw-lista">' + filas.join('') + '</div>';
       window.kwUI.acordeon(cont);
 
       if (correoAbierto) {
