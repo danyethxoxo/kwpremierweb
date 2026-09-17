@@ -1616,3 +1616,52 @@ header > *:last-child { margin-left: auto; }
     flex: 0 0 20px;
   }
 }
+
+/* Refinamiento final del buscador del riel:
+   la lupa conserva su espacio aun cuando el texto queda oculto;
+   el campo abierto es bajo y queda centrado con el mismo margen a ambos
+   lados del panel. */
+@media (min-width: 1024px) {
+  html.kw-riel .drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within) .drawer-buscar-toggle > span,
+  html.kw-riel .drawer:not(.drawer-der).sin-hover .drawer-buscar-toggle > span {
+    width: 0;
+    min-width: 0;
+    flex: 0 0 0;
+    overflow: hidden;
+    opacity: 0;
+  }
+  html.kw-riel .drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within) .drawer-buscar-toggle svg,
+  html.kw-riel .drawer:not(.drawer-der).sin-hover .drawer-buscar-toggle svg {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    margin: 0;
+  }
+
+  html.kw-riel .drawer:not(.drawer-der):hover .drawer-buscar,
+  html.kw-riel .drawer:not(.drawer-der).open .drawer-buscar,
+  html.kw-riel .drawer:not(.drawer-der):focus-within .drawer-buscar,
+  html.kw-riel .drawer:not(.drawer-der).buscando .drawer-buscar {
+    width: 236px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  html.kw-riel .drawer.buscando .drawer-buscar,
+  html.kw-riel .drawer.buscando .drawer-buscar-toggle {
+    min-height: 36px;
+    height: 36px;
+  }
+  html.kw-riel .drawer.buscando .drawer-buscar-toggle {
+    width: 38px;
+    flex-basis: 38px;
+    padding: 4px 8px;
+  }
+  html.kw-riel .drawer.buscando .drawer-buscar .kw-buscar-campo-inline {
+    line-height: 1.2;
+  }
+  html.kw-riel .drawer.buscando .drawer-buscar .kw-buscar-cerrar-inline {
+    width: 24px;
+    height: 24px;
+  }
+}
