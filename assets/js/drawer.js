@@ -277,6 +277,32 @@
   `;
   while (contenedor.firstChild) document.body.appendChild(contenedor.firstChild);
 
+  // En Nuevo asesor el Hub permanece expandido: fijamos los textos
+  // directamente para que ninguna regla del riel contraído los oculte.
+  function fijarTextosNuevoAsesor() {
+    if (!document.body.classList.contains('en-ficha-asesor') &&
+        !document.body.classList.contains('cargando-nuevo')) return;
+    const d = document.getElementById('drawer');
+    if (!d) return;
+    d.style.width = '292px';
+    d.style.minWidth = '292px';
+    d.style.maxWidth = '292px';
+    d.querySelectorAll('.drawer-link > span, .drawer-section-label, .drawer-usuario-txt')
+      .forEach((el) => {
+        el.style.setProperty('display', 'inline-flex', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('width', 'auto', 'important');
+        el.style.setProperty('max-width', 'none', 'important');
+        el.style.setProperty('flex', '1 1 auto', 'important');
+        el.style.setProperty('overflow', 'visible', 'important');
+      });
+  }
+  fijarTextosNuevoAsesor();
+  new MutationObserver(fijarTextosNuevoAsesor).observe(document.body, {
+    attributes: true, attributeFilter: ['class']
+  });
+
   // El botón vive dentro del <header> de la página (si existe) para que
   // quede junto al logo; si la página no tiene header (ej. index.html),
   // flota fijo en la esquina.
