@@ -256,8 +256,8 @@
       </a>`}
       <nav class="drawer-nav">
         ${esPublico ? '' : `
-        <div class="drawer-link drawer-buscar-acceso" id="drawer-buscar">
-          <button type="button" class="drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
+        <div class="drawer-buscar-acceso" id="drawer-buscar">
+          <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
             ${ICONS.search}<span>Buscar en la página</span>
           </button>
         </div>`}
