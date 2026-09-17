@@ -784,32 +784,60 @@
     }
   }
 
-  /* La barra lateral cambió la geometría de esta pantalla. Mantener la
-     antigua cadena de flex + overflow:hidden podía calcular la lista con
-     altura cero: los datos sí se pintaban, pero quedaban recortados.
-     Asesores vuelve al flujo natural de la página; sólo la barra lateral
-     permanece fija por medio de sus estilos compartidos. */
+  /* El Panel ocupa exactamente la ventana. Encabezado, herramientas y
+     pestañas permanecen quietos; el único scroll vive dentro de la lista
+     de asesores. La altura se transmite por toda la cadena de flex para
+     que el área desplazable siempre tenga una medida real. */
   @media (min-width: 901px) {
+    html:has(body.en-asesores),
     body.en-asesores {
-      height: auto;
-      min-height: 100vh;
-      overflow-y: auto;
+      height: 100%;
+      overflow: hidden;
     }
     body.en-asesores > main.kw-page {
-      display: block;
-      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
     }
+    body.en-asesores #contenido-panel,
+    body.en-asesores .kw-lateral-principal,
     body.en-asesores #panel-paneles,
     body.en-asesores #panel-paneles > .kw-tabpanel.activo,
     body.en-asesores #asesores-paneles,
     body.en-asesores #asesores-paneles > .kw-tabpanel.activo {
-      display: block;
       min-height: 0;
     }
+    body.en-asesores #panel-paneles {
+      display: flex;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+    body.en-asesores #panel-paneles > .kw-tabpanel.activo {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.en-asesores #asesores-paneles {
+      display: flex;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+    body.en-asesores #asesores-paneles > .kw-tabpanel.activo {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      overflow: hidden;
+    }
     body.en-asesores .asesores-lista {
-      min-height: 120px;
-      overflow: visible;
-      padding-right: 0;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      padding: 2px 6px 12px 2px;
     }
   }
 
@@ -829,9 +857,11 @@
       flex: none;
     }
     body.en-asesores #contenido-panel > .kw-lateral-principal {
-      display: block;
-      min-height: 100vh;
-      overflow: visible;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
     }
     #contenido-panel #panel-tabs,
     #contenido-panel .asesores-card > .barra > .buscador,
@@ -2110,19 +2140,26 @@
       const visible = panel.dataset.panel === clave;
       panel.hidden = !visible;
       panel.classList.toggle('activo', visible);
-      panel.style.display = visible ? 'block' : 'none';
+      panel.style.display = visible ? 'flex' : 'none';
       panel.style.visibility = visible ? 'visible' : 'hidden';
       panel.style.opacity = visible ? '1' : '0';
       if (visible) {
+        panel.style.flexDirection = 'column';
+        panel.style.flex = '1 1 auto';
+        panel.style.minHeight = '0';
         panel.style.height = 'auto';
         panel.style.maxHeight = 'none';
+        panel.style.overflow = 'hidden';
         const lista = panel.querySelector('.asesores-lista');
         if (lista) {
           lista.style.display = 'block';
           lista.style.visibility = 'visible';
           lista.style.opacity = '1';
+          lista.style.flex = '1 1 auto';
+          lista.style.minHeight = '0';
           lista.style.height = 'auto';
           lista.style.maxHeight = 'none';
+          lista.style.overflowY = 'auto';
         }
       }
     });
