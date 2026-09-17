@@ -22,7 +22,33 @@
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916c">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <style>
-  /* ── Lo único que solo esta pantalla tiene ──────────────────────
+  /* Carga de transición al abrir Nuevo asesor, igual que Firmas. */
+  #ficha-carga {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(20,16,14,.82);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  #ficha-carga[hidden] { display: none; }
+  #ficha-carga .kw-loader {
+    width: 56px;
+    height: 56px;
+    min-height: 0;
+    padding: 0;
+  }
+  #ficha-carga .kw-loader .circle { border-top-color: var(--red); }
+  #ficha-carga-texto {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+    /* ── Lo único que solo esta pantalla tiene ──────────────────────
      El resto sale de las piezas compartidas: .kw-page-encabezado,
      .kw-resumen/.kw-conteo, .kw-lista/.kw-fila, .kw-datos.en-columnas,
      .kw-fila-acciones y .field. */
@@ -75,7 +101,16 @@
      la tarjeta, contenido a todo el ancho disponible y secciones con
      línea inferior en lugar de rótulos pequeños en mayúsculas. */
   #vista-ficha > .kw-page-encabezado {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
     margin: 0 0 12px;
+    text-align: left;
+  }
+  #vista-ficha > .kw-page-encabezado .kw-page-titulo {
+    margin-left: 0;
+    text-align: left;
   }
   .ficha-hoja {
     width: 100%;
@@ -196,6 +231,12 @@
 </style>
 </head>
 <body>
+  <div id="ficha-carga" hidden role="status" aria-live="polite">
+    <div class="kw-loader" aria-hidden="true">
+      <div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>
+    </div>
+    <div id="ficha-carga-texto">Abriendo Nuevo asesor…</div>
+  </div>
 
   <!-- El mismo header que las demás pantallas: la lupa de un lado y la
        campanita del otro, que los pone drawer.js. -->
@@ -968,12 +1009,26 @@
     $('ficha-borrar').style.display = editando ? '' : 'none';
     aviso('', '');
 
-    $('vista-lista').style.display = 'none';
-    $('vista-ficha').style.display = '';
+    const carga = $('ficha-carga');
+    if (carga) {
+      carga.hidden = false;
+      carga.setAttribute('aria-hidden', 'false');
+    }
     document.body.classList.add('en-ficha-asesor');
-    window.scrollTo(0, 0);
-    $('f-nombre').focus();
-    limpiarAutollenado(a);
+    // Pintar primero la carga para que no se vea la lista de Base de
+    // asesores durante el cambio de vista. La animación dura lo justo
+    // para que se perciba como una transición, no como un parpadeo.
+    window.setTimeout(function () {
+      $('vista-lista').style.display = 'none';
+      $('vista-ficha').style.display = '';
+      if (carga) {
+        carga.hidden = true;
+        carga.setAttribute('aria-hidden', 'true');
+      }
+      window.scrollTo(0, 0);
+      $('f-nombre').focus();
+      limpiarAutollenado(a);
+    }, 320);
   }
 
   // El navegador ve un campo de texto seguido de uno de contraseña y le
@@ -998,6 +1053,11 @@
     $('vista-ficha').style.display = 'none';
     $('vista-lista').style.display = '';
     document.body.classList.remove('en-ficha-asesor');
+    const carga = $('ficha-carga');
+    if (carga) {
+      carga.hidden = true;
+      carga.setAttribute('aria-hidden', 'true');
+    }
     window.scrollTo(0, 0);
   }
 
