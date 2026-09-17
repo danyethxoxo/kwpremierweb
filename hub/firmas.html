@@ -19,7 +19,7 @@
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260915a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916a">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916b">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/kwpremierweb/assets/js/kw-firma-puente.js?v=20260907a"></script>
@@ -491,47 +491,7 @@
       flex: 1; min-height: 0;
     }
 
-    /* Una sola franja lateral fija. Los dos contenidos se intercambian
-       sin transiciones cruzadas para que nunca se vean al mismo tiempo. */
-    html.kw-riel body.en-historial #drawer {
-      display: none !important;
-      visibility: hidden; pointer-events: none;
-      width: 292px !important; transform: none !important;
-      transition: none !important;
-    }
-    html.kw-riel body.en-historial.firmas-muestra-hub #drawer {
-      display: flex !important;
-      visibility: visible !important;
-      pointer-events: auto !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
-    body.en-historial.firmas-muestra-hub .firmas-panel-pagina {
-      display: none !important;
-    }
-
-    @keyframes firmas-switch-entrada {
-      from { opacity: 0; transform: translateX(-6px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    body.en-historial.firmas-switch-usado.firmas-muestra-hub #drawer > *,
-    body.en-historial.firmas-switch-usado:not(.firmas-muestra-hub) .firmas-panel-pagina {
-      animation: firmas-switch-entrada 180ms cubic-bezier(.22,1,.36,1) both;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      body.en-historial.firmas-switch-usado.firmas-muestra-hub #drawer > *,
-      body.en-historial.firmas-switch-usado:not(.firmas-muestra-hub) .firmas-panel-pagina {
-        animation: none;
-      }
-    }
-
-    body.en-historial #drawer-overlay { display: none !important; }
-    body.en-historial.firmas-muestra-hub #drawer .drawer-header,
-    body.en-historial.firmas-muestra-hub #drawer .drawer-link > span,
-    body.en-historial.firmas-muestra-hub #drawer .drawer-section-label,
-    body.en-historial.firmas-muestra-hub #drawer .drawer-usuario-txt {
-      opacity: 1 !important;
-    }
+    /* El intercambio con el menú global lo controla kw-lateral.css. */
   }
 
   @media (max-width: 1023px) {
@@ -1645,7 +1605,7 @@
           <a class="firmas-panel-logo kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="firmas-panel-menu kw-lateral-menu" id="firmas-panel-menu" aria-label="Mostrar menú del Hub" title="Mostrar menú del Hub" aria-pressed="false">
+          <button type="button" class="firmas-panel-menu kw-lateral-menu" id="firmas-panel-menu" data-kw-menu-principal aria-label="Mostrar menú del Hub" title="Mostrar menú del Hub" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
           </button>
         </div>
@@ -2125,47 +2085,6 @@
 
   document.addEventListener('DOMContentLoaded', prepararPanelHistorial, { once: true });
 
-  function prepararSwitchLateral() {
-    const boton = $('firmas-panel-menu');
-    const botonHub = $('drawer-hamburguesa');
-    const drawer = $('drawer');
-    if (!boton || !botonHub || !drawer) return;
-
-    const iconoSwitch = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>';
-
-    function mostrarHub(mostrar) {
-      document.body.classList.toggle('firmas-muestra-hub', mostrar);
-      document.body.classList.remove('menu-global-abierto', 'menu-global-cerrando');
-      drawer.classList.remove('open', 'sin-hover');
-
-      boton.setAttribute('aria-pressed', String(mostrar));
-      boton.setAttribute('aria-label', mostrar ? 'Mostrar filtros' : 'Mostrar menú del Hub');
-      boton.title = mostrar ? 'Mostrar filtros' : 'Mostrar menú del Hub';
-
-      botonHub.innerHTML = iconoSwitch;
-      botonHub.setAttribute('aria-label', 'Mostrar filtros');
-      botonHub.title = 'Mostrar filtros';
-    }
-
-    boton.addEventListener('click', (evento) => {
-      evento.preventDefault();
-      evento.stopPropagation();
-      document.body.classList.add('firmas-switch-usado');
-      mostrarHub(!document.body.classList.contains('firmas-muestra-hub'));
-    });
-
-    botonHub.addEventListener('click', (evento) => {
-      if (!document.body.classList.contains('firmas-muestra-hub')) return;
-      evento.preventDefault();
-      evento.stopImmediatePropagation();
-      document.body.classList.add('firmas-switch-usado');
-      mostrarHub(false);
-    }, true);
-
-    mostrarHub(false);
-  }
-
-  document.addEventListener('DOMContentLoaded', prepararSwitchLateral, { once: true });
   // Los modal-overlay de esta pantalla (documento, detalle, editar) no
   // bloqueaban el fondo: con la rueda o el teclado, el scroll se iba al
   // historial de atrás en vez de quedarse dentro del modal. Se cuenta
@@ -5505,7 +5424,7 @@
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260915a" data-menu="hub"></script>
-<script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916a"></script>
+<script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916b"></script>
 
 </body>
 </html>
