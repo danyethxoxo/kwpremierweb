@@ -261,7 +261,7 @@
           <label for="search-btn" class="drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
             <span class="drawer-buscar-icono">${ICONS.search}</span><span>Buscar en la página</span>
           </label>
-        </div>`}}
+        </div>`}
         ${navHtml}
       </nav>
       <div class="drawer-footer">${footerHtml}</div>
