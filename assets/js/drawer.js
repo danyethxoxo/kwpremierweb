@@ -254,7 +254,15 @@
           <span class="drawer-usuario-rol" id="drawer-usuario-rol"></span>
         </span>
       </a>`}
-      <nav class="drawer-nav">${navHtml}</nav>
+      <nav class="drawer-nav">
+        ${esPublico ? '' : `
+        <div class="drawer-buscar drawer-buscar-acceso" id="drawer-buscar">
+          <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
+            ${ICONS.search}<span>Buscar en la página</span>
+          </button>
+        </div>`}
+        ${navHtml}
+      </nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
     ${esPublico ? '' : `
