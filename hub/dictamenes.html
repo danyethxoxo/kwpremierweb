@@ -1337,6 +1337,50 @@
     body.en-lista .dic-arriba:not(:has(.dic-campo-buscar, .kw-resumen)) {
       display: none;
     }
+
+    /* En crear/editar, el lateral deja de ser intercambiable: se ve
+       directamente el menú completo del Hub y el formulario usa el mismo
+       margen de 18px que la vista de expedientes. */
+    body.en-editor > .kw-lateral-universal {
+      display: none !important;
+    }
+    html.kw-riel body.en-editor {
+      padding-left: 292px !important;
+    }
+    html.kw-riel body.en-editor > main.kw-page {
+      width: 100%;
+      max-width: none;
+      min-height: 100vh;
+      padding: 18px !important;
+    }
+    html.kw-riel body.en-editor #drawer {
+      display: flex !important;
+      width: 292px !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    html.kw-riel body.en-editor #drawer .drawer-hamburguesa {
+      display: none !important;
+    }
+    html.kw-riel body.en-editor #drawer .drawer-header,
+    html.kw-riel body.en-editor #drawer .drawer-link > span,
+    html.kw-riel body.en-editor #drawer .drawer-section-label,
+    html.kw-riel body.en-editor #drawer .drawer-usuario-txt {
+      opacity: 1 !important;
+    }
+    html.kw-riel body.en-editor #drawer .drawer-usuario {
+      justify-content: flex-start;
+      padding: 13px 7px;
+    }
+    body.en-editor #drawer-overlay {
+      display: none !important;
+    }
+    body.en-editor #vista-editor > .dic-barra {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
   }
 </style>
 </head>
@@ -3994,6 +4038,10 @@
     $('vista-lista').style.display = 'none';
     $('vista-editor').style.display = '';
     document.body.classList.remove('en-lista');
+    document.body.classList.add('en-editor');
+    document.body.classList.remove('menu-global-abierto', 'menu-global-cerrando');
+    var drawerEditor = $('drawer');
+    if (drawerEditor) drawerEditor.classList.remove('open', 'sin-hover', 'buscando');
     document.body.classList.remove('cargando-nuevo');
     window.scrollTo(0, 0);
   }
@@ -4006,6 +4054,10 @@
     }
     $('vista-editor').style.display = 'none';
     $('vista-lista').style.display = '';
+    document.body.classList.remove('en-editor');
+    document.body.classList.remove('menu-global-abierto', 'menu-global-cerrando');
+    var drawerEditor = $('drawer');
+    if (drawerEditor) drawerEditor.classList.remove('open', 'sin-hover', 'buscando');
     document.body.classList.add('en-lista');
   }
 
