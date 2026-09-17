@@ -35,6 +35,8 @@
     gap: 14px;
   }
   #ficha-carga[hidden] { display: none; }
+  body.cargando-nuevo #contenido { visibility: hidden; }
+  body.cargando-nuevo #ficha-carga { visibility: visible; }
   #ficha-carga .kw-loader {
     width: 56px;
     height: 56px;
@@ -237,6 +239,18 @@
     </div>
     <div id="ficha-carga-texto">Abriendo Nuevo asesor…</div>
   </div>
+  <script>
+    // La carga se enciende antes de auth, Supabase y las listas: así la
+    // vista de Base de asesores nunca alcanza a aparecer durante la entrada.
+    if (new URLSearchParams(location.search).has('nuevo')) {
+      document.body.classList.add('cargando-nuevo');
+      var cargaInicial = document.getElementById('ficha-carga');
+      if (cargaInicial) {
+        cargaInicial.hidden = false;
+        cargaInicial.setAttribute('aria-hidden', 'false');
+      }
+    }
+  </script>
 
   <!-- El mismo header que las demás pantallas: la lupa de un lado y la
        campanita del otro, que los pone drawer.js. -->
@@ -1025,6 +1039,7 @@
         carga.hidden = true;
         carga.setAttribute('aria-hidden', 'true');
       }
+      document.body.classList.remove('cargando-nuevo');
       window.scrollTo(0, 0);
       $('f-nombre').focus();
       limpiarAutollenado(a);
