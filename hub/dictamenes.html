@@ -1282,6 +1282,9 @@
       box-shadow: none;
       overflow: visible;
     }
+    body.en-lista .kw-lateral-contenido .dic-filtros-mas {
+      display: none;
+    }
     body.en-lista .kw-lateral-contenido .kw-filtros {
       display: flex;
       flex-direction: column;
@@ -4882,6 +4885,17 @@
     var caja = $('filtros-caja');
     var abierta = caja.classList.contains('abierta');
     var campos = Array.prototype.slice.call($('filtros').children);
+    var btn = $('btn-mas-filtros');
+
+    // En la barra lateral los filtros ya están apilados: no hay un
+    // segundo renglón que ocultar ni hace falta la flecha azul de "más".
+    if (caja.closest('.kw-lateral-contenido')) {
+      campos.forEach(function (c) { c.classList.remove('dic-filtro-oculto'); });
+      btn.hidden = true;
+      $('filtros-cuantos').hidden = true;
+      return;
+    }
+    btn.hidden = false;
 
     // Se miden con todos a la vista: uno escondido no tiene lugar que leer.
     campos.forEach(function (c) { c.classList.remove('dic-filtro-oculto'); });
@@ -4896,7 +4910,6 @@
       });
     }
 
-    var btn = $('btn-mas-filtros');
     btn.setAttribute('aria-expanded', abierta ? 'true' : 'false');
     var dice = abierta ? 'Ver solo el primer filtro' : 'Ver todos los filtros';
     btn.title = dice;
