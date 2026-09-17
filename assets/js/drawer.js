@@ -254,8 +254,6 @@
           <span class="drawer-usuario-rol" id="drawer-usuario-rol"></span>
         </span>
       </a>`}
-      ${esPublico ? '' : `
-      </div>`}
       <nav class="drawer-nav">${navHtml}</nav>
       <div class="drawer-footer">${footerHtml}</div>
     </div>
