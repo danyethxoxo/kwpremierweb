@@ -19,7 +19,7 @@
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260915a">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916b">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916c">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/kwpremierweb/assets/js/kw-xlsx.js?v=20260829t"></script>
 <style>
@@ -1042,6 +1042,17 @@
      cuatro elegidos, una sola línea los recortaría y ya no se sabría a
      quiénes se está filtrando. */
   .dic-multi { position: relative; }
+  .dic-multi > #f-asesor-busca { padding-right: 38px; }
+  .dic-asesor-toggle {
+    position: absolute; right: 5px; bottom: 5px; z-index: 2;
+    width: 28px; height: 28px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 8px; background: transparent;
+    color: var(--muted); cursor: pointer;
+  }
+  .dic-asesor-toggle:hover { background: var(--pastel-rojo); color: var(--red); }
+  .dic-asesor-toggle svg { width: 17px; height: 17px; transition: transform 160ms ease; }
+  .dic-asesor-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
   .dic-multi-elegidos { display: flex; flex-wrap: wrap; gap: 5px; }
   .dic-multi-elegidos:not(:empty) { margin-bottom: 6px; }
   .dic-multi-chip {
@@ -1430,6 +1441,13 @@
             <div class="dic-multi-elegidos" id="f-asesor-elegidos"></div>
             <input type="text" id="f-asesor-busca" class="kw-input"
               placeholder="Buscar asesor" autocomplete="off">
+            <button type="button" class="dic-asesor-toggle" id="f-asesor-toggle"
+              aria-label="Mostrar lista de asesores" aria-controls="f-asesor-lista"
+              aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
             <div class="dic-asesor-lista" id="f-asesor-lista"></div>
           </div>
         </div>
@@ -2387,12 +2405,14 @@
       }).join('')
       : '<div class="dic-asesor-vacio">Ningún asesor con ese nombre.</div>';
     caja.classList.add('abierta');
+    $('f-asesor-toggle').setAttribute('aria-expanded', 'true');
 
     caja.querySelectorAll('[data-mas-asesor]').forEach(function (b) {
       b.addEventListener('click', function () {
         asesoresFiltro.push(b.dataset.masAsesor);
         $('f-asesor-busca').value = '';
         caja.classList.remove('abierta');
+        $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
         pintarAsesoresFiltro();
         pintar();
       });
@@ -4969,8 +4989,27 @@
 
   $('f-asesor-busca').addEventListener('input', pintarSugerenciasAsesor);
   $('f-asesor-busca').addEventListener('focus', pintarSugerenciasAsesor);
+  $('f-asesor-busca').addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    $('f-asesor-lista').classList.remove('abierta');
+    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
+  });
+  $('f-asesor-toggle').addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var lista = $('f-asesor-lista');
+    if (lista.classList.contains('abierta')) {
+      lista.classList.remove('abierta');
+      this.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    $('f-asesor-busca').focus();
+    pintarSugerenciasAsesor();
+  });
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('#f-asesor-caja')) $('f-asesor-lista').classList.remove('abierta');
+    if (e.target.closest('#f-asesor-caja')) return;
+    $('f-asesor-lista').classList.remove('abierta');
+    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
   });
 
   $('f-limpiar').addEventListener('click', function () {
@@ -4986,6 +5025,7 @@
     asesoresFiltro = [];
     $('f-asesor-busca').value = '';
     $('f-asesor-lista').classList.remove('abierta');
+    $('f-asesor-toggle').setAttribute('aria-expanded', 'false');
     pintarAsesoresFiltro();
     pintar();
     acomodarFiltros();
