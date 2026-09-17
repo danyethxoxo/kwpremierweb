@@ -698,12 +698,13 @@
   .asesores-card .asesores-grupos {
     flex: 0 1 auto;
     width: auto;
+    height: 34px;
     max-width: min(620px, 58vw);
     min-width: 0;
     align-self: center;
     align-items: center;
     margin: 0;
-    padding: 4px 0;
+    padding: 0;
     overflow-x: auto;
     scrollbar-width: thin;
     border-bottom: 0;
@@ -711,10 +712,21 @@
   .asesores-card .asesores-grupos .kw-tab {
     flex: 0 0 auto;
     min-width: max-content;
+    height: 34px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
   }
   .asesores-card .asesores-grupos .kw-tab.activo,
   .asesores-card .asesores-grupos .kw-tab[aria-selected="true"] {
     color: var(--red, #a30000) !important;
+    font-weight: 700;
+  }
+  .asesores-card .asesores-grupos .kw-tabs-indicador {
+    background: var(--red, #a30000) !important;
   }
   /* Separación breve y constante entre el selector de categorías y las
      filas; sin la raya general, sólo queda el indicador de la activa. */
@@ -2202,6 +2214,14 @@
   // por DOM y los demás quedan realmente ocultos.
   function mostrarGrupoAsesores(clave) {
     const paneles = document.getElementById('asesores-paneles');
+    const tabs = document.getElementById('asesores-tabs');
+    if (tabs) {
+      tabs.querySelectorAll('.kw-tab').forEach(function (boton) {
+        const activo = boton.dataset.tab === clave;
+        boton.classList.toggle('activo', activo);
+        boton.setAttribute('aria-selected', activo ? 'true' : 'false');
+      });
+    }
     if (!paneles) return;
     Array.from(paneles.children).forEach(function (panel) {
       if (!panel.classList.contains('kw-tabpanel')) return;
