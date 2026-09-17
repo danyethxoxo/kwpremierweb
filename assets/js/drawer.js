@@ -498,13 +498,11 @@
     } else if (header) {
       header.classList.add('kw-buscando');
     }
-    if (!campoLocal) {
-      buscarResultados.hidden = true;
-      buscarResultados.innerHTML = '';
-      // Drive y el calendario se van trayendo desde ya, aunque todavía
-      // no se enseñe nada: así la primera búsqueda no espera.
-      cargarExtras();
-    }
+    buscarResultados.hidden = true;
+    buscarResultados.innerHTML = '';
+    // La búsqueda global se conserva aunque la página también tenga un
+    // filtro local: ambos reciben el texto al mismo tiempo.
+    cargarExtras();
     // El foco espera al siguiente cuadro: pedirlo en el mismo tick en que
     // la cápsula todavía se está estirando hace que algunos navegadores
     // lo ignoren.
@@ -565,11 +563,10 @@
 
   buscarInput.addEventListener('input', () => {
     if (campoLocal) {
-      // Se le pasa a la página su propio evento, para que su filtrado de
-      // siempre corra sin enterarse de que el texto vino de otro campo.
+      // El filtro de la página sigue funcionando, pero no cancela la
+      // búsqueda general del Hub.
       campoLocal.value = buscarInput.value;
       campoLocal.dispatchEvent(new Event('input', { bubbles: true }));
-      return;
     }
     pintarResultados(buscarInput.value);
   });
