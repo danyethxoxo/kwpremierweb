@@ -509,6 +509,22 @@
     body.en-historial.firmas-muestra-hub .firmas-panel-pagina {
       display: none !important;
     }
+
+    @keyframes firmas-switch-entrada {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    body.en-historial.firmas-switch-usado.firmas-muestra-hub #drawer > *,
+    body.en-historial.firmas-switch-usado:not(.firmas-muestra-hub) .firmas-panel-pagina {
+      animation: firmas-switch-entrada 180ms cubic-bezier(.22,1,.36,1) both;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body.en-historial.firmas-switch-usado.firmas-muestra-hub #drawer > *,
+      body.en-historial.firmas-switch-usado:not(.firmas-muestra-hub) .firmas-panel-pagina {
+        animation: none;
+      }
+    }
+
     body.en-historial #drawer-overlay { display: none !important; }
     body.en-historial.firmas-muestra-hub #drawer .drawer-header,
     body.en-historial.firmas-muestra-hub #drawer .drawer-link > span,
@@ -2134,6 +2150,7 @@
     boton.addEventListener('click', (evento) => {
       evento.preventDefault();
       evento.stopPropagation();
+      document.body.classList.add('firmas-switch-usado');
       mostrarHub(!document.body.classList.contains('firmas-muestra-hub'));
     });
 
@@ -2141,6 +2158,7 @@
       if (!document.body.classList.contains('firmas-muestra-hub')) return;
       evento.preventDefault();
       evento.stopImmediatePropagation();
+      document.body.classList.add('firmas-switch-usado');
       mostrarHub(false);
     }, true);
 
