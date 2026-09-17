@@ -474,10 +474,11 @@
     ? (header.querySelector('.kw-header-capsula') || header)
     : null;
   const areaBuscarRiel = document.getElementById('drawer-buscar');
+  const searchCheck = document.getElementById('search-btn');
 
   const buscarInput = document.createElement('input');
   buscarInput.type = 'text';
-  buscarInput.id = 'kw-buscar-input';
+  buscarInput.id = 'search-bar';
   buscarInput.className = 'kw-buscar-campo-inline';
   buscarInput.autocomplete = 'off';
   buscarInput.placeholder = campoLocal
@@ -519,6 +520,7 @@
 
   function abrirBuscar() {
     if (!capsula && !areaBuscarRiel) return;
+    if (searchCheck) searchCheck.checked = true;
     if (buscadorVaEnRiel()) {
       const riel = areaBuscarRiel.closest('.drawer');
       riel.classList.remove('sin-hover');
@@ -538,6 +540,7 @@
   }
   function cerrarBuscar() {
     if (!capsula && !areaBuscarRiel) return;
+    if (searchCheck) searchCheck.checked = false;
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
