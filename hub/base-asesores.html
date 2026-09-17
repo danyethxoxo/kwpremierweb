@@ -71,21 +71,62 @@
      Un expediente de veinticuatro campos dentro de un modal es un
      cuadrito con scroll propio; de página entera se llena como se
      llena un formulario de papel. */
+  /* Misma composición que el editor de Dictámenes: título separado de
+     la tarjeta, contenido a todo el ancho disponible y secciones con
+     línea inferior en lugar de rótulos pequeños en mayúsculas. */
+  #vista-ficha > .kw-page-encabezado {
+    margin: 0 0 12px;
+  }
   .ficha-hoja {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--r-tarjeta); padding: var(--sp-5);
-    max-width: 900px;
+    width: 100%;
+    max-width: none;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r-tarjeta);
+    box-shadow: var(--sombra-1);
+    padding: var(--sp-4);
   }
-  .ficha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-4); }
+  .ficha-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+  }
+  .ficha-hoja .field { margin-bottom: var(--sp-3); }
+  .ficha-grid > .field { margin-bottom: 0; }
+  .ficha-hoja .field > label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
   .ficha-subtitulo {
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.03em;
-    margin: var(--sp-4) 0 var(--sp-3); padding-top: var(--sp-4);
-    border-top: 1px solid var(--border);
+    width: 100%;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: normal;
+    margin: var(--sp-5) 0 var(--sp-3);
+    padding: 0 0 6px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
   }
-  /* El primero abre la hoja: no separa nada de lo de arriba porque no
-     hay nada arriba. */
-  .ficha-subtitulo.primera { margin-top: 0; padding-top: 0; border-top: none; }
+  .ficha-subtitulo.primera {
+    margin: 0 0 var(--sp-3);
+    padding: 0 0 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 1024px) {
+    body.en-ficha-asesor > main.kw-page {
+      width: 100%;
+      max-width: none;
+      min-height: 100vh;
+      padding: 18px !important;
+    }
+  }
 
   /* El cumpleaños, en tres pedazos. */
   .fecha-partes { display: flex; gap: var(--sp-2); }
@@ -929,6 +970,7 @@
 
     $('vista-lista').style.display = 'none';
     $('vista-ficha').style.display = '';
+    document.body.classList.add('en-ficha-asesor');
     window.scrollTo(0, 0);
     $('f-nombre').focus();
     limpiarAutollenado(a);
@@ -955,6 +997,7 @@
     contactos = [];
     $('vista-ficha').style.display = 'none';
     $('vista-lista').style.display = '';
+    document.body.classList.remove('en-ficha-asesor');
     window.scrollTo(0, 0);
   }
 
