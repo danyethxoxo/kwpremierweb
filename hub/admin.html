@@ -2791,9 +2791,28 @@
       gruposAsesores = gruposDesdeBase();
     } else if (gruposLibro && gruposLibro.length) {
       // La base todavía no existe (falta correr 073_asesores.sql) o
-      // quedó vacía: mientras tanto se pinta lo que el libro trajo, que
-      // es como trabajaba el panel antes de que hubiera base.
-      gruposAsesores = gruposLibro;
+      // quedó vacía: se pinta el libro, pero dentro de las cuatro tablas
+      // estables. La respuesta antigua sólo mandaba "activos"; usarla
+      // directamente hacía desaparecer Bajas y Back Office.
+      gruposAsesores = BD_GRUPOS.map(function (g) {
+        return { clave: g.clave, titulo: g.titulo, hoja: '', personas: [] };
+      });
+      gruposLibro.forEach(function (g) {
+        if (g.clave === 'celulas') {
+          gruposAsesores.push(g);
+          return;
+        }
+        const clave = estatusDe({ grupo: g.clave, hoja: g.hoja });
+        const destino = gruposAsesores.find(function (x) { return x.clave === clave; });
+        if (destino) {
+          destino.hoja = g.hoja || destino.hoja;
+          destino.columnas = g.columnas;
+          destino.filasHoja = g.filasHoja;
+          destino.personas = destino.personas.concat(g.personas || []);
+        } else {
+          gruposAsesores.push(g);
+        }
+      });
     } else {
       // Un "esta sección es solo para el equipo de altas" se queda aquí
       // dentro, no tumba el Panel entero: lo demás del Panel sí es suyo.
