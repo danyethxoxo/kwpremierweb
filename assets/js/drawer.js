@@ -68,6 +68,7 @@
     { href: `${BASE}/hub/dictamenes.html`, label: 'Dictaminación de Expedientes', icon: 'dictamen' },
     { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
     { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo' },
+    { href: `${BASE}/hub/admin.html#asesores`, label: 'Panel Máster', icon: 'tablero', masterOnly: true },
   ];
 
   function estaActivo(href) {
@@ -80,7 +81,8 @@
     return items.map((item) => {
       if (item.section) return `<div class="drawer-section-label">${item.section}</div>`;
       const activo = estaActivo(item.href) ? ' activo' : '';
-      return `<a href="${item.href}" class="drawer-link${activo}">${ICONS[item.icon]}<span>${item.label}</span></a>`;
+      const soloMaster = item.masterOnly ? ' data-master-only hidden' : '';
+      return `<a href="${item.href}" class="drawer-link${activo}"${soloMaster}>${ICONS[item.icon]}<span>${item.label}</span></a>`;
     }).join('');
   }
 
@@ -868,6 +870,8 @@
         rol.textContent = ROLES_TXT[perfil.role] || perfil.role;
         rol.className = 'drawer-usuario-rol rol-' + perfil.role;
       }
+      const panelMaster = document.querySelector('[data-master-only]');
+      if (panelMaster) panelMaster.hidden = perfil.role !== 'master';
 
       if (perfil.foto_url) {
         const foto = document.getElementById('drawer-usuario-foto');
