@@ -423,6 +423,7 @@
   // Va aquí y no en el HTML de cada página porque el campo de búsqueda se
   // agrega más abajo y tiene que quedar después de él.
   const accionesMq = window.matchMedia('(min-width: 1024px)');
+  let campanaRaf = 0;
   function colocarCampanaEnAcciones() {
     const campana = document.getElementById('notif-bell-slot');
     if (!campana) return;
@@ -432,7 +433,17 @@
       return;
     }
     const grupos = Array.from(document.querySelectorAll('.kw-page-acciones'));
-    const acciones = grupos.find((el) => el.offsetParent !== null) || grupos[0];
+    const botonPrincipal = document.getElementById('btn-nuevo');
+    const grupoPrincipal = botonPrincipal && botonPrincipal.closest('.kw-page-acciones');
+    const accionesVisibles = grupos.find((el) => {
+      const encabezado = el.closest('.kw-page-encabezado');
+      return (encabezado || el).offsetParent !== null;
+    });
+    // En pantallas con más de una vista, como Dictámenes, el bloque de
+    // acciones puede activarse después de que termine de cargar el perfil.
+    // El botón principal es la referencia estable para no dejar la campana
+    // dentro de la barra superior durante ese intervalo.
+    const acciones = accionesVisibles || grupoPrincipal || grupos[0];
     if (!acciones) return;
     const engrane = acciones.querySelector('.kw-menu-ancla');
     if (engrane) {
@@ -442,9 +453,20 @@
       acciones.insertBefore(campana, acciones.firstChild);
     }
   }
-  requestAnimationFrame(colocarCampanaEnAcciones);
+  function programarCampanaEnAcciones() {
+    cancelAnimationFrame(campanaRaf);
+    campanaRaf = requestAnimationFrame(colocarCampanaEnAcciones);
+  }
+  programarCampanaEnAcciones();
   document.addEventListener('DOMContentLoaded', colocarCampanaEnAcciones, { once: true });
-  accionesMq.addEventListener('change', colocarCampanaEnAcciones);
+  window.addEventListener('kw-auth-ready', programarCampanaEnAcciones);
+  accionesMq.addEventListener('change', programarCampanaEnAcciones);
+  if (document.body) {
+    new MutationObserver(programarCampanaEnAcciones).observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  }
 
   const atras = header && header.querySelector('.back-btn');
   if (atras) {
