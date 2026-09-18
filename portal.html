@@ -19,7 +19,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942s">
 <!-- Va DESPUÉS de kw-base.css: es quien reemplaza el vidrio sobre fondo
      oscuro por tarjeta blanca sobre lienzo claro, y para eso tiene que
@@ -40,101 +39,66 @@
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
 
-  .header-socials { display: flex; align-items: center; gap: 8px; }
-  .social-btn {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: #f5f5f5; color: #888;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, transform 0.15s;
-  }
-  .social-btn:hover { background: #ffe0e0; color: var(--red); transform: translateY(-1px); }
-  .social-btn svg { width: 15px; height: 15px; fill: currentColor; }
-
-  #notif-bell-slot { position: relative; }
-  .notif-bell-btn {
-    position: relative; display: flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 50%; border: none;
-    background: #f5f5f5; color: #888; cursor: pointer;
-    transition: background 0.15s, color 0.15s, transform 0.15s;
-  }
-  .notif-bell-btn:hover { background: #ffe0e0; color: var(--red); transform: translateY(-1px); }
-  .notif-bell-btn svg { width: 16px; height: 16px; }
-  .notif-bell-badge {
-    position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 3px;
-    border-radius: 20px; background: var(--red); color: #fff; font-size: 10px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; line-height: 1; border: 2px solid #fff;
-  }
-
-  /* El Panel Master: cuadrado y solo el ícono, en índigo. El header
-     tiene dos cosas y no compiten: la campanita, que es del día a día y
-     va en guinda, y este, que es de administración y va en otro color
-     para que se distinga de un vistazo. El ancho lo iguala la regla de
-     .kw-header-sueltos de kw-base.css. */
-  header.kw-header .kw-header-sueltos > #btn-admin.btn-admin-header {
-    color: var(--pastel-indigo-txt);
-    text-decoration: none;
-    padding: 0; width: 52px;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    transition: color 0.15s, box-shadow 0.15s;
-  }
-  header.kw-header .kw-header-sueltos > #btn-admin.btn-admin-header:hover {
-    color: var(--pastel-indigo-txt);
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-  .btn-admin-header svg { width: 18px; height: 18px; fill: none; }
-
   /* ── CONTENIDO ── */
   main {
     flex: 1;
-    max-width: 920px;
+    width: 100%;
+    max-width: 1320px;
     margin: 0 auto;
-    padding: 94px 20px 50px;
+    padding: 24px clamp(22px, 4vw, 64px) 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
-  .welcome { width: 100%; text-align: center; margin: 0 auto 32px; }
-  /* Iba en blanco porque colgaba sobre el fondo guinda. Ahora cuelga
-     sobre el lienzo claro, así que toma el color de siempre. Y baja de
-     peso: en un diseño claro, una negrita de 800 en un título grande se
-     lee como grito. */
+  /* El riel global empuja las páginas a la izquierda. El portal es un
+     tablero y conserva su composición centrada. */
+  html.kw-riel body.portal-page > main {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 24px clamp(22px, 4vw, 64px) 18px !important;
+  }
+  .welcome { width: 100%; text-align: center; margin: 0 auto 20px; }
   .welcome-title {
-    font-size: 30px; font-weight: 700; color: var(--text);
-    letter-spacing: -0.03em; line-height: 1.15;
+    font-size: clamp(24px, 2.4vw, 30px);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
   }
 
   .cards-grid {
     width: 100%;
-    max-width: 780px;
+    max-width: 1200px;
     margin: 0 auto;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 18px;
+    align-items: stretch;
+    gap: 12px;
   }
-  .cards-grid .hover-card { flex: 0 1 calc(50% - 9px); }
-  .cards-grid .hover-card { min-height: 160px; }
-  .cards-grid .hover-card-icon svg { width: 25px; height: 25px; }
-  /* ── El color de cada tarjeta ──
-     Antes eran todas del mismo rosa y la cuadrícula se leía como un
-     solo bloque: para encontrar algo había que leer los diez títulos.
-     Ahora cada una tiene su tono, y el ojo aprende dónde está lo que
-     usa a diario sin leer.
+  .cards-grid .hover-card {
+    flex: 0 1 calc(20% - 10px);
+    min-width: 190px;
+    min-height: 132px;
+    padding: 16px 16px 14px;
+  }
+  .cards-grid .hover-card-icon {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+  }
+  .cards-grid .hover-card-icon svg { width: 22px; height: 22px; }
+  .cards-grid .hover-card-title { font-size: 15px; margin-bottom: 5px; }
+  .cards-grid .hover-card-desc { font-size: 12px; line-height: 1.35; padding-right: 30px; }
+  .cards-grid .hover-card-arrow { right: 14px; bottom: 14px; width: 28px; height: 28px; }
 
-     El rojo sigue mandando (es la mitad de la cuadrícula, y es el que
-     se llena al pasar el cursor en todas). Los demás pasteles están
-     para separar, no para competir. */
-  /* El color de cada tarjeta vive en kw-claro.css, junto al del baño del
-     fondo y al de la flecha. Aquí estaba repetido, y con la mitad de las
-     tarjetas en rojo. */
-
-
-
-
-
-  footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; }
+  @media (max-width: 1120px) {
+    .cards-grid .hover-card { flex-basis: calc(25% - 9px); }
+  }
+  @media (max-width: 860px) {
+    .cards-grid .hover-card { flex-basis: calc(33.333% - 8px); }
+  }
+  footer { display: flex; justify-content: center; gap: 10px; padding: 12px 20px 16px; }
   /* Blancos con su borde, no gris sobre gris: el gris de antes se
      apoyaba en que atrás hubiera oscuro, y sobre el lienzo claro queda
      casi del mismo tono que el fondo. */
@@ -153,39 +117,24 @@
   .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
 
   @media (max-width: 640px) {
-    main { padding: 82px 16px 36px; }
-    .cards-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .cards-grid .hover-card { flex-basis: calc(50% - 5px); min-height: auto; padding: 20px 12px; }
+    main { padding: 18px 14px 24px; justify-content: flex-start; }
+    html.kw-riel body.portal-page > main { padding: 18px 14px 24px !important; }
+    .welcome { margin-bottom: 14px; }
+    .cards-grid { gap: 10px; }
+    .cards-grid .hover-card {
+      flex-basis: calc(50% - 5px);
+      min-width: 0;
+      min-height: auto;
+      padding: 14px 12px;
+    }
+    .cards-grid .hover-card-desc { padding-right: 0; }
     .welcome-title { font-size: 21px; }
 
-    /* Orden en celular: Accesos Directos, Contratos, Calendario, Reporta una Incidencia */
-    .hover-card:nth-child(1) { order: 1; } /* Accesos Directos */
-    .hover-card:nth-child(4) { order: 2; } /* Acuerdos y Contratos */
-    .hover-card:nth-child(2) { order: 3; } /* Calendario */
-    .hover-card:nth-child(3) { order: 4; } /* Reporta una Incidencia */
   }
 </style>
 </head>
-<body>
+<body class="portal-page">
 
-  <header class="kw-header">
-
-    <!-- El perfil ya no vive aquí: ahora es el bloque de hasta arriba del
-         menú, con el nombre y el puesto de quien tiene la sesión. Así
-         está en las 28 pantallas y no nada más en esta. -->
-    <div class="header-socials" style="margin-left:auto;">
-      <div id="notif-bell-slot"></div>
-
-      <!-- El Panel Master va con su propio ícono (un tablero, no el
-           engrane de "configuración" que ya usan otras pantallas para
-           otra cosa), sin texto y en índigo: no es una acción del día a
-           día como la campanita, y en guinda se confundía con ella. -->
-      <a href="hub/admin.html" id="btn-admin" class="btn-admin-header" style="display:none;"
-         title="Panel Master" aria-label="Panel Master">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-      </a>
-    </div>
-  </header>
 
   <main>
     <div class="welcome">
@@ -407,11 +356,11 @@
         .eq('id', userData.user.id)
         .single();
       if (perfil && (perfil.role === 'admin' || perfil.role === 'master' || perfil.role === 'staff')) {
-        document.getElementById('btn-admin').style.display = '';
-        document.getElementById('card-liderazgo').style.display = '';
+        const cardLiderazgo = document.getElementById('card-liderazgo');
+        if (cardLiderazgo) cardLiderazgo.style.display = '';
       }
     } catch (e) {
-      // Si algo falla, simplemente no se muestra el botón de Admin.
+      // Si algo falla, la tarjeta exclusiva permanece oculta.
     }
   }
 
