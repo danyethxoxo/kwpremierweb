@@ -739,9 +739,25 @@
       window.matchMedia('(min-width: 1024px)').matches;
   }
 
+  // En escritorio el menú del Hub es navegación permanente, no una
+  // gaveta temporal. En celular conserva el panel superpuesto de siempre.
+  const rielFijoMq = window.matchMedia('(min-width: 1024px)');
+  function sincronizarRielFijo() {
+    if (enRiel(drawerIzq)) {
+      drawerIzq.classList.remove('sin-hover');
+      drawerIzq.classList.add('open');
+    } else {
+      drawerIzq.classList.remove('open', 'sin-hover');
+    }
+  }
+  sincronizarRielFijo();
+  rielFijoMq.addEventListener('change', sincronizarRielFijo);
+
   function abrirPanel(panel) {
     if (!panel || !panel.el) return;
-    PANELES.forEach((otro) => { if (otro !== panel) otro.el.classList.remove('open'); });
+    PANELES.forEach((otro) => {
+      if (otro !== panel && !enRiel(otro.el)) otro.el.classList.remove('open');
+    });
     panel.el.classList.remove('sin-hover');
     panel.el.classList.add('open');
     // El riel no tapa la página: vive en su propia franja. Trabarle el
@@ -756,6 +772,11 @@
   }
   function cerrarPaneles() {
     PANELES.forEach((p) => {
+      if (enRiel(p.el)) {
+        p.el.classList.remove('sin-hover');
+        p.el.classList.add('open');
+        return;
+      }
       // Al soltar el riel, el cursor sigue encima (se acaba de picar un
       // botón de adentro), así que el :hover lo mantendría ancho y
       // parecería que no pasó nada. Se le fuerza el ancho angosto hasta
@@ -788,6 +809,7 @@
   // mantener el cursor encima. Vuelta a picar, se cierra.
   const hamRiel = document.getElementById('drawer-hamburguesa');
   if (hamRiel) hamRiel.addEventListener('click', () => {
+    if (enRiel(drawerIzq)) return;
     if (drawerIzq.classList.contains('open')) cerrar(); else abrir();
   });
   velo.addEventListener('click', cerrar);
