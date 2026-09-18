@@ -77,16 +77,6 @@
     }
   }
 
-  function acomodarCampana(lateral) {
-    const campana = document.getElementById('notif-bell-slot');
-    if (!campana || !lateral || document.body.classList.contains('en-historial')) return;
-    const cabecera = lateral.querySelector('.kw-lateral-cabecera');
-    const menu = cabecera && cabecera.querySelector('.kw-lateral-menu');
-    const sueltos = document.querySelector('.kw-header-sueltos');
-    if (escritorio.matches && cabecera && menu) cabecera.insertBefore(campana, menu);
-    else if (sueltos) sueltos.appendChild(campana);
-  }
-
   function iniciar() {
     const lateral = crearBarra() || document.querySelector('.kw-lateral');
     const drawer = document.getElementById('drawer');
@@ -102,11 +92,7 @@
       }
     }
     acomodarFuentes(lateral);
-    acomodarCampana(lateral);
-    escritorio.addEventListener('change', function () {
-      acomodarFuentes(lateral);
-      acomodarCampana(lateral);
-    });
+    escritorio.addEventListener('change', function () { acomodarFuentes(lateral); });
 
     botones.forEach(function (boton) {
       boton.addEventListener('click', function (evento) {

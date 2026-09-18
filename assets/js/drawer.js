@@ -422,6 +422,30 @@
   //
   // Va aquí y no en el HTML de cada página porque el campo de búsqueda se
   // agrega más abajo y tiene que quedar después de él.
+  const accionesMq = window.matchMedia('(min-width: 1024px)');
+  function colocarCampanaEnAcciones() {
+    const campana = document.getElementById('notif-bell-slot');
+    if (!campana) return;
+    const sueltos = header && header.querySelector('.kw-header-sueltos');
+    if (!accionesMq.matches) {
+      if (sueltos) sueltos.appendChild(campana);
+      return;
+    }
+    const grupos = Array.from(document.querySelectorAll('.kw-page-acciones'));
+    const acciones = grupos.find((el) => el.offsetParent !== null) || grupos[0];
+    if (!acciones) return;
+    const engrane = acciones.querySelector('.kw-menu-ancla');
+    if (engrane) {
+      acciones.insertBefore(engrane, acciones.firstChild);
+      engrane.insertAdjacentElement('afterend', campana);
+    } else {
+      acciones.insertBefore(campana, acciones.firstChild);
+    }
+  }
+  requestAnimationFrame(colocarCampanaEnAcciones);
+  document.addEventListener('DOMContentLoaded', colocarCampanaEnAcciones, { once: true });
+  accionesMq.addEventListener('change', colocarCampanaEnAcciones);
+
   const atras = header && header.querySelector('.back-btn');
   if (atras) {
     const caja = header.querySelector('.kw-header-capsula') || header;
