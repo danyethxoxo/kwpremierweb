@@ -1,27 +1,27 @@
-/* ═══════════════════════════════════════════════════════════════
+/* ???????????????????????????????????????????????????????????????
    KW Premier - estilos compartidos
-   ═══════════════════════════════════════════════════════════════
-   Reglas que se repiten en (casi) todas las páginas del sitio:
+   ???????????????????????????????????????????????????????????????
+   Reglas que se repiten en (casi) todas las p?ginas del sitio:
    colores, botones, modales, header/footer, campos de formulario,
-   insignias de rol. Para usarlo en una página:
+   insignias de rol. Para usarlo en una p?gina:
 
      <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css">
 
-   Un solo cambio aquí se refleja en toda página que lo enlace - no
+   Un solo cambio aqu? se refleja en toda p?gina que lo enlace - no
    hace falta editar documento por documento.
 
-   Lo que SÍ debe seguir viviendo dentro de cada página (no aquí):
-   estilos específicos de esa página o ese documento en particular
-   (por ejemplo el diseño de las hojas tamaño carta de los acuerdos,
+   Lo que S? debe seguir viviendo dentro de cada p?gina (no aqu?):
+   estilos espec?ficos de esa p?gina o ese documento en particular
+   (por ejemplo el dise?o de las hojas tama?o carta de los acuerdos,
    o el layout propio de una vista de lista/directorio).
-   ═══════════════════════════════════════════════════════════════ */
+   ??????????????????????????????????????????????????????????????? */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 /* Con su propia version: sin ella, kw-ui.css se quedaba en el cache
    del navegador aunque kw-base.css se volviera a bajar. */
 @import url('kw-ui.css?v=20260905a');
 
-/* Los colores viven aquí; las medidas y los componentes, en kw-ui.css. */
+/* Los colores viven aqu?; las medidas y los componentes, en kw-ui.css. */
 :root {
   --red: #8a0000;
   --text: #1a1a1a;
@@ -68,27 +68,27 @@
 /* El hueco de la barra de desplazamiento se reserva SIEMPRE, haya o no
    barra. Sin esto, cualquier pantalla que crezca o se encoja (buscar en
    una lista y quedarse sin resultados, abrir un filtro, cargar datos)
-   hace aparecer o desaparecer la barra, y al cambiar el ancho útil se
+   hace aparecer o desaparecer la barra, y al cambiar el ancho ?til se
    recorre TODO el contenido unos pixeles de lado: se ve como un
-   brinquito de la página entera.
+   brinquito de la p?gina entera.
 
    Solo reserva espacio donde la barra de verdad ocupa ancho (Windows,
    Linux). En Mac y celular, donde la barra flota encima, esto no cambia
    nada. */
 html {
   /* Los paneles que entran por un lado esperan estacionados fuera de la
-     pantalla, y ahí alargan el área que se puede recorrer: aparecía una
-     barra horizontal y la página se podía arrastrar de lado hasta el
+     pantalla, y ah? alargan el ?rea que se puede recorrer: aparec?a una
+     barra horizontal y la p?gina se pod?a arrastrar de lado hasta el
      panel escondido. Se recorta.
 
-     Va `clip` y no `hidden` a propósito: `hidden` convierte al elemento
+     Va `clip` y no `hidden` a prop?sito: `hidden` convierte al elemento
      en un contenedor con scroll propio, y eso rompe todo lo que va
-     pegajoso adentro (los encabezados de tabla, sin ir más lejos).
+     pegajoso adentro (los encabezados de tabla, sin ir m?s lejos).
      `clip` solo recorta. */
   overflow-x: clip;
   scrollbar-gutter: stable;
-  /* El deslizón horizontal es para abrir los paneles laterales, no para
-     irse de la página: sin esto el navegador lo toma como "atrás". */
+  /* El desliz?n horizontal es para abrir los paneles laterales, no para
+     irse de la p?gina: sin esto el navegador lo toma como "atr?s". */
   overscroll-behavior-x: contain;
 }
 
@@ -101,17 +101,17 @@ h1, h2, h3, h4 {
   letter-spacing: -0.02em;
 }
 
-/* Campo trampa para robots: se llena solo si quien envía el formulario no
-   es una persona, así que tiene que quedar fuera de la pantalla y fuera del
+/* Campo trampa para robots: se llena solo si quien env?a el formulario no
+   es una persona, as? que tiene que quedar fuera de la pantalla y fuera del
    recorrido con Tab. Sin esta regla se ve como una caja de texto suelta, y
-   lo que escriba ahí alguien de verdad hace que su envío se descarte. */
+   lo que escriba ah? alguien de verdad hace que su env?o se descarte. */
 .trampa { position: absolute; left: -9999px; opacity: 0; height: 0; }
 
-/* ── Header / logo ── */
+/* ?? Header / logo ?? */
 .logo { display: flex; align-items: center; text-decoration: none; }
 .logo img { height: 40px; width: auto; display: block; }
 
-/* Botón de regresar: sin borde ni fondo - solo texto e ícono, que
+/* Bot?n de regresar: sin borde ni fondo - solo texto e ?cono, que
    cambian de color al presionarse. */
 .back-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -124,13 +124,13 @@ h1, h2, h3, h4 {
 .back-btn:active { color: var(--red); transform: scale(0.94); }
 .back-btn svg { flex-shrink: 0; }
 /* Dentro del header va en la punta contraria a la hamburguesa. Con margen
-   automático y no confiando en que sea el último hijo: drawer.js le cuelga
-   después el campo de búsqueda, que en reposo no se ve pero sí cuenta para
-   la regla de :last-child de más abajo. */
+   autom?tico y no confiando en que sea el ?ltimo hijo: drawer.js le cuelga
+   despu?s el campo de b?squeda, que en reposo no se ve pero s? cuenta para
+   la regla de :last-child de m?s abajo. */
 header.kw-header .back-btn { margin-left: auto; }
 
-/* Título compacto dentro del header, solo visible en móvil - ahí se
-   esconde el bloque de título de la página (eyebrow + h1 + desc) para
+/* T?tulo compacto dentro del header, solo visible en m?vil - ah? se
+   esconde el bloque de t?tulo de la p?gina (eyebrow + h1 + desc) para
    no repetir el mismo texto dos veces y ganar espacio en pantalla.
    Uso: <span class="kw-header-title">Acuerdos y contratos</span>
    entre el hueco que deja drawer.js (hamburguesa) y el back-btn. */
@@ -146,17 +146,17 @@ header.kw-header .back-btn { margin-left: auto; }
   .kw-header-title { display: block; }
 }
 
-/* ── Header compartido (páginas migradas: <header class="kw-header">) ──
-   Barra fija translúcida con blur; en lugar de un borde duro, un
+/* ?? Header compartido (p?ginas migradas: <header class="kw-header">) ??
+   Barra fija transl?cida con blur; en lugar de un borde duro, un
    degradado la funde con el contenido. Al hacer scroll hacia abajo,
-   drawer.js le pone .kw-header-oculto: en celular la cápsula entera se
+   drawer.js le pone .kw-header-oculto: en celular la c?psula entera se
    va hacia arriba y vuelve al subir; en escritorio se queda fija.
-   El contenido de cada página debe dejar ~72px libres arriba. */
+   El contenido de cada p?gina debe dejar ~72px libres arriba. */
 header.kw-header {
   position: fixed; top: 10px; left: 12px; right: 12px; z-index: 90;
   display: flex; align-items: center; gap: 8px;
   padding: 7px 16px; min-height: 52px;
-  /* Cápsula flotante en vez de una barra pegada de orilla a orilla:
+  /* C?psula flotante en vez de una barra pegada de orilla a orilla:
      las esquinas redondas del todo y el aire alrededor son lo que la
      hacen leer como una pastilla de vidrio encima del contenido. */
   border-radius: 999px;
@@ -168,11 +168,11 @@ header.kw-header {
   box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
   transition: background 0.25s, box-shadow 0.25s, border-color 0.25s;
 }
-/* ── Cuando hay botones de acción, el header se parte en dos ──
+/* ?? Cuando hay botones de acci?n, el header se parte en dos ??
    drawer.js le pone .kw-header-partido y arma dentro una .kw-header-capsula
    con lo de navegar y un grupo .kw-header-sueltos con los atajos (Perfil,
-   campanita, Panel). El <header> deja entonces de ser la cápsula: pasa a
-   ser nada más el renglón que acomoda las dos piezas. */
+   campanita, Panel). El <header> deja entonces de ser la c?psula: pasa a
+   ser nada m?s el rengl?n que acomoda las dos piezas. */
 header.kw-header-partido {
   background: none;
   border: 0;
@@ -181,10 +181,10 @@ header.kw-header-partido {
   padding: 0;
   gap: 10px;
 }
-/* Los selectores llevan el header adelante a propósito: varias páginas
+/* Los selectores llevan el header adelante a prop?sito: varias p?ginas
    traen su propio estilo para estos botones (por ejemplo .btn-admin-header
-   en el Portal) en un <style> que carga DESPUÉS de esta hoja, y con la
-   misma especificidad les ganaría. */
+   en el Portal) en un <style> que carga DESPU?S de esta hoja, y con la
+   misma especificidad les ganar?a. */
 header.kw-header .kw-header-capsula,
 header.kw-header .kw-header-sueltos > *:not(#notif-bell-slot) {
   border-radius: 999px;
@@ -199,15 +199,15 @@ header.kw-header .kw-header-capsula {
   padding: 7px 16px; min-height: 52px;
 }
 /* Los atajos (la campanita) van pegados a la orilla derecha, siempre.
-   Antes los empujaba la cápsula, que se estiraba a todo lo ancho; en
-   cuanto una pantalla la deja medir lo suyo, la campanita se venía con
-   ella hasta media pantalla. Pegarla aquí la deja quieta sin depender de
-   lo que hagan las demás piezas del renglón. */
+   Antes los empujaba la c?psula, que se estiraba a todo lo ancho; en
+   cuanto una pantalla la deja medir lo suyo, la campanita se ven?a con
+   ella hasta media pantalla. Pegarla aqu? la deja quieta sin depender de
+   lo que hagan las dem?s piezas del rengl?n. */
 header.kw-header .kw-header-sueltos {
   display: flex; align-items: center; gap: 8px; flex-shrink: 0;
   margin-left: auto;
 }
-/* Cada atajo es su propia pastilla, del mismo alto que la cápsula para
+/* Cada atajo es su propia pastilla, del mismo alto que la c?psula para
    que los dos queden alineados. */
 header.kw-header .kw-header-sueltos > * {
   display: flex; align-items: center; justify-content: center;
@@ -216,8 +216,8 @@ header.kw-header .kw-header-sueltos > * {
   font-size: 12.5px; font-weight: 700;
   transition: box-shadow 0.15s;
 }
-/* La campanita va suelta, sin pastilla: una campana ya se lee como botón
-   por sí sola, y metida en un círculo pesaba lo mismo que el resto del
+/* La campanita va suelta, sin pastilla: una campana ya se lee como bot?n
+   por s? sola, y metida en un c?rculo pesaba lo mismo que el resto del
    header sin ser igual de importante. Conserva su ancho para que el
    desplegable siga colgando de donde debe. */
 header.kw-header .kw-header-sueltos > #notif-bell-slot {
@@ -230,9 +230,9 @@ header.kw-header .kw-header-sueltos > * .notif-bell-btn {
   background: none; border: none; box-shadow: none;
   width: 100%; height: 100%; color: var(--red);
 }
-/* El SVG no traía tamaño propio: sin esta regla el navegador lo dibuja a
-   su tamaño por defecto (bastante más grande que la pastilla de 52px que
-   lo contiene), así que sale enorme y recortado. */
+/* El SVG no tra?a tama?o propio: sin esta regla el navegador lo dibuja a
+   su tama?o por defecto (bastante m?s grande que la pastilla de 52px que
+   lo contiene), as? que sale enorme y recortado. */
 header.kw-header .kw-header-sueltos > * .notif-bell-btn svg { width: 21px; height: 21px; }
 header.kw-header .kw-header-sueltos > *:hover {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 30px rgba(0,0,0,0.26);
@@ -245,20 +245,20 @@ header.kw-header .kw-header-sueltos > * .notif-bell-btn:hover {
 }
 
 @media (max-width: 640px) {
-  /* En celular el texto de los atajos sobra: con el ícono basta, y así
-     la cápsula de al lado se queda con el ancho que necesita. */
+  /* En celular el texto de los atajos sobra: con el ?cono basta, y as?
+     la c?psula de al lado se queda con el ancho que necesita. */
   header.kw-header .kw-header-sueltos > * span:not(.notif-bell-badge) { display: none; }
   header.kw-header .kw-header-sueltos > * { padding: 0; width: 52px; }
 }
 
-/* ── Esconderse al bajar: solo en celular ──
-   La cápsula entera se va hacia arriba (con sus botones adentro, no
-   nada más el fondo) y vuelve completa al subir. Se mueve con
+/* ?? Esconderse al bajar: solo en celular ??
+   La c?psula entera se va hacia arriba (con sus botones adentro, no
+   nada m?s el fondo) y vuelve completa al subir. Se mueve con
    transform y no con top, porque transform lo resuelve la GPU y no
-   obliga a recalcular el acomodo de la página en cada cuadro.
+   obliga a recalcular el acomodo de la p?gina en cada cuadro.
 
-   En escritorio no se esconde: ahí sobra alto de pantalla y perder el
-   Atrás y el menú mientras se lee estorba más de lo que ayuda. Como el
+   En escritorio no se esconde: ah? sobra alto de pantalla y perder el
+   Atr?s y el men? mientras se lee estorba m?s de lo que ayuda. Como el
    ocultarse vive dentro de este @media, en pantalla grande la clase
    que pone drawer.js simplemente no hace nada. */
 @media (max-width: 900px) {
@@ -290,7 +290,7 @@ header.kw-header .kw-header-sueltos > * .notif-bell-btn:hover {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset, 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* ── Footer con redes sociales ── */
+/* ?? Footer con redes sociales ?? */
 footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; }
 .footer-social {
   width: 34px; height: 34px;
@@ -307,7 +307,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .footer-social:hover { background: #ffe0e0; color: var(--red); transform: translateY(-2px); }
 .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
 
-/* ── Botones ──
+/* ?? Botones ??
    Estilo "con profundidad": relieve suave hacia afuera en reposo, y
    se hunden (sombra hacia adentro + se achican un poco) al presionarlos. */
 .btn-download {
@@ -369,9 +369,9 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.12);
 }
 
-/* ── Modales de confirmación (nombre, finalizar, copia, eliminar, etc.) ── */
-/* Los modales se prenden y apagan con style.display en cada página, así
-   que la animación de entrada va como animation (arranca sola en cuanto
+/* ?? Modales de confirmaci?n (nombre, finalizar, copia, eliminar, etc.) ?? */
+/* Los modales se prenden y apagan con style.display en cada p?gina, as?
+   que la animaci?n de entrada va como animation (arranca sola en cuanto
    el elemento se muestra) y no como transition. La de salida la pone
    kwUI.cerrarModal(), que espera a que termine antes de esconderlo. */
 .modal-overlay {
@@ -403,10 +403,10 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 }
 .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
 .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
-/* El mensaje de kwUI.alert()/kwUI.confirm(): a diferencia del subtítulo
-   de arriba, aquí el texto ES el contenido, así que va de tamaño normal
+/* El mensaje de kwUI.alert()/kwUI.confirm(): a diferencia del subt?tulo
+   de arriba, aqu? el texto ES el contenido, as? que va de tama?o normal
    y con el color de texto de siempre, no apagado. "pre-line" respeta
-   los \n que trae el mensaje (los mismos que antes leía alert() nativo). */
+   los \n que trae el mensaje (los mismos que antes le?a alert() nativo). */
 .kw-aviso-msg { font-size: 14px; color: var(--text); line-height: 1.5; white-space: pre-line; margin: 0; }
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
 .btn-modal-cancelar, .btn-modal-confirmar {
@@ -435,14 +435,14 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   transform: translateY(1px) scale(0.97);
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.12);
 }
-/* Deshabilitado se ve apagado de verdad, no solo "más tenue": con
-   opacity 0.6 el rojo seguía leyéndose como botón listo para picar. */
+/* Deshabilitado se ve apagado de verdad, no solo "m?s tenue": con
+   opacity 0.6 el rojo segu?a ley?ndose como bot?n listo para picar. */
 .btn-modal-confirmar:disabled {
   background: #e2e2e0; color: #999; box-shadow: none;
   cursor: default; transform: none; filter: none;
 }
-/* Mientras manda, el botón se queda activo de color pero sin permitir
-   otro clic: apagarlo a media petición se lee como que algo falló. */
+/* Mientras manda, el bot?n se queda activo de color pero sin permitir
+   otro clic: apagarlo a media petici?n se lee como que algo fall?. */
 .btn-modal-confirmar.enviando:disabled {
   background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
   color: var(--red);
@@ -465,10 +465,10 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 @media (prefers-reduced-motion: reduce) { .kw-btn-spinner { animation-duration: 2s; } }
 
 /* Campo obligatorio: el asterisco avisa antes de picarle a Enviar por
-   qué el botón está apagado. */
+   qu? el bot?n est? apagado. */
 .field.requerido > label::after { content: ' *'; color: var(--red); }
 
-/* ── Campos de formulario (perfil, listas, etc.) ── */
+/* ?? Campos de formulario (perfil, listas, etc.) ?? */
 .field { margin-bottom: 14px; }
 .field label {
   display: block; font-size: 11.5px; font-weight: 500;
@@ -487,7 +487,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 }
 .field input:disabled { background: #f4f4f4; color: var(--muted); }
 
-/* Contraseña con ojito para mostrarla/ocultarla. */
+/* Contrase?a con ojito para mostrarla/ocultarla. */
 .password-wrap { position: relative; }
 .password-wrap input { padding-right: 40px; }
 .password-toggle {
@@ -497,7 +497,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 }
 .password-toggle:hover { color: var(--text); }
 
-/* Campo con ícono adentro (para los enlaces de redes en Mi Perfil). */
+/* Campo con ?cono adentro (para los enlaces de redes en Mi Perfil). */
 .campo-icono { position: relative; }
 .campo-icono svg {
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -507,8 +507,8 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .campo-icono svg.sin-relleno { fill: none; stroke: currentColor; stroke-width: 2; }
 .campo-icono input { padding-left: 37px; }
 
-/* ── Íconos de redes en tarjetas de personas y micrositio ──
-   Al pasar el cursor, cada ícono toma el color de su propia red. */
+/* ?? ?conos de redes en tarjetas de personas y micrositio ??
+   Al pasar el cursor, cada ?cono toma el color de su propia red. */
 .persona-red {
   width: 28px; height: 28px; border-radius: 50%;
   background: #f5f5f5; color: #888;
@@ -525,7 +525,7 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .red-tiktok:hover { color: #000; background: #e8e8e8; }
 .red-linkedin:hover { color: #0A66C2; background: #e8f1fa; }
 
-/* ── Animación de carga (aros concéntricos girando en rojo KW) ──
+/* ?? Animaci?n de carga (aros conc?ntricos girando en rojo KW) ??
    Uso: <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div>
         <div class="circle tres"></div></div> */
 .kw-loader {
@@ -551,11 +551,11 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
   to { transform: rotateZ(0deg); }
 }
 
-/* ── Skeleton screens (placeholders que laten mientras carga contenido
+/* ?? Skeleton screens (placeholders que laten mientras carga contenido
    real, para listas de tarjetas - documentos guardados, incidencias, etc.)
    Uso: un contenedor con .kw-skel-line / .kw-skel-circle dentro de la
    misma estructura de la tarjeta real (ej. .lista-item), con clases de
-   ancho .kw-skel-w40/50/60/70/80/100 y .kw-skel-sm para líneas delgadas. ── */
+   ancho .kw-skel-w40/50/60/70/80/100 y .kw-skel-sm para l?neas delgadas. ?? */
 .kw-skel {
   background: linear-gradient(90deg, #ececec 25%, #f6f6f6 37%, #ececec 63%);
   background-size: 400px 100%;
@@ -578,28 +578,28 @@ footer { display: flex; justify-content: center; gap: 10px; padding: 24px 20px; 
 .kw-skel-w80 { width: 80%; }
 .kw-skel-w100 { width: 100%; }
 
-/* ── Aparición animada de elementos (tarjetas de listas al cargar) ──
-   Uso: agregar .kw-aparece al elemento recién insertado, opcionalmente
+/* ?? Aparici?n animada de elementos (tarjetas de listas al cargar) ??
+   Uso: agregar .kw-aparece al elemento reci?n insertado, opcionalmente
    con style="animation-delay: Nms" para escalonar varios en secuencia. */
 @keyframes kw-aparece {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-/* backwards y no both: el estado final de la animación es exactamente el
-   natural (opacity 1, sin desplazar), así que "both" no aportaba nada y
+/* backwards y no both: el estado final de la animaci?n es exactamente el
+   natural (opacity 1, sin desplazar), as? que "both" no aportaba nada y
    en cambio dejaba un transform pegado para siempre. Un transform, aunque
    sea el de identidad, convierte al elemento en el marco de referencia de
-   todo lo que tenga dentro con position:fixed - y ahí un botón flotante
+   todo lo que tenga dentro con position:fixed - y ah? un bot?n flotante
    deja de estar fijo a la pantalla y se va con el scroll. */
 .kw-aparece { animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 @keyframes kw-aparece-fade { from { opacity: 0; } to { opacity: 1; } }
 .kw-aparece-fila { animation: kw-aparece-fade 0.4s ease both; }
 
-/* ── Aparición escalonada al entrar a una página ──
+/* ?? Aparici?n escalonada al entrar a una p?gina ??
    Puramente CSS (sin JS) para que no haya parpadeo: al ser parte de la
    hoja de estilos, el estado inicial ya aplica desde el primer pintado.
-   Los bloques principales del contenido (título, tarjetas, secciones)
-   entran uno tras otro; si el bloque es una cuadrícula de tarjetas
+   Los bloques principales del contenido (t?tulo, tarjetas, secciones)
+   entran uno tras otro; si el bloque es una cuadr?cula de tarjetas
    (.cards-grid, .grid o la agenda del calendario) cada tarjeta se anima
    por separado. .split/.calendar-col cubren el layout del calendario. */
 main > :not(.cards-grid):not(.grid),
@@ -610,8 +610,8 @@ main > :not(.cards-grid):not(.grid),
 .grid > *,
 #agenda-container > * {
   /* backwards, no both: ver la nota de .kw-aparece. Con "both" cada
-     bloque de la página se quedaba con un transform puesto y cualquier
-     botón flotante de adentro dejaba de estar fijo a la pantalla. */
+     bloque de la p?gina se quedaba con un transform puesto y cualquier
+     bot?n flotante de adentro dejaba de estar fijo a la pantalla. */
   animation: kw-aparece 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 main > :not(.cards-grid):not(.grid):nth-child(2), .page > :not(.cards-grid):not(.grid):nth-child(2), .split > *:nth-child(2), .calendar-col > *:nth-child(2), .cards-grid > *:nth-child(2), .grid > *:nth-child(2), #agenda-container > *:nth-child(2) { animation-delay: 90ms; }
@@ -621,7 +621,7 @@ main > :not(.cards-grid):not(.grid):nth-child(5), .page > :not(.cards-grid):not(
 main > :not(.cards-grid):not(.grid):nth-child(6), .page > :not(.cards-grid):not(.grid):nth-child(6), .split > *:nth-child(6), .calendar-col > *:nth-child(6), .cards-grid > *:nth-child(6), .grid > *:nth-child(6), #agenda-container > *:nth-child(6) { animation-delay: 450ms; }
 main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):not(.grid):nth-child(n+7), .split > *:nth-child(n+7), .calendar-col > *:nth-child(n+7), .cards-grid > *:nth-child(n+7), .grid > *:nth-child(n+7), #agenda-container > *:nth-child(n+7) { animation-delay: 500ms; }
 
-/* ── Mensajes de estado (éxito / error) ── */
+/* ?? Mensajes de estado (?xito / error) ?? */
 .msg {
   font-size: 13px; padding: 10px 12px; border-radius: 10px;
   margin-top: 12px; display: none;
@@ -629,34 +629,34 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .msg.error { display: block; background: #fdeaea; color: #a30000; }
 .msg.ok { display: block; background: #eaf7ea; color: #1a7a1a; }
 
-/* ── Rol ──
+/* ?? Rol ??
    Sin pastilla: el rol es un dato, no algo que se pique, y encima del
-   vidrio la pastilla se veía como un parche. Queda el puro texto con
+   vidrio la pastilla se ve?a como un parche. Queda el puro texto con
    su color. */
 .rol-badge {
   display: inline-block;
   font-size: 12px; font-weight: 700; text-transform: capitalize;
   letter-spacing: 0.01em;
 }
-/* Los cuatro roles se distinguen por qué tan hondo va el vino, no por
-   colores distintos: así no aparecen morados y azules sueltos en medio
+/* Los cuatro roles se distinguen por qu? tan hondo va el vino, no por
+   colores distintos: as? no aparecen morados y azules sueltos en medio
    de una plataforma que es toda de un color. */
 .rol-master { color: #6b0000; }
 .rol-admin { color: #8a0000; }
 .rol-staff { color: #a83232; }
 .rol-asociado { color: #495057; }
 
-/* ── Tarjetas con relleno de color al pasar el cursor ──
+/* ?? Tarjetas con relleno de color al pasar el cursor ??
    Uso: <a class="hover-card" style="--card-color: var(--red);">
           <div class="hover-card-icon" style="background:#E7F5FF;"><svg style="color:#1971c2;">...</svg></div>
-          <div class="hover-card-title">Título</div>
-          <div class="hover-card-desc">Descripción breve.</div>
+          <div class="hover-card-title">T?tulo</div>
+          <div class="hover-card-desc">Descripci?n breve.</div>
           <div class="hover-card-arrow"><svg>flecha</svg></div>
         </a>
-   --card-color es el color propio de cada tarjeta: tiñe su ícono y su
+   --card-color es el color propio de cada tarjeta: ti?e su ?cono y su
    flecha, no la tarjeta entera. Al pasar el cursor la tarjeta no se
    llena de color: el vidrio se aclara casi a blanco y se levanta, como
-   una lámina de cristal que se acerca. */
+   una l?mina de cristal que se acerca. */
 .hover-card {
   position: relative;
   overflow: hidden;
@@ -689,7 +689,7 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
   transition: background 0.2s;
 }
 .hover-card-icon svg { width: 22px; height: 22px; transition: color 0.2s; }
-/* El ícono es lo único que se llena de color al pasar el cursor: queda
+/* El ?cono es lo ?nico que se llena de color al pasar el cursor: queda
    como el cuadrito oscuro de la tarjeta activa del ejemplo. */
 .hover-card:hover .hover-card-icon { background: var(--card-color, var(--red)); }
 .hover-card:hover .hover-card-icon svg { color: #fff; }
@@ -703,8 +703,8 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
   font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1;
   transition: color 0.2s;
   /* Hueco para la flecha, que va encimada en la esquina de abajo a la
-     derecha. Sin esto, la descripción más larga del tablero le pasaba
-     por debajo y el último renglón quedaba tapado. */
+     derecha. Sin esto, la descripci?n m?s larga del tablero le pasaba
+     por debajo y el ?ltimo rengl?n quedaba tapado. */
   padding-right: 44px;
 }
 
@@ -719,9 +719,9 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .hover-card-arrow svg { width: 16px; height: 16px; }
 .hover-card:hover .hover-card-arrow { opacity: 1; transform: translate(0, 0); }
 
-/* ── Menú lateral (hamburguesa) ──
+/* ?? Men? lateral (hamburguesa) ??
    Inyectado por /assets/js/drawer.js - ver ese archivo para el uso. */
-/* Ícono de hamburguesa: sin fondo ni borde - solo las tres rayas, que
+/* ?cono de hamburguesa: sin fondo ni borde - solo las tres rayas, que
    cambian de color al presionarse. */
 .hamburger-btn {
   flex-shrink: 0;
@@ -731,23 +731,23 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
   cursor: pointer; color: var(--text);
   transition: color 0.15s, transform 0.12s;
 }
-/* Páginas sin <header> (por ejemplo index.html): flotante fijo. */
+/* P?ginas sin <header> (por ejemplo index.html): flotante fijo. */
 .hamburger-btn.fijo { position: fixed; top: 14px; left: 12px; z-index: 150; }
 .hamburger-btn:active { color: var(--red); transform: scale(0.88); }
 .hamburger-btn svg { width: 22px; height: 22px; }
 /* La lupa comparte estilo con la hamburguesa (misma clase) y vive justo
-   a su derecha; en páginas sin <header> también flota fijo, corrido lo
+   a su derecha; en p?ginas sin <header> tambi?n flota fijo, corrido lo
    justo para no encimarse con ella. */
 .hamburger-btn.fijo-buscar { left: 54px; }
 
-/* ── Buscador del sitio (lupa junto al menú) ──
-   Ya no abre un panel aparte: al picar la lupa, la propia cápsula del
-   header se estira y se escribe ahí mismo. Lo que estorba (el título,
-   el Atrás) se hace a un lado mientras dura la búsqueda.
+/* ?? Buscador del sitio (lupa junto al men?) ??
+   Ya no abre un panel aparte: al picar la lupa, la propia c?psula del
+   header se estira y se escribe ah? mismo. Lo que estorba (el t?tulo,
+   el Atr?s) se hace a un lado mientras dura la b?squeda.
 
-   En las páginas que ya traen su propio buscador (Drive, el ABC
+   En las p?ginas que ya traen su propio buscador (Drive, el ABC
    Tracker, las listas de documentos), drawer.js esconde ese campo y le
-   pasa a la página lo que se escriba aquí: así hay una sola lupa en
+   pasa a la p?gina lo que se escriba aqu?: as? hay una sola lupa en
    pantalla y sigue filtrando lo mismo que antes. */
 .kw-buscar-campo-inline {
   flex: 1; min-width: 0;
@@ -764,8 +764,8 @@ main > :not(.cards-grid):not(.grid):nth-child(n+7), .page > :not(.cards-grid):no
 .kw-buscar-cerrar-inline:hover { background: rgba(0,0,0,0.12); color: var(--text); }
 .kw-buscar-cerrar-inline svg { width: 13px; height: 13px; }
 
-/* Mientras se busca: sale el campo y se esconde todo lo demás de la
-   cápsula, menos la lupa (que ahora cierra) y el propio campo. */
+/* Mientras se busca: sale el campo y se esconde todo lo dem?s de la
+   c?psula, menos la lupa (que ahora cierra) y el propio campo. */
 header.kw-buscando .kw-buscar-campo-inline { display: block; }
 header.kw-buscando .kw-buscar-cerrar-inline { display: flex; }
 header.kw-buscando .kw-header-title,
@@ -773,7 +773,7 @@ header.kw-buscando .back-btn,
 header.kw-buscando .kw-header-sueltos,
 header.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
 
-/* Los resultados cuelgan de la cápsula. */
+/* Los resultados cuelgan de la c?psula. */
 .kw-buscar-resultados-inline {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0;
   max-height: min(60vh, 420px); overflow-y: auto;
@@ -786,8 +786,8 @@ header.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
 }
 .kw-buscar-resultados-inline[hidden] { display: none; }
 
-/* "Sin resultados" es un renglón, no una pantalla: con 26px arriba y
-   abajo salía un recuadro enorme para siete palabras. */
+/* "Sin resultados" es un rengl?n, no una pantalla: con 26px arriba y
+   abajo sal?a un recuadro enorme para siete palabras. */
 .kw-buscar-vacio { padding: 13px 14px; text-align: center; color: var(--muted); font-size: 13px; }
 .kw-buscar-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -797,8 +797,8 @@ header.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
 }
 .kw-buscar-item:hover { background: rgba(138,0,0,0.07); }
 .kw-buscar-item-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-/* Un renglón por resultado, cortado con puntos. Los nombres largos de
-   Drive se partían en dos y tres líneas, y seis resultados llenaban la
+/* Un rengl?n por resultado, cortado con puntos. Los nombres largos de
+   Drive se part?an en dos y tres l?neas, y seis resultados llenaban la
    lista entera. */
 .kw-buscar-item-label {
   font-size: 13px; font-weight: 600; line-height: 1.35;
@@ -808,24 +808,24 @@ header.kw-buscando .hamburger-btn:not(.kw-buscar-btn) { display: none; }
 .kw-buscar-item > svg { width: 15px; height: 15px; color: #c9c9c9; flex-shrink: 0; }
 .kw-buscar-item:hover > svg { color: var(--red); }
 
-/* El buscador propio de la página se esconde: su trabajo lo hace ahora
-   la lupa del header, y tener dos lupas en pantalla confundía. */
+/* El buscador propio de la p?gina se esconde: su trabajo lo hace ahora
+   la lupa del header, y tener dos lupas en pantalla confund?a. */
 .kw-buscador-local-oculto { display: none !important; }
 
-/* Con el botón insertado como primer hijo del header, el último hijo
+/* Con el bot?n insertado como primer hijo del header, el ?ltimo hijo
    (back-btn, grupo de la derecha, etc.) se recorre al extremo derecho. */
 header > *:last-child { margin-left: auto; }
 
 .drawer-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
-  /* Un desenfoque leve detrás del velo: es lo que hace que el panel se
-     lea como vidrio y no como una hoja blanca encima de la página. */
+  /* Un desenfoque leve detr?s del velo: es lo que hace que el panel se
+     lea como vidrio y no como una hoja blanca encima de la p?gina. */
   backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   opacity: 0; pointer-events: none; transition: opacity 0.25s;
 }
 .drawer-overlay.open { opacity: 1; pointer-events: auto; }
 
-/* El mismo vidrio que las tarjetas y la cápsula del header: flota con
+/* El mismo vidrio que las tarjetas y la c?psula del header: flota con
    aire alrededor (no pegado de orilla a orilla) para que el canto se
    alcance a ver, que es la mitad del efecto. */
 .drawer {
@@ -855,7 +855,7 @@ header > *:last-child { margin-left: auto; }
 }
 .drawer-header img { height: 32px; width: auto; display: block; }
 /* La hamburguesa que vive dentro del riel. En el panel de siempre (celular
-   y sitio público) no hace falta: ahí ya está la del header. */
+   y sitio p?blico) no hace falta: ah? ya est? la del header. */
 .drawer-hamburguesa { display: none; }
 .drawer-close {
   width: 32px; height: 32px; border-radius: 50%;
@@ -867,10 +867,10 @@ header > *:last-child { margin-left: auto; }
   transition: color var(--t-rapido), box-shadow var(--t-rapido);
 }
 .drawer-close:hover { color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 4px 12px rgba(0,0,0,0.18); }
-/* ── Quién está adentro, hasta arriba del menú ──
-   Es lo primero que se ve al abrirlo y es también la puerta al perfil.
-   Antes eso era una pastilla suelta en el header, y solo existía en el
-   portal: desde aquí queda en las mismas 28 pantallas que traen menú. */
+/* ?? Qui?n est? adentro, hasta arriba del men? ??
+   Es lo primero que se ve al abrirlo y es tambi?n la puerta al perfil.
+   Antes eso era una pastilla suelta en el header, y solo exist?a en el
+   portal: desde aqu? queda en las mismas 28 pantallas que traen men?. */
 .drawer-usuario {
   display: flex; align-items: center; gap: 11px;
   padding: 13px 16px; margin: 12px 12px 0;
@@ -889,7 +889,7 @@ header > *:last-child { margin-left: auto; }
 .drawer-usuario-nombre {
   font-size: 13.5px; font-weight: 700; color: var(--text);
   /* El nombre completo puede no caber; se corta con puntos en vez de
-     empujar el ancho del menú. */
+     empujar el ancho del men?. */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .drawer-usuario-rol { font-size: 11.5px; font-weight: 600; color: var(--muted); }
@@ -899,13 +899,13 @@ header > *:last-child { margin-left: auto; }
   display: flex; flex-direction: column; gap: 2px;
   /* La barra de desplazamiento del navegador, encima de una franja de
      64px, se come un cuarto del ancho y se ve como un tubo gris pegado
-     a los íconos. Se sigue pudiendo desplazar (rueda, dedo, teclado):
-     lo único que se va es el dibujo de la barra. */
+     a los ?conos. Se sigue pudiendo desplazar (rueda, dedo, teclado):
+     lo ?nico que se va es el dibujo de la barra. */
   scrollbar-width: none;
   -ms-overflow-style: none;
   /* Al llegar al final de la lista, seguir arrastrando ya no le pasa el
-     scroll a la página de atrás (eso movía el header aunque uno
-     estuviera dentro del menú). */
+     scroll a la p?gina de atr?s (eso mov?a el header aunque uno
+     estuviera dentro del men?). */
   overscroll-behavior: contain;
 }
 .drawer-nav::-webkit-scrollbar { width: 0; height: 0; }
@@ -920,8 +920,8 @@ header > *:last-child { margin-left: auto; }
   color: var(--text); text-decoration: none; font-weight: 600; font-size: 13.5px;
   transition: background 0.15s;
 }
-/* Sobre vidrio, un gris sólido se ve como un parche pegado; el realce
-   va con blanco translúcido, que es luz y no pintura. */
+/* Sobre vidrio, un gris s?lido se ve como un parche pegado; el realce
+   va con blanco transl?cido, que es luz y no pintura. */
 .drawer-link:hover { background: rgba(255,255,255,0.55); }
 .drawer-link.activo {
   color: var(--red);
@@ -943,25 +943,25 @@ header > *:last-child { margin-left: auto; }
 .drawer-footer { padding: 14px 20px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
 .drawer-footer .drawer-link { color: #a30000; }
 
-/* ══════════════════════════════════════════════════════════════
-   El riel: el menú siempre a la vista
-   ══════════════════════════════════════════════════════════════
+/* ??????????????????????????????????????????????????????????????
+   El riel: el men? siempre a la vista
+   ??????????????????????????????????????????????????????????????
    En pantalla ancha y dentro de la plataforma (drawer.js pone .kw-riel
-   en el <html>; en el sitio público no), el menú deja de ir y venir: se
-   queda como una franja de íconos pegada a la izquierda y se ensancha
+   en el <html>; en el sitio p?blico no), el men? deja de ir y venir: se
+   queda como una franja de ?conos pegada a la izquierda y se ensancha
    al acercarle el cursor o al picar la hamburguesa.
 
    El contenido se recorre para dejarle su lugar en vez de quedar
-   debajo. Es más trabajo que dejarlo flotando encima, pero flotando le
+   debajo. Es m?s trabajo que dejarlo flotando encima, pero flotando le
    tapaba la orilla al contenido en los monitores angostos, que es justo
-   donde más falta hace cada pixel.
+   donde m?s falta hace cada pixel.
 
    El ensanchado se hace con el ancho y no escondiendo texto: el panel ya
-   recorta lo que se sale (overflow: hidden), así que las etiquetas se
-   asoman solas conforme crece. Así se ve como una gaveta que se abre y
+   recorta lo que se sale (overflow: hidden), as? que las etiquetas se
+   asoman solas conforme crece. As? se ve como una gaveta que se abre y
    no como texto que aparece de golpe.
 
-   Debajo de 1024px no aplica nada de esto: en celular y tableta el menú
+   Debajo de 1024px no aplica nada de esto: en celular y tableta el men?
    sigue siendo el panel de siempre, que aparece sobre el contenido. */
 @media (min-width: 1024px) {
   html.kw-riel {
@@ -991,29 +991,29 @@ header > *:last-child { margin-left: auto; }
     box-shadow: 14px 0 34px rgba(35, 27, 27, 0.13);
   }
   /* El freno de un instante: se pone al soltar el riel con el cursor
-     todavía encima, y se quita en cuanto el cursor sale. Sin él, cerrar
-     no se veía porque el :hover volvía a ensancharlo de inmediato. */
+     todav?a encima, y se quita en cuanto el cursor sale. Sin ?l, cerrar
+     no se ve?a porque el :hover volv?a a ensancharlo de inmediato. */
   html.kw-riel .drawer:not(.drawer-der).sin-hover,
   html.kw-riel .drawer:not(.drawer-der).sin-hover:hover { width: var(--riel-ancho); }
-  /* Una búsqueda activa nunca puede quedarse dentro del riel angosto:
+  /* Una b?squeda activa nunca puede quedarse dentro del riel angosto:
      el campo y los resultados necesitan el ancho completo hasta cerrar. */
   html.kw-riel .drawer:not(.drawer-der).buscando,
   html.kw-riel .drawer:not(.drawer-der).buscando.sin-hover {
     width: 292px;
   }
 
-  /* El velo oscuro es para cuando el menú tapa la página. El riel no la
+  /* El velo oscuro es para cuando el men? tapa la p?gina. El riel no la
      tapa: vive en su propia franja. */
   html.kw-riel .drawer-overlay { display: none; }
 
   /* La X del riel sobra: se cierra solo al alejar el cursor. La del
-     panel de accesos NO: ese se abre con clic y se queda, así que
+     panel de accesos NO: ese se abre con clic y se queda, as? que
      necesita su manera visible de cerrarse. */
   html.kw-riel .drawer:not(.drawer-der) .drawer-close { display: none; }
 
   /* El encabezado conserva siempre su altura para que abrir el riel no
-     mueva el perfil, la lupa ni el icono que está debajo del cursor. El
-     logo sí permanece invisible hasta que el riel se ensancha. */
+     mueva el perfil, la lupa ni el icono que est? debajo del cursor. El
+     logo s? permanece invisible hasta que el riel se ensancha. */
   html.kw-riel .drawer:not(.drawer-der) .drawer-header {
     display: flex; order: -3; height: 56px; min-height: 56px;
     padding: 10px 18px; justify-content: flex-start; overflow: hidden;
@@ -1036,9 +1036,9 @@ header > *:last-child { margin-left: auto; }
   }
 
   /* Angosto no se recorta nada a media palabra: dos letras sueltas al
-     filo se leen como un error, no como que hay más. Todo lo que es
-     texto se desvanece y quedan solo los íconos; al ensancharse vuelve.
-     El desvanecido va un poco más rápido que el ancho para que las
+     filo se leen como un error, no como que hay m?s. Todo lo que es
+     texto se desvanece y quedan solo los ?conos; al ensancharse vuelve.
+     El desvanecido va un poco m?s r?pido que el ancho para que las
      letras no se vean arrastradas mientras la gaveta se mueve. */
   html.kw-riel .drawer:not(:hover):not(.open):not(:focus-within) .drawer-link > span,
   html.kw-riel .drawer:not(:hover):not(.open):not(:focus-within) .drawer-section-label,
@@ -1110,10 +1110,10 @@ header > *:last-child { margin-left: auto; }
     box-shadow: 0 16px 34px rgba(35,27,27,0.16);
   }
 
-  /* Angosto, ese renglón es la hamburguesa; ancho, es el logo. Antes el
+  /* Angosto, ese rengl?n es la hamburguesa; ancho, es el logo. Antes el
      logo se recortaba a la marca "kw" y quedaba como un adorno cortado
-     que además no se podía picar. Ahora el espacio sirve para algo: es
-     el botón que deja el menú abierto sin tener que sostener el cursor. */
+     que adem?s no se pod?a picar. Ahora el espacio sirve para algo: es
+     el bot?n que deja el men? abierto sin tener que sostener el cursor. */
   html.kw-riel .drawer:not(.drawer-der) .drawer-hamburguesa {
     display: flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; flex-shrink: 0;
@@ -1125,10 +1125,10 @@ header > *:last-child { margin-left: auto; }
   html.kw-riel .drawer-hamburguesa:hover { color: var(--red); }
   html.kw-riel .drawer-hamburguesa svg { width: 21px; height: 21px; }
 
-  /* El Dock inspira el movimiento, no una copia literal: el ícono que
+  /* El Dock inspira el movimiento, no una copia literal: el ?cono que
      recibe el cursor crece y avanza un poco, mientras su nombre aparece
      con el ensanchado del riel. Los vecinos se mantienen estables para
-     que el menú no salte al recorrerlo. */
+     que el men? no salte al recorrerlo. */
   html.kw-riel .drawer-link svg,
   html.kw-riel .drawer-usuario-foto {
     transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -1143,14 +1143,14 @@ header > *:last-child { margin-left: auto; }
     box-shadow: 0 5px 14px rgba(40,12,12,0.2);
   }
 
-  /* ── El header se queda sin barra ──
-     Con el riel puesto, la cápsula blanca de arriba ya no navega a
-     ningún lado: era el mismo menú, otra vez, en forma de tira. Se le
-     quita el fondo y queda el puro renglón de íconos flotando sobre el
-     contenido; lo que sí hace falta (buscar, la campanita, el Panel,
-     el Atrás) se queda, pero suelto.
+  /* ?? El header se queda sin barra ??
+     Con el riel puesto, la c?psula blanca de arriba ya no navega a
+     ning?n lado: era el mismo men?, otra vez, en forma de tira. Se le
+     quita el fondo y queda el puro rengl?n de ?conos flotando sobre el
+     contenido; lo que s? hace falta (buscar, la campanita, el Panel,
+     el Atr?s) se queda, pero suelto.
 
-     La cápsula vuelve a aparecer al buscar: ahí sí se convierte en un
+     La c?psula vuelve a aparecer al buscar: ah? s? se convierte en un
      campo de texto, y un campo sin su recuadro no se entiende. */
   html.kw-riel header.kw-header .kw-header-capsula {
     background: none; background-image: none;
@@ -1158,24 +1158,24 @@ header > *:last-child { margin-left: auto; }
     backdrop-filter: none; -webkit-backdrop-filter: none;
     padding: 0; min-height: 44px;
   }
-  /* Al picar la lupa aparece un cuadro de búsqueda del tamaño de lo que
+  /* Al picar la lupa aparece un cuadro de b?squeda del tama?o de lo que
      se escribe, no una barra de orilla a orilla. Estirado ocupaba todo
-     el renglón para un campo que casi siempre lleva dos palabras, y el
+     el rengl?n para un campo que casi siempre lleva dos palabras, y el
      desplegable de resultados heredaba ese ancho: media pantalla de
      blanco para tres renglones. */
   html.kw-riel header.kw-buscando {
-    /* El ancho del cuadro y el de sus resultados salen de aquí: el
-       desplegable cuelga del <header> y no del cuadro, así que sin una
+    /* El ancho del cuadro y el de sus resultados salen de aqu?: el
+       desplegable cuelga del <header> y no del cuadro, as? que sin una
        sola fuente los dos se despegan al tocar uno. */
     --ancho-buscador: min(360px, 42vw);
   }
-  /* La campanita y el Panel se quedan donde estaban. Se escondían porque
+  /* La campanita y el Panel se quedan donde estaban. Se escond?an porque
      el campo se estiraba de orilla a orilla y les quitaba el lugar; ya
-     que es un cuadro de su propio tamaño, no le estorban a nadie y
-     desaparecerlos solo dejaba la sensación de que algo se rompió. */
+     que es un cuadro de su propio tama?o, no le estorban a nadie y
+     desaparecerlos solo dejaba la sensaci?n de que algo se rompi?. */
   /* La orilla derecha ya se la pone la regla de arriba, que vale
-     siempre; aquí solo hace falta volver a enseñarlas, porque buscando
-     se esconden de fábrica. */
+     siempre; aqu? solo hace falta volver a ense?arlas, porque buscando
+     se esconden de f?brica. */
   html.kw-riel header.kw-buscando .kw-header-sueltos { display: flex; }
 
   html.kw-riel header.kw-buscando .kw-header-capsula {
@@ -1189,28 +1189,28 @@ header > *:last-child { margin-left: auto; }
     border: 1px solid var(--border);
     box-shadow: var(--sombra-2);
     border-radius: var(--r-tarjeta, 18px);
-    /* Delgado: lo que mide el cuadro es su contenido más un pelo de
-       aire. Con la lupa de 40px y 6px arriba y abajo salía de 54, más
+    /* Delgado: lo que mide el cuadro es su contenido m?s un pelo de
+       aire. Con la lupa de 40px y 6px arriba y abajo sal?a de 54, m?s
        alto que los atajos de al lado (44) y que cualquier otra cosa del
-       renglón, y se leía como una barra y no como un campo. */
+       rengl?n, y se le?a como una barra y no como un campo. */
     padding: 5px 12px; min-height: 0;
   }
   html.kw-riel header.kw-buscando .kw-buscar-campo-inline { font-size: 14px; }
-  /* La lupa se encoge mientras es el ícono de adentro del campo; suelta
-     vuelve a su tamaño de botón. */
+  /* La lupa se encoge mientras es el ?cono de adentro del campo; suelta
+     vuelve a su tama?o de bot?n. */
   html.kw-riel header.kw-buscando .kw-buscar-btn { width: 32px; height: 32px; }
   html.kw-riel header.kw-buscando .kw-buscar-btn svg { width: 19px; height: 19px; }
   html.kw-riel header.kw-buscando .kw-buscar-cerrar-inline { width: 26px; height: 26px; }
-  /* Los resultados miden lo mismo que el cuadro y quedan debajo de él,
-     no de orilla a orilla del renglón. Bajan desde el cuadro en vez de
+  /* Los resultados miden lo mismo que el cuadro y quedan debajo de ?l,
+     no de orilla a orilla del rengl?n. Bajan desde el cuadro en vez de
      aparecer ya puestos. */
   html.kw-riel header.kw-buscando .kw-buscar-resultados-inline {
     right: auto;
     width: var(--ancho-buscador);
     border-radius: var(--r-tarjeta, 18px);
-    /* Más corto: la lista llegaba casi al pie de la pantalla y tapaba
-       la página entera para enseñar resultados que casi siempre están
-       en los primeros. Los demás se siguen alcanzando rodando. */
+    /* M?s corto: la lista llegaba casi al pie de la pantalla y tapaba
+       la p?gina entera para ense?ar resultados que casi siempre est?n
+       en los primeros. Los dem?s se siguen alcanzando rodando. */
     max-height: min(46vh, 320px);
     animation: kw-buscador-baja var(--t-medio) var(--curva-salida) both;
   }
@@ -1228,71 +1228,71 @@ header > *:last-child { margin-left: auto; }
     html.kw-riel header.kw-buscando .kw-buscar-resultados-inline { animation: none; }
   }
 
-  /* ── El contenido sube ──
-     Las páginas reservaban arriba entre 82 y 100px, que era el alto de
-     la cápsula del header más su aire. Sin barra, ese hueco quedó
-     vacío. Se fija aquí un solo valor para todas: el renglón de íconos
-     mide 44px y arranca a 10px del borde, así que con 62px el título
-     queda justo debajo de la lupa, sin la franja en blanco que se veía
+  /* ?? El contenido sube ??
+     Las p?ginas reservaban arriba entre 82 y 100px, que era el alto de
+     la c?psula del header m?s su aire. Sin barra, ese hueco qued?
+     vac?o. Se fija aqu? un solo valor para todas: el rengl?n de ?conos
+     mide 44px y arranca a 10px del borde, as? que con 62px el t?tulo
+     queda justo debajo de la lupa, sin la franja en blanco que se ve?a
      antes.
 
-     Va con el <html> por delante a propósito. Cada página trae su
-     padding en su propio <style>, que carga después de esta hoja; con
-     la misma especificidad le ganaría. Y solo se toca el de arriba:
+     Va con el <html> por delante a prop?sito. Cada p?gina trae su
+     padding en su propio <style>, que carga despu?s de esta hoja; con
+     la misma especificidad le ganar?a. Y solo se toca el de arriba:
      los laterales y el de abajo son cosa de cada pantalla.
 
      Una pantalla que acomode su header dentro del flujo (y no flotando)
-     no necesita reservar nada: se sale poniéndole .kw-header-en-flujo a
-     su <body>. Lo hace Dictámenes, que ya traía su header metido en una
-     cinta junto al título. */
+     no necesita reservar nada: se sale poni?ndole .kw-header-en-flujo a
+     su <body>. Lo hace Dict?menes, que ya tra?a su header metido en una
+     cinta junto al t?tulo. */
   html.kw-riel body:not(.kw-header-en-flujo) > main,
   html.kw-riel body:not(.kw-header-en-flujo) > .page,
   html.kw-riel body:not(.kw-header-en-flujo) > div > main,
   html.kw-riel body:not(.kw-header-en-flujo) > div > .page { padding-top: var(--tope-pegado, 62px); }
 
-  /* Los atajos medían 52px para igualar el alto de la cápsula. Sin ella
-     ya no tienen a quién igualarse, y esos ocho pixeles de más eran
+  /* Los atajos med?an 52px para igualar el alto de la c?psula. Sin ella
+     ya no tienen a qui?n igualarse, y esos ocho pixeles de m?s eran
      justo los que empujaban el contenido hacia abajo. */
   html.kw-riel header.kw-header .kw-header-sueltos > * { height: 44px; }
   html.kw-riel header.kw-header .kw-header-sueltos > #notif-bell-slot { width: 40px; }
-  /* La hamburguesa del header sobra: la del riel hace lo mismo y está
+  /* La hamburguesa del header sobra: la del riel hace lo mismo y est?
      junto a lo que abre. */
   html.kw-riel #kw-drawer-toggle { display: none; }
   html.kw-riel header.kw-header:not(.kw-buscando) #kw-buscar-toggle { display: none; }
 
-  /* Y el "Atrás" también. Servía cuando llegar a otro lado era volver
+  /* Y el "Atr?s" tambi?n. Serv?a cuando llegar a otro lado era volver
      sobre los pasos; con el riel siempre a la vista, cualquier destino
-     está a un clic sin tener que retroceder. En celular no se quita:
-     ahí el menú está guardado detrás de la hamburguesa. */
+     est? a un clic sin tener que retroceder. En celular no se quita:
+     ah? el men? est? guardado detr?s de la hamburguesa. */
   html.kw-riel header.kw-header .back-btn { display: none; }
 
-  /* ── El renglón de arriba deja pasar los clics ──
-     Sin fondo, el header se ve como si no estuviera; pero seguía ahí,
-     estirado de orilla a orilla, tragándose todo clic que cayera en esa
+  /* ?? El rengl?n de arriba deja pasar los clics ??
+     Sin fondo, el header se ve como si no estuviera; pero segu?a ah?,
+     estirado de orilla a orilla, trag?ndose todo clic que cayera en esa
      franja. Con la barra puesta no se notaba porque era una barra de
-     verdad; ahora tapaba la orilla de arriba de la página sin que nada
+     verdad; ahora tapaba la orilla de arriba de la p?gina sin que nada
      lo explicara.
 
      Los clics lo atraviesan y solo los botones los reciben, cada uno en
-     su propio espacio. Al buscar no: ahí la cápsula vuelve a ser un
+     su propio espacio. Al buscar no: ah? la c?psula vuelve a ser un
      campo de texto y necesita recibirlos. */
   html.kw-riel header.kw-header:not(.kw-buscando),
   html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-capsula {
     pointer-events: none;
   }
   /* Todo lo que cuelga del header recibe clics otra vez, menos la
-     cápsula, que es el hueco vacío que se atraviesa. Va por "cualquier
+     c?psula, que es el hueco vac?o que se atraviesa. Va por "cualquier
      hijo" y no por una lista de nombres: una pantalla puede colgar sus
-     propios botones del renglón (Firmas cuelga los de volver), y con la
-     lista cerrada esos nacían muertos, sin nada que dijera por qué. */
+     propios botones del rengl?n (Firmas cuelga los de volver), y con la
+     lista cerrada esos nac?an muertos, sin nada que dijera por qu?. */
   html.kw-riel header.kw-header:not(.kw-buscando) > *:not(.kw-header-capsula),
   html.kw-riel header.kw-header:not(.kw-buscando) > *:not(.kw-header-capsula) *,
   html.kw-riel header.kw-header:not(.kw-buscando) .kw-header-capsula > * {
     pointer-events: auto;
   }
 
-  /* La foto va centrada en la franja mientras está angosta: pegada a la
-     izquierda quedaba fuera del eje de los íconos de abajo. */
+  /* La foto va centrada en la franja mientras est? angosta: pegada a la
+     izquierda quedaba fuera del eje de los ?conos de abajo. */
   html.kw-riel .drawer:not(:hover):not(.open) .drawer-usuario,
   html.kw-riel .drawer.sin-hover .drawer-usuario { justify-content: center; padding: 13px 0; }
   html.kw-riel .drawer-usuario-foto {
@@ -1300,8 +1300,8 @@ header > *:last-child { margin-left: auto; }
     box-shadow: 0 2px 8px rgba(40,12,12,0.14);
   }
 
-  /* Sin esto, un nombre largo o una etiqueta larga estiran el renglón y
-     empujan el ícono fuera de la franja mientras está angosta. */
+  /* Sin esto, un nombre largo o una etiqueta larga estiran el rengl?n y
+     empujan el ?cono fuera de la franja mientras est? angosta. */
   html.kw-riel .drawer-link,
   html.kw-riel .drawer-usuario { white-space: nowrap; }
   html.kw-riel .drawer-nav { padding: 6px 8px 14px; }
@@ -1315,7 +1315,7 @@ header > *:last-child { margin-left: auto; }
   .drawer-buscar { display: none; }
 }
 
-/* ── Panel de la derecha: los accesos que cada quien se guarda ──
+/* ?? Panel de la derecha: los accesos que cada quien se guarda ??
    Mismo vidrio y mismo comportamiento que el de la izquierda; solo
    entra del otro lado. */
 .drawer-der {
@@ -1330,8 +1330,8 @@ header > *:last-child { margin-left: auto; }
 }
 .drawer-titulo svg { width: 17px; height: 17px; color: var(--red); }
 
-/* El enlace y el bote de basura comparten renglón: el bote solo se
-   asoma al pasar el mouse (en celular se ve siempre, que ahí no hay
+/* El enlace y el bote de basura comparten rengl?n: el bote solo se
+   asoma al pasar el mouse (en celular se ve siempre, que ah? no hay
    mouse que lo despierte). */
 .drawer-acceso { display: flex; align-items: center; gap: 4px; }
 .drawer-acceso .drawer-link { flex: 1; min-width: 0; }
@@ -1363,14 +1363,14 @@ header > *:last-child { margin-left: auto; }
 }
 .drawer-agregar:disabled { opacity: 0.6; cursor: default; }
 
-/* ── Desplegable de notificaciones (campanita) ───────────────────────
-   Vivía duplicado en portal.html y en hub/tickets.html, y las dos copias
-   ya habían empezado a separarse. Aquí queda una sola: cada página se
-   queda nada más con el estilo de su botón, que sí cambia según el
+/* ?? Desplegable de notificaciones (campanita) ???????????????????????
+   Viv?a duplicado en portal.html y en hub/tickets.html, y las dos copias
+   ya hab?an empezado a separarse. Aqu? queda una sola: cada p?gina se
+   queda nada m?s con el estilo de su bot?n, que s? cambia seg?n el
    header donde va.
    Solo existe en escritorio: en celular la campanita es un enlace a su
-   propia página (hub/notificaciones.html) - un desplegable de 320px no
-   cabía bien ahí y ya se sentía encimado con el header. */
+   propia p?gina (hub/notificaciones.html) - un desplegable de 320px no
+   cab?a bien ah? y ya se sent?a encimado con el header. */
 .notif-backdrop {
   position: fixed; inset: 0; z-index: 49;
   background: rgba(15,15,15,0.35);
@@ -1380,17 +1380,17 @@ header > *:last-child { margin-left: auto; }
 }
 .notif-backdrop.abierto { opacity: 1; pointer-events: auto; }
 
-/* El desplegable cuelga de la orilla derecha del botón y se abre hacia
+/* El desplegable cuelga de la orilla derecha del bot?n y se abre hacia
    la izquierda. Nace ya en el DOM (no con display:none) para poder
-   animar su entrada; oculto se le quitan además los clics y se saca
+   animar su entrada; oculto se le quitan adem?s los clics y se saca
    del orden de lectura, para que no estorbe ni se pueda tabular hasta
-   él mientras está cerrado. */
+   ?l mientras est? cerrado. */
 .notif-dropdown {
   /* Cuelga del borde de abajo de la campanita y no de una distancia
      fija: con los 46px de antes, sobre una pastilla de 52 el panel
      empezaba seis pixeles arriba de donde termina la campana y se le
      encimaba a ella y al header. Medido contra el 100%, queda debajo
-     sin importar de qué alto sea la pastilla. */
+     sin importar de qu? alto sea la pastilla. */
   position: absolute; top: calc(100% + 8px); right: 0; width: 320px; max-height: 420px;
   background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
   backdrop-filter: blur(16px) saturate(140%);
@@ -1472,22 +1472,22 @@ header > *:last-child { margin-left: auto; }
   font-size: 9px; font-weight: 700; line-height: 1;
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ??????????????????????????????????????????????????????????????
    Las notificaciones, en panel lateral
-   ══════════════════════════════════════════════════════════════
-   Eran un recuadro de 320×420 colgando de la campanita. Al lado del
-   menú, que ya es una gaveta de alto completo, se veía como una pieza
-   de otro juego: mismo sitio, dos maneras distintas de enseñar una
+   ??????????????????????????????????????????????????????????????
+   Eran un recuadro de 320?420 colgando de la campanita. Al lado del
+   men?, que ya es una gaveta de alto completo, se ve?a como una pieza
+   de otro juego: mismo sitio, dos maneras distintas de ense?ar una
    lista.
 
-   Ahora es el mismo panel, del mismo tamaño y del mismo material, solo
-   que entra por la derecha. Abre con clic y nada más: el menú se
-   ensancha al acercar el cursor porque está siempre a la vista y roza
+   Ahora es el mismo panel, del mismo tama?o y del mismo material, solo
+   que entra por la derecha. Abre con clic y nada m?s: el men? se
+   ensancha al acercar el cursor porque est? siempre a la vista y roza
    sin querer no cuesta nada; unas notificaciones que se abrieran solas
-   al pasar por encima taparían la pantalla sin que nadie las pidiera.
+   al pasar por encima tapar?an la pantalla sin que nadie las pidiera.
 
-   Debajo de 1024px no aplica: ahí la campanita ya manda derecho a la
-   página de notificaciones. */
+   Debajo de 1024px no aplica: ah? la campanita ya manda derecho a la
+   p?gina de notificaciones. */
 @media (min-width: 1024px) {
   html.kw-riel .notif-dropdown {
     position: fixed; top: 10px; right: 12px; bottom: 10px; left: auto;
@@ -1504,19 +1504,19 @@ header > *:last-child { margin-left: auto; }
                 inset 0 -1px 0 rgba(255,255,255,0.30),
                 inset 1px 0 0 rgba(255,255,255,0.38);
     z-index: 201;
-    /* Entra deslizando desde su orilla, igual que el menú, en vez de
+    /* Entra deslizando desde su orilla, igual que el men?, en vez de
        aparecer creciendo desde una esquina. */
     transform: translateX(calc(100% + 16px));
     transition: transform var(--t-lento) var(--curva);
     opacity: 1; visibility: visible;
   }
   html.kw-riel .notif-dropdown.abierto { transform: translateX(0); }
-  /* Cerrado no recibe clics ni se puede tabular hasta él, aunque siga
+  /* Cerrado no recibe clics ni se puede tabular hasta ?l, aunque siga
      visible para poder animarlo. */
   html.kw-riel .notif-dropdown:not(.abierto) { pointer-events: none; }
   /* El velo se queda solo para atrapar el clic que cierra el panel: sin
      color y sin desenfoque. Oscurecer la pantalla es de una ventana que
-     exige atención antes de dejar seguir; estos paneles no exigen nada,
+     exige atenci?n antes de dejar seguir; estos paneles no exigen nada,
      se asoman y se van. */
   html.kw-riel .notif-backdrop {
     z-index: 200;
@@ -1530,9 +1530,9 @@ header > *:last-child { margin-left: auto; }
 
   /* Los dos paneles de la derecha van pegados a su orilla y con las
      esquinas casi rectas. Flotando con margen y 22px de redondeo se
-     leían como una cápsula enorme; un panel que entra por un lado se
+     le?an como una c?psula enorme; un panel que entra por un lado se
      entiende mejor si nace de ese lado en vez de aparecer despegado de
-     él. Solo las esquinas de adentro llevan curva. */
+     ?l. Solo las esquinas de adentro llevan curva. */
   html.kw-riel .notif-dropdown,
   html.kw-riel .drawer-der {
     top: 0; bottom: 0; right: 0;
@@ -1711,7 +1711,7 @@ header > *:last-child { margin-left: auto; }
 
 /* Ajuste fino del buscador del riel y del perfil:
    el buscador no debe ocupar casi todo el panel, y activar su campo no
-   debe cambiar la geometría del bloque de usuario. */
+   debe cambiar la geometr?a del bloque de usuario. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer:not(.drawer-der):hover .drawer-buscar,
   html.kw-riel .drawer:not(.drawer-der).open .drawer-buscar,
@@ -1740,8 +1740,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* El botón de búsqueda del riel cerrado ocupa la misma celda que los
-   demás iconos. Se elimina el fondo nativo del <button> y se centra la
+/* El bot?n de b?squeda del riel cerrado ocupa la misma celda que los
+   dem?s iconos. Se elimina el fondo nativo del <button> y se centra la
    lupa para que no quede recortada ni desplazada. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within) .drawer-buscar,
@@ -1823,8 +1823,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Buscar en la página vive como un acceso más del menú, encima de
-   Propiedades, con la misma geometría que los demás enlaces. */
+/* Buscar en la p?gina vive como un acceso m?s del men?, encima de
+   Propiedades, con la misma geometr?a que los dem?s enlaces. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso {
     order: -10;
@@ -1855,8 +1855,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* El acceso de búsqueda comparte el componente visual real de los
-   enlaces del menú; solo al activarse su contenedor recibe el contorno. */
+/* El acceso de b?squeda comparte el componente visual real de los
+   enlaces del men?; solo al activarse su contenedor recibe el contorno. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso {
     display: flex;
@@ -1898,7 +1898,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Buscar en la página: mismo comportamiento exacto que un drawer-link. */
+/* Buscar en la p?gina: mismo comportamiento exacto que un drawer-link. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso {
     order: initial !important;
@@ -1960,7 +1960,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* El acceso de búsqueda no se desplaza al pasar el cursor. */
+/* El acceso de b?squeda no se desplaza al pasar el cursor. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso:hover,
   html.kw-riel .drawer-buscar-acceso:hover .drawer-buscar-toggle {
@@ -1971,8 +1971,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Contenedor neutro; el botón interno es el único drawer-link, igual que
-   todos los accesos del menú. */
+/* Contenedor neutro; el bot?n interno es el ?nico drawer-link, igual que
+   todos los accesos del men?. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso {
     order: initial !important;
@@ -2002,7 +2002,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* El hover de Buscar en la página solo cambia el realce; no mueve su
+/* El hover de Buscar en la p?gina solo cambia el realce; no mueve su
    caja, icono ni texto. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle,
@@ -2054,8 +2054,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Buscador tipo checkbox: el acceso conserva la geometría del menú y
-   la cápsula se abre al marcarlo. */
+/* Buscador tipo checkbox: el acceso conserva la geometr?a del men? y
+   la c?psula se abre al marcarlo. */
 @media (min-width: 1024px) {
   #drawer-buscar-acceso, .drawer-buscar-acceso { position: relative; }
   #search-btn {
@@ -2120,8 +2120,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Búsqueda como acceso normal: solo el botón participa visualmente en
-   el listado; el contenedor no añade geometría ni estados propios. */
+/* B?squeda como acceso normal: solo el bot?n participa visualmente en
+   el listado; el contenedor no a?ade geometr?a ni estados propios. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso {
     display: contents !important;
@@ -2156,7 +2156,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Misma geometría y animación que cualquier drawer-link. */
+/* Misma geometr?a y animaci?n que cualquier drawer-link. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle {
     display: flex !important;
@@ -2182,8 +2182,8 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* La cápsula de búsqueda no cambia de fondo al pasar el cursor; solo
-   conserva la animación de la lupa. */
+/* La c?psula de b?squeda no cambia de fondo al pasar el cursor; solo
+   conserva la animaci?n de la lupa. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle:hover {
     background: transparent !important;
@@ -2191,7 +2191,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Alineación base del buscador: la lupa parte en la misma posición que
+/* Alineaci?n base del buscador: la lupa parte en la misma posici?n que
    los iconos de los accesos, antes de cualquier hover. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle {
@@ -2208,7 +2208,7 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
-/* Corrección del desfase inicial: el acceso parte con la misma coordenada
+/* Correcci?n del desfase inicial: el acceso parte con la misma coordenada
    horizontal que alcanza durante el hover. */
 @media (min-width: 1024px) {
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle svg {
@@ -2216,5 +2216,50 @@ header > *:last-child { margin-left: auto; }
   }
   html.kw-riel .drawer-buscar-acceso .drawer-buscar-toggle:hover svg {
     transform: translateX(3px) scale(1.22) !important;
+  }
+}
+/* Busqueda lateral: campo y cierre comparten el primer renglon; la lista
+   aprovecha todo el espacio restante hasta el separador del pie. */
+@media (min-width: 1024px) {
+  html.kw-riel body #drawer.buscando #drawer-buscar {
+    grid-template-columns: minmax(0, 1fr) 32px !important;
+    grid-template-rows: 38px minmax(0, 1fr) !important;
+    column-gap: 0 !important;
+    row-gap: 8px !important;
+  }
+  html.kw-riel body #drawer.buscando #drawer-buscar .kw-buscar-campo-inline {
+    grid-column: 1;
+    grid-row: 1;
+    border-right: 0 !important;
+    border-radius: 7px 0 0 7px !important;
+    box-shadow: none !important;
+  }
+  html.kw-riel body #drawer.buscando #drawer-buscar .kw-buscar-cerrar-inline {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 32px !important;
+    height: 38px !important;
+    margin: 0 !important;
+    border: 1px solid var(--red) !important;
+    border-left: 0 !important;
+    border-radius: 0 7px 7px 0 !important;
+    background: #fff !important;
+    color: var(--muted) !important;
+  }
+  html.kw-riel body #drawer.buscando #drawer-buscar .kw-buscar-cerrar-inline:hover {
+    background: #f8f8f8 !important;
+    color: var(--text) !important;
+  }
+  html.kw-riel body #drawer.buscando #drawer-buscar .kw-buscar-resultados-inline {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: stretch !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
   }
 }
