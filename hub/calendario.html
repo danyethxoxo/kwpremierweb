@@ -9,14 +9,14 @@
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondi? a tiempo; redirigiendo al login por seguridad.');
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
       location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942d">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942c">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916c">
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
@@ -39,15 +39,15 @@
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   /* kw-base.css reserva siempre el hueco de la barra de desplazamiento
-     (para que las p?ginas no brinquen de lado cuando aparece o
-     desaparece). Aqu? no aplica: esta pantalla es de alto fijo y nunca
-     hace scroll en la ventana, as? que ese hueco ser?a una franja
+     (para que las páginas no brinquen de lado cuando aparece o
+     desaparece). Aquí no aplica: esta pantalla es de alto fijo y nunca
+     hace scroll en la ventana, así que ese hueco sería una franja
      muerta de 15px a la derecha. El scroll de verdad ocurre dentro de
      .panel-scroll, no en html. */
   html { scrollbar-gutter: auto; }
 
 
-  /* ?? Layout de dos columnas: banners (izquierda) + calendario (derecha) ?? */
+  /* ── Layout de dos columnas: banners (izquierda) + calendario (derecha) ── */
   .split {
     display: grid;
     grid-template-columns: 340px 1fr;
@@ -81,15 +81,15 @@
     overflow: hidden;
   }
 
-  /* ?? Parte fija de arriba (no se mueve al hacer scroll en la agenda) ?? */
+  /* ── Parte fija de arriba (no se mueve al hacer scroll en la agenda) ── */
   .calendar-top {
     flex-shrink: 0;
     padding: 66px 32px 12px;
     background: transparent;
   }
-  /* El relleno de arriba existe nada m?s para dejarle lugar al header.
+  /* El relleno de arriba existe nada más para dejarle lugar al header.
      Cuando el header se va (solo pasa en celular), ese lugar sobra y
-     quedaba un hueco vac?o: aqu? se recoge junto con ?l. */
+     quedaba un hueco vacío: aquí se recoge junto con él. */
   @media (max-width: 900px) {
     .calendar-top { transition: padding-top 0.28s var(--curva-salida); }
     .kw-header-fuera .calendar-top { padding-top: 10px; }
@@ -110,7 +110,7 @@
   .page-title { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; margin-bottom: 0; }
   .page-desc { font-size: 13px; color: var(--muted); margin-top: 2px; margin-bottom: 12px; }
 
-  /* ?? Navegador de mes ?? */
+  /* ── Navegador de mes ── */
   .month-nav {
     display: flex; align-items: center; justify-content: space-between;
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
@@ -130,10 +130,10 @@
   .month-btn:active { transform: scale(0.93); }
   .month-btn.today-btn { width: auto; padding: 0 14px; font-size: 12.5px; font-weight: 600; }
 
-  /* ?? Zona con scroll propio: solo la agenda se mueve ??
-     Nota: esta clase ya no la lleva ning?n elemento del marcado (el
-     panel real usa .panel-scroll, ver esa regla m?s abajo); se deja tal
-     cual para no tocar de m?s. */
+  /* ── Zona con scroll propio: solo la agenda se mueve ──
+     Nota: esta clase ya no la lleva ningún elemento del marcado (el
+     panel real usa .panel-scroll, ver esa regla más abajo); se deja tal
+     cual para no tocar de más. */
   .calendar-scroll {
     flex: 1;
     min-height: 0;
@@ -141,7 +141,7 @@
     padding: 20px 32px 60px;
   }
 
-  /* ?? Estados ?? */
+  /* ── Estados ── */
   .state-box {
     text-align: center; padding: 48px 20px; color: var(--muted);
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
@@ -170,7 +170,7 @@
     .state-box { scroll-margin-top: 8px; }
   }
 
-  /* ?? Agenda ?? */
+  /* ── Agenda ── */
   .day-group {
     margin-bottom: 18px; scroll-margin-top: 8px;
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 18px;
@@ -180,8 +180,8 @@
     padding: 18px 20px 8px;
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   }
-  /* El d?a de hoy no se pinta de color: es el vidrio casi s?lido, que
-     resalta contra los dem?s d?as, m?s transparentes. */
+  /* El día de hoy no se pinta de color: es el vidrio casi sólido, que
+     resalta contra los demás días, más transparentes. */
   .day-group.is-today {
     border: 1px solid rgba(255,255,255,0.9);
     background: linear-gradient(150deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.98) 45%, rgba(255,255,255,0.96) 100%);
@@ -244,24 +244,24 @@
   .event-btn-details { color: var(--text); }
   .day-sin-eventos { padding: 16px 0; color: var(--muted); font-size: 13px; }
 
-  /* ?? Pesta?as Agenda / Salas ??
+  /* ── Pestañas Agenda / Salas ──
      .kw-tabpanel trae "display:block" por default (pensado para una
-     p?gina normal que s? puede crecer). Aqu? el layout entero es de
-     alto fijo con scroll propio, as? que la pesta?a activa necesita
+     página normal que sí puede crecer). Aquí el layout entero es de
+     alto fijo con scroll propio, así que la pestaña activa necesita
      ser ella misma una columna flex: una franja fija arriba (mes o
-     bot?n de nueva reserva) y una zona con scroll debajo, igual que ya
-     hac?a la agenda antes de que hubiera pesta?as. */
+     botón de nueva reserva) y una zona con scroll debajo, igual que ya
+     hacía la agenda antes de que hubiera pestañas. */
   .kw-tabpanels { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
   .kw-tabpanel.activo { display: flex; flex-direction: column; min-height: 0; }
-  /* .kw-tabs (kw-ui.css) vive aqu? directo sobre el fondo guinda, no
+  /* .kw-tabs (kw-ui.css) vive aquí directo sobre el fondo guinda, no
      dentro de una tarjeta: sus colores (pensados para el fondo claro
-     de siempre) se aclaran solo en esta p?gina. */
-  /* La barra de pesta?as se reemplaz? por el selector del header: se
+     de siempre) se aclaran solo en esta página. */
+  /* La barra de pestañas se reemplazó por el selector del header: se
      queda en el HTML porque es la que de verdad cambia de panel (la
      mueve kwUI.activarTab), pero ya no se ve. */
   .calendar-top .kw-tabs { display: none; }
 
-  /* ?? Selector de vista, en el t?tulo del header ?? */
+  /* ── Selector de vista, en el título del header ── */
   .cal-selector {
     display: flex; align-items: center; justify-content: center; gap: 5px;
     border: none; background: none; cursor: pointer;
@@ -270,7 +270,7 @@
     transition: background 0.15s;
   }
   /* .kw-header-title se esconde en pantalla grande (kw-base.css), pero
-     aqu? no es un t?tulo: es el control para cambiar de vista, as? que
+     aquí no es un título: es el control para cambiar de vista, así que
      tiene que verse siempre. */
   header.kw-header .cal-selector { display: flex; }
   .cal-selector:hover { background: rgba(138,0,0,0.07); }
@@ -301,15 +301,15 @@
     flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 60px;
     /* Al saltar a "hoy" y esconderse el header, el hueco de arriba
        (.calendar-top) se encoge; sin esto, el navegador "corrige" solo
-       la posici?n del scroll para que el contenido no brinque bajo el
-       usuario, aunque aqu? nada brinc? de verdad. Esa correcci?n
+       la posición del scroll para que el contenido no brinque bajo el
+       usuario, aunque aquí nada brincó de verdad. Esa corrección
        dispara varios eventos de scroll con valores que suben y bajan,
        y cada uno esconde o muestra el header otra vez: eso era el
        temblor al entrar. */
     overflow-anchor: none;
   }
 
-  /* ?? Salas ?? */
+  /* ── Salas ── */
   .btn-nueva-reserva {
     display: inline-flex; align-items: center; gap: 8px;
     background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82); border-radius: 30px;
@@ -366,7 +366,7 @@
     padding: 30px 16px; border: 1.5px dashed var(--border); border-radius: 14px;
   }
 
-  /* ?? Modales: pedir sala / rechazar ?? */
+  /* ── Modales: pedir sala / rechazar ── */
   .form-reserva .field { margin-bottom: 12px; }
   .form-reserva .field-fila { display: flex; gap: 10px; }
   .form-reserva .field-fila .field { flex: 1; }
@@ -399,9 +399,9 @@
 <body>
 
   <header class="kw-header">
-    <!-- El t?tulo es tambi?n el selector de vista: al picarle se
-         despliega Agenda / Salas. Sustituye a la barra de pesta?as, que
-         ocupaba un rengl?n entero para dos opciones. -->
+    <!-- El título es también el selector de vista: al picarle se
+         despliega Agenda / Salas. Sustituye a la barra de pestañas, que
+         ocupaba un renglón entero para dos opciones. -->
     <button type="button" class="kw-header-title cal-selector" id="cal-selector"
             aria-haspopup="true" aria-expanded="false">
       <span id="cal-selector-texto">Agenda</span>
@@ -418,7 +418,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
-      <span class="back-label">Atr?s</span>
+      <span class="back-label">Atrás</span>
     </a>
   </header>
 
@@ -429,7 +429,7 @@
       <div class="banner-placeholder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <div class="banner-placeholder-title">Banners del calendario</div>
-        <div class="banner-placeholder-desc">Aqu? van a ir las im?genes de los banners - pr?ximamente.</div>
+        <div class="banner-placeholder-desc">Aquí van a ir las imágenes de los banners - próximamente.</div>
       </div>
     </aside>
 
@@ -437,7 +437,7 @@
 
       <div class="calendar-top">
         <h1 class="page-title">Calendario de eventos</h1>
-        <p class="page-desc">?Qu? hay hoy en la agenda?</p>
+        <p class="page-desc">¿Qué hay hoy en la agenda?</p>
 
         <div class="kw-tabs" data-kw-tabs="cal-panels">
           <button type="button" class="kw-tab activo" data-tab="agenda">Agenda</button>
@@ -453,7 +453,7 @@
               <button class="month-btn" id="btn-prev" aria-label="Semana anterior" onclick="changeWeek(-1)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <div class="month-label" id="month-label">?</div>
+              <div class="month-label" id="month-label">·</div>
               <div class="month-nav-btns">
                 <button class="month-btn today-btn" onclick="goToday(true)">Hoy</button>
                 <button class="month-btn" id="btn-next" aria-label="Semana siguiente" onclick="changeWeek(1)">
@@ -467,7 +467,7 @@
             <div id="agenda-container">
               <div class="state-box">
                 <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
-                Cargando eventos?
+                Cargando eventos…
               </div>
             </div>
             <footer style="margin-top: 8px;">
@@ -503,7 +503,7 @@
             <div id="salas-mias">
               <div class="state-box">
                 <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
-                Cargando?
+                Cargando…
               </div>
             </div>
           </div>
@@ -518,7 +518,7 @@
   <div id="modal-reserva" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3>Pedir una sala</h3>
-      <p class="modal-sub">La solicitud le llega a recepci?n para que la acepte o la rechace.</p>
+      <p class="modal-sub">La solicitud le llega a recepción para que la acepte o la rechace.</p>
       <div class="form-reserva">
         <div class="field">
           <label for="res-sala">Sala</label>
@@ -545,7 +545,7 @@
         </div>
         <div class="field">
           <label for="res-motivo">Motivo (opcional)</label>
-          <textarea id="res-motivo" rows="2" maxlength="300" placeholder="Para qu? es la reuni?n"></textarea>
+          <textarea id="res-motivo" rows="2" maxlength="300" placeholder="Para qué es la reunión"></textarea>
         </div>
       </div>
       <div class="msg" id="res-msg"></div>
@@ -564,8 +564,8 @@
       <h3>Rechazar solicitud</h3>
       <p class="modal-sub" id="rechazar-sub"></p>
       <div class="field">
-        <label for="rechazar-nota">Motivo (opcional, se le manda a quien pidi?)</label>
-        <textarea id="rechazar-nota" rows="3" maxlength="300" placeholder="Por ejemplo: esa sala ya est? ocupada, prueba otro horario"></textarea>
+        <label for="rechazar-nota">Motivo (opcional, se le manda a quien pidió)</label>
+        <textarea id="rechazar-nota" rows="3" maxlength="300" placeholder="Por ejemplo: esa sala ya está ocupada, prueba otro horario"></textarea>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalRechazar()">Cancelar</button>
@@ -583,10 +583,10 @@
   const CALENDAR_TZ = "America/Mexico_City";
   const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const DIAS_SEMANA = ['domingo','lunes','martes','mi?rcoles','jueves','viernes','s?bado'];
+  const DIAS_SEMANA = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 
-  // Todas las fechas se leen/comparan como hora de Ciudad de M?xico (la del calendario),
-  // sin depender de la zona horaria del dispositivo de quien visita la p?gina.
+  // Todas las fechas se leen/comparan como hora de Ciudad de México (la del calendario),
+  // sin depender de la zona horaria del dispositivo de quien visita la página.
 
   function getTodayInMexico() {
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone: CALENDAR_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
@@ -602,7 +602,7 @@
   }
 
   function weekdayOf(parts) {
-    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay(); // 0=domingo..6=s?bado
+    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay(); // 0=domingo..6=sábado
   }
 
   function getMondayOfWeek(parts) {
@@ -615,19 +615,19 @@
 
   let currentWeekStart = getMondayOfWeek(getTodayInMexico()); // { year, month, day } - lunes de la semana visible
   let pendingScrollToToday = true; // en la primera carga, salta a los eventos de hoy
-  let pendingPulseToday = false; // al darle "Hoy", resalta la tarjeta con una animaci?n
+  let pendingPulseToday = false; // al darle "Hoy", resalta la tarjeta con una animación
 
   function fmtWeekLabel(monday) {
     const sunday = addDays(monday, 6);
     if (monday.year === sunday.year && monday.month === sunday.month) {
-      return `${monday.day} ? ${sunday.day} de ${MESES[monday.month - 1]} ${monday.year}`;
+      return `${monday.day} – ${sunday.day} de ${MESES[monday.month - 1]} ${monday.year}`;
     } else if (monday.year === sunday.year) {
-      return `${monday.day} ${MESES_CORTOS[monday.month - 1]} ? ${sunday.day} ${MESES_CORTOS[sunday.month - 1]} ${monday.year}`;
+      return `${monday.day} ${MESES_CORTOS[monday.month - 1]} – ${sunday.day} ${MESES_CORTOS[sunday.month - 1]} ${monday.year}`;
     }
-    return `${monday.day} ${MESES_CORTOS[monday.month - 1]} ${monday.year} ? ${sunday.day} ${MESES_CORTOS[sunday.month - 1]} ${sunday.year}`;
+    return `${monday.day} ${MESES_CORTOS[monday.month - 1]} ${monday.year} – ${sunday.day} ${MESES_CORTOS[sunday.month - 1]} ${sunday.year}`;
   }
 
-  // Construye el l?mite ISO de un d?a concreto, ya en la zona horaria del calendario
+  // Construye el límite ISO de un día concreto, ya en la zona horaria del calendario
   function dateBoundaryISO(year, month, day) {
     const d = new Date(Date.UTC(year, month - 1, day));
     const y = d.getUTCFullYear();
@@ -636,8 +636,8 @@
     return `${y}-${mm}-${dd}T00:00:00-06:00`;
   }
 
-  // Extrae a?o/mes/d?a/hora/minuto directo del string ISO que regresa Google
-  // (ya viene en hora local de Ciudad de M?xico), sin pasar por conversi?n del navegador.
+  // Extrae año/mes/día/hora/minuto directo del string ISO que regresa Google
+  // (ya viene en hora local de Ciudad de México), sin pasar por conversión del navegador.
   function parseEventParts(iso) {
     const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
     return {
@@ -658,24 +658,24 @@
     return `${h12}:${String(p.minute).padStart(2, '0')} ${ampm}`;
   }
 
-  // Busca un link de Zoom/Meet dentro de un texto (para usarlo como bot?n "?nete en l?nea").
+  // Busca un link de Zoom/Meet dentro de un texto (para usarlo como botón "Únete en línea").
   function findMeetingLink(html) {
     if (!html) return null;
     const m = html.match(/https?:\/\/[^\s<">]*(?:zoom\.us|meet\.google\.com)[^\s<">]*/i);
     return m ? m[0] : null;
   }
 
-  // Detecta links de Zoom/Meet dentro de la descripci?n y los muestra con
+  // Detecta links de Zoom/Meet dentro de la descripción y los muestra con
   // un texto claro y consistente, en vez del texto/URL crudo que trae Google.
   function normalizeMeetingLinks(html) {
     if (!html) return html;
     let out = html.replace(/<a\s+[^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>/gi, (match, href) => {
-      if (/zoom\.us/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">?? ?nete a la sesi?n por Zoom</a>`;
-      if (/meet\.google\.com/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">?? ?nete a la sesi?n por Meet</a>`;
+      if (/zoom\.us/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">🎥 Únete a la sesión por Zoom</a>`;
+      if (/meet\.google\.com/i.test(href)) return `<a class="meeting-link" href="${href}" target="_blank" rel="noopener">🎥 Únete a la sesión por Meet</a>`;
       return match;
     });
     out = out.replace(/(?<!href=")(https?:\/\/[^\s<"]*(?:zoom\.us|meet\.google\.com)[^\s<"]*)/gi, (url) => {
-      const label = /zoom\.us/i.test(url) ? '?? ?nete a la sesi?n por Zoom' : '?? ?nete a la sesi?n por Meet';
+      const label = /zoom\.us/i.test(url) ? '🎥 Únete a la sesión por Zoom' : '🎥 Únete a la sesión por Meet';
       return `<a class="meeting-link" href="${url}" target="_blank" rel="noopener">${label}</a>`;
     });
     return out;
@@ -684,7 +684,7 @@
   async function loadEvents() {
     const container = document.getElementById('agenda-container');
     document.getElementById('month-label').textContent = fmtWeekLabel(currentWeekStart);
-    container.innerHTML = `<div class="state-box"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>Cargando eventos?</div>`;
+    container.innerHTML = `<div class="state-box"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>Cargando eventos…</div>`;
 
     const nextMonday = addDays(currentWeekStart, 7);
     const timeMin = dateBoundaryISO(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day);
@@ -696,14 +696,14 @@
 
     try {
       const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`El servidor respondi? ${res.status}`);
+      if (!res.ok) throw new Error(`El servidor respondió ${res.status}`);
       const data = await res.json();
       renderAgenda(data.events || []);
     } catch (err) {
       container.innerHTML = `
         <div class="state-box error">
           No se pudieron cargar los eventos.<br>
-          <span style="font-size:12px;opacity:0.8;">${(err && err.message) ? err.message : 'Error de conexi?n'}</span><br>
+          <span style="font-size:12px;opacity:0.8;">${(err && err.message) ? err.message : 'Error de conexión'}</span><br>
           <button class="retry-btn" onclick="loadEvents()">Reintentar</button>
         </div>`;
     }
@@ -715,8 +715,8 @@
     const container = document.getElementById('agenda-container');
     const today = getTodayInMexico();
 
-    // Siempre se muestran los 7 d?as de la semana (lunes a domingo), tengan
-    // o no eventos, para que cada d?a quede separado visualmente del resto.
+    // Siempre se muestran los 7 días de la semana (lunes a domingo), tengan
+    // o no eventos, para que cada día quede separado visualmente del resto.
     const weekDays = [];
     for (let i = 0; i < 7; i++) {
       weekDays.push({ parts: addDays(currentWeekStart, i), events: [] });
@@ -739,14 +739,14 @@
         const startP = parseEventParts(ev.start);
         const endP = parseEventParts(ev.end);
         const timeHTML = ev.allDay
-          ? `<div class="event-time all-day">Todo<br>el d?a</div>`
+          ? `<div class="event-time all-day">Todo<br>el día</div>`
           : `<div class="event-time">${fmtTime(startP)}<span class="end-time">${fmtTime(endP)}</span></div>`;
         const locationHTML = ev.location
           ? `<div class="event-location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escapeHTML(ev.location)}</div>`
           : '';
         const joinLink = ev.hangoutLink || findMeetingLink(ev.description);
         const joinBtnHTML = joinLink
-          ? `<a class="event-btn event-btn-join" href="${joinLink}" target="_blank" rel="noopener" title="?nete en l?nea" aria-label="?nete en l?nea">
+          ? `<a class="event-btn event-btn-join" href="${joinLink}" target="_blank" rel="noopener" title="Únete en línea" aria-label="Únete en línea">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             </a>`
           : '';
@@ -764,7 +764,7 @@
           </div>`;
       }).join('');
 
-      const bodyHTML = eventsHTML || `<div class="day-sin-eventos">No hay eventos programados${isToday ? ' hoy' : ' este d?a'}.</div>`;
+      const bodyHTML = eventsHTML || `<div class="day-sin-eventos">No hay eventos programados${isToday ? ' hoy' : ' este día'}.</div>`;
 
       return `
         <div class="day-group${isToday ? ' is-today' : ''}" id="${isToday ? 'day-today' : ''}">
@@ -781,7 +781,7 @@
       pendingScrollToToday = false;
       if (todayEl) {
         todayEl.scrollIntoView({ block: 'start' });
-        // El salto autom?tico a "hoy" cuenta como scroll hacia abajo y
+        // El salto automático a "hoy" cuenta como scroll hacia abajo y
         // esconde la barra del header; la re-mostramos - solo el scroll
         // manual del usuario debe esconderla.
         setTimeout(() => {
@@ -821,11 +821,11 @@
     loadEvents();
   }
 
-  // ???????????????????????????????????????????????????????????????
+  // ═══════════════════════════════════════════════════════════════
   // SALAS
-  // ???????????????????????????????????????????????????????????????
-  // N?mero de WhatsApp de recepci?n (con lada, solo d?gitos: 52 + los
-  // 10 del celular). Mientras est? vac?o, mandar una solicitud nueva
+  // ═══════════════════════════════════════════════════════════════
+  // Número de WhatsApp de recepción (con lada, solo dígitos: 52 + los
+  // 10 del celular). Mientras esté vacío, mandar una solicitud nueva
   // no abre WhatsApp solo; se avisa que hay que avisarle a mano.
   const RECEPCION_WHATSAPP = '';
 
@@ -876,8 +876,8 @@
 
     await cargarReservas();
 
-    // Se actualiza sola: si alguien m?s pide, acepta o rechaza mientras
-    // esta pantalla est? abierta, no hace falta recargar para verlo.
+    // Se actualiza sola: si alguien más pide, acepta o rechaza mientras
+    // esta pantalla está abierta, no hace falta recargar para verlo.
     window.kwSupabase
       .channel('reservas-salas-cambios')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas_salas' }, cargarReservas)
@@ -917,12 +917,12 @@
     const mias = vigentes.filter(r => r.asesor_id === miId);
     document.getElementById('salas-mias').innerHTML = mias.length
       ? mias.map(r => tarjetaReserva(r, false)).join('')
-      : '<div class="salas-vacio">Todav?a no has pedido ninguna sala.</div>';
+      : '<div class="salas-vacio">Todavía no has pedido ninguna sala.</div>';
   }
 
   function tarjetaReserva(r, esAjena) {
     const quien = esAjena
-      ? `<div class="reserva-quien">Pidi?: ${escapeHTML([r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ') || 'Alguien')}</div>`
+      ? `<div class="reserva-quien">Pidió: ${escapeHTML([r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ') || 'Alguien')}</div>`
       : '';
     const motivo = r.motivo ? `<div class="reserva-motivo">${escapeHTML(r.motivo)}</div>` : '';
     const nota = (!esAjena && r.estado === 'rechazada' && r.nota_respuesta)
@@ -940,7 +940,7 @@
         <div class="reserva-top">
           <div>
             <div class="reserva-sala">${escapeHTML(r.sala_nombre)}</div>
-            <div class="reserva-cuando">${fmtFechaCorta(r.fecha)} ? ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)}</div>
+            <div class="reserva-cuando">${fmtFechaCorta(r.fecha)} · ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)}</div>
             ${quien}
           </div>
           <span class="estado-pill estado-${r.estado}">${etiquetaEstado}</span>
@@ -949,7 +949,7 @@
       </div>`;
   }
 
-  // ?? Pedir una sala ??
+  // ── Pedir una sala ──
   function abrirModalReserva() {
     document.getElementById('res-sala').value = 'juntas';
     document.getElementById('res-fecha').value = '';
@@ -976,7 +976,7 @@
     if (!fecha) return decir('Elige una fecha.');
     if (fecha < new Date().toISOString().slice(0, 10)) return decir('Elige una fecha que no haya pasado.');
     if (!inicio || !fin) return decir('Elige la hora de inicio y de fin.');
-    if (fin <= inicio) return decir('La hora de fin debe ser despu?s de la de inicio.');
+    if (fin <= inicio) return decir('La hora de fin debe ser después de la de inicio.');
 
     const btn = document.getElementById('res-btn');
     const cont = document.getElementById('res-btn-cont');
@@ -1001,11 +1001,11 @@
       const salaTexto = sala.selectedOptions[0].textContent;
       const texto = `Hola! Te llega una solicitud de sala del sitio:\n\n${salaTexto}\n` +
         `${fmtFechaCorta(fecha)}, de ${fmtHoraCorta(inicio)} a ${fmtHoraCorta(fin)}\n` +
-        `Pidi?: ${miNombre}` + (motivo ? `\nMotivo: ${motivo}` : '') +
+        `Pidió: ${miNombre}` + (motivo ? `\nMotivo: ${motivo}` : '') +
         `\n\nEntra a Calendario > Salas en el sitio para aceptarla o rechazarla.`;
       const href = waHref(RECEPCION_WHATSAPP, texto);
       if (href) window.open(href, '_blank');
-      else toast('No hay un n?mero de recepci?n configurado todav?a: av?sale t? directamente.', 'error');
+      else toast('No hay un número de recepción configurado todavía: avísale tú directamente.', 'error');
     } catch (err) {
       decir((err && err.message) || 'No se pudo enviar la solicitud.');
     } finally {
@@ -1014,7 +1014,7 @@
     }
   }
 
-  // ?? Aceptar / rechazar ??
+  // ── Aceptar / rechazar ──
   async function aceptar(id) {
     const btnSi = document.getElementById('btn-si-' + id);
     const btnNo = document.getElementById('btn-no-' + id);
@@ -1039,10 +1039,10 @@
         const nombreCorto = ((data.asesor && data.asesor.nombre) || r.asesor_nombre || '').split(' ')[0] || '';
         const texto = `Hola ${nombreCorto}! Tu solicitud de ${data.sala_nombre || r.sala_nombre} ` +
           `para el ${fmtFechaCorta(r.fecha)} de ${fmtHoraCorta(r.hora_inicio)} a ${fmtHoraCorta(r.hora_fin)} ` +
-          `fue ACEPTADA. Ya qued? agendada.`;
+          `fue ACEPTADA. Ya quedó agendada.`;
         window.open(waHref(whatsapp, texto), '_blank');
       } else {
-        toast('Aceptada. No tiene WhatsApp registrado, av?sale por otro medio.', 'error');
+        toast('Aceptada. No tiene WhatsApp registrado, avísale por otro medio.', 'error');
       }
     } catch (err) {
       toast((err && err.message) || 'No se pudo aceptar.', 'error');
@@ -1055,7 +1055,7 @@
     reservaARechazar = id;
     const r = reservasCache.find(x => x.id === id);
     document.getElementById('rechazar-sub').textContent = r
-      ? `${r.sala_nombre} ? ${fmtFechaCorta(r.fecha)} ? ${[r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ')}`
+      ? `${r.sala_nombre} · ${fmtFechaCorta(r.fecha)} · ${[r.asesor_nombre, r.asesor_apellido].filter(Boolean).join(' ')}`
       : '';
     document.getElementById('rechazar-nota').value = '';
     document.getElementById('modal-rechazar').style.display = 'flex';
@@ -1091,7 +1091,7 @@
           (nota ? ` Motivo: ${nota}.` : '') + ` Puedes pedir otro horario desde el sitio.`;
         window.open(waHref(r.asesor_whatsapp, texto), '_blank');
       } else {
-        toast('Rechazada. No tiene WhatsApp registrado, av?sale por otro medio.', 'error');
+        toast('Rechazada. No tiene WhatsApp registrado, avísale por otro medio.', 'error');
       }
     } catch (err) {
       toast((err && err.message) || 'No se pudo rechazar.', 'error');
@@ -1101,10 +1101,10 @@
     }
   }
 
-  // ?? Selector de vista del header (Agenda / Salas) ??
-  // Manda sobre las pesta?as de siempre, que siguen ah? pero escondidas:
-  // ellas son las que de verdad cambian de panel, as? que aqu? solo se
-  // les pide el cambio y se refleja en el t?tulo.
+  // ── Selector de vista del header (Agenda / Salas) ──
+  // Manda sobre las pestañas de siempre, que siguen ahí pero escondidas:
+  // ellas son las que de verdad cambian de panel, así que aquí solo se
+  // les pide el cambio y se refleja en el título.
   function armarSelectorVista() {
     var boton = document.getElementById('cal-selector');
     var menu = document.getElementById('cal-menu');
@@ -1141,7 +1141,7 @@
       if (e.key === 'Escape') abrir(false);
     });
 
-    // Arranca reflejando la pesta?a que est? activa.
+    // Arranca reflejando la pestaña que esté activa.
     var activa = document.querySelector('.kw-tab.activo');
     elegir(activa ? activa.dataset.tab : 'agenda');
   }
@@ -1162,4 +1162,3 @@
 <script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916b"></script>
 </body>
 </html>
-

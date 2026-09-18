@@ -9,7 +9,7 @@
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondi? a tiempo; redirigiendo al login por seguridad.');
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
       location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942d">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942c">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916c">
 <style>
@@ -25,12 +25,12 @@
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
-  /* M?s angosta que el ancho de p?gina general: es una lista de un solo
-     rengl?n por cosa, y a 1180px los nombres quedaban perdidos en medio
+  /* Más angosta que el ancho de página general: es una lista de un solo
+     renglón por cosa, y a 1180px los nombres quedaban perdidos en medio
      de un campo de blanco. */
   .kw-page { max-width: 1000px; }
 
-  /* ?? Buscador ??
+  /* ── Buscador ──
      La clase .buscador y el id #busq son el trato con drawer.js: por
      ellos reconoce el buscador de esta pantalla, esconde esta franja y
      le pasa lo que se escriba en la lupa del header. */
@@ -56,8 +56,8 @@
   .limpiar-busq svg { width: 14px; height: 14px; }
   .limpiar-busq.se-ve { display: flex; }
 
-  /* ?? Ruta de carpetas ??
-     Un solo rengl?n: las migas de d?nde est?s parado a la izquierda y,
+  /* ── Ruta de carpetas ──
+     Un solo renglón: las migas de dónde estás parado a la izquierda y,
      hasta la orilla derecha (donde termina la tarjeta de un archivo),
      las dos flechas para regresar y volver a entrar. */
   .ruta {
@@ -77,7 +77,7 @@
   .ruta .actual { color: var(--text); font-weight: 700; padding: 4px 7px; }
   .ruta .sep { color: var(--muted); font-size: 12px; }
 
-  /* Las dos flechas van juntas, del tama?o de un bot?n chico, para que
+  /* Las dos flechas van juntas, del tamaño de un botón chico, para que
      se lean como un par y no como dos adornos sueltos. */
   .ruta-flechas { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .ruta-flechas button {
@@ -91,18 +91,18 @@
     color: var(--red); border-color: color-mix(in srgb, var(--red) 32%, transparent);
     background: #fff;
   }
-  /* Sin lugar a d?nde ir se quedan a la vista pero apagadas: si
-     desaparecieran, el rengl?n entero brincar?a de ancho cada vez que
+  /* Sin lugar a dónde ir se quedan a la vista pero apagadas: si
+     desaparecieran, el renglón entero brincaría de ancho cada vez que
      se entra o se sale de una carpeta. */
   .ruta-flechas button[disabled] { opacity: 0.38; cursor: default; }
   .ruta-flechas svg { width: 15px; height: 15px; }
-  /* Mientras carga el ?rbol todav?a no hay ruta que pintar; sin esto se
+  /* Mientras carga el árbol todavía no hay ruta que pintar; sin esto se
      reservaban 42px en blanco arriba del loader. */
   .ruta:empty { min-height: 0; margin-bottom: 0; }
 
-  /* Los renglones, el cuadro de ?cono y el estado vac?o salen del
-     sistema (.kw-fila, .kw-fila-icono, .kw-vacio), y de ah? sale
-     tambi?n el color que toman al pasarles el mouse. Aqu? viv?an
+  /* Los renglones, el cuadro de ícono y el estado vacío salen del
+     sistema (.kw-fila, .kw-fila-icono, .kw-vacio), y de ahí sale
+     también el color que toman al pasarles el mouse. Aquí vivían
      copiados, con el vidrio de cuando el fondo era oscuro y con casi
      todos los tipos de archivo en rojo. */
 
@@ -129,7 +129,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
-      <span>Atr?s</span>
+      <span>Atrás</span>
     </a>
   </header>
 
@@ -142,8 +142,8 @@
       <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input type="text" id="busq" placeholder="Buscar un archivo o carpeta?" autocomplete="off" />
-      <button type="button" class="limpiar-busq" id="btn-limpiar" title="Limpiar" aria-label="Limpiar b?squeda">
+      <input type="text" id="busq" placeholder="Buscar un archivo o carpeta…" autocomplete="off" />
+      <button type="button" class="limpiar-busq" id="btn-limpiar" title="Limpiar" aria-label="Limpiar búsqueda">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
@@ -156,20 +156,20 @@
 
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <script>
-  // Misma funci?n que el Proceso de Alta: ah? ya vive el token de Google
-  // con permiso de Drive. Si alg?n d?a cambia el slug de la funci?n, se
-  // ajusta aqu? y en hub/admin.html (la pesta?a de Asesores).
+  // Misma función que el Proceso de Alta: ahí ya vive el token de Google
+  // con permiso de Drive. Si algún día cambia el slug de la función, se
+  // ajusta aquí y en hub/admin.html (la pestaña de Asesores).
   var DRIVE_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
-  var elementos = [];      // el ?rbol plano que devuelve la funci?n
+  var elementos = [];      // el árbol plano que devuelve la función
   var raiz = null;
   var carpetaActual = null;
   var porId = {};
-  // En qu? paso de la navegaci?n de esta pantalla estamos y hasta d?nde
+  // En qué paso de la navegación de esta pantalla estamos y hasta dónde
   // llega la rama hacia adelante. Es lo que decide si las flechas de la
-  // ruta est?n vivas: el navegador no dice cu?ntas p?ginas trae
-  // guardadas, as? que se lleva la cuenta aqu?. La ra?z es el paso 0, y
-  // por eso "regresar" nunca alcanza a sacar de la p?gina.
+  // ruta están vivas: el navegador no dice cuántas páginas trae
+  // guardadas, así que se lleva la cuenta aquí. La raíz es el paso 0, y
+  // por eso "regresar" nunca alcanza a sacar de la página.
   var pasoActual = 0;
   var pasoTope = 0;
 
@@ -192,8 +192,8 @@
   function tipoDe(mime) {
     var m = String(mime || '');
     if (m.indexOf('folder') >= 0) return { c: 'carpeta', n: 'Carpeta' };
-    if (m.indexOf('spreadsheet') >= 0 || m.indexOf('excel') >= 0 || m.indexOf('csv') >= 0) return { c: 'hoja', n: 'Hoja de c?lculo' };
-    if (m.indexOf('presentation') >= 0 || m.indexOf('powerpoint') >= 0) return { c: 'pres', n: 'Presentaci?n' };
+    if (m.indexOf('spreadsheet') >= 0 || m.indexOf('excel') >= 0 || m.indexOf('csv') >= 0) return { c: 'hoja', n: 'Hoja de cálculo' };
+    if (m.indexOf('presentation') >= 0 || m.indexOf('powerpoint') >= 0) return { c: 'pres', n: 'Presentación' };
     if (m.indexOf('pdf') >= 0) return { c: 'pdf', n: 'PDF' };
     if (m.indexOf('image') >= 0) return { c: 'img', n: 'Imagen' };
     if (m.indexOf('document') >= 0 || m.indexOf('word') >= 0 || m.indexOf('text') >= 0) return { c: 'doc', n: 'Documento' };
@@ -213,8 +213,8 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
   }
 
-  // Ruta legible de un elemento ("Manuales ? Ventas"), para que en los
-  // resultados de b?squeda se sepa de d?nde sali? cada archivo.
+  // Ruta legible de un elemento ("Manuales › Ventas"), para que en los
+  // resultados de búsqueda se sepa de dónde salió cada archivo.
   function rutaDe(id) {
     var partes = [], guarda = 0;
     var p = porId[id] ? porId[id].padre : null;
@@ -224,14 +224,14 @@
       partes.unshift(c.nombre);
       p = c.padre;
     }
-    return partes.join(' ? ');
+    return partes.join(' › ');
   }
 
   function filaHTML(el, conRuta) {
     var t = tipoDe(el.mime);
     var meta = el.tipo === 'carpeta'
       ? (conRuta && rutaDe(el.id) ? rutaDe(el.id) : contarDentro(el.id))
-      : [t.n, fecha(el.modificado), conRuta ? rutaDe(el.id) : ''].filter(Boolean).join(' ? ');
+      : [t.n, fecha(el.modificado), conRuta ? rutaDe(el.id) : ''].filter(Boolean).join(' · ');
 
     var flecha = el.tipo === 'carpeta'
       ? '<polyline points="9 18 15 12 9 6"/>'
@@ -255,7 +255,7 @@
 
   function contarDentro(id) {
     var n = elementos.filter(function (e) { return e.padre === id; }).length;
-    if (!n) return 'Vac?a';
+    if (!n) return 'Vacía';
     return n === 1 ? '1 elemento' : n + ' elementos';
   }
 
@@ -263,8 +263,8 @@
     var cont = document.getElementById('ruta');
     if (!raiz) { cont.innerHTML = ''; return; }
 
-    // Buscando no hay carpeta en la que se est? parado (los resultados
-    // salen de todo el ?rbol), as? que las migas se van y quedan solo
+    // Buscando no hay carpeta en la que se esté parado (los resultados
+    // salen de todo el árbol), así que las migas se van y quedan solo
     // las flechas.
     var migas = '';
     if (!document.getElementById('busq').value.trim()) {
@@ -279,7 +279,7 @@
       if (cadena.length) {
         migas = '<button type="button" data-ir="' + esc(raiz) + '">Documentos</button>';
         cadena.forEach(function (c, i) {
-          migas += '<span class="sep">?</span>';
+          migas += '<span class="sep">›</span>';
           migas += (i === cadena.length - 1)
             ? '<span class="actual">' + esc(c.nombre) + '</span>'
             : '<button type="button" data-ir="' + esc(c.id) + '">' + esc(c.nombre) + '</button>';
@@ -303,8 +303,8 @@
     cont.querySelectorAll('[data-ir]').forEach(function (b) {
       b.addEventListener('click', function () { abrirCarpeta(b.dataset.ir); });
     });
-    // Las flechas mueven el historial del navegador, no la carpeta: as?
-    // hacen exactamente lo mismo que el "atr?s" del navegador y las dos
+    // Las flechas mueven el historial del navegador, no la carpeta: así
+    // hacen exactamente lo mismo que el "atrás" del navegador y las dos
     // formas de moverse no se pelean. Quien repinta es popstate.
     cont.querySelectorAll('[data-nav]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -323,8 +323,8 @@
 
     var lista, buscando = !!termino;
     if (buscando) {
-      // Se busca en todo el ?rbol, no solo en la carpeta abierta: la
-      // gracia es encontrar el archivo sin saber d?nde qued? guardado.
+      // Se busca en todo el árbol, no solo en la carpeta abierta: la
+      // gracia es encontrar el archivo sin saber dónde quedó guardado.
       lista = elementos.filter(function (e) {
         return e.nombre.toLowerCase().indexOf(termino) >= 0;
       });
@@ -335,14 +335,14 @@
     if (!lista.length) {
       cont.innerHTML = buscando
         ? '<div class="kw-vacio"><strong>Sin resultados</strong>No hay nada que se llame "' + esc(termino) + '".</div>'
-        : '<div class="kw-vacio"><strong>Esta carpeta est? vac?a</strong>Todav?a no hay archivos aqu?.</div>';
+        : '<div class="kw-vacio"><strong>Esta carpeta está vacía</strong>Todavía no hay archivos aquí.</div>';
       return;
     }
 
     // Las carpetas van primero y luego los archivos, pero sin los
-    // r?tulos de "Carpetas" y "Archivos" encima: el cuadro de color y
-    // la flecha de cada rengl?n ya dicen cu?l es cu?l, y los dos
-    // letreros nada m?s part?an la lista en dos sin agregar nada.
+    // rótulos de "Carpetas" y "Archivos" encima: el cuadro de color y
+    // la flecha de cada renglón ya dicen cuál es cuál, y los dos
+    // letreros nada más partían la lista en dos sin agregar nada.
     var carpetas = lista.filter(function (e) { return e.tipo === 'carpeta'; });
     var archivos = lista.filter(function (e) { return e.tipo === 'archivo'; });
     cont.innerHTML = '<div class="kw-lista">' +
@@ -359,16 +359,16 @@
   }
 
   // Entrar a una carpeta se marca en el historial del navegador (con
-  // pushState, sin cambiar la URL) para que "atr?s" regrese un nivel en
-  // vez de sacar de la p?gina entera. Sin esto, como navegar entre
-  // carpetas no cambiaba de URL, el navegador no ten?a nada que "deshacer"
-  // ah? adentro y el primer "atr?s" te mandaba de una vez al portal.
+  // pushState, sin cambiar la URL) para que "atrás" regrese un nivel en
+  // vez de sacar de la página entera. Sin esto, como navegar entre
+  // carpetas no cambiaba de URL, el navegador no tenía nada que "deshacer"
+  // ahí adentro y el primer "atrás" te mandaba de una vez al portal.
   function abrirCarpeta(id, marcar) {
     carpetaActual = id;
     document.getElementById('busq').value = '';
     if (marcar !== false) {
       // Entrar a una carpeta nueva corta la rama de adelante: lo que se
-      // hab?a navegado y luego deshecho ya no se puede rehacer, igual
+      // había navegado y luego deshecho ya no se puede rehacer, igual
       // que en el navegador.
       pasoActual += 1;
       pasoTope = pasoActual;
@@ -380,7 +380,7 @@
 
   window.addEventListener('popstate', function (ev) {
     var id = (ev.state && ev.state.kwCarpeta) || raiz;
-    if (!id) return; // todav?a no ha cargado el ?rbol
+    if (!id) return; // todavía no ha cargado el árbol
     carpetaActual = id;
     pasoActual = (ev.state && typeof ev.state.kwPaso === 'number') ? ev.state.kwPaso : 0;
     document.getElementById('busq').value = '';
@@ -399,7 +399,7 @@
     cont.innerHTML = '<div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
     try {
       var { data: ses } = await window.kwSupabase.auth.getSession();
-      if (!ses || !ses.session) throw new Error('Sesi?n no v?lida.');
+      if (!ses || !ses.session) throw new Error('Sesión no válida.');
 
       var res = await fetch(DRIVE_URL, {
         method: 'POST',
@@ -419,8 +419,8 @@
       elementos.forEach(function (e) { porId[e.id] = e; });
 
       // Se reemplaza el estado inicial (no se "empuja") para que la
-      // ra?z no cuente como un paso navegado: el primer "atr?s" desde
-      // ah? s? debe salir al portal, como se espera.
+      // raíz no cuente como un paso navegado: el primer "atrás" desde
+      // ahí sí debe salir al portal, como se espera.
       history.replaceState({ kwCarpeta: raiz, kwPaso: 0 }, '', location.href);
       pasoActual = 0;
       pasoTope = 0;
@@ -433,7 +433,7 @@
 
       document.getElementById('pie').innerHTML =
         '<span>' + elementos.filter(function (e) { return e.tipo === 'archivo'; }).length + ' archivos en total</span>' +
-        '<a href="https://drive.google.com/drive/folders/' + encodeURIComponent(raiz) + '" target="_blank" rel="noopener">Abrir en Drive ?</a>';
+        '<a href="https://drive.google.com/drive/folders/' + encodeURIComponent(raiz) + '" target="_blank" rel="noopener">Abrir en Drive ↗</a>';
 
       pintar();
     } catch (err) {
@@ -451,4 +451,3 @@
 <script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916b" data-filtros=".buscador"></script>
 </body>
 </html>
-

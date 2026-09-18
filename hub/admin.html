@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Panel</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
-<style>html:not(.kw-auth-ok) body { visibility: hidden; }  /* ?? Accesos dentro de la tarjeta ????????????????????????????
-     El bot?n de la derecha no es un <button>: la cabeza de la fila ya
-     es el bot?n que abre la tarjeta, y uno dentro de otro no es HTML
-     v?lido. Picarlo abre la tarjeta, que es donde est?n los accesos. */
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }  /* ── Accesos dentro de la tarjeta ────────────────────────────
+     El botón de la derecha no es un <button>: la cabeza de la fila ya
+     es el botón que abre la tarjeta, y uno dentro de otro no es HTML
+     válido. Picarlo abre la tarjeta, que es donde están los accesos. */
   .btn-abrir-accesos {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 6px 13px; border-radius: var(--r-pastilla);
@@ -19,26 +19,26 @@
   .kw-fila-cabeza:hover .btn-abrir-accesos { background: #ffe6e6; border-color: var(--red); }
   .btn-abrir-accesos.listo { color: #146c14; background: #f0faf1; border-color: rgba(26,122,26,0.3); }
   .kw-fila-cabeza:hover .btn-abrir-accesos.listo { background: #e3f6e4; border-color: #1a7a1a; }
-  /* .activo (accesos abiertos) rellena con el color s?lido y letras
-     blancas. Necesita su PROPIA regla de :hover con m?s peso que las de
+  /* .activo (accesos abiertos) rellena con el color sólido y letras
+     blancas. Necesita su PROPIA regla de :hover con más peso que las de
      arriba (dos clases contra una, o tres contra dos): sin eso, al pasar
-     el mouse por encima el fondo se ca?a al rosa/verde p?lido de siempre
+     el mouse por encima el fondo se caía al rosa/verde pálido de siempre
      mientras el texto se quedaba blanco - blanco sobre casi blanco,
-     that's the "las letras se ponen blancas" que se report?. */
+     that's the "las letras se ponen blancas" que se reportó. */
   .btn-abrir-accesos.activo { background: var(--red); color: #fff; border-color: var(--red); }
   .kw-fila-cabeza:hover .btn-abrir-accesos.activo { background: #6e0000; border-color: #6e0000; }
   .btn-abrir-accesos.activo.listo { background: #1a7a1a; color: #fff; border-color: #1a7a1a; }
   .kw-fila-cabeza:hover .btn-abrir-accesos.activo.listo { background: #146c14; border-color: #146c14; }
   .btn-abrir-accesos svg { width: 13px; height: 13px; }
 
-  /* El KWID va sin ?cono, solo el texto "ID:" delante del n?mero. */
+  /* El KWID va sin ícono, solo el texto "ID:" delante del número. */
   .kw-extra-id { font-weight: 700; color: var(--muted); }
 
-  /* ?? C?lulas ??????????????????????????????????????????????????
-     Nada de tarjetas que se abren: una caja por l?der (c?lula o, si no
+  /* ── Células ──────────────────────────────────────────────────
+     Nada de tarjetas que se abren: una caja por líder (célula o, si no
      tiene, su Coaching), con el color en el CONTORNO de la caja entera
-     - as? se ve de un vistazo d?nde empieza y termina la gente de cada
-     quien. Dentro, nada m?s el nombre de cada persona, en renglones
+     - así se ve de un vistazo dónde empieza y termina la gente de cada
+     quien. Dentro, nada más el nombre de cada persona, en renglones
      lisos sin color propio: el color ya lo puso la caja que los rodea. */
   .celula-grupo {
     border: 1.5px solid var(--cc); border-radius: var(--r-tarjeta);
@@ -57,7 +57,7 @@
     padding: 2px 9px;
   }
   /* Renglones, no chips sueltos - y a dos columnas para que la lista no
-     se vaya tan larga con muchos asesores por c?lula. */
+     se vaya tan larga con muchos asesores por célula. */
   .celula-tarjetas {
     display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px;
   }
@@ -83,17 +83,17 @@
   .color-rojo      { --cc: #b91c1c; --cc-bg: #fbeaea; }
   .color-gris-oscuro { --cc: #52525b; --cc-bg: #eeeef0; }
 
-  /* ?? El expediente del asesor (Usuario Command, contrase?a, correo
-     personal, etc.) ????????????????????????????????????????????
+  /* ── El expediente del asesor (Usuario Command, contraseña, correo
+     personal, etc.) ────────────────────────────────────────────
      Sale del mismo Excel de siempre; mientras eso siga siendo la fuente
-     va a haber huecos, y esos se dejan vac?os en vez de mostrar algo. */
+     va a haber huecos, y esos se dejan vacíos en vez de mostrar algo. */
   .kw-clave { display: inline-flex; align-items: center; gap: 8px; }
   .clave-valor {
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
     letter-spacing: 0.02em;
   }
   /* Esto es para que no se quede a la vista sin querer al abrir la
-     tarjeta - el texto real sigue en el DOM debajo del borr?n, as? que
+     tarjeta - el texto real sigue en el DOM debajo del borrón, así que
      no es una forma de esconderla de quien abra las herramientas de
      desarrollador del navegador. */
   .clave-valor.oculta { filter: blur(5px); user-select: none; }
@@ -143,8 +143,8 @@
     padding: 0; gap: 5px 12px; flex-wrap: nowrap;
     text-transform: none; letter-spacing: normal;
   }
-  /* Tres accesos y las dos acciones caben en un solo rengl?n. En
-     pantallas angostas el rengl?n completo se desplaza horizontalmente. */
+  /* Tres accesos y las dos acciones caben en un solo renglón. En
+     pantallas angostas el renglón completo se desplaza horizontalmente. */
   .accesos-fila {
     display: grid; flex: 0 0 auto; min-width: 0;
     grid-template-columns: repeat(3, 68px) 44px 44px;
@@ -182,8 +182,8 @@
   .acceso.esperando .acceso-label { cursor: wait; }
 
   /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
-     m?s de una cuenta configurada. Es solo informaci?n - el bot?n de
-     Dar/Quitar de arriba sigue aplicando a las dos de un jal?n. */
+     más de una cuenta configurada. Es solo información - el botón de
+     Dar/Quitar de arriba sigue aplicando a las dos de un jalón. */
   .acceso-cuentas { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 0 10px 9px 34px; }
   .acceso-cuenta {
     display: inline-flex; align-items: center; gap: 4px;
@@ -201,8 +201,8 @@
   .acceso-cuenta.no { color: #8d9299; }
   .verif-cuentas.acceso-cuentas { padding-left: 0; margin-top: 2px; }
 
-  /* Men? de acciones del asesor: ocupa el lugar de la flecha que antes
-     indicaba que la tarjeta se pod?a desplegar. */
+  /* Menú de acciones del asesor: ocupa el lugar de la flecha que antes
+     indicaba que la tarjeta se podía desplegar. */
   .kw-fila { position: relative; }
   .kw-fila-barra { display: flex; align-items: center; width: 100%; }
   .kw-fila-barra .kw-fila-cabeza {
@@ -235,7 +235,7 @@
   .asesor-menu-opcion svg { width: 15px; height: 15px; }
 
   /* Capa de espera para operaciones contra Google. Cubre la pantalla
-     completa para dejar claro que la acci?n sigue en curso. */
+     completa para dejar claro que la acción sigue en curso. */
   .accesos-carga {
     position: fixed; inset: 0; z-index: 10000;
     display: none; align-items: center; justify-content: center;
@@ -250,9 +250,9 @@
     text-shadow: 0 1px 8px rgba(255,255,255,0.9);
   }
 
-  /* ?? Modal de Revisar Accesos ????????????????????????????????
-     Arriba se quedan fijos el buscador, la selecci?n y el aviso; solo
-     la lista hace scroll, as? lo de arriba sigue a la mano sin tener
+  /* ── Modal de Revisar Accesos ────────────────────────────────
+     Arriba se quedan fijos el buscador, la selección y el aviso; solo
+     la lista hace scroll, así lo de arriba sigue a la mano sin tener
      que subir hasta el principio. */
   #modal-verificar .modal-box {
     max-width: 680px; max-height: 86vh;
@@ -288,8 +288,8 @@
   .verif-barra-seleccion .verif-todo { margin-left: 0; width: auto; padding: 0 11px; gap: 6px; }
 
   #verificar-msg { flex-shrink: 0; }
-  /* Al final de la lista el scroll no se encadena a la p?gina de atr?s,
-     que era lo que mov?a el header estando en el modal. */
+  /* Al final de la lista el scroll no se encadena a la página de atrás,
+     que era lo que movía el header estando en el modal. */
   .verif-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
   .verif-scroll.ocupado { opacity: 0.55; pointer-events: none; }
 
@@ -307,7 +307,7 @@
   .verif-correo { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
   .verif-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
-  /* Cada acceso es su propio bot?n: verde si lo tiene (picarlo lo quita),
+  /* Cada acceso es su propio botón: verde si lo tiene (picarlo lo quita),
      apagado si no (picarlo lo da). */
   .verif-chip {
     display: inline-flex; align-items: center; gap: 5px;
@@ -346,7 +346,7 @@
 
   /* Operatividad conserva su tabla y editor aislados dentro del Panel.
      El iframe es del mismo sitio y se presenta sin marco, como parte de
-     la pesta?a; aislarlo evita colisiones entre sus filtros y los del Panel. */
+     la pestaña; aislarlo evita colisiones entre sus filtros y los del Panel. */
   .panel-operatividad { width: 100%; }
   .panel-operatividad-frame {
     display: block; width: 100%; height: calc(100vh - 138px); min-height: 650px;
@@ -359,48 +359,48 @@
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondi? a tiempo; redirigiendo al login por seguridad.');
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
       location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942d">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942c">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260829q">
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-lateral.css?v=20260916c">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
-     la p?gina quiera cambiar de pesta?a; se arma solo al cargar el DOM. -->
+     la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
 <script src="/kwpremierweb/assets/js/kw-ui.js?v=20260831b"></script>
 <style>
-  /* Lo de esta pantalla nada m?s. Colores, tipograf?a, tarjetas,
-     pesta?as, filtros, tablas, modales y campos vienen de kw-base.css:
+  /* Lo de esta pantalla nada más. Colores, tipografía, tarjetas,
+     pestañas, filtros, tablas, modales y campos vienen de kw-base.css:
      esta hoja solo agrega lo que es propio del Panel. */
   html, body { min-height: 100%; color: var(--text); }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  /* El t?tulo y la descripci?n de la p?gina viven directo sobre el
-     fondo guinda (no dentro de una tarjeta blanca), as? que necesitan
+  /* El título y la descripción de la página viven directo sobre el
+     fondo guinda (no dentro de una tarjeta blanca), así que necesitan
      su propio color claro; kw-page-titulo/kw-page-desc de kw-ui.css
      traen el oscuro de siempre, pensado para fondo gris. */
   .kw-page-titulo { color: var(--text); }
   .kw-page-desc { color: var(--muted); }
 
-  /* Barra de arriba: el t?tulo de la p?gina, las pesta?as y el acceso
-     al creador de formatos comparten rengl?n. El t?tulo se queda a la
-     izquierda y empuja lo dem?s a la derecha (margin-left: auto en las
-     pesta?as), para que el Panel arranque de un solo bloque en vez de
-     gastar un rengl?n entero en el puro t?tulo. El bot?n de la derecha
-     queda separado de las pesta?as a prop?sito: no es una secci?n m?s
+  /* Barra de arriba: el título de la página, las pestañas y el acceso
+     al creador de formatos comparten renglón. El título se queda a la
+     izquierda y empuja lo demás a la derecha (margin-left: auto en las
+     pestañas), para que el Panel arranque de un solo bloque en vez de
+     gastar un renglón entero en el puro título. El botón de la derecha
+     queda separado de las pestañas a propósito: no es una sección más
      del Panel, es otra pantalla. */
   .barra-superior {
     display: flex; align-items: center;
     gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap;
   }
-  /* El bloque de t?tulo ya no lleva el aire de abajo que tra?a cuando
-     viv?a en su propio rengl?n. */
+  /* El bloque de título ya no lleva el aire de abajo que traía cuando
+     vivía en su propio renglón. */
   .barra-superior .kw-page-encabezado { margin-bottom: 0; min-width: 0; }
   .barra-superior .panel-encabezado {
     width: 100%;
@@ -439,27 +439,27 @@
     .panel-encabezado-acciones .btn-nuevo-asesor { padding-inline: 12px; }
   }
   .barra-superior .kw-tabs { margin-left: auto; }
-  /* Cuando el rengl?n se parte (pantallas medianas), el t?tulo se lleva
-     uno completo y las pesta?as con su bot?n el siguiente, en vez de
+  /* Cuando el renglón se parte (pantallas medianas), el título se lleva
+     uno completo y las pestañas con su botón el siguiente, en vez de
      quedar las tres cosas apretadas. */
   @media (max-width: 900px) {
     .barra-superior .kw-page-encabezado { flex: 1 1 100%; }
     .barra-superior .kw-tabs { margin-left: 0; }
   }
-  /* Las pesta?as ocupan lo que miden, no todo el rengl?n: estiradas
-     dejaban un plano gris vac?o a la derecha del ?ltimo bot?n.
-     El min-width:0 es lo que las deja encogerse en celular; sin ?l no
-     bajan de su ancho natural y empujan la p?gina de lado. */
+  /* Las pestañas ocupan lo que miden, no todo el renglón: estiradas
+     dejaban un plano gris vacío a la derecha del último botón.
+     El min-width:0 es lo que las deja encogerse en celular; sin él no
+     bajan de su ancho natural y empujan la página de lado. */
   .barra-superior .kw-tabs { margin-bottom: 0; flex: 0 1 auto; min-width: 0; }
-  /* Sin la raya de abajo: aqu? las pesta?as van en el rengl?n del
-     t?tulo, no encima de un panel, as? que esa raya se ve?a como un
-     subrayado suelto a media fila. La de la pesta?a abierta se queda,
-     que es la que dice cu?l es. */
+  /* Sin la raya de abajo: aquí las pestañas van en el renglón del
+     título, no encima de un panel, así que esa raya se veía como un
+     subrayado suelto a media fila. La de la pestaña abierta se queda,
+     que es la que dice cuál es. */
   .barra-superior .kw-tabs.planas { border-bottom: 0; }
   .barra-superior > .btn-formatos { flex-shrink: 0; }
 
-  /* Todos los paneles arrancan del mismo alto, as? cambiar de pesta?a
-     no mueve la p?gina de golpe. */
+  /* Todos los paneles arrancan del mismo alto, así cambiar de pestaña
+     no mueve la página de golpe. */
   #panel-paneles { --panel-min: 620px; }
 
   .btn-formatos {
@@ -481,7 +481,7 @@
   .btn-formatos svg { width: 15px; height: 15px; }
 
   /* Alta de usuario: los tres controles alineados por abajo y a la
-     misma altura, para que el bot?n no quede montado ni hundido. */
+     misma altura, para que el botón no quede montado ni hundido. */
   .invite-row {
     display: grid; gap: var(--sp-2);
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -513,7 +513,7 @@
 
   .denegado { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--muted); }
 
-  /* Usuarios compactos: una fila, nombre enlazable, visibilidad y men?. */
+  /* Usuarios compactos: una fila, nombre enlazable, visibilidad y menú. */
   .usuario-fila { overflow: visible; position: relative; }
   .usuario-fila:has(.documento-menu:not([hidden])) { z-index: 45; }
   .usuario-fila .kw-fila-cabeza { cursor: default; overflow: visible; }
@@ -533,9 +533,9 @@
   }
   .usuario-fila .documento-menu button svg { width: 17px; height: 17px; flex: 0 0 auto; }
 
-  /* ?? Modal: editar usuario ??
-     Solo lo que cambia respecto al modal de kw-base.css: este es m?s
-     ancho porque lleva formulario, y trae el bot?n de eliminar. */
+  /* ── Modal: editar usuario ──
+     Solo lo que cambia respecto al modal de kw-base.css: este es más
+     ancho porque lleva formulario, y trae el botón de eliminar. */
   #modal-editar-usuario .modal-box {
     width: min(760px, calc(100vw - 32px)); max-width: 760px;
     max-height: none; overflow: visible;
@@ -577,8 +577,8 @@
     }
     #modal-editar-usuario .field { grid-column: 1 / -1; }
   }
-  /* Eliminar no es una acci?n de la misma altura que Guardar: va m?s
-     abajo, m?s chico y separado por una l?nea, para que no se pique de
+  /* Eliminar no es una acción de la misma altura que Guardar: va más
+     abajo, más chico y separado por una línea, para que no se pique de
      pasada al querer darle a los botones de arriba. */
   .btn-eliminar-usuario {
     width: 100%; padding: 8px;
@@ -588,13 +588,13 @@
     transition: background var(--t-rapido), border-color var(--t-rapido);
   }
   .btn-eliminar-usuario:hover { background: #fdeaea; border-color: #a30000; }
-  /* La separaci?n va en el envoltorio del confirmar, que es quien ocupa
-     el lugar del bot?n. Sin borde ni relleno: al voltearse girar?a con
-     ?l y la l?nea aparecer?a abajo. */
+  /* La separación va en el envoltorio del confirmar, que es quien ocupa
+     el lugar del botón. Sin borde ni relleno: al voltearse giraría con
+     él y la línea aparecería abajo. */
   #modal-editar-usuario .kw-confirmar { margin-top: var(--sp-5); }
 
-  /* Las listas salieron de su tarjeta (cada rengl?n ya es una), as? que
-     necesitan su propia separaci?n. */
+  /* Las listas salieron de su tarjeta (cada renglón ya es una), así que
+     necesitan su propia separación. */
   #usuarios-cont, #documentos-cont, #creados-cont { margin-top: var(--sp-4); }
   #usuarios-cont .kw-vacio,
   #documentos-cont .kw-vacio,
@@ -604,7 +604,7 @@
   #creados-cont .kw-vacio strong { color: var(--text); }
 
   /* Documentos quedan siempre compactos. El nombre abre el archivo y
-     las acciones secundarias viven en el men? de tres puntos. */
+     las acciones secundarias viven en el menú de tres puntos. */
   .documento-fila { overflow: visible; }
   .documento-fila .kw-fila-cabeza { cursor: default; }
   .documento-titulo {
@@ -636,11 +636,11 @@
   }
 
   /* Las tarjetas de Asesores, Usuarios y Documentos comparten el mismo
-     alto compacto: menos relleno y menos separaci?n entre renglones. */
+     alto compacto: menos relleno y menos separación entre renglones. */
   #contenido-panel .kw-lista { gap: 6px; }
   #contenido-panel .kw-fila-cabeza { padding: 9px 14px; min-height: 52px; }
 
-  /* En Asesores, nombre y correo aprovechan el mismo rengl?n. El correo
+  /* En Asesores, nombre y correo aprovechan el mismo renglón. El correo
      se recorta con puntos suspensivos si no cabe, sin empujar acciones. */
   .asesores-lista .kw-fila-texto {
     display: flex; align-items: baseline; gap: 10px; min-width: 0;
@@ -652,7 +652,7 @@
 
   @media (max-width: 640px) {
     /* En celulares angostos se prioriza que ambos datos sigan siendo
-       legibles; ah? vuelven a apilarse dentro de la tarjeta compacta. */
+       legibles; ahí vuelven a apilarse dentro de la tarjeta compacta. */
     .asesores-lista .kw-fila-texto { display: block; }
     .asesores-lista .kw-fila-titulo { max-width: none; }
     .asesores-lista .kw-fila-sub { margin-top: 2px; }
@@ -660,7 +660,7 @@
 
   /* El encabezado de la lista de usuarios va sin el degradado guinda de
      las tarjetas plegables: pegado al de "Agregar nuevo usuario", dos
-     encabezados con el mismo tono se le?an como si fueran una sola
+     encabezados con el mismo tono se leían como si fueran una sola
      tarjeta partida a la mitad. Se queda con el vidrio blanco, sin la
      capa de color de encima. */
   #card-usuarios > .kw-card-head-btn {
@@ -670,25 +670,25 @@
       linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
   }
 
-  /* ?? Asesores ????????????????????????????????????????????????
-     Antes era su propia pantalla (hub/alta.html); ahora es una pesta?a
-     m?s del Panel, y esa pantalla nada m?s redirige aqu?. */
+  /* ── Asesores ────────────────────────────────────────────────
+     Antes era su propia pantalla (hub/alta.html); ahora es una pestaña
+     más del Panel, y esa pantalla nada más redirige aquí. */
 
-  /* Los grupos (activos, bajas, back office, c?lulas) son pesta?as
-     dentro de la pesta?a. Las de adentro no heredan el alto m?nimo de
+  /* Los grupos (activos, bajas, back office, células) son pestañas
+     dentro de la pestaña. Las de adentro no heredan el alto mínimo de
      las de afuera: ese hueco ya lo reserva el panel de arriba, y
-     repetirlo dejar?a media pantalla vac?a debajo de las listas. */
+     repetirlo dejaría media pantalla vacía debajo de las listas. */
   #asesores-paneles { --panel-min: 0px; }
-  /* Miden lo que miden sus botones, no todo el rengl?n: estiradas
-     dejaban un plano gris vac?o a la derecha de "C?lulas". El max-width
+  /* Miden lo que miden sus botones, no todo el renglón: estiradas
+     dejaban un plano gris vacío a la derecha de "Células". El max-width
      es lo que las deja deslizarse de lado en celular en vez de empujar
-     la p?gina. */
-  /* La misma separaci?n arriba que abajo: pegado a la tarjeta de arriba
-     y despegado de la lista, el men? se le?a como parte de la tarjeta. */
+     la página. */
+  /* La misma separación arriba que abajo: pegado a la tarjeta de arriba
+     y despegado de la lista, el menú se leía como parte de la tarjeta. */
   /* Antes iban en su barra gris, y estirada a todo lo ancho dejaba un
-     plano vac?o a la derecha de la ?ltima pesta?a; por eso med?a lo que
-     su contenido. Planas es al rev?s: la raya de abajo es la que separa
-     las pesta?as de la lista, y cortada a la mitad de la tarjeta se ve?a
+     plano vacío a la derecha de la última pestaña; por eso medía lo que
+     su contenido. Planas es al revés: la raya de abajo es la que separa
+     las pestañas de la lista, y cortada a la mitad de la tarjeta se veía
      como un subrayado suelto. */
   #asesores-tabs {
     flex: 0 1 auto;
@@ -728,27 +728,27 @@
   .asesores-card .asesores-grupos .kw-tabs-indicador {
     background: var(--red, #a30000) !important;
   }
-  /* Separaci?n breve y constante entre el selector de categor?as y las
-     filas; sin la raya general, s?lo queda el indicador de la activa. */
+  /* Separación breve y constante entre el selector de categorías y las
+     filas; sin la raya general, sólo queda el indicador de la activa. */
   .asesores-card { margin-bottom: 10px; }
   #asesores-paneles { margin-top: 0; }
   #asesores-tabs:empty { display: none; }
-  /* Mientras todav?a no existen pesta?as, el skeleton es hijo directo
-     del contenedor y necesita el mismo aire que despu?s aporta la barra. */
+  /* Mientras todavía no existen pestañas, el skeleton es hijo directo
+     del contenedor y necesita el mismo aire que después aporta la barra. */
   #asesores-paneles > .kw-lista { margin-top: var(--sp-4); }
 
-  /* La lista cuelga del panel, sin tarjeta detr?s: cada rengl?n ya es
+  /* La lista cuelga del panel, sin tarjeta detrás: cada renglón ya es
      su propia tarjeta. */
   .asesores-lista .kw-vacio { color: var(--muted); }
 
   /* El nombre de la tarjeta, arriba de la barra y sin adornos: el
-     t?tulo de la pantalla ya est? m?s arriba. */
+     título de la pantalla ya está más arriba. */
   .asesores-titulo {
     font-size: 15px; font-weight: 700; margin-bottom: 0; flex: 0 0 auto;
     white-space: nowrap;
   }
-  /* Esta tarjeta funciona como una sola barra de herramientas: t?tulo,
-     b?squeda, acciones y contador comparten rengl?n para liberar alto. */
+  /* Esta tarjeta funciona como una sola barra de herramientas: título,
+     búsqueda, acciones y contador comparten renglón para liberar alto. */
   .asesores-card {
     padding: 12px 18px;
     display: flex; align-items: center; gap: 16px;
@@ -759,14 +759,14 @@
   .asesores-card .kw-btn-icono { width: 34px; height: 34px; }
 
   /* En pantallas donde una sola fila ya no cabe, vuelve al acomodo de dos
-     renglones para conservar controles legibles y ?reas t?ctiles c?modas. */
+     renglones para conservar controles legibles y áreas táctiles cómodas. */
   @media (max-width: 900px) {
     .asesores-card { display: block; }
     .asesores-card .asesores-titulo { margin-bottom: 8px; }
     .asesores-card .barra { flex-wrap: wrap; }
   }
-  /* Usuarios y Documentos reutilizan la composici?n compacta de la
-     barra de Asesores: t?tulo y controles viven en el mismo rengl?n. */
+  /* Usuarios y Documentos reutilizan la composición compacta de la
+     barra de Asesores: título y controles viven en el mismo renglón. */
   .panel-barra {
     padding: 12px 18px;
     display: flex; align-items: center; gap: 16px;
@@ -781,7 +781,7 @@
   }
   .panel-barra-usuario #invite-msg { flex: 0 0 100%; margin: 0; }
   .panel-barra-usuario #invite-msg:empty { display: none; }
-  /* Una sola caja de medida para que input, select y bot?n no hereden
+  /* Una sola caja de medida para que input, select y botón no hereden
      alturas distintas de sus componentes base. */
   #invite-form .field,
   #invite-form .field input,
@@ -822,20 +822,20 @@
     .panel-barra-documentos .kw-filtros { grid-template-columns: 1fr; }
   }
 
-  /* Cu?ntos hay, al final del mismo rengl?n que la barra. */
+  /* Cuántos hay, al final del mismo renglón que la barra. */
   .resumen-activos { display: inline-flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
   .resumen-activos .num { font-size: 26px; font-weight: 700; color: var(--red); line-height: 1; }
   .resumen-activos .etiqueta { font-size: 12.5px; color: var(--muted); }
 
-  /* En la pesta?a de Asesores la que rueda es la lista y no la p?gina:
-     as? el t?tulo, el buscador, los botones y las pesta?as se quedan
+  /* En la pestaña de Asesores la que rueda es la lista y no la página:
+     así el título, el buscador, los botones y las pestañas se quedan
      quietos y no hay que subir hasta arriba para buscar a otro.
 
      El alto sale del acomodo (flex desde el body) y no de una cuenta con
-     n?meros m?gicos; la clase la pone y la quita cambiarTabPanel(), para
-     que las otras pesta?as rueden como cualquier p?gina. Solo en
+     números mágicos; la clase la pone y la quita cambiarTabPanel(), para
+     que las otras pestañas rueden como cualquier página. Solo en
      pantalla ancha: en el celular una zona con scroll propio dentro de
-     una p?gina que tambi?n rueda es de lo peor que se puede hacer. */
+     una página que también rueda es de lo peor que se puede hacer. */
   @media (min-width: 901px) {
     body.en-asesores { height: 100vh; overflow: hidden; }
     body.en-asesores > main.kw-page,
@@ -848,23 +848,23 @@
       flex: 1; min-height: 0;
     }
     /* El pie son tres iconos de redes: cuando la lista rueda por dentro
-       se le est? quitando alto a lo que se vino a ver por un adorno que
+       se le está quitando alto a lo que se vino a ver por un adorno que
        en esta pantalla nadie va a picar. */
     body.en-asesores > footer { display: none; }
     body.en-asesores .asesores-lista {
       flex: 1; min-height: 0;
       overflow-y: auto;
       /* Al llegar al final, la rueda del mouse no sigue moviendo lo de
-         atr?s. */
+         atrás. */
       overscroll-behavior: contain;
       padding-right: 4px;
     }
   }
 
   /* El Panel ocupa exactamente la ventana. Encabezado, herramientas y
-     pesta?as permanecen quietos; el ?nico scroll vive dentro de la lista
+     pestañas permanecen quietos; el único scroll vive dentro de la lista
      de asesores. La altura se transmite por toda la cadena de flex para
-     que el ?rea desplazable siempre tenga una medida real. */
+     que el área desplazable siempre tenga una medida real. */
   @media (min-width: 901px) {
     html:has(body.en-asesores),
     body.en-asesores {
@@ -921,8 +921,8 @@
   @media (min-width: 1024px) {
     /* En Asesores, la regla historica que mantiene fija la cabecera
        convertia todo #contenido-panel en una columna. Ahora ese nodo es
-       la cuadr?cula de la barra lateral, as? que debe conservar sus dos
-       columnas y trasladar el flex ?nicamente al contenido principal. */
+       la cuadrícula de la barra lateral, así que debe conservar sus dos
+       columnas y trasladar el flex únicamente al contenido principal. */
     body.en-asesores #contenido-panel.kw-lateral-shell {
       display: grid;
       grid-template-columns: 292px minmax(0, 1fr);
@@ -963,8 +963,8 @@
   }
   .buscador input::placeholder { color: var(--placeholder, #aaa); }
 
-  /* El sitio no trae un `.btn` general, as? que vive aqu?, junto a lo
-     ?nico que lo usa. */
+  /* El sitio no trae un `.btn` general, así que vive aquí, junto a lo
+     único que lo usa. */
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
     border-radius: 10px; padding: 9px 16px; border: 1.5px solid var(--border);
@@ -976,13 +976,13 @@
   .btn:active { transform: translateY(1px) scale(0.98); }
   .btn:disabled { opacity: 0.55; cursor: default; }
   .btn svg { width: 15px; height: 15px; }
-  /* El de la base es un enlace y no un <button>, para que sea una p?gina
-     de verdad: se abre en su direcci?n y darle atr?s en el navegador
-     regresa aqu?. Un enlace trae subrayado de f?brica. */
+  /* El de la base es un enlace y no un <button>, para que sea una página
+     de verdad: se abre en su dirección y darle atrás en el navegador
+     regresa aquí. Un enlace trae subrayado de fábrica. */
   a.btn { text-decoration: none; }
   .btn-mini { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
-  /* El bot?n principal de la pantalla, arriba del todo: dar de alta a
-     alguien. En guinda y con texto, como el de cada pantalla; los dem?s
+  /* El botón principal de la pantalla, arriba del todo: dar de alta a
+     alguien. En guinda y con texto, como el de cada pantalla; los demás
      de esta barra son enlaces de texto. */
   .btn-nuevo-asesor {
     display: inline-flex; align-items: center; gap: 7px;
@@ -995,46 +995,46 @@
   .btn-nuevo-asesor:hover { transform: translateY(-1px); filter: brightness(1.06); }
   .btn-nuevo-asesor svg { width: 15px; height: 15px; }
 
-  /* Lo que va en lugar del bot?n en la hoja de bajas. */
+  /* Lo que va en lugar del botón en la hoja de bajas. */
   .estado-alta {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 12px; font-weight: 700; white-space: nowrap; color: #8d9299;
   }
   .estado-alta svg { width: 14px; height: 14px; }
 
-  /* Informaci?n y accesos son dos vistas independientes de la tarjeta. */
+  /* Información y accesos son dos vistas independientes de la tarjeta. */
   .kw-fila.solo-accesos .kw-datos { display: none; }
   .acceso.no .acceso-icono { color: #c62828; }
   .acceso.no .acceso-icono svg { stroke: currentColor; }
 
   @media (max-width: 640px) {
-    /* El contador baja a su propio rengl?n: al lado de los botones
+    /* El contador baja a su propio renglón: al lado de los botones
        quedaba en una columna de dos palabras de ancho. */
     .resumen-activos { flex-basis: 100%; align-items: center; order: 3; }
     .resumen-activos .num { font-size: 20px; }
 
-    /* El buscador se lleva un rengl?n completo y los botones el
+    /* El buscador se lleva un renglón completo y los botones el
        siguiente, repartido en partes iguales, con la etiqueta recortada
        a lo que se entiende sin leerla completa. Los tres en el mismo
-       rengl?n que el buscador no caben: quedaban de dos dedos de ancho. */
+       renglón que el buscador no caben: quedaban de dos dedos de ancho. */
     .barra { gap: 7px; }
     .barra .crece { display: none; }
     .buscador { max-width: none; flex: 1 1 100%; order: -1; }
     .barra-botones { flex: 1 1 100%; gap: 7px; position: relative; }
-    /* El de marcar todos va dentro de su envoltorio de confirmar, as? que
-       el reparto del rengl?n se le pide a ese, no al bot?n. El men? se
-       queda de su tama?o fijo: crecer parejo lo dejar?a ancho por gusto,
-       con todo ese hueco vac?o alrededor del ?cono. */
+    /* El de marcar todos va dentro de su envoltorio de confirmar, así que
+       el reparto del renglón se le pide a ese, no al botón. El menú se
+       queda de su tamaño fijo: crecer parejo lo dejaría ancho por gusto,
+       con todo ese hueco vacío alrededor del ícono. */
     .barra-botones > .btn, .barra-botones > .kw-confirmar { flex: 1 1 0; min-width: 0; }
     .barra-botones > .kw-menu-ancla { flex: 0 0 auto; }
     .barra-botones .btn { width: 100%; justify-content: center; gap: 6px; padding: 9px 6px; font-size: 12px; }
     .barra-botones .btn svg { width: 14px; height: 14px; }
     .btn-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .btn-txt-largo { display: none; }
-    /* En el pedazo de rengl?n que le toca no cabe la pregunta de
-       confirmar, as? que al abrirse se monta sobre los tres botones. El
-       ancho lo pisa el !important a prop?sito: kw-ui.js le pone uno
-       medido para cuando va en l?nea, y aqu? manda el rengl?n entero. */
+    /* En el pedazo de renglón que le toca no cabe la pregunta de
+       confirmar, así que al abrirse se monta sobre los tres botones. El
+       ancho lo pisa el !important a propósito: kw-ui.js le pone uno
+       medido para cuando va en línea, y aquí manda el renglón entero. */
     .barra-botones > .kw-confirmar.abierto {
       position: absolute; left: 0; right: 0; top: 0;
       width: auto !important; flex: none; z-index: 2;
@@ -1050,22 +1050,22 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
-      <span>Atr?s</span>
+      <span>Atrás</span>
     </a>
   </header>
 
   <main class="kw-page">
     <div id="contenido-panel" class="kw-lateral-shell" style="display:none;">
-      <aside class="kw-lateral" aria-label="Navegaci?n del Panel Master">
+      <aside class="kw-lateral" aria-label="Navegación del Panel Master">
         <div class="kw-lateral-cabecera">
           <a class="kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar al men? del Hub" title="Cambiar al men? del Hub">
+          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar al menú del Hub" title="Cambiar al menú del Hub">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
           </button>
         </div>
-        <label class="kw-lateral-buscador" aria-label="Buscar en la secci?n actual">
+        <label class="kw-lateral-buscador" aria-label="Buscar en la sección actual">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="search" id="panel-lateral-buscar" placeholder="Buscar" oninput="buscarDesdePanelLateral(this.value)">
         </label>
@@ -1078,7 +1078,7 @@
           <div class="kw-page-acciones panel-encabezado-acciones">
           <div class="kw-menu-ancla">
             <button type="button" class="kw-btn-icono" id="btn-mas"
-              title="Configuraci?n y acciones" aria-label="Configuraci?n y acciones"
+              title="Configuración y acciones" aria-label="Configuración y acciones"
               aria-haspopup="true" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/></svg>
             </button>
@@ -1105,9 +1105,9 @@
           <button type="button" class="kw-tab" data-tab="documentos">Documentos</button>
           <button type="button" class="kw-tab" data-tab="operatividad">Operatividad</button>
         </div>
-        <!-- Documentos creados y el Creador de formatos est?n apagados a
-             prop?sito: por ahora no se usan y no se quieren a la vista.
-             Su panel y su c?digo siguen en su lugar; para volver a
+        <!-- Documentos creados y el Creador de formatos están apagados a
+             propósito: por ahora no se usan y no se quieren a la vista.
+             Su panel y su código siguen en su lugar; para volver a
              prenderlos basta con descomentar estas dos cosas.
 
         <button type="button" class="kw-tab" data-tab="creados">Documentos creados</button>
@@ -1117,41 +1117,41 @@
           Creador de formatos
         </a>
         -->
-        <!-- El bot?n principal de la pantalla: en guinda y con texto,
+        <!-- El botón principal de la pantalla: en guinda y con texto,
              como el de cada pantalla. Solo para quien puede dar de alta
-             (Master/Admin); initAdmin() lo prende junto con la pesta?a
+             (Master/Admin); initAdmin() lo prende junto con la pestaña
              de Asesores.
 
-             Lleva al formulario de la base, que es una p?gina y no un
+             Lleva al formulario de la base, que es una página y no un
              cuadro encima: un expediente de veinticuatro campos dentro
              de un modal es un cuadrito con scroll propio. -->
 
       </div>
 
       <div class="kw-tabpanels" id="panel-paneles">
-      <!-- El equipo de altas es el ?nico que ve esto; initAdmin() quita
-           la pesta?a entera si quien entr? no lo es. -->
+      <!-- El equipo de altas es el único que ve esto; initAdmin() quita
+           la pestaña entera si quien entró no lo es. -->
       <section class="kw-tabpanel activo" data-panel="asesores">
-        <!-- Todo lo de arriba en un rengl?n: buscar de un lado, y del
-             otro el men?, la base y cu?ntos hay. Antes el nombre y el
-             n?mero iban en su propia franja arriba de la barra, y entre
-             las dos se com?an el alto que la lista necesita. -->
+        <!-- Todo lo de arriba en un renglón: buscar de un lado, y del
+             otro el menú, la base y cuántos hay. Antes el nombre y el
+             número iban en su propia franja arriba de la barra, y entre
+             las dos se comían el alto que la lista necesita. -->
         <div class="kw-card asesores-card">
-          <!-- Las categor?as viven en la misma barra que el conteo. -->
+          <!-- Las categorías viven en la misma barra que el conteo. -->
           <div class="kw-tabs planas asesores-grupos" id="asesores-tabs"></div>
 
           <div class="barra">
             <div class="buscador">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="asesores-buscador" placeholder="Buscar por nombre, correo o KWID?" oninput="pintarGrupos()" />
+              <input type="text" id="asesores-buscador" placeholder="Buscar por nombre, correo o KWID…" oninput="pintarGrupos()" />
             </div>
             <span class="crece"></span>
-            <!-- Un solo bot?n a la vista, y lo dem?s en su men?:
-                 tres botones al hilo tapaban al ?nico al que se le pica
-                 todos los d?as, que es irse a la base. Revisar accesos y
+            <!-- Un solo botón a la vista, y lo demás en su menú:
+                 tres botones al hilo tapaban al único al que se le pica
+                 todos los días, que es irse a la base. Revisar accesos y
                  recargar el libro se hacen cada tanto. -->
             <div class="resumen-activos">
-              <span class="num" id="asesores-num">?</span>
+              <span class="num" id="asesores-num">·</span>
               <span class="etiqueta" id="asesores-etiqueta">en la lista</span>
             </div>
           </div>
@@ -1159,10 +1159,10 @@
           <div class="msg" id="asesores-msg"></div>
         </div>
 
-        <!-- Una pesta?a por hoja del libro. Las arma cargarAsesores() con
-             lo que de verdad venga, as? que aqu? nacen vac?as; el
-             data-kw-tabs tambi?n lo pone el JS, porque kw-ui arma cada
-             barra una sola vez y armarla sin botones la dejar?a muerta. -->
+        <!-- Una pestaña por hoja del libro. Las arma cargarAsesores() con
+             lo que de verdad venga, así que aquí nacen vacías; el
+             data-kw-tabs también lo pone el JS, porque kw-ui arma cada
+             barra una sola vez y armarla sin botones la dejaría muerta. -->
         <div class="kw-tabpanels" id="asesores-paneles">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -1213,7 +1213,7 @@
               <label for="doc-buscador">Buscar</label>
               <div class="kw-buscador">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                <input type="text" class="kw-input" id="doc-buscador" placeholder="Nombre o folio?" oninput="filtrarDocumentosPanel()" />
+                <input type="text" class="kw-input" id="doc-buscador" placeholder="Nombre o folio…" oninput="filtrarDocumentosPanel()" />
               </div>
             </div>
             <div class="kw-campo-filtro">
@@ -1243,7 +1243,7 @@
           </div>
         </div>
 
-        <!-- La lista va fuera de la tarjeta: cada rengl?n ya es su propia
+        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
              tarjeta y meterlas todas dentro de otra se ve como una caja
              dentro de otra caja. -->
         <div id="documentos-cont"></div>
@@ -1258,9 +1258,9 @@
           loading="lazy"></iframe>
       </section>
 
-      <!-- Sin pesta?a que lleve aqu? mientras el Creador de formatos
-           est? apagado (ver la barra de arriba). Se queda armado para
-           que volver a prenderlo sea descomentar el bot?n y ya. -->
+      <!-- Sin pestaña que lleve aquí mientras el Creador de formatos
+           esté apagado (ver la barra de arriba). Se queda armado para
+           que volver a prenderlo sea descomentar el botón y ya. -->
       <section class="kw-tabpanel" data-panel="creados">
         <div class="kw-card">
           <div class="kw-card-head">
@@ -1272,7 +1272,7 @@
               <label for="creado-buscador">Buscar</label>
               <div class="kw-buscador">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                <input type="text" class="kw-input" id="creado-buscador" placeholder="T?tulo o folio?" oninput="filtrarDocumentosCreadosPanel()" />
+                <input type="text" class="kw-input" id="creado-buscador" placeholder="Título o folio…" oninput="filtrarDocumentosCreadosPanel()" />
               </div>
             </div>
             <div class="kw-campo-filtro">
@@ -1302,7 +1302,7 @@
           </div>
         </div>
 
-        <!-- La lista va fuera de la tarjeta: cada rengl?n ya es su propia
+        <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
              tarjeta y meterlas todas dentro de otra se ve como una caja
              dentro de otra caja. -->
         <div id="creados-cont"></div>
@@ -1312,7 +1312,7 @@
     </div>
 
     <div id="denegado" class="denegado" style="display:none;">
-      No tienes permiso para ver esta p?gina. <a href="../portal.html">Regresar al hub</a>.
+      No tienes permiso para ver esta página. <a href="../portal.html">Regresar al hub</a>.
     </div>
   </main>
 
@@ -1354,10 +1354,10 @@
           <option value="Team Leader">Team Leader</option>
         </select>
       </div>
-      <div class="field"><label>Nueva contrase?a (opcional)</label>
+      <div class="field"><label>Nueva contraseña (opcional)</label>
         <div class="password-wrap">
           <input type="password" id="edit-password" placeholder="Dejar en blanco para no cambiarla" />
-          <button type="button" class="password-toggle" aria-label="Mostrar contrase?a" onclick="togglePasswordVisibility('edit-password', this)">
+          <button type="button" class="password-toggle" aria-label="Mostrar contraseña" onclick="togglePasswordVisibility('edit-password', this)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
@@ -1366,19 +1366,19 @@
       <div class="modal-actions editar-acciones">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
         <button type="button" class="btn-modal-confirmar" onclick="guardarEdicionUsuario()">Guardar</button>
-        <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="?Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar</button>
+        <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="¿Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: confirmaci?n para copiar un documento -->
+  <!-- Modal: confirmación para copiar un documento -->
   <div id="modal-copia-doc" class="modal-overlay" style="display:none;">
     <div class="modal-box" id="modal-copia-doc-box">
-      <h3>?Hacer una copia de este documento?</h3>
+      <h3>¿Hacer una copia de este documento?</h3>
       <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">No</button>
-        <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">S?, copiar</button>
+        <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">Sí, copiar</button>
       </div>
     </div>
   </div>
@@ -1390,7 +1390,7 @@
       <div class="verif-cabeza">
         <div class="buscador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="verificar-buscador" placeholder="Buscar por nombre o correo?" />
+          <input type="text" id="verificar-buscador" placeholder="Buscar por nombre o correo…" />
         </div>
         <button type="button" class="verif-cerrar" id="verif-cerrar" aria-label="Cerrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -1432,13 +1432,13 @@
   const APIKEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Liderazgo', asociado: 'Asociado' };
   const TIPO_LABELS = {
-    carta_terminacion: 'Carta de Terminaci?n Anticipada',
-    aceptacion_oferta: 'Aceptaci?n de Oferta de Arrendamiento',
+    carta_terminacion: 'Carta de Terminación Anticipada',
+    aceptacion_oferta: 'Aceptación de Oferta de Arrendamiento',
     acuerdo_renta: 'Acuerdo de Renta',
     aviso_privacidad: 'Aviso de Privacidad',
-    cedula_registro: 'C?dula de Registro de Cliente',
+    cedula_registro: 'Cédula de Registro de Cliente',
     checklist: 'Check List Vendedor y Comprador',
-    colaboracion: 'Acuerdo de Colaboraci?n entre Asesores',
+    colaboracion: 'Acuerdo de Colaboración entre Asesores',
     contrapropuesta: 'Contrapropuesta de Arrendamiento',
     referido: 'Formato de Referido'
   };
@@ -1517,7 +1517,7 @@
     const buscador = document.getElementById('panel-lateral-buscar');
     if (!buscador) return;
     buscador.disabled = tab === 'operatividad';
-    buscador.placeholder = tab === 'operatividad' ? 'Sin b?squeda' : 'Buscar';
+    buscador.placeholder = tab === 'operatividad' ? 'Sin búsqueda' : 'Buscar';
     buscador.value = '';
     buscarDesdePanelLateral('');
   }
@@ -1539,8 +1539,8 @@
   }
 
   // Filas fantasma mientras llega la respuesta: ocupan el mismo lugar
-  // que las de verdad, as? que al llegar los datos nada se recorre.
-  // El esqueleto tiene la forma de la tarjeta cerrada, no de un rengl?n
+  // que las de verdad, así que al llegar los datos nada se recorre.
+  // El esqueleto tiene la forma de la tarjeta cerrada, no de un renglón
   // de tabla: si no, al llegar los datos la lista brinca.
   function esqueleto(filas, conAvatar) {
     let html = '<div class="kw-lista">';
@@ -1559,7 +1559,7 @@
   async function llamarFuncion(url, payload) {
     const { data: sessionData } = await window.kwSupabase.auth.getSession();
     const token = sessionData && sessionData.session && sessionData.session.access_token;
-    if (!token) throw new Error('No hay sesi?n activa.');
+    if (!token) throw new Error('No hay sesión activa.');
 
     const resp = await fetch(url, {
       method: 'POST',
@@ -1575,13 +1575,13 @@
       let mensaje;
       if (typeof body.error === 'string' && body.error.trim()) mensaje = body.error;
       else if (!esJsonValido && raw && raw.trim()) mensaje = raw.trim();
-      else mensaje = 'Error ' + resp.status + '. El servidor no envi? un mensaje de error.';
+      else mensaje = 'Error ' + resp.status + '. El servidor no envió un mensaje de error.';
       throw new Error(mensaje);
     }
     return body;
   }
 
-  // ?? Usuarios ??
+  // ── Usuarios ──
   async function cargarUsuarios() {
     const cont = document.getElementById('usuarios-cont');
     if (!cont.innerHTML.trim()) cont.innerHTML = esqueleto(5, true);
@@ -1594,7 +1594,7 @@
       usuariosCache = data || [];
 
       if (!usuariosCache.length) {
-        cont.innerHTML = '<div class="kw-vacio"><strong>Todav?a no hay usuarios</strong>Agrega al primero con el formulario de arriba.</div>';
+        cont.innerHTML = '<div class="kw-vacio"><strong>Todavía no hay usuarios</strong>Agrega al primero con el formulario de arriba.</div>';
         return;
       }
 
@@ -1611,7 +1611,7 @@
           ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 8 9 8a17 17 0 0 1-2.1 3.2M6.6 6.6C4.2 8.2 3 12 3 12s3.5 8 9 8c1 0 2-.3 2.9-.7"/></svg>'
           : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
         const menu = puedoEditar ? `<div class="documento-menu-ancla">
-          <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="M?s acciones" aria-haspopup="true" aria-expanded="false">
+          <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
           </button>
           <div class="documento-menu" hidden>
@@ -1657,14 +1657,14 @@
   async function toggleOcultoUsuario(u, btn) {
     const nuevoValor = !u.oculto;
     const textoOriginal = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Guardando?'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
     try {
       await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: u.id, oculto: nuevoValor });
       u.oculto = nuevoValor;
       cargarUsuarios();
     } catch (err) {
       if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
-      await window.kwUI.alert((err && err.message) || 'Ocurri? un error al cambiar la visibilidad.');
+      await window.kwUI.alert((err && err.message) || 'Ocurrió un error al cambiar la visibilidad.');
     }
   }
 
@@ -1700,7 +1700,7 @@
     }
     btn.disabled = true;
     const textoInvite = btn.textContent;
-    btn.textContent = 'Agregando?';
+    btn.textContent = 'Agregando…';
     setInviteMsg('', '');
     try {
       const invitado = await llamarFuncion(INVITAR_URL, { email, rol });
@@ -1711,13 +1711,13 @@
           puesto: puesto
         });
       }
-      setInviteMsg('Usuario agregado. Se le envi? un correo para completar su registro.', 'ok');
+      setInviteMsg('Usuario agregado. Se le envió un correo para completar su registro.', 'ok');
       document.getElementById('invite-email').value = '';
       document.getElementById('invite-puesto').value = '';
       document.getElementById('invite-puesto').dispatchEvent(new Event('change', { bubbles: true }));
       cargarUsuarios();
     } catch (err) {
-      setInviteMsg((err && err.message) || 'Ocurri? un error, intenta de nuevo.', 'error');
+      setInviteMsg((err && err.message) || 'Ocurrió un error, intenta de nuevo.', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = textoInvite;
@@ -1767,7 +1767,7 @@
     const input = document.getElementById(id);
     const mostrando = input.type === 'text';
     input.type = mostrando ? 'password' : 'text';
-    btn.setAttribute('aria-label', mostrando ? 'Mostrar contrase?a' : 'Ocultar contrase?a');
+    btn.setAttribute('aria-label', mostrando ? 'Mostrar contraseña' : 'Ocultar contraseña');
   }
 
   async function guardarEdicionUsuario() {
@@ -1775,7 +1775,7 @@
     setEditMsg('', '');
     const btnGuardar = document.querySelector('#modal-editar-usuario .btn-modal-confirmar');
     const textoGuardar = btnGuardar ? btnGuardar.textContent : '';
-    if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando?'; }
+    if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
     try {
       const payload = {
         accion: 'actualizar',
@@ -1799,14 +1799,14 @@
       cargarUsuarios();
       setTimeout(cerrarModalEditar, 900);
     } catch (err) {
-      setEditMsg(err.message || 'Ocurri? un error al guardar.', 'error');
+      setEditMsg(err.message || 'Ocurrió un error al guardar.', 'error');
     } finally {
       if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = textoGuardar; }
     }
   }
 
-  // La pregunta la hace el propio bot?n al voltearse (data-kw-confirmar),
-  // as? que aqu? ya se viene con el "S?" dado.
+  // La pregunta la hace el propio botón al voltearse (data-kw-confirmar),
+  // así que aquí ya se viene con el "Sí" dado.
   async function confirmarEliminarUsuario() {
     if (!usuarioEnEdicion) return;
     setEditMsg('', '');
@@ -1815,11 +1815,11 @@
       cerrarModalEditar();
       cargarUsuarios();
     } catch (err) {
-      setEditMsg(err.message || 'Ocurri? un error al eliminar.', 'error');
+      setEditMsg(err.message || 'Ocurrió un error al eliminar.', 'error');
     }
   }
 
-  // ?? Documentos de todo el equipo ??
+  // ── Documentos de todo el equipo ──
   async function cargarDocumentosPanel() {
     const cont = document.getElementById('documentos-cont');
     cont.innerHTML = esqueleto(6, false);
@@ -1880,7 +1880,7 @@
 
     if (!filtrados.length) {
       cont.innerHTML = '<div class="kw-vacio"><strong>Nada con esos filtros</strong>' +
-        'Prueba quitando alguno para ver m?s resultados.</div>';
+        'Prueba quitando alguno para ver más resultados.</div>';
       return;
     }
 
@@ -1896,7 +1896,7 @@
         : `<span class="kw-fila-titulo">${nombre}</span>`;
       const menu = listo
         ? `<div class="documento-menu-ancla">
-            <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="M?s acciones" aria-haspopup="true" aria-expanded="false">
+            <button type="button" class="documento-menu-btn" onclick="toggleMenuDocumento(this,event)" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
             <div class="documento-menu" hidden>
@@ -1909,7 +1909,7 @@
           <span class="kw-fila-punto ${listo ? 'verde' : 'ambar'}" title="${listo ? 'Finalizado' : 'Borrador'}"></span>
           <span class="kw-fila-texto">
             ${titulo}
-            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} ? ${fmtFechaCorta(d.updated_at)}</span>
+            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
           </span>
           <span class="kw-fila-extra">
             <span class="kw-extra">${I.documento}<span>${escapeHtml(TIPO_LABELS[d.tipo_documento] || d.tipo_documento)}</span></span>
@@ -1940,7 +1940,7 @@
     }
   });
 
-  // ?? Documentos hechos con el creador de formatos ??
+  // ── Documentos hechos con el creador de formatos ──
   let documentosCreadosCache = [];
 
   async function cargarDocumentosCreadosPanel() {
@@ -2004,7 +2004,7 @@
 
     if (!filtrados.length) {
       cont.innerHTML = '<div class="kw-vacio"><strong>Nada con esos filtros</strong>' +
-        'Aqu? van los documentos que el equipo llene con los formatos del creador.</div>';
+        'Aquí van los documentos que el equipo llene con los formatos del creador.</div>';
       return;
     }
 
@@ -2023,7 +2023,7 @@
           <span class="kw-fila-punto ${listo ? 'verde' : 'ambar'}" title="${listo ? 'Finalizado' : 'Borrador'}"></span>
           <span class="kw-fila-texto">
             <span class="kw-fila-titulo">${escapeHtml(d.titulo || 'Sin nombre')}</span>
-            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} ? ${fmtFechaCorta(d.updated_at)}</span>
+            <span class="kw-fila-sub">${escapeHtml(nombreAsesor)} · ${fmtFechaCorta(d.updated_at)}</span>
           </span>
           <span class="kw-fila-extra">
             <span class="kw-extra">${I.documento}<span>${escapeHtml(d.plantilla_nombre || 'Formato borrado')}</span></span>
@@ -2047,11 +2047,11 @@
   }
 
   const MODAL_COPIA_CONFIRM_HTML = `
-    <h3>?Hacer una copia de este documento?</h3>
+    <h3>¿Hacer una copia de este documento?</h3>
     <p id="copia-doc-sub" style="font-size:13px;color:var(--muted);margin-bottom:4px;"></p>
     <div class="modal-actions">
       <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">No</button>
-      <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">S?, copiar</button>
+      <button type="button" class="btn-modal-confirmar" onclick="confirmarCopiaDoc()">Sí, copiar</button>
     </div>`;
 
   let docPendienteCopia = null;
@@ -2062,7 +2062,7 @@
     docPendienteTipo = tipo;
     document.getElementById('modal-copia-doc-box').innerHTML = MODAL_COPIA_CONFIRM_HTML;
     document.getElementById('copia-doc-sub').textContent =
-      `Se crear? un borrador nuevo para ${nombreAsesor}, con la misma informaci?n, para que la corrija.`;
+      `Se creará un borrador nuevo para ${nombreAsesor}, con la misma información, para que la corrija.`;
     document.getElementById('modal-copia-doc').style.display = 'flex';
   }
 
@@ -2082,7 +2082,7 @@
       mostrarExitoCopiaDoc(nuevoId, tipo);
     } catch (err) {
       cerrarModalCopiaDoc();
-      await window.kwUI.alert((err && err.message) || 'Ocurri? un error al hacer la copia.');
+      await window.kwUI.alert((err && err.message) || 'Ocurrió un error al hacer la copia.');
     }
   }
 
@@ -2093,7 +2093,7 @@
       : '';
     document.getElementById('modal-copia-doc-box').innerHTML = `
       <h3>Copia creada</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Se cre? el borrador nuevo correctamente.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Se creó el borrador nuevo correctamente.</p>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalCopiaDoc()">Cerrar</button>
         ${irAlDocumentoHTML}
@@ -2101,17 +2101,17 @@
   }
 
 
-  // ??????????????????????????????????????????????????????????????
+  // ══════════════════════════════════════════════════════════════
   // Asesores (Proceso de Alta)
-  // ??????????????????????????????????????????????????????????????
+  // ══════════════════════════════════════════════════════════════
   // El libro de asesores trae una hoja por grupo: activos, bajas, back
-  // office y c?lulas. La funci?n devuelve una lista por hoja y aqu? cada
-  // una es una pesta?a.
+  // office y células. La función devuelve una lista por hoja y aquí cada
+  // una es una pestaña.
   //
   // Los tres accesos (Contactos, Drive, Calendario) se dan y se quitan
-  // uno por uno o los tres de golpe, y lo que se ense?a es lo que de
-  // verdad hay en Google, no lo que qued? apuntado en la base: la base
-  // dice lo que se hizo desde aqu?, Google dice c?mo est? hoy.
+  // uno por uno o los tres de golpe, y lo que se enseña es lo que de
+  // verdad hay en Google, no lo que quedó apuntado en la base: la base
+  // dice lo que se hizo desde aquí, Google dice cómo está hoy.
   const ALTA_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   const ACCESOS = [
@@ -2136,7 +2136,7 @@
   let gruposAsesores = [];
   let grupoActivo = '';
   // Estado general y desglose por cuenta de Contactos, Drive y
-  // Calendario. El desglose s?lo llega para Master.
+  // Calendario. El desglose sólo llega para Master.
   let estadoGoogle = {};
   let estadoGoogleListo = false;
   // [{clave, nombre, accesosCompletos}] de las cuentas configuradas.
@@ -2144,14 +2144,14 @@
   let cuentasContactosInfo = [];
   // Correos cuya tarjeta trae abierto el bloque de Accesos. Picar la
   // tarjeta (la flecha, el nombre, donde sea del encabezado) solo
-  // ense?a los datos del asesor; los accesos se quedan escondidos hasta
-  // que se pica el bot?n "Dar de alta" a prop?sito.
+  // enseña los datos del asesor; los accesos se quedan escondidos hasta
+  // que se pica el botón "Dar de alta" a propósito.
   const mostrandoAccesos = new Set();
   // Cuenta elegida para inspeccionar por persona. Drive y Calendario
-  // pertenecen a la cuenta original de Dani; Contactos es el ?nico
+  // pertenecen a la cuenta original de Dani; Contactos es el único
   // acceso duplicado entre Dani y KW Premier.
   const cuentaVistaPorCorreo = new Map();
-  // Contrase?as del expediente que se pidieron mostrar (ver
+  // Contraseñas del expediente que se pidieron mostrar (ver
   // infoExtraHtml). El texto real siempre vive en el DOM; esto solo
   // decide si se ve borroso o no.
   const clavesVisibles = new Set();
@@ -2180,7 +2180,7 @@
     return gruposAsesores.find(function (g) { return g.clave === clave; }) || null;
   }
 
-  // Quien ya se fue del Market Center no recibe accesos nuevos, as? que
+  // Quien ya se fue del Market Center no recibe accesos nuevos, así que
   // esos dos estatus van de solo lectura.
   function grupoDaDeAlta(clave) { return !esDeBaja(clave); }
   // Aguanta los dos vocabularios: los estatus de la base
@@ -2203,15 +2203,15 @@
     return null;
   }
 
-  // ?? Las pesta?as de cada hoja ??
-  // Se rearman solo cuando cambia el juego de hojas (alguien agreg? o
-  // renombr? una en el libro): rearmarlas en cada recarga dejar?a un
-  // detector de tama?o colgado por cada vez.
+  // ── Las pestañas de cada hoja ──
+  // Se rearman solo cuando cambia el juego de hojas (alguien agregó o
+  // renombró una en el libro): rearmarlas en cada recarga dejaría un
+  // detector de tamaño colgado por cada vez.
   let clavesPintadas = '';
 
-  // Visibilidad expl?cita de los grupos. No depende de transiciones ni
-  // de reglas compartidas de pesta?as: el panel elegido queda visible
-  // por DOM y los dem?s quedan realmente ocultos.
+  // Visibilidad explícita de los grupos. No depende de transiciones ni
+  // de reglas compartidas de pestañas: el panel elegido queda visible
+  // por DOM y los demás quedan realmente ocultos.
   function mostrarGrupoAsesores(clave) {
     const paneles = document.getElementById('asesores-paneles');
     const tabs = document.getElementById('asesores-tabs');
@@ -2270,8 +2270,8 @@
         '<div class="asesores-lista" id="lista-' + escapeHtml(g.clave) + '"></div></section>';
     }).join('');
 
-    // kw-ui arma cada barra de pesta?as una sola vez y le deja una marca;
-    // al volver a pintar los botones hay que solt?rsela para que los
+    // kw-ui arma cada barra de pestañas una sola vez y le deja una marca;
+    // al volver a pintar los botones hay que soltársela para que los
     // vuelva a tomar.
     tabs.removeAttribute('data-kw-listo');
     tabs.setAttribute('data-kw-tabs', 'asesores-paneles');
@@ -2312,16 +2312,16 @@
     return filtro ? g.personas.filter(function (p) { return coincide(p, filtro); }) : g.personas;
   }
 
-  // ?? La tarjeta de cada persona ??
-  // Cerrada trae el nombre, el correo y el bot?n; abierta, sus datos y
+  // ── La tarjeta de cada persona ──
+  // Cerrada trae el nombre, el correo y el botón; abierta, sus datos y
   // los tres accesos con su estado, en una sola fila seleccionable.
 
-  // El bloque de accesos. Mientras Google no conteste se ense?a
-  // "Comprobando" en vez de un "no lo tiene" que ser?a mentira.
-  // Solo para Master, y solo cuando ya hay m?s de una cuenta configurada:
-  // en cu?l de las dos est? (o no est?) el contacto de esta persona. Es
-  // nada m?s informativo - el bot?n de Dar/Quitar de arriba sigue
-  // aplicando a las dos cuentas de un jal?n.
+  // El bloque de accesos. Mientras Google no conteste se enseña
+  // "Comprobando" en vez de un "no lo tiene" que sería mentira.
+  // Solo para Master, y solo cuando ya hay más de una cuenta configurada:
+  // en cuál de las dos está (o no está) el contacto de esta persona. Es
+  // nada más informativo - el botón de Dar/Quitar de arriba sigue
+  // aplicando a las dos cuentas de un jalón.
   function desgloseContactosHtml(estado, claseExtra, cuentaSeleccionada, interactivo) {
     if (!esMaster() || cuentasContactosInfo.length < 2 || !estado || !estado.contactosPorCuenta) return '';
     return '<div class="acceso-cuentas' + (claseExtra ? ' ' + claseExtra : '') + '">' + cuentasContactosInfo.map(function (cuenta) {
@@ -2333,8 +2333,8 @@
     }).join('') + '</div>';
   }
 
-  // Una l?nea del bloque de info, o nada si el dato viene vac?o: casi
-  // todo esto sale del Excel a mano, as? que huecos son lo normal, no
+  // Una línea del bloque de info, o nada si el dato viene vacío: casi
+  // todo esto sale del Excel a mano, así que huecos son lo normal, no
   // el error.
   function datoHtml(icono, texto, href) {
     if (!texto) return '';
@@ -2344,15 +2344,15 @@
       : '<div class="kw-dato">' + icono + contenido + '</div>';
   }
 
-  // El expediente del asesor: lo que trae el Excel adem?s de lo que ya
+  // El expediente del asesor: lo que trae el Excel además de lo que ya
   // se usaba para el alta. Mientras esto siga viviendo en una hoja, va a
-  // haber datos que falten - se dejan vac?os, no es un error.
+  // haber datos que falten - se dejan vacíos, no es un error.
   function infoExtraHtml(p) {
     const I = window.kwUI.iconos;
-    // La lista puede venir de la base o armarse con lo que el libro dej?
+    // La lista puede venir de la base o armarse con lo que el libro dejó
     // en sus cuatro columnas de siempre.
     // Supabase guarda este campo como JSON, pero registros antiguos
-    // pueden traer un objeto ?nico o incluso el JSON serializado. Nunca
+    // pueden traer un objeto único o incluso el JSON serializado. Nunca
     // se asume que tiene .map(): una ficha irregular no debe cancelar
     // el render de toda la lista.
     let contactos = [];
@@ -2363,7 +2363,7 @@
         const leidos = JSON.parse(p.contactos);
         contactos = Array.isArray(leidos) ? leidos : (leidos && typeof leidos === 'object' ? [leidos] : []);
       } catch (e) {
-        console.warn('Contactos con formato no v?lido para', p.correo || p.nombre);
+        console.warn('Contactos con formato no válido para', p.correo || p.nombre);
       }
     } else if (p.contactos && typeof p.contactos === 'object') {
       contactos = [p.contactos];
@@ -2380,17 +2380,17 @@
       ? '<div class="kw-dato">' + ICONO_LLAVE +
           '<span class="kw-dato-txt kw-clave">' +
             '<span class="clave-valor' + (claveVisible ? '' : ' oculta') + '" data-correo="' + escapeHtml(p.correo) + '">' + escapeHtml(p.contrasena) + '</span>' +
-            '<button type="button" class="clave-toggle" data-correo="' + escapeHtml(p.correo) + '" aria-label="' + (claveVisible ? 'Ocultar' : 'Mostrar') + ' contrase?a">' + I.ojo + '</button>' +
+            '<button type="button" class="clave-toggle" data-correo="' + escapeHtml(p.correo) + '" aria-label="' + (claveVisible ? 'Ocultar' : 'Mostrar') + ' contraseña">' + I.ojo + '</button>' +
           '</span>' +
         '</div>'
       : '';
     return datoHtml(I.persona, p.usuarioCommand, null) +
       clave +
       datoHtml(I.correo, p.correoPersonal, p.correoPersonal ? 'mailto:' + p.correoPersonal : null) +
-      datoHtml(I.calendario, p.cumpleanos ? 'Cumplea?os: ' + p.cumpleanos : '', null) +
+      datoHtml(I.calendario, p.cumpleanos ? 'Cumpleaños: ' + p.cumpleanos : '', null) +
       datoHtml(I.etiqueta, p.curp ? 'CURP: ' + p.curp : '', null) +
       datoHtml(I.etiqueta, p.tipoAsociado ? 'Tipo de asociado: ' + p.tipoAsociado : '', null) +
-      datoHtml(I.etiqueta, p.clasificacion ? 'Clasificaci?n: ' + p.clasificacion : '', null) +
+      datoHtml(I.etiqueta, p.clasificacion ? 'Clasificación: ' + p.clasificacion : '', null) +
       datoHtml(I.calendario, p.aniversario ? 'Aniversario KW: ' + p.aniversario : '', null) +
       datoHtml(I.persona, p.sponsor ? 'Sponsor: ' + p.sponsor : '', null) +
       datoHtml(I.persona, p.coachAsignado ? 'Coach: ' + p.coachAsignado : '', null) +
@@ -2466,17 +2466,17 @@
     const fecha = esBaja ? (p.fechaBaja || p.fechaIngreso) : p.fechaIngreso;
     const etiquetaFecha = esBaja ? 'Baja' : 'Ingreso';
 
-    // El bot?n vive DENTRO de la cabeza, que ya es el bot?n que abre la
-    // tarjeta: por eso es un <span> y no un <button> (un bot?n dentro de
-    // otro no es HTML v?lido) - pero s? tiene su propio escuchador (ver
-    // m?s abajo, en fase de captura) para que picarlo NO sea lo mismo
+    // El botón vive DENTRO de la cabeza, que ya es el botón que abre la
+    // tarjeta: por eso es un <span> y no un <button> (un botón dentro de
+    // otro no es HTML válido) - pero sí tiene su propio escuchador (ver
+    // más abajo, en fase de captura) para que picarlo NO sea lo mismo
     // que picar el resto del encabezado. El resto del encabezado abre la
-    // tarjeta y ense?a los datos del asesor; este bot?n, adem?s, ense?a
+    // tarjeta y enseña los datos del asesor; este botón, además, enseña
     // los accesos.
     const mostrando = mostrandoAccesos.has(p.correo);
-    // Tres estados y no dos: quien todav?a no tiene correo de KW (se
-    // captur? en la ficha y su cuenta viene despu?s) no est? dado de
-    // baja, nada m?s no hay a qu? darle accesos todav?a. Decirle "dado
+    // Tres estados y no dos: quien todavía no tiene correo de KW (se
+    // capturó en la ficha y su cuenta viene después) no está dado de
+    // baja, nada más no hay a qué darle accesos todavía. Decirle "dado
     // de baja" a un asesor activo es de las peores confusiones que puede
     // haber en esta pantalla.
     const boton = esBaja
@@ -2504,7 +2504,7 @@
       '</button>' +
       (p.id
         ? '<div class="asesor-menu">' +
-            '<button type="button" class="asesor-menu-btn" aria-label="Abrir men?" aria-expanded="false">?</button>' +
+            '<button type="button" class="asesor-menu-btn" aria-label="Abrir menú" aria-expanded="false">⋮</button>' +
             '<div class="asesor-menu-lista">' +
               '<a class="asesor-menu-opcion" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '">' + ICONO_LAPIZ + 'Editar</a>' +
             '</div>' +
@@ -2515,27 +2515,27 @@
         '<div class="kw-datos en-columnas">' +
           (p.telefono ? '<a class="kw-dato" href="tel:' + escapeHtml(p.telefono) + '">' + I.telefono + '<span class="kw-dato-txt">' + escapeHtml(p.telefono) + '</span></a>' : '') +
           (p.puesto ? '<div class="kw-dato">' + I.maletin + '<span class="kw-dato-txt">' + escapeHtml(p.puesto) + '</span></div>' : '') +
-          (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">C?lula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
+          (p.celula ? '<div class="kw-dato">' + I.persona + '<span class="kw-dato-txt">Célula: ' + escapeHtml(p.celula) + '</span></div>' : '') +
           '<div class="kw-dato kw-solo-movil"><span class="kw-dato-txt">ID: ' + escapeHtml(p.kwid || 'sin KWID') + '</span></div>' +
           '<div class="kw-dato kw-solo-movil">' + I.calendario + '<span class="kw-dato-txt">' + etiquetaFecha + ': ' + escapeHtml(fecha || 'sin fecha') + '</span></div>' +
           infoExtraHtml(p) +
         '</div>' +
         // Los accesos van escondidos hasta que se pica "Dar de alta" a
-        // prop?sito: picar la tarjeta nada m?s ense?a los datos.
+        // propósito: picar la tarjeta nada más enseña los datos.
         accesosHtml(p, g, mostrando) +
       '</div></div></div>' +
     '</div>';
   }
 
-  // ?? C?lulas ??????????????????????????????????????????????????
-  // No es una tarjeta que se abre: aqu? solo importa qui?n est? en cada
-  // c?lula, as? que cada quien es nada m?s su nombre, agrupado bajo el
-  // nombre de su l?der y con el color de esa c?lula en el contorno.
+  // ── Células ──────────────────────────────────────────────────
+  // No es una tarjeta que se abre: aquí solo importa quién está en cada
+  // célula, así que cada quien es nada más su nombre, agrupado bajo el
+  // nombre de su líder y con el color de esa célula en el contorno.
   const PALETA_CELULAS = ['ambar', 'azul', 'verde', 'morado', 'rosa', 'cian', 'naranja', 'indigo', 'rojo', 'gris-oscuro'];
 
-  // El mismo color para la misma c?lula cada vez que se pinta: se asigna
-  // por orden alfab?tico del nombre del l?der, no por el orden en que
-  // aparecen en la hoja (ese s? puede cambiar de una recarga a otra).
+  // El mismo color para la misma célula cada vez que se pinta: se asigna
+  // por orden alfabético del nombre del líder, no por el orden en que
+  // aparecen en la hoja (ese sí puede cambiar de una recarga a otra).
   function colorDeCelula(nombreCelula, todasLasCelulas) {
     const i = todasLasCelulas.indexOf(nombreCelula);
     return PALETA_CELULAS[i % PALETA_CELULAS.length];
@@ -2544,11 +2544,11 @@
   function pintarCelulas(cont, g, visibles) {
     const porCelula = new Map();
     visibles.forEach(function (p) {
-      // Quien no tiene c?lula pero s? trae Coaching se agrupa bajo su
-      // coach: en la hoja es la misma idea (a qui?n le reporta), nada
-      // m?s en otra columna. "Sin c?lula asignada" se queda para quien
+      // Quien no tiene célula pero sí trae Coaching se agrupa bajo su
+      // coach: en la hoja es la misma idea (a quién le reporta), nada
+      // más en otra columna. "Sin célula asignada" se queda para quien
       // de plano no trae ninguna de las dos.
-      const nombreGrupo = (p.celula || '').trim() || (p.coachAsignado || '').trim() || 'Sin c?lula asignada';
+      const nombreGrupo = (p.celula || '').trim() || (p.coachAsignado || '').trim() || 'Sin célula asignada';
       if (!porCelula.has(nombreGrupo)) porCelula.set(nombreGrupo, []);
       porCelula.get(nombreGrupo).push(p);
     });
@@ -2560,8 +2560,8 @@
       const personas = porCelula.get(nombreCelula)
         .slice()
         .sort(function (a, b) { return (a.nombre || '').localeCompare(b.nombre || '', 'es'); });
-      // El color va en el CONTORNO del grupo entero (una caja por l?der),
-      // no en cada rengl?n: as? se ve de un vistazo d?nde empieza y
+      // El color va en el CONTORNO del grupo entero (una caja por líder),
+      // no en cada renglón: así se ve de un vistazo dónde empieza y
       // termina la gente de cada quien.
       return '<div class="celula-grupo color-' + color + '">' +
         '<div class="celula-titulo"><span class="celula-punto color-' + color + '"></span>' +
@@ -2579,35 +2579,35 @@
       if (!cont) return;
 
       if (!g.personas.length) {
-        // Una hoja con renglones pero sin columnas reconocidas no est?
-        // vac?a: es que sus encabezados se llaman de otra forma, y por
-        // eso de ah? no se rescat? a nadie para la base. Decirlo ahorra
-        // la adivinanza de por qu? no sale nadie.
+        // Una hoja con renglones pero sin columnas reconocidas no está
+        // vacía: es que sus encabezados se llaman de otra forma, y por
+        // eso de ahí no se rescató a nadie para la base. Decirlo ahorra
+        // la adivinanza de por qué no sale nadie.
         const sinColumnas = g.filasHoja > 1 && !(g.columnas || []).length;
         cont.innerHTML = '<div class="kw-vacio"><strong>' +
-          (sinColumnas ? 'No se reconocieron las columnas' : 'Aqu? no hay nadie todav?a') + '</strong>' +
+          (sinColumnas ? 'No se reconocieron las columnas' : 'Aquí no hay nadie todavía') + '</strong>' +
           (sinColumnas
             ? 'La hoja "' + escapeHtml(g.hoja) + '" del libro trae ' + g.filasHoja + ' renglones, pero ninguno ' +
               'de sus encabezados coincide con los que se buscan (Agente o Nombre, Correo, Celular, KW ID, ' +
-              'Fecha de ingreso), as? que de ah? no se pudo guardar a nadie.'
-            : 'Nadie est? en este grupo. Se pasa gente aqu? desde su ficha, en la base de datos.') +
+              'Fecha de ingreso), así que de ahí no se pudo guardar a nadie.'
+            : 'Nadie está en este grupo. Se pasa gente aquí desde su ficha, en la base de datos.') +
           '</div>';
         return;
       }
 
       const visibles = visiblesDe(g);
       if (!visibles.length) {
-        cont.innerHTML = '<div class="kw-vacio"><strong>Nadie coincide con la b?squeda</strong>' +
+        cont.innerHTML = '<div class="kw-vacio"><strong>Nadie coincide con la búsqueda</strong>' +
           'Prueba con otro nombre, correo o KWID.</div>';
         return;
       }
 
-      // C?lulas no es una lista de tarjetas que se abren: es nada m?s
-      // ver qui?n est? en cada c?lula, as? que se agrupa por l?der y se
+      // Células no es una lista de tarjetas que se abren: es nada más
+      // ver quién está en cada célula, así que se agrupa por líder y se
       // pinta aparte (ver pintarCelulas).
       if (g.clave === 'celulas') { pintarCelulas(cont, g, visibles); return; }
 
-      // Se guarda cu?l estaba abierta para volver a abrirla al repintar:
+      // Se guarda cuál estaba abierta para volver a abrirla al repintar:
       // sin esto, dar un acceso cerraba la tarjeta en la cara de quien
       // acababa de picarle.
       const abierta = cont.querySelector('.kw-fila.abierta .kw-fila-sub');
@@ -2617,9 +2617,9 @@
         try {
           return filaAsesorHtml(p, g, i);
         } catch (error) {
-          // Un expediente incompleto se ense?a en versi?n b?sica. Antes,
-          // cualquier dato con formato inesperado deten?a el .map() y
-          // dejaba en blanco tambi?n a todos los dem?s asesores.
+          // Un expediente incompleto se enseña en versión básica. Antes,
+          // cualquier dato con formato inesperado detenía el .map() y
+          // dejaba en blanco también a todos los demás asesores.
           console.error('No se pudo pintar la ficha de asesor:', p && (p.correo || p.nombre), error);
           return '<div class="kw-fila kw-aparece-fila">' +
             '<div class="kw-fila-barra"><div class="kw-fila-cabeza">' +
@@ -2647,9 +2647,9 @@
     actualizarBarra();
   }
 
-  // Un solo escuchador para toda la pesta?a: las listas se repintan cada
+  // Un solo escuchador para toda la pestaña: las listas se repintan cada
   // vez que cambia un acceso, y volver a colgarle un escuchador a cada
-  // bot?n en cada repintado los va acumulando.
+  // botón en cada repintado los va acumulando.
   function actualizarAccionesAcceso(caja) {
     const seleccionados = Array.from(caja.querySelectorAll('.acceso-check:checked'));
     const hayParaDar = seleccionados.some(function (check) {
@@ -2664,7 +2664,7 @@
     const quitar = caja.querySelector('.acceso-seleccion-accion.quitar');
     if (dar) {
       dar.disabled = !hayParaDar;
-      dar.title = hayParaDar ? 'Dar accesos seleccionados' : 'Selecciona un acceso que todav?a no tenga';
+      dar.title = hayParaDar ? 'Dar accesos seleccionados' : 'Selecciona un acceso que todavía no tenga';
     }
     if (quitar) {
       quitar.disabled = !hayParaQuitar;
@@ -2709,15 +2709,15 @@
     const encontrado = personaPorCorreo(correo);
     if (encontrado) {
       // Se sustituye el bloque completo para recalcular en ese instante
-      // los tres iconos con el estado espec?fico de la cuenta elegida.
+      // los tres iconos con el estado específico de la cuenta elegida.
       caja.outerHTML = accesosHtml(encontrado.persona, encontrado.grupo, true);
       const renovada = document.querySelector('.accesos[data-correo="' + CSS.escape(encontrado.persona.correo) + '"]');
       if (renovada) actualizarAccionesAcceso(renovada);
     }
   });
 
-  // Los correos de Contactos se guardan detr?s de la flecha de Accesos.
-  // Se despliegan en el mismo rengl?n sin empujar las tarjetas hacia abajo.
+  // Los correos de Contactos se guardan detrás de la flecha de Accesos.
+  // Se despliegan en el mismo renglón sin empujar las tarjetas hacia abajo.
   document.addEventListener('click', function (e) {
     const boton = e.target.closest('.accesos-toggle');
     if (!boton || boton.tagName !== 'BUTTON') return;
@@ -2729,7 +2729,7 @@
     boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
   });
 
-  // El men? de tres puntos vive fuera del bot?n que abre la tarjeta.
+  // El menú de tres puntos vive fuera del botón que abre la tarjeta.
   // Solo contiene Editar por ahora y se cierra al picar en cualquier
   // otro lugar.
   document.addEventListener('click', function (e) {
@@ -2755,8 +2755,8 @@
     });
   });
 
-  // Si los accesos est?n abiertos, pulsar el resto de la tarjeta cambia
-  // a la informaci?n sin cerrar primero y sin mezclar ambas vistas.
+  // Si los accesos están abiertos, pulsar el resto de la tarjeta cambia
+  // a la información sin cerrar primero y sin mezclar ambas vistas.
   document.addEventListener('click', function (e) {
     const cabeza = e.target.closest('.kw-fila-cabeza');
     if (!cabeza || e.target.closest('.btn-abrir-accesos')) return;
@@ -2775,12 +2775,12 @@
     if (botonAlta) botonAlta.classList.remove('activo');
   }, true);
 
-  // El bot?n "Alta" vive DENTRO del encabezado de la tarjeta, que
+  // El botón "Alta" vive DENTRO del encabezado de la tarjeta, que
   // es a su vez un <button> que abre/cierra la tarjeta entera (lo arma
-  // kw-ui.js). Para que picar el bot?n NO dispare tambi?n el abrir/cerrar
-  // de kw-ui (que llegar?a primero si se frenara nada m?s al burbujear),
-  // este escuchador va en FASE DE CAPTURA: as? se entera del clic antes
-  // de que le toque al de kw-ui, y puede detenerlo ah? mismo.
+  // kw-ui.js). Para que picar el botón NO dispare también el abrir/cerrar
+  // de kw-ui (que llegaría primero si se frenara nada más al burbujear),
+  // este escuchador va en FASE DE CAPTURA: así se entera del clic antes
+  // de que le toque al de kw-ui, y puede detenerlo ahí mismo.
   document.addEventListener('click', function (e) {
     const boton = e.target.closest('.btn-abrir-accesos');
     if (!boton) return;
@@ -2794,7 +2794,7 @@
 
     if (abrir) {
       mostrandoAccesos.add(correo);
-      // Alta abre exclusivamente los accesos; la informaci?n permanece
+      // Alta abre exclusivamente los accesos; la información permanece
       // escondida hasta que se pulse el resto de la tarjeta.
       if (fila) {
         const lista = fila.closest('.kw-lista');
@@ -2823,8 +2823,8 @@
     boton.classList.toggle('activo', abrir);
   }, true);
 
-  // Mostrar/ocultar una contrase?a del expediente. El texto real ya
-  // vive en el DOM (nada m?s se ve borroso mientras est? oculta): esto
+  // Mostrar/ocultar una contraseña del expediente. El texto real ya
+  // vive en el DOM (nada más se ve borroso mientras está oculta): esto
   // es para que no se quede a la vista sin querer al abrir la tarjeta,
   // no una forma de esconderla de alguien que abra las herramientas de
   // desarrollador del navegador.
@@ -2836,14 +2836,14 @@
     if (clavesVisibles.has(correo)) clavesVisibles.delete(correo); else clavesVisibles.add(correo);
     const valor = btn.parentElement.querySelector('.clave-valor');
     if (valor) valor.classList.toggle('oculta', !clavesVisibles.has(correo));
-    btn.setAttribute('aria-label', clavesVisibles.has(correo) ? 'Ocultar contrase?a' : 'Mostrar contrase?a');
+    btn.setAttribute('aria-label', clavesVisibles.has(correo) ? 'Ocultar contraseña' : 'Mostrar contraseña');
   });
 
-  // ?? Dar y quitar accesos ??
+  // ── Dar y quitar accesos ──
   // `pasos` null son los tres. La pregunta de confirmar es la misma para
   // todos los caminos (un acceso suelto, los tres, o varias personas
   // desde el modal): esto toca cuentas de gente de verdad y un clic de
-  // m?s no debe bastar.
+  // más no debe bastar.
   const NOMBRE_ACCESO = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
 
   function textoDeAccesos(pasos) {
@@ -2909,7 +2909,7 @@
     const fallas = [];
     (data.hechas || []).forEach(function (h) {
       (h.resultados || []).forEach(function (r) {
-        if (!r.ok) fallas.push((h.nombre || h.correo) + ' ? ' + (NOMBRE_ACCESO[r.paso] || r.paso) + ': ' + r.detalle);
+        if (!r.ok) fallas.push((h.nombre || h.correo) + ' · ' + (NOMBRE_ACCESO[r.paso] || r.paso) + ': ' + r.detalle);
       });
     });
     if (fallas.length) return 'No se pudo completar: ' + fallas.join(' | ');
@@ -2942,7 +2942,7 @@
     el.className = 'msg ' + (clase || '');
   }
 
-  // ?? Cargar ??
+  // ── Cargar ──
   function esqueletoAsesores() {
     const hueco = function (ancho) {
       return '<div class="kw-fila"><div class="kw-fila-cabeza">' +
@@ -2954,16 +2954,16 @@
     return '<div class="kw-lista">' + hueco('w60') + hueco('w70') + hueco('w50') + '</div>';
   }
 
-  // Lo que el libro dijo de cada hoja la ?ltima vez que se ley?: c?mo se
-  // llama la hoja y qu? columnas se le reconocieron. Ya no es de donde
-  // sale la lista, pero sirve para poder explicar por qu? una hoja no
+  // Lo que el libro dijo de cada hoja la última vez que se leyó: cómo se
+  // llama la hoja y qué columnas se le reconocieron. Ya no es de donde
+  // sale la lista, pero sirve para poder explicar por qué una hoja no
   // trajo a nadie.
   let hojasDelLibro = {};
 
   // El camino es: se lee el libro, se guarda en la base, y de la base
-  // salen las pesta?as. No al rev?s. Por eso un libro ca?do (o borrado)
+  // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
   // ya no deja al panel sin lista: lo que se ve es lo que la casa tiene
-  // guardado, y el libro nada m?s lo alimenta mientras siga vivo.
+  // guardado, y el libro nada más lo alimenta mientras siga vivo.
   async function cargarAsesores() {
     const op = document.getElementById('op-recargar');
     const paneles = document.getElementById('asesores-paneles');
@@ -2972,8 +2972,8 @@
 
     // Las tablas no dependen de que primero respondan el libro o la base:
     // aparecen desde el primer instante y cada una conserva su carga.
-    // Antes, una petici?n lenta o un error de red dejaba toda esta zona
-    // vac?a porque ni siquiera se alcanzaban a crear las pesta?as.
+    // Antes, una petición lenta o un error de red dejaba toda esta zona
+    // vacía porque ni siquiera se alcanzaban a crear las pestañas.
     if (!gruposAsesores.length) {
       gruposAsesores = BD_GRUPOS.map(function (g) {
         return { clave: g.clave, titulo: g.titulo, hoja: '', personas: [] };
@@ -2991,7 +2991,7 @@
     try {
       const data = await llamarAlta({ accion: 'listar' });
       // Mientras la Edge Function siga siendo la vieja (se publica a mano
-      // desde Supabase, as? que puede ir un rato atr?s de esta pantalla)
+      // desde Supabase, así que puede ir un rato atrás de esta pantalla)
       // no manda `grupos`, solo la lista de siempre.
       gruposLibro = data.grupos || (data.personas
         ? [{ clave: 'activos', titulo: 'Asesores Activos', hoja: 'Activos', personas: data.personas }]
@@ -3009,10 +3009,10 @@
     if (hayBase && bdAsesores.length) {
       gruposAsesores = gruposDesdeBase();
     } else if (gruposLibro && gruposLibro.length) {
-      // La base todav?a no existe (falta correr 073_asesores.sql) o
-      // qued? vac?a: se pinta el libro, pero dentro de las cuatro tablas
-      // estables. La respuesta antigua s?lo mandaba "activos"; usarla
-      // directamente hac?a desaparecer Bajas y Back Office.
+      // La base todavía no existe (falta correr 073_asesores.sql) o
+      // quedó vacía: se pinta el libro, pero dentro de las cuatro tablas
+      // estables. La respuesta antigua sólo mandaba "activos"; usarla
+      // directamente hacía desaparecer Bajas y Back Office.
       gruposAsesores = BD_GRUPOS.map(function (g) {
         return { clave: g.clave, titulo: g.titulo, hoja: '', personas: [] };
       });
@@ -3033,19 +3033,19 @@
         }
       });
     } else {
-      // Un "esta secci?n es solo para el equipo de altas" se queda aqu?
-      // dentro, no tumba el Panel entero: lo dem?s del Panel s? es suyo.
+      // Un "esta sección es solo para el equipo de altas" se queda aquí
+      // dentro, no tumba el Panel entero: lo demás del Panel sí es suyo.
       const err = fallaLibro || {};
       // Las cuatro tablas permanecen disponibles aunque ambas fuentes
       // fallen. Cada una explica que no pudo cargarse, en vez de borrar
-      // tambi?n la navegaci?n entre Activos, Bajas y Back Office.
+      // también la navegación entre Activos, Bajas y Back Office.
       gruposAsesores.forEach(function (g) {
         const lista = document.getElementById('lista-' + g.clave);
         if (!lista) return;
         lista.innerHTML = '<div class="kw-vacio"><strong>No se pudo cargar esta lista</strong>' +
           'Ni la base ni el libro respondieron. ' + escapeHtml(err.message || '') + '</div>';
       });
-      avisoAsesores('No se pudieron cargar los asesores. Puedes intentar de nuevo desde M?s acciones.', 'error');
+      avisoAsesores('No se pudieron cargar los asesores. Puedes intentar de nuevo desde Más acciones.', 'error');
       terminarRecarga();
       return;
     }
@@ -3053,9 +3053,9 @@
     armarTabsAsesores();
     pintarGrupos();
     cargarEstadoGoogle();
-    // Que el libro falle ya no es una pantalla en blanco, pero s? algo
-    // que hay que decir: lo que se est? viendo puede traer un d?a de
-    // retraso contra lo que all? se acaba de capturar.
+    // Que el libro falle ya no es una pantalla en blanco, pero sí algo
+    // que hay que decir: lo que se está viendo puede traer un día de
+    // retraso contra lo que allá se acaba de capturar.
     avisoAsesores(
       fallaLibro
         ? 'No se pudo leer el libro (' + (fallaLibro.message || 'sin detalle') + '). Esto es lo que hay guardado en la base.'
@@ -3070,17 +3070,17 @@
     op.classList.remove('trabajando');
   }
 
-  // ?? El men? de la barra ??
+  // ── El menú de la barra ──
   // Lo que se hace cada tanto (revisar accesos, recargar el libro) vive
-  // aqu? adentro: afuera se queda el bot?n al que se le pica todos los
-  // d?as, que es irse a la base.
+  // aquí adentro: afuera se queda el botón al que se le pica todos los
+  // días, que es irse a la base.
   function abrirMas(abrir) {
     const menu = document.getElementById('mas-menu');
     const quiere = abrir === undefined ? menu.hidden : abrir;
     menu.hidden = !quiere;
     document.getElementById('btn-mas').setAttribute('aria-expanded', quiere ? 'true' : 'false');
     // Ya abierto es cuando se puede medir: si se sale de la pantalla, se
-    // corre lo que haga falta (en el celular no cabe pegado al bot?n).
+    // corre lo que haga falta (en el celular no cabe pegado al botón).
     if (quiere) window.kwUI.colgarMenu(document.getElementById('btn-mas'), menu);
   }
 
@@ -3106,10 +3106,10 @@
     cargarAsesores();
   });
 
-  // Lo que hay en Google se pide aparte y despu?s de pintar la lista: son
-  // tres llamadas a Google y tardan bastante m?s que leer el libro, as?
+  // Lo que hay en Google se pide aparte y después de pintar la lista: son
+  // tres llamadas a Google y tardan bastante más que leer el libro, así
   // que la lista aparece de inmediato y los accesos se van llenando
-  // cuando llegan, en vez de dejar la pantalla en blanco esper?ndolos.
+  // cuando llegan, en vez de dejar la pantalla en blanco esperándolos.
   async function cargarEstadoGoogle() {
     try {
       const data = await llamarAlta({ accion: 'verificar' });
@@ -3132,9 +3132,9 @@
     }
   }
 
-  // ?? Revisar accesos ??
+  // ── Revisar accesos ──
   // Revisa TODO el libro contra Google (no solo la hoja de activos) y
-  // deja dar o quitar cada acceso desde ah? mismo, de a uno o de a
+  // deja dar o quitar cada acceso desde ahí mismo, de a uno o de a
   // varios seleccionados.
   let ultimaVerificacion = [];
   let seleccionados = new Set();
@@ -3181,16 +3181,16 @@
       return;
     }
     if (!filas.length) {
-      cont.innerHTML = '<div class="kw-vacio">Nadie coincide con la b?squeda.</div>';
+      cont.innerHTML = '<div class="kw-vacio">Nadie coincide con la búsqueda.</div>';
       pintarSeleccion();
       return;
     }
 
     cont.innerHTML = '<div class="verif-lista">' + filas.map(function (p) {
       const marcado = seleccionados.has(p.correo);
-      // Cada acceso es su propio bot?n: verde si lo tiene (y picarlo lo
+      // Cada acceso es su propio botón: verde si lo tiene (y picarlo lo
       // quita), apagado si no (y picarlo lo da).
-      // A quien ya caus? baja solo se le puede QUITAR: darle accesos
+      // A quien ya causó baja solo se le puede QUITAR: darle accesos
       // nuevos a alguien que ya se fue no es algo que se quiera a un
       // clic de distancia.
       const daDeAlta = grupoDaDeAlta(p.grupo);
@@ -3215,7 +3215,7 @@
         '<div class="verif-cuerpo">' +
           '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
           '<span class="verif-correo">' + escapeHtml(p.correo) +
-            (p.grupoTitulo ? ' ? ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
+            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
           '<div class="verif-chips">' + chips + '</div>' + desglose +
         '</div>' +
         '<div class="verif-acciones">' +
@@ -3248,7 +3248,7 @@
   async function accesoDesdeVerif(correos, pasos, quitar) {
     const gente = correos.map(function (c) {
       const fila = ultimaVerificacion.find(function (p) { return p.correo === c; });
-      // Dar accesos se salta a los de baja; quitar s? les aplica.
+      // Dar accesos se salta a los de baja; quitar sí les aplica.
       if (fila && !quitar && !grupoDaDeAlta(fila.grupo)) return null;
       return fila ? {
         correo: fila.correo, nombre: fila.nombre, telefono: fila.telefono,
@@ -3335,11 +3335,11 @@
     });
   })();
 
-  // ?? Inicio ??
+  // ── Inicio ──
   async function initAdmin() {
     try {
       const { data: userData } = await window.kwSupabase.auth.getUser();
-      if (!userData || !userData.user) throw new Error('sin sesi?n');
+      if (!userData || !userData.user) throw new Error('sin sesión');
       miUserId = userData.user.id;
 
       const { data: perfil, error } = await window.kwSupabase
@@ -3355,12 +3355,12 @@
         return;
       }
 
-      const NOMBRE_PANEL = { master: 'M?ster', admin: 'Admin', staff: 'Liderazgo' };
+      const NOMBRE_PANEL = { master: 'Máster', admin: 'Admin', staff: 'Liderazgo' };
       document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
       document.getElementById('panel-title-header').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
 
-      // Asesores es de Master y Admin, m?s el equipo de altas. Esto solo
-      // decide si se ENSE?A la pesta?a: el candado real est? en la Edge
+      // Asesores es de Master y Admin, más el equipo de altas. Esto solo
+      // decide si se ENSEÑA la pestaña: el candado real está en la Edge
       // Function, que comprueba lo mismo del lado del servidor.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
@@ -3368,8 +3368,8 @@
       else document.getElementById('acceso-nuevo-asesor').style.display = '';
 
       if (miRol === 'staff') {
-        // Liderazgo no administra usuarios: se le quita esa pesta?a en
-        // vez de dej?rsela puesta y que le rebote.
+        // Liderazgo no administra usuarios: se le quita esa pestaña en
+        // vez de dejársela puesta y que le rebote.
         quitarTabPanel('usuarios');
       } else {
         if (miRol !== 'master') {
@@ -3380,10 +3380,10 @@
         cargarUsuarios();
       }
 
-      // A cada quien le quedan pesta?as distintas, as? que la que se abre
+      // A cada quien le quedan pestañas distintas, así que la que se abre
       // es la primera que le haya quedado a esta persona - salvo que
-      // venga con una pedida en la direcci?n (admin.html#asesores, que es
-      // a donde lleva el acceso directo del men?).
+      // venga con una pedida en la dirección (admin.html#asesores, que es
+      // a donde lleva el acceso directo del menú).
       const pedida = (location.hash || '').replace('#', '');
       const inicial = document.querySelector('#panel-tabs [data-tab="' + pedida + '"]')
         || document.querySelector('#panel-tabs .kw-tab');
@@ -3398,16 +3398,16 @@
     }
   }
 
-  // Qui?n entra a Asesores. El rol es lo que manda, para que dar de alta
-  // a un Admin nuevo en el Panel ya le abra la secci?n sin que alguien
-  // tenga que acordarse de venir a agregar su correo aqu? y en el secreto
-  // ALTA_EMAILS de la funci?n. La lista de correos se queda para abrirle
+  // Quién entra a Asesores. El rol es lo que manda, para que dar de alta
+  // a un Admin nuevo en el Panel ya le abra la sección sin que alguien
+  // tenga que acordarse de venir a agregar su correo aquí y en el secreto
+  // ALTA_EMAILS de la función. La lista de correos se queda para abrirle
   // a alguien que no sea ni Master ni Admin.
   const ROLES_ALTA = ['master', 'admin'];
   const CORREOS_ALTA = ['dani.guerrero@kwmexico.mx'];
 
-  // Se va la pesta?a Y su panel: dejar el panel puesto sin forma de
-  // llegar a ?l nada m?s deja c?digo pidiendo datos que nadie ve.
+  // Se va la pestaña Y su panel: dejar el panel puesto sin forma de
+  // llegar a él nada más deja código pidiendo datos que nadie ve.
   function quitarTabPanel(nombre) {
     const btn = document.querySelector('#panel-tabs [data-tab="' + nombre + '"]');
     if (btn) btn.remove();
@@ -3415,22 +3415,22 @@
     if (panel) panel.remove();
   }
 
-  // ???????????????????????????????????????????????????????????
+  // ═══════════════════════════════════════════════════════════
   // La base de asesores
-  // ???????????????????????????????????????????????????????????
+  // ═══════════════════════════════════════════════════════════
   //
-  // De aqu? salen las pesta?as de arriba. La tabla `asesores` es la
-  // ra?z: el libro se lee, se copia ah? (sincronizarBaseDesdeLibro) y
-  // de ah? se pinta. Verla completa, corregir un expediente y repartir
+  // De aquí salen las pestañas de arriba. La tabla `asesores` es la
+  // raíz: el libro se lee, se copia ahí (sincronizarBaseDesdeLibro) y
+  // de ahí se pinta. Verla completa, corregir un expediente y repartir
   // a la gente entre los grupos es lo que hace base-asesores.html, que
-  // es su propia p?gina.
+  // es su propia página.
 
-  // Los cuatro estatus, y c?mo se llama cada uno en pantalla. El mismo
+  // Los cuatro estatus, y cómo se llama cada uno en pantalla. El mismo
   // juego que base-asesores.html.
   //
-  // C?lulas no est? aqu? a prop?sito: la c?lula es un miembro del staff
+  // Células no está aquí a propósito: la célula es un miembro del staff
   // que se le asigna a quien no quiere coach, no un lugar donde estar.
-  // Su pesta?a se arma aparte, con quien tenga una asignada (ver
+  // Su pestaña se arma aparte, con quien tenga una asignada (ver
   // gruposDesdeBase).
   const BD_GRUPOS = [
     { clave: 'asesor_activo', titulo: 'Asesores activos' },
@@ -3444,12 +3444,12 @@
   // El estatus, dicho como se dice hoy. Los renglones que se guardaron
   // antes traen el nombre de la hoja del libro ('activos', 'bajas',
   // 'back_office', 'celulas'), y la copia del libro los sigue mandando
-  // as? hasta que se corra la migraci?n. La pantalla no puede quedarse
-  // esper?ndola: se traduce tambi?n aqu?, al leer, y as? Back Office
-  // tiene a su gente el d?a uno.
+  // así hasta que se corra la migración. La pantalla no puede quedarse
+  // esperándola: se traduce también aquí, al leer, y así Back Office
+  // tiene a su gente el día uno.
   function estatusDe(a) {
     const g = String(a.grupo || '').toLowerCase();
-    // Si la base ya trae un estatus can?nico, ?se manda. En especial,
+    // Si la base ya trae un estatus canónico, ése manda. En especial,
     // una persona movida manualmente de Back Office baja a activo puede
     // conservar el nombre de su hoja original sin volver a aparecer de baja.
     if (BD_GRUPOS.some(function (grupo) { return grupo.clave === g; })) return g;
@@ -3464,9 +3464,9 @@
     return g || 'asesor_activo';
   }
 
-  // Qui?n va en la pesta?a de C?lulas: a quien se le asign? una, y
-  // tambi?n quien vino de esa hoja del libro (que es de donde sal?an
-  // antes de que la c?lula fuera un campo).
+  // Quién va en la pestaña de Células: a quien se le asignó una, y
+  // también quien vino de esa hoja del libro (que es de donde salían
+  // antes de que la célula fuera un campo).
   function esDeCelula(a) {
     return Boolean(a.celula)
       || /celula/i.test(String(a.hoja || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
@@ -3485,17 +3485,17 @@
       bdAsesores = data || [];
       return true;
     } catch (error) {
-      // Una falla de red tambi?n puede lanzar antes de que Supabase
-      // devuelva { error }. Se contiene aqu? para que las pesta?as que
-      // ya est?n en pantalla no desaparezcan ni se queden cargando.
+      // Una falla de red también puede lanzar antes de que Supabase
+      // devuelva { error }. Se contiene aquí para que las pestañas que
+      // ya están en pantalla no desaparezcan ni se queden cargando.
       console.error('No se pudo leer la base de asesores:', error && error.message);
       return false;
     }
   }
 
-  // Las cuatro visualizaciones salen de aqu?: un grupo por cada clave,
-  // m?s cualquier otra que la base traiga (si el libro estrena una hoja,
-  // su gente llega con esa clave y aparece su pesta?a sola).
+  // Las cuatro visualizaciones salen de aquí: un grupo por cada clave,
+  // más cualquier otra que la base traiga (si el libro estrena una hoja,
+  // su gente llega con esa clave y aparece su pestaña sola).
   function gruposDesdeBase() {
     const claves = BD_GRUPOS.map(function (g) { return g.clave; });
     bdAsesores.forEach(function (a) {
@@ -3516,13 +3516,13 @@
       };
     });
 
-    // C?lulas no es un estatus: es quien tenga una c?lula asignada, est?
-    // donde est?. Va al final y se pinta agrupada por su l?der.
+    // Células no es un estatus: es quien tenga una célula asignada, esté
+    // donde esté. Va al final y se pinta agrupada por su líder.
     const conCelula = bdAsesores.filter(esDeCelula);
     if (conCelula.length) {
       grupos.push({
         clave: 'celulas',
-        titulo: 'C?lulas',
+        titulo: 'Células',
         hoja: (hojasDelLibro.celulas || {}).hoja || '',
         personas: conCelula.map(personaDesdeBase),
       });
@@ -3533,7 +3533,7 @@
   // La base guarda con nombres de columna (correo_personal) y la
   // pantalla los pinta con los de siempre (correoPersonal), que son los
   // que el libro mandaba. Se traduce en un solo lugar para que todo lo
-  // que ya sab?a pintar a una persona siga sirviendo igual.
+  // que ya sabía pintar a una persona siga sirviendo igual.
   function personaDesdeBase(a) {
     return {
       id: a.id,
@@ -3576,14 +3576,14 @@
     };
   }
 
-  // ?? La copia del libro ??
+  // ── La copia del libro ──
   // Se llama cada vez que el panel lee el libro, y antes de pintar: lo
   // que el libro traiga queda guardado en la base, y de la base sale lo
-  // que se ve. As? es como el libro deja de ser el origen sin tener que
-  // apagarlo de un d?a para otro.
+  // que se ve. Así es como el libro deja de ser el origen sin tener que
+  // apagarlo de un día para otro.
   //
-  // Se traga sus propios errores: que la copia falle (todav?a no se
-  // corre la migraci?n, se cay? la red) no puede dejar sin lista al
+  // Se traga sus propios errores: que la copia falle (todavía no se
+  // corre la migración, se cayó la red) no puede dejar sin lista al
   // panel, que es a lo que la persona vino.
   async function sincronizarBaseDesdeLibro(grupos) {
     const personas = [];
@@ -3612,4 +3612,3 @@
 <script src="/kwpremierweb/assets/js/kw-lateral.js?v=20260916b"></script>
 </body>
 </html>
-

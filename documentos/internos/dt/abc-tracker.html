@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ABC de la Tecnolog?a Tracker</title>
+<title>ABC de la Tecnología Tracker</title>
 <link rel="icon" type="image/png" href="/kwpremierweb/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
   setTimeout(function () {
     if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondi? a tiempo; redirigiendo al login por seguridad.');
+      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
       location.replace('/kwpremierweb/login.html');
     }
   }, 4000);
@@ -18,19 +18,19 @@
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
 <script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942d">
+<link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942c">
 <!-- El tema claro va al final: es el que cambia el material y el fondo, y
-     para eso tiene que ganarle a lo que traiga kw-base.css. Antes aqu?
-     colgaba adem?s kw-ui.css DESPUES de esta linea, y como esa hoja
+     para eso tiene que ganarle a lo que traiga kw-base.css. Antes aquí
+     colgaba además kw-ui.css DESPUES de esta linea, y como esa hoja
      vuelve a declarar --bg con el guinda oscuro, esta pantalla se
      quedaba en negro mientras el resto del sitio ya iba en claro.
      kw-ui.css no hace falta enlazarlo: kw-base.css ya lo trae. -->
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-claro.css?v=20260902d">
 <style>
-  /* Sin esto, cualquier elemento que tambi?n traiga su propio "display"
+  /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
      cascada al [hidden] del navegador - una regla de autor siempre
-     gana sobre la hoja del user-agent, sin importar qu? tan espec?fico
+     gana sobre la hoja del user-agent, sin importar qué tan específico
      sea el atributo. Con !important se garantiza que ocultarlo con el
      atributo `hidden` siempre funcione, sin tener que pelear la
      especificidad cada vez que un componente nuevo use flex. */
@@ -44,7 +44,7 @@
   .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
   .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 22px; }
 
-  /* ?? Conteos que tambi?n funcionan como filtros ?? */
+  /* ── Conteos que también funcionan como filtros ── */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 20px; }
   .stat {
     --tono: #4f46e5; --pastel: #eeecff;
@@ -67,7 +67,7 @@
   .stat.activa .stat-num, .stat.activa .stat-lbl { color: var(--tono); }
   @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
-  /* ?? Barra de herramientas ?? */
+  /* ── Barra de herramientas ── */
   .toolbar {
     display: flex; gap: 14px; align-items: center;
     margin-bottom: 14px; min-width: 0;
@@ -94,8 +94,8 @@
   select.filtro { height: 36px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; color: var(--text); outline: none; cursor: pointer; }
   select.filtro:focus { border-color: var(--red); }
   /* kw-ui.js envuelve el <select> en un .kw-select que por defecto es
-     width:100%, pensado para formularios de una columna. Aqu? va en una
-     barra horizontal junto al buscador y al bot?n, as? que se le quita
+     width:100%, pensado para formularios de una columna. Aquí va en una
+     barra horizontal junto al buscador y al botón, así que se le quita
      el ancho completo para que no empuje todo a renglones separados. */
   .toolbar .kw-select { width: auto; flex: 0 0 auto; min-width: 170px; }
   .toolbar-filtros { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
@@ -113,7 +113,7 @@
   .toolbar-menu button:hover { background:#f5f5f5; }
   .toolbar-menu button:disabled { opacity:.55; cursor:default; }
 
-  /* Pesta?as universales: solo texto y subrayado, sin c?psula ni fondo. */
+  /* Pestañas universales: solo texto y subrayado, sin cápsula ni fondo. */
   .abc-tabs-texto {
     display: flex; align-items: center; gap: 20px;
     margin-left: auto; align-self: stretch;
@@ -141,14 +141,14 @@
     .abc-tabs-texto { width: 100%; }
   }
 
-  /* ?? Chips de asesores fijados (filtro m?ltiple) ?? */
+  /* ── Chips de asesores fijados (filtro múltiple) ── */
   .chips-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 16px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 4px 5px 4px 10px; font-size: 11px; font-weight: 600; }
   .chip-x { width: 18px; height: 18px; border: none; border-radius: 50%; background: #eee; color: #666; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .chip-x:hover { background: var(--red); color: #fff; }
 
-  /* ?? Lista de asesores ?? */
+  /* ── Lista de asesores ── */
   .lista { display: flex; flex-direction: column; gap: 8px; }
   .fila {
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
@@ -169,9 +169,9 @@
   button.fila-dt:hover { color: var(--text); text-decoration: underline; }
   button.fila-dt .fila-dt-lapiz { width: 10px; height: 10px; opacity: .45; flex-shrink: 0; }
   button.fila-dt:hover .fila-dt-lapiz { opacity: .9; }
-  /* Men? para elegir DT, dibujado por nosotros (no el <select> gris del
+  /* Menú para elegir DT, dibujado por nosotros (no el <select> gris del
      navegador). El contenedor de la fila de datos es position:relative
-     para que se ancle debajo del bot?n "DT: ?". */
+     para que se ancle debajo del botón "DT: …". */
   .fila-meta { position: relative; }
   .dt-menu { position: absolute; top: 22px; left: 0; z-index: 40; min-width: 210px; max-height: 260px; overflow-y: auto;
              background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 11px;
@@ -196,9 +196,9 @@
   .pct { font-size: 13px; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .fila-flecha { width: 16px; height: 16px; color: #aaa; flex-shrink: 0; transition: transform .2s; }
 
-  /* Men? de tres puntos: cambiar DT o dar de baja, hasta la derecha de
+  /* Menú de tres puntos: cambiar DT o dar de baja, hasta la derecha de
      la tarjeta. Va en su propio contenedor position:relative para que
-     el men? se despliegue anclado a ?l y no a toda la fila. */
+     el menú se despliegue anclado a él y no a toda la fila. */
   .fila-opciones { position: relative; flex-shrink: 0; }
   .fila-menu-btn { width: 28px; height: 28px; border: none; background: none; border-radius: 8px; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .fila-menu-btn:hover { background: #f2f2f2; color: #333; }
@@ -219,10 +219,10 @@
     .barra { display: block; flex: 1; }
   }
 
-  /* Panel del checklist: se despliega hacia abajo del rengl?n, con las
+  /* Panel del checklist: se despliega hacia abajo del renglón, con las
      vibras del libro de Sheets - sesiones arriba, temas en columnas
-     angostas con el nombre en vertical, un solo rengl?n de casillas.
-     El truco de grid-template-rows 0fr?1fr anima el alto sin medirlo
+     angostas con el nombre en vertical, un solo renglón de casillas.
+     El truco de grid-template-rows 0fr→1fr anima el alto sin medirlo
      por JS y sin que se le note un salto cuando el checklist se
      construye la primera vez que se abre (se arma solo una vez, no en
      cada palomeo). */
@@ -234,43 +234,43 @@
      (en JS, 100 / cantidad de temas) es lo que reparte las 25 columnas
      a lo ancho de toda la tarjeta en vez de amontonarse a la izquierda
      con espacio en blanco sobrando a la derecha. Sin el colgroup,
-     "fixed" divide el ancho por la fila con m?s celdas sin garant?a de
-     que sea la de los temas (la de arriba trae colspans por sesi?n). */
+     "fixed" divide el ancho por la fila con más celdas sin garantía de
+     que sea la de los temas (la de arriba trae colspans por sesión). */
   .chk-scroll { overflow-x: auto; padding: 10px 16px 14px; }
   table.chk-tabla { border-collapse: separate; border-spacing: 0; font-size: 11.5px; width: 100%; table-layout: fixed; }
   table.chk-tabla th { background: #fafafa; font-weight: 600; color: var(--muted); padding: 4px 4px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #e5e7eb; }
   table.chk-tabla thead tr:first-child th { text-align: center; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* La clave para que TODOS los nombres arranquen en el mismo punto:
      el <span> tiene alto FIJO (100%), no "max-height".
-     Con max-height la caja se encog?a al largo de cada texto, y como
+     Con max-height la caja se encogía al largo de cada texto, y como
      el texto se lee de abajo hacia arriba, el inicio de la lectura
-     quedaba a distinta altura seg?n el largo - "Google Suite"
-     empezaba a 30px del fondo, "Canva" a 63px, y los de varias l?neas
-     (que s? llenaban el alto) a 5px. Se midi? en el navegador: 58.5px
-     de dispersi?n con max-height, 0px con alto fijo.
-     Con la caja siempre del mismo tama?o, `text-align: start` ancla
+     quedaba a distinta altura según el largo - "Google Suite"
+     empezaba a 30px del fondo, "Canva" a 63px, y los de varias líneas
+     (que sí llenaban el alto) a 5px. Se midió en el navegador: 58.5px
+     de dispersión con max-height, 0px con alto fijo.
+     Con la caja siempre del mismo tamaño, `text-align: start` ancla
      todos los textos en el mismo borde y quedan parejos. */
-  /* El alto va en p?xeles, no en %: un porcentaje aqu? no resuelve
+  /* El alto va en píxeles, no en %: un porcentaje aquí no resuelve
      contra el contenedor flex y el <span> termina creciendo con el
      texto, con lo que los nombres largos dejan de partirse en varias
-     l?neas y estiran el encabezado a cientos de p?xeles. La variable
+     líneas y estiran el encabezado a cientos de píxeles. La variable
      mantiene sincronizados el alto de la celda y el del texto. */
   table.chk-tabla thead tr:last-child th { --cab-alto: 112px; height: calc(var(--cab-alto) + 8px); padding: 0; }
   table.chk-tabla .chk-cabeza { display: flex; align-items: flex-start; justify-content: center; height: 100%; padding-top: 8px; }
-  /* En vertical-rl el ancho de la celda decide cu?ntas l?neas caben
+  /* En vertical-rl el ancho de la celda decide cuántas líneas caben
      lado a lado (eso ya lo resuelve el colgroup); el alto del <span>
-     es lo que dispara el salto de l?nea - al rev?s de como se piensa
+     es lo que dispara el salto de línea - al revés de como se piensa
      en texto horizontal. */
   table.chk-tabla thead tr:last-child th span { writing-mode: vertical-rl; transform: rotate(180deg); text-align: start; font-size: 10.5px; font-weight: 500; color: #333; white-space: normal; word-break: break-word; line-height: 1.2; height: var(--cab-alto); }
   table.chk-tabla td { text-align: center; padding: 8px 0; border-right: 1px solid #e5e7eb; }
 
-  /* Bandas por sesi?n: cada sesi?n trae su propio tono, no solo
+  /* Bandas por sesión: cada sesión trae su propio tono, no solo
      alternado entre dos - con 11 grupos (Onboarding + S1..S10) y 8
      tonos que se repiten en ciclo, dos sesiones nunca vecinas
      terminan compartiendo color. Corre de encabezado a casillas, la
-     columna completa, y adem?s hay un borde m?s marcado en el l?mite
-     entre una sesi?n y la siguiente - m?s fuerte que el separador fino
-     que ya llevan los temas entre s? dentro de la misma sesi?n. */
+     columna completa, y además hay un borde más marcado en el límite
+     entre una sesión y la siguiente - más fuerte que el separador fino
+     que ya llevan los temas entre sí dentro de la misma sesión. */
   table.chk-tabla th.banda-0, table.chk-tabla td.banda-0 { background: #EEF1F8; }
   table.chk-tabla th.banda-1, table.chk-tabla td.banda-1 { background: #FBF2E9; }
   table.chk-tabla th.banda-2, table.chk-tabla td.banda-2 { background: #EAF6EF; }
@@ -279,9 +279,9 @@
   table.chk-tabla th.banda-5, table.chk-tabla td.banda-5 { background: #FFF9E6; }
   table.chk-tabla th.banda-6, table.chk-tabla td.banda-6 { background: #E9F5FB; }
   table.chk-tabla th.banda-7, table.chk-tabla td.banda-7 { background: #F2F2F2; }
-  /* El rengl?n de arriba (la sigla de la sesi?n) va un punto m?s
+  /* El renglón de arriba (la sigla de la sesión) va un punto más
      saturado que sus propias casillas, para que el nombre de la
-     sesi?n se distinga incluso entre dos tonos parecidos. */
+     sesión se distinga incluso entre dos tonos parecidos. */
   table.chk-tabla thead tr:first-child th.banda-0 { background: #E4E9F5; }
   table.chk-tabla thead tr:first-child th.banda-1 { background: #F7E9DA; }
   table.chk-tabla thead tr:first-child th.banda-2 { background: #DFF0E6; }
@@ -292,7 +292,7 @@
   table.chk-tabla thead tr:first-child th.banda-7 { background: #E6E6E6; }
   table.chk-tabla .fin-grupo { border-right: 2px solid #ccd1dc; }
 
-  /* ?? Casilla ?? */
+  /* ── Casilla ── */
   .chk { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border: 1.5px solid #cfcfcf; border-radius: 5px; background: #fff; cursor: pointer; position: relative; transition: background .12s, border-color .12s; vertical-align: middle; }
   .chk:hover { border-color: #2563eb; }
   .chk:checked { background: #2563eb; border-color: #2563eb; }
@@ -300,12 +300,12 @@
   .chk:disabled { opacity: .45; cursor: default; }
   .chk.guardando { opacity: .5; }
 
-  /* min-height + centrado a prop?sito: sin esto, al filtrar y no
-     encontrar nada la p?gina entera se desinflaba de golpe (de una
-     lista larga con scroll a una franja angosta sin ?l), y ese salto
-     de tama?o se sent?a como que la pantalla se "encog?a" con cada
-     tecleo. Con un alto m?nimo generoso, pasar de la lista al estado
-     vac?o ya no mueve tanto el resto de la p?gina. */
+  /* min-height + centrado a propósito: sin esto, al filtrar y no
+     encontrar nada la página entera se desinflaba de golpe (de una
+     lista larga con scroll a una franja angosta sin él), y ese salto
+     de tamaño se sentía como que la pantalla se "encogía" con cada
+     tecleo. Con un alto mínimo generoso, pasar de la lista al estado
+     vacío ya no mueve tanto el resto de la página. */
   .vacio {
     text-align: center; padding: 46px 20px; color: var(--muted); font-size: 13.5px;
     min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -326,10 +326,10 @@
 <body>
 
 <header class="kw-header">
-  <span class="kw-header-title">ABC de la Tecnolog?a Tracker</span>
+  <span class="kw-header-title">ABC de la Tecnología Tracker</span>
   <a href="../index.html" class="back-btn">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-    <span>Atr?s</span>
+    <span>Atrás</span>
   </a>
 </header>
 
@@ -339,29 +339,29 @@
   </div>
 
   <div id="contenido">
-    <h1 class="page-title">ABC de la Tecnolog?a Tracker</h1>
+    <h1 class="page-title">ABC de la Tecnología Tracker</h1>
     <div id="avisos"></div>
 
     <div class="stats" id="stats-filtros">
       <button type="button" class="stat activos" data-stat="activos" aria-pressed="false">
-        <span class="stat-num" id="s-asesores">?</span><span class="stat-lbl">Asesores activos</span>
+        <span class="stat-num" id="s-asesores">·</span><span class="stat-lbl">Asesores activos</span>
       </button>
       <button type="button" class="stat adopcion" data-stat="adopcion" aria-pressed="false">
-        <span class="stat-num" id="s-adopcion">?</span><span class="stat-lbl">Adopci?n del MC</span>
+        <span class="stat-num" id="s-adopcion">·</span><span class="stat-lbl">Adopción del MC</span>
       </button>
       <button type="button" class="stat completos" data-stat="completos" aria-pressed="false">
-        <span class="stat-num" id="s-completos">?</span><span class="stat-lbl">Al 100%</span>
+        <span class="stat-num" id="s-completos">·</span><span class="stat-lbl">Al 100%</span>
       </button>
       <button type="button" class="stat temas" data-stat="temas" aria-pressed="false" title="Mostrar asesores con temas pendientes">
-        <span class="stat-num" id="s-temas">?</span><span class="stat-lbl">Temas del ABC</span>
+        <span class="stat-num" id="s-temas">·</span><span class="stat-lbl">Temas del ABC</span>
       </button>
     </div>
 
     <div class="toolbar">
       <div class="buscador">
         <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="busq" placeholder="Buscar por nombre o KWID?" autocomplete="off" />
-        <button type="button" class="input-clear" id="busq-clear" aria-label="Limpiar b?squeda" hidden>
+        <input type="text" id="busq" placeholder="Buscar por nombre o KWID…" autocomplete="off" />
+        <button type="button" class="input-clear" id="busq-clear" aria-label="Limpiar búsqueda" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <div class="sugerencias" id="sugerencias" hidden></div>
@@ -377,12 +377,12 @@
       </div>
 
       <div class="toolbar-menu-wrap">
-        <button type="button" class="toolbar-menu-btn" id="toolbar-menu-btn" aria-label="M?s acciones" aria-expanded="false">
+        <button type="button" class="toolbar-menu-btn" id="toolbar-menu-btn" aria-label="Más acciones" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
         </button>
         <div class="toolbar-menu" id="toolbar-menu" hidden>
-          <button type="button" id="btn-sync"><span>?</span> Sincronizar</button>
-          <button type="button" id="btn-exportar"><span>?</span> Exportar a Excel</button>
+          <button type="button" id="btn-sync"><span>↻</span> Sincronizar</button>
+          <button type="button" id="btn-exportar"><span>↓</span> Exportar a Excel</button>
         </div>
       </div>
     </div>
@@ -400,12 +400,12 @@
   var FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
-  var dtsConocidos = []; // nombres de DT ya vistos en el padr?n, para el filtro y el editor
+  var dtsConocidos = []; // nombres de DT ya vistos en el padrón, para el filtro y el editor
   var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
   var pestana = 'activos'; // 'activos' | 'inactivos'
-  var statFiltro = null; // ?nicamente 'completos' filtra la lista
-  var statsMarcados = new Set(); // los dem?s conteos solo conservan estado visual
-  var filaEls = new Map(); // kwid -> nodo .fila del ?ltimo render, para actualizar sin repintar todo
+  var statFiltro = null; // únicamente 'completos' filtra la lista
+  var statsMarcados = new Set(); // los demás conteos solo conservan estado visual
+  var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
 
   function esc(s) {
@@ -419,7 +419,7 @@
   }
 
   // El porcentaje se calcula igual que en el libro de Sheets: temas
-  // palomeados entre el total de temas activos. Se hace aqu? y no en la
+  // palomeados entre el total de temas activos. Se hace aquí y no en la
   // base para que la barra se mueva en el momento en que se palomea,
   // sin volver a preguntar.
   function pctDe(kwid) {
@@ -429,17 +429,17 @@
     return Math.round(n * 100 / temas.length);
   }
 
-  // Sem?foro continuo: 0% rojo, 50% amarillo y 100% verde.
+  // Semáforo continuo: 0% rojo, 50% amarillo y 100% verde.
   function colorProgreso(pct) {
     var p = Math.max(0, Math.min(100, Number(pct) || 0));
     return 'hsl(' + Math.round(p * 1.2) + ', 78%, 38%)';
   }
 
-  // Un color por DT para ubicar de un vistazo qui?n es de qui?n. Daniel
-  // y Jessica tienen color fijo porque as? se pidi? (azul y naranja); a
-  // cualquier otro DT que se agregue despu?s se le asigna uno estable
-  // de una paleta v?a hash del nombre, para no tener que acordarse de
-  // venir aqu? a mano cada vez que entra alguien nuevo al equipo.
+  // Un color por DT para ubicar de un vistazo quién es de quién. Daniel
+  // y Jessica tienen color fijo porque así se pidió (azul y naranja); a
+  // cualquier otro DT que se agregue después se le asigna uno estable
+  // de una paleta vía hash del nombre, para no tener que acordarse de
+  // venir aquí a mano cada vez que entra alguien nuevo al equipo.
   var COLOR_DT_FIJO = { daniel: '#2563EB', jess: '#EA580C' };
   var PALETA_DT = ['#4F46E5', '#0891B2', '#059669', '#7C3AED', '#0D9488', '#BE185D', '#65A30D', '#C2410C'];
   function colorDT(nombre) {
@@ -454,7 +454,7 @@
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   // Se parsea el "AAAA-MM-DD" a mano en vez de `new Date(iso)`: eso
   // interpreta la fecha en UTC medianoche, y con huso horario negativo
-  // se corre un d?a para atr?s al mostrarla en local.
+  // se corre un día para atrás al mostrarla en local.
   function fechaCorta(iso) {
     var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!m) return null;
@@ -468,14 +468,14 @@
     caja.innerHTML =
       '<div class="aviso' + (tipo === 'error' ? ' error' : '') + '">' +
         '<span class="aviso-txt">' + esc(msg) + '</span>' +
-        '<button type="button" class="aviso-x" aria-label="Cerrar aviso" title="Cerrar">?</button>' +
+        '<button type="button" class="aviso-x" aria-label="Cerrar aviso" title="Cerrar">✕</button>' +
       '</div>';
     caja.querySelector('.aviso-x').onclick = limpiarAviso;
 
-    // Los avisos de "ya qued?" se van solos a los 10 segundos; los de
+    // Los avisos de "ya quedó" se van solos a los 10 segundos; los de
     // error se quedan hasta que se cierren, porque casi siempre piden
     // hacer algo (corregir la hoja, reintentar) y desaparecer solos
-    // har?a que se pierdan sin haberlos le?do.
+    // haría que se pierdan sin haberlos leído.
     clearTimeout(avisoTimer);
     if (tipo !== 'error') avisoTimer = setTimeout(limpiarAviso, 10000);
   }
@@ -485,10 +485,10 @@
     document.getElementById('avisos').innerHTML = '';
   }
 
-  // Con nombres fijados (chips), la lista es exactamente esa selecci?n:
-  // ignora buscador, DT y pesta?a a prop?sito, porque fijar a alguien
-  // es una elecci?n expl?cita que no deber?a desaparecer si adem?s
-  // est? de baja o no coincide con el DT elegido en el otro filtro.
+  // Con nombres fijados (chips), la lista es exactamente esa selección:
+  // ignora buscador, DT y pestaña a propósito, porque fijar a alguien
+  // es una elección explícita que no debería desaparecer si además
+  // está de baja o no coincide con el DT elegido en el otro filtro.
   function filtrados() {
     if (pinned.size) return Array.from(pinned.values());
     var q = norm(document.getElementById('busq').value.trim());
@@ -513,8 +513,8 @@
     document.getElementById('s-asesores').textContent = activos.length;
     document.getElementById('s-temas').textContent = temas.length;
     if (!activos.length || !temas.length) {
-      document.getElementById('s-adopcion').textContent = '?';
-      document.getElementById('s-completos').textContent = '?';
+      document.getElementById('s-adopcion').textContent = '·';
+      document.getElementById('s-completos').textContent = '·';
       return;
     }
     var suma = 0, completos = 0;
@@ -556,12 +556,12 @@
     var salida = document.getElementById('salida');
     var lista = filtrados();
     filaEls = new Map();
-    // un repintado completo se lleva entre las patas cualquier men? abierto
+    // un repintado completo se lleva entre las patas cualquier menú abierto
     menuFilaAbierto = null;
     menuDTAbierto = null;
     if (!lista.length) {
       salida.innerHTML = '<div class="vacio"><strong>Sin resultados</strong>' +
-        (pinned.size ? 'Ninguno de los nombres fijados sigue en el padr?n.' : 'Nadie coincide con lo que buscas.') +
+        (pinned.size ? 'Ninguno de los nombres fijados sigue en el padrón.' : 'Nadie coincide con lo que buscas.') +
         '</div>';
       return;
     }
@@ -596,7 +596,7 @@
           '<span class="pct" style="color:' + colorProgreso(p) + '">' + p + '%</span>' +
         '</div>' +
         (puedeEditar
-          ? '<div class="fila-opciones"><button type="button" class="fila-menu-btn" data-kwid="' + esc(a.kwid) + '" aria-label="M?s opciones">' +
+          ? '<div class="fila-opciones"><button type="button" class="fila-menu-btn" data-kwid="' + esc(a.kwid) + '" aria-label="Más opciones">' +
               '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>' +
             '</button></div>'
           : '') +
@@ -611,7 +611,7 @@
     '</div>';
   }
 
-  // Repinta solo el .fila-main de un rengl?n (despu?s de cambiar su DT),
+  // Repinta solo el .fila-main de un renglón (después de cambiar su DT),
   // sin tocar el checklist que pueda estar abierto debajo ni el resto
   // de la lista.
   function refrescarFilaMain(kwid) {
@@ -624,12 +624,12 @@
     fila.querySelector('.fila-main').setAttribute('aria-expanded', abierta ? 'true' : 'false');
   }
 
-  // ?? Asignar/cambiar el DT de un asesor ??
+  // ── Asignar/cambiar el DT de un asesor ──
   //
-  // Se despliega un men? dibujado por nosotros, con el mismo estilo que
+  // Se despliega un menú dibujado por nosotros, con el mismo estilo que
   // el resto del sitio, en vez del <select> nativo (que se ve como el
   // desplegable gris del navegador y no combina con nada).
-  var menuDTAbierto = null; // kwid con el men? de DT abierto, o null
+  var menuDTAbierto = null; // kwid con el menú de DT abierto, o null
 
   function cerrarMenuDT() {
     if (!menuDTAbierto) return;
@@ -712,8 +712,8 @@
     }
   }
 
-  // ?? Men? de tres puntos: cambiar DT o dar de baja ??
-  var menuFilaAbierto = null; // kwid del rengl?n con el men? abierto, o null
+  // ── Menú de tres puntos: cambiar DT o dar de baja ──
+  var menuFilaAbierto = null; // kwid del renglón con el menú abierto, o null
 
   function cerrarMenuFila() {
     if (!menuFilaAbierto) return;
@@ -731,8 +731,8 @@
     var host = fila && fila.querySelector('.fila-opciones');
     if (!host || !a) return;
 
-    // "Cambiar DT" no va aqu?: el propio texto "DT: ?" del rengl?n ya
-    // es un bot?n que abre ese mismo editor - tenerlo dos veces ser?a
+    // "Cambiar DT" no va aquí: el propio texto "DT: …" del renglón ya
+    // es un botón que abre ese mismo editor - tenerlo dos veces sería
     // redundante.
     var svgBaja = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
     var svgAlta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
@@ -754,7 +754,7 @@
   }
 
   // Dar de baja NUNCA borra nada - solo marca activo=false, igual que
-  // hace la sincronizaci?n con la hoja. El avance del asesor se queda
+  // hace la sincronización con la hoja. El avance del asesor se queda
   // intacto por si regresa.
   async function alternarActivo(kwid) {
     var a = asesores.find(function (x) { return x.kwid === kwid; });
@@ -769,8 +769,8 @@
         .from('abc_asesores').update({ activo: a.activo }).eq('kwid', kwid);
       if (error) throw error;
       limpiarAviso();
-      // Dar de baja o reactivar cambia de pesta?a a la persona, as? que
-      // aqu? s? hace falta repintar toda la lista (a diferencia del DT,
+      // Dar de baja o reactivar cambia de pestaña a la persona, así que
+      // aquí sí hace falta repintar toda la lista (a diferencia del DT,
       // que nunca la mueve de lugar). Con nombres fijados (chips) no
       // aplica: esos se quedan en pantalla pase lo que pase.
       if (!pinned.size) pintar();
@@ -782,21 +782,21 @@
     }
   }
 
-  // "Sesi?n 1" -> "S1"; nombres que no siguen ese patr?n (Onboarding)
+  // "Sesión 1" -> "S1"; nombres que no siguen ese patrón (Onboarding)
   // se dejan tal cual.
   function siglaSesion(nombre) {
-    var m = String(nombre || '').match(/^sesi[o?]n\s+(\d+)$/i);
+    var m = String(nombre || '').match(/^sesi[oó]n\s+(\d+)$/i);
     return m ? 'S' + m[1] : nombre;
   }
 
   // El checklist de un asesor: sesiones arriba, temas como columnas
-  // angostas con el nombre en vertical y un solo rengl?n de casillas
-  // la idea de la cuadr?cula del libro, pero para un asesor a la vez.
+  // angostas con el nombre en vertical y un solo renglón de casillas
+  // la idea de la cuadrícula del libro, pero para un asesor a la vez.
   function htmlChecklistHorizontal(kwid) {
-    // grupos: una entrada por sesi?n, con cu?ntos temas trae (para el
-    // colspan). grupoDeTema: a qu? grupo pertenece cada tema, en el
+    // grupos: una entrada por sesión, con cuántos temas trae (para el
+    // colspan). grupoDeTema: a qué grupo pertenece cada tema, en el
     // mismo orden que `temas`, para poder alternar el color de fondo y
-    // saber d?nde termina cada sesi?n (para el separador m?s marcado).
+    // saber dónde termina cada sesión (para el separador más marcado).
     var grupos = [], grupoDeTema = [], actual = null;
     temas.forEach(function (t) {
       if (!actual || actual.sesion !== t.sesion) { actual = { sesion: t.sesion, n: 0 }; grupos.push(actual); }
@@ -807,18 +807,18 @@
     // Un <col> por tema, todas del mismo ancho: con table-layout:fixed
     // eso es lo que reparte la tabla a todo lo ancho de la tarjeta en
     // vez de dejarla amontonada a la izquierda. El min-width es lo que
-    // evita que esto se rompa en celular: ah? el 100% del contenedor es
-    // angosto, y sin un m?nimo por columna el texto vertical se
-    // encimar?a entre s? en vez de simplemente scrollear horizontal
+    // evita que esto se rompa en celular: ahí el 100% del contenedor es
+    // angosto, y sin un mínimo por columna el texto vertical se
+    // encimaría entre sí en vez de simplemente scrollear horizontal
     // como scrollea .chk-scroll.
     var anchoCol = (100 / temas.length).toFixed(4) + '%';
     var anchoMinTotal = (temas.length * 40) + 'px';
 
-    // banda(i): tinte propio por sesi?n (8 tonos en ciclo, as? que dos
-    // sesiones VECINAS nunca se repiten). finGrupo(i): separador m?s
-    // marcado en el ?ltimo tema de cada sesi?n, para que el corte entre
-    // una sesi?n y la siguiente se note m?s que el separador fino entre
-    // dos temas de la misma sesi?n.
+    // banda(i): tinte propio por sesión (8 tonos en ciclo, así que dos
+    // sesiones VECINAS nunca se repiten). finGrupo(i): separador más
+    // marcado en el último tema de cada sesión, para que el corte entre
+    // una sesión y la siguiente se note más que el separador fino entre
+    // dos temas de la misma sesión.
     function banda(i) { return ' banda-' + (grupoDeTema[i] % 8); }
     function finGrupo(i) { return (grupoDeTema[i] !== grupoDeTema[i + 1]) ? ' fin-grupo' : ''; }
 
@@ -844,7 +844,7 @@
     return h;
   }
 
-  // Abre o cierra el checklist de un rengl?n in place - el checklist se
+  // Abre o cierra el checklist de un renglón in place - el checklist se
   // construye la primera vez que se abre (no en cada render) para no
   // armar de entrada 100 tablas de 25 casillas que nadie va a ver.
   function alternarFila(kwid) {
@@ -877,14 +877,14 @@
     }
   }
 
-  // ?? Guardar un palomeo ??
+  // ── Guardar un palomeo ──
   //
   // Se escribe de inmediato y la pantalla se actualiza sin esperar a la
-  // respuesta: en sesi?n se palomea r?pido y esperar el viaje al
+  // respuesta: en sesión se palomea rápido y esperar el viaje al
   // servidor por cada clic se siente lento. Si la escritura falla, la
   // casilla se regresa a como estaba y se avisa - nunca se queda
-  // mostrando algo que no se guard?. Solo se actualiza el rengl?n que
-  // cambi? (no toda la lista), as? que el checklist se queda abierto.
+  // mostrando algo que no se guardó. Solo se actualiza el renglón que
+  // cambió (no toda la lista), así que el checklist se queda abierto.
   async function alPalomear(input, kwid, temaId) {
     if (!puedeEditar) return;
     var quiere = input.checked;
@@ -916,11 +916,11 @@
       input.classList.remove('guardando');
       actualizarProgresoFila(kwid);
       pintarStats();
-      avisar('No se pudo guardar el cambio: ' + (err.message || err) + '. Revisa tu conexi?n e int?ntalo de nuevo.', 'error');
+      avisar('No se pudo guardar el cambio: ' + (err.message || err) + '. Revisa tu conexión e inténtalo de nuevo.', 'error');
     }
   }
 
-  // ?? Fijar / quitar un asesor de la selecci?n (chips) ??
+  // ── Fijar / quitar un asesor de la selección (chips) ──
   function fijarAsesor(kwid) {
     var a = asesores.find(function (x) { return x.kwid === kwid; });
     if (!a) return;
@@ -937,7 +937,7 @@
     pintar();
   }
 
-  // ?? Sugerencias de b?squeda ??
+  // ── Sugerencias de búsqueda ──
   function candidatosPara(q) {
     var palabras = norm(q).trim().split(/\s+/).filter(Boolean);
     if (!palabras.length) return [];
@@ -954,8 +954,8 @@
     cont.hidden = false;
     cont.innerHTML = candidatos.map(function (a) {
       return '<button type="button" class="sug" data-kwid="' + esc(a.kwid) + '">' +
-        '<span class="sug-nom">' + esc(a.nombre) + (a.activo ? '' : ' ? Baja') + '</span>' +
-        '<span class="sug-sub">KWID ' + esc(a.kwid) + (a.dt_asignado ? ' ? ' + esc(a.dt_asignado) : '') + '</span>' +
+        '<span class="sug-nom">' + esc(a.nombre) + (a.activo ? '' : ' · Baja') + '</span>' +
+        '<span class="sug-sub">KWID ' + esc(a.kwid) + (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : '') + '</span>' +
       '</button>';
     }).join('');
   }
@@ -989,12 +989,12 @@
     cerrarToolbarMenu();
   }
 
-  // ?? Sincronizar con la hoja de asesores ??
+  // ── Sincronizar con la hoja de asesores ──
   //
-  // Primero pide la vista previa (sin escribir) y ense?a qu? cambiar?a.
+  // Primero pide la vista previa (sin escribir) y enseña qué cambiaría.
   // Solo si se confirma se manda aplicar. Las bajas se deducen de "ya no
-  // est? en la hoja", as? que verlas antes evita un desastre si alg?n
-  // d?a la hoja se lee incompleta.
+  // está en la hoja", así que verlas antes evita un desastre si algún
+  // día la hoja se lee incompleta.
   async function sincronizar() {
     var btn = document.getElementById('btn-sync');
     btn.disabled = true;
@@ -1004,21 +1004,21 @@
       var n = previa.nuevos.length, r = previa.reactivados.length, b = previa.bajas.length;
       var omitidos = previa.omitidos || [];
 
-      // Antes, alguien nuevo en la hoja sin KW ID capturado todav?a
-      // simplemente no aparec?a en ning?n lado y nadie se enteraba de
-      // por qu?: el sync "corr?a bien" pero se com?a gente en
+      // Antes, alguien nuevo en la hoja sin KW ID capturado todavía
+      // simplemente no aparecía en ningún lado y nadie se enteraba de
+      // por qué: el sync "corría bien" pero se comía gente en
       // silencio. Ahora se avisa por nombre, pase lo que pase con el
-      // resto de la sincronizaci?n.
+      // resto de la sincronización.
       var avisoOmitidos = omitidos.length
-        ? '\n\n' + omitidos.length + ' persona(s) en la hoja no se pudieron traer por falta de KW ID:\n? ' +
-          omitidos.slice(0, 12).map(function (o) { return o.nombre + ' (fila ' + o.fila + ')'; }).join('\n? ') +
-          (omitidos.length > 12 ? '\n? ?y ' + (omitidos.length - 12) + ' m?s' : '') +
-          '\nCapt?rales el KW ID en la hoja y vuelve a sincronizar.'
+        ? '\n\n' + omitidos.length + ' persona(s) en la hoja no se pudieron traer por falta de KW ID:\n· ' +
+          omitidos.slice(0, 12).map(function (o) { return o.nombre + ' (fila ' + o.fila + ')'; }).join('\n· ') +
+          (omitidos.length > 12 ? '\n· …y ' + (omitidos.length - 12) + ' más' : '') +
+          '\nCaptúrales el KW ID en la hoja y vuelve a sincronizar.'
         : '';
 
       if (!n && !r && !b) {
         avisar(
-          'El padr?n ya est? al d?a: ' + previa.total_hoja + ' asesores en la hoja, nada que cambiar.' + avisoOmitidos,
+          'El padrón ya está al día: ' + previa.total_hoja + ' asesores en la hoja, nada que cambiar.' + avisoOmitidos,
           omitidos.length ? 'error' : undefined
         );
         return;
@@ -1026,20 +1026,20 @@
 
       var resumen = [];
       if (n) resumen.push(n + ' alta(s) nueva(s)');
-      if (r) resumen.push(r + ' reactivaci?n(es)');
+      if (r) resumen.push(r + ' reactivación(es)');
       if (b) resumen.push(b + ' baja(s)');
 
       var detalle = '';
-      if (n) detalle += '\n\nNuevos:\n? ' + previa.nuevos.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n? ') + (n > 12 ? '\n? ?y ' + (n - 12) + ' m?s' : '');
-      if (b) detalle += '\n\nSe marcar?n como BAJA (no se borra nada, su avance se conserva):\n? ' + previa.bajas.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n? ') + (b > 12 ? '\n? ?y ' + (b - 12) + ' m?s' : '');
+      if (n) detalle += '\n\nNuevos:\n· ' + previa.nuevos.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (n > 12 ? '\n· …y ' + (n - 12) + ' más' : '');
+      if (b) detalle += '\n\nSe marcarán como BAJA (no se borra nada, su avance se conserva):\n· ' + previa.bajas.slice(0, 12).map(function (p) { return p.nombre || p.kwid; }).join('\n· ') + (b > 12 ? '\n· …y ' + (b - 12) + ' más' : '');
       detalle += avisoOmitidos;
 
-      if (!(await window.kwUI.confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicar?a: ' + resumen.join(', ') + '.' + detalle + '\n\n?Aplicar estos cambios?'))) return;
+      if (!(await window.kwUI.confirm('La hoja trae ' + previa.total_hoja + ' asesores.\n\nSe aplicaría: ' + resumen.join(', ') + '.' + detalle + '\n\n¿Aplicar estos cambios?'))) return;
 
       var hecho = await llamarSync(true);
       await cargar();
       pintar();
-      var msg = 'Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivaci?n(es) y ' + hecho.bajas.length + ' baja(s).';
+      var msg = 'Listo: ' + hecho.nuevos.length + ' alta(s), ' + hecho.reactivados.length + ' reactivación(es) y ' + hecho.bajas.length + ' baja(s).';
       avisar(msg + avisoOmitidos, omitidos.length ? 'error' : undefined);
     } catch (err) {
       avisar('No se pudo sincronizar: ' + (err.message || err), 'error');
@@ -1050,7 +1050,7 @@
 
   async function llamarSync(aplicar) {
     var { data: ses } = await window.kwSupabase.auth.getSession();
-    if (!ses || !ses.session) throw new Error('Sesi?n no v?lida.');
+    if (!ses || !ses.session) throw new Error('Sesión no válida.');
     var res = await fetch(FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.session.access_token },
@@ -1061,7 +1061,7 @@
     return data;
   }
 
-  // ?? Carga ??
+  // ── Carga ──
   async function cargar() {
     var r = await Promise.all([
       window.kwSupabase.from('abc_temas').select('id, orden, sesion, nombre').eq('activo', true).order('orden'),
@@ -1076,7 +1076,7 @@
     (r[2].data || []).forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
 
     // Los nombres fijados apuntan a los objetos "asesor" de antes de
-    // recargar; se refrescan contra el padr?n nuevo (y si alguno ya no
+    // recargar; se refrescan contra el padrón nuevo (y si alguno ya no
     // existe, se suelta solo en vez de quedarse con datos viejos).
     var kwidsFijados = Array.from(pinned.keys());
     pinned = new Map();
@@ -1119,14 +1119,14 @@
     }
   }
 
-  // ?? Eventos de la lista, por delegaci?n: los renglones y sus
-  //    checklists se reconstruyen en cada pintar(), as? que engancharlos
-  //    uno por uno se tendr?a que repetir cada vez. Aqu? se engancha una
-  //    sola vez sobre el contenedor. ??
+  // ── Eventos de la lista, por delegación: los renglones y sus
+  //    checklists se reconstruyen en cada pintar(), así que engancharlos
+  //    uno por uno se tendría que repetir cada vez. Aquí se engancha una
+  //    sola vez sobre el contenedor. ──
   var salidaEl = document.getElementById('salida');
   salidaEl.addEventListener('click', function (e) {
-    // El bot?n de DT y el de tres puntos viven DENTRO de .fila-main
-    // hay que resolverlos primero, si no el clic tambi?n disparar?a
+    // El botón de DT y el de tres puntos viven DENTRO de .fila-main
+    // hay que resolverlos primero, si no el clic también dispararía
     // abrir/cerrar el checklist.
     var menuBtn = e.target.closest('.fila-menu-btn');
     if (menuBtn) { abrirMenuFila(menuBtn.dataset.kwid); return; }
@@ -1137,7 +1137,7 @@
   });
   salidaEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    if (e.target.closest('button.fila-dt, select.fila-dt-select, .fila-menu-btn, .fila-menu')) return; // que el teclado del select/men? siga siendo suyo
+    if (e.target.closest('button.fila-dt, select.fila-dt-select, .fila-menu-btn, .fila-menu')) return; // que el teclado del select/menú siga siendo suyo
     var main = e.target.closest('.fila-main');
     if (!main) return;
     e.preventDefault();
@@ -1154,7 +1154,7 @@
     if (btn) quitarFijado(btn.dataset.kwid);
   });
 
-  // ?? Buscador + sugerencias ??
+  // ── Buscador + sugerencias ──
   var busq = document.getElementById('busq');
   var busqClear = document.getElementById('busq-clear');
 
@@ -1238,4 +1238,3 @@
 <script src="/kwpremierweb/assets/js/drawer.js?v=20260937b" data-menu="hub"></script>
 </body>
 </html>
-
