@@ -424,6 +424,42 @@
   // agrega más abajo y tiene que quedar después de él.
   const accionesMq = window.matchMedia('(min-width: 1024px)');
   let campanaRaf = 0;
+  function obtenerAccionesDePagina() {
+    const grupos = Array.from(document.querySelectorAll('.kw-page-acciones'));
+    const visibles = grupos.find((el) => {
+      const encabezado = el.closest('.kw-page-encabezado, .page-head');
+      return (encabezado || el).offsetParent !== null;
+    });
+    if (visibles) return visibles;
+
+    const encabezados = Array.from(document.querySelectorAll('.kw-page-encabezado, .page-head'));
+    const encabezado = encabezados.find((el) => el.offsetParent !== null) || encabezados[0];
+    if (encabezado) {
+      encabezado.classList.add('con-acciones', 'kw-acciones-universales');
+      const accionDirecta = Array.from(encabezado.children).find((el) =>
+        el.matches('#btn-nuevo, .btn-nuevo, .btn-nuevo-doc, .btn-nuevo-asesor, .btn-reportar'));
+      const acciones = document.createElement('div');
+      acciones.className = 'kw-page-acciones';
+      encabezado.appendChild(acciones);
+      if (accionDirecta) acciones.appendChild(accionDirecta);
+      return acciones;
+    }
+
+    // Las pantallas anteriores al encabezado compartido tienen el título
+    // directamente dentro de .page. Se les arma el mismo renglón sin
+    // cambiar el texto ni el resto de su contenido.
+    const titulos = Array.from(document.querySelectorAll('main > .page-title, .page > .page-title'));
+    const titulo = titulos.find((el) => el.offsetParent !== null) || titulos[0];
+    if (!titulo || !titulo.parentElement) return null;
+    const encabezadoAuto = document.createElement('div');
+    encabezadoAuto.className = 'kw-page-encabezado con-acciones kw-acciones-universales';
+    titulo.parentElement.insertBefore(encabezadoAuto, titulo);
+    encabezadoAuto.appendChild(titulo);
+    const acciones = document.createElement('div');
+    acciones.className = 'kw-page-acciones';
+    encabezadoAuto.appendChild(acciones);
+    return acciones;
+  }
   function colocarCampanaEnAcciones() {
     const campana = document.getElementById('notif-bell-slot');
     if (!campana) return;
@@ -432,26 +468,17 @@
       if (sueltos) sueltos.appendChild(campana);
       return;
     }
-    const grupos = Array.from(document.querySelectorAll('.kw-page-acciones'));
-    const botonPrincipal = document.getElementById('btn-nuevo');
-    const grupoPrincipal = botonPrincipal && botonPrincipal.closest('.kw-page-acciones');
-    const accionesVisibles = grupos.find((el) => {
-      const encabezado = el.closest('.kw-page-encabezado');
-      return (encabezado || el).offsetParent !== null;
-    });
-    // En pantallas con más de una vista, como Dictámenes, el bloque de
-    // acciones puede activarse después de que termine de cargar el perfil.
-    // El botón principal es la referencia estable para no dejar la campana
-    // dentro de la barra superior durante ese intervalo.
-    const acciones = accionesVisibles || grupoPrincipal || grupos[0];
+    const acciones = obtenerAccionesDePagina();
     if (!acciones) return;
     const engrane = acciones.querySelector('.kw-menu-ancla');
+    const accionPrincipal = acciones.querySelector('#btn-nuevo, .btn-nuevo, .btn-nuevo-doc, .btn-nuevo-asesor, .btn-reportar');
     if (engrane) {
       acciones.insertBefore(engrane, acciones.firstChild);
       engrane.insertAdjacentElement('afterend', campana);
     } else {
       acciones.insertBefore(campana, acciones.firstChild);
     }
+    if (accionPrincipal) acciones.appendChild(accionPrincipal);
   }
   function programarCampanaEnAcciones() {
     cancelAnimationFrame(campanaRaf);
