@@ -633,6 +633,7 @@
     if ((header && header.contains(e.target)) ||
         (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
     volverAlAccesoBuscar();
+    e.kwBuscadorContraido = true;
   });
 
   const drawerIzq = document.getElementById('drawer');
@@ -699,6 +700,7 @@
   // Sin velo que atrape los clics, es esto lo que cierra el riel al picar
   // fuera de él.
   document.addEventListener('click', (e) => {
+    if (e.kwBuscadorContraido) return;
     if (!drawerIzq.classList.contains('open') || !enRiel(drawerIzq)) return;
     if (e.target instanceof Element && e.target.closest('#drawer, #kw-drawer-toggle')) return;
     cerrarPaneles();
