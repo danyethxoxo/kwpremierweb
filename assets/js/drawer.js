@@ -222,6 +222,9 @@
   }
 
   const esPublico = modo === 'publico';
+  const rutaPagina = location.pathname.replace(/\/+$/, '').toLowerCase();
+  const esInicioHub = /\/portal\.html$/.test(rutaPagina);
+  const esIndiceDocumentos = /\/documentos\/(acuerdos|contratos)\/index\.html$/.test(rutaPagina);
   // El riel: en las pantallas de trabajo el menú deja de ser un panel que
   // aparece y desaparece, y pasa a ser una franja de íconos siempre a la
   // vista que se ensancha al acercarse. En el sitio público no: ahí el
@@ -229,6 +232,8 @@
   // propiedades. La marca va en el <html> para que el CSS pueda recorrer
   // el contenido y el header, que son de la página y no del menú.
   if (!esPublico) document.documentElement.classList.add('kw-riel');
+  if (esInicioHub) document.documentElement.classList.add('kw-riel-inicio');
+  if (esIndiceDocumentos) document.body.classList.add('kw-indice-documentos');
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
   const homeHref = esPublico ? `${BASE}/index.html` : `${BASE}/portal.html`;
   const footerHtml = esPublico
@@ -739,11 +744,15 @@
       window.matchMedia('(min-width: 1024px)').matches;
   }
 
+  function esRielFijo(el) {
+    return enRiel(el) && !esInicioHub;
+  }
+
   // En escritorio el menú del Hub es navegación permanente, no una
   // gaveta temporal. En celular conserva el panel superpuesto de siempre.
   const rielFijoMq = window.matchMedia('(min-width: 1024px)');
   function sincronizarRielFijo() {
-    if (enRiel(drawerIzq)) {
+    if (esRielFijo(drawerIzq)) {
       drawerIzq.classList.remove('sin-hover');
       drawerIzq.classList.add('open');
     } else {
@@ -756,7 +765,7 @@
   function abrirPanel(panel) {
     if (!panel || !panel.el) return;
     PANELES.forEach((otro) => {
-      if (otro !== panel && !enRiel(otro.el)) otro.el.classList.remove('open');
+      if (otro !== panel && !esRielFijo(otro.el)) otro.el.classList.remove('open');
     });
     panel.el.classList.remove('sin-hover');
     panel.el.classList.add('open');
@@ -772,7 +781,7 @@
   }
   function cerrarPaneles() {
     PANELES.forEach((p) => {
-      if (enRiel(p.el)) {
+      if (esRielFijo(p.el)) {
         p.el.classList.remove('sin-hover');
         p.el.classList.add('open');
         return;
@@ -809,7 +818,7 @@
   // mantener el cursor encima. Vuelta a picar, se cierra.
   const hamRiel = document.getElementById('drawer-hamburguesa');
   if (hamRiel) hamRiel.addEventListener('click', () => {
-    if (enRiel(drawerIzq)) return;
+    if (esRielFijo(drawerIzq)) return;
     if (drawerIzq.classList.contains('open')) cerrar(); else abrir();
   });
   velo.addEventListener('click', cerrar);

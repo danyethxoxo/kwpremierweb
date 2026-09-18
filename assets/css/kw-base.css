@@ -979,6 +979,10 @@ header > *:last-child { margin-left: auto; }
     --riel-ancho: 292px;
     --riel-hueco: 292px;
   }
+  html.kw-riel.kw-riel-inicio {
+    --riel-ancho: 68px;
+    --riel-hueco: 68px;
+  }
   html.kw-riel body { padding-left: var(--riel-hueco); }
   html.kw-riel header.kw-header { left: calc(var(--riel-hueco) + 12px); }
 
@@ -2319,25 +2323,41 @@ header > *:last-child { margin-left: auto; }
    en escritorio el menú del Hub debe ganar siempre. Durante una
    búsqueda se respetan sus reglas propias para dejar espacio al campo. */
 @media (min-width: 1024px) {
-  html.kw-riel #drawer:not(.drawer-der) {
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der) {
     width: 292px !important;
     min-width: 292px !important;
     max-width: 292px !important;
   }
-  html.kw-riel #drawer:not(.drawer-der):not(.buscando) .drawer-header {
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der):not(.buscando) .drawer-header {
     opacity: 1 !important;
     visibility: visible !important;
   }
-  html.kw-riel #drawer:not(.drawer-der):not(.buscando) .drawer-link > span,
-  html.kw-riel #drawer:not(.drawer-der):not(.buscando) .drawer-section-label,
-  html.kw-riel #drawer:not(.drawer-der):not(.buscando) .drawer-usuario-txt {
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der):not(.buscando) .drawer-link > span,
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der):not(.buscando) .drawer-section-label,
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der):not(.buscando) .drawer-usuario-txt {
     display: inline-flex !important;
     opacity: 1 !important;
     visibility: visible !important;
     width: auto !important;
     max-width: none !important;
   }
-  html.kw-riel #drawer:not(.drawer-der):not(.buscando) .drawer-usuario-txt {
+  html.kw-riel:not(.kw-riel-inicio) #drawer:not(.drawer-der):not(.buscando) .drawer-usuario-txt {
     flex: 1 1 auto !important;
+  }
+}
+
+/* Los dos índices documentales preceden al encabezado compartido y
+   conservaban el relleno antiguo de 100px. Se alinean explícitamente con
+   el título del historial de Firmas también en pantallas intermedias. */
+@media (min-width: 641px) {
+  html.kw-riel body.kw-indice-documentos > main.page {
+    padding-top: 18px !important;
+    padding-left: 18px !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  body.kw-indice-documentos .kw-page-encabezado {
+    margin-top: 0 !important;
   }
 }
