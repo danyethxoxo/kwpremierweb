@@ -224,7 +224,7 @@
   const esPublico = modo === 'publico';
   const rutaPagina = location.pathname.replace(/\/+$/, '').toLowerCase();
   const esInicioHub = /\/portal\.html$/.test(rutaPagina);
-  const esIndiceDocumentos = /\/documentos\/(acuerdos|contratos)\/index\.html$/.test(rutaPagina);
+  const esIndiceDocumentos = /\/documentos\/(acuerdos|contratos)(?:\/index\.html)?$/.test(rutaPagina);
   // El riel: en las pantallas de trabajo el menú deja de ser un panel que
   // aparece y desaparece, y pasa a ser una franja de íconos siempre a la
   // vista que se ensancha al acercarse. En el sitio público no: ahí el
