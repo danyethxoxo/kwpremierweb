@@ -625,7 +625,7 @@
     if (!busquedaAbierta()) return;
     if ((header && header.contains(e.target)) ||
         (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
-    cerrarBuscar();
+    buscarInput.blur();
   });
 
   const drawerIzq = document.getElementById('drawer');
