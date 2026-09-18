@@ -547,7 +547,7 @@
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
       if (enRiel(riel)) riel.classList.add('sin-hover');
-      riel.classList.remove('buscando', 'open');
+      riel.classList.remove('buscando', 'busqueda-con-resultados', 'open');
     }
     buscarInput.blur();
     buscarResultados.hidden = true;
@@ -562,6 +562,9 @@
 
   function pintarResultados(termino) {
     const q = termino.trim();
+    if (areaBuscarRiel) {
+      areaBuscarRiel.closest('.drawer').classList.toggle('busqueda-con-resultados', Boolean(q));
+    }
     // Con el campo vacío no se enseña nada: el recuadro decía "escribe
     // para buscar" justo debajo de donde se está escribiendo, y lo único
     // que hacía era tapar la página. Aparece hasta que hay algo que
@@ -588,11 +591,17 @@
     `).join('');
   }
 
+  function cancelarTermino() {
+    buscarInput.value = '';
+    pintarResultados('');
+    requestAnimationFrame(() => buscarInput.focus());
+  }
+
   searchBtn.addEventListener('click', () => {
     if (busquedaAbierta()) cerrarBuscar();
     else abrirBuscar();
   });
-  buscarCerrar.addEventListener('click', cerrarBuscar);
+  buscarCerrar.addEventListener('click', cancelarTermino);
 
   buscarInput.addEventListener('input', () => {
     // La búsqueda del riel es universal. Los filtros particulares de
