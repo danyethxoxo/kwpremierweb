@@ -2362,6 +2362,48 @@ header > *:last-child { margin-left: auto; }
   }
 }
 
+/* Apertura y cierre discretos del buscador, sin mover los accesos. */
+@keyframes kw-buscar-abre-suave {
+  from { opacity: .72; transform: scaleY(.94); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+@keyframes kw-buscar-cierra-suave {
+  from { opacity: .72; transform: scale(.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (min-width: 1024px) {
+  html.kw-riel #drawer.buscando #drawer-buscar {
+    transform-origin: top center;
+    animation: kw-buscar-abre-suave 180ms ease-out;
+  }
+  html.kw-riel #drawer.busqueda-cerrando #drawer-buscar .drawer-buscar-toggle {
+    transform-origin: center left;
+    animation: kw-buscar-cierra-suave 180ms ease-out;
+  }
+
+  /* La lupa comparte exactamente la columna de los demás iconos. */
+  html.kw-riel #drawer .drawer-buscar-toggle svg,
+  html.kw-riel #drawer .drawer-buscar-icono,
+  html.kw-riel #drawer .drawer-buscar-icono svg {
+    width: 20px !important;
+    height: 20px !important;
+    flex-basis: 20px !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  html.kw-riel #drawer.buscando #drawer-buscar .drawer-buscar-toggle {
+    width: 38px !important;
+    min-width: 38px !important;
+    padding: 11px 9px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.kw-riel #drawer.buscando #drawer-buscar,
+  html.kw-riel #drawer.busqueda-cerrando #drawer-buscar .drawer-buscar-toggle {
+    animation: none;
+  }
+}
+
 /* Un solo título para todos los módulos del Hub. Firmas Digitales es la
    referencia: las reglas locales antiguas no deben cambiar ni su tamaño
    ni su posición al pasar de una pantalla a otra. */

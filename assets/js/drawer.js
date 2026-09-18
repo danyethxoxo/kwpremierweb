@@ -224,7 +224,8 @@
   const esPublico = modo === 'publico';
   const rutaPagina = location.pathname.replace(/\/+$/, '').toLowerCase();
   const esInicioHub = /\/portal\.html$/.test(rutaPagina);
-  const esIndiceDocumentos = /\/documentos\/(acuerdos|contratos)(?:\/index\.html)?$/.test(rutaPagina);
+  const esIndiceDocumentos = document.body.classList.contains('kw-indice-documentos') ||
+    /\/documentos\/(acuerdos|contratos)(?:\/index\.html)?$/.test(rutaPagina);
   // El riel: en las pantallas de trabajo el menú deja de ser un panel que
   // aparece y desaparece, y pasa a ser una franja de íconos siempre a la
   // vista que se ensancha al acercarse. En el sitio público no: ahí el
@@ -243,8 +244,28 @@
       paginaDocumental.style.setProperty('box-sizing', 'border-box', 'important');
       paginaDocumental.style.setProperty('min-height', '100vh', 'important');
       paginaDocumental.style.setProperty('padding-bottom', '12px', 'important');
-      pieDocumental.style.setProperty('margin-top', 'auto', 'important');
       pieDocumental.style.setProperty('flex-shrink', '0', 'important');
+      paginaDocumental.style.setProperty('position', 'relative', 'important');
+      function ajustarPieDocumental() {
+        pieDocumental.style.setProperty('position', 'static', 'important');
+        pieDocumental.style.setProperty('inset', 'auto', 'important');
+        pieDocumental.style.setProperty('margin-top', '48px', 'important');
+        const anterior = pieDocumental.previousElementSibling;
+        if (!anterior) return;
+        const finContenido = anterior.offsetTop + anterior.offsetHeight;
+        const inicioPieAlFondo = paginaDocumental.clientHeight - 12 - pieDocumental.offsetHeight;
+        if (finContenido + 48 <= inicioPieAlFondo) {
+          pieDocumental.style.setProperty('position', 'absolute', 'important');
+          pieDocumental.style.setProperty('left', '18px', 'important');
+          pieDocumental.style.setProperty('right', '24px', 'important');
+          pieDocumental.style.setProperty('bottom', '12px', 'important');
+          pieDocumental.style.setProperty('margin-top', '0', 'important');
+        }
+      }
+      requestAnimationFrame(() => requestAnimationFrame(ajustarPieDocumental));
+      window.addEventListener('resize', ajustarPieDocumental);
+      window.addEventListener('kw-auth-ready', () => requestAnimationFrame(ajustarPieDocumental));
+      window.setTimeout(ajustarPieDocumental, 600);
     }
   }
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
@@ -616,7 +637,7 @@
     if (searchCheck) searchCheck.checked = true;
     if (buscadorVaEnRiel()) {
       const riel = areaBuscarRiel.closest('.drawer');
-      riel.classList.remove('sin-hover');
+      riel.classList.remove('sin-hover', 'busqueda-cerrando');
       riel.classList.add('open', 'buscando');
     } else if (header) {
       header.classList.add('kw-buscando');
@@ -637,6 +658,8 @@
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
+      riel.classList.add('busqueda-cerrando');
+      window.setTimeout(() => riel.classList.remove('busqueda-cerrando'), 180);
       if (enRiel(riel)) riel.classList.add('sin-hover');
       riel.classList.remove('buscando', 'busqueda-con-resultados', 'open');
     }
@@ -690,6 +713,8 @@
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
+      riel.classList.add('busqueda-cerrando');
+      window.setTimeout(() => riel.classList.remove('busqueda-cerrando'), 180);
       riel.classList.remove('buscando', 'busqueda-con-resultados', 'sin-hover');
       riel.classList.add('open');
     }
