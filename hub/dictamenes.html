@@ -1144,6 +1144,38 @@
   .dic-nuevo-punto textarea:focus { outline: none; border-color: var(--red); }
 
   .dic-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--sp-4); }
+  /* En el formulario largo, Guardar permanece siempre disponible en un
+     pie fijo. El espacio reservado abajo evita que tape Observaciones o
+     el aviso que aparece después de guardar. */
+  body.en-editor #vista-editor { padding-bottom: 86px; }
+  body.en-editor #vista-editor > .dic-editor > .dic-acciones {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 180;
+    justify-content: flex-end;
+    align-items: center;
+    margin: 0;
+    padding: 12px 18px max(12px, env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.96);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -10px 28px rgba(35,27,27,.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  body.en-editor #e-guardar { min-width: 170px; justify-content: center; }
+  @media (min-width: 1024px) {
+    body.en-editor #vista-editor > .dic-editor > .dic-acciones { left: 292px; }
+  }
+  @media (max-width: 640px) {
+    body.en-editor #vista-editor { padding-bottom: 96px; }
+    body.en-editor #vista-editor > .dic-editor > .dic-acciones {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+    body.en-editor #e-guardar { flex: 1 1 auto; min-width: 0; }
+  }
   .dic-msg { border-radius: 12px; padding: 11px 13px; font-size: 13px; margin-bottom: var(--sp-3); display: none; }
   .dic-msg.error { display: block; background: rgba(198,32,39,0.08); color: #8a1212; }
   .dic-msg.ok { display: block; background: var(--pastel-menta); color: var(--pastel-menta-txt); }
