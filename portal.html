@@ -19,6 +19,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/kwpremierweb/assets/js/auth-guard.js"></script>
+<script src="/kwpremierweb/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/kwpremierweb/assets/css/kw-base.css?v=20260942s">
 <!-- Va DESPUÉS de kw-base.css: es quien reemplaza el vidrio sobre fondo
      oscuro por tarjeta blanca sobre lienzo claro, y para eso tiene que
@@ -37,7 +38,39 @@
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
+  .header-socials { display: flex; align-items: center; gap: 8px; }
 
+  /* El header existe como ancla para el menu movil, la campana y Panel
+     Master, pero nunca vuelve a dibujar la capsula. Esta regla aplica
+     desde el primer render y evita el destello al recargar. */
+  body.portal-page > header.kw-header,
+  body.portal-page > header.kw-header.kw-header-partido,
+  body.portal-page > header.kw-header .kw-header-capsula {
+    background: none !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  body.portal-page > header.kw-header.kw-header-partido { padding: 0; }
+  body.portal-page > header.kw-header .kw-header-capsula {
+    padding: 0;
+    min-height: 44px;
+  }
+  body.portal-page #kw-buscar-toggle { display: none !important; }
+  body.portal-page > header.kw-header:not(.kw-buscando) { pointer-events: none; }
+  body.portal-page > header.kw-header .kw-header-sueltos,
+  body.portal-page > header.kw-header .kw-header-sueltos * ,
+  body.portal-page > header.kw-header #kw-drawer-toggle { pointer-events: auto; }
+  #btn-admin.btn-admin-header {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--pastel-indigo-txt);
+    text-decoration: none;
+  }
+  .btn-admin-header svg { width: 18px; height: 18px; fill: none; }
 
   /* ── CONTENIDO ── */
   main {
@@ -45,19 +78,19 @@
     width: 100%;
     max-width: 1320px;
     margin: 0 auto;
-    padding: 24px clamp(22px, 4vw, 64px) 18px;
+    padding: 18px clamp(24px, 4vw, 64px) 18px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
   }
   /* El riel global empuja las páginas a la izquierda. El portal es un
      tablero y conserva su composición centrada. */
   html.kw-riel body.portal-page > main {
     margin-left: auto !important;
     margin-right: auto !important;
-    padding: 24px clamp(22px, 4vw, 64px) 18px !important;
+    padding: 18px clamp(24px, 4vw, 64px) 18px !important;
   }
-  .welcome { width: 100%; text-align: center; margin: 0 auto 20px; }
+  .welcome { width: 100%; text-align: center; margin: 0 auto 24px; }
   .welcome-title {
     font-size: clamp(24px, 2.4vw, 30px);
     font-weight: 700;
@@ -68,35 +101,32 @@
 
   .cards-grid {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: stretch;
-    gap: 12px;
+    gap: 16px;
   }
   .cards-grid .hover-card {
-    flex: 0 1 calc(20% - 10px);
-    min-width: 190px;
-    min-height: 132px;
-    padding: 16px 16px 14px;
+    flex: 0 1 calc(25% - 12px);
+    min-width: 220px;
+    min-height: 145px;
+    padding: 20px 20px 18px;
   }
   .cards-grid .hover-card-icon {
-    width: 38px;
-    height: 38px;
-    margin-bottom: 10px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
   }
   .cards-grid .hover-card-icon svg { width: 22px; height: 22px; }
-  .cards-grid .hover-card-title { font-size: 15px; margin-bottom: 5px; }
-  .cards-grid .hover-card-desc { font-size: 12px; line-height: 1.35; padding-right: 30px; }
-  .cards-grid .hover-card-arrow { right: 14px; bottom: 14px; width: 28px; height: 28px; }
+  .cards-grid .hover-card-title { font-size: 16px; margin-bottom: 6px; }
+  .cards-grid .hover-card-desc { font-size: 12.5px; line-height: 1.4; padding-right: 34px; }
+  .cards-grid .hover-card-arrow { right: 16px; bottom: 16px; width: 30px; height: 30px; }
 
-  @media (max-width: 1120px) {
-    .cards-grid .hover-card { flex-basis: calc(25% - 9px); }
-  }
-  @media (max-width: 860px) {
-    .cards-grid .hover-card { flex-basis: calc(33.333% - 8px); }
+  @media (max-width: 980px) {
+    .cards-grid .hover-card { flex-basis: calc(33.333% - 11px); }
   }
   footer { display: flex; justify-content: center; gap: 10px; padding: 12px 20px 16px; }
   /* Blancos con su borde, no gris sobre gris: el gris de antes se
@@ -117,8 +147,8 @@
   .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
 
   @media (max-width: 640px) {
-    main { padding: 18px 14px 24px; justify-content: flex-start; }
-    html.kw-riel body.portal-page > main { padding: 18px 14px 24px !important; }
+    main { padding: 82px 14px 24px; justify-content: flex-start; }
+    html.kw-riel body.portal-page > main { padding: 82px 14px 24px !important; }
     .welcome { margin-bottom: 14px; }
     .cards-grid { gap: 10px; }
     .cards-grid .hover-card {
@@ -135,10 +165,19 @@
 </head>
 <body class="portal-page">
 
+  <header class="kw-header" aria-label="Acciones del portal">
+    <div class="header-socials" style="margin-left:auto;">
+      <div id="notif-bell-slot"></div>
+      <a href="hub/admin.html" id="btn-admin" class="btn-admin-header" style="display:none;"
+         title="Panel Master" aria-label="Panel Master">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      </a>
+    </div>
+  </header>
 
   <main>
     <div class="welcome">
-      <div class="welcome-title">¿A dónde necesitas acceder?</div>
+      <h1 class="welcome-title">¿A dónde necesitas acceder?</h1>
     </div>
 
     <div class="cards-grid">
@@ -356,7 +395,9 @@
         .eq('id', userData.user.id)
         .single();
       if (perfil && (perfil.role === 'admin' || perfil.role === 'master' || perfil.role === 'staff')) {
+        const btnAdmin = document.getElementById('btn-admin');
         const cardLiderazgo = document.getElementById('card-liderazgo');
+        if (btnAdmin) btnAdmin.style.display = '';
         if (cardLiderazgo) cardLiderazgo.style.display = '';
       }
     } catch (e) {
