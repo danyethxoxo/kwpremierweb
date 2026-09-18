@@ -591,17 +591,24 @@
     `).join('');
   }
 
-  function cancelarTermino() {
+  function volverAlAccesoBuscar() {
     buscarInput.value = '';
     pintarResultados('');
-    requestAnimationFrame(() => buscarInput.focus());
+    buscarInput.blur();
+    if (searchCheck) searchCheck.checked = false;
+    if (header) header.classList.remove('kw-buscando');
+    if (areaBuscarRiel) {
+      const riel = areaBuscarRiel.closest('.drawer');
+      riel.classList.remove('buscando', 'busqueda-con-resultados', 'sin-hover');
+      riel.classList.add('open');
+    }
   }
 
   searchBtn.addEventListener('click', () => {
     if (busquedaAbierta()) cerrarBuscar();
     else abrirBuscar();
   });
-  buscarCerrar.addEventListener('click', cancelarTermino);
+  buscarCerrar.addEventListener('click', volverAlAccesoBuscar);
 
   buscarInput.addEventListener('input', () => {
     // La búsqueda del riel es universal. Los filtros particulares de
@@ -625,7 +632,8 @@
     if (!busquedaAbierta()) return;
     if ((header && header.contains(e.target)) ||
         (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
-    buscarInput.blur();
+    if (buscarInput.value.trim()) buscarInput.blur();
+    else volverAlAccesoBuscar();
   });
 
   const drawerIzq = document.getElementById('drawer');
