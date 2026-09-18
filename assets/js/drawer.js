@@ -632,8 +632,7 @@
     if (!busquedaAbierta()) return;
     if ((header && header.contains(e.target)) ||
         (areaBuscarRiel && areaBuscarRiel.contains(e.target))) return;
-    if (buscarInput.value.trim()) buscarInput.blur();
-    else volverAlAccesoBuscar();
+    volverAlAccesoBuscar();
   });
 
   const drawerIzq = document.getElementById('drawer');
