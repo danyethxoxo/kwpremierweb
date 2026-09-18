@@ -234,6 +234,19 @@
   if (!esPublico) document.documentElement.classList.add('kw-riel');
   if (esInicioHub) document.documentElement.classList.add('kw-riel-inicio');
   if (esIndiceDocumentos) document.body.classList.add('kw-indice-documentos');
+  if (esIndiceDocumentos) {
+    const paginaDocumental = document.querySelector('main.page');
+    const pieDocumental = paginaDocumental && paginaDocumental.querySelector(':scope > .footer');
+    if (paginaDocumental && pieDocumental) {
+      paginaDocumental.style.setProperty('display', 'flex', 'important');
+      paginaDocumental.style.setProperty('flex-direction', 'column', 'important');
+      paginaDocumental.style.setProperty('box-sizing', 'border-box', 'important');
+      paginaDocumental.style.setProperty('min-height', '100vh', 'important');
+      paginaDocumental.style.setProperty('padding-bottom', '12px', 'important');
+      pieDocumental.style.setProperty('margin-top', 'auto', 'important');
+      pieDocumental.style.setProperty('flex-shrink', '0', 'important');
+    }
+  }
   const navHtml = construirNav(esPublico ? NAV_PUBLICO : NAV_HUB);
   const homeHref = esPublico ? `${BASE}/index.html` : `${BASE}/portal.html`;
   const footerHtml = esPublico
