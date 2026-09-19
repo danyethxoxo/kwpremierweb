@@ -397,6 +397,7 @@
      del Panel, es otra pantalla. */
   .barra-superior {
     display: flex; align-items: center;
+    width: 100%;
     gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap;
   }
   /* El bloque de título ya no lleva el aire de abajo que traía cuando
@@ -405,7 +406,8 @@
   .barra-superior .panel-encabezado {
     width: 100%;
     flex: 1 1 100%;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     justify-content: flex-start;
     text-align: left;
@@ -450,15 +452,16 @@
   }
   @media (min-width: 1024px) {
     /* Misma geometría de Firmas, sin depender de :has(). */
-    html.kw-riel body.kw-panel-lateral { padding-left: 0 !important; }
+    html.kw-riel body.kw-panel-lateral { padding: 0 !important; margin: 0 !important; }
     body.kw-panel-lateral > .kw-header,
     body.kw-panel-lateral > footer { display: none; }
-    body.kw-panel-lateral > main.kw-page {
+    html.kw-riel body.kw-panel-lateral:not(.kw-header-en-flujo) > main.kw-page {
       width: 100%; max-width: none; min-height: 100vh;
       margin: 0 !important; padding: 0 !important;
     }
-    body.kw-panel-lateral .kw-lateral-shell { width: 100%; margin: 0; }
+    body.kw-panel-lateral .kw-lateral-shell { width: 100%; max-width: none; margin: 0; }
     body.kw-panel-lateral .kw-lateral-shell > .kw-lateral { margin: 0; }
+    body.kw-panel-lateral .kw-lateral-principal { width: 100%; }
     body.kw-panel-lateral .panel-encabezado { margin-bottom: 12px; }
   }
   .barra-superior .kw-tabs { margin-left: auto; }
@@ -3629,7 +3632,7 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/assets/js/drawer.js?v=20260919d" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20260919e" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260919c"></script>
 </body>
 </html>
