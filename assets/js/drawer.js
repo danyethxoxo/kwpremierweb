@@ -68,7 +68,7 @@
     { href: `${BASE}/hub/dictamenes.html`, label: 'Dictaminación de Expedientes', icon: 'dictamen' },
     { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
     { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo' },
-    { href: `${BASE}/hub/admin.html?v=20260919e#asesores`, label: 'Panel Máster', icon: 'tablero' },
+    { href: `${BASE}/hub/admin.html?v=20260919f#asesores`, label: 'Panel Máster', icon: 'tablero' },
   ];
 
   function estaActivo(href) {
@@ -102,8 +102,8 @@
     { label: 'Dictámenes', href: `${BASE}/hub/dictamenes.html`, cat: 'Hub', alias: 'dictamen expediente revision legal observaciones subsanar' },
     { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub' },
     { label: 'Reporta una Incidencia', href: `${BASE}/hub/tickets.html`, cat: 'Hub', alias: 'ticket soporte tecnico ayuda' },
-    { label: 'Asesores (Proceso de Alta)', href: `${BASE}/hub/admin.html?v=20260919e#asesores`, cat: 'Hub', alias: 'dar de alta asesor nuevo bajas back office celulas' },
-    { label: 'Panel de Admin', href: `${BASE}/hub/admin.html?v=20260919e`, cat: 'Hub', alias: 'administracion' },
+    { label: 'Asesores (Proceso de Alta)', href: `${BASE}/hub/admin.html?v=20260919f#asesores`, cat: 'Hub', alias: 'dar de alta asesor nuevo bajas back office celulas' },
+    { label: 'Panel de Admin', href: `${BASE}/hub/admin.html?v=20260919f`, cat: 'Hub', alias: 'administracion' },
     { label: 'Mi Perfil', href: `${BASE}/perfil.html`, cat: 'Hub', alias: 'micrositio perfil publico' },
 
     { label: 'Carta de Terminación Anticipada', href: `${BASE}/documentos/acuerdos/cartaterminacion.html`, cat: 'Acuerdos', alias: 'terminar cancelar' },
@@ -117,7 +117,7 @@
 
     { label: 'Acuerdo de Renta', href: `${BASE}/documentos/contratos/renta.html`, cat: 'Contratos', alias: 'renta arrendamiento contrato' },
     { label: 'Contrato de Compraventa PROFECO', href: `${BASE}/documentos/contratos/profeco.html`, cat: 'Contratos', alias: 'profeco compraventa venta residencial' },
-    { label: 'Operatividad', href: `${BASE}/hub/admin.html?v=20260919e#operatividad`, cat: 'Panel', alias: 'captaciones control hoja registro exclusivas comisiones command' },
+    { label: 'Operatividad', href: `${BASE}/hub/admin.html?v=20260919f#operatividad`, cat: 'Panel', alias: 'captaciones control hoja registro exclusivas comisiones command' },
 
     { label: 'ABC · Seguimiento de asesores', href: `${BASE}/documentos/internos/dt/abc-tracker.html`, cat: 'Internos (DT)', alias: 'abc tracker adopcion tecnologia avance palomear checklist dt' },
     { label: 'GPS · Programa Trimestral', href: `${BASE}/documentos/internos/gps.html`, cat: 'Internos (Liderazgo)', alias: 'gps trimestral seguimiento pc program' },
