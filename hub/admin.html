@@ -419,7 +419,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 8px;
     margin-left: auto;
   }
   .panel-encabezado-acciones .kw-menu-ancla { flex: 0 0 auto; }
@@ -447,6 +447,19 @@
     .panel-encabezado { align-items: center; }
     .panel-encabezado-acciones { gap: 7px; }
     .panel-encabezado-acciones .btn-nuevo-asesor { padding-inline: 12px; }
+  }
+  @media (min-width: 1024px) {
+    /* Misma geometría de Firmas, sin depender de :has(). */
+    html.kw-riel body.kw-panel-lateral { padding-left: 0 !important; }
+    body.kw-panel-lateral > .kw-header,
+    body.kw-panel-lateral > footer { display: none; }
+    body.kw-panel-lateral > main.kw-page {
+      width: 100%; max-width: none; min-height: 100vh;
+      margin: 0 !important; padding: 0 !important;
+    }
+    body.kw-panel-lateral .kw-lateral-shell { width: 100%; margin: 0; }
+    body.kw-panel-lateral .kw-lateral-shell > .kw-lateral { margin: 0; }
+    body.kw-panel-lateral .panel-encabezado { margin-bottom: 12px; }
   }
   .barra-superior .kw-tabs { margin-left: auto; }
   /* Cuando el renglón se parte (pantallas medianas), el título se lleva
@@ -997,12 +1010,12 @@
   .btn-nuevo-asesor {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 9px 16px; border-radius: 999px;
-    background: var(--red); color: #fff; text-decoration: none;
-    font-size: 13px; font-weight: 700; white-space: nowrap;
-    box-shadow: 0 4px 14px rgba(40,12,12,0.2);
-    transition: transform var(--t-medio), filter var(--t-rapido);
+    border: none; background: var(--red); color: #fff; text-decoration: none;
+    font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    transition: transform var(--t-medio);
   }
-  .btn-nuevo-asesor:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .btn-nuevo-asesor:hover { transform: translateY(-1px); }
   .btn-nuevo-asesor svg { width: 15px; height: 15px; }
 
   /* Lo que va en lugar del botón en la hoja de bajas. */
@@ -1052,7 +1065,7 @@
   }
 </style>
 </head>
-<body>
+<body class="kw-panel-lateral">
 
   <header class="kw-header">
     <span class="kw-header-title" id="panel-title-header"></span>
@@ -3616,7 +3629,7 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/assets/js/drawer.js?v=20260919c" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20260919d" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260919c"></script>
 </body>
 </html>
