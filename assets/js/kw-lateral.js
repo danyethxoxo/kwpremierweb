@@ -84,6 +84,11 @@
     const botones = document.querySelectorAll('[data-kw-menu-principal]');
     if (!lateral || !drawer || !menuDrawer || !botones.length) return;
 
+    // Las pantallas que tienen una barra propia arrancan con ella visible.
+    // drawer.js mantiene el menú global abierto en escritorio; si no se
+    // corrige aquí, ese estado tapa los filtros y el switch parece ausente.
+    if (escritorio.matches) drawer.classList.remove('open');
+
     prepararFuentes(lateral);
     if (!fuentes.length && lateral.classList.contains('kw-lateral-universal')) {
       const contenedor = lateral.querySelector('.kw-lateral-contenido');
@@ -99,8 +104,24 @@
         evento.preventDefault();
         evento.stopPropagation();
         document.body.classList.add('kw-lateral-switch-usado');
-        menuDrawer.click();
+        if (escritorio.matches) drawer.classList.add('open');
+        else menuDrawer.click();
       });
+    });
+
+    // Dentro del menú global, la misma hamburguesa regresa a la barra de
+    // filtros. El manejador del riel fijo en drawer.js no lo cierra por sí
+    // solo, por eso esta integración pertenece al componente lateral.
+    menuDrawer.addEventListener('click', function (evento) {
+      if (!escritorio.matches || !drawer.classList.contains('open')) return;
+      evento.preventDefault();
+      evento.stopPropagation();
+      document.body.classList.add('kw-lateral-switch-usado');
+      drawer.classList.remove('open');
+    });
+
+    escritorio.addEventListener('change', function (evento) {
+      if (evento.matches) drawer.classList.remove('open');
     });
 
     let cierrePendiente = 0;
