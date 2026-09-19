@@ -107,6 +107,11 @@
     const sincronizar = function () {
       const abierto = drawer.classList.contains('open');
       window.clearTimeout(cierrePendiente);
+      botones.forEach(function (boton) {
+        boton.setAttribute('aria-pressed', abierto ? 'true' : 'false');
+        boton.setAttribute('aria-label', abierto ? 'Volver a herramientas de la página' : 'Cambiar a accesos rápidos');
+        boton.setAttribute('title', abierto ? 'Volver a herramientas de la página' : 'Cambiar a accesos rápidos');
+      });
 
       if (abierto) {
         document.body.classList.remove('menu-global-cerrando');

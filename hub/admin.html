@@ -368,7 +368,7 @@
 <script src="/assets/js/auth-guard.js"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260918b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260829q">
-<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260916e">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260919a">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
 <script src="/assets/js/kw-ui.js?v=20260831b"></script>
@@ -405,10 +405,20 @@
   .barra-superior .panel-encabezado {
     width: 100%;
     flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .barra-superior .panel-encabezado > .kw-page-titulo {
+    flex: 0 1 auto;
+    margin-right: 0;
+    text-align: left;
   }
   .panel-encabezado-acciones {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 10px;
     margin-left: auto;
   }
@@ -1061,7 +1071,7 @@
           <a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/assets/img/logo-kw-premier.png" alt="KW Premier">
           </a>
-          <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar al menú del Hub" title="Cambiar al menú del Hub">
+          <button type="button" class="kw-lateral-menu" id="panel-lateral-switch" data-kw-menu-principal aria-label="Cambiar a accesos rápidos" title="Cambiar a accesos rápidos" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
           </button>
         </div>
@@ -1069,7 +1079,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="search" id="panel-lateral-buscar" placeholder="Buscar" oninput="buscarDesdePanelLateral(this.value)">
         </label>
-        <nav class="kw-lateral-nav" id="panel-lateral-nav" aria-label="Secciones del panel"></nav>
+        <nav class="kw-lateral-nav" id="panel-lateral-nav" aria-label="Secciones del panel">
+          <button type="button" data-panel="asesores">Asesores</button>
+          <button type="button" data-panel="usuarios">Agregar usuarios</button>
+          <button type="button" data-panel="documentos">Documentos</button>
+          <button type="button" data-panel="operatividad">Operatividad</button>
+          <a class="kw-lateral-enlace" href="base-asesores.html">Base de datos</a>
+        </nav>
       </aside>
       <div class="kw-lateral-principal">
       <div class="barra-superior">
@@ -1491,23 +1507,15 @@
 
   function prepararPanelLateral() {
     const nav = document.getElementById('panel-lateral-nav');
-    const tabs = document.querySelectorAll('#panel-tabs .kw-tab');
     if (!nav) return;
-    nav.replaceChildren();
-    tabs.forEach((tab) => {
-      const boton = document.createElement('button');
-      boton.type = 'button';
-      boton.dataset.panel = tab.dataset.tab;
-      boton.textContent = tab.textContent.trim();
-      boton.addEventListener('click', () => cambiarTabPanel(tab.dataset.tab));
-      nav.appendChild(boton);
+    nav.querySelectorAll('button[data-panel]').forEach((boton) => {
+      const tab = document.querySelector('#panel-tabs .kw-tab[data-tab="' + boton.dataset.panel + '"]');
+      if (!tab) {
+        boton.remove();
+        return;
+      }
+      boton.onclick = () => cambiarTabPanel(boton.dataset.panel);
     });
-
-    const base = document.createElement('a');
-    base.className = 'kw-lateral-enlace';
-    base.href = 'base-asesores.html';
-    base.textContent = 'Base de datos';
-    nav.appendChild(base);
   }
 
   function sincronizarPanelLateral(tab) {
@@ -3609,6 +3617,6 @@
   }
 </script>
 <script src="/assets/js/drawer.js?v=20260937o" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20260916d"></script>
+<script src="/assets/js/kw-lateral.js?v=20260919a"></script>
 </body>
 </html>
