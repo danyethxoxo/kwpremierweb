@@ -7,7 +7,7 @@
 // navegacion. Asi conserva el mismo comportamiento sin encimarse en el
 // encabezado.
 (function () {
-  const BASE = '/kwpremierweb';
+  const BASE = '';
   let notificaciones = [];
   let abierta = false;
   let backdropEl = null;

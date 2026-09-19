@@ -3,7 +3,7 @@
 //
 // Uso: en la página, después de auth-guard.js,
 //
-//   <script src="/kwpremierweb/assets/js/kw-prellenar.js"
+//   <script src="/assets/js/kw-prellenar.js"
 //           data-campos="f-asesor-envia"></script>
 //
 // data-campos acepta varios ids separados por coma.

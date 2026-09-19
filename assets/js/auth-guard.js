@@ -12,9 +12,9 @@
 // se esconde hasta saber si hay sesión, y sin esto lo que se ve
 // entretanto es un blanco.
 (function () {
-  // El sitio se publica en /kwpremierweb/ (GitHub Pages de proyecto,
+  // El sitio se publica en / (GitHub Pages de proyecto,
   // no dominio propio) - si eso cambia algún día, ajustar solo aquí.
-  var BASE_PATH = '/kwpremierweb';
+  var BASE_PATH = '';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   var MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';

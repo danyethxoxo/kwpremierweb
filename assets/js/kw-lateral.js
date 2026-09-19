@@ -24,8 +24,8 @@
     lateral.setAttribute('aria-label', 'Filtros y herramientas de ' + tituloPagina());
     lateral.innerHTML =
       '<div class="kw-lateral-cabecera">' +
-        '<a class="kw-lateral-logo" href="/kwpremierweb/portal.html" aria-label="Ir al inicio del Hub">' +
-          '<img src="/kwpremierweb/assets/img/logo-kw-premier.png" alt="KW Premier">' +
+        '<a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">' +
+          '<img src="/assets/img/logo-kw-premier.png" alt="KW Premier">' +
         '</a>' +
         '<button type="button" class="kw-lateral-menu" data-kw-menu-principal ' +
           'aria-label="Mostrar menú del Hub" title="Mostrar menú del Hub">' + iconoSwitch() + '</button>' +

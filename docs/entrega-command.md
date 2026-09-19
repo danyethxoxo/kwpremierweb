@@ -79,7 +79,7 @@ correo con las instrucciones, y la llave por WhatsApp o por otro medio.
 
 Ya está publicada y escrita para él, no hace falta preparar nada más:
 
-- **Documentación completa:** https://danyethxoxo.github.io/kwpremierweb/api.html
+- **Documentación completa:** https://www.kwpremieroficial.com/api.html
 - **Colección de Postman:** `docs/kwpremier-api.postman_collection.json`
   (adjuntar el archivo; le sirve para probar sin escribir código)
 
@@ -119,7 +119,7 @@ integración.
 > inventario de Command en el sitio de KW Premier. Te paso todo para que
 > lo revises.
 >
-> Documentación: https://danyethxoxo.github.io/kwpremierweb/api.html
+> Documentación: https://www.kwpremieroficial.com/api.html
 > (te adjunto también una colección de Postman por si quieres probar sin
 > escribir código)
 >
