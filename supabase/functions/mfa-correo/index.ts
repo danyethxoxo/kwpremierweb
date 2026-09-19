@@ -2,11 +2,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <onboarding@resend.dev>'
 const ALLOWED_ORIGINS = (Deno.env.get('MFA_ALLOWED_ORIGINS') ||
-  'https://danyethxoxo.github.io,http://localhost:3000,http://127.0.0.1:5500')
+  'https://www.kwpremieroficial.com,https://kwpremieroficial.com,https://danyethxoxo.github.io,http://localhost:3000,http://127.0.0.1:5500')
   .split(',').map((value) => value.trim()).filter(Boolean)
 const CODE_MINUTES = 5
 const SESSION_HOURS = 4

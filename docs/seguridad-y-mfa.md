@@ -11,7 +11,8 @@ Orden de despliegue:
 2. Desplegar `supabase/functions/mfa-correo/index.ts` con JWT verification activa.
 3. Confirmar que existen los secrets `RESEND_API_KEY` y `EMAIL_FROM`.
 4. Si se usa otro dominio, configurar `MFA_ALLOWED_ORIGINS` como lista separada
-   por comas. El valor predeterminado permite GitHub Pages y desarrollo local.
+   por comas. El valor predeterminado permite `kwpremieroficial.com`, GitHub
+   Pages y desarrollo local.
 5. Probar con una cuenta normal antes de exigir MFA a mas usuarios.
 
 La migracion conserva a los usuarios de la version anterior usando de forma
