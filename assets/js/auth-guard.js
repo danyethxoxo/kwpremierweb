@@ -17,6 +17,7 @@
   var BASE_PATH = '/kwpremierweb';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
+  var MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
   var INACTIVITY_MS = 4 * 60 * 60 * 1000; // 4 horas sin uso -> se cierra sola
   var ACTIVITY_KEY = 'kw_last_activity';
 
@@ -138,18 +139,35 @@
   // vigente no debe dejar ver ninguna página protegida, aunque quien la
   // tenga llegue aquí navegando directo por la URL (no por login).
   function faltaSegundoPaso(session) {
-    var meta = session.user && session.user.app_metadata;
-    var activo = meta && meta.mfa_correo_activo === true;
-    var okHasta = meta && meta.mfa_correo_ok_hasta;
-    var vigente = okHasta && new Date(okHasta).getTime() > Date.now();
-    return !!(activo && !vigente);
+    return fetch(MFA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ accion: 'estado' }),
+      cache: 'no-store'
+    }).then(function (respuesta) {
+      // Compatibilidad durante el despliegue coordinado: la version anterior
+      // de la funcion no conoce `estado`. Solo en ese caso se usa el control
+      // antiguo; cualquier otro fallo permanece cerrado por seguridad.
+      if (respuesta.status === 400) {
+        var meta = session.user && session.user.app_metadata;
+        var activo = meta && meta.mfa_correo_activo === true;
+        var okHasta = meta && meta.mfa_correo_ok_hasta;
+        return { activo: activo, verificado: !activo || (okHasta && new Date(okHasta).getTime() > Date.now()) };
+      }
+      if (!respuesta.ok) throw new Error('No se pudo comprobar el segundo paso');
+      return respuesta.json();
+    }).then(function (estado) {
+      return estado.activo === true && estado.verificado !== true;
+    });
   }
 
   window.kwSupabase.auth.getSession().then(function (result) {
     var session = result && result.data && result.data.session;
     if (!session) return redirectToLogin();
-    if (faltaSegundoPaso(session)) return redirectToLogin();
-    continuarConSesion();
+    return faltaSegundoPaso(session).then(function (falta) {
+      if (falta) return redirectToLogin();
+      continuarConSesion();
+    });
   }).catch(redirectToLogin);
 
   function continuarConSesion() {

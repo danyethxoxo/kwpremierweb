@@ -176,7 +176,7 @@
       </form>
 
       <form id="mfa-form" style="display:none;">
-        <p class="sub" style="margin-bottom:14px;">Te mandamos un código a tu correo. Escríbelo aquí.</p>
+        <p class="sub" id="mfa-destino" style="margin-bottom:14px;">Te mandamos un código a tu correo alternativo. Escríbelo aquí.</p>
         <div class="field">
           <label>Código</label>
           <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
@@ -246,38 +246,44 @@
       body: JSON.stringify(cuerpo),
     });
     const datos = await res.json();
-    if (!res.ok) throw new Error(datos.error || 'Ocurrió un error.');
+    if (!res.ok) {
+      const error = new Error(datos.error || 'Ocurrió un error.');
+      error.status = res.status;
+      throw error;
+    }
     return datos;
   }
 
-  // Después de una contraseña correcta (o al llegar con sesión ya
-  // abierta) falta ver si esa cuenta tiene verificación en dos pasos
-  // activada. Se guarda en app_metadata de la sesión (solo la Edge
-  // Function mfa-correo la puede escribir, con la llave de servicio),
-  // así que no es algo que el navegador se pueda inventar solo.
-  // auth-guard.js hace la misma comprobación en el resto del sitio,
-  // por si alguien se salta este paso navegando directo a otra URL.
+  // La Edge Function comprueba el session_id actual. La migración 085
+  // aplica el mismo candado en RLS para que no se pueda eludir llamando
+  // directamente a la API de Supabase.
   async function revisarSegundoPaso() {
     try {
       const { data } = await sb.auth.getSession();
       const sesion = data && data.session;
-      const meta = sesion && sesion.user.app_metadata;
-      const activo = meta && meta.mfa_correo_activo === true;
-      const okHasta = meta && meta.mfa_correo_ok_hasta;
-      const vigente = okHasta && new Date(okHasta).getTime() > Date.now();
-      if (activo && !vigente) {
+      if (!sesion) return;
+      let estado;
+      try {
+        estado = await llamarMFA({ accion: 'estado' }, sesion.access_token);
+      } catch (estadoError) {
+        if (estadoError.status !== 400) throw estadoError;
+        const meta = sesion.user && sesion.user.app_metadata;
+        const activoAnterior = meta && meta.mfa_correo_activo === true;
+        const okAnterior = meta && meta.mfa_correo_ok_hasta;
+        estado = { activo: activoAnterior, verificado: !activoAnterior || (okAnterior && new Date(okAnterior).getTime() > Date.now()) };
+      }
+      if (estado.activo && !estado.verificado) {
         mostrarFormMFA();
         try {
-          await llamarMFA({ accion: 'enviar' }, sesion.access_token);
+          const envio = await llamarMFA({ accion: 'enviar' }, sesion.access_token);
+          document.getElementById('mfa-destino').textContent = 'Te mandamos un código a ' + envio.enviado_a + '. Escríbelo aquí.';
         } catch (err) {
           showMsg(err.message || 'No se pudo mandar el código.', 'error');
         }
         return;
       }
     } catch (err) {
-      // Si esta comprobación falla, se deja pasar: la sesión de
-      // cualquier forma queda atrapada por auth-guard.js en la
-      // siguiente página, o por RLS del lado de la base.
+      throw new Error(err.message || 'No se pudo comprobar el segundo paso.');
     }
     try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
     mostrarCargando();
@@ -313,7 +319,6 @@
     try {
       const { data } = await sb.auth.getSession();
       await llamarMFA({ accion: 'verificar', codigo }, data.session.access_token);
-      await sb.auth.refreshSession();
       try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
       mostrarCargando();
       location.replace(getRedirectTarget());

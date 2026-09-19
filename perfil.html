@@ -305,13 +305,17 @@
     <!-- Módulo 5: Verificación en dos pasos (MFA por correo) -->
     <div class="card">
       <h2>Verificación en dos pasos</h2>
-      <p class="kw-nota">Un código que te llega a tu correo personal, además de tu contraseña. Muy recomendado si tienes rol Master o Admin. No hace falta instalar nada.</p>
+      <p class="kw-nota">Usa un correo alternativo, distinto al que utilizas para iniciar sesión. Cada navegador debe confirmar su propio código.</p>
       <div id="mfa-estado">Revisando…</div>
 
       <div id="mfa-enroll" style="display:none;margin-top:14px;">
-        <p class="kw-nota">Te mandamos un código a tu correo. Escríbelo aquí:</p>
+        <div class="field"><label>Correo alternativo</label>
+          <input type="email" id="mfa-correo-alternativo" autocomplete="email" maxlength="254" placeholder="correo.personal@ejemplo.com" />
+        </div>
+        <button type="button" class="btn-guardar" id="btn-mfa-enviar" onclick="enviarActivacionMFA()">Enviar código</button>
+        <p class="kw-nota" id="mfa-instruccion" style="display:none;margin-top:14px;">Escribe el código de 6 dígitos:</p>
         <div class="field"><label>Código de 6 dígitos</label>
-          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" disabled />
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn-guardar" id="btn-mfa-confirmar" onclick="confirmarActivacionMFA()">Confirmar código</button>
@@ -838,6 +842,12 @@
 
   const MFA_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/mfa-correo';
 
+  function escapeHtmlMFA(valor) {
+    return String(valor).replace(/[&<>"']/g, function (caracter) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[caracter];
+    });
+  }
+
   async function llamarMFA(cuerpo) {
     const { data: sesion } = await window.kwSupabase.auth.getSession();
     const res = await fetch(MFA_URL, {
@@ -853,13 +863,13 @@
   async function cargarEstadoMFA() {
     const estadoDiv = document.getElementById('mfa-estado');
     try {
-      const { data } = await window.kwSupabase.auth.getSession();
-      const meta = data && data.session && data.session.user.app_metadata;
-      const activo = !!(meta && meta.mfa_correo_activo === true);
-      if (activo) {
+      const estado = await llamarMFA({ accion: 'estado' });
+      if (estado.activo) {
         estadoDiv.innerHTML =
-          '<span class="rol-badge" style="background:#eaf7ea;color:#1a7a1a;">Activada</span> ' +
+          '<span class="rol-badge" style="background:#eaf7ea;color:#1a7a1a;">Activada</span> <span>Correo: ' + escapeHtmlMFA(estado.enviado_a || '') + '</span> ' +
+          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-cambiar">Cambiar correo</button>' +
           '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-desactivar">Desactivar</button>';
+        document.getElementById('btn-mfa-cambiar').onclick = iniciarActivacionMFA;
         document.getElementById('btn-mfa-desactivar').onclick = desactivarMFA;
       } else {
         estadoDiv.innerHTML =
@@ -874,14 +884,29 @@
 
   async function iniciarActivacionMFA() {
     setMsg('mfa-msg', '', '');
+    document.getElementById('mfa-correo-alternativo').value = '';
+    document.getElementById('mfa-codigo').value = '';
+    document.getElementById('mfa-codigo').disabled = true;
+    document.getElementById('mfa-instruccion').style.display = 'none';
+    document.getElementById('mfa-enroll').style.display = 'block';
+    document.getElementById('mfa-correo-alternativo').focus();
+  }
+
+  async function enviarActivacionMFA() {
+    const correo = document.getElementById('mfa-correo-alternativo').value.trim();
+    const btn = document.getElementById('btn-mfa-enviar');
+    if (!correo) return setMsg('mfa-msg', 'Escribe el correo alternativo.', 'error');
+    btn.disabled = true;
     try {
-      await llamarMFA({ accion: 'enviar' });
-      document.getElementById('mfa-codigo').value = '';
-      document.getElementById('mfa-enroll').style.display = 'block';
-      setMsg('mfa-msg', 'Te mandamos un código a tu correo.', 'ok');
+      const envio = await llamarMFA({ accion: 'preparar', correo_alternativo: correo });
+      document.getElementById('mfa-codigo').disabled = false;
+      document.getElementById('mfa-instruccion').style.display = 'block';
+      setMsg('mfa-msg', 'Código enviado a ' + envio.enviado_a + '.', 'ok');
       document.getElementById('mfa-codigo').focus();
     } catch (err) {
       setMsg('mfa-msg', err.message || 'No se pudo mandar el código.', 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -895,8 +920,7 @@
     }
     btn.disabled = true;
     try {
-      await llamarMFA({ accion: 'verificar', codigo });
-      await window.kwSupabase.auth.refreshSession();
+      await llamarMFA({ accion: 'confirmar', codigo });
       document.getElementById('mfa-enroll').style.display = 'none';
       await cargarEstadoMFA();
     } catch (err) {
@@ -915,7 +939,6 @@
     if (!ok) return;
     try {
       await llamarMFA({ accion: 'desactivar' });
-      await window.kwSupabase.auth.refreshSession();
       await cargarEstadoMFA();
     } catch (err) {
       setMsg('mfa-msg', err.message || 'No se pudo desactivar.', 'error');

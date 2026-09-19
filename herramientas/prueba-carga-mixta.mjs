@@ -12,6 +12,8 @@
 // documentos de verdad ahí (por eso hicimos el proyecto aparte).
 //
 // Cómo se corre:
+//     $env:KW_TEST_USERS_JSON='[{"email":"...","password":"..."}]'
+//     $env:KW_TEST_MASTER_JSON='{"email":"...","password":"..."}'
 //     node herramientas/prueba-carga-mixta.mjs
 //
 // ─────────────────────────────────────────────────────────────
@@ -19,14 +21,20 @@
 const URL_BASE = 'https://fuqhibgktfktnhefsbzz.supabase.co';
 const LLAVE = 'sb_publishable_iWCdkZkvF_mMGp8D1_VjFQ_DyoxlpYL';
 
-// Las 3 que van a estar "creando documentos" al mismo tiempo.
-const CUENTAS_ASESOR = [
-  { email: 'prueba2@kwmexico.mx', password: '123456789' },
-  { email: 'prueba3@kwmexico.mx', password: '123456789' },
-  { email: 'prueba4@kwmexico.mx', password: '123456789' },
-];
-// La que está en "usuarios" y "firmas" al mismo tiempo.
-const CUENTA_MASTER = { email: 'prueba5@kwmexico.mx', password: '123456789' };
+function leerCuentaEnv(nombre, esperaArreglo) {
+  const valor = process.env[nombre];
+  if (!valor) throw new Error(`Falta ${nombre}. Las credenciales de prueba no deben guardarse en Git.`);
+  const datos = JSON.parse(valor);
+  const cuentas = esperaArreglo ? datos : [datos];
+  if (!Array.isArray(cuentas) || cuentas.length === 0 || cuentas.some((c) => !c?.email || !c?.password)) {
+    throw new Error(`${nombre} no tiene el formato esperado.`);
+  }
+  return esperaArreglo ? cuentas : cuentas[0];
+}
+
+// Las cuentas se suministran al proceso y nunca se escriben en el repositorio.
+const CUENTAS_ASESOR = leerCuentaEnv('KW_TEST_USERS_JSON', true);
+const CUENTA_MASTER = leerCuentaEnv('KW_TEST_MASTER_JSON', false);
 
 const DOCS_POR_ASESOR = 7; // 3 × 7 = 21 documentos, ~"20 al mismo tiempo"
 const CONSULTAS_MASTER = 10; // veces que revisa usuarios / firmas mientras tanto
