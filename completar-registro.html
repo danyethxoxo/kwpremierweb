@@ -164,7 +164,19 @@
             </button>
           </div>
         </div>
-        <button type="submit" class="btn-submit" id="submit-btn">Crear cuenta</button>
+        <div class="field">
+          <label>Correo de seguridad</label>
+          <input type="email" id="correo-seguridad" autocomplete="email" maxlength="254" required placeholder="Un correo diferente al de acceso" />
+        </div>
+        <p class="sub" style="margin-bottom:12px;">Enviaremos un código para comprobar este correo y confiar en este dispositivo durante 7 días de actividad.</p>
+        <button type="submit" class="btn-submit" id="submit-btn">Enviar código de seguridad</button>
+        <div id="paso-codigo" style="display:none;margin-top:18px;">
+          <div class="field">
+            <label for="codigo-seguridad">Código de 6 dígitos</label>
+            <input type="text" id="codigo-seguridad" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+          </div>
+          <button type="button" class="btn-submit" id="confirmar-codigo" disabled>Verificar y crear cuenta</button>
+        </div>
       </form>
     </div>
   </main>
@@ -174,6 +186,38 @@
   const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const BASE_PATH = '';
+  const MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
+  const DEVICE_KEY = 'kw_device_token_v1';
+  let registroPendiente = null;
+  let volatileDeviceToken = '';
+
+  function getDeviceToken() {
+    try {
+      const stored = localStorage.getItem(DEVICE_KEY);
+      if (/^[A-Za-z0-9_-]{43}$/.test(stored || '')) return stored;
+    } catch (e) {}
+    if (volatileDeviceToken) return volatileDeviceToken;
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    let binary = '';
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
+    return volatileDeviceToken;
+  }
+
+  async function llamarMFA(cuerpo) {
+    const { data } = await sb.auth.getSession();
+    if (!data?.session) throw new Error('Tu sesión de invitación expiró.');
+    const res = await fetch(MFA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.session.access_token },
+      body: JSON.stringify({ ...cuerpo, dispositivo_token: getDeviceToken() }),
+    });
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || 'No se pudo completar la verificación.');
+    return datos;
+  }
 
   function togglePasswordVisibility(id, btn) {
     const input = document.getElementById(id);
@@ -210,6 +254,7 @@
     const apellido = document.getElementById('apellido').value.trim();
     const password = document.getElementById('password').value;
     const password2 = document.getElementById('password2').value;
+    const correoSeguridad = document.getElementById('correo-seguridad').value.trim();
     const submitBtn = document.getElementById('submit-btn');
 
     if (password !== password2) {
@@ -226,17 +271,41 @@
       const { error: passError } = await sb.auth.updateUser({ password });
       if (passError) throw passError;
 
-      const { error: profileError } = await sb
-        .from('profiles')
-        .update({ nombre, apellido })
-        .eq('id', userId);
-      if (profileError) throw profileError;
-
-      showMsg('¡Listo! Entrando...', 'ok');
-      setTimeout(() => { location.replace(BASE_PATH + '/portal.html'); }, 800);
+      const envio = await llamarMFA({ accion: 'preparar', correo_alternativo: correoSeguridad });
+      registroPendiente = { userId, nombre, apellido };
+      document.querySelectorAll('#completar-form > .field, #completar-form > p.sub, #submit-btn').forEach((elemento) => { elemento.style.display = 'none'; });
+      document.getElementById('paso-codigo').style.display = 'block';
+      showMsg('Código enviado a ' + envio.enviado_a + '. Revisa también spam o promociones.', 'ok');
+      document.getElementById('codigo-seguridad').focus();
     } catch (err) {
       showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
       submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('codigo-seguridad').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    document.getElementById('confirmar-codigo').disabled = this.value.length !== 6;
+  });
+
+  document.getElementById('confirmar-codigo').addEventListener('click', async function () {
+    if (!registroPendiente) return;
+    const codigo = document.getElementById('codigo-seguridad').value;
+    const btn = this;
+    btn.disabled = true;
+    clearMsg();
+    try {
+      await llamarMFA({ accion: 'confirmar', codigo });
+      const { error: profileError } = await sb.from('profiles').update({
+        nombre: registroPendiente.nombre,
+        apellido: registroPendiente.apellido,
+      }).eq('id', registroPendiente.userId);
+      if (profileError) throw profileError;
+      showMsg('¡Cuenta protegida! Entrando...', 'ok');
+      setTimeout(() => { location.replace(BASE_PATH + '/portal.html'); }, 800);
+    } catch (err) {
+      showMsg(err.message || 'Código incorrecto. Intenta nuevamente.', 'error');
+      btn.disabled = false;
     }
   });
 

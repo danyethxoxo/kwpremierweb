@@ -8,14 +8,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
-// El sitio se publica en /kwpremierweb/ (GitHub Pages de proyecto).
-const REDIRECT_TO = 'https://danyethxoxo.github.io/kwpremierweb/completar-registro.html'
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const REDIRECT_TO = 'https://www.kwpremieroficial.com/completar-registro.html'
 
 const ROLES_ASIGNABLES = ['admin', 'staff', 'asociado']
 
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://www.kwpremieroficial.com',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -81,13 +80,31 @@ Deno.serve(async (req) => {
     const newUserId = inviteData?.user?.id
     if (!newUserId) return respond({ error: 'La invitación no devolvió un usuario válido.' }, 500)
 
+    // Una fila inactiva obliga al invitado a verificar un correo de
+    // seguridad antes de que PostgREST le permita acceder a datos. Se crea
+    // antes de asignar el rol para que un fallo parcial siempre quede cerrado.
+    const { error: mfaError } = await admin.from('mfa_metodos').upsert({
+      user_id: newUserId,
+      canal: 'correo',
+      destino: null,
+      activo: false,
+      updated_at: new Date().toISOString(),
+    })
+    if (mfaError) {
+      const { error: cleanupError } = await admin.auth.admin.deleteUser(newUserId)
+      if (cleanupError) console.error('No se pudo eliminar la invitacion incompleta', newUserId, cleanupError.message)
+      return respond({ error: cleanupError
+        ? 'La invitacion quedo incompleta y debe eliminarse desde Auth antes de reintentar.'
+        : 'No se pudo preparar la seguridad de la cuenta; la invitacion fue cancelada.' }, 500)
+    }
+
     const { error: updateError } = await admin
       .from('profiles')
       .update({ role: rol })
       .eq('id', newUserId)
 
     if (updateError) {
-      return respond({ error: 'Usuario invitado, pero no se pudo asignar el rol: ' + (updateError.message || 'error desconocido') }, 500)
+      return respond({ error: 'Usuario bloqueado por MFA, pero no se pudo asignar el rol: ' + (updateError.message || 'error desconocido') }, 500)
     }
 
     return respond({ ok: true, user_id: newUserId })

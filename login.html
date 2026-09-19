@@ -193,6 +193,23 @@
   const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const DEVICE_KEY = 'kw_device_token_v1';
+  let volatileDeviceToken = '';
+
+  function getDeviceToken() {
+    try {
+      const stored = localStorage.getItem(DEVICE_KEY);
+      if (/^[A-Za-z0-9_-]{43}$/.test(stored || '')) return stored;
+    } catch (e) {}
+    if (volatileDeviceToken) return volatileDeviceToken;
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    let binary = '';
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
+    return volatileDeviceToken;
+  }
 
   function getRedirectTarget() {
     // El sitio se publica en / (GitHub Pages de proyecto).
@@ -264,7 +281,7 @@
       if (!sesion) return;
       let estado;
       try {
-        estado = await llamarMFA({ accion: 'estado' }, sesion.access_token);
+        estado = await llamarMFA({ accion: 'estado', dispositivo_token: getDeviceToken() }, sesion.access_token);
       } catch (estadoError) {
         if (estadoError.status !== 400) throw estadoError;
         const meta = sesion.user && sesion.user.app_metadata;
@@ -272,10 +289,15 @@
         const okAnterior = meta && meta.mfa_correo_ok_hasta;
         estado = { activo: activoAnterior, verificado: !activoAnterior || (okAnterior && new Date(okAnterior).getTime() > Date.now()) };
       }
+      if (estado.requerido && !estado.activo) {
+        mostrarCargando();
+        location.replace('/completar-registro.html');
+        return;
+      }
       if (estado.activo && !estado.verificado) {
         mostrarFormMFA();
         try {
-          const envio = await llamarMFA({ accion: 'enviar' }, sesion.access_token);
+          const envio = await llamarMFA({ accion: 'enviar', dispositivo_token: getDeviceToken() }, sesion.access_token);
           document.getElementById('mfa-destino').textContent = 'Te mandamos un código a ' + envio.enviado_a + '. Escríbelo aquí.';
         } catch (err) {
           showMsg(err.message || 'No se pudo mandar el código.', 'error');
@@ -318,7 +340,7 @@
     btn.disabled = true;
     try {
       const { data } = await sb.auth.getSession();
-      await llamarMFA({ accion: 'verificar', codigo }, data.session.access_token);
+      await llamarMFA({ accion: 'verificar', codigo, dispositivo_token: getDeviceToken() }, data.session.access_token);
       try { localStorage.setItem('kw_last_activity', String(Date.now())); } catch (e) {}
       mostrarCargando();
       location.replace(getRedirectTarget());
@@ -326,6 +348,10 @@
       showMsg(err.message || 'Código incorrecto, intenta de nuevo.', 'error');
       btn.disabled = false;
     }
+  });
+
+  document.getElementById('mfa-codigo').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
   });
 
   document.getElementById('auth-form').addEventListener('submit', async function (e) {

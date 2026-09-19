@@ -18,8 +18,26 @@
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   var MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
-  var INACTIVITY_MS = 4 * 60 * 60 * 1000; // 4 horas sin uso -> se cierra sola
+  var INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias sin uso
   var ACTIVITY_KEY = 'kw_last_activity';
+  var DEVICE_KEY = 'kw_device_token_v1';
+  var volatileDeviceToken = '';
+
+  function getDeviceToken() {
+    try {
+      var current = localStorage.getItem(DEVICE_KEY);
+      if (/^[A-Za-z0-9_-]{43}$/.test(current || '')) return current;
+    } catch (e) {}
+    if (volatileDeviceToken) return volatileDeviceToken;
+    var bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    var binary = '';
+    bytes.forEach(function (byte) { binary += String.fromCharCode(byte); });
+    volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
+    return volatileDeviceToken;
+  }
+  window.kwGetDeviceToken = getDeviceToken;
 
   // ── Pantalla de carga ──────────────────────────────────────
   // Se arma desde aquí, y no desde el HTML de cada página, para que
@@ -142,7 +160,7 @@
     return fetch(MFA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
-      body: JSON.stringify({ accion: 'estado' }),
+      body: JSON.stringify({ accion: 'estado', dispositivo_token: getDeviceToken() }),
       cache: 'no-store'
     }).then(function (respuesta) {
       // Compatibilidad durante el despliegue coordinado: la version anterior
@@ -157,6 +175,10 @@
       if (!respuesta.ok) throw new Error('No se pudo comprobar el segundo paso');
       return respuesta.json();
     }).then(function (estado) {
+      if (estado.requerido === true && estado.activo !== true) {
+        location.replace(BASE_PATH + '/completar-registro.html');
+        return new Promise(function () {});
+      }
       return estado.activo === true && estado.verificado !== true;
     });
   }

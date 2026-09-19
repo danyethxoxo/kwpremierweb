@@ -817,11 +817,15 @@
       if (codigo) cambios.nonce = codigo;
       const { error } = await window.kwSupabase.auth.updateUser(cambios);
       if (error) throw error;
-      setMsg('password-msg', 'Contraseña actualizada.', 'ok');
+      await llamarMFA({ accion: 'revocar_todos' });
+      try { localStorage.removeItem('kw_device_token_v1'); } catch (e) {}
+      setMsg('password-msg', 'Contraseña actualizada. Cerrando las sesiones por seguridad…', 'ok');
       document.getElementById('nueva-password').value = '';
       document.getElementById('nueva-password2').value = '';
       document.getElementById('password-codigo').value = '';
       codigoWrap.style.display = 'none';
+      await window.kwSupabase.auth.signOut({ scope: 'global' });
+      setTimeout(function () { location.replace('/login.html'); }, 900);
     } catch (err) {
       const detalle = String((err && (err.code || err.message)) || '');
       if (!codigo && /reauth|nonce|security purposes|recent/i.test(detalle)) {
@@ -856,7 +860,9 @@
     const res = await fetch(MFA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sesion.session.access_token },
-      body: JSON.stringify(cuerpo),
+      body: JSON.stringify(Object.assign({}, cuerpo, {
+        dispositivo_token: window.kwGetDeviceToken ? window.kwGetDeviceToken() : ''
+      })),
     });
     const datos = await res.json();
     if (!res.ok) throw new Error(datos.error || 'Ocurrió un error.');
@@ -871,9 +877,11 @@
         estadoDiv.innerHTML =
           '<span class="rol-badge" style="background:#eaf7ea;color:#1a7a1a;">Activada</span> <span>Correo: ' + escapeHtmlMFA(estado.enviado_a || '') + '</span> ' +
           '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-cambiar">Cambiar correo</button>' +
-          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-desactivar">Desactivar</button>';
+          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-olvidar">Olvidar este dispositivo</button>' +
+          '<button type="button" class="btn-guardar" style="margin-left:10px;" id="btn-mfa-revocar">Revocar todos</button>';
         document.getElementById('btn-mfa-cambiar').onclick = iniciarActivacionMFA;
-        document.getElementById('btn-mfa-desactivar').onclick = desactivarMFA;
+        document.getElementById('btn-mfa-olvidar').onclick = olvidarDispositivoActual;
+        document.getElementById('btn-mfa-revocar').onclick = revocarTodosDispositivos;
       } else {
         estadoDiv.innerHTML =
           '<span class="rol-badge" style="background:#f2f2f2;color:#666;">No activada</span> ' +
@@ -973,14 +981,27 @@
     if (evento.key === 'Enter' && this.value.length === 6) confirmarActivacionMFA();
   });
 
-  async function desactivarMFA() {
-    const ok = await window.kwUI.confirm('¿Desactivar la verificación en dos pasos? Ya no se te va a pedir el código al entrar.');
+  async function olvidarDispositivoActual() {
+    const ok = await window.kwUI.confirm('¿Olvidar este dispositivo? Se cerrará la sesión y pedirá un código al volver a entrar.');
     if (!ok) return;
     try {
-      await llamarMFA({ accion: 'desactivar' });
-      await cargarEstadoMFA();
+      await llamarMFA({ accion: 'revocar_actual' });
+      try { localStorage.removeItem('kw_device_token_v1'); } catch (e) {}
+      window.kwLogout();
     } catch (err) {
-      setMsg('mfa-msg', err.message || 'No se pudo desactivar.', 'error');
+      setMsg('mfa-msg', err.message || 'No se pudo olvidar el dispositivo.', 'error');
+    }
+  }
+
+  async function revocarTodosDispositivos() {
+    const ok = await window.kwUI.confirm('¿Revocar todos los dispositivos? Todas las sesiones deberán confirmar un código nuevamente.');
+    if (!ok) return;
+    try {
+      await llamarMFA({ accion: 'revocar_todos' });
+      try { localStorage.removeItem('kw_device_token_v1'); } catch (e) {}
+      window.kwLogout();
+    } catch (err) {
+      setMsg('mfa-msg', err.message || 'No se pudieron revocar los dispositivos.', 'error');
     }
   }
 

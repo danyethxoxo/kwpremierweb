@@ -15,6 +15,11 @@ Orden de despliegue:
    Pages y desarrollo local.
 5. Probar con una cuenta normal antes de exigir MFA a mas usuarios.
 
+Para la version de dispositivos confiables, ejecutar despues
+`supabase/sql/086_dispositivos_confiables_mfa.sql` y desplegar tanto
+`mfa-correo` como `invitar-usuario`. Los invitados creados despues de ese
+despliegue no pueden consultar datos hasta verificar su correo de seguridad.
+
 La migracion conserva a los usuarios de la version anterior usando de forma
 temporal su correo de acceso. Cada persona puede cambiarlo por uno alternativo
 desde Perfil.
@@ -26,9 +31,14 @@ desde Perfil.
 - Un codigo vence en cinco minutos, funciona una vez y se bloquea tras cinco
   intentos; solo se permiten cinco envios por hora.
 - Copiar el token a otro navegador no autoriza ese segundo `session_id`.
+- Un navegador nuevo solicita codigo; el mismo navegador permanece confiable
+  mientras registre acceso al menos una vez cada siete dias.
+- Borrar el almacenamiento del navegador, usar modo privado, olvidar el
+  dispositivo o cambiar/restablecer la contrasena vuelve a exigir codigo.
 - Una consulta REST o RPC antes de verificar devuelve que se requiere el
   segundo paso.
-- Desactivar o cambiar el correo requiere una sesion que ya completo MFA.
+- La verificacion no se puede desactivar. Cambiar el correo exige una sesion
+  que ya completo MFA y revoca los dispositivos anteriores.
 - El cliente nunca recibe el correo completo ni errores internos de Resend.
 
 ## Recomendaciones adicionales
