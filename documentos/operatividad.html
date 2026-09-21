@@ -52,22 +52,42 @@
   /* En escritorio los filtros viven dentro de la barra con switch, igual
      que Firmas Digitales. En celular regresan a esta barra por medio de
      kw-lateral.js, por eso se conservan sus estilos originales. */
-  .kw-lateral-contenido .filtros {
+  .kw-lateral-contenido .filtros,
+  .operatividad-panel .filtros {
     padding: 0; border: 0; border-radius: 0; background: transparent;
   }
-  .kw-lateral-contenido .filtro {
+  .kw-lateral-contenido .filtro,
+  .operatividad-panel .filtro {
     width: 100%; height: 38px; padding: 0 11px; border: 1px solid var(--border);
     border-radius: 10px; background: #fff; text-align: left;
   }
   .kw-lateral-contenido .filtro.activo,
-  .kw-lateral-contenido .filtro.activo:hover {
+  .kw-lateral-contenido .filtro.activo:hover,
+  .operatividad-panel .filtro.activo,
+  .operatividad-panel .filtro.activo:hover {
     border-color: rgba(163,0,0,.28); background: var(--pastel-rojo); color: var(--red);
     box-shadow: none;
   }
+  .operatividad-panel .filtros { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   @media (min-width: 1024px) {
-    .barra:has(.kw-lateral-filtro-origen) { display: none; }
-    .page { min-height: 100vh; padding: 18px; display: flex; flex-direction: column; }
+    html.kw-riel body:has(.operatividad-panel) { padding-left: 0 !important; }
+    body:has(.operatividad-panel) > header.kw-header { display: none; }
+    html.kw-riel .page.kw-lateral-shell { min-height: 100vh; padding: 0 !important; }
+    .operatividad-panel { grid-column: 1; }
+    .operatividad-principal { grid-column: 2; min-width: 0; min-height: 100vh; padding: 18px; display: flex; flex-direction: column; }
     .tabla-caja { flex: 1 1 auto; min-height: 0; max-height: none; }
+    html.kw-riel body:has(.operatividad-panel):not(.menu-global-abierto):not(.menu-global-cerrando) #drawer { width: 292px; visibility: hidden; pointer-events: none; opacity: 0; transform: translateX(-8px); }
+    html.kw-riel body:has(.operatividad-panel).menu-global-abierto #drawer,
+    html.kw-riel body:has(.operatividad-panel).menu-global-cerrando #drawer { width: 292px; visibility: visible; z-index: 203; }
+    html.kw-riel body:has(.operatividad-panel).menu-global-abierto #drawer { opacity: 1; transform: translateX(0); }
+    html.kw-riel body:has(.operatividad-panel).menu-global-cerrando #drawer { opacity: 0; transform: translateX(-8px); }
+    body.menu-global-abierto .operatividad-panel { opacity: 0; pointer-events: none; transform: translateX(-8px); }
+    .operatividad-panel { transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1); }
+  }
+  @media (max-width: 1023px) {
+    .kw-lateral-shell > .operatividad-panel { display: flex !important; position: static; height: auto; min-height: 0; margin: 72px 12px 0; padding: 0 12px 12px; border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--sombra-1); }
+    .operatividad-panel .kw-lateral-cabecera { display: none; }
+    .operatividad-principal { padding: 12px; }
   }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
@@ -180,10 +200,10 @@
   .barra-btn.tenue:hover { background: #fafafa; }
 
   /* ── Resumen de lo que se está viendo ── */
-  .resumen-capsula {
-    margin-bottom: 14px; padding: 12px 18px; border: 1px solid var(--border);
-    border-radius: var(--r-card); background: #fff; box-shadow: var(--sombra-1);
+  .operatividad-resumen-capsula {
+    margin-bottom: 14px; padding: 12px 18px; display: flex; align-items: center;
   }
+  .operatividad-principal > .barra { display: none; }
   .resumen { display: flex; flex-wrap: wrap; gap: 22px; margin: 0; }
   .resumen-dato { color: var(--text); }
   .resumen-valor { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
@@ -330,7 +350,27 @@
     </a>
   </header>
 
-  <main class="page">
+  <main class="page kw-lateral-shell">
+    <aside class="kw-lateral operatividad-panel" aria-label="Filtros de operatividad">
+      <div class="kw-lateral-cabecera">
+        <a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">
+          <img src="/assets/img/logo-kw-premier.png" alt="KW Premier">
+        </a>
+        <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar a accesos rápidos" title="Cambiar a accesos rápidos" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
+        </button>
+      </div>
+      <label class="kw-lateral-buscador" id="operatividad-lateral-buscar" data-kw-buscador-propio aria-label="Buscar en operatividad">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="buscador-input" placeholder="Buscar" autocomplete="off" />
+      </label>
+      <div class="filtros" id="filtros-tipo">
+        <button type="button" class="filtro activo" data-tipo="">Todas</button>
+        <button type="button" class="filtro" data-tipo="VENTA">Venta</button>
+        <button type="button" class="filtro" data-tipo="RENTA">Renta</button>
+      </div>
+    </aside>
+    <div class="kw-lateral-principal operatividad-principal">
     <div class="kw-page-encabezado con-acciones operatividad-encabezado">
       <h1 class="kw-page-titulo">Operatividad</h1>
       <div class="kw-page-acciones">
@@ -361,25 +401,15 @@
            le pide que no esconda este campo, porque aquí vive pegado a
            los filtros y a los botones, y esconderlo dejaría media barra
            coja. -->
-      <label class="kw-lateral-buscador" id="operatividad-lateral-buscar" aria-label="Buscar en operatividad">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" id="buscador-input" placeholder="Buscar" autocomplete="off" />
-      </label>
-
-      <div class="filtros" id="filtros-tipo">
-        <button type="button" class="filtro activo" data-tipo="">Todas</button>
-        <button type="button" class="filtro" data-tipo="VENTA">Venta</button>
-        <button type="button" class="filtro" data-tipo="RENTA">Renta</button>
-      </div>
-
     </div>
 
-    <div class="resumen-capsula">
+    <div class="kw-card operatividad-resumen-capsula">
       <div class="resumen" id="resumen"></div>
     </div>
 
     <div class="tabla-caja" id="caja">
       <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+    </div>
     </div>
   </main>
 
@@ -892,9 +922,6 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
     drawerScript.onload = function () {
       var lateralScript = document.createElement('script');
       lateralScript.src = '/assets/js/kw-lateral.js?v=20260920a';
-      lateralScript.dataset.filtros = '#operatividad-lateral-buscar|#filtros-tipo';
-      lateralScript.dataset.titulo = 'Operatividad';
-      lateralScript.dataset.sinContexto = 'true';
       document.body.appendChild(lateralScript);
     };
     document.body.appendChild(drawerScript);
