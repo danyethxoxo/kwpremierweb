@@ -58,8 +58,6 @@
   ];
 
   const NAV_HUB = [
-    { href: `${BASE}/propiedades.html`, label: 'Propiedades', icon: 'llave' },
-    { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto' },
     { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
     { href: `${BASE}/hub/calendario.html`, label: 'Calendario KW Premier', icon: 'calendar' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
@@ -100,7 +98,6 @@
     { label: 'Creador de formatos', href: `${BASE}/hub/plantillas.html`, cat: 'Hub', alias: 'plantillas' },
     { label: 'Firmas Digitales', href: `${BASE}/hub/firmas.html`, cat: 'Hub', alias: 'firma electronica weetrust firmar documento' },
     { label: 'Dictámenes', href: `${BASE}/hub/dictamenes.html`, cat: 'Hub', alias: 'dictamen expediente revision legal observaciones subsanar' },
-    { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub' },
     { label: 'Reporta una Incidencia', href: `${BASE}/hub/tickets.html`, cat: 'Hub', alias: 'ticket soporte tecnico ayuda' },
     { label: 'Asesores (Proceso de Alta)', href: `${BASE}/hub/admin.html?v=20260919f#asesores`, cat: 'Hub', alias: 'dar de alta asesor nuevo bajas back office celulas' },
     { label: 'Panel de Admin', href: `${BASE}/hub/admin.html?v=20260919f`, cat: 'Hub', alias: 'administracion' },
@@ -124,7 +121,6 @@
     { label: 'Constancia ABC de la Tecnología', href: `${BASE}/documentos/internos/abc.html`, cat: 'Internos (Liderazgo)', alias: 'abc tecnologia' },
 
     { label: 'Inicio', href: `${BASE}/index.html`, cat: 'Sitio público' },
-    { label: 'Propiedades', href: `${BASE}/propiedades.html`, cat: 'Sitio público', alias: 'inventario listados' },
     { label: 'Asesores', href: `${BASE}/asesores.html`, cat: 'Sitio público' },
     { label: 'Liderazgo', href: `${BASE}/staff.html`, cat: 'Sitio público' },
     { label: 'Nuestro Market Center', href: `${BASE}/market-center.html`, cat: 'Sitio público', alias: 'oficina mc' },
