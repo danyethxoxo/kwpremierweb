@@ -66,6 +66,8 @@
   .stat-num { font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -0.5px; }
   .stat-lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .stat.activa .stat-num, .stat.activa .stat-lbl { color: var(--tono); }
+  #stats-filtros > div.stat { cursor: default; }
+  #stats-filtros > div.stat:hover { transform: none; box-shadow: var(--sombra-1); border-color: color-mix(in srgb, var(--tono) 48%, transparent); }
   @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
   /* ── Barra de herramientas ── */
@@ -150,6 +152,9 @@
     #contenido > .toolbar { margin: 0; min-height: 0; }
     .kw-lateral-contenido .buscador { width: 100%; min-width: 0; max-width: none; flex: none; }
     .kw-lateral-contenido .buscador input { height: 38px; }
+    /* Con poca altura, los filtros deben desplazar la barra, no encimarse. */
+    .kw-lateral-contenido { flex-shrink: 0; }
+    .kw-lateral-contenido > * { flex-shrink: 0; }
     .kw-lateral-contenido .sugerencias { height: var(--alto-sugerencias); max-height: none; }
     .kw-lateral-contenido .stats { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 0; order: 1; }
     .kw-lateral-contenido .stat { width: 100%; min-height: 38px; padding: 7px 11px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; border-width: 1px; border-radius: 9px; box-shadow: none; }
@@ -381,18 +386,18 @@
     <div id="avisos"></div>
 
     <div class="stats" id="stats-filtros">
-      <button type="button" class="stat activos" data-stat="activos" aria-pressed="false">
+      <div class="stat activos">
         <span class="stat-num" id="s-asesores">·</span><span class="stat-lbl">Asesores activos</span>
-      </button>
-      <button type="button" class="stat adopcion" data-stat="adopcion" aria-pressed="false">
+      </div>
+      <div class="stat adopcion">
         <span class="stat-num" id="s-adopcion">·</span><span class="stat-lbl">Adopción del MC</span>
-      </button>
+      </div>
       <button type="button" class="stat completos" data-stat="completos" aria-pressed="false">
         <span class="stat-num" id="s-completos">·</span><span class="stat-lbl">Al 100%</span>
       </button>
-      <button type="button" class="stat temas" data-stat="temas" aria-pressed="false" title="Mostrar asesores con temas pendientes">
+      <div class="stat temas">
         <span class="stat-num" id="s-temas">·</span><span class="stat-lbl">Temas del ABC</span>
-      </button>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -443,7 +448,6 @@
   var pinned = new Map(); // kwid -> asesor, cuando hay al menos uno la lista se reduce a esto
   var pestana = 'activos'; // 'activos' | 'inactivos'
   var statFiltro = null; // únicamente 'completos' filtra la lista
-  var statsMarcados = new Set(); // los demás conteos solo conservan estado visual
   var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
   var guardadosPendientes = new Set();
@@ -530,6 +534,7 @@
   // es una elección explícita que no debería desaparecer si además
   // está de baja o no coincide con el DT elegido en el otro filtro.
   function filtrados() {
+    if (statFiltro === 'completos') return asesores.filter(function (a) { return pctDe(a.kwid) === 100; });
     if (pinned.size) return Array.from(pinned.values());
     var q = norm(document.getElementById('busq').value.trim());
     var dt = document.getElementById('f-dt').value;
@@ -538,7 +543,6 @@
       if (pestana === 'inactivos' && a.activo) return false;
       if (dt && (a.dt_asignado || '') !== dt) return false;
       var pct = pctDe(a.kwid);
-      if (statFiltro === 'completos' && pct !== 100) return false;
       if (q) {
         var texto = norm(a.nombre + ' ' + a.kwid);
         var palabras = q.split(/\s+/);
@@ -569,9 +573,7 @@
 
   function refrescarStatsActivos() {
     document.querySelectorAll('#stats-filtros [data-stat]').forEach(function (b) {
-      var activa = b.dataset.stat === 'completos'
-        ? statFiltro === 'completos'
-        : statsMarcados.has(b.dataset.stat);
+      var activa = statFiltro === 'completos';
       b.classList.toggle('activa', activa);
       b.setAttribute('aria-pressed', activa ? 'true' : 'false');
     });
@@ -1306,17 +1308,10 @@
   document.getElementById('f-dt').addEventListener('change', pintar);
 
   document.getElementById('stats-filtros').addEventListener('click', function (e) {
-    var stat = e.target.closest('[data-stat]');
+    var stat = e.target.closest('button[data-stat="completos"]');
     if (!stat) return;
-    var clave = stat.dataset.stat;
-    if (clave === 'completos') {
-      statFiltro = statFiltro === 'completos' ? null : 'completos';
-      pintar();
-      return;
-    }
-    if (statsMarcados.has(clave)) statsMarcados.delete(clave);
-    else statsMarcados.add(clave);
-    refrescarStatsActivos();
+    statFiltro = statFiltro === 'completos' ? null : 'completos';
+    pintar();
   });
 
   document.getElementById('abc-tabs').addEventListener('click', function (e) {
