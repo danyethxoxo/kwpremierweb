@@ -24,6 +24,7 @@
 <script src="/assets/js/notif-bell.js?v=20260915a"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260918b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260829q">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260916e">
 <script src="/assets/js/kw-ui.js?v=20260831b"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
@@ -38,6 +39,31 @@
   .page { flex: 1; width: 100%; margin: 0 auto; padding: 94px 22px 60px; }
   .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
   .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
+  .operatividad-encabezado { margin-bottom: 18px; }
+  .btn-nueva-captacion {
+    display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
+    border: 0; border-radius: 999px; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(138,0,0,0.22); transition: transform 0.15s, background 0.15s;
+  }
+  .btn-nueva-captacion:hover { background: #760000; transform: translateY(-1px); }
+  .btn-nueva-captacion svg { width: 15px; height: 15px; }
+
+  /* En escritorio los filtros viven dentro de la barra con switch, igual
+     que Firmas Digitales. En celular regresan a esta barra por medio de
+     kw-lateral.js, por eso se conservan sus estilos originales. */
+  .kw-lateral-contenido .filtros {
+    padding: 0; border: 0; border-radius: 0; background: transparent;
+  }
+  .kw-lateral-contenido .filtro {
+    width: 100%; height: 38px; padding: 0 11px; border: 1px solid var(--border);
+    border-radius: 10px; background: #fff; text-align: left;
+  }
+  .kw-lateral-contenido .filtro.activo,
+  .kw-lateral-contenido .filtro.activo:hover {
+    border-color: rgba(163,0,0,.28); background: var(--pastel-rojo); color: var(--red);
+    box-shadow: none;
+  }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
      conserva únicamente la herramienta y se usan las mismas tarjetas,
@@ -296,8 +322,28 @@
   </header>
 
   <main class="page">
-    <h1 class="page-title">Operatividad</h1>
-    <p class="page-desc">Las captaciones del Market Center, con el desglose completo de cada una.</p>
+    <div class="kw-page-encabezado con-acciones operatividad-encabezado">
+      <h1 class="kw-page-titulo">Operatividad</h1>
+      <div class="kw-page-acciones">
+        <div class="kw-menu-ancla">
+          <button type="button" class="kw-btn-icono" id="btn-engrane"
+            title="Más acciones" aria-label="Más acciones"
+            aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <div class="kw-menu" id="engrane-menu" role="menu" hidden>
+            <button type="button" class="kw-menu-op" role="menuitem" id="btn-csv">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Descargar CSV</span>
+            </button>
+          </div>
+        </div>
+        <button type="button" class="btn-nueva-captacion btn-nuevo" id="btn-nueva">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Nueva captación</span>
+        </button>
+      </div>
+    </div>
 
     <div class="barra">
       <!-- El id es el que drawer.js reconoce como "el buscador de esta
@@ -317,15 +363,6 @@
         <button type="button" class="filtro" data-tipo="RENTA">Renta</button>
       </div>
 
-      <button type="button" class="barra-btn tenue" id="btn-csv">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="barra-btn-txt">Descargar</span>
-      </button>
-
-      <button type="button" class="barra-btn" id="btn-nueva">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span class="barra-btn-txt">Nueva captación</span>
-      </button>
     </div>
 
     <div class="resumen" id="resumen"></div>
@@ -809,6 +846,29 @@ document.getElementById('modal-editar').addEventListener('click', function (e) {
   if (e.target === this) cerrarEditor();
 });
 
+function abrirEngrane(abrir) {
+  var menu = document.getElementById('engrane-menu');
+  var boton = document.getElementById('btn-engrane');
+  var quiere = abrir === undefined ? menu.hidden : abrir;
+  menu.hidden = !quiere;
+  boton.setAttribute('aria-expanded', quiere ? 'true' : 'false');
+  if (quiere && window.kwUI) window.kwUI.colgarMenu(boton, menu);
+}
+
+document.getElementById('btn-engrane').addEventListener('click', function (e) {
+  e.stopPropagation();
+  abrirEngrane();
+});
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.kw-menu-ancla')) abrirEngrane(false);
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !document.getElementById('engrane-menu').hidden) {
+    abrirEngrane(false);
+    document.getElementById('btn-engrane').focus();
+  }
+});
+
 if (document.documentElement.classList.contains('kw-auth-ok')) arrancar();
 else window.addEventListener('kw-auth-ready', arrancar, { once: true });
 </script>
@@ -819,6 +879,13 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
     var drawerScript = document.createElement('script');
     drawerScript.src = '/assets/js/drawer.js?v=20260937o';
     drawerScript.dataset.menu = 'hub';
+    drawerScript.onload = function () {
+      var lateralScript = document.createElement('script');
+      lateralScript.src = '/assets/js/kw-lateral.js?v=20260916d';
+      lateralScript.dataset.filtros = '#filtros-tipo';
+      lateralScript.dataset.titulo = 'Operatividad';
+      document.body.appendChild(lateralScript);
+    };
     document.body.appendChild(drawerScript);
   }
 </script>
