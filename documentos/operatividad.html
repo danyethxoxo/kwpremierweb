@@ -64,6 +64,9 @@
     border-color: rgba(163,0,0,.28); background: var(--pastel-rojo); color: var(--red);
     box-shadow: none;
   }
+  @media (min-width: 1024px) {
+    .barra:has(.kw-lateral-filtro-origen) { display: none; }
+  }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
      conserva únicamente la herramienta y se usan las mismas tarjetas,
@@ -338,10 +341,10 @@
             </button>
           </div>
         </div>
-        <button type="button" class="btn-nueva-captacion btn-nuevo" id="btn-nueva">
+        <a href="/documentos/nueva-captacion.html" class="btn-nueva-captacion btn-nuevo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nueva captación</span>
-        </button>
+        </a>
       </div>
     </div>
 
@@ -352,10 +355,10 @@
            le pide que no esconda este campo, porque aquí vive pegado a
            los filtros y a los botones, y esconderlo dejaría media barra
            coja. -->
-      <div class="buscador" data-kw-buscador-propio>
+      <label class="kw-lateral-buscador" id="operatividad-lateral-buscar" aria-label="Buscar en operatividad">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="buscador-input" placeholder="Buscar por asociado, folio, dirección o cliente" autocomplete="off" />
-      </div>
+        <input type="search" id="buscador-input" placeholder="Buscar" autocomplete="off" />
+      </label>
 
       <div class="filtros" id="filtros-tipo">
         <button type="button" class="filtro activo" data-tipo="">Todas</button>
@@ -837,7 +840,6 @@ document.querySelectorAll('#filtros-tipo .filtro').forEach(function (b) {
   });
 });
 
-document.getElementById('btn-nueva').addEventListener('click', function () { abrirEditor(null); });
 document.getElementById('btn-csv').addEventListener('click', descargar);
 document.getElementById('btn-cancelar').addEventListener('click', cerrarEditor);
 document.getElementById('btn-guardar').addEventListener('click', guardar);
@@ -882,8 +884,9 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
     drawerScript.onload = function () {
       var lateralScript = document.createElement('script');
       lateralScript.src = '/assets/js/kw-lateral.js?v=20260916d';
-      lateralScript.dataset.filtros = '#filtros-tipo';
+      lateralScript.dataset.filtros = '#operatividad-lateral-buscar|#filtros-tipo';
       lateralScript.dataset.titulo = 'Operatividad';
+      lateralScript.dataset.sinContexto = 'true';
       document.body.appendChild(lateralScript);
     };
     document.body.appendChild(drawerScript);
