@@ -26,6 +26,7 @@
      quedaba en negro mientras el resto del sitio ya iba en claro.
      kw-ui.css no hace falta enlazarlo: kw-base.css ya lo trae. -->
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260902d">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260916e">
 <style>
   /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
@@ -139,6 +140,22 @@
     .toolbar-filtros { width: 100%; flex-wrap: wrap; }
     .toolbar .kw-select { flex: 1; min-width: 160px; }
     .abc-tabs-texto { width: 100%; }
+  }
+
+  @media (min-width: 1024px) {
+    body.kw-lateral-universal-activa > main.page { max-width: none; margin: 0; padding: 94px 24px 60px; }
+    .kw-lateral-contenido .buscador { width: 100%; min-width: 0; max-width: none; flex: none; }
+    .kw-lateral-contenido .buscador input { height: 38px; }
+    .kw-lateral-contenido .stats { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 0; order: 2; }
+    .kw-lateral-contenido .stat { width: 100%; min-height: 38px; padding: 7px 11px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; border-width: 1px; border-radius: 9px; box-shadow: none; }
+    .kw-lateral-contenido .stat-num { min-width: 32px; font-size: 16px; }
+    .kw-lateral-contenido .stat-lbl { margin: 0; font-size: 12px; }
+    .kw-lateral-contenido .toolbar-filtros { width: 100%; order: 1; }
+    .kw-lateral-contenido .toolbar-filtros .kw-select,
+    .kw-lateral-contenido .toolbar-filtros select { width: 100% !important; min-width: 0; }
+    .kw-lateral-contenido .abc-tabs-texto { width: 100%; margin: 0; align-self: auto; justify-content: stretch; order: 3; }
+    .kw-lateral-contenido .abc-tab { flex: 1; padding-top: 4px; }
+    .toolbar { justify-content: flex-end; }
   }
 
   /* ── Chips de asesores fijados (filtro múltiple) ── */
@@ -358,7 +375,7 @@
     </div>
 
     <div class="toolbar">
-      <div class="buscador">
+      <div class="buscador" data-kw-buscador-propio>
         <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="busq" placeholder="Buscar por nombre o KWID…" autocomplete="off" />
         <button type="button" class="input-clear" id="busq-clear" aria-label="Limpiar búsqueda" hidden>
@@ -407,6 +424,7 @@
   var statsMarcados = new Set(); // los demás conteos solo conservan estado visual
   var filaEls = new Map(); // kwid -> nodo .fila del último render, para actualizar sin repintar todo
   var puedeEditar = false;
+  var guardadosPendientes = new Set();
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -888,10 +906,14 @@
   async function alPalomear(input, kwid, temaId) {
     if (!puedeEditar) return;
     var quiere = input.checked;
-    var antes = !!avance.get(llave(kwid, temaId));
+    var clave = llave(kwid, temaId);
+    var antes = !!avance.get(clave);
 
-    avance.set(llave(kwid, temaId), quiere);
-    if (!quiere) avance.delete(llave(kwid, temaId));
+    input.disabled = true;
+    guardadosPendientes.add(clave);
+
+    avance.set(clave, quiere);
+    if (!quiere) avance.delete(clave);
     input.classList.add('guardando');
     actualizarProgresoFila(kwid);
     pintarStats();
@@ -899,14 +921,15 @@
     try {
       var { data: ses } = await window.kwSupabase.auth.getSession();
       var uid = ses && ses.session && ses.session.user ? ses.session.user.id : null;
-      var { error } = await window.kwSupabase.from('abc_avance').upsert({
+      var { data: guardado, error } = await window.kwSupabase.from('abc_avance').upsert({
         kwid: kwid,
         tema_id: temaId,
         completado: quiere,
         marcado_por: uid,
         marcado_en: new Date().toISOString(),
-      }, { onConflict: 'kwid,tema_id' });
+      }, { onConflict: 'kwid,tema_id' }).select('completado').single();
       if (error) throw error;
+      if (!guardado || guardado.completado !== quiere) throw new Error('El servidor no confirmó el cambio');
 
       input.classList.remove('guardando');
       limpiarAviso();
@@ -917,8 +940,17 @@
       actualizarProgresoFila(kwid);
       pintarStats();
       avisar('No se pudo guardar el cambio: ' + (err.message || err) + '. Revisa tu conexión e inténtalo de nuevo.', 'error');
+    } finally {
+      guardadosPendientes.delete(clave);
+      input.disabled = false;
     }
   }
+
+  window.addEventListener('beforeunload', function (e) {
+    if (!guardadosPendientes.size) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   // ── Fijar / quitar un asesor de la selección (chips) ──
   function fijarAsesor(kwid) {
@@ -1061,6 +1093,31 @@
     return data;
   }
 
+  // Relee el Excel cada vez que se abre la pantalla. Una cantidad
+  // anormal de bajas se deja para revisión manual porque suele indicar
+  // que la hoja o su rango se leyó incompleto.
+  async function sincronizarAlEntrar() {
+    try {
+      var previa = await llamarSync(false);
+      var cambios = previa.nuevos.length + previa.reactivados.length + previa.bajas.length;
+      if (!cambios) return;
+
+      var activosActuales = Math.max(0, Number(previa.total_padron || 0) - previa.reactivados.length);
+      var limiteBajas = Math.max(5, Math.ceil(activosActuales * 0.20));
+      if (previa.bajas.length > limiteBajas) {
+        avisar('Se leyó el Excel, pero no se aplicó automáticamente porque propone ' + previa.bajas.length + ' bajas. Revísalo desde Sincronizar.', 'error');
+        return;
+      }
+
+      await llamarSync(true);
+      if ((previa.omitidos || []).length) {
+        avisar('El padrón se actualizó. ' + previa.omitidos.length + ' persona(s) del Excel no tienen KW ID y no pudieron agregarse.', 'error');
+      }
+    } catch (err) {
+      avisar('No se pudo actualizar el padrón desde Excel; se muestra la última lectura guardada. ' + (err.message || err), 'error');
+    }
+  }
+
   // ── Carga ──
   async function cargar() {
     var r = await Promise.all([
@@ -1111,6 +1168,7 @@
       }
       puedeEditar = true;
 
+      await sincronizarAlEntrar();
       await cargar();
       pintar();
     } catch (err) {
@@ -1236,5 +1294,6 @@
 </script>
 <script src="/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/assets/js/drawer.js?v=20260937o" data-menu="hub"></script>
+<script src="/assets/js/kw-lateral.js?v=20260916d" data-filtros=".buscador|.toolbar-filtros|#stats-filtros|#abc-tabs" data-sin-contexto="true"></script>
 </body>
 </html>
