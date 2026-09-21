@@ -398,28 +398,15 @@
   .dic-acciones-iconos { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
   .dic-icono-btn {
     --accion-color: #696969;
-    display: inline-flex; align-items: center; justify-content: flex-start; gap: 7px;
-    width: auto; max-width: 32px; height: 32px; padding: 0 8px;
-    overflow: hidden; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0;
     border: 1px solid var(--accion-color); border-radius: 9px;
     background: #fff; color: var(--accion-color); cursor: pointer;
-    transition: max-width .28s ease, padding .28s ease, background .18s ease,
-      color .18s ease, box-shadow .18s ease, transform .18s ease;
+    transition: background .18s ease, color .18s ease, box-shadow .18s ease,
+      transform .18s ease;
   }
   .dic-icono-btn svg { width: 15px; height: 15px; flex: 0 0 auto; }
-  .dic-icono-texto {
-    max-width: 0; opacity: 0; transform: translateX(-8px);
-    overflow: hidden; font-size: 12px; font-weight: 500;
-    transition: max-width .28s ease, opacity .18s ease, transform .28s ease;
-  }
-  .dic-icono-btn.preparado {
-    max-width: 210px; padding: 0 11px; background: color-mix(in srgb, var(--accion-color) 8%, white);
-    box-shadow: 0 5px 13px color-mix(in srgb, var(--accion-color) 18%, transparent);
-    transform: translateX(-2px);
-  }
-  .dic-icono-btn.preparado .dic-icono-texto {
-    max-width: 170px; opacity: 1; transform: translateX(0);
-  }
+  .dic-icono-texto { display: none; }
   .dic-icono-btn:hover { background: color-mix(in srgb, var(--accion-color) 7%, white); }
   .dic-icono-btn.accion-imprimir { --accion-color: #a30d22; }
   .dic-icono-btn.accion-imprimir-correcciones { --accion-color: #7540a8; }
@@ -430,7 +417,7 @@
 
   @media (max-width: 560px) {
     .dic-barra-tarjeta { flex-wrap: wrap; }
-    .dic-acciones-iconos { margin-left: 0; }
+    .dic-acciones-iconos { margin-left: 0; flex-wrap: wrap; justify-content: flex-end; }
   }
 
   /* ── Checklist de Marketing ── */
@@ -1180,10 +1167,7 @@
     /* El pie del menú comparte la línea superior y el eje vertical del
        pie fijo del editor: Cerrar sesión ya no queda flotando arriba. */
     body.en-editor .drawer-footer { padding-top: 1px; padding-bottom: 1px; }
-    /* El velo cubre menú y pie; la caja se centra en toda la pantalla. */
-    body.en-editor .modal-overlay { z-index: 1000; }
   }
-  body.en-editor .modal-overlay { z-index: 1000; }
   @media (max-width: 640px) {
     body.en-editor #vista-editor { padding-bottom: 128px; }
     body.en-editor #vista-editor > .dic-editor > .dic-acciones {
@@ -1283,6 +1267,46 @@
     text-align: center;
   }
   .dic-pdf-menu-pie .dic-pdf-opciones button:hover {
+    background: var(--pastel-rojo);
+    color: #6e0000;
+  }
+  /* En la vista de consulta el selector de PDF también se abre dentro de
+     la fila de iconos: las dos opciones quedan a la izquierda del icono. */
+  .dic-pdf-menu-iconos {
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 6px;
+  }
+  .dic-pdf-menu-iconos .dic-pdf-opciones {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    white-space: nowrap;
+  }
+  .dic-pdf-menu-iconos .dic-pdf-opciones[hidden] { display: none; }
+  .dic-pdf-menu-iconos .dic-pdf-opciones button {
+    display: inline-flex;
+    width: auto;
+    min-height: 32px;
+    padding: 6px 10px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--red);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--red);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  }
+  .dic-pdf-menu-iconos .dic-pdf-opciones button:hover {
     background: var(--pastel-rojo);
     color: #6e0000;
   }
@@ -3068,14 +3092,8 @@
       evento.preventDefault();
       evento.stopPropagation();
     }
-    if (!boton.classList.contains('preparado')) {
-      document.querySelectorAll('.dic-icono-btn.preparado').forEach(function (otro) {
-        if (otro !== boton) otro.classList.remove('preparado');
-      });
-      boton.classList.add('preparado');
-      return false;
-    }
-    boton.classList.remove('preparado');
+    // Los iconos ejecutan su acción al primer clic. Las acciones que sí
+    // requieren confirmación usan su aviso modal, no una segunda pulsación.
     return true;
   }
 
@@ -3109,9 +3127,6 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.dic-pdf-menu')) cerrarMenusPDF();
     if (e.target.closest('.dic-icono-btn')) return;
-    document.querySelectorAll('.dic-icono-btn.preparado').forEach(function (b) {
-      b.classList.remove('preparado');
-    });
   });
 
   function datosMarketing(d) {
