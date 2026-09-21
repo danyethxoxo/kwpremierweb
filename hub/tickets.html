@@ -65,6 +65,11 @@
   .btn-reportar:hover { transform: translateY(-1px); }
   .btn-reportar svg { width: 15px; height: 15px; }
 
+  /* Fuente del buscador que kw-lateral.js lleva al panel en escritorio.
+     En móvil permanece arriba de la lista para no perder el filtro. */
+  .incidencias-buscar { display: none; }
+  .kw-lateral-contenido .incidencias-buscar { display: flex; }
+
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
   .incidencias-lista { display: flex; flex-direction: column; gap: 12px; }
   .incidencia-item {
@@ -248,6 +253,19 @@
        la columna de Estatus fuera de la pantalla. */
     .estatus-badge { font-size: 11px; }
   }
+
+  /* Igual que la lista del Panel Master: con el lateral visible, el área
+     de trabajo usa todo el riel restante en vez del ancho angosto común. */
+  @media (min-width: 1024px) {
+    body.kw-lateral-universal-activa > main.kw-page {
+      width: 100%; max-width: none; margin: 0; padding: 18px !important;
+    }
+    body.kw-lateral-universal-activa .kw-page-encabezado { margin-bottom: 18px; }
+  }
+
+  @media (max-width: 1023px) {
+    .incidencias-buscar { display: flex; margin-bottom: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -263,6 +281,11 @@
   </header>
 
   <main class="kw-page">
+
+    <label class="kw-lateral-buscador incidencias-buscar" aria-label="Buscar incidencias">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="incidencias-buscar" placeholder="Buscar" oninput="buscarIncidencias(this.value)" autocomplete="off">
+    </label>
 
     <div id="vista-reportero" style="display:none;">
       <div class="kw-page-encabezado con-acciones">
@@ -445,6 +468,8 @@
   let todasIncidenciasCache = [];
   let incidenciaEnDetalle = null;
   let repArchivosSeleccionados = [];
+  let busquedaIncidencias = '';
+  let busquedaIncidenciasTimer = 0;
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -677,6 +702,26 @@
     });
   }
 
+  function coincideBusquedaIncidencia(inc) {
+    if (!busquedaIncidencias) return true;
+    const texto = [
+      inc.titulo, inc.descripcion, inc.respuesta,
+      ESTATUS_LABELS[inc.estatus] || inc.estatus,
+      inc.reportante_nombre, inc.reportante_apellido, inc.reportante_email
+    ].filter(Boolean).join(' ').toLocaleLowerCase('es-MX');
+    return texto.includes(busquedaIncidencias);
+  }
+
+  function buscarIncidencias(valor) {
+    busquedaIncidencias = String(valor || '').trim().toLocaleLowerCase('es-MX');
+    window.clearTimeout(busquedaIncidenciasTimer);
+    if (miRol === 'asociado') {
+      pintarMisIncidencias();
+    } else if (ROLES_GESTION.includes(miRol)) {
+      busquedaIncidenciasTimer = window.setTimeout(cargarTodasIncidencias, 180);
+    }
+  }
+
   function renderIncidenciaItem(inc, idx) {
     const respuestaHTML = inc.respuesta
       ? `<div class="incidencia-respuesta"><strong>Respuesta del equipo</strong>${escapeHtml(inc.respuesta)}</div>`
@@ -698,6 +743,19 @@
 
   let misIncidenciasCache = [];
 
+  function pintarMisIncidencias() {
+    const cont = document.getElementById('mis-incidencias-cont');
+    const visibles = misIncidenciasCache.filter(coincideBusquedaIncidencia);
+    if (!visibles.length) {
+      cont.innerHTML = '<div class="estado-vacio">' + (busquedaIncidencias
+        ? 'No hay incidencias que coincidan con tu búsqueda.'
+        : 'No has reportado ninguna incidencia todavía.') + '</div>';
+      return;
+    }
+    cont.innerHTML = visibles.map((inc, i) => renderIncidenciaItem(inc, i)).join('');
+    vincularImagenesGrid(cont, visibles);
+  }
+
   async function cargarMisIncidencias() {
     const cont = document.getElementById('mis-incidencias-cont');
     try {
@@ -708,13 +766,8 @@
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      if (!data || data.length === 0) {
-        cont.innerHTML = '<div class="estado-vacio">No has reportado ninguna incidencia todavía.</div>';
-        return;
-      }
-      misIncidenciasCache = data;
-      cont.innerHTML = data.map((inc, i) => renderIncidenciaItem(inc, i)).join('');
-      vincularImagenesGrid(cont, misIncidenciasCache);
+      misIncidenciasCache = data || [];
+      pintarMisIncidencias();
     } catch (err) {
       cont.innerHTML = `<div class="estado-vacio">${escapeHtml(err.message || 'Ocurrió un error al cargar tus incidencias.')}</div>`;
     }
@@ -741,16 +794,24 @@
         return;
       }
 
+      const visibles = todasIncidenciasCache
+        .map((inc, indice) => ({ inc, indice }))
+        .filter(({ inc }) => coincideBusquedaIncidencia(inc));
+      if (!visibles.length) {
+        cont.innerHTML = '<div class="estado-vacio">No hay incidencias que coincidan con tu búsqueda.</div>';
+        return;
+      }
+
       // El renglón cerrado lleva lo mínimo (título, fecha y el punto del
       // estatus); el resto aparece al abrirlo, con la misma pinta que las
       // tarjetas de prospectos: cada dato con su iconito y los botones
       // como pastillas hasta abajo.
       const I = window.kwUI.iconos;
       let html = '<div class="kw-lista">';
-      todasIncidenciasCache.forEach((inc, i) => {
+      visibles.forEach(({ inc, indice }, i) => {
         const nombreAsesor = [inc.reportante_nombre, inc.reportante_apellido].filter(Boolean).join(' ') || inc.reportante_email || 'Sin nombre';
         const etiqueta = ESTATUS_LABELS[inc.estatus] || inc.estatus;
-        html += `<div class="kw-fila kw-aparece-fila" data-idx="${i}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
+        html += `<div class="kw-fila kw-aparece-fila" data-idx="${indice}" style="animation-delay:${Math.min(i, 8) * 30}ms;">
           <button type="button" class="kw-fila-cabeza">
             <span class="kw-fila-punto estatus-${inc.estatus}" title="${escapeHtml(etiqueta)}"></span>
             <span class="kw-fila-texto">
@@ -768,7 +829,7 @@
               <div class="kw-dato kw-solo-movil">${I.documento}<span class="kw-dato-txt">${escapeHtml(inc.titulo)}</span></div>
               <div class="kw-dato kw-solo-movil">${I.persona}<span class="kw-dato-txt">${escapeHtml(nombreAsesor)}</span></div>
               <div class="kw-dato con-acciones texto-solo-movil">${I.etiqueta}<span class="kw-dato-txt"><span class="estatus-badge estatus-${inc.estatus}">${etiqueta}</span></span><div class="kw-fila-acciones">
-                <button type="button" class="kw-fila-btn" data-abrir="${i}">
+                <button type="button" class="kw-fila-btn" data-abrir="${indice}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v7H3V3h7"/></svg>
                   Ver completa
                 </button>
@@ -932,6 +993,6 @@
   }
 </script>
 <script src="/assets/js/drawer.js?v=20260937o" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20260916d"></script>
+<script src="/assets/js/kw-lateral.js?v=20260916d" data-sin-contexto="true" data-filtros=".incidencias-buscar"></script>
 </body>
 </html>
