@@ -4996,9 +4996,12 @@
     var boton = botonEnvio || $('e-enviar-correo');
     var contenidoOriginal = boton.innerHTML;
     boton.disabled = true;
-    boton.textContent = 'Preparando PDF...';
+    boton.textContent = 'Preparando PDFs...';
     try {
-      var pdf = await crearPDF(d, false);
+      var pdfs = await Promise.all([
+        crearPDF(d, false),
+        crearPDF(d, true),
+      ]);
       boton.textContent = 'Enviando correo...';
       var sesion = await window.kwSupabase.auth.getSession();
       var token = sesion.data.session && sesion.data.session.access_token;
@@ -5014,8 +5017,10 @@
           },
           body: JSON.stringify({
             dictamen_id: d.id,
-            nombre_archivo: nombrePDF(d, false),
-            pdf_base64: await base64DeBlob(pdf),
+            nombre_archivo_solo_datos: nombrePDF(d, false),
+            pdf_solo_datos: await base64DeBlob(pdfs[0]),
+            nombre_archivo_con_correcciones: nombrePDF(d, true),
+            pdf_con_correcciones: await base64DeBlob(pdfs[1]),
           }),
         }
       );

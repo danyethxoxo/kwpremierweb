@@ -86,8 +86,11 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}))
     if (!validUuid(body.dictamen_id)) return response(req, { error: 'Dictamen inválido.' }, 400)
-    const adjunto = pdfBase64(body.pdf_base64)
-    if (!adjunto) return response(req, { error: 'El archivo adjunto no es un PDF válido o excede 7 MB.' }, 400)
+    const pdfSoloDatos = pdfBase64(body.pdf_solo_datos)
+    const pdfConCorrecciones = pdfBase64(body.pdf_con_correcciones)
+    if (!pdfSoloDatos || !pdfConCorrecciones) {
+      return response(req, { error: 'Los dos archivos adjuntos deben ser PDFs válidos de hasta 7 MB.' }, 400)
+    }
 
     // Se consulta la tabla directamente, no la vista de listado: algunos
     // proyectos aún conservan una versión anterior de esa vista sin todos
@@ -128,9 +131,13 @@ Deno.serve(async (req) => {
           <p>Hola ${escapeHtml(asesor)},</p>
           <p>Adjuntamos el dictamen de expediente correspondiente a:</p>
           <p style="font-weight:700;color:#7d0000">${escapeHtml(direccion)}</p>
+          <p>Incluye una versión con los datos y otra con las correcciones.</p>
           <p>Saludos,<br>KW Premier</p>
         </div>`,
-        attachments: [{ filename: fileName(body.nombre_archivo), content: adjunto }],
+        attachments: [
+          { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
+          { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },
+        ],
       }),
     })
     if (!envio.ok) {
