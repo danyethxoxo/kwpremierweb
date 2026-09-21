@@ -38,8 +38,6 @@
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  .header-right { display: flex; align-items: center; gap: 10px; }
-
   #notif-bell-slot { position: relative; }
   .notif-bell-btn {
     position: relative; display: flex; align-items: center; justify-content: center;
@@ -54,49 +52,19 @@
     display: flex; align-items: center; justify-content: center; line-height: 1; border: 2px solid #fff;
   }
 
-  .page { flex: 1; width: 100%; max-width: var(--ancho-pagina); margin: 0 auto; padding: 90px var(--sp-4) var(--sp-6); }
-  .page-title { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px; }
-  .page-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
-
-  /* El botón va en el renglón del título, no en una franja aparte:
-     es LA acción de la pantalla y así se ve de entrada, sin gastar un
-     bloque entero para él solo. */
-  .page-head {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 20px; margin-bottom: 26px;
-  }
-  .page-head-txt { min-width: 0; }
-  .page-head .page-title { margin-bottom: 8px; }
-  .page-head .page-desc { margin-bottom: 0; }
-  .page-head .btn-reportar { flex-shrink: 0; }
+  /* Encabezado y acción principal compartidos con Firmas y Dictámenes. */
+  .kw-page-encabezado { margin-bottom: 26px; }
+  .kw-page-texto { min-width: 0; }
+  .kw-page-texto .kw-page-desc { margin-top: 8px; }
   .btn-reportar {
     display: inline-flex; align-items: center; gap: 8px;
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-    color: var(--red);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%); border: none; border-radius: 30px;
-    padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 4px 18px rgba(138,0,0,0.3);
-    font-family: 'Poppins', Arial, sans-serif;
+    justify-content: center;
   }
-  .btn-reportar:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
   .btn-reportar svg { width: 15px; height: 15px; }
 
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
-  .card-box {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: var(--r-tarjeta);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    padding: var(--sp-4); box-shadow: var(--sombra-1), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-  }
-
   .incidencias-lista { display: flex; flex-direction: column; gap: 12px; }
   .incidencia-item {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     padding: 16px 18px; transition: box-shadow 0.15s, border-color 0.15s;
   }
   .incidencia-item:hover { border-color: #ddd; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
@@ -142,9 +110,8 @@
     text-transform: uppercase; letter-spacing: 0.03em;
   }
   .estado-vacio { padding: var(--sp-6) var(--sp-4); color: var(--muted); font-size: 13.5px; text-align: center; }
-  /* Esta lista vive directo sobre el fondo de la página (sin tarjeta
-     blanca detrás), a diferencia de la de gestión que sí está dentro
-     de .card-box: aquí el texto apagado necesita aclararse aparte. */
+  /* Esta lista vive directo sobre el fondo de la página; el texto apagado
+     necesita aclararse aparte. */
   #mis-incidencias-cont .estado-vacio { color: var(--muted); }
 
   tr.fila-incidencia { cursor: pointer; }
@@ -260,12 +227,12 @@
   .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
 
   @media (max-width: 640px) {
-    .page { padding: 82px 16px 40px; }
-    .page-title, .page-desc { display: none; }
+    .kw-page-texto { display: none; }
     /* Sin título ni descripción arriba, el botón con su texto se quedaba
        solo en un renglón vacío. Aquí es el mismo redondo con el "+" que
        usan los contratos y los acuerdos, fijo abajo a la derecha. */
-    .page-head { display: block; margin-bottom: 0; }
+    .kw-page-encabezado { display: block; margin-bottom: 0; }
+    .kw-page-acciones { display: block; }
     .btn-reportar {
       position: fixed; right: 18px; bottom: 18px; z-index: 50;
       width: 56px; height: 56px; padding: 0; border-radius: 50%;
@@ -286,33 +253,32 @@
 
   <header class="kw-header">
     <span class="kw-header-title">Incidencias</span>
-    <div class="header-right">
-      <div id="notif-bell-slot"></div>
-      <a href="../portal.html" class="back-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        <span>Atrás</span>
-      </a>
-    </div>
+    <a href="../portal.html" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Atrás</span>
+    </a>
   </header>
 
-  <main class="page">
+  <main class="kw-page">
 
     <div id="vista-reportero" style="display:none;">
-      <div class="page-head">
-        <div class="page-head-txt">
-          <h1 class="page-title">Incidencias</h1>
-          <p class="page-desc">Genera un reporte de algún problema que hayas detectado y sigue aquí en qué va.</p>
+      <div class="kw-page-encabezado con-acciones">
+        <div class="kw-page-texto">
+          <h1 class="kw-page-titulo">Incidencias</h1>
+          <p class="kw-page-desc">Genera un reporte de algún problema que hayas detectado y sigue aquí en qué va.</p>
         </div>
-        <button type="button" class="btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span class="btn-reportar-txt">Reportar incidencia</span>
-        </button>
+        <div class="kw-page-acciones">
+          <button type="button" class="btn-nuevo-documento btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="btn-reportar-txt">Reportar incidencia</span>
+          </button>
+        </div>
       </div>
       <h2 class="section-title">Mis incidencias</h2>
       <div class="incidencias-lista" id="mis-incidencias-cont">
-        <div class="incidencia-item">
+        <div class="incidencia-item kw-card">
           <div class="incidencia-head">
             <div style="flex:1;">
               <div class="kw-skel kw-skel-line kw-skel-w60"></div>
@@ -322,7 +288,7 @@
           <div class="kw-skel kw-skel-line kw-skel-w100" style="margin-top:10px;"></div>
           <div class="kw-skel kw-skel-line kw-skel-w70" style="margin-top:6px;"></div>
         </div>
-        <div class="incidencia-item">
+        <div class="incidencia-item kw-card">
           <div class="incidencia-head">
             <div style="flex:1;">
               <div class="kw-skel kw-skel-line kw-skel-w50"></div>
@@ -336,15 +302,17 @@
     </div>
 
     <div id="vista-gestion" style="display:none;">
-      <div class="page-head">
-        <div class="page-head-txt">
-          <h1 class="page-title">Incidencias</h1>
-          <p class="page-desc">Consulta y responde los reportes de todo el equipo, o genera uno de algún problema que hayas detectado.</p>
+      <div class="kw-page-encabezado con-acciones">
+        <div class="kw-page-texto">
+          <h1 class="kw-page-titulo">Incidencias</h1>
+          <p class="kw-page-desc">Consulta y responde los reportes de todo el equipo, o genera uno de algún problema que hayas detectado.</p>
         </div>
-        <button type="button" class="btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span class="btn-reportar-txt">Reportar incidencia</span>
-        </button>
+        <div class="kw-page-acciones">
+          <button type="button" class="btn-nuevo-documento btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="btn-reportar-txt">Reportar incidencia</span>
+          </button>
+        </div>
       </div>
       <!-- Sin tarjeta que envuelva: cada incidencia ya es su propia
            tarjeta, y meterlas todas dentro de otra se veía como una caja
@@ -697,7 +665,7 @@
       ? `<div class="incidencia-respuesta"><strong>Respuesta del equipo</strong>${escapeHtml(inc.respuesta)}</div>`
       : '';
     return `
-      <div class="incidencia-item kw-aparece" style="animation-delay:${Math.min(idx, 8) * 40}ms;">
+      <div class="incidencia-item kw-card kw-aparece" style="animation-delay:${Math.min(idx, 8) * 40}ms;">
         <div class="incidencia-head">
           <div>
             <div class="incidencia-titulo">${escapeHtml(inc.titulo)}</div>
