@@ -4216,11 +4216,14 @@
 
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
-    $('e-descargar-menu').disabled = true;
-    $('e-enviar-correo').disabled = true;
-    ['e-descargar', 'e-descargar-correcciones', 'e-enviar-correo'].forEach(function (idBoton) {
-      $(idBoton).onclick = null;
-    });
+    // Si ya se está editando un expediente guardado, sus PDFs y el envío
+    // están disponibles desde el inicio. Solo un dictamen nuevo espera a
+    // su primera guardada para tener id, folio y archivos descargables.
+    $('e-descargar-menu').disabled = !d;
+    $('e-enviar-correo').disabled = !d;
+    $('e-descargar').onclick = d ? function () { cerrarMenusPDF(); imprimir(d.id, false); } : null;
+    $('e-descargar-correcciones').onclick = d ? function () { cerrarMenusPDF(); imprimir(d.id, true); } : null;
+    $('e-enviar-correo').onclick = d ? function () { enviarDictamenPorCorreo(d.id); } : null;
     cerrarMenusPDF();
     $('e-origen').style.display = d ? 'none' : '';
     $('e-contrato-buscar').value = '';
