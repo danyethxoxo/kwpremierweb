@@ -52,14 +52,17 @@
     display: flex; align-items: center; justify-content: center; line-height: 1; border: 2px solid #fff;
   }
 
-  /* Encabezado y acción principal compartidos con Firmas y Dictámenes. */
+  /* Encabezado y acciones en el mismo formato que Firmas y Dictámenes. */
   .kw-page-encabezado { margin-bottom: 26px; }
-  .kw-page-texto { min-width: 0; }
-  .kw-page-texto .kw-page-desc { margin-top: 8px; }
   .btn-reportar {
     display: inline-flex; align-items: center; gap: 8px;
-    justify-content: center;
+    padding: 9px 16px; border-radius: 999px;
+    border: none; background: var(--red); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(40,12,12,0.2);
+    transition: transform var(--t-medio);
   }
+  .btn-reportar:hover { transform: translateY(-1px); }
   .btn-reportar svg { width: 15px; height: 15px; }
 
   .section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
@@ -227,12 +230,10 @@
   .denegado { text-align: center; padding: 60px 20px; color: var(--muted); }
 
   @media (max-width: 640px) {
-    .kw-page-texto { display: none; }
     /* Sin título ni descripción arriba, el botón con su texto se quedaba
        solo en un renglón vacío. Aquí es el mismo redondo con el "+" que
        usan los contratos y los acuerdos, fijo abajo a la derecha. */
-    .kw-page-encabezado { display: block; margin-bottom: 0; }
-    .kw-page-acciones { display: block; }
+    .kw-page-encabezado { margin-bottom: 0; }
     .btn-reportar {
       position: fixed; right: 18px; bottom: 18px; z-index: 50;
       width: 56px; height: 56px; padding: 0; border-radius: 50%;
@@ -265,12 +266,20 @@
 
     <div id="vista-reportero" style="display:none;">
       <div class="kw-page-encabezado con-acciones">
-        <div class="kw-page-texto">
-          <h1 class="kw-page-titulo">Incidencias</h1>
-          <p class="kw-page-desc">Genera un reporte de algún problema que hayas detectado y sigue aquí en qué va.</p>
-        </div>
+        <h1 class="kw-page-titulo">Incidencias</h1>
         <div class="kw-page-acciones">
-          <button type="button" class="btn-nuevo-documento btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
+          <div class="kw-menu-ancla">
+            <button type="button" class="kw-btn-icono" title="Más acciones" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false" onclick="alternarMenuIncidencias(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/></svg>
+            </button>
+            <div class="kw-menu incidencias-menu" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" onclick="recargarIncidencias(this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Recargar incidencias</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span class="btn-reportar-txt">Reportar incidencia</span>
           </button>
@@ -303,12 +312,20 @@
 
     <div id="vista-gestion" style="display:none;">
       <div class="kw-page-encabezado con-acciones">
-        <div class="kw-page-texto">
-          <h1 class="kw-page-titulo">Incidencias</h1>
-          <p class="kw-page-desc">Consulta y responde los reportes de todo el equipo, o genera uno de algún problema que hayas detectado.</p>
-        </div>
+        <h1 class="kw-page-titulo">Incidencias</h1>
         <div class="kw-page-acciones">
-          <button type="button" class="btn-nuevo-documento btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
+          <div class="kw-menu-ancla">
+            <button type="button" class="kw-btn-icono" title="Más acciones" aria-label="Más acciones" aria-haspopup="true" aria-expanded="false" onclick="alternarMenuIncidencias(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83 2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/></svg>
+            </button>
+            <div class="kw-menu incidencias-menu" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" onclick="recargarIncidencias(this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Recargar incidencias</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn-reportar" onclick="abrirModalReportar()" aria-label="Reportar incidencia">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span class="btn-reportar-txt">Reportar incidencia</span>
           </button>
@@ -838,6 +855,46 @@
       setMsg('det-msg', (err && err.message) || 'Ocurrió un error al eliminar.', 'error');
     }
   }
+
+  // El engrane conserva el patrón de acciones secundarias del Hub: el
+  // botón principal queda libre para reportar y la recarga vive en el menú.
+  function cerrarMenusIncidencias(excepto) {
+    document.querySelectorAll('.incidencias-menu').forEach(menu => {
+      if (menu !== excepto) menu.hidden = true;
+    });
+    document.querySelectorAll('.kw-btn-icono[aria-expanded="true"]').forEach(btn => {
+      if (!excepto || !btn.parentElement.contains(excepto)) btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function alternarMenuIncidencias(btn) {
+    const menu = btn.parentElement.querySelector('.incidencias-menu');
+    if (!menu) return;
+    const abrir = menu.hidden;
+    cerrarMenusIncidencias(menu);
+    menu.hidden = !abrir;
+    btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    if (abrir && window.kwUI && window.kwUI.colgarMenu) window.kwUI.colgarMenu(btn, menu);
+  }
+
+  async function recargarIncidencias(btn) {
+    const menu = btn.closest('.incidencias-menu');
+    cerrarMenusIncidencias();
+    btn.disabled = true;
+    btn.classList.add('trabajando');
+    try {
+      if (ROLES_GESTION.includes(miRol)) await cargarTodasIncidencias();
+      else await cargarMisIncidencias();
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('trabajando');
+      if (menu) menu.hidden = true;
+    }
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('.kw-menu-ancla')) cerrarMenusIncidencias();
+  });
 
   // ── Inicio ──
   async function initIncidencias() {
