@@ -143,12 +143,14 @@
   }
 
   @media (min-width: 1024px) {
-    body.kw-lateral-universal-activa > main.page { max-width: none; margin: 0; padding: 18px 18px 60px !important; }
+    /* Supera el max-width !important del tema compartido. */
+    body.kw-lateral-universal-activa > main.page { width: 100%; max-width: none !important; margin: 0; padding: 18px 18px 60px !important; }
     #contenido { width: 100%; min-width: 0; }
     #contenido > .kw-page-encabezado { min-height: 40px; margin-bottom: 14px; }
     #contenido > .toolbar { margin: 0; min-height: 0; }
     .kw-lateral-contenido .buscador { width: 100%; min-width: 0; max-width: none; flex: none; }
     .kw-lateral-contenido .buscador input { height: 38px; }
+    .kw-lateral-contenido .sugerencias { height: var(--alto-sugerencias); max-height: none; }
     .kw-lateral-contenido .stats { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 0; order: 1; }
     .kw-lateral-contenido .stat { width: 100%; min-height: 38px; padding: 7px 11px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; border-width: 1px; border-radius: 9px; box-shadow: none; }
     .kw-lateral-contenido .stat-num { min-width: 32px; font-size: 16px; }
@@ -163,7 +165,8 @@
 
   /* Los dos estados reutilizan las tarjetas de resumen en una sola fila. */
   #abc-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  #abc-tabs .stat { min-height: 38px; padding: 7px 11px; border-width: 1px; border-radius: 9px; box-shadow: none; font-size: 12px; }
+  #abc-tabs .stat { min-height: 38px; padding: 7px 11px; border: 1px solid var(--tono); background: #fff; color: var(--tono); border-radius: 9px; box-shadow: none; font-size: 12px; }
+  #abc-tabs .stat[aria-selected="true"] { background: var(--pastel); }
   #abc-tabs .stat::after { display: none; }
   /* Elevar la tarjeta y su cabecera evita que el menú quede bajo el checklist o la siguiente tarjeta. */
   .fila { position: relative; }
@@ -346,6 +349,9 @@
   .aviso-x { flex: 0 0 auto; width: 22px; height: 22px; margin: -1px -5px 0 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; opacity: .5; cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
   .aviso-x:hover { opacity: 1; background: rgba(0, 0, 0, .07); }
 
+  /* Los menús del ABC deben ocultar por completo el contenido que queda detrás. */
+  .dt-menu, .sugerencias { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--border); }
+
   @media (max-width: 640px) {
     .page { padding: 82px 14px 40px; }
     .page-title, .page-desc { display: none; }
@@ -410,7 +416,7 @@
 
       <div class="toolbar-menu-wrap kw-menu-ancla">
         <button type="button" class="kw-btn-icono" id="toolbar-menu-btn" aria-label="Más acciones" title="Más acciones" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 3 2 3-1 2 2 3-1 1-3 3-1 2-3-2-2 1-3-3-2-3 1-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
         <div class="toolbar-menu" id="toolbar-menu" hidden>
           <button type="button" id="btn-sync"><span>↻</span> Sincronizar</button>
@@ -993,7 +999,7 @@
       if (pinned.has(a.kwid)) return false;
       var texto = norm(a.nombre + ' ' + a.kwid);
       return palabras.every(function (p) { return texto.indexOf(p) >= 0; });
-    }).slice(0, 8);
+    });
   }
   function pintarSugerencias(q) {
     var cont = document.getElementById('sugerencias');
@@ -1006,7 +1012,17 @@
         '<span class="sug-sub">KWID ' + esc(a.kwid) + (a.dt_asignado ? ' · ' + esc(a.dt_asignado) : '') + '</span>' +
       '</button>';
     }).join('');
+    ajustarAltoSugerencias();
   }
+  function ajustarAltoSugerencias() {
+    var cont = document.getElementById('sugerencias');
+    if (cont.hidden) return;
+    var barra = cont.closest('.kw-lateral');
+    if (!barra) { cont.style.removeProperty('--alto-sugerencias'); return; }
+    var fondo = Math.min(window.innerHeight, barra.getBoundingClientRect().bottom);
+    cont.style.setProperty('--alto-sugerencias', Math.max(0, fondo - cont.getBoundingClientRect().top - 16) + 'px');
+  }
+  window.addEventListener('resize', ajustarAltoSugerencias);
   function ocultarSugerencias() {
     var cont = document.getElementById('sugerencias');
     cont.hidden = true;
