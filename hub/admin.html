@@ -850,6 +850,33 @@
     display: inline-flex; align-items: center; justify-content: center;
     font-weight: 500; line-height: 1;
   }
+  /* hidden pierde contra el display:flex genérico de .field si no se
+     declara aquí. Puesto solo se muestra al elegir Liderazgo. */
+  #invite-puesto-wrap[hidden] { display: none !important; }
+  /* El selector propio del sitio es un menú HTML, no el <select> nativo:
+     puede enseñar todos los puestos de una vez, sin scroll interno. */
+  #invite-puesto-wrap .kw-select-menu {
+    max-height: none;
+    overflow: visible;
+    min-width: max-content;
+    width: max-content;
+    max-width: min(440px, calc(100vw - 48px));
+    z-index: 120;
+  }
+  @media (min-width: 701px) {
+    .panel-barra-usuario { flex-wrap: nowrap; }
+    .panel-barra-usuario .invite-row {
+      display: flex;
+      grid-template-columns: none;
+      gap: 10px;
+      align-items: center;
+    }
+    #invite-form .field { flex: 0 0 auto; }
+    #invite-form .field:first-child { flex: 1 1 auto; min-width: 190px; }
+    #invite-form .field:nth-child(2) { flex-basis: 155px; }
+    #invite-puesto-wrap { flex-basis: 285px !important; }
+    #invite-form .btn-invite { flex: 0 0 118px; padding: 0 14px; }
+  }
 
   .panel-barra-documentos { align-items: center; }
   .panel-barra-documentos .kw-filtros {
@@ -1231,7 +1258,7 @@
 
       <section class="kw-tabpanel" data-panel="usuarios">
         <div class="kw-card panel-barra panel-barra-usuario">
-          <h2 class="panel-barra-titulo">Agregar nuevo usuario</h2>
+          <h2 class="panel-barra-titulo">Nuevo Usuario</h2>
           <form id="invite-form" class="invite-row">
             <div class="field">
               <input type="email" id="invite-email" placeholder="Correo" aria-label="Correo" required />
@@ -1245,7 +1272,7 @@
             </div>
             <div class="field" id="invite-puesto-wrap" hidden>
               <select id="invite-puesto" aria-label="Puesto de Liderazgo">
-                <option value="">- Selecciona puesto -</option>
+                <option value="" hidden>Puesto</option>
                 <option value="Principal Operator">Principal Operator</option>
                 <option value="Director of First Impressions">Director of First Impressions</option>
                 <option value="Technology Director">Technology Director</option>
