@@ -1197,23 +1197,25 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
-  #e-descargar, #e-descargar-correcciones, #e-volver {
+  #e-descargar, #e-descargar-correcciones, #e-enviar-correo, #e-volver {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
   }
-  #e-descargar, #e-descargar-correcciones {
+  #e-descargar, #e-descargar-correcciones, #e-enviar-correo {
     border-color: var(--red); background: var(--red); color: #fff;
     font-weight: 500; box-shadow: 0 4px 12px rgba(138,0,0,0.18);
   }
   #e-descargar-correcciones { background: #222; border-color: #222; }
+  #e-enviar-correo { background: #7d0000; border-color: #7d0000; }
   #e-descargar:hover { background: #6e0000; border-color: #6e0000; }
   #e-descargar-correcciones:hover { background: #000; border-color: #000; }
+  #e-enviar-correo:hover { background: #550000; border-color: #550000; }
   #e-volver {
     padding: 7px 2px; border: 0; border-radius: 0; background: transparent;
     color: var(--pastel-menta-txt); font-weight: 400; box-shadow: none;
   }
   #e-volver:hover { background: transparent; color: #111; transform: none; }
-  #e-descargar svg, #e-descargar-correcciones svg, #e-volver svg {
+  #e-descargar svg, #e-descargar-correcciones svg, #e-enviar-correo svg, #e-volver svg {
     width: 15px; height: 15px; flex: 0 0 auto;
   }
 
@@ -1910,6 +1912,10 @@
           <button type="button" class="kw-fila-btn" id="e-descargar-correcciones">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
             PDF con correcciones
+          </button>
+          <button type="button" class="kw-fila-btn" id="e-enviar-correo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            Enviar por correo
           </button>
           <button type="button" class="kw-fila-btn neutro" id="e-volver">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>
@@ -4923,24 +4929,93 @@
     return hojaFila('Observaciones', parrafos, 68);
   }
 
+  function nombrePDF(d, conCorrecciones) {
+    return 'dictamen-' + (d.folio || 'borrador') +
+      (Number(d.revision) > 0 ? '-rev-' + Number(d.revision) : '') +
+      (conCorrecciones ? '-con-correcciones' : '-solo-datos') + '.pdf';
+  }
+
+  async function crearPDF(d, conCorrecciones) {
+    var logo = await cargarLogo();
+    return armarPDF(
+      dibujarHoja(d, logo, conCorrecciones === true),
+      logo
+    );
+  }
+
   async function imprimir(id, conCorrecciones) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
 
-    var logo = await cargarLogo();
-    var url = URL.createObjectURL(armarPDF(
-      dibujarHoja(d, logo, conCorrecciones === true),
-      logo
-    ));
+    var url = URL.createObjectURL(await crearPDF(d, conCorrecciones));
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'dictamen-' + (d.folio || 'borrador') +
-      (Number(d.revision) > 0 ? '-rev-' + Number(d.revision) : '') +
-      (conCorrecciones ? '-con-correcciones' : '-solo-datos') + '.pdf';
+    a.download = nombrePDF(d, conCorrecciones);
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function base64DeBlob(blob) {
+    return new Promise(function (resolve, reject) {
+      var lector = new FileReader();
+      lector.onerror = function () { reject(new Error('No se pudo preparar el PDF.')); };
+      lector.onload = function () {
+        var valor = String(lector.result || '');
+        resolve(valor.slice(valor.indexOf(',') + 1));
+      };
+      lector.readAsDataURL(blob);
+    });
+  }
+
+  async function enviarDictamenPorCorreo(id) {
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    if (!d) return;
+    if (!d.asesor_correo) {
+      await window.kwUI.alert('Este asesor no tiene un correo registrado. Actualízalo antes de enviar el dictamen.');
+      return;
+    }
+    var aceptar = await window.kwUI.confirm(
+      'Se enviará el PDF del dictamen a ' + d.asesor_correo + '.\n\n¿Continuar?'
+    );
+    if (!aceptar) return;
+
+    var boton = $('e-enviar-correo');
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = 'Preparando PDF...';
+    try {
+      var pdf = await crearPDF(d, false);
+      boton.textContent = 'Enviando correo...';
+      var sesion = await window.kwSupabase.auth.getSession();
+      var token = sesion.data.session && sesion.data.session.access_token;
+      if (!token) throw new Error('Tu sesión expiró. Inicia sesión de nuevo para enviar el dictamen.');
+
+      var respuesta = await fetch(
+        'https://iloetojomzqtadkithtv.supabase.co/functions/v1/enviar-dictamen-email',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+          },
+          body: JSON.stringify({
+            dictamen_id: d.id,
+            nombre_archivo: nombrePDF(d, false),
+            pdf_base64: await base64DeBlob(pdf),
+          }),
+        }
+      );
+      var datos = await respuesta.json().catch(function () { return {}; });
+      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || 'No se pudo enviar el correo.');
+      await window.kwUI.alert('Dictamen enviado correctamente a ' + datos.enviado_a + '.');
+    } catch (e) {
+      await window.kwUI.alert(e.message || 'No se pudo enviar el dictamen por correo.');
+    } finally {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    }
   }
 
   // ── Arranque ────────────────────────────────────────────────
@@ -5296,6 +5371,7 @@
     $('e-listo').classList.add('visible');
     $('e-descargar').onclick = function () { imprimir(id, false); };
     $('e-descargar-correcciones').onclick = function () { imprimir(id, true); };
+    $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
   });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
