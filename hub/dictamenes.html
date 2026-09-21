@@ -1176,12 +1176,16 @@
     body.en-editor #vista-editor > .dic-editor > .dic-acciones { left: 292px; }
   }
   @media (max-width: 640px) {
-    body.en-editor #vista-editor { padding-bottom: 76px; }
+    body.en-editor #vista-editor { padding-bottom: 128px; }
     body.en-editor #vista-editor > .dic-editor > .dic-acciones {
       padding-left: 14px;
       padding-right: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    body.en-editor #e-guardar { flex: 1 1 auto; min-width: 0; }
+    body.en-editor #vista-editor > .dic-editor > .dic-acciones > button {
+      width: 100%; min-width: 0;
+    }
   }
   .dic-msg { border-radius: 12px; padding: 11px 13px; font-size: 13px; margin-bottom: var(--sp-3); display: none; }
   .dic-msg.error { display: block; background: rgba(198,32,39,0.08); color: #8a1212; }
@@ -1197,7 +1201,7 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
-  #e-descargar, #e-descargar-correcciones, #e-enviar-correo, #e-volver {
+  #e-descargar, #e-descargar-correcciones, #e-enviar-correo {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
   }
@@ -1210,12 +1214,10 @@
   #e-descargar:hover { background: #6e0000; border-color: #6e0000; }
   #e-descargar-correcciones:hover { background: #000; border-color: #000; }
   #e-enviar-correo:hover { background: #550000; border-color: #550000; }
-  #e-volver {
-    padding: 7px 2px; border: 0; border-radius: 0; background: transparent;
-    color: var(--pastel-menta-txt); font-weight: 400; box-shadow: none;
+  #e-descargar:disabled, #e-descargar-correcciones:disabled, #e-enviar-correo:disabled {
+    opacity: .46; cursor: not-allowed; box-shadow: none; transform: none;
   }
-  #e-volver:hover { background: transparent; color: #111; transform: none; }
-  #e-descargar svg, #e-descargar-correcciones svg, #e-enviar-correo svg, #e-volver svg {
+  #e-descargar svg, #e-descargar-correcciones svg, #e-enviar-correo svg {
     width: 15px; height: 15px; flex: 0 0 auto;
   }
 
@@ -1900,27 +1902,23 @@
         </div>
 
         <div class="dic-acciones">
+          <button type="button" class="kw-fila-btn" id="e-descargar" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            PDF solo datos
+          </button>
+          <button type="button" class="kw-fila-btn" id="e-descargar-correcciones" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            PDF con correcciones
+          </button>
+          <button type="button" class="kw-fila-btn" id="e-enviar-correo" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            Enviar por correo
+          </button>
           <button type="button" class="btn-nuevo" id="e-guardar">Guardar</button>
         </div>
 
         <div class="dic-listo" id="e-listo">
           <span id="e-listo-txt">Guardado.</span>
-          <button type="button" class="kw-fila-btn" id="e-descargar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            PDF solo datos
-          </button>
-          <button type="button" class="kw-fila-btn" id="e-descargar-correcciones">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            PDF con correcciones
-          </button>
-          <button type="button" class="kw-fila-btn" id="e-enviar-correo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-            Enviar por correo
-          </button>
-          <button type="button" class="kw-fila-btn neutro" id="e-volver">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>
-            Volver a la lista
-          </button>
         </div>
       </div>
     </div>
@@ -4077,6 +4075,10 @@
 
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
+    ['e-descargar', 'e-descargar-correcciones', 'e-enviar-correo'].forEach(function (idBoton) {
+      $(idBoton).disabled = true;
+      $(idBoton).onclick = null;
+    });
     $('e-origen').style.display = d ? 'none' : '';
     $('e-contrato-buscar').value = '';
     $('e-contrato-operacion').value = 'todos';
@@ -5241,7 +5243,6 @@
   });
 
   $('btn-nuevo').addEventListener('click', function () { navegarEditor(null); });
-  $('e-volver').addEventListener('click', function () { cerrarEditor(); });
 
   $('e-contrato-buscar').addEventListener('input', pintarContratosOrigen);
   $('e-contrato-operacion').addEventListener('change', pintarContratosOrigen);
@@ -5369,6 +5370,9 @@
         (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '') + '.'
       : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
     $('e-listo').classList.add('visible');
+    $('e-descargar').disabled = false;
+    $('e-descargar-correcciones').disabled = false;
+    $('e-enviar-correo').disabled = false;
     $('e-descargar').onclick = function () { imprimir(id, false); };
     $('e-descargar-correcciones').onclick = function () { imprimir(id, true); };
     $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };

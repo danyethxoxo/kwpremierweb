@@ -89,20 +89,32 @@ Deno.serve(async (req) => {
     const adjunto = pdfBase64(body.pdf_base64)
     if (!adjunto) return response(req, { error: 'El archivo adjunto no es un PDF válido o excede 7 MB.' }, 400)
 
+    // Se consulta la tabla directamente, no la vista de listado: algunos
+    // proyectos aún conservan una versión anterior de esa vista sin todos
+    // los campos que requiere el envío.
     const { data: dictamen, error: dictamenError } = await admin
-      .from('dictamenes_con_asesor')
-      .select('id, folio, inmueble, asesor_nombre, asesor_correo, archivado_at')
+      .from('dictamenes')
+      .select('id, folio, inmueble, asesor_id, archivado_at')
       .eq('id', body.dictamen_id).maybeSingle()
     if (dictamenError || !dictamen || dictamen.archivado_at) {
       return response(req, { error: 'No se encontró un dictamen activo para enviar.' }, 404)
     }
 
-    const destino = String(dictamen.asesor_correo || '').trim().toLowerCase()
+    if (!dictamen.asesor_id) {
+      return response(req, { error: 'El dictamen no tiene una persona asignada.' }, 400)
+    }
+    const { data: asesorAsignado, error: asesorError } = await admin
+      .from('dictamen_asesores').select('nombre, correo').eq('id', dictamen.asesor_id).maybeSingle()
+    if (asesorError || !asesorAsignado) {
+      return response(req, { error: 'No se encontró la persona asignada al dictamen.' }, 404)
+    }
+
+    const destino = String(asesorAsignado.correo || '').trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) {
       return response(req, { error: 'El asesor no tiene un correo válido registrado.' }, 400)
     }
     const direccion = String(dictamen.inmueble || 'sin dirección').trim()
-    const asesor = String(dictamen.asesor_nombre || 'Asesor(a)').trim()
+    const asesor = String(asesorAsignado.nombre || 'Asesor(a)').trim()
     const asunto = 'Dictamen de Expediente, ' + direccion
 
     const envio = await fetch('https://api.resend.com/emails', {
