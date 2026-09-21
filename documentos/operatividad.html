@@ -43,7 +43,7 @@
   .btn-nueva-captacion {
     display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
     border: 0; border-radius: 999px; background: var(--red); color: #fff;
-    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none;
     box-shadow: 0 4px 14px rgba(138,0,0,0.22); transition: transform 0.15s, background 0.15s;
   }
   .btn-nueva-captacion:hover { background: #760000; transform: translateY(-1px); }
@@ -66,6 +66,8 @@
   }
   @media (min-width: 1024px) {
     .barra:has(.kw-lateral-filtro-origen) { display: none; }
+    .page { min-height: 100vh; padding: 18px; display: flex; flex-direction: column; }
+    .tabla-caja { flex: 1 1 auto; min-height: 0; max-height: none; }
   }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
@@ -178,7 +180,11 @@
   .barra-btn.tenue:hover { background: #fafafa; }
 
   /* ── Resumen de lo que se está viendo ── */
-  .resumen { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 14px; }
+  .resumen-capsula {
+    margin-bottom: 14px; padding: 12px 18px; border: 1px solid var(--border);
+    border-radius: var(--r-card); background: #fff; box-shadow: var(--sombra-1);
+  }
+  .resumen { display: flex; flex-wrap: wrap; gap: 22px; margin: 0; }
   .resumen-dato { color: var(--text); }
   .resumen-valor { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
   .resumen-etiqueta {
@@ -348,7 +354,7 @@
       </div>
     </div>
 
-    <div class="barra">
+    <div class="barra" data-kw-buscador-propio>
       <!-- El id es el que drawer.js reconoce como "el buscador de esta
            página": así la lupa del encabezado filtra esta tabla en vez de
            abrir la búsqueda general del sitio. Y data-kw-buscador-propio
@@ -368,7 +374,9 @@
 
     </div>
 
-    <div class="resumen" id="resumen"></div>
+    <div class="resumen-capsula">
+      <div class="resumen" id="resumen"></div>
+    </div>
 
     <div class="tabla-caja" id="caja">
       <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
@@ -883,7 +891,7 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
     drawerScript.dataset.menu = 'hub';
     drawerScript.onload = function () {
       var lateralScript = document.createElement('script');
-      lateralScript.src = '/assets/js/kw-lateral.js?v=20260916d';
+      lateralScript.src = '/assets/js/kw-lateral.js?v=20260920a';
       lateralScript.dataset.filtros = '#operatividad-lateral-buscar|#filtros-tipo';
       lateralScript.dataset.titulo = 'Operatividad';
       lateralScript.dataset.sinContexto = 'true';
