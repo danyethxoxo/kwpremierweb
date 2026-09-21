@@ -944,6 +944,61 @@
     }
   }
 
+  /* Usuarios y Documentos usan la misma idea que Asesores: los filtros o
+     el formulario se quedan fijos y la lista es la única que rueda. */
+  @media (min-width: 901px) {
+    html:has(body.en-panel-scroll),
+    body.en-panel-scroll {
+      height: 100%;
+      overflow: hidden;
+    }
+    body.en-panel-scroll > main.kw-page,
+    body.en-panel-scroll #contenido-panel,
+    body.en-panel-scroll .kw-lateral-principal,
+    body.en-panel-scroll #panel-paneles,
+    body.en-panel-scroll #panel-paneles > .kw-tabpanel.activo {
+      min-height: 0;
+    }
+    body.en-panel-scroll > main.kw-page {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    body.en-panel-scroll > footer { display: none; }
+    body.en-panel-scroll #panel-paneles,
+    body.en-panel-scroll #panel-paneles > .kw-tabpanel.activo {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.en-panel-scroll .panel-lista-interna {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      padding: 2px 6px 12px 2px;
+    }
+  }
+  @media (min-width: 1024px) {
+    body.en-panel-scroll #contenido-panel.kw-lateral-shell {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      flex: 1;
+      min-height: 0;
+    }
+    body.en-panel-scroll #contenido-panel > .kw-lateral { display: flex; flex: none; }
+    body.en-panel-scroll #contenido-panel > .kw-lateral-principal {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
+
   /* El Panel ocupa exactamente la ventana. Encabezado, herramientas y
      pestañas permanecen quietos; el único scroll vive dentro de la lista
      de asesores. La altura se transmite por toda la cadena de flex para
@@ -1291,7 +1346,7 @@
         </div>
 
         <!-- Cada usuario es una tarjeta independiente, igual que en Asesores. -->
-        <div id="usuarios-cont"></div>
+        <div id="usuarios-cont" class="panel-lista-interna"></div>
       </section>
 
       <section class="kw-tabpanel" data-panel="documentos">
@@ -1335,7 +1390,7 @@
         <!-- La lista va fuera de la tarjeta: cada renglón ya es su propia
              tarjeta y meterlas todas dentro de otra se ve como una caja
              dentro de otra caja. -->
-        <div id="documentos-cont"></div>
+        <div id="documentos-cont" class="panel-lista-interna"></div>
       </section>
 
       <section class="kw-tabpanel panel-operatividad" data-panel="operatividad">
@@ -1564,10 +1619,12 @@
   function cambiarTabPanel(tab) {
     window.kwUI.activarTab(tab, document.getElementById('panel-tabs'));
     sincronizarPanelLateral(tab);
-    // Solo la de Asesores es una lista larga que conviene que ruede por
-    // dentro; las otras dos son formularios y ruedan como siempre.
+    // Las listas largas ruedan por dentro; sus cabeceras no se pierden al
+    // buscar o administrar muchos usuarios/documentos.
     document.body.classList.toggle('en-asesores', tab === 'asesores');
-    if (tab !== 'asesores') {
+    document.body.classList.toggle('en-panel-scroll', tab === 'usuarios' || tab === 'documentos');
+    const usaScrollInterno = tab === 'asesores' || tab === 'usuarios' || tab === 'documentos';
+    if (!usaScrollInterno) {
       document.body.style.height = 'auto';
       document.body.style.overflowY = 'auto';
       document.documentElement.style.overflowY = 'auto';
