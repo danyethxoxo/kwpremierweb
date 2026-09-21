@@ -1165,19 +1165,34 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+  body.en-editor #e-descargar-menu,
+  body.en-editor #e-enviar-correo,
   body.en-editor #e-guardar {
-    min-width: 150px;
-    min-height: 38px;
-    padding: 8px 18px;
-    justify-content: center;
+    min-height: 34px;
+    padding: 7px 14px;
     border-radius: 9px;
+    font-size: 12px;
+    justify-content: center;
+  }
+  body.en-editor #e-guardar { min-width: 112px; }
+  /* El menú sale hacia la izquierda, dentro de la misma barra: no tapa
+     el formulario ni obliga a llevar el cursor arriba del pie fijo. */
+  @media (min-width: 641px) {
+    .dic-pdf-menu-pie .dic-pdf-opciones {
+      right: calc(100% + 8px); bottom: 0;
+      display: flex; min-width: auto; white-space: nowrap;
+    }
   }
   @media (min-width: 1024px) {
     body.en-editor #vista-editor > .dic-editor > .dic-acciones { left: 292px; }
     /* El pie del menú comparte la línea superior y el eje vertical del
        pie fijo del editor: Cerrar sesión ya no queda flotando arriba. */
     body.en-editor .drawer-footer { padding-top: 1px; padding-bottom: 1px; }
+    /* El velo cubre menú y pie, pero la caja se centra en el espacio útil
+       a la derecha del riel, no en toda la pantalla. */
+    body.en-editor .modal-overlay { z-index: 1000; padding-left: 312px; }
   }
+  body.en-editor .modal-overlay { z-index: 1000; }
   @media (max-width: 640px) {
     body.en-editor #vista-editor { padding-bottom: 128px; }
     body.en-editor #vista-editor > .dic-editor > .dic-acciones {
@@ -1189,6 +1204,8 @@
     body.en-editor #vista-editor > .dic-editor > .dic-acciones > button {
       width: 100%; min-width: 0;
     }
+    body.en-editor #vista-editor > .dic-editor > .dic-acciones > .dic-pdf-menu,
+    body.en-editor #e-descargar-menu { width: 100%; }
   }
   .dic-msg { border-radius: 12px; padding: 11px 13px; font-size: 13px; margin-bottom: var(--sp-3); display: none; }
   .dic-msg.error { display: block; background: rgba(198,32,39,0.08); color: #8a1212; }
