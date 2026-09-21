@@ -461,7 +461,9 @@
     }
     body.kw-panel-lateral .kw-lateral-shell { width: 100%; max-width: none; margin: 0; }
     body.kw-panel-lateral .kw-lateral-shell > .kw-lateral { margin: 0; }
-    body.kw-panel-lateral .kw-lateral-principal { width: 100%; }
+    /* El contenido empieza en la misma línea que el buscador lateral:
+       abajo de la cabecera de 58px y su separación de 14px. */
+    body.kw-panel-lateral .kw-lateral-principal { width: 100%; padding: 72px 18px 18px; }
     body.kw-panel-lateral .barra-superior { margin-bottom: 12px; }
     body.kw-panel-lateral .panel-encabezado { margin-bottom: 0; }
     body.kw-panel-lateral .asesores-card { margin-bottom: 8px; }
@@ -676,6 +678,13 @@
   .asesores-lista .kw-fila-titulo { flex: 0 1 auto; max-width: 46%; }
   .asesores-lista .kw-fila-sub {
     flex: 1 1 auto; min-width: 0; margin-top: 0;
+  }
+  /* La ficha abierta se lee de arriba abajo. En especial teléfono,
+     correo, clasificación y aniversario quedan en la misma columna. */
+  .asesores-lista .kw-datos.en-columnas {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
   }
 
   @media (max-width: 640px) {
@@ -2990,7 +2999,7 @@
   // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
   // ya no deja al panel sin lista: lo que se ve es lo que la casa tiene
   // guardado, y el libro nada más lo alimenta mientras siga vivo.
-  async function cargarAsesores() {
+  async function cargarAsesores(recargarLibro) {
     const op = document.getElementById('op-recargar');
     const paneles = document.getElementById('asesores-paneles');
     op.disabled = true;
@@ -3012,6 +3021,24 @@
       actualizarBarra();
     }
 
+    // La lista cotidiana sale de la base. Antes se esperaba a Google Sheets
+    // y a la sincronización antes de enseñar una sola tarjeta, aunque los
+    // mismos asesores ya estaban almacenados aquí.
+    if (!recargarLibro) {
+      const hayBaseInicial = await leerBaseDatos();
+      if (hayBaseInicial && bdAsesores.length) {
+        gruposAsesores = gruposDesdeBase();
+        armarTabsAsesores();
+        pintarGrupos();
+        cargarEstadoGoogle();
+        terminarRecarga();
+        return;
+      }
+    }
+
+    // Google queda para la recarga explícita y como respaldo de una base
+    // todavía vacía. Así se conserva la sincronización sin frenar el uso
+    // normal del Panel Master.
     let gruposLibro = null;
     let fallaLibro = null;
     try {
@@ -3129,7 +3156,7 @@
   });
   document.getElementById('op-recargar').addEventListener('click', function () {
     abrirMas(false);
-    cargarAsesores();
+    cargarAsesores(true);
   });
 
   // Lo que hay en Google se pide aparte y después de pintar la lista: son
