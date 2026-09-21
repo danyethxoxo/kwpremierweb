@@ -1204,25 +1204,39 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
-  #e-descargar, #e-descargar-correcciones, #e-enviar-correo {
+  #e-descargar-menu, #e-enviar-correo {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
   }
-  #e-descargar, #e-descargar-correcciones, #e-enviar-correo {
+  #e-descargar-menu, #e-enviar-correo {
     border-color: var(--red); background: var(--red); color: #fff;
     font-weight: 500; box-shadow: 0 4px 12px rgba(138,0,0,0.18);
   }
-  #e-descargar-correcciones { background: #222; border-color: #222; }
   #e-enviar-correo { background: #7d0000; border-color: #7d0000; }
-  #e-descargar:hover { background: #6e0000; border-color: #6e0000; }
-  #e-descargar-correcciones:hover { background: #000; border-color: #000; }
+  #e-descargar-menu:hover { background: #6e0000; border-color: #6e0000; }
   #e-enviar-correo:hover { background: #550000; border-color: #550000; }
-  #e-descargar:disabled, #e-descargar-correcciones:disabled, #e-enviar-correo:disabled {
+  #e-descargar-menu:disabled, #e-enviar-correo:disabled {
     opacity: .46; cursor: not-allowed; box-shadow: none; transform: none;
   }
-  #e-descargar svg, #e-descargar-correcciones svg, #e-enviar-correo svg {
+  #e-descargar-menu svg, #e-enviar-correo svg {
     width: 15px; height: 15px; flex: 0 0 auto;
   }
+  .dic-pdf-menu { position: relative; display: inline-flex; }
+  .dic-pdf-opciones {
+    position: absolute; z-index: 250; min-width: 190px;
+    padding: 6px; border: 1px solid var(--border); border-radius: 11px;
+    background: #fff; box-shadow: 0 12px 28px rgba(35,27,27,.18);
+  }
+  .dic-pdf-opciones[hidden] { display: none; }
+  .dic-pdf-opciones button {
+    display: block; width: 100%; padding: 9px 11px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--text); font: inherit; font-size: 12.5px;
+    text-align: left; cursor: pointer;
+  }
+  .dic-pdf-opciones button:hover { background: var(--pastel-rojo); color: var(--red); }
+  .dic-pdf-menu-pie .dic-pdf-opciones { right: 0; bottom: calc(100% + 8px); }
+  .dic-pdf-menu-iconos .dic-pdf-opciones { right: 0; top: calc(100% + 7px); }
+  .dic-icono-btn.accion-pdf-menu { --accion-color: #a30d22; }
 
 
   /* Los contratos enlazados usan la misma jerarquía visual que los
@@ -1905,14 +1919,16 @@
         </div>
 
         <div class="dic-acciones">
-          <button type="button" class="kw-fila-btn" id="e-descargar" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            PDF solo datos
-          </button>
-          <button type="button" class="kw-fila-btn" id="e-descargar-correcciones" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            PDF con correcciones
-          </button>
+          <div class="dic-pdf-menu dic-pdf-menu-pie">
+            <button type="button" class="kw-fila-btn" id="e-descargar-menu" disabled aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              Descargar PDF
+            </button>
+            <div class="dic-pdf-opciones" id="e-descargar-opciones" hidden>
+              <button type="button" id="e-descargar">Solo con datos</button>
+              <button type="button" id="e-descargar-correcciones">Datos y correcciones</button>
+            </div>
+          </div>
           <button type="button" class="kw-fila-btn" id="e-enviar-correo" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
             Enviar por correo
@@ -3014,6 +3030,26 @@
     return true;
   }
 
+  function cerrarMenusPDF(excepto) {
+    document.querySelectorAll('.dic-pdf-menu').forEach(function (menu) {
+      if (menu === excepto) return;
+      var opciones = menu.querySelector('[data-pdf-opciones], #e-descargar-opciones');
+      var boton = menu.querySelector('[data-pdf-menu], #e-descargar-menu');
+      if (opciones) opciones.hidden = true;
+      if (boton) boton.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function alternarMenuPDF(menu) {
+    var opciones = menu && menu.querySelector('[data-pdf-opciones], #e-descargar-opciones');
+    var boton = menu && menu.querySelector('[data-pdf-menu], #e-descargar-menu');
+    if (!opciones || !boton || boton.disabled) return;
+    var abrir = opciones.hidden;
+    cerrarMenusPDF(menu);
+    opciones.hidden = !abrir;
+    boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  }
+
   function navegarEditor(id) {
     if (!id) document.body.classList.add('cargando-nuevo');
     var destino = new URL(location.href);
@@ -3022,6 +3058,7 @@
   }
 
   document.addEventListener('click', function (e) {
+    if (!e.target.closest('.dic-pdf-menu')) cerrarMenusPDF();
     if (e.target.closest('.dic-icono-btn')) return;
     document.querySelectorAll('.dic-icono-btn.preparado').forEach(function (b) {
       b.classList.remove('preparado');
@@ -3170,9 +3207,20 @@
         dibujo + '<span class="dic-icono-texto">' + escapar(titulo) + '</span></button>';
     }
 
+    function menuPDF(id) {
+      return '<div class="dic-pdf-menu dic-pdf-menu-iconos">' +
+        '<button type="button" class="dic-icono-btn accion-pdf-menu" data-pdf-menu ' +
+          'title="Descargar PDF" aria-label="Descargar PDF" aria-expanded="false">' +
+          ICONO_BAJAR + '<span class="dic-icono-texto">Descargar PDF</span></button>' +
+        '<div class="dic-pdf-opciones" data-pdf-opciones hidden>' +
+          '<button type="button" data-imprimir="' + id + '">Solo con datos</button>' +
+          '<button type="button" data-imprimir-correcciones="' + id + '">Datos y correcciones</button>' +
+        '</div>' +
+      '</div>';
+    }
+
     var acciones = '<div class="dic-acciones-iconos">' +
-      iconoBtn('data-imprimir', d.id, 'PDF solo datos', ICONO_BAJAR) +
-      iconoBtn('data-imprimir-correcciones', d.id, 'PDF con correcciones', ICONO_BAJAR) +
+      menuPDF(d.id) +
       (puedoDictaminar && !d.archivado_at
         ? iconoBtn('data-enviar-correo', d.id, 'Enviar por correo', ICONO_ENVIAR) +
           iconoBtn('data-editar', d.id, 'Editar', ICONO_LAPIZ) +
@@ -3523,14 +3571,30 @@
 
     raiz.querySelectorAll('[data-imprimir]').forEach(function (b) {
       b.addEventListener('click', function (e) {
+        if (b.closest('.dic-pdf-opciones')) {
+          e.preventDefault(); e.stopPropagation(); cerrarMenusPDF();
+          imprimir(b.dataset.imprimir, false);
+          return;
+        }
         if (!confirmarIcono(b, e)) return;
         imprimir(b.dataset.imprimir, false);
       });
     });
     raiz.querySelectorAll('[data-imprimir-correcciones]').forEach(function (b) {
       b.addEventListener('click', function (e) {
+        if (b.closest('.dic-pdf-opciones')) {
+          e.preventDefault(); e.stopPropagation(); cerrarMenusPDF();
+          imprimir(b.dataset.imprimirCorrecciones, true);
+          return;
+        }
         if (!confirmarIcono(b, e)) return;
         imprimir(b.dataset.imprimirCorrecciones, true);
+      });
+    });
+    raiz.querySelectorAll('[data-pdf-menu]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        alternarMenuPDF(b.closest('.dic-pdf-menu'));
       });
     });
     raiz.querySelectorAll('[data-enviar-correo]').forEach(function (b) {
@@ -4088,10 +4152,12 @@
 
     aviso('editor-msg', '', '');
     $('e-listo').classList.remove('visible');
+    $('e-descargar-menu').disabled = true;
+    $('e-enviar-correo').disabled = true;
     ['e-descargar', 'e-descargar-correcciones', 'e-enviar-correo'].forEach(function (idBoton) {
-      $(idBoton).disabled = true;
       $(idBoton).onclick = null;
     });
+    cerrarMenusPDF();
     $('e-origen').style.display = d ? 'none' : '';
     $('e-contrato-buscar').value = '';
     $('e-contrato-operacion').value = 'todos';
@@ -5261,6 +5327,9 @@
   });
 
   $('btn-nuevo').addEventListener('click', function () { navegarEditor(null); });
+  $('e-descargar-menu').addEventListener('click', function () {
+    alternarMenuPDF(this.closest('.dic-pdf-menu'));
+  });
 
   $('e-contrato-buscar').addEventListener('input', pintarContratosOrigen);
   $('e-contrato-operacion').addEventListener('change', pintarContratosOrigen);
@@ -5388,11 +5457,10 @@
         (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '') + '.'
       : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
     $('e-listo').classList.add('visible');
-    $('e-descargar').disabled = false;
-    $('e-descargar-correcciones').disabled = false;
+    $('e-descargar-menu').disabled = false;
     $('e-enviar-correo').disabled = false;
-    $('e-descargar').onclick = function () { imprimir(id, false); };
-    $('e-descargar-correcciones').onclick = function () { imprimir(id, true); };
+    $('e-descargar').onclick = function () { cerrarMenusPDF(); imprimir(id, false); };
+    $('e-descargar-correcciones').onclick = function () { cerrarMenusPDF(); imprimir(id, true); };
     $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
   });
 
