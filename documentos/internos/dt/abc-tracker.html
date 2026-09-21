@@ -62,7 +62,7 @@
   .stat.completos { --tono: #16835b; --pastel: #e6f5ee; }
   .stat.temas     { --tono: #c05b12; --pastel: #fff0e5; }
   .stat:hover { border-color: var(--tono); box-shadow: var(--sombra-2); transform: translateY(-1px); }
-  .stat.activa { background: var(--pastel); border-color: var(--tono); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tono) 14%, transparent); }
+  .stat.activa, .stat[aria-selected="true"] { background: var(--pastel); border-color: var(--tono); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tono) 14%, transparent); }
   .stat-num { font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -0.5px; }
   .stat-lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .stat.activa .stat-num, .stat.activa .stat-lbl { color: var(--tono); }
@@ -143,20 +143,32 @@
   }
 
   @media (min-width: 1024px) {
-    body.kw-lateral-universal-activa > main.page { max-width: none; margin: 0; padding: 94px 24px 60px; }
+    body.kw-lateral-universal-activa > main.page { max-width: none; margin: 0; padding: 18px 18px 60px !important; }
+    #contenido { width: 100%; min-width: 0; }
+    #contenido > .kw-page-encabezado { min-height: 40px; margin-bottom: 14px; }
+    #contenido > .toolbar { margin: 0; min-height: 0; }
     .kw-lateral-contenido .buscador { width: 100%; min-width: 0; max-width: none; flex: none; }
     .kw-lateral-contenido .buscador input { height: 38px; }
-    .kw-lateral-contenido .stats { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 0; order: 2; }
+    .kw-lateral-contenido .stats { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 0; order: 1; }
     .kw-lateral-contenido .stat { width: 100%; min-height: 38px; padding: 7px 11px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; border-width: 1px; border-radius: 9px; box-shadow: none; }
     .kw-lateral-contenido .stat-num { min-width: 32px; font-size: 16px; }
     .kw-lateral-contenido .stat-lbl { margin: 0; font-size: 12px; }
-    .kw-lateral-contenido .toolbar-filtros { width: 100%; order: 1; }
+    .kw-lateral-contenido .toolbar-filtros { width: 100%; order: 2; }
     .kw-lateral-contenido .toolbar-filtros .kw-select,
     .kw-lateral-contenido .toolbar-filtros select { width: 100% !important; min-width: 0; }
     .kw-lateral-contenido .abc-tabs-texto { width: 100%; margin: 0; align-self: auto; justify-content: stretch; order: 3; }
     .kw-lateral-contenido .abc-tab { flex: 1; padding-top: 4px; }
     .toolbar { justify-content: flex-end; }
   }
+
+  /* Los dos estados reutilizan las tarjetas de resumen en una sola fila. */
+  #abc-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #abc-tabs .stat { min-height: 38px; padding: 7px 11px; border-width: 1px; border-radius: 9px; box-shadow: none; font-size: 12px; }
+  #abc-tabs .stat::after { display: none; }
+  /* Elevar la tarjeta y su cabecera evita que el menú quede bajo el checklist o la siguiente tarjeta. */
+  .fila { position: relative; }
+  .fila:has(.dt-menu, .fila-menu) { z-index: 10; }
+  .fila-main { position: relative; z-index: 1; }
 
   /* ── Chips de asesores fijados (filtro múltiple) ── */
   .chips-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 16px; }
@@ -356,7 +368,10 @@
   </div>
 
   <div id="contenido">
-    <h1 class="page-title">ABC de la Tecnología Tracker</h1>
+    <div class="kw-page-encabezado con-acciones">
+      <h1 class="kw-page-titulo">ABC de la Tecnología Tracker</h1>
+      <div class="kw-page-acciones" id="abc-acciones"></div>
+    </div>
     <div id="avisos"></div>
 
     <div class="stats" id="stats-filtros">
@@ -389,13 +404,13 @@
       </div>
 
       <div class="abc-tabs-texto" id="abc-tabs" role="tablist" aria-label="Estado de asesores">
-        <button type="button" class="abc-tab activo" data-tab="activos" role="tab" aria-selected="true">Activos</button>
-        <button type="button" class="abc-tab" data-tab="inactivos" role="tab" aria-selected="false">Inactivos</button>
+        <button type="button" class="abc-tab stat activos activo" data-tab="activos" role="tab" aria-selected="true">Activos</button>
+        <button type="button" class="abc-tab stat temas" data-tab="inactivos" role="tab" aria-selected="false">Inactivos</button>
       </div>
 
-      <div class="toolbar-menu-wrap">
-        <button type="button" class="toolbar-menu-btn" id="toolbar-menu-btn" aria-label="Más acciones" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+      <div class="toolbar-menu-wrap kw-menu-ancla">
+        <button type="button" class="kw-btn-icono" id="toolbar-menu-btn" aria-label="Más acciones" title="Más acciones" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 3 2 3-1 2 2 3-1 1-3 3-1 2-3-2-2 1-3-3-2-3 1-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
         <div class="toolbar-menu" id="toolbar-menu" hidden>
           <button type="button" id="btn-sync"><span>↻</span> Sincronizar</button>
@@ -414,6 +429,7 @@
 
 <script>
 (function () {
+  document.getElementById('abc-acciones').appendChild(document.querySelector('.toolbar-menu-wrap'));
   var FUNCTION_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/hyper-processor';
 
   var temas = [], asesores = [], avance = new Map(); // avance: "kwid|tema_id" -> true
@@ -1119,11 +1135,27 @@
   }
 
   // ── Carga ──
+  // Leer todas las páginas: el límite de respuestas de Supabase truncaba
+  // los avances y hacía desaparecer checks confirmados al volver a entrar.
+  async function cargarAvances() {
+    var datos = [], desde = 0, cantidad = 500;
+    while (true) {
+      var r = await window.kwSupabase.from('abc_avance').select('kwid, tema_id')
+        .eq('completado', true).order('kwid').order('tema_id')
+        .range(desde, desde + cantidad - 1);
+      if (r.error) throw r.error;
+      var pagina = r.data || [];
+      datos = datos.concat(pagina);
+      if (pagina.length < cantidad) return { data: datos };
+      desde += pagina.length;
+    }
+  }
+
   async function cargar() {
     var r = await Promise.all([
       window.kwSupabase.from('abc_temas').select('id, orden, sesion, nombre').eq('activo', true).order('orden'),
       window.kwSupabase.from('abc_asesores').select('kwid, nombre, dt_asignado, activo, fecha_ingreso').order('nombre'),
-      window.kwSupabase.from('abc_avance').select('kwid, tema_id').eq('completado', true),
+      cargarAvances(),
     ]);
     for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
 
@@ -1294,6 +1326,6 @@
 </script>
 <script src="/assets/js/kw-ui.js?v=20260831b"></script>
 <script src="/assets/js/drawer.js?v=20260937o" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20260916d" data-filtros=".buscador|.toolbar-filtros|#stats-filtros|#abc-tabs" data-sin-contexto="true"></script>
+<script src="/assets/js/kw-lateral.js?v=20260916d" data-filtros=".buscador|#stats-filtros|.toolbar-filtros|#abc-tabs" data-sin-contexto="true"></script>
 </body>
 </html>
