@@ -72,7 +72,7 @@
   }
   .operatividad-panel .filtros { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   .operatividad-resumen-lateral {
-    display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px;
+    display: flex; flex-direction: column; gap: 8px !important; margin: 0 0 8px !important;
   }
   .operatividad-resumen-lateral .operatividad-conteo {
     width: 100%; min-height: 36px; display: flex; align-items: center; gap: 8px;
@@ -106,9 +106,19 @@
     .operatividad-panel { transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1); }
   }
   @media (max-width: 1023px) {
-    .kw-lateral-shell > .operatividad-panel { display: flex !important; position: static; height: auto; min-height: 0; margin: 72px 12px 0; padding: 0 12px 12px; border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--sombra-1); }
-    .operatividad-panel .kw-lateral-cabecera { display: none; }
-    .operatividad-principal { padding: 12px; }
+    body.en-operatividad { margin: 0; min-width: 0; }
+    body.en-operatividad > header.kw-header { display: none; }
+    .page.kw-lateral-shell {
+      width: 100% !important; max-width: none !important; min-height: 100vh; margin: 0 !important;
+      padding: 0 !important; display: grid !important; grid-template-columns: 292px minmax(0, 1fr);
+    }
+    .kw-lateral-shell > .operatividad-panel {
+      grid-column: 1; grid-row: 1; display: flex !important; width: 292px; min-height: 100vh;
+      margin: 0 !important; padding: 0 14px 16px; border: 0; border-right: 1px solid var(--border);
+      border-radius: 0; box-shadow: 8px 0 24px rgba(35,27,27,.08); background: #fff;
+    }
+    .operatividad-panel .kw-lateral-cabecera { display: flex; }
+    .kw-lateral-shell > .operatividad-principal { grid-column: 2; grid-row: 1; min-width: 0; padding: 18px; display: flex !important; flex-direction: column; }
   }
 
   /* Dentro del Panel, la pestaña ya aporta navegación y título. Aquí se
