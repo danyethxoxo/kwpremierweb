@@ -39,7 +39,9 @@
   .page { flex: 1; width: 100%; margin: 0 auto; padding: 94px 22px 60px; }
   .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
   .page-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
-  .operatividad-encabezado { margin-bottom: 18px; }
+  .operatividad-encabezado { width: 100%; margin-bottom: 18px; text-align: left; }
+  .operatividad-encabezado .kw-page-titulo { margin: 0; text-align: left; }
+  .operatividad-encabezado .kw-page-acciones { margin-left: auto; }
   .btn-nueva-captacion {
     display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
     border: 0; border-radius: 999px; background: var(--red); color: #fff;
@@ -70,8 +72,9 @@
   }
   .operatividad-panel .filtros { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   @media (min-width: 1024px) {
-    html.kw-riel body:has(.operatividad-panel) { padding-left: 0 !important; }
-    body:has(.operatividad-panel) > header.kw-header { display: none; }
+    html.kw-riel body.en-operatividad { padding-left: 0 !important; }
+    body.en-operatividad { height: 100vh; overflow: hidden; }
+    body.en-operatividad > header.kw-header { display: none; }
     .page.kw-lateral-shell {
       width: 100%; max-width: none; height: 100vh; min-height: 100vh; margin: 0;
       padding: 0 !important; display: grid; grid-template-columns: 292px minmax(0, 1fr); overflow: hidden;
@@ -79,12 +82,12 @@
     .operatividad-panel { grid-column: 1; }
     .operatividad-principal { grid-column: 2; min-width: 0; height: 100vh; min-height: 0; padding: 18px; display: flex; flex-direction: column; overflow: hidden; }
     .tabla-caja { flex: 1 1 auto; min-height: 0; max-height: none; }
-    html.kw-riel body:has(.operatividad-panel):not(.menu-global-abierto):not(.menu-global-cerrando) #drawer { width: 292px; visibility: hidden; pointer-events: none; opacity: 0; transform: translateX(-8px); }
-    html.kw-riel body:has(.operatividad-panel).menu-global-abierto #drawer,
-    html.kw-riel body:has(.operatividad-panel).menu-global-cerrando #drawer { width: 292px; visibility: visible; z-index: 203; }
-    html.kw-riel body:has(.operatividad-panel).menu-global-abierto #drawer { opacity: 1; transform: translateX(0); }
-    html.kw-riel body:has(.operatividad-panel).menu-global-cerrando #drawer { opacity: 0; transform: translateX(-8px); }
-    body.menu-global-abierto .operatividad-panel { opacity: 0; pointer-events: none; transform: translateX(-8px); }
+    html.kw-riel body.en-operatividad:not(.menu-global-abierto):not(.menu-global-cerrando) #drawer { width: 292px; visibility: hidden; pointer-events: none; opacity: 0; transform: translateX(-8px); }
+    html.kw-riel body.en-operatividad.menu-global-abierto #drawer,
+    html.kw-riel body.en-operatividad.menu-global-cerrando #drawer { width: 292px; visibility: visible; z-index: 203; }
+    html.kw-riel body.en-operatividad.menu-global-abierto #drawer { opacity: 1; transform: translateX(0); }
+    html.kw-riel body.en-operatividad.menu-global-cerrando #drawer { opacity: 0; transform: translateX(-8px); }
+    body.en-operatividad.menu-global-abierto .operatividad-panel { opacity: 0; pointer-events: none; transform: translateX(-8px); }
     .operatividad-panel { transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1); }
   }
   @media (max-width: 1023px) {
@@ -341,7 +344,7 @@
   }
 </style>
 </head>
-<body>
+<body class="en-operatividad">
 
   <header class="kw-header">
     <span class="kw-header-title">Operatividad</span>
