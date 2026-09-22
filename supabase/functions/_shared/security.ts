@@ -75,7 +75,10 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers })
       if (!methods.includes(req.method)) throw new HttpError(405, 'Metodo no permitido')
       const url = new URL(req.url)
-      if (url.protocol !== 'https:' && !(Deno.env.get('ALLOW_LOCAL_HTTP') === 'true' &&
+      // Supabase terminates TLS at its ingress and forwards HTTP internally.
+      // Its trusted ingress overwrites X-Forwarded-Proto with the client scheme.
+      if (url.protocol !== 'https:' && req.headers.get('x-forwarded-proto') !== 'https' &&
+          !(Deno.env.get('ALLOW_LOCAL_HTTP') === 'true' &&
           ['localhost', '127.0.0.1', 'kong'].includes(url.hostname))) throw new HttpError(400, 'HTTPS requerido')
       const ip = clientIp(req.headers, Deno.env.get('TRUSTED_IP_HEADER') || 'x-forwarded-for')
       await consumeLimit('ip:all', ip, 1200)

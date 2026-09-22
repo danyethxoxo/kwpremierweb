@@ -1,5 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
-// Edge Function: proceso-alta
+// Edge Function: hyper-processor (proceso de alta)
 //
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
 // Panel, sin tener que entrar a cada una a mano:
@@ -1191,7 +1191,7 @@ function pasosPedidos(valor: unknown): Paso[] {
   return PASOS.filter((p) => pedidos.includes(p))
 }
 
-secureServe({ name: 'proceso-alta', userLimit: 60 }, async (req: Request) => {
+secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 

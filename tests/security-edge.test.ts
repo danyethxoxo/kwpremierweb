@@ -137,6 +137,13 @@ Deno.test('middleware enforces auth, MFA, rates, CORS, malformed bodies and safe
     assert.equal(ok.headers.get('Access-Control-Allow-Origin'), 'https://www.kwpremieroficial.com')
     assert.equal(ok.headers.get('Cache-Control'), 'no-store')
     assert.equal(called, 1)
+    const internalHttp = new Request('http://project.supabase.co/functions/v1/test', {
+      method: 'POST', headers: { Origin: 'https://www.kwpremieroficial.com',
+        Authorization: 'Bearer valid-user', 'Content-Type': 'application/json' }, body: '{}',
+    })
+    assert.equal((await handler(internalHttp)).status, 400)
+    internalHttp.headers.set('x-forwarded-proto', 'https')
+    assert.equal((await handler(internalHttp)).status, 200)
     assert(scopes.includes('user:all') && scopes.includes('ip:all'))
     assert.equal((await handler(request('valid-user', 'https://www.kwpremieroficial.com', '{bad'))).status, 400)
     rate = false

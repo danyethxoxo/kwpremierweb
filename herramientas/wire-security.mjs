@@ -17,7 +17,7 @@ const plans = {
   'invitar-usuario': "userLimit: 10",
   'firmar-documento': "userLimit: 60, maxBytes: 30 * 1024 * 1024",
   'enviar-dictamen-email': "userLimit: 10, maxBytes: 20 * 1024 * 1024",
-  'proceso-alta': "userLimit: 60",
+  'hyper-processor': "userLimit: 60",
   'notificar-incidencia-email': "userLimit: 10",
   'mfa-correo': "mfa: false, userLimit: 30",
   'calendar-events': "methods: ['GET', 'POST'], auth: 'user'",
