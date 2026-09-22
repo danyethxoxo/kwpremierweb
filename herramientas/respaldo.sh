@@ -55,7 +55,7 @@ set -uo pipefail
 umask 077
 
 FECHA=$(date +%Y-%m-%d_%H%M)
-DESTINO=~/respaldos-kwpremier/$FECHA
+DESTINO="${BACKUP_DIRECTORY:-$HOME/respaldos-kwpremier}/$FECHA"
 RAIZ=$(git rev-parse --show-toplevel 2>/dev/null)
 
 if [ -z "${RAIZ:-}" ]; then
@@ -85,10 +85,6 @@ git bundle create "$DESTINO/codigo.bundle" --all 2>&1 | grep -v '^$' | sed 's/^/
 if git bundle verify "$DESTINO/codigo.bundle" 2>&1 | grep -q "complete history"; then
   COMMITS=$(git log --oneline | wc -l | tr -d ' ')
   echo "      OK: $COMMITS commits, historia completa y verificada."
-elif ! command -v age >/dev/null 2>&1 || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
-  echo "      ERROR: instala age y define BACKUP_AGE_RECIPIENT (llave publica)."
-  echo "      No se genera una copia de los datos sin cifrar."
-  exit 1
 else
   echo "      CUIDADO: el bundle NO quedó completo. Revísalo antes de confiar en él."
 fi
@@ -107,6 +103,10 @@ elif ! command -v pg_dump >/dev/null 2>&1; then
   echo "      SALTADO: no está instalado pg_dump."
   echo "      Mac: brew install libpq && brew link --force libpq"
   echo "      Ubuntu: sudo apt install postgresql-client"
+elif ! command -v age >/dev/null 2>&1 || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  echo "      ERROR: instala age y define BACKUP_AGE_RECIPIENT (llave publica)."
+  echo "      No se genera una copia de los datos sin cifrar."
+  exit 1
 else
   # --no-owner y --no-acl para que el volcado se pueda restaurar en
   # otro proyecto de Supabase, no solo en este.

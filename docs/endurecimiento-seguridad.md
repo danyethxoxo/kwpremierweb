@@ -34,6 +34,7 @@ Ventanas de 60 segundos. Los limites globales se comparten entre funciones.
 - MFA: 30 peticiones por usuario, ademas de sus limites de codigo/envio previos.
 - Integracion de propiedades: 120 por llave de API verificada.
 - Formularios publicos: 10 envios por IP y, si hay sesion, tambien por usuario.
+  Se acepta un formulario por solicitud; los lotes no pueden evadir ese cupo.
 
 Las IP se guardan como HMAC, no como direcciones en texto plano. La tabla es
 privada y los clientes no pueden elegir ni reiniciar sus contadores. Si esta
@@ -166,7 +167,8 @@ PGSSLMODE=verify-full. Configurar PGSSLROOTCERT con la CA del proyecto. La clave
 privada age debe mantenerse fuera del repositorio y separada del respaldo.
 El dump contiene public, auth, storage y private, pero Storage solo aporta
 metadatos: los archivos deben respaldarse por separado. Se comprobo sintaxis
-del script; no se hizo un respaldo/restauracion de produccion.
+del script y sus rutas de exito/error con herramientas simuladas; no se hizo
+un respaldo/restauracion de produccion ni se simulo la criptografia de age.
 
 ## Verificacion reproducible
 

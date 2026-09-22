@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { allowedOrigins, boundedBody, clientIp, gatewayTarget, HttpError, validEmail, validPassword, validateJson } from '../supabase/functions/_shared/security-core.ts'
 import { secureHandler } from '../supabase/functions/_shared/security.ts'
+import { forwardData } from '../supabase/functions/data-gateway/handler.ts'
 
 Deno.test('CORS accepts exact origins and rejects wildcards and URL paths', () => {
   assert(allowedOrigins('https://www.kwpremieroficial.com').has('https://www.kwpremieroficial.com'))
@@ -37,6 +38,53 @@ Deno.test('gateway only routes allowlisted paths on the configured host', () => 
     'https://project.supabase.co/rest/v1/profiles?select=id')
   for (const path of ['https://evil.test', '../auth/v1', 'profiles%2f..', 'rpc/private.secret', 'profiles/other']) {
     assert.throws(() => gatewayTarget(`https://project.supabase.co/functions/v1/data-gateway/${path}`, base))
+  }
+})
+
+Deno.test('gateway preserves caller scope, blocks bulk forms and removes upstream SQL/compression metadata', async () => {
+  const originalFetch = globalThis.fetch
+  const keys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'DATA_GATEWAY_SECRET']
+  const previous = keys.map((key) => Deno.env.get(key))
+  Deno.env.set('SUPABASE_URL', 'https://project.supabase.co')
+  Deno.env.set('SUPABASE_ANON_KEY', 'test-anon')
+  Deno.env.set('DATA_GATEWAY_SECRET', 'test-gateway')
+  let status = 200, called = 0
+  const req = new Request('https://project.supabase.co/functions/v1/data-gateway/profiles?select=id', {
+    headers: { apikey: 'evil-service', Authorization: 'Bearer forged-user', 'x-kw-gateway': 'forged-secret',
+      'Accept-Profile': 'private', 'Range': '0-9', 'Accept': 'application/json' },
+  })
+  globalThis.fetch = async (input, init) => {
+    called++
+    assert.equal(String(input), 'https://project.supabase.co/rest/v1/profiles?select=id')
+    const headers = new Headers(init?.headers)
+    assert.equal(headers.get('apikey'), 'test-anon')
+    assert.equal(headers.get('authorization'), 'Bearer verified-user')
+    assert.equal(headers.get('x-kw-gateway'), 'test-gateway')
+    assert.equal(headers.get('accept-profile'), null)
+    assert.equal(headers.get('range'), '0-9')
+    return Response.json(status === 200 ? [{ id: 'own-row' }] : { code: '42501', message: 'private table detail', details: 'internal SQL' }, {
+      status, headers: { 'content-encoding': 'gzip', 'content-length': '1000', 'content-range': '0-0/1' },
+    })
+  }
+  try {
+    const result = await forwardData(req, { userId: 'verified-id', token: 'verified-user' })
+    assert.equal(result.headers.get('content-encoding'), null)
+    assert.equal(result.headers.get('content-length'), null)
+    assert.equal(result.headers.get('content-range'), '0-0/1')
+    assert.deepEqual(await result.json(), [{ id: 'own-row' }])
+    status = 403
+    const denied = await forwardData(req, { userId: 'verified-id', token: 'verified-user' })
+    const error = await denied.json()
+    assert.equal(error.code, '42501')
+    assert(!JSON.stringify(error).includes('internal SQL'))
+    assert(!JSON.stringify(error).includes('private table'))
+    await assert.rejects(() => forwardData(new Request('https://project.supabase.co/functions/v1/data-gateway/prospectos', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '[{"nombre":"A"},{"nombre":"B"}]',
+    }), {}), /un formulario/)
+    assert.equal(called, 2)
+  } finally {
+    globalThis.fetch = originalFetch
+    keys.forEach((key, i) => previous[i] === undefined ? Deno.env.delete(key) : Deno.env.set(key, previous[i]!))
   }
 })
 
