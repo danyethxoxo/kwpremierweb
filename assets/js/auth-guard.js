@@ -142,7 +142,7 @@
     return;
   }
 
-  window.kwSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.kwSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
 
   // Primero se pregunta si hay sesión y hasta después se mira el reloj
   // de inactividad. Al revés se caía en un doble inicio de sesión: quien
@@ -163,15 +163,6 @@
       body: JSON.stringify({ accion: 'estado', dispositivo_token: getDeviceToken() }),
       cache: 'no-store'
     }).then(function (respuesta) {
-      // Compatibilidad durante el despliegue coordinado: la version anterior
-      // de la funcion no conoce `estado`. Solo en ese caso se usa el control
-      // antiguo; cualquier otro fallo permanece cerrado por seguridad.
-      if (respuesta.status === 400) {
-        var meta = session.user && session.user.app_metadata;
-        var activo = meta && meta.mfa_correo_activo === true;
-        var okHasta = meta && meta.mfa_correo_ok_hasta;
-        return { activo: activo, verificado: !activo || (okHasta && new Date(okHasta).getTime() > Date.now()) };
-      }
       if (!respuesta.ok) throw new Error('No se pudo comprobar el segundo paso');
       return respuesta.json();
     }).then(function (estado) {

@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: weetrust-webhook
 //
 // Recibe los avisos de weetrust cuando alguien firma un documento o
@@ -57,10 +58,10 @@
 // proyecto se publican pegando el archivo en el Dashboard, y un import
 // compartido rompería esa forma de trabajar.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const WEETRUST_USER_ID = Deno.env.get('WEETRUST_USER_ID')
 const WEETRUST_API_KEY = Deno.env.get('WEETRUST_API_KEY')
@@ -197,7 +198,7 @@ function nombreEnWeetrust(doc: Record<string, any>, documentID: string): string 
 // Crea el renglón de un documento que se mandó desde el panel de
 // weetrust y que el sitio todavía no conocía.
 async function crearDesdeWeetrust(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   documentID: string,
   doc: Record<string, any>,
 ) {
@@ -263,7 +264,7 @@ async function crearDesdeWeetrust(
   return data
 }
 
-Deno.serve(async (req: Request) => {
+secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes: 65536, json: false }, async (req: Request) => {
   // Sin CORS a propósito: esto no lo llama un navegador, lo llama el
   // servidor de weetrust. Un navegador no tiene nada que hacer aquí.
   if (req.method !== 'POST') {
@@ -294,7 +295,7 @@ Deno.serve(async (req: Request) => {
       // 200 a propósito: el aviso llegó bien, simplemente no traía nada
       // que reconociéramos. Contestar error haría que weetrust lo
       // reintentara para siempre sin que eso arreglara nada.
-      console.warn('Aviso sin identificador reconocible:', crudo.slice(0, 500))
+      console.warn('Aviso sin identificador reconocible')
       return new Response('ok', { status: 200 })
     }
 
@@ -346,7 +347,8 @@ Deno.serve(async (req: Request) => {
       }
 
       const datos = json?.responseData
-      const doc = Array.isArray(datos) ? datos[0] : datos
+      const doc = (Array.isArray(datos) ? datos : [datos]).find((item) =>
+        String(item?.documentID || '') === fila.weetrust_document_id)
       if (!doc) continue
 
       const suyos = Array.isArray(doc.signatory) ? doc.signatory : []

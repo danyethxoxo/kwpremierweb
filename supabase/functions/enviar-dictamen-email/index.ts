@@ -1,30 +1,19 @@
+import { secureServe } from '../_shared/security.ts'
 // Envía al asesor el PDF del dictamen que acaba de finalizarse.
 //
 // Secrets requeridos en Supabase:
 //   RESEND_API_KEY  clave de envío de Resend
 //   EMAIL_FROM      por ejemplo: KW Premier <noreply@kwpremieroficial.com>
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
-const ALLOWED_ORIGINS = (Deno.env.get('DICTAMEN_EMAIL_ALLOWED_ORIGINS') ||
-  'https://www.kwpremieroficial.com,https://kwpremieroficial.com,https://danyethxoxo.github.io,http://localhost:3000,http://127.0.0.1:5500')
-  .split(',').map((value) => value.trim()).filter(Boolean)
 const MAX_PDF_BYTES = 7 * 1024 * 1024
 
-function cors(req: Request) {
-  const origin = req.headers.get('Origin') || ''
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
-  return {
-    'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Vary': 'Origin',
-  }
-}
+function cors(_req: Request) { return {} }
 
 function response(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -61,7 +50,7 @@ function fileName(value: unknown) {
   return /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑ._ -]{1,140}\.pdf$/i.test(name) ? name : 'dictamen.pdf'
 }
 
-Deno.serve(async (req) => {
+secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 * 1024 }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) })
   if (req.method !== 'POST') return response(req, { error: 'Método no permitido.' }, 405)
 

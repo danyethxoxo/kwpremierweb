@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nueva captación</title>
@@ -11,12 +14,12 @@
     if (!document.documentElement.classList.contains('kw-auth-ok')) location.replace('/login.html');
   }, 4000);
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/auth-guard.js"></script>
-<script src="/assets/js/notif-bell.js?v=20260915a"></script>
+<script src="/assets/js/notif-bell.js?v=20260922"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260918b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260829q">
-<script src="/assets/js/kw-ui.js?v=20260831b"></script>
+<script src="/assets/js/kw-ui.js?v=20260922"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
   body { background: transparent; }
@@ -126,7 +129,7 @@ var COLUMNAS = [
   { col: 'estatus_command', titulo: 'Estatus Command', grupo: 'Seguimiento', tipo: 'opciones', opciones: ['CARGADA','PENDIENTE','NO APLICA'] }
 ];
 
-function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : v; return d.innerHTML; }
+function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : v; return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function esNumero(c) { return c.tipo === 'dinero' || c.tipo === 'porcentaje'; }
 function campo(c) {
   var id = 'campo-' + c.col;
@@ -180,6 +183,6 @@ async function iniciar() { if (await validarRol()) pintarCampos(); }
 if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
 else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 </script>
-<script src="/assets/js/drawer.js?v=20260937o" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20260922" data-menu="hub"></script>
 </body>
 </html>

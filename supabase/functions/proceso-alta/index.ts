@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: proceso-alta
 //
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
@@ -77,10 +78,10 @@
 // Ya existen y se reusan: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 // GOOGLE_REFRESH_TOKEN, GOOGLE_CALENDAR_ID.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!
@@ -105,10 +106,7 @@ const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A1:Z500'
 const ALTA_DRIVE_FOLDER_ID = Deno.env.get('ALTA_DRIVE_FOLDER_ID')
 const ALTA_EMAILS = Deno.env.get('ALTA_EMAILS') || ''
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const corsHeaders = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -1193,7 +1191,7 @@ function pasosPedidos(valor: unknown): Paso[] {
   return PASOS.filter((p) => pedidos.includes(p))
 }
 
-Deno.serve(async (req: Request) => {
+secureServe({ name: 'proceso-alta', userLimit: 60 }, async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
@@ -1439,7 +1437,7 @@ Deno.serve(async (req: Request) => {
       const mapaDb = new Map(
         (actuales || [])
           .filter((a: { correo: string | null }) => a.correo)
-          .map((a: { correo: string }) => [a.correo.toLowerCase(), a] as const))
+          .map((a: { correo: string; activo: boolean }) => [a.correo.toLowerCase(), a] as const))
       const mapaHoja = new Map(enHoja.map((p) => [p.correo.toLowerCase(), p] as const))
 
       const nuevos = enHoja.filter((p) => !mapaDb.has(p.correo.toLowerCase()))

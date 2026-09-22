@@ -12,8 +12,8 @@
 --      `notificar-email` (Edge Functions > notificar-email).
 --   2. Ya debiste haber puesto el secreto WEBHOOK_SECRET en esa función
 --      (Project Settings > Edge Functions > Secrets).
---   3. Abajo, sustituir PON_AQUI_TU_WEBHOOK_SECRET por ese mismo valor
---      exacto - si no coinciden, la función responde "No autorizado".
+--   3. Guardar el mismo valor en Supabase Vault como kw_webhook_secret.
+--      Nunca pegar el secreto en una migracion versionada.
 --
 -- Requiere 013_notificaciones.sql.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
@@ -26,8 +26,10 @@ language plpgsql security definer set search_path = public, extensions
 as $$
 declare
   v_url text := 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/notificar-email';
-  v_secreto text := 'PON_AQUI_TU_WEBHOOK_SECRET';
+  v_secreto text;
 begin
+  select decrypted_secret into v_secreto from vault.decrypted_secrets where name = 'kw_webhook_secret' limit 1;
+  if v_secreto is null then raise exception 'Falta kw_webhook_secret en Vault'; end if;
   perform net.http_post(
     url := v_url,
     headers := jsonb_build_object(

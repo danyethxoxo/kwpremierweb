@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: calendar-events
 //
 // Dos trabajos, los dos contra el mismo Google Calendar de la cuenta:
@@ -30,10 +31,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
 
 const CALENDAR_TZ = "America/Mexico_City";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const corsHeaders = {};
 
 function respond(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -183,12 +181,12 @@ async function aceptarReserva(admin: any, reservaId: string, quienId: string) {
   };
 }
 
-Deno.serve(async (req: Request) => {
+secureServe({ name: 'calendar-events', methods: ['GET', 'POST'], auth: 'user' }, async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     if (req.method === "POST") {
-      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.117.0");
       if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
         return respond({ error: "Faltan variables de entorno del proyecto." }, 500);
       }

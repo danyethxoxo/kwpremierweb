@@ -9,7 +9,8 @@
 -- ANTES DE CORRER ESTO:
 --   1. Desplegar la Edge Function `avisar-prospecto`.
 --   2. Tener puesta la variable SYNC_SECRET (la misma de sincronizar-propiedades).
---   3. Abajo, sustituir PON_AQUI_TU_SYNC_SECRET por ese mismo valor.
+--   3. Guardar el mismo valor en Supabase Vault como kw_sync_secret.
+--      Nunca pegar secretos en migraciones versionadas.
 --
 -- Requiere 026_micrositio_y_prospectos.sql.
 -- Ejecutar completo en Supabase Dashboard > SQL Editor.
@@ -22,8 +23,10 @@ language plpgsql security definer set search_path = public, extensions
 as $$
 declare
   v_url text := 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/avisar-prospecto';
-  v_secreto text := 'PON_AQUI_TU_SYNC_SECRET';
+  v_secreto text;
 begin
+  select decrypted_secret into v_secreto from vault.decrypted_secrets where name = 'kw_sync_secret' limit 1;
+  if v_secreto is null then raise exception 'Falta kw_sync_secret en Vault'; end if;
   perform net.http_post(
     url := v_url,
     headers := jsonb_build_object(

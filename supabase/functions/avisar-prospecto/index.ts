@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: avisar-prospecto
 //
 // Manda por correo el aviso de un prospecto nuevo. La dispara sola la
@@ -20,10 +21,10 @@
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const CORREO_REMITENTE = Deno.env.get('CORREO_REMITENTE') || 'KW Premier <onboarding@resend.dev>'
 const CORREO_COPIA = Deno.env.get('CORREO_COPIA')
@@ -31,10 +32,7 @@ const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
 
 const SITIO = 'https://danyethxoxo.github.io/kwpremierweb'
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret',
-}
+const CORS_HEADERS = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -116,7 +114,7 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
   return { html, texto }
 }
 
-Deno.serve(async (req) => {
+secureServe({ name: 'avisar-prospecto', auth: 'service', ipLimit: 60 }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 

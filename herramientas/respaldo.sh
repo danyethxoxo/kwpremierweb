@@ -52,6 +52,7 @@
 # código y avisa que faltó la parte importante.
 
 set -uo pipefail
+umask 077
 
 FECHA=$(date +%Y-%m-%d_%H%M)
 DESTINO=~/respaldos-kwpremier/$FECHA
@@ -84,6 +85,10 @@ git bundle create "$DESTINO/codigo.bundle" --all 2>&1 | grep -v '^$' | sed 's/^/
 if git bundle verify "$DESTINO/codigo.bundle" 2>&1 | grep -q "complete history"; then
   COMMITS=$(git log --oneline | wc -l | tr -d ' ')
   echo "      OK: $COMMITS commits, historia completa y verificada."
+elif ! command -v age >/dev/null 2>&1 || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  echo "      ERROR: instala age y define BACKUP_AGE_RECIPIENT (llave publica)."
+  echo "      No se genera una copia de los datos sin cifrar."
+  exit 1
 else
   echo "      CUIDADO: el bundle NO quedó completo. Revísalo antes de confiar en él."
 fi
@@ -105,19 +110,16 @@ elif ! command -v pg_dump >/dev/null 2>&1; then
 else
   # --no-owner y --no-acl para que el volcado se pueda restaurar en
   # otro proyecto de Supabase, no solo en este.
-  if pg_dump "$SUPABASE_DB_URL" \
+  if PGDATABASE="$SUPABASE_DB_URL" PGSSLMODE=verify-full pg_dump \
        --no-owner --no-acl \
-       --schema=public \
-       --file="$DESTINO/base-de-datos.sql" 2>"$DESTINO/pg_dump-errores.log"; then
-    TAM=$(du -h "$DESTINO/base-de-datos.sql" | cut -f1)
-    LINEAS=$(wc -l < "$DESTINO/base-de-datos.sql" | tr -d ' ')
-    echo "      OK: $TAM, $LINEAS líneas."
-    rm -f "$DESTINO/pg_dump-errores.log"
-    gzip -f "$DESTINO/base-de-datos.sql"
-    echo "      Comprimido a $(du -h "$DESTINO/base-de-datos.sql.gz" | cut -f1)."
+       --schema=public --schema=auth --schema=storage --schema=private \
+       2>"$DESTINO/pg_dump-errores.log" | gzip | age -r "$BACKUP_AGE_RECIPIENT" -o "$DESTINO/base-de-datos.sql.gz.age.partial"; then
+    mv "$DESTINO/base-de-datos.sql.gz.age.partial" "$DESTINO/base-de-datos.sql.gz.age"
+    echo "      OK: respaldo cifrado con age, sin archivo intermedio en texto plano."
   else
     echo "      FALLÓ. El detalle está en $DESTINO/pg_dump-errores.log"
-    tail -3 "$DESTINO/pg_dump-errores.log" | sed 's/^/      /'
+    echo "      El archivo .partial NO es un respaldo valido."
+    exit 1
   fi
 fi
 
@@ -128,7 +130,9 @@ ls -lh "$DESTINO" | tail -n +2 | awk '{print "  " $9 "  (" $5 ")"}'
 echo
 echo "CÓMO SE RESTAURA, llegado el caso:"
 echo "  Código:  git clone $DESTINO/codigo.bundle carpeta-nueva"
-echo "  Base:    gunzip -c $DESTINO/base-de-datos.sql.gz | psql \"\$SUPABASE_DB_URL\""
+echo "  Base: age -d -i /ruta/llave-privada $DESTINO/base-de-datos.sql.gz.age | gunzip | psql"
+echo "  Configura PGDATABASE y PGSSLMODE=verify-full para restaurar en una base de prueba."
+echo "  El volcado incluye metadatos de Storage, no los archivos: respaldalos por separado."
 echo
 echo "Guarda esta carpeta fuera de la computadora (Drive, disco externo,"
 echo "lo que sea). Un respaldo que vive en la misma máquina que el"

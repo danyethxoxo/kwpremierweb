@@ -1,0 +1,50 @@
+project_id = "kwpremierweb"
+
+# These values apply to local Supabase. Mirror them in hosted Auth settings.
+[auth]
+site_url = "https://www.kwpremieroficial.com"
+additional_redirect_urls = ["https://www.kwpremieroficial.com/completar-registro.html", "https://www.kwpremieroficial.com/restablecer-password.html"]
+enable_signup = false
+minimum_password_length = 12
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+secure_password_change = true
+double_confirm_changes = true
+
+[auth.rate_limit]
+email_sent = 10
+sign_in_sign_ups = 30
+token_verifications = 30
+
+# The public gateway verifies user JWTs with auth.getUser; anonymous access
+# remains subject to RLS. Provider webhooks use their own mandatory secrets.
+[functions.data-gateway]
+verify_jwt = false
+[functions.api-propiedades]
+verify_jwt = false
+[functions.calendar-events]
+verify_jwt = true
+[functions.sincronizar-propiedades]
+verify_jwt = false
+[functions.avisar-prospecto]
+verify_jwt = false
+[functions.notificar-email]
+verify_jwt = false
+[functions.weetrust-webhook]
+verify_jwt = false
+[functions.gestionar-usuario]
+verify_jwt = true
+[functions.invitar-usuario]
+verify_jwt = true
+[functions.firmar-documento]
+verify_jwt = true
+[functions.enviar-dictamen-email]
+verify_jwt = true
+[functions.notificar-incidencia-email]
+verify_jwt = true
+[functions.proceso-alta]
+verify_jwt = true
+[functions.mfa-correo]
+verify_jwt = true

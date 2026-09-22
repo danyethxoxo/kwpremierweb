@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: firmar-documento
 //
 // Manda documentos a firma electrónica con weetrust y consulta cómo van.
@@ -34,10 +35,10 @@
 //
 // Ya existen y se reusan: SUPABASE_URL, SERVICE_ROLE_KEY.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const WEETRUST_USER_ID = Deno.env.get('WEETRUST_USER_ID')
 const WEETRUST_API_KEY = Deno.env.get('WEETRUST_API_KEY')
@@ -47,10 +48,7 @@ const WEETRUST_URL = WEETRUST_AMBIENTE === 'produccion'
   ? 'https://api.weetrust.mx'
   : 'https://api-sandbox.weetrust.com.mx'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const corsHeaders = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -472,7 +470,7 @@ function limpiarObservadores(crudo: unknown): Observador[] {
   return observadores
 }
 
-Deno.serve(async (req: Request) => {
+secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 1024 }, async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 

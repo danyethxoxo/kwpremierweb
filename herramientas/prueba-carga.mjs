@@ -57,7 +57,7 @@
 // Si salen errores 429, significa que Supabase está limitando por
 // exceso de peticiones: es justo lo que se quería descubrir.
 
-const URL_BASE = 'https://iloetojomzqtadkithtv.supabase.co/rest/v1';
+const URL_BASE = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/data-gateway';
 const LLAVE = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
 
 const CABECERAS = { apikey: LLAVE, Authorization: `Bearer ${LLAVE}` };

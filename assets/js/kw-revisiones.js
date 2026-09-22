@@ -13,7 +13,7 @@
   function esc(valor) {
     var d = document.createElement('div');
     d.textContent = valor == null ? '' : String(valor);
-    return d.innerHTML;
+    return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function nombreRevision(numero) {

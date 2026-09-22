@@ -10,7 +10,7 @@
 -- siendo x-webhook-secret, que ya trae desde 036.
 --
 -- Requiere 036_notificar_email_trigger.sql ya corrido (con tu
--- WEBHOOK_SECRET real puesto en vez de PON_AQUI_TU_WEBHOOK_SECRET).
+-- WEBHOOK_SECRET real guardado en Vault como kw_webhook_secret).
 --
 -- IMPORTANTE: si después de correr esto el diagnóstico (037) sigue
 -- marcando 401 UNAUTHORIZED_NO_AUTH_HEADER, hay que apagar a mano la
@@ -26,9 +26,11 @@ language plpgsql security definer set search_path = public, extensions
 as $$
 declare
   v_url text := 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/notificar-email';
-  v_secreto text := 'xAN9_aVWejpijYWQiEUOZSmTwixcZErCYj0S8CBIrsI';
+  v_secreto text;
   v_anon_key text := 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
 begin
+  select decrypted_secret into v_secreto from vault.decrypted_secrets where name = 'kw_webhook_secret' limit 1;
+  if v_secreto is null then raise exception 'Falta kw_webhook_secret en Vault'; end if;
   perform net.http_post(
     url := v_url,
     headers := jsonb_build_object(

@@ -28,7 +28,7 @@
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str == null ? '' : str;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // El fondo oscuro/difuminado detrás del desplegable vive suelto en
@@ -144,7 +144,8 @@
       render();
       window.kwSupabase.from('notificaciones').update({ leido: true }).eq('id', id).then(function () {});
     }
-    if (url) location.href = url;
+    const destino = window.kwSecurity.safeUrl(url, true);
+    if (url && destino) location.href = destino;
   }
 
   function marcarTodasLeidas() {

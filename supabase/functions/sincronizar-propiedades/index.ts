@@ -1,3 +1,4 @@
+import { secureServe } from '../_shared/security.ts'
 // Edge Function: sincronizar-propiedades
 //
 // Lee el feed de inventario que Command manda a los portales (XML o JSON)
@@ -48,20 +49,17 @@
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { XMLParser } from 'https://esm.sh/fast-xml-parser@4.3.6'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
+import { XMLParser } from 'https://esm.sh/fast-xml-parser@5.11.1'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
 const FEED_URL = Deno.env.get('FEED_URL')
 const FEED_USER = Deno.env.get('FEED_USER')
 const FEED_PASS = Deno.env.get('FEED_PASS')
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret',
-}
+const CORS_HEADERS = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -288,7 +286,7 @@ function parsearFeed(cuerpo: string, contentType: string): Record<string, unknow
 // quedan con asesor_id en null y solo con el nombre.
 // ─────────────────────────────────────────────────────────────
 async function enlazarAsesores(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   filas: Fila[],
 ): Promise<Record<string, unknown>[]> {
   const correos = [...new Set(
@@ -316,7 +314,7 @@ async function enlazarAsesores(
 
 // ─────────────────────────────────────────────────────────────
 
-Deno.serve(async (req) => {
+secureServe({ name: 'sincronizar-propiedades', auth: (req) => Deno.env.get('SYNC_SECRET') && req.headers.get('x-sync-secret') === Deno.env.get('SYNC_SECRET') ? 'service' : 'user', maxBytes: 8 * 1024 * 1024, json: false }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
@@ -380,7 +378,8 @@ Deno.serve(async (req) => {
       if (FEED_USER && FEED_PASS) {
         cabeceras['Authorization'] = 'Basic ' + btoa(FEED_USER + ':' + FEED_PASS)
       }
-      const resp = await fetch(FEED_URL, { headers: cabeceras })
+      if (new URL(FEED_URL).protocol !== 'https:') return respond({ error: 'El feed debe usar HTTPS.' }, 400)
+      const resp = await fetch(FEED_URL, { headers: cabeceras, redirect: 'error', signal: AbortSignal.timeout(30000) })
       if (!resp.ok) {
         const mensaje = 'El feed respondió ' + resp.status + ': ' + (await resp.text()).slice(0, 300)
         await admin.from('propiedades_sync').upsert({

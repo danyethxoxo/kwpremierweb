@@ -391,7 +391,7 @@
       }
       if (!document.querySelector('script[src*="notif-bell.js"]')) {
         const sc = document.createElement('script');
-        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260915a`;
+        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260922
         document.head.appendChild(sc);
       } else {
         // Ya estaba cargado. Se le avisa de todos modos, sin importar si
@@ -1014,8 +1014,8 @@
       const t = document.createElement('div');
       t.textContent = f.titulo;
       return `<div class="drawer-acceso">
-        <a class="drawer-link" href="${encodeURI(f.url)}">${iconoDe(f.icono)}<span>${t.innerHTML}</span></a>
-        <button type="button" class="drawer-quitar" data-quitar="${f.id}" title="Quitar" aria-label="Quitar ${t.innerHTML}">${ICONS.basura}</button>
+        <a class="drawer-link" href="${window.kwSecurity.escapeHtml(window.kwSecurity.safeUrl(f.url, true))}">${iconoDe(f.icono)}<span>${t.innerHTML}</span></a>
+        <button type="button" class="drawer-quitar" data-quitar="${f.id}" title="Quitar" aria-label="Quitar ${window.kwSecurity.escapeHtml(f.titulo)}">${ICONS.basura}</button>
       </div>`;
     }).join('');
     lista.querySelectorAll('[data-quitar]').forEach((btn) => {

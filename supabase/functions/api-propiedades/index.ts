@@ -1,3 +1,5 @@
+import { secureServe } from '../_shared/security.ts'
+import { safeHttpsUrl, validEmail } from '../_shared/security-core.ts'
 // Edge Function: api-propiedades
 //
 // API pública de KW Premier para recibir inventario desde sistemas
@@ -30,16 +32,12 @@
 //
 // Se crea vía Supabase Dashboard > Edge Functions > Create function.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-}
+const CORS_HEADERS = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -91,11 +89,17 @@ function comoNumero(v: unknown): number | null {
 }
 
 function validar(p: Record<string, unknown>): Resultado {
+  if (Array.isArray(p)) return { error: 'La propiedad debe ser un objeto.' }
   const id = tomar(p, 'id', 'external_id', 'listing_id')
   if (!id) return { error: 'Falta "id" (el identificador de la propiedad en tu sistema).' }
 
   const titulo = tomar(p, 'titulo', 'title')
   if (!titulo) return { error: 'Falta "titulo".' }
+  if (typeof titulo !== 'string' || titulo.length > 500 || String(id).length > 200) return { error: 'Titulo o identificador invalido.' }
+  const correo = tomar(p, 'asesor_email', 'agent_email')
+  if (correo !== undefined && !validEmail(correo)) return { error: 'Correo del asesor invalido.' }
+  const descripcion = tomar(p, 'descripcion', 'description')
+  if (descripcion !== undefined && (typeof descripcion !== 'string' || descripcion.length > 20000)) return { error: 'Descripcion invalida.' }
 
   const operacion = tomar(p, 'operacion', 'operation')
   if (operacion && !OPERACIONES.includes(String(operacion))) {
@@ -116,7 +120,10 @@ function validar(p: Record<string, unknown>): Resultado {
     }
     imagenes = imagenesCrudas
       .map((i) => (typeof i === 'string' ? i : (i as Record<string, unknown>)?.url))
-      .filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
+      .filter((u): u is string => typeof u === 'string')
+    if (imagenes.length !== imagenesCrudas.length || imagenes.length > 100 || imagenes.some((u) => !safeHttpsUrl(u))) {
+      return { error: 'Las imagenes deben ser hasta 100 enlaces HTTPS validos.' }
+    }
   }
 
   const dir = (tomar(p, 'direccion', 'address') ?? {}) as Record<string, unknown>
@@ -161,7 +168,7 @@ function validar(p: Record<string, unknown>): Resultado {
 
 // ─────────────────────────────────────────────────────────────
 
-Deno.serve(async (req) => {
+secureServe({ name: 'api-propiedades', methods: ['GET', 'POST', 'DELETE'], auth: (req) => /\/llaves(?:\/|$)/.test(new URL(req.url).pathname) ? 'user' : 'service', maxBytes: 4 * 1024 * 1024 }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
 
   try {

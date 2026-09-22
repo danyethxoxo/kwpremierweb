@@ -1,3 +1,5 @@
+import { secureServe } from '../_shared/security.ts'
+import { validEmail } from '../_shared/security-core.ts'
 // Edge Function: invitar-usuario
 // Invita por correo a un nuevo usuario y le asigna un rol, sin que
 // ninguna llave privilegiada (SERVICE_ROLE_KEY) toque el navegador.
@@ -5,7 +7,7 @@
 // "admin". Se crea vía Supabase Dashboard > Edge Functions > Create
 // function, pegando este código.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -13,10 +15,7 @@ const REDIRECT_TO = 'https://www.kwpremieroficial.com/completar-registro.html'
 
 const ROLES_ASIGNABLES = ['admin', 'staff', 'asociado']
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://www.kwpremieroficial.com',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const CORS_HEADERS = {}
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -25,7 +24,7 @@ function respond(body: unknown, status = 200) {
   })
 }
 
-Deno.serve(async (req) => {
+secureServe({ name: 'invitar-usuario', userLimit: 10 }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
@@ -61,7 +60,7 @@ Deno.serve(async (req) => {
     const email = String(body.email || '').trim().toLowerCase()
     const rol = String(body.rol || '')
 
-    if (!email || !ROLES_ASIGNABLES.includes(rol)) {
+    if (!validEmail(email) || !ROLES_ASIGNABLES.includes(rol)) {
       return respond({ error: 'Correo o rol inválido' }, 400)
     }
 

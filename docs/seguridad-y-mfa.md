@@ -1,5 +1,10 @@
 # Seguridad y verificacion en dos pasos
 
+Para el despliegue actual consultar [endurecimiento de seguridad](endurecimiento-seguridad.md).
+Las migraciones 088-091 y el gateway agregan requisitos de despliegue y sustituyen
+las listas CORS anteriores por ALLOWED_ORIGINS. El cambio de contrasena tambien
+revoca dispositivos/sesiones MFA mediante trigger del servidor.
+
 ## Puesta en produccion
 
 La version segura usa un correo alternativo verificado y liga la aprobacion al

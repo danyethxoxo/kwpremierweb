@@ -1,3 +1,5 @@
+import { secureServe } from '../_shared/security.ts'
+import { validEmail, validPassword, validUuid } from '../_shared/security-core.ts'
 // Edge Function: gestionar-usuario
 // Permite a Master/Admin editar (nombre, apellido, correo, rol,
 // contraseña) o eliminar cuentas, respetando el límite de cada rol:
@@ -6,15 +8,12 @@
 // rol "admin" ni "master". Se crea vía Supabase Dashboard > Edge
 // Functions > Create function, pegando este código.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const CORS_HEADERS = {}
 
 const ROLES_VALIDOS = ['master', 'admin', 'staff', 'asociado']
 
@@ -36,7 +35,7 @@ function respond(body: unknown, status = 200) {
   })
 }
 
-Deno.serve(async (req) => {
+secureServe({ name: 'gestionar-usuario', userLimit: 20 }, async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
@@ -71,7 +70,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const accion = String(body.accion || '')
     const targetId = String(body.user_id || '')
-    if (!targetId) return respond({ error: 'Falta indicar el usuario a modificar' }, 400)
+    if (!validUuid(targetId)) return respond({ error: 'Usuario invalido' }, 400)
 
     const { data: targetProfile, error: targetError } = await admin
       .from('profiles')
@@ -114,8 +113,12 @@ Deno.serve(async (req) => {
       if (targetId === callerId && nuevoRol && nuevoRol !== rolActualDestino) {
         return respond({ error: 'No puedes cambiar tu propio rol' }, 400)
       }
-      if (password && password.length < 6) {
-        return respond({ error: 'La contraseña debe tener al menos 6 caracteres' }, 400)
+      if (email && !validEmail(email)) return respond({ error: 'Correo invalido' }, 400)
+      if ([nombre, apellido].some((v) => v !== undefined && (v.length > 120 || /[\x00-\x1f]/.test(v)))) {
+        return respond({ error: 'Nombre o apellido invalido' }, 400)
+      }
+      if (password && !validPassword(password)) {
+        return respond({ error: 'La contraseña debe tener al menos 12 caracteres y como maximo 72 bytes' }, 400)
       }
 
       if (email || password) {

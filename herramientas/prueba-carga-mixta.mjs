@@ -66,7 +66,7 @@ function cabeceras(token) {
 
 // ── Escenario A: crear documentos ──
 async function crearDocumento(token, userId, indice) {
-  const res = await fetch(`${URL_BASE}/rest/v1/documentos_guardados`, {
+  const res = await fetch(`${URL_BASE}/functions/v1/data-gateway/documentos_guardados`, {
     method: 'POST',
     headers: { ...cabeceras(token), Prefer: 'return=minimal' },
     body: JSON.stringify({
@@ -83,7 +83,7 @@ async function crearDocumento(token, userId, indice) {
 // ── Escenario B: revisar usuarios (como el panel de Agregar usuarios) ──
 async function verUsuarios(token) {
   const res = await fetch(
-    `${URL_BASE}/rest/v1/profiles?select=id,nombre,apellido,email,role&order=created_at.desc&limit=50`,
+    `${URL_BASE}/functions/v1/data-gateway/profiles?select=id,nombre,apellido,email,role&order=created_at.desc&limit=50`,
     { headers: cabeceras(token) }
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -93,7 +93,7 @@ async function verUsuarios(token) {
 
 // ── Escenario C: revisar firmas ──
 async function verFirmas(token) {
-  const res = await fetch(`${URL_BASE}/rest/v1/firmas_documentos?select=*&limit=30`, {
+  const res = await fetch(`${URL_BASE}/functions/v1/data-gateway/firmas_documentos?select=*&limit=30`, {
     headers: cabeceras(token),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
