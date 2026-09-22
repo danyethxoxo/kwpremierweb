@@ -48,3 +48,9 @@ test('all pages load security before Supabase and all inline JavaScript parses',
     if (html.includes('createClient(SUPABASE_URL, SUPABASE_KEY')) assert(html.includes('fetch: window.kwSecureFetch'), file);
   }
 });
+test('shared browser scripts parse', () => {
+  const scripts = walk(new URL('assets/js/', root).pathname.replace(/^\/([A-Z]:)/i, '$1'));
+  for (const file of scripts.filter((path) => path.endsWith('.js'))) {
+    assert.doesNotThrow(() => new vm.Script(readFileSync(file, 'utf8'), { filename: file }), file);
+  }
+});

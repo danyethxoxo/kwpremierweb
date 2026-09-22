@@ -73,7 +73,8 @@ for (const file of files(root)) {
 // Project cache rule: bump every reference to each modified shared asset.
 for (const file of files(root).filter((p) => /\.(html|js|css)$/.test(p))) {
   const code = readFileSync(file, 'utf8');
-  const next = code.replace(/((?:auth-guard|drawer|notif-bell|kw-ui|kw-revisiones|kw-compartir)\.js\?v=)[^"'\s<>]+/g, '$120260922');
+  const next = code.replace(/((?:auth-guard|drawer|notif-bell|kw-ui|kw-revisiones|kw-compartir)\.js\?v=)[^"'`\s<>;]+/g,
+    (_match, prefix) => prefix + '20260922');
   if (next !== code) writeFileSync(file, next);
 }
 console.log(`Security wiring: ${changed} frontend files updated.`);

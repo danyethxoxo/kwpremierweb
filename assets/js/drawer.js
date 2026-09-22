@@ -168,8 +168,13 @@
         })
         .catch(() => { driveItems = []; });
 
-      const pCalendario = fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/calendar-events')
-        .then((r) => r.json())
+      const pCalendario = fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/calendar-events', {
+        headers: { Authorization: 'Bearer ' + token },
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('No se pudo cargar el calendario');
+          return r.json();
+        })
         .then((data) => {
           calendarItems = (data.events || []).map((ev) => {
             const fecha = formatoFechaEvento(ev);
@@ -391,7 +396,7 @@
       }
       if (!document.querySelector('script[src*="notif-bell.js"]')) {
         const sc = document.createElement('script');
-        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260922
+        sc.src = `${BASE}/assets/js/notif-bell.js?v=20260922`;
         document.head.appendChild(sc);
       } else {
         // Ya estaba cargado. Se le avisa de todos modos, sin importar si
