@@ -1749,7 +1749,7 @@
         <span class="dic-cabecera-col">Listado</span>
       </div>
 
-      <div class="kw-lista" id="lista">
+      <div class="kw-lista" id="lista" aria-busy="true">
         <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
         <div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-w30" style="margin-top:7px;"></div></div></div></div>
       </div>
@@ -2039,6 +2039,10 @@
   var historial = [];
   var documentosEnlazados = [];
   var asesores = [];
+  // La lista ya trae su skeleton en el HTML. Mientras llega la primera
+  // consulta, los filtros y catálogos pueden pedir un repintado; esta
+  // bandera evita que ese repintado confunda "aún cargando" con "vacía".
+  var listaCargando = true;
   var tipos = [];
   var abierto = null;
   var verArchivo = false;
@@ -2418,6 +2422,8 @@
       .order('created_at', { ascending: false }).limit(500);
 
     if (r.error) {
+      listaCargando = false;
+      $('lista').setAttribute('aria-busy', 'false');
       $('lista').innerHTML = '<div class="kw-vacio">No se pudieron cargar los dictámenes: '
         + escapar(r.error.message) + '</div>';
       return;
@@ -2451,6 +2457,7 @@
       .limit(1000);
     documentosEnlazados = de.error ? [] : (de.data || []);
 
+    listaCargando = false;
     pintar();
   }
 
@@ -2669,7 +2676,6 @@
   // ── La lista ────────────────────────────────────────────────
 
   function pintar() {
-    pintarResumen();
     // El título es ahora el del renglón de arriba, que es el único que
     // queda. La descripción se fue con el encabezado que se quitó: decía
     // lo que la propia pantalla enseña, y costaba un renglón.
@@ -2677,6 +2683,18 @@
       ? 'Archivo de expedientes'
       : 'Dictaminación de Expedientes';
     $('op-archivo-txt').textContent = verArchivo ? 'Volver a la lista' : 'Ver archivo';
+
+    // El skeleton debe durar lo que la consulta, no un tiempo fijo. Así no
+    // aparece un estado vacío momentáneo antes de que lleguen los expedientes.
+    if (listaCargando) {
+      $('resumen').innerHTML = '';
+      $('dic-cabecera').style.display = '';
+      $('lista').setAttribute('aria-busy', 'true');
+      return;
+    }
+
+    $('lista').setAttribute('aria-busy', 'false');
+    pintarResumen();
 
     var filas = visibles();
 
