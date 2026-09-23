@@ -244,6 +244,10 @@
   }
   .pct { font-size: 13px; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .fila-flecha { width: 16px; height: 16px; color: #aaa; flex-shrink: 0; transition: transform .2s; }
+  .fila-acciones { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .fila-accion { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.78); color: var(--muted); font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap; }
+  .fila-accion:hover { border-color: var(--red); background: #fff; color: var(--red); }
+  .fila-accion svg { width: 14px; height: 14px; flex-shrink: 0; }
 
   /* Menú de tres puntos: cambiar DT o dar de baja, hasta la derecha de
      la tarjeta. Va en su propio contenedor position:relative para que
@@ -288,9 +292,9 @@
   .abc-historial-item-tema { margin-top: 2px; color: var(--text); font-size: 12.5px; overflow-wrap: anywhere; }
   .abc-historial-item-meta { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
   .abc-historial-item-fecha { align-self: start; color: var(--muted); font-size: 11px; white-space: nowrap; text-align: right; }
-  .abc-modal { position: fixed; inset: 0; z-index: 120; display: flex; align-items: flex-start; justify-content: center; padding: 72px 18px 24px; }
-  .abc-modal-fondo { position: absolute; inset: 0; background: rgba(20,20,20,.32); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-  .abc-modal-caja { position: relative; display: flex; flex-direction: column; width: min(900px, 100%); max-height: calc(100vh - 96px); overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+  .abc-modal { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-start; justify-content: center; padding: 48px 15px 24px; }
+  .abc-modal-fondo { position: absolute; inset: 0; background: rgba(20,20,20,.58); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .abc-modal-caja { position: relative; display: flex; flex-direction: column; width: min(1120px, calc(100vw - 30px)); max-height: calc(100vh - 72px); overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
   .abc-modal-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px 13px; border-bottom: 1px solid var(--border); }
   .abc-modal-cabecera h2 { margin: 0; color: var(--text); font-size: 17px; }
   .abc-modal-cabecera p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
@@ -301,7 +305,7 @@
   .abc-modal-filtros select, .abc-modal-filtros input { height: 34px; min-width: 150px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
   .abc-modal-filtros input { width: min(300px, 42vw); }
   .abc-modal-filtros select:focus, .abc-modal-filtros input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
-  .abc-historial-salida { min-height: 150px; overflow: auto; padding: 14px 18px 18px; }
+  .abc-historial-salida { min-height: 250px; overflow: auto; padding: 14px 18px 18px; }
   .abc-historial-resumen { margin-bottom: 10px; color: var(--muted); font-size: 12px; }
   .abc-historial-vacio { padding: 42px 15px; color: var(--muted); font-size: 13px; text-align: center; }
   .abc-historial-error { padding: 16px; border-radius: 9px; background: #fdecea; color: #8b1a10; font-size: 12.5px; }
@@ -317,7 +321,7 @@
     .abc-historial-item { grid-template-columns: 1fr; }
     .abc-historial-item-fecha { grid-column: 1; text-align: left; }
   }
-  @media (max-width: 680px) { .fila-meta span:last-child { display: none; } }
+  @media (max-width: 680px) { .fila-meta span:last-child { display: none; } .fila-accion span { display: none; } .fila-accion { width: 30px; justify-content: center; padding: 0; } }
   @media (max-width: 480px) {
     .fila-main { flex-wrap: wrap; }
     .fila-prog { order: 3; width: 100%; margin-top: 8px; }
@@ -735,6 +739,16 @@
     var dtHtml = puedeEditar
       ? '<button type="button" class="fila-dt" data-kwid="' + esc(a.kwid) + '">' + puntoDT + textoDT + lapiz + '</button>'
       : '<span class="fila-dt">' + puntoDT + textoDT + '</span>';
+    var acciones = puedeEditar
+      ? '<div class="fila-acciones">' +
+          '<button type="button" class="fila-accion" data-accion="comentarios" data-kwid="' + esc(a.kwid) + '" aria-label="Abrir comentarios">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.1-.6L4 20l1.5-3.7A7.3 7.3 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/><path d="M8 11h8M8 14h5"/></svg><span>Comentario</span>' +
+          '</button>' +
+          '<button type="button" class="fila-accion" data-accion="historial" data-kwid="' + esc(a.kwid) + '" aria-label="Abrir historial">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Historial</span>' +
+          '</button>' +
+        '</div>'
+      : '';
     return '<div class="fila-main" role="button" tabindex="0" aria-expanded="false">' +
         '<div class="fila-txt">' +
           '<div class="fila-nom">' + esc(a.nombre) + (a.activo ? '' : '<span class="fila-baja">Baja</span>') + '</div>' +
@@ -744,6 +758,7 @@
             (fecha ? '<span>Ingreso ' + fecha + '</span>' : '') +
           '</div>' +
         '</div>' +
+        acciones +
         '<div class="fila-prog">' +
           '<span class="barra"><i style="width:' + p + '%;background-color:' + colorProgreso(p) + '"></i></span>' +
           '<span class="pct" style="color:' + colorProgreso(p) + '">' + p + '%</span>' +
@@ -1036,28 +1051,20 @@
     // redundante.
     var svgBaja = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
     var svgAlta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
-    var svgComentario = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.1-.6L4 20l1.5-3.7A7.3 7.3 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/><path d="M8 11h8M8 14h5"/></svg>';
-    var svgHistorial = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
     var m = document.createElement('div');
     m.className = 'fila-menu';
     m.innerHTML =
-      '<button type="button" data-accion="comentario">' + svgComentario + 'Comentario</button>' +
-      '<button type="button" data-accion="historial">' + svgHistorial + 'Historial</button>' +
       '<button type="button" class="' + (a.activo ? 'peligro' : '') + '" data-accion="baja">' +
         (a.activo ? svgBaja + 'Dar de baja' : svgAlta + 'Reactivar') +
       '</button>';
     host.appendChild(m);
     menuFilaAbierto = kwid;
 
-    m.addEventListener('click', function (e) {
-      var accion = e.target.closest('[data-accion]');
-      if (!accion) return;
+    m.querySelector('[data-accion="baja"]').addEventListener('click', function (e) {
       e.stopPropagation();
       cerrarMenuFila();
-      if (accion.dataset.accion === 'baja') alternarActivo(kwid);
-      if (accion.dataset.accion === 'comentario') abrirPanelFila(kwid, 'comentarios');
-      if (accion.dataset.accion === 'historial') abrirPanelFila(kwid, 'historial');
+      alternarActivo(kwid);
     });
   }
 
@@ -1567,6 +1574,12 @@
       if (panelFila) panelFila.hidden = true;
       return;
     }
+    var accionBtn = e.target.closest('.fila-accion');
+    if (accionBtn) {
+      e.stopPropagation();
+      abrirPanelFila(accionBtn.dataset.kwid, accionBtn.dataset.accion);
+      return;
+    }
     // El botón de DT y el de tres puntos viven DENTRO de .fila-main
     // hay que resolverlos primero, si no el clic también dispararía
     // abrir/cerrar el checklist.
@@ -1585,7 +1598,7 @@
   });
   salidaEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    if (e.target.closest('button.fila-dt, select.fila-dt-select, .fila-menu-btn, .fila-menu')) return; // que el teclado del select/menú siga siendo suyo
+    if (e.target.closest('button.fila-dt, select.fila-dt-select, .fila-menu-btn, .fila-menu, .fila-accion')) return; // que el teclado del select/menú siga siendo suyo
     var main = e.target.closest('.fila-main');
     if (!main) return;
     e.preventDefault();
