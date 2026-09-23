@@ -707,6 +707,7 @@
   function armarFormularioLead() {
     var form = document.getElementById('form-lead');
     if (!form) return;
+    form.dataset.kwFormStartedAt = String(Date.now());
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -746,6 +747,8 @@
           telefono: telefono || null,
           mensaje: mensaje || null,
           origen: 'propiedad',
+          apodo: form.apodo.value,
+          kw_form_started_at: form.dataset.kwFormStartedAt || String(Date.now()),
         });
         if (res.error) throw res.error;
         mostrarGracias();

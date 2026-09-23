@@ -22,12 +22,12 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-export async function consumeLimit(scope: string, subject: string, limit: number): Promise<void> {
+export async function consumeLimit(scope: string, subject: string, limit: number, windowSeconds = 60): Promise<void> {
   const { data, error } = await adminClient().rpc('security_consume_rate', {
-    p_scope: scope, p_subject: subject, p_limit: limit, p_window: 60,
+    p_scope: scope, p_subject: subject, p_limit: limit, p_window: windowSeconds,
   })
   if (error || !data || typeof data.allowed !== 'boolean') throw new HttpError(503, 'Servicio no disponible')
-  if (!data.allowed) throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', data.retry_after || 60)
+  if (!data.allowed) throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', data.retry_after || windowSeconds)
 }
 
 async function authenticate(req: Request, options: Options): Promise<Context> {

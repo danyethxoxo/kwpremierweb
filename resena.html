@@ -256,6 +256,8 @@
         texto: document.getElementById('res-texto').value.trim(),
         estrellas: calificacion,
         rol: document.getElementById('res-rol').value.trim() || null,
+        apodo: document.getElementById('res-apodo').value,
+        kw_form_started_at: document.getElementById('formulario').dataset.kwFormStartedAt || String(Date.now()),
       });
       if (error) throw error;
       actualizarBoton('enviado');
@@ -275,6 +277,8 @@
   ['res-nombre', 'res-texto'].forEach(function (id) {
     document.getElementById(id).addEventListener('input', function () { actualizarBoton(); });
   });
+
+  document.getElementById('formulario').dataset.kwFormStartedAt = String(Date.now());
 
   pintarEstrellas();
   actualizarBoton();

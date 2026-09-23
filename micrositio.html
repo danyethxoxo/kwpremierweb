@@ -995,6 +995,7 @@
   // ─────────────────────────────────────────────────────────────
   function conectarFormulario() {
     var form = document.getElementById('form-prospecto');
+    if (form) form.dataset.kwFormStartedAt = String(Date.now());
     var msg = document.getElementById('form-msg');
     var btn = document.getElementById('btn-enviar');
     // El texto vive en un <span> aparte del ícono de WhatsApp: así se
@@ -1068,6 +1069,8 @@
           telefono: telefono || null,
           mensaje: mensaje || null,
           origen: 'micrositio',
+          apodo: form.apodo.value,
+          kw_form_started_at: form.dataset.kwFormStartedAt || String(Date.now()),
         });
         if (res.error) throw res.error;
         mostrarGracias();
