@@ -217,7 +217,13 @@
   function getRedirectTarget() {
     // El sitio se publica en / (GitHub Pages de proyecto).
     const params = new URLSearchParams(location.search);
-    return params.get('redirect') || '/portal.html';
+    const target = params.get('redirect') || '/portal.html';
+    // Nunca convertir el parametro de redireccion en un open redirect.
+    return /^\/(?!\/)/.test(target) && !/[\r\n]/.test(target) ? target : '/portal.html';
+  }
+
+  function activarMfaUrl() {
+    return '/activar-mfa.html?redirect=' + encodeURIComponent(getRedirectTarget());
   }
 
   // Pantalla de carga: el mismo velo con el logo que usan las páginas
@@ -294,7 +300,7 @@
       }
       if (estado.requerido && !estado.activo) {
         mostrarCargando();
-        location.replace('/completar-registro.html');
+        location.replace(estado.requiere_alta ? '/completar-registro.html' : activarMfaUrl());
         return;
       }
       if (estado.activo && !estado.verificado) {

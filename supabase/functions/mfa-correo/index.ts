@@ -90,8 +90,12 @@ secureServe({ name: 'mfa-correo', mfa: false, userLimit: 30 }, async (req) => {
 
     const { data: method, error: methodLookupError } = await admin.from('mfa_metodos').select('destino,activo').eq('user_id', userId).maybeSingle()
     if (methodLookupError) return response(req, { error: 'No se pudo comprobar la seguridad de la cuenta.' }, 500)
-    const required = !!method
+    const { data: profile, error: profileLookupError } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle()
+    if (profileLookupError) return response(req, { error: 'No se pudo comprobar el rol de la cuenta.' }, 500)
+    const privileged = profile?.role === 'master' || profile?.role === 'admin'
+    const required = privileged || !!method
     const active = method?.activo === true && !!method?.destino
+    const needsEnrollment = required && !active
     let trusted = false
     if (active && deviceHash) {
       const { data: device, error: deviceLookupError } = await admin.from('mfa_dispositivos').select('id').eq('user_id', userId)
@@ -113,6 +117,8 @@ secureServe({ name: 'mfa-correo', mfa: false, userLimit: 30 }, async (req) => {
       requerido: required,
       activo: active,
       verificado: !required || (active && verified),
+      requiere_alta: !!method && needsEnrollment,
+      requiere_mfa: privileged && needsEnrollment,
       dispositivo_confiable: trusted,
       enviado_a: active ? maskEmail(method.destino) : null,
     })

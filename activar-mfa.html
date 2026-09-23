@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activar verificación</title>
+  <link rel="icon" type="image/png" href="/assets/img/favicon.png" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260829q" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; background: var(--lienzo); color: var(--text); font-family: Poppins, Arial, sans-serif; }
+    .card { width: min(100%, 430px); padding: 30px 26px; border: 1px solid rgba(255,255,255,.8); border-radius: 18px; background: rgba(255,255,255,.82); box-shadow: 0 12px 40px rgba(0,0,0,.12); }
+    .logo { display: block; width: 145px; margin: 0 auto 20px; }
+    h1 { margin: 0 0 8px; text-align: center; font-size: 21px; }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; line-height: 1.55; text-align: center; }
+    label { display: block; margin: 0 0 6px; color: var(--red); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    input { width: 100%; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 10px; font: inherit; }
+    button { width: 100%; margin-top: 14px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--red); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: default; }
+    .secondary { margin-top: 10px; background: transparent; color: var(--red); border: 1px solid var(--border); }
+    .msg { display: none; margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; }
+    .msg.show { display: block; }
+    .msg.error { background: #fdeaea; color: #a30000; }
+    .msg.ok { background: #eaf7ea; color: #1a7a1a; }
+    #code-block { display: none; margin-top: 18px; }
+    #code-block.show { display: block; }
+    .hint { margin: 9px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="/assets/img/logo-kw-premier.png" alt="KW Premier" />
+    <h1>Protege tu cuenta</h1>
+    <p class="sub">Las cuentas de administrador y master necesitan un correo de seguridad antes de entrar al portal.</p>
+    <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+    <form id="mfa-form" novalidate>
+      <label for="security-email">Correo de seguridad</label>
+      <input id="security-email" type="email" autocomplete="email" maxlength="254" required placeholder="Un correo distinto al de acceso" />
+      <p class="hint">Usaremos este correo para enviarte un código cuando entres desde un dispositivo nuevo.</p>
+      <button id="send-btn" type="submit">Enviar código</button>
+    </form>
+
+    <div id="code-block">
+      <label for="security-code">Código de 6 dígitos</label>
+      <input id="security-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+      <button id="verify-btn" type="button" disabled>Verificar y continuar</button>
+    </div>
+    <button id="logout-btn" class="secondary" type="button">Cerrar sesión</button>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
+    const MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
+    const DEVICE_KEY = 'kw_device_token_v1';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
+    let volatileDeviceToken = '';
+
+    function getDeviceToken() {
+      try {
+        const stored = localStorage.getItem(DEVICE_KEY);
+        if (/^[A-Za-z0-9_-]{43}$/.test(stored || '')) return stored;
+      } catch (e) {}
+      if (volatileDeviceToken) return volatileDeviceToken;
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      let binary = '';
+      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+      volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
+      return volatileDeviceToken;
+    }
+
+    function target() {
+      const raw = new URLSearchParams(location.search).get('redirect') || '/portal.html';
+      return /^\/(?!\/)/.test(raw) && !/[\r\n]/.test(raw) ? raw : '/portal.html';
+    }
+
+    function message(text, kind) {
+      const el = document.getElementById('msg');
+      el.textContent = text || '';
+      el.className = 'msg' + (text ? ' show ' + (kind || 'error') : '');
+    }
+
+    async function callMfa(body) {
+      const { data, error } = await sb.auth.getSession();
+      if (error || !data.session) throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+      const response = await fetch(MFA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.session.access_token },
+        body: JSON.stringify(Object.assign({}, body, { dispositivo_token: getDeviceToken() })),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'No se pudo completar la verificación.');
+      return payload;
+    }
+
+    async function init() {
+      const { data } = await sb.auth.getSession();
+      if (!data || !data.session) {
+        location.replace('/login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
+        return;
+      }
+      try {
+        const state = await callMfa({ accion: 'estado' });
+        if (!state.requerido || state.activo) {
+          location.replace(target());
+          return;
+        }
+        if (state.requiere_alta) {
+          location.replace('/completar-registro.html');
+        }
+      } catch (error) {
+        message(error.message || 'No se pudo comprobar la seguridad de tu cuenta.');
+      }
+    }
+
+    document.getElementById('mfa-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = document.getElementById('security-email').value.trim();
+      const button = document.getElementById('send-btn');
+      if (!window.kwSecurity.validEmail(email)) {
+        message('Escribe un correo válido.', 'error');
+        return;
+      }
+      button.disabled = true;
+      message('');
+      try {
+        const sent = await callMfa({ accion: 'preparar', correo_alternativo: email });
+        document.getElementById('security-email').readOnly = true;
+        document.getElementById('code-block').classList.add('show');
+        document.getElementById('security-code').focus();
+        message('Enviamos un código a ' + (sent.enviado_a || 'tu correo de seguridad') + '.', 'ok');
+      } catch (error) {
+        message(error.message || 'No se pudo enviar el código.', 'error');
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('security-code').addEventListener('input', (event) => {
+      event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+      document.getElementById('verify-btn').disabled = event.target.value.length !== 6;
+    });
+
+    document.getElementById('verify-btn').addEventListener('click', async () => {
+      const button = document.getElementById('verify-btn');
+      button.disabled = true;
+      try {
+        await callMfa({ accion: 'confirmar', codigo: document.getElementById('security-code').value });
+        message('Cuenta protegida. Entrando al portal…', 'ok');
+        setTimeout(() => location.replace(target()), 500);
+      } catch (error) {
+        message(error.message || 'Código incorrecto o vencido.', 'error');
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      location.replace('/login.html');
+    });
+
+    init();
+  </script>
+</body>
+</html>

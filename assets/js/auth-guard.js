@@ -167,7 +167,7 @@
       return respuesta.json();
     }).then(function (estado) {
       if (estado.requerido === true && estado.activo !== true) {
-        location.replace(BASE_PATH + '/completar-registro.html');
+        location.replace(BASE_PATH + (estado.requiere_alta ? '/completar-registro.html' : '/activar-mfa.html'));
         return new Promise(function () {});
       }
       return estado.activo === true && estado.verificado !== true;
