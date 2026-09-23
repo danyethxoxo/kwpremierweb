@@ -21,15 +21,7 @@
 
     const lateral = document.createElement('aside');
     lateral.className = 'kw-lateral kw-lateral-universal';
-    lateral.setAttribute('aria-label', 'Filtros y herramientas de ' + tituloPagina());
-    const sinContexto = script && script.dataset.sinContexto === 'true';
-    const contexto = sinContexto ? '' :
-      '<div class="kw-lateral-contexto">' +
-        '<span class="kw-lateral-eyebrow">Vista actual</span>' +
-        '<strong>' + tituloPagina().replace(/[&<>"']/g, function (c) {
-          return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-        }) + '</strong>' +
-      '</div>';
+    lateral.setAttribute('aria-label', 'Filtros y herramientas');
     lateral.innerHTML =
       '<div class="kw-lateral-cabecera">' +
         '<a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">' +
@@ -38,7 +30,6 @@
         '<button type="button" class="kw-lateral-menu" data-kw-menu-principal ' +
           'aria-label="Mostrar menú del Hub" title="Mostrar menú del Hub">' + iconoSwitch() + '</button>' +
       '</div>' +
-      contexto +
       '<div class="kw-lateral-contenido"></div>';
 
     document.body.insertBefore(lateral, document.body.firstChild);
