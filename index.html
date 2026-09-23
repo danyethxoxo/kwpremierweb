@@ -29,10 +29,15 @@
   :root {
     --vino: #5C0000;              /* el guinda de los bloques de color */
     --vino-hondo: #430000;        /* un escalón más abajo, para degradar */
+    --pagina-gutter: clamp(18px, 3vw, 32px);
   }
 
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
-  body { background: transparent; }
+  body {
+    background: transparent;
+    width: 100%; max-width: 100%; min-width: 0;
+    overflow-x: clip;
+  }
   /* El menú lleva a secciones de esta misma página: se baja deslizando,
      no de golpe (salvo para quien pidió menos movimiento en su sistema). */
   html { scroll-behavior: smooth; }
@@ -44,15 +49,21 @@
      centro y el botón del portal a la derecha. No va fija: en una
      portada estorba, y el botón vuelve a quedar a la mano en el pie. */
   .tapa {
-    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
-    gap: 16px; padding: 26px 32px 22px;
+    position: relative; display: block;
+    padding: 26px var(--pagina-gutter) 22px; width: 100%; min-width: 0;
   }
-  .tapa-social { display: flex; align-items: center; gap: 14px; padding-top: 6px; }
+  .tapa-social {
+    position: absolute; left: var(--pagina-gutter); top: 32px;
+    display: flex; align-items: center; gap: 14px; width: max-content; min-width: 0;
+  }
   .tapa-social a { color: var(--muted); display: flex; transition: color 0.15s, transform 0.12s; }
   .tapa-social a:hover { color: var(--red); transform: translateY(-2px); }
   .tapa-social svg { width: 18px; height: 18px; display: block; }
 
-  .tapa-centro { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .tapa-centro {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    width: min(100%, 700px); min-width: 0; margin: 0 auto;
+  }
   .tapa-logo { display: block; }
   .tapa-logo img { height: 46px; width: auto; display: block; }
 
@@ -61,6 +72,7 @@
   .tapa-nav {
     display: flex; align-items: center; justify-content: center;
     flex-wrap: wrap; gap: 4px 6px;
+    max-width: 100%;
     padding: 5px 8px; border-radius: 999px;
     background: linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 100%);
     border: 1px solid rgba(255,255,255,0.85);
@@ -70,14 +82,18 @@
   }
   .tapa-nav a {
     position: relative;
-    padding: 6px 11px; border-radius: 999px;
+    min-width: 0; padding: 6px 11px; border-radius: 999px;
     font-size: 14.5px; font-weight: 500; color: var(--text);
     text-decoration: none; white-space: nowrap;
     transition: background 0.15s, color 0.15s;
   }
   .tapa-nav a:hover { background: #f3efef; color: var(--red); }
 
-  .tapa-der { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 2px; }
+  .tapa-der {
+    position: absolute; right: var(--pagina-gutter); top: 26px;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 12px; min-width: 0; margin-left: 0;
+  }
   /* Solo sale con sesión abierta (lo prende reflejarSesion). */
   .tapa-iniciales {
     display: none; align-items: center; justify-content: center;
@@ -103,13 +119,15 @@
   .btn-tapa:active { transform: translateY(1px); }
 
   /* ── Portada ── */
-  .portada { text-align: center; padding: 62px 24px 74px; }
+  .portada { width: 100%; max-width: 100%; text-align: center; padding: 62px var(--pagina-gutter) 74px; }
   .portada-antes {
+    width: 100%; max-width: 100%; overflow-wrap: anywhere;
     font-size: 21px; font-weight: 600; margin-bottom: 12px; color: var(--red);
   }
   .portada-titulo {
+    width: 100%; max-width: min(15ch, 100%); overflow-wrap: anywhere;
     font-size: 74px; line-height: 1.02; letter-spacing: -0.035em;
-    max-width: 15ch; margin: 0 auto; color: var(--text);
+    margin: 0 auto; color: var(--text);
   }
 
   .portada-foto {
@@ -119,7 +137,7 @@
   }
 
   /* ── Cuerpo ── */
-  main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+  main { flex: 1; width: 100%; max-width: 1180px; min-width: 0; margin: 0 auto; padding: 0 var(--pagina-gutter); }
 
   .bloque { padding: 74px 0; border-top: 1px solid var(--border); }
   .bloque:first-child { border-top: 0; }
@@ -228,7 +246,7 @@
     background:
       radial-gradient(120% 140% at 15% -20%, rgba(150,20,20,0.55), transparent 62%),
       linear-gradient(160deg, #6b0000 0%, var(--vino) 48%, var(--vino-hondo) 100%);
-    color: #fff; text-align: center; padding: 72px 24px;
+    color: #fff; text-align: center; padding: 72px var(--pagina-gutter);
   }
   .banda h2 {
     font-size: 46px; line-height: 1.06; letter-spacing: -0.035em;
@@ -254,7 +272,7 @@
   .pie {
     border-top: 1px solid var(--border);
     display: grid; grid-template-columns: auto 1fr auto; align-items: center;
-    gap: 24px; padding: 34px 32px;
+    gap: 24px; padding: 34px var(--pagina-gutter);
   }
   .pie-logo img { height: 40px; width: auto; display: block; }
   .pie-dir { font-size: 13px; line-height: 1.6; color: var(--muted); text-align: center; }
@@ -283,24 +301,35 @@
      redes y el botón se reparten el renglón de abajo. */
   @media (max-width: 700px) {
     .tapa {
-      grid-template-columns: 1fr auto;
-      grid-template-areas: 'logo logo' 'social boton';
-      gap: 18px; padding: 20px 18px 16px;
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "centro centro" "social der";
+      align-items: center; column-gap: 16px; row-gap: 14px;
+      padding: 20px var(--pagina-gutter);
     }
-    .tapa-centro { grid-area: logo; }
-    .tapa-social { grid-area: social; padding-top: 0; }
-    .tapa-der { grid-area: boton; padding-top: 0; }
+    .tapa-centro { grid-area: centro; width: 100%; margin: 0; }
+    .tapa-social {
+      position: static; grid-area: social; width: auto; padding-top: 0; align-self: center;
+    }
+    .tapa-der {
+      position: static; grid-area: der; justify-self: end; padding-top: 0;
+    }
     .tapa-logo img { height: 38px; }
-    .tapa-nav { gap: 2px 4px; }
-    .tapa-nav a { padding: 6px 9px; font-size: 13.5px; }
-    .btn-tapa { padding: 12px 22px; font-size: 13.5px; }
+    .tapa-nav {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      width: 100%; gap: 2px; padding: 5px;
+    }
+    .tapa-nav a {
+      padding: 6px 4px; font-size: 12.5px; line-height: 1.15;
+      white-space: normal; text-align: center;
+    }
+    .btn-tapa { max-width: 100%; padding: 12px 16px; font-size: 13.5px; }
 
-    .portada { padding: 40px 18px 48px; }
-    .portada-antes { font-size: 16px; }
-    .portada-titulo { font-size: 36px; }
+    .portada { padding: 40px var(--pagina-gutter) 48px; }
+    .portada-antes { font-size: 16px; line-height: 1.35; }
+    .portada-titulo { max-width: 100%; font-size: clamp(32px, 9.5vw, 42px); }
     .portada-foto { height: 46vh; min-height: 260px; background-image: url('/assets/img/equipo-kw-premier-sm.jpg'); }
 
-    main { padding: 0 18px; }
+    main { padding: 0 var(--pagina-gutter); }
     .bloque { padding: 48px 0; }
     .bloque-titulo { font-size: 31px; margin-bottom: 32px; }
     .bloque-rotulo { font-size: 21px; }
@@ -310,12 +339,12 @@
     .resenas { grid-template-columns: 1fr; }
     .oficina-mapa, .oficina-mapa iframe { min-height: 300px; }
 
-    .banda { padding: 52px 18px; }
+    .banda { padding: 52px var(--pagina-gutter); }
     .banda h2 { font-size: 28px; }
     .banda p { font-size: 14px; }
     .btn-banda { padding: 15px 28px; font-size: 14.5px; }
 
-    .pie { grid-template-columns: 1fr; justify-items: center; gap: 18px; padding: 30px 18px; }
+    .pie { grid-template-columns: 1fr; justify-items: center; gap: 18px; padding: 30px var(--pagina-gutter); }
     .pie-social { justify-content: center; }
   }
 </style>
