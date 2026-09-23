@@ -282,8 +282,16 @@
   @keyframes fila-confirmacion-entrada { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
   .fila-comentarios-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 13px; }
   .fila-comentario { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
+  .fila-comentario-cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .fila-comentario-texto { color: var(--text); font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .fila-comentario-meta { margin-top: 6px; color: var(--muted); font-size: 11px; }
+  .fila-comentario-meta { min-width: 0; color: var(--muted); font-size: 11px; }
+  .fila-comentario-acciones { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .fila-comentario-accion { height: 25px; padding: 0 7px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--muted); font: inherit; font-size: 10.5px; cursor: pointer; }
+  .fila-comentario-accion:hover { background: #f5f5f5; color: var(--text); }
+  .fila-comentario-accion.peligro { color: #b91c1c; }
+  .fila-comentario-accion.peligro:hover { background: #fef2f2; }
+  .fila-comentario-editor { width: 100%; min-height: 74px; max-height: 170px; margin-top: 8px; resize: vertical; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; box-sizing: border-box; }
+  .fila-comentario-editor:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
   .fila-comentario-form { display: flex; align-items: flex-end; gap: 9px; }
   .fila-comentario-form textarea { flex: 1; min-height: 58px; max-height: 150px; resize: vertical; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
   .fila-comentario-form textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
@@ -805,9 +813,11 @@
   function htmlComentariosContenido(kwid, rows) {
     var lista = rows.length
       ? '<div class="fila-comentarios-lista">' + rows.map(function (r) {
-          return '<article class="fila-comentario">' +
+          return '<article class="fila-comentario" data-comentario-id="' + esc(r.id) + '">' +
+            '<div class="fila-comentario-cabecera"><div class="fila-comentario-meta">' + esc(r.creado_por_nombre || 'Usuario no identificado') + ' · ' + esc(fechaHora(r.creado_en)) + '</div>' +
+              htmlAccionesComentario(false) +
+            '</div>' +
             '<div class="fila-comentario-texto">' + esc(r.comentario) + '</div>' +
-            '<div class="fila-comentario-meta">' + esc(r.creado_por_nombre || 'Usuario no identificado') + ' · ' + esc(fechaHora(r.creado_en)) + '</div>' +
           '</article>';
         }).join('') + '</div>'
       : '';
@@ -906,7 +916,7 @@
     if (tipo === 'historial') await cargarHistorialAsesor(kwid);
   }
 
-  function mostrarConfirmacionComentario(kwid) {
+  function mostrarConfirmacionComentario(kwid, mensaje) {
     var fila = filaEls.get(kwid);
     var panel = fila && fila.querySelector('.fila-panel[data-panel="comentarios"]');
     var cont = panel && panel.querySelector('[data-panel-contenido="comentarios"]');
@@ -918,13 +928,108 @@
     var aviso = document.createElement('div');
     aviso.className = 'fila-comentario-confirmacion';
     aviso.setAttribute('role', 'status');
-    aviso.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg><span>Comentario agregado</span>';
+    aviso.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg><span>' + esc(mensaje || 'Comentario agregado') + '</span>';
     cont.insertBefore(aviso, cont.firstChild);
     var timer = setTimeout(function () {
       if (aviso.parentNode) aviso.remove();
       comentarioConfirmTimers.delete(kwid);
     }, 3000);
     comentarioConfirmTimers.set(kwid, timer);
+  }
+
+  function htmlAccionesComentario(editando) {
+    if (!puedeEditar) return '';
+    return editando
+      ? '<div class="fila-comentario-acciones"><button type="button" class="fila-comentario-accion" data-comentario-accion="guardar">Guardar</button><button type="button" class="fila-comentario-accion" data-comentario-accion="cancelar">Cancelar</button></div>'
+      : '<div class="fila-comentario-acciones"><button type="button" class="fila-comentario-accion" data-comentario-accion="editar">Editar</button><button type="button" class="fila-comentario-accion peligro" data-comentario-accion="eliminar">Eliminar</button></div>';
+  }
+
+  function iniciarEdicionComentario(button) {
+    var article = button.closest('.fila-comentario');
+    var texto = article && article.querySelector('.fila-comentario-texto');
+    var acciones = article && article.querySelector('.fila-comentario-acciones');
+    if (!article || !texto || !acciones || article.dataset.editando === '1') return;
+    article.dataset.editando = '1';
+    texto.hidden = true;
+    var editor = document.createElement('textarea');
+    editor.className = 'fila-comentario-editor';
+    editor.maxLength = 1000;
+    editor.setAttribute('aria-label', 'Editar comentario');
+    editor.value = texto.textContent;
+    texto.parentNode.insertBefore(editor, texto);
+    acciones.innerHTML = htmlAccionesComentario(true);
+    editor.focus();
+  }
+
+  function cancelarEdicionComentario(button) {
+    var article = button.closest('.fila-comentario');
+    if (!article) return;
+    var editor = article.querySelector('.fila-comentario-editor');
+    var texto = article.querySelector('.fila-comentario-texto');
+    var acciones = article.querySelector('.fila-comentario-acciones');
+    if (editor) editor.remove();
+    if (texto) texto.hidden = false;
+    delete article.dataset.editando;
+    if (acciones) acciones.innerHTML = htmlAccionesComentario(false);
+  }
+
+  async function actualizarComentario(button) {
+    var article = button.closest('.fila-comentario');
+    var editor = article && article.querySelector('.fila-comentario-editor');
+    var acciones = article && article.querySelector('.fila-comentario-acciones');
+    var fila = article && article.closest('.fila');
+    if (!article || !editor || !acciones || !fila || article.dataset.guardando === '1') return;
+    var comentario = editor.value.trim();
+    if (!comentario) {
+      editor.focus();
+      return;
+    }
+    article.dataset.guardando = '1';
+    acciones.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    try {
+      var r = await window.kwSupabase.from('abc_comentarios')
+        .update({ comentario: comentario })
+        .eq('id', article.dataset.comentarioId);
+      if (r.error) throw r.error;
+      await cargarComentariosAsesor(fila.dataset.kwid);
+      mostrarConfirmacionComentario(fila.dataset.kwid, 'Comentario actualizado');
+    } catch (err) {
+      avisar('No se pudo actualizar el comentario: ' + (err.message || err) + '.', 'error');
+    } finally {
+      delete article.dataset.guardando;
+      acciones.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+    }
+  }
+
+  async function eliminarComentario(button) {
+    var article = button.closest('.fila-comentario');
+    var fila = article && article.closest('.fila');
+    if (!article || !fila || article.dataset.guardando === '1') return;
+    if (!window.confirm('¿Quieres eliminar este comentario?')) return;
+    var acciones = article.querySelector('.fila-comentario-acciones');
+    article.dataset.guardando = '1';
+    if (acciones) acciones.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    try {
+      var r = await window.kwSupabase.from('abc_comentarios')
+        .delete()
+        .eq('id', article.dataset.comentarioId);
+      if (r.error) throw r.error;
+      await cargarComentariosAsesor(fila.dataset.kwid);
+      mostrarConfirmacionComentario(fila.dataset.kwid, 'Comentario eliminado');
+    } catch (err) {
+      avisar('No se pudo eliminar el comentario: ' + (err.message || err) + '.', 'error');
+    } finally {
+      delete article.dataset.guardando;
+      if (acciones) acciones.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+    }
+  }
+
+  function manejarAccionComentario(button) {
+    var accion = button.dataset.comentarioAccion;
+    if (accion === 'editar') iniciarEdicionComentario(button);
+    if (accion === 'cancelar') cancelarEdicionComentario(button);
+    if (accion === 'guardar') actualizarComentario(button);
+    if (accion === 'eliminar') eliminarComentario(button);
   }
 
   async function guardarComentario(form) {
@@ -1615,6 +1720,12 @@
     if (cerrarPanel) {
       var panelOuter = cerrarPanel.closest('.fila-panel-outer');
       if (panelOuter) panelOuter.classList.remove('abierto');
+      return;
+    }
+    var comentarioBtn = e.target.closest('.fila-comentario-accion');
+    if (comentarioBtn) {
+      e.stopPropagation();
+      manejarAccionComentario(comentarioBtn);
       return;
     }
     var accionBtn = e.target.closest('.fila-accion');
