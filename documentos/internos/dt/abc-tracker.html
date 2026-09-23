@@ -265,15 +265,21 @@
   .fila-menu button.peligro { color: #b91c1c; }
   .fila-menu button.peligro:hover { background: #fef2f2; }
   .fila-menu button.peligro svg { color: #b91c1c; }
+  .fila-panel-outer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+  .fila-panel-outer.abierto { grid-template-rows: 1fr; }
+  .fila-panel-inner { min-height: 0; overflow: hidden; }
+  .fila-panel-outer:not(.abierto) { pointer-events: none; }
   .fila-panel { border-top: 1px solid var(--border); background: rgba(250,250,250,.72); padding: 14px 16px 16px; }
   .fila-panel-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
   .fila-panel-cabecera strong { font-size: 13.5px; color: var(--text); }
-  .fila-panel-sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
   .fila-panel-cerrar { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
   .fila-panel-cerrar:hover { background: #eee; color: var(--text); }
   .fila-panel-contenido { min-width: 0; }
   .fila-panel-cargando, .fila-panel-vacio, .fila-panel-error { padding: 12px 0; color: var(--muted); font-size: 12.5px; }
   .fila-panel-error { color: #8b1a10; }
+  .fila-comentario-confirmacion { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #16835b; font-size: 12.5px; font-weight: 600; animation: fila-confirmacion-entrada .18s ease; }
+  .fila-comentario-confirmacion svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  @keyframes fila-confirmacion-entrada { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
   .fila-comentarios-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 13px; }
   .fila-comentario { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
   .fila-comentario-texto { color: var(--text); font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -284,8 +290,8 @@
   .fila-comentario-form button { height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: var(--red); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
   .fila-comentario-form button:hover { filter: brightness(1.08); }
   .fila-comentario-form button:disabled { opacity: .55; cursor: default; }
-  .abc-historial-lista { display: flex; flex-direction: column; gap: 8px; }
-  .abc-historial-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
+  .abc-historial-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 260px)); justify-content: start; gap: 8px; }
+  .abc-historial-item { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
   .abc-historial-item-main { min-width: 0; }
   .abc-historial-item-estado { font-size: 12.5px; font-weight: 700; color: #16835b; }
   .abc-historial-item-estado.desmarcado { color: #b91c1c; }
@@ -318,6 +324,7 @@
     .abc-modal-filtros { align-items: stretch; flex-direction: column; }
     .abc-modal-filtros input { width: 100%; }
     .abc-modal-filtros select { width: 100%; }
+    .abc-historial-lista { grid-template-columns: 1fr; }
     .abc-historial-item { grid-template-columns: 1fr; }
     .abc-historial-item-fecha { grid-column: 1; text-align: left; }
   }
@@ -553,6 +560,7 @@
   var comentariosCache = new Map();
   var historialCache = new Map();
   var historialGlobal = [];
+  var comentarioConfirmTimers = new Map();
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -773,14 +781,18 @@
   }
 
   function htmlPanelesFila() {
-    return '<div class="fila-panel" data-panel="comentarios" hidden>' +
-      '<div class="fila-panel-cabecera"><div><strong>Comentarios</strong><span class="fila-panel-sub">Notas del seguimiento de este asesor</span></div><button type="button" class="fila-panel-cerrar">Cerrar</button></div>' +
-      '<div class="fila-panel-contenido" data-panel-contenido="comentarios"><div class="fila-panel-cargando">Cargando comentarios...</div></div>' +
-    '</div>' +
-    '<div class="fila-panel" data-panel="historial" hidden>' +
-      '<div class="fila-panel-cabecera"><div><strong>Historial</strong><span class="fila-panel-sub">Cambios de checks de este asesor</span></div><button type="button" class="fila-panel-cerrar">Cerrar</button></div>' +
-      '<div class="fila-panel-contenido" data-panel-contenido="historial"><div class="fila-panel-cargando">Cargando historial...</div></div>' +
-    '</div>';
+    return '<div class="fila-panel-outer" data-panel-outer="comentarios"><div class="fila-panel-inner">' +
+      '<div class="fila-panel" data-panel="comentarios">' +
+        '<div class="fila-panel-cabecera"><div><strong>Comentarios</strong></div><button type="button" class="fila-panel-cerrar">Cerrar</button></div>' +
+        '<div class="fila-panel-contenido" data-panel-contenido="comentarios"><div class="fila-panel-cargando">Cargando comentarios...</div></div>' +
+      '</div>' +
+    '</div></div>' +
+    '<div class="fila-panel-outer" data-panel-outer="historial"><div class="fila-panel-inner">' +
+      '<div class="fila-panel" data-panel="historial">' +
+        '<div class="fila-panel-cabecera"><div><strong>Historial</strong></div><button type="button" class="fila-panel-cerrar">Cerrar</button></div>' +
+        '<div class="fila-panel-contenido" data-panel-contenido="historial"><div class="fila-panel-cargando">Cargando historial...</div></div>' +
+      '</div>' +
+    '</div></div>';
   }
 
   function temaPorId(id) {
@@ -795,7 +807,7 @@
             '<div class="fila-comentario-meta">' + esc(r.creado_por_nombre || 'Usuario no identificado') + ' · ' + esc(fechaHora(r.creado_en)) + '</div>' +
           '</article>';
         }).join('') + '</div>'
-      : '<div class="fila-panel-vacio">Aún no hay comentarios para este asesor.</div>';
+      : '';
     var formulario = puedeEditar
       ? '<form class="fila-comentario-form" data-kwid="' + esc(kwid) + '">' +
           '<textarea maxlength="1000" placeholder="Escribe un comentario de seguimiento" aria-label="Comentario para el asesor"></textarea>' +
@@ -877,17 +889,39 @@
   async function abrirPanelFila(kwid, tipo) {
     var fila = filaEls.get(kwid);
     var panel = fila && fila.querySelector('.fila-panel[data-panel="' + tipo + '"]');
-    if (!fila || !panel) return;
-    var estabaAbierto = !panel.hidden;
-    fila.querySelectorAll('.fila-panel').forEach(function (p) { p.hidden = true; });
+    var wrapper = panel && panel.closest('.fila-panel-outer');
+    if (!fila || !panel || !wrapper) return;
+    var estabaAbierto = wrapper.classList.contains('abierto');
+    fila.querySelectorAll('.fila-panel-outer').forEach(function (p) { p.classList.remove('abierto'); });
     if (estabaAbierto) return;
     var checklist = fila.querySelector('.fila-checklist-outer');
     var main = fila.querySelector('.fila-main');
     if (checklist) checklist.classList.remove('abierto');
     if (main) main.setAttribute('aria-expanded', 'false');
-    panel.hidden = false;
+    wrapper.classList.add('abierto');
     if (tipo === 'comentarios') await cargarComentariosAsesor(kwid);
     if (tipo === 'historial') await cargarHistorialAsesor(kwid);
+  }
+
+  function mostrarConfirmacionComentario(kwid) {
+    var fila = filaEls.get(kwid);
+    var panel = fila && fila.querySelector('.fila-panel[data-panel="comentarios"]');
+    var cont = panel && panel.querySelector('[data-panel-contenido="comentarios"]');
+    if (!cont) return;
+    var anterior = comentarioConfirmTimers.get(kwid);
+    if (anterior) clearTimeout(anterior);
+    var existente = cont.querySelector('.fila-comentario-confirmacion');
+    if (existente) existente.remove();
+    var aviso = document.createElement('div');
+    aviso.className = 'fila-comentario-confirmacion';
+    aviso.setAttribute('role', 'status');
+    aviso.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg><span>Comentario agregado</span>';
+    cont.insertBefore(aviso, cont.firstChild);
+    var timer = setTimeout(function () {
+      if (aviso.parentNode) aviso.remove();
+      comentarioConfirmTimers.delete(kwid);
+    }, 3000);
+    comentarioConfirmTimers.set(kwid, timer);
   }
 
   async function guardarComentario(form) {
@@ -909,7 +943,7 @@
         .single();
       if (r.error) throw r.error;
       await cargarComentariosAsesor(kwid);
-      avisar('Comentario guardado.');
+      mostrarConfirmacionComentario(kwid);
     } catch (err) {
       avisar('No se pudo guardar el comentario: ' + (err.message || err) + '.', 'error');
     } finally {
@@ -1165,6 +1199,11 @@
   function alternarFila(kwid) {
     var fila = filaEls.get(kwid);
     if (!fila) return;
+    var panelesAbiertos = fila.querySelectorAll('.fila-panel-outer.abierto');
+    if (panelesAbiertos.length) {
+      panelesAbiertos.forEach(function (p) { p.classList.remove('abierto'); });
+      return;
+    }
     var outer = fila.querySelector('.fila-checklist-outer');
     var main = fila.querySelector('.fila-main');
     var abierta = outer.classList.toggle('abierto');
@@ -1231,7 +1270,8 @@
       input.classList.remove('guardando');
       var filaConHistorial = filaEls.get(kwid);
       var panelHistorial = filaConHistorial && filaConHistorial.querySelector('.fila-panel[data-panel="historial"]');
-      if (panelHistorial && !panelHistorial.hidden) cargarHistorialAsesor(kwid);
+      var historialOuter = panelHistorial && panelHistorial.closest('.fila-panel-outer');
+      if (historialOuter && historialOuter.classList.contains('abierto')) cargarHistorialAsesor(kwid);
       limpiarAviso();
     } catch (err) {
       if (antes) avance.set(llave(kwid, temaId), true); else avance.delete(llave(kwid, temaId));
@@ -1570,8 +1610,8 @@
   salidaEl.addEventListener('click', function (e) {
     var cerrarPanel = e.target.closest('.fila-panel-cerrar');
     if (cerrarPanel) {
-      var panelFila = cerrarPanel.closest('.fila-panel');
-      if (panelFila) panelFila.hidden = true;
+      var panelOuter = cerrarPanel.closest('.fila-panel-outer');
+      if (panelOuter) panelOuter.classList.remove('abierto');
       return;
     }
     var accionBtn = e.target.closest('.fila-accion');
