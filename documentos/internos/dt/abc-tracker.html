@@ -69,7 +69,8 @@
   .stat-num { font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -0.5px; }
   .stat-lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .stat.activa .stat-num, .stat.activa .stat-lbl { color: var(--tono); }
-  #stats-filtros > div.stat { cursor: default; }
+  #stats-filtros > div.stat { cursor: default; user-select: none; }
+  #stats-filtros > button[data-stat="completos"] { cursor: pointer; }
   #stats-filtros > div.stat:hover { transform: none; box-shadow: var(--sombra-1); border-color: color-mix(in srgb, var(--tono) 48%, transparent); }
   @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
@@ -537,8 +538,9 @@
   // es una elección explícita que no debería desaparecer si además
   // está de baja o no coincide con el DT elegido en el otro filtro.
   function filtrados() {
-    if (statFiltro === 'completos') return asesores.filter(function (a) { return pctDe(a.kwid) === 100; });
-    if (pinned.size) return Array.from(pinned.values());
+    if (pinned.size) return Array.from(pinned.values()).filter(function (a) {
+      return statFiltro !== 'completos' || pctDe(a.kwid) === 100;
+    });
     var q = norm(document.getElementById('busq').value.trim());
     var dt = document.getElementById('f-dt').value;
     return asesores.filter(function (a) {
@@ -546,6 +548,7 @@
       if (pestana === 'inactivos' && a.activo) return false;
       if (dt && (a.dt_asignado || '') !== dt) return false;
       var pct = pctDe(a.kwid);
+      if (statFiltro === 'completos' && pct !== 100) return false;
       if (q) {
         var texto = norm(a.nombre + ' ' + a.kwid);
         var palabras = q.split(/\s+/);
@@ -1310,11 +1313,15 @@
 
   document.getElementById('f-dt').addEventListener('change', pintar);
 
-  document.getElementById('stats-filtros').addEventListener('click', function (e) {
-    var stat = e.target.closest('button[data-stat="completos"]');
-    if (!stat) return;
+  document.querySelector('#stats-filtros button[data-stat="completos"]').addEventListener('click', function () {
     statFiltro = statFiltro === 'completos' ? null : 'completos';
     pintar();
+  });
+  document.querySelectorAll('#stats-filtros > div.stat').forEach(function (stat) {
+    stat.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
   });
 
   document.getElementById('abc-tabs').addEventListener('click', function (e) {
