@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mi Perfil</title>
+<title>Configuración de cuenta</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script>
@@ -51,6 +51,14 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
   }
   .card h2 { font-size: 15px; margin-bottom: 14px; }
+  /* Estas opciones quedan fuera de la interfaz por ahora. Algunas clases
+     del sistema usan display:flex, así que el hidden nativo necesita este
+     refuerzo para no volver a mostrarlas. */
+  #perfil-tabs .kw-tab[hidden],
+  #perfil-paneles .kw-tabpanel[hidden],
+  #perfil-paneles .card[hidden],
+  #perfil-paneles .foto-wrap[hidden],
+  #perfil-paneles .portada-wrap[hidden] { display: none !important; }
 
   .foto-wrap {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -137,7 +145,7 @@
 <body>
 
   <header class="kw-header">
-    <span class="kw-header-title">Mi Perfil</span>
+    <span class="kw-header-title">Configuración de cuenta</span>
     <a href="portal.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -147,26 +155,28 @@
   </header>
 
   <main class="page">
-    <h1 class="page-title">Mi Perfil</h1>
-    <p class="page-desc">Tu perfil, tus enlaces y tu configuración.</p>
+    <h1 class="page-title">Configuración de cuenta</h1>
+    <p class="page-desc">Actualiza tu nombre y las opciones de seguridad de tu cuenta.</p>
 
     <div class="kw-tabs" data-kw-tabs="perfil-paneles" id="perfil-tabs">
-      <button type="button" class="kw-tab activo" data-tab="perfil">Perfil</button>
-      <button type="button" class="kw-tab" data-tab="enlaces">Enlaces</button>
-      <button type="button" class="kw-tab" data-tab="avanzado">Configuración avanzada</button>
+      <button type="button" class="kw-tab activo" data-tab="perfil">Cuenta</button>
+      <!-- La personalización pública se conserva en el código, pero se
+           retira de la interfaz hasta definir esa experiencia. -->
+      <button type="button" class="kw-tab" data-tab="enlaces" hidden>Enlaces</button>
+      <button type="button" class="kw-tab" data-tab="avanzado">Seguridad</button>
     </div>
 
     <div class="kw-tabpanels" id="perfil-paneles">
     <section class="kw-tabpanel activo" data-panel="perfil">
 
-    <!-- Módulo 1: Perfil (foto, nombre y acerca de mí) -->
+    <!-- Módulo 1: datos básicos de la cuenta. -->
     <div class="card">
-      <h2>Perfil</h2>
+      <h2>Datos de tu cuenta</h2>
       <!-- La portada se ve distinto en celular y escritorio (son de
            alturas distintas), así que además de subirla se puede
            ajustar qué parte se ancla arriba/abajo en el modal de
            posición (ver abrirModalPosPortada). -->
-      <div class="portada-wrap">
+      <div class="portada-wrap" hidden>
         <div class="portada-preview" id="portada-preview"></div>
         <div class="portada-acciones">
           <input type="file" id="portada-input" accept="image/*" style="display:none;" onchange="iniciarAjustePortada(event)" />
@@ -177,7 +187,7 @@
         <div class="msg" id="portada-msg"></div>
       </div>
 
-      <div class="foto-wrap">
+      <div class="foto-wrap" hidden>
         <div class="foto-preview" id="foto-preview">?</div>
         <input type="file" id="foto-input" accept="image/*" style="display:none;" onchange="iniciarCropFoto(event)" />
         <button type="button" class="btn-foto" onclick="document.getElementById('foto-input').click()">Cambiar foto</button>
@@ -185,18 +195,20 @@
       </div>
       <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" /></div>
       <div class="field"><label>Apellido</label><input type="text" id="perfil-apellido" /></div>
+      <div hidden>
       <div class="field"><label>Presentación corta</label><textarea id="perfil-descripcion" maxlength="220" placeholder="Una o dos líneas para la tarjeta de tu perfil. Ej: Asesor inmobiliario especializado en Polanco y Condesa."></textarea>
         <div class="ayuda-campo">Aparece junto a tu foto, arriba de tus redes.</div></div>
       <div class="field"><label>Título de la sección "Conóceme"</label><input type="text" id="perfil-titulo-conoceme" maxlength="60" placeholder="Acerca de mí" />
         <div class="ayuda-campo">El encabezado arriba de tu presentación larga. Si lo dejas vacío dice "Acerca de mí".</div></div>
       <div class="field"><label>Acerca de mí</label><textarea id="perfil-acerca" placeholder="Cuéntales a los clientes quién eres, tu experiencia y tu zona."></textarea>
         <div class="ayuda-campo">El texto largo de tu perfil público. Si lo dejas vacío se usa uno general.</div></div>
-      <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar perfil</button>
+      </div>
+      <button type="button" class="btn-guardar" id="btn-guardar-datos" onclick="guardarDatosPerfil()">Guardar cambios</button>
       <div class="msg" id="datos-msg"></div>
     </div>
 
     <!-- Módulo 2: Tu enlace público, para compartirlo o imprimir su QR -->
-    <div class="card">
+    <div class="card" hidden>
       <h2>Mi perfil público</h2>
       <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px;">Este es tu enlace personal. Compártelo con tus clientes o imprime el código QR en tu tarjeta.</p>
       <div class="enlace-publico">
@@ -209,7 +221,7 @@
     <!-- Módulo 2b: Enlace de propiedades personalizado - a quien entre
          por aquí, todo lo que navegue le muestra tus datos de contacto,
          aunque la propiedad sea de otro asesor. -->
-    <div class="card">
+    <div class="card" hidden>
       <h2>Mi catálogo de propiedades</h2>
       <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px;">
         Comparte este enlace en vez del genérico: quien entre por aquí navega el mismo catálogo de
@@ -224,7 +236,7 @@
     </div>
 
     </section>
-    <section class="kw-tabpanel" data-panel="enlaces">
+    <section class="kw-tabpanel" data-panel="enlaces" hidden>
 
     <!-- Módulo 3: Enlaces (sitio web y redes, con su ícono en cada campo) -->
     <div class="card">
@@ -275,7 +287,7 @@
 
     <!-- Módulo 4: Información adicional (correo, rol y contraseña) -->
     <div class="card">
-      <h2>Información adicional</h2>
+      <h2>Cuenta y contraseña</h2>
       <div class="field"><label>Correo</label><input type="email" id="perfil-email" disabled /></div>
       <div class="field">
         <label>Rol</label>
@@ -1022,6 +1034,6 @@
 </script>
 <script src="/assets/js/kw-qr.js?v=20260829"></script>
 <script src="/assets/js/kw-compartir.js?v=20260922"></script>
-<script src="/assets/js/drawer.js?v=20260922b" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
 </body>
 </html>

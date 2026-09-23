@@ -59,7 +59,6 @@
 
   const NAV_HUB = [
     { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
-    { href: `${BASE}/hub/calendario.html`, label: 'Calendario KW Premier', icon: 'calendar' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
     { href: `${BASE}/documentos/documentos.html`, label: 'Acuerdos y Contratos', icon: 'carpeta' },
     { href: `${BASE}/hub/firmas.html`, label: 'Firmas Digitales', icon: 'pluma' },
@@ -92,7 +91,6 @@
   const INDICE_BUSQUEDA = [
     { label: 'Inicio del Hub', href: `${BASE}/portal.html`, cat: 'Hub' },
     { label: 'Accesos Directos', href: `${BASE}/hub/accesosdirectos.html`, cat: 'Hub', alias: 'command weetrust kw one' },
-    { label: 'Calendario', href: `${BASE}/hub/calendario.html`, cat: 'Hub', alias: 'agenda sala de juntas evento' },
     { label: 'Acuerdos y Contratos', href: `${BASE}/documentos/documentos.html`, cat: 'Hub', alias: 'documentos' },
     { label: 'Documentos de Drive', href: `${BASE}/hub/drive.html`, cat: 'Hub', alias: 'drive carpeta archivos formatos manuales' },
     { label: 'Creador de formatos', href: `${BASE}/hub/plantillas.html`, cat: 'Hub', alias: 'plantillas' },
@@ -101,7 +99,7 @@
     { label: 'Reporta una Incidencia', href: `${BASE}/hub/tickets.html`, cat: 'Hub', alias: 'ticket soporte tecnico ayuda' },
     { label: 'Asesores (Proceso de Alta)', href: `${BASE}/hub/admin.html?v=20260919f#asesores`, cat: 'Hub', alias: 'dar de alta asesor nuevo bajas back office celulas' },
     { label: 'Panel de Admin', href: `${BASE}/hub/admin.html?v=20260919f`, cat: 'Hub', alias: 'administracion' },
-    { label: 'Mi Perfil', href: `${BASE}/perfil.html`, cat: 'Hub', alias: 'micrositio perfil publico' },
+    { label: 'Configuración de cuenta', href: `${BASE}/perfil.html`, cat: 'Hub', alias: 'nombre contraseña seguridad' },
 
     { label: 'Carta de Terminación Anticipada', href: `${BASE}/documentos/acuerdos/cartaterminacion.html`, cat: 'Acuerdos', alias: 'terminar cancelar' },
     { label: 'Aceptación de Oferta de Arrendamiento', href: `${BASE}/documentos/acuerdos/aceptacionoferta.html`, cat: 'Acuerdos', alias: 'oferta arrendamiento' },
@@ -288,7 +286,7 @@
       <a href="${BASE}/perfil.html" class="drawer-usuario" id="drawer-usuario">
         <span class="drawer-usuario-foto" id="drawer-usuario-foto">${ICONS.persona}</span>
         <span class="drawer-usuario-txt">
-          <span class="drawer-usuario-nombre" id="drawer-usuario-nombre">Mi perfil</span>
+          <span class="drawer-usuario-nombre" id="drawer-usuario-nombre">Configuración de cuenta</span>
           <span class="drawer-usuario-rol" id="drawer-usuario-rol"></span>
         </span>
       </a>`}
@@ -1177,19 +1175,8 @@
     });
   }
 
-  // "Mi Perfil" ahora lleva al perfil público de cada quien (el que se
-  // comparte con los clientes), no al formulario: desde ahí hay un botón
-  // de Editar. Como el id sale de la sesión, se resuelve al vuelo; si no
-  // hay sesión se queda apuntando a perfil.html, que manda al login.
-  if (!esPublico) {
-    const enlacePerfil = document.getElementById('drawer-usuario');
-    if (enlacePerfil && window.kwSupabase) {
-      window.kwSupabase.auth.getSession().then(({ data }) => {
-        const yo = data && data.session && data.session.user;
-        if (yo) enlacePerfil.href = `${BASE}/micrositio.html?id=${encodeURIComponent(yo.id)}`;
-      }).catch(() => {});
-    }
-  }
+  // La ficha del usuario abre la configuración de cuenta. El micrositio
+  // público queda pausado hasta retomar esa experiencia visual.
 
   // La cápsula del header se esconde al bajar y reaparece al subir,
   // completa: se va con todo y sus botones dentro. Aquí solo se pone o
