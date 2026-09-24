@@ -1206,19 +1206,6 @@
   /* El nombre vive dentro del editor: así se alinea con la hoja y no se
      pelea con la lupa, la campana ni el botón de volver del header. */
   #header-firmas.modo-editor .kw-header-title { display: none; }
-  .editor-encabezado {
-    display: flex; flex-direction: column; align-items: flex-start;
-    gap: 3px; min-width: 0; margin: 0 0 12px; padding: 0 2px;
-  }
-  .editor-encabezado-kicker {
-    color: var(--muted); font-size: 10.5px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-  }
-  .editor-titulo {
-    max-width: 100%; min-width: 0; color: var(--text);
-    font-size: clamp(16px, 1.7vw, 22px); font-weight: 600; line-height: 1.25;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
 
   /* ── La búsqueda ──
      Esta pantalla se dejaba el campo puesto de planta junto a la lupa,
@@ -1239,11 +1226,6 @@
      todo lo ancho (que es lo que hace de fábrica, para dejar lugar al
      campo) empujaba al botón de volver hasta la otra orilla. */
   html.kw-riel #header-firmas:not(.kw-buscando) .kw-header-capsula { flex: 0 0 auto; }
-
-  @media (max-width: 900px) {
-    .editor-encabezado { margin-bottom: 10px; padding: 0; }
-    .editor-titulo { white-space: normal; overflow-wrap: anywhere; }
-  }
 
   /* El contenido de Firmas no necesita el colchón inferior genérico: en
      el editor ese espacio le quitaba altura útil al visor y a los campos. */
@@ -1351,7 +1333,7 @@
     display: flex; align-items: center; gap: 6px;
     padding: 7px 12px;
     border-bottom: 1px solid rgba(0,0,0,0.09);
-    background: #fafafa;
+    background: #fafafa; position: relative;
   }
   .zoom-btn {
     width: 26px; height: 26px; border-radius: 7px;
@@ -1365,6 +1347,16 @@
   .zoom-pct {
     font-size: 12px; font-weight: 700; color: var(--text);
     min-width: 48px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .editor-zoom-titulo {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    max-width: 42%; min-width: 0; color: var(--text);
+    font-size: 12px; font-weight: 700; line-height: 1.1;
+    text-align: center; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; pointer-events: none;
+  }
+  @media (max-width: 720px) {
+    .editor-zoom-titulo { max-width: 34%; }
   }
   /* Vuelve la hoja al ancho de la columna. Se apaga cuando ya está así,
      que es cuando no haría nada. */
@@ -1961,10 +1953,6 @@
 
     <!-- Vista 3: el editor -->
     <div id="vista-editor" style="display:none;">
-          <div class="editor-encabezado">
-            <span class="editor-encabezado-kicker">Preparar firmas</span>
-            <h1 class="editor-titulo" id="editor-nombre">Documento</h1>
-          </div>
           <div class="editor-split">
 
             <!-- Vista previa: la tira de miniaturas y la hoja, en un
@@ -1983,6 +1971,7 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   </button>
                   <span class="zoom-pct" id="zoom-pct">100 %</span>
+                  <span class="editor-zoom-titulo" id="editor-nombre">Documento</span>
                   <button type="button" class="zoom-ajustar" id="zoom-ajustar">Ajustar al ancho</button>
 
                 </div>
