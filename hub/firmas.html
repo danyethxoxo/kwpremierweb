@@ -901,18 +901,24 @@
   .doc-caja {
     max-width: min(1440px, calc(100vw - 32px));
     max-height: calc(100vh - 32px); width: 100%; overflow: auto;
-    position: relative; text-align: left;
+    position: relative; text-align: left; padding-top: 38px;
+  }
+  .doc-caja > .det-cerrar {
+    top: 12px; right: 12px; z-index: 3;
   }
   .doc-split {
-    display: grid; grid-template-columns: minmax(0,1fr) 320px;
-    gap: 24px; align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 320px;
+    grid-template-rows: auto minmax(0,1fr);
+    column-gap: 24px; row-gap: 14px; align-items: stretch;
   }
-  .doc-izquierda { min-width: 0; display: flex; flex-direction: column; }
   #doc-titulo {
+    grid-column: 1; grid-row: 1;
     font-weight: 600; margin: 0 0 14px; padding-right: 36px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .doc-documento {
+    grid-column: 1; grid-row: 2;
     display: grid; grid-template-columns: 132px minmax(0,1fr);
     gap: 14px; min-width: 0;
   }
@@ -949,6 +955,7 @@
   /* La lista de firmantes es lo único que se desplaza; el título y
      "Descargar" se quedan fijos arriba y abajo. */
   .doc-lado {
+    grid-column: 2; grid-row: 2; align-self: stretch;
     display: flex; flex-direction: column; gap: var(--sp-3);
     height: min(74vh, 780px); min-height: 0; box-sizing: border-box;
     padding: 18px; overflow: hidden;
@@ -970,7 +977,13 @@
   .doc-lado .det-acciones { margin-top: 0; flex-direction: column; }
   .doc-lado .det-btn { width: 100%; }
   @media (max-width: 780px) {
-    .doc-split { grid-template-columns: 1fr; }
+    .doc-split {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    #doc-titulo { grid-column: 1; grid-row: 1; }
+    .doc-documento { grid-column: 1; grid-row: 2; }
+    .doc-lado { grid-column: 1; grid-row: 3; }
     .doc-lado { height: auto; max-height: 420px; }
   }
   @media (max-width: 560px) {
@@ -2073,15 +2086,13 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
       <div class="doc-split">
-        <div class="doc-izquierda">
-          <h3 id="doc-titulo">Documento</h3>
-          <div class="doc-documento">
-            <aside class="doc-miniaturas" id="doc-miniaturas">
-              <div class="doc-mini-tit">Páginas <b id="doc-minis-cuenta">0/0</b></div>
-              <div id="doc-minis-lista" class="doc-minis-lista barra-oscura"></div>
-            </aside>
-            <div id="doc-cuerpo" class="doc-marco barra-oscura"></div>
-          </div>
+        <h3 id="doc-titulo">Documento</h3>
+        <div class="doc-documento">
+          <aside class="doc-miniaturas" id="doc-miniaturas">
+            <div class="doc-mini-tit">Páginas <b id="doc-minis-cuenta">0/0</b></div>
+            <div id="doc-minis-lista" class="doc-minis-lista barra-oscura"></div>
+          </aside>
+          <div id="doc-cuerpo" class="doc-marco barra-oscura"></div>
         </div>
         <div class="doc-lado">
           <div id="doc-lado-tit" class="doc-lado-tit"></div>
@@ -4359,13 +4370,8 @@
     // al abrir un contrato a medias, y ahorra tener que cerrar y abrir
     // el estatus por separado.
     const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
-    const yaFirmaron = firmantes.filter((x) => x.firmado).length;
-    const faltan = firmantes.length - yaFirmaron;
 
-    $('doc-lado-tit').textContent = firmantes.length
-      ? (faltan ? 'Firmas pendientes ' + faltan + '/' + firmantes.length
-                : 'Firmado por los ' + firmantes.length)
-      : '';
+    $('doc-lado-tit').textContent = firmantes.length ? 'Firmantes' : '';
 
     $('doc-lado').innerHTML = firmantes.length
       ? firmantes.map((x) => {
