@@ -1269,26 +1269,19 @@
     :root { --alto-editor: calc(100dvh - var(--tope-pegado, 62px) - 18px); }
   }
 
-  /* El editor se sale del ancho de página del sitio (1180px). Ese ancho
-     está bien para el historial, pero aquí lo tiene que repartir entre
-     el documento y los campos, y al documento le tocaba tan poco que el
-     contrato salía en letra chica. Se ensancha solo esta vista, sin
-     tocar --ancho-pagina, que lo usan todas las demás pantallas.
-
-     El margen negativo es lo que lo recentra: el 50% es del hueco de
-     .kw-page, así que restarle media caja nueva la deja centrada en la
-     pantalla, no en el contenedor. */
-  @media (min-width: 1240px) {
-    #vista-editor {
-      /* Lo que sobra a los lados, contando el riel: sin descontarlo, el
-         editor se pasaba de la pantalla por la derecha y la columna de
-         los firmantes salía cortada. */
-      --hueco-riel: 0px;
-      --ancho-editor: calc(100vw - var(--hueco-riel) - 24px);
-      width: var(--ancho-editor);
-      margin-left: calc(50% - var(--ancho-editor) / 2);
+  /* En el editor el riel ya descuenta su propio ancho del body. Dejarlo
+     dentro del max-width de .kw-page lo encoge y el margen negativo lo
+     descuadra: la hoja y la columna de firmantes terminan cortadas en una
+     pantalla grande. El editor usa todo el ancho disponible después del
+     riel, con un borde pequeño para que no toque la línea de la gaveta. */
+  @media (min-width: 901px) {
+    body.firmas-pagina:not(.en-historial) > main.kw-page {
+      width: 100%; max-width: none; margin-left: 0; margin-right: 0;
+      padding-left: 12px !important; padding-right: 12px !important;
     }
-    html.kw-riel #vista-editor { --hueco-riel: var(--riel-hueco, 84px); }
+    body.firmas-pagina:not(.en-historial) #vista-editor {
+      width: 100%; max-width: none; margin-left: 0; margin-right: 0;
+    }
   }
 
   /* Al documento le toca bastante más que a los campos: es lo que hay
