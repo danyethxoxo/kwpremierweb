@@ -134,6 +134,41 @@
       transform: translateX(3px) scale(1.12) !important;
     }
   }
+  @media (min-width: 1024px) {
+    /* Historial conserva el riel abierto; al preparar un documento la hoja
+       necesita el ancho completo y el menú vuelve al estado compacto del
+       portal. El hover todavía puede abrirlo de forma temporal. */
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido {
+      --riel-ancho: 68px; --riel-hueco: 68px;
+    }
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within):not(.buscando),
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der).sin-hover {
+      width: 68px !important; min-width: 68px !important; max-width: 68px !important;
+    }
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within):not(.buscando) .drawer-header,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der).sin-hover .drawer-header {
+      opacity: 0 !important; visibility: hidden !important;
+    }
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within):not(.buscando) .drawer-link > span,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within):not(.buscando) .drawer-section-label,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der):not(:hover):not(.open):not(:focus-within):not(.buscando) .drawer-usuario-txt,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der).sin-hover .drawer-link > span,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der).sin-hover .drawer-section-label,
+    html.kw-riel body.firmas-pagina.firmas-riel-contraido
+      #drawer:not(.drawer-der).sin-hover .drawer-usuario-txt {
+      display: none !important; opacity: 0 !important; visibility: hidden !important;
+      width: 0 !important; max-width: 0 !important; overflow: hidden !important;
+    }
+  }
   /* Un peso menos: es el rótulo de un recuadro, no un título. */
   .firma-drop-txt { font-size: 13.5px; font-weight: 600; color: var(--text); }
   .firma-drop-sub { font-size: 12px; color: var(--muted); }
@@ -2721,6 +2756,16 @@
     // En el historial la que rueda es la tabla y la página se queda
     // quieta; en las otras dos vistas, al revés.
     document.body.classList.toggle('en-historial', cual === 'historial');
+    document.body.classList.toggle('firmas-riel-contraido', cual !== 'historial');
+    const drawerFirmas = document.getElementById('drawer');
+    if (drawerFirmas) {
+      if (cual === 'historial') {
+        drawerFirmas.classList.remove('sin-hover');
+        drawerFirmas.classList.add('open');
+      } else {
+        drawerFirmas.classList.remove('open', 'sin-hover', 'buscando');
+      }
+    }
     // El nombre del documento y "Cambiar documentos" solo tienen sentido
     // mientras se edita: el header los muestra en lugar del título de la
     // pantalla nada más en ese momento.
