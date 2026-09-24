@@ -2755,6 +2755,16 @@
     history[reemplazar ? 'replaceState' : 'pushState']({ vistaFirmas: cual }, '', url);
   }
 
+  function restablecerEstadoHistorial() {
+    const drawer = document.getElementById('drawer');
+    if (drawer) {
+      drawer.classList.remove('open', 'sin-hover', 'buscando', 'busqueda-cerrando', 'busqueda-con-resultados');
+    }
+    const header = document.getElementById('header-firmas');
+    if (header) header.classList.remove('modo-editor', 'modo-archivos', 'kw-buscando');
+    document.body.classList.remove('menu-global-abierto', 'menu-global-cerrando');
+  }
+
   // Las tres vistas se prenden y apagan desde un solo lugar: repartir
   // los display por cada manejador es como se acaba con dos vistas
   // encendidas a la vez.
@@ -2813,6 +2823,7 @@
       desarmar();
     }
     mostrarVista(cual, { desdeURL: true });
+    if (cual === 'historial') restablecerEstadoHistorial();
   }
 
   window.addEventListener('popstate', abrirVistaDeURL);
