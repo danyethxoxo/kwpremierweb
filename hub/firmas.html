@@ -1182,20 +1182,22 @@
      Documento a la izquierda, campos a la derecha. En pantallas
      angostas se apilan, con el documento arriba: la firma se coloca
      mirando la hoja, así que la hoja va primero. */
-  /* ── El nombre del documento, en el header ──
-     Solo aparece mientras se edita (el header le pone .modo-editor):
-     toma el lugar del título de la pantalla, centrado, para no repetirlo
-     también en el editor y ganar ese espacio para la hoja y los
-     firmantes. */
-  .kw-header-doc {
-    display: none;
-    flex: 1; min-width: 0; text-align: center;
-    font-size: 13px; font-weight: 500; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    padding: 0 8px;
-  }
+  /* El nombre vive dentro del editor: así se alinea con la hoja y no se
+     pelea con la lupa, la campana ni el botón de volver del header. */
   #header-firmas.modo-editor .kw-header-title { display: none; }
-  #header-firmas.modo-editor .kw-header-doc { display: block; }
+  .editor-encabezado {
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 3px; min-width: 0; margin: 0 0 12px; padding: 0 2px;
+  }
+  .editor-encabezado-kicker {
+    color: var(--muted); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .editor-titulo {
+    max-width: 100%; min-width: 0; color: var(--text);
+    font-size: clamp(16px, 1.7vw, 22px); font-weight: 600; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   /* ── La búsqueda ──
      Esta pantalla se dejaba el campo puesto de planta junto a la lupa,
@@ -1204,10 +1206,8 @@
      en las demás pantallas, y con el campo fijo aquí el header de
      Firmas era el único distinto de todo el sitio.
 
-     Mientras se edita un documento el nombre del archivo se queda a la
-     vista aunque se esté buscando: es lo que dice en qué se está
-     trabajando. */
-  #header-firmas.kw-buscando.modo-editor .kw-header-doc { display: block; }
+     Mientras se edita un documento, el nombre queda a la vista dentro de
+     la propia zona de trabajo aunque se esté buscando. */
   /* Abierto el cuadro de búsqueda, el botón de volver se pasa a su
      derecha en vez de quedarse adentro comiéndose el ancho de lo que se
      escribe. Va con position absoluta porque el cuadro es la cápsula que
@@ -1219,19 +1219,9 @@
      campo) empujaba al botón de volver hasta la otra orilla. */
   html.kw-riel #header-firmas:not(.kw-buscando) .kw-header-capsula { flex: 0 0 auto; }
 
-  /* El nombre del documento, clavado al centro del renglón y no
-     centrado en lo que sobra: repartiéndose el hueco con lo de al lado
-     se recorría cada vez que el cuadro de búsqueda se abría o se
-     cerraba. Fuera del acomodo no le quita lugar a nadie ni nadie se lo
-     quita a él, y no recibe clics: es un rótulo, no un botón. */
-  @media (min-width: 901px) {
-    #header-firmas .kw-header-doc {
-      position: absolute; left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      max-width: min(38%, 440px);
-      flex: 0 0 auto; padding: 0;
-      pointer-events: none;
-    }
+  @media (max-width: 900px) {
+    .editor-encabezado { margin-bottom: 10px; padding: 0; }
+    .editor-titulo { white-space: normal; overflow-wrap: anywhere; }
   }
 
   /* El alto de la zona de trabajo. Lo comparten el visor y la columna
@@ -1714,10 +1704,6 @@
        drawer.js, igual que en todas. -->
   <header class="kw-header" id="header-firmas">
     <span class="kw-header-title">Firmas Digitales</span>
-    <!-- Solo se ve mientras se edita un documento: el nombre del archivo
-         en el lugar del título, para no repetirlo también allá abajo y
-         ganar ese espacio para la hoja y los firmantes. -->
-    <span class="kw-header-doc" id="editor-nombre"></span>
     <a href="../portal.html" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -1944,6 +1930,10 @@
 
     <!-- Vista 3: el editor -->
     <div id="vista-editor" style="display:none;">
+          <div class="editor-encabezado">
+            <span class="editor-encabezado-kicker">Preparar firmas</span>
+            <h1 class="editor-titulo" id="editor-nombre">Documento</h1>
+          </div>
           <div class="editor-split">
 
             <!-- Vista previa: la tira de miniaturas y la hoja, en un
@@ -3682,28 +3672,6 @@
       archivo: 'firmas-' + cual + '.xlsx',
     });
   });
-
-  // ── Cada pieza del renglón de arriba, por su cuenta ──
-  // drawer.js mete el contenido del header dentro de la cápsula de
-  // búsqueda. El nombre del documento se saca de ahí para mantenerlo
-  // centrado y visible mientras se preparan las firmas.
-  function acomodarHeader() {
-    const h = document.getElementById('header-firmas');
-    const capsula = h && h.querySelector('.kw-header-capsula');
-    if (!capsula) return;
-    const sueltos = h.querySelector('.kw-header-sueltos');
-    ['editor-nombre'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el && capsula.contains(el)) h.insertBefore(el, sueltos || null);
-    });
-  }
-  // Después de drawer.js, que es quien arma la cápsula: los dos son
-  // scripts del final del <body>, así que para entonces ya corrió.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', acomodarHeader);
-  } else {
-    acomodarHeader();
-  }
 
   // La búsqueda es la de drawer.js, tal cual: el campo se abre desde la
   // lupa y él pone y quita su propia equis. Aquí vivían dos parches (uno
