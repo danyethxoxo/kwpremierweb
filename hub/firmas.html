@@ -115,6 +115,25 @@
   }
   .firma-drop:hover, .firma-drop.encima { border-color: var(--red); background: rgba(198,32,39,0.04); }
   .firma-drop svg { color: var(--muted); }
+  body.firmas-pagina #vista-archivos,
+  body.firmas-pagina #paso-archivos { width: 100%; max-width: none; }
+  body.firmas-pagina #paso-archivos .firma-drop {
+    width: 100%; align-self: stretch; box-sizing: border-box;
+  }
+  @media (min-width: 1024px) {
+    /* El riel conserva la lupa en el mismo sitio desde el primer frame;
+       el movimiento de los demás íconos no debe desplazarla al pasar por
+       un estado de hover incompleto. */
+    html.kw-riel body.firmas-pagina #drawer-buscar .drawer-buscar-toggle {
+      line-height: 0; transform: translateZ(0);
+    }
+    html.kw-riel body.firmas-pagina #drawer-buscar .drawer-buscar-toggle svg {
+      display: block; margin: 0; transform: translateX(0) scale(1) !important;
+    }
+    html.kw-riel body.firmas-pagina #drawer-buscar .drawer-buscar-toggle:hover svg {
+      transform: translateX(3px) scale(1.12) !important;
+    }
+  }
   /* Un peso menos: es el rótulo de un recuadro, no un título. */
   .firma-drop-txt { font-size: 13.5px; font-weight: 600; color: var(--text); }
   .firma-drop-sub { font-size: 12px; color: var(--muted); }
@@ -1643,7 +1662,7 @@
   .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 </head>
-<body class="en-historial">
+<body class="en-historial firmas-pagina">
 
   <!-- Tapa toda la pantalla mientras se trae el historial y se pone al
        día contra weetrust. Antes eso pasaba con la tabla ya visible: se
