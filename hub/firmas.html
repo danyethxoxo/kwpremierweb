@@ -2083,6 +2083,7 @@
   const BASE = '';
   const FN_FIRMAR = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/firmar-documento';
   const MAX_BYTES = 20 * 1024 * 1024;
+  const MENSAJE_PESO = 'Entre todos pasan de 20 MB. Quita alguno o vuelve a generarlos con menos resolución.';
 
   let miUserId = null;
   let miPerfil = { nombre: '', correo: '' };
@@ -2303,10 +2304,6 @@
       archivos.push(a);
     }
 
-    const total = archivos.reduce((s, a) => s + a.size, 0);
-    if (total > MAX_BYTES) {
-      avisoArchivos('Entre todos pasan de 20 MB. Quita alguno o vuelve a generarlos con menos resolución.', 'error');
-    }
     pintarArchivos();
   }
 
@@ -2407,6 +2404,7 @@
     $('drop-sub').textContent = archivos.length
       ? 'Se unen en el orden de la lista'
       : 'Puedes elegir varios PDF y se unen en uno solo';
+    validarPesoArchivos();
   }
 
   $('archivo').addEventListener('change', (e) => {
@@ -2663,6 +2661,24 @@
     caja.textContent = texto;
     caja.className = 'msg ' + (tipo || '');
     caja.style.display = 'block';
+  }
+
+  function validarPesoArchivos() {
+    const total = archivos.reduce((s, a) => s + a.size, 0);
+    const excede = total > MAX_BYTES;
+    const caja = $('msg-archivos');
+
+    if (excede) {
+      if (caja.textContent !== MENSAJE_PESO || caja.style.display === 'none') {
+        avisoArchivos(MENSAJE_PESO, 'error');
+      }
+    } else if (caja.textContent === MENSAJE_PESO) {
+      avisoArchivos('', '');
+    }
+
+    const btn = $('btn-continuar');
+    if (btn) btn.disabled = excede || !archivos.length;
+    return !excede;
   }
 
   function nombreDelUnido() {
@@ -2928,7 +2944,7 @@
   });
 
   $('btn-continuar').addEventListener('click', async () => {
-    if (!archivos.length) return;
+    if (!archivos.length || !validarPesoArchivos()) return;
 
     const btn = $('btn-continuar');
     btn.disabled = true;
