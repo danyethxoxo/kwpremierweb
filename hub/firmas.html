@@ -4775,12 +4775,21 @@
         const accion = b.dataset.accion;
         cerrarFlotante();
 
+        if (accion === 'reenviar' && !(await window.kwUI.confirm(
+          '¿Reenviar el correo a los firmantes que todavía faltan?'))) return;
         if (accion === 'borrar' && !(await window.kwUI.confirm('¿Eliminar "' + nombreDoc(f) + '" del historial?\n\n'
           + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.'))) return;
 
+        const config = ACCIONES[accion] || {};
         try {
-          const r = await llamarFuncion({ accion, id: f.id });
-          if (r.aviso) await window.kwUI.alert(r.aviso);
+          b.disabled = true;
+          b.textContent = config.trabajando || 'Un momento...';
+          const r = await llamarFuncion({ accion, id: String(f.id) });
+          if (r.aviso) {
+            await window.kwUI.alert(r.aviso);
+          } else if (accion === 'reenviar') {
+            await window.kwUI.alert('El correo se volvió a enviar a quienes faltan de firmar.');
+          }
           await Promise.all([cargarEnvios(), cargarCupo()]);
         } catch (e) {
           await window.kwUI.alert(e.message || 'No se pudo completar la acción.');
@@ -5135,6 +5144,10 @@
   // botones nacen dentro del modal y no en la lista.
   // Qué dice cada botón mientras trabaja, y qué se hace al terminar.
   const ACCIONES = {
+    reenviar: {
+      trabajando: 'Reenviando correo...',
+      cierra: true,
+    },
     regenerar_enlaces: {
       trabajando: 'Pidiendo ligas...',
       // No se cierra: las ligas nuevas se copian de aquí mismo, así que
