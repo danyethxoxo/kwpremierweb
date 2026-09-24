@@ -842,39 +842,64 @@
   .tag-color.elegido { border-color: var(--text); }
 
   /* ── La vista previa del documento ──
-     El documento a la izquierda y quién ya firmó a la derecha, que es lo
-     que uno quiere saber al abrir un contrato a medias. */
-  .doc-caja { max-width: 1000px; width: 100%; position: relative; text-align: left; }
-  /* El título de este modal es el nombre del archivo, no un rótulo: en
-     negritas y a 17px era lo que más pesaba de la pantalla, para algo
-     que ya se sabe (se acaba de picar ese renglón). */
-  #doc-titulo { font-weight: 500; }
-  .doc-split { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: var(--sp-4); align-items: start; }
-  @media (max-width: 780px) { .doc-split { grid-template-columns: 1fr; } }
-
-  /* Blanco, igual que el visor del editor: la hoja se separa por su
-     filo y su sombra, no por un fondo gris alrededor. */
+     La ventana necesita espacio para leer el PDF, pero conserva la columna
+     de firmantes visible y el título anclado a la zona del documento. */
+  .doc-caja {
+    max-width: min(1440px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px); width: 100%; overflow: auto;
+    position: relative; text-align: left;
+  }
+  .doc-split {
+    display: grid; grid-template-columns: minmax(0,1fr) 320px;
+    gap: 24px; align-items: stretch;
+  }
+  .doc-izquierda { min-width: 0; display: flex; flex-direction: column; }
+  #doc-titulo {
+    font-weight: 600; margin: 0 0 14px; padding-right: 36px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .doc-documento {
+    display: grid; grid-template-columns: 132px minmax(0,1fr);
+    gap: 14px; min-width: 0;
+  }
+  .doc-miniaturas {
+    display: flex; flex-direction: column; min-height: 0;
+    height: min(74vh, 780px); overflow: hidden;
+    background: #fafafa; border: 1px solid rgba(0,0,0,0.09);
+    border-radius: 10px;
+  }
+  .doc-mini-tit {
+    flex: 0 0 auto; padding: 10px 11px; display: flex;
+    align-items: center; justify-content: space-between; gap: 6px;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    color: var(--muted); font-size: 11px; font-weight: 700;
+  }
+  .doc-mini-tit b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .doc-minis-lista { flex: 1 1 auto; overflow-y: auto; padding: 10px 8px; }
   .doc-marco {
-    background: #fff; border-radius: 10px; padding: var(--sp-3);
-    border: 1px solid rgba(0,0,0,0.09);
-    max-height: min(72vh, 760px); overflow-y: auto; overflow-x: hidden;
+    min-width: 0; height: min(74vh, 780px); overflow-y: auto; overflow-x: hidden;
+    background: #fff;
   }
   .doc-marco .pagina-num { color: var(--muted); }
   .doc-marco canvas, .doc-marco .pagina-caja { max-width: 100%; }
+  .doc-marco .pagina-caja { margin-left: auto; margin-right: auto; }
+  .doc-marco .pagina-caja canvas {
+    border: 0; border-radius: 0; box-shadow: none;
+  }
   .doc-visor {
     width: 100%; height: min(70vh, 720px);
     border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
     background: #f4f4f4;
   }
 
-  /* Mismo alto que el visor de al lado (.doc-marco), para que el
-     recuadro no crezca según cuántos firmantes tenga el documento: con
-     cuatro o más se hacía larguísimo y descuadraba el modal. La lista de
-     firmantes es lo único que se desplaza; el título y "Descargar" se
-     quedan fijos arriba y abajo. */
+  /* La lista de firmantes es lo único que se desplaza; el título y
+     "Descargar" se quedan fijos arriba y abajo. */
   .doc-lado {
     display: flex; flex-direction: column; gap: var(--sp-3);
-    height: min(72vh, 760px);
+    height: min(74vh, 780px); min-height: 0; box-sizing: border-box;
+    padding: 18px; overflow: hidden;
+    background: rgba(250,250,250,0.8); border: 1px solid rgba(0,0,0,0.09);
+    border-radius: 12px;
   }
   .doc-lado-tit { font-size: 13px; font-weight: 700; margin-bottom: 4px; flex: 0 0 auto; }
   .doc-firmantes { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
@@ -890,6 +915,17 @@
   .doc-firmante .firma-liga { align-self: flex-start; margin-top: 2px; }
   .doc-lado .det-acciones { margin-top: 0; flex-direction: column; }
   .doc-lado .det-btn { width: 100%; }
+  @media (max-width: 780px) {
+    .doc-split { grid-template-columns: 1fr; }
+    .doc-lado { height: auto; max-height: 420px; }
+  }
+  @media (max-width: 560px) {
+    .doc-caja { padding: 20px 14px; }
+    .doc-documento { grid-template-columns: 1fr; }
+    .doc-miniaturas { height: 124px; }
+    .doc-minis-lista { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; }
+    .doc-minis-lista .mini-hoja { flex: 0 0 74px; margin-bottom: 0; }
+  }
 
   /* Las etiquetas puestas, en su columna de la tabla. */
   .env-tags { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
@@ -1975,9 +2011,17 @@
       <button type="button" class="det-cerrar" id="doc-cerrar" aria-label="Cerrar">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <h3 id="doc-titulo">Documento</h3>
       <div class="doc-split">
-        <div id="doc-cuerpo" class="doc-marco barra-oscura"></div>
+        <div class="doc-izquierda">
+          <h3 id="doc-titulo">Documento</h3>
+          <div class="doc-documento">
+            <aside class="doc-miniaturas" id="doc-miniaturas">
+              <div class="doc-mini-tit">Páginas <b id="doc-minis-cuenta">0/0</b></div>
+              <div id="doc-minis-lista" class="doc-minis-lista barra-oscura"></div>
+            </aside>
+            <div id="doc-cuerpo" class="doc-marco barra-oscura"></div>
+          </div>
+        </div>
         <div class="doc-lado">
           <div id="doc-lado-tit" class="doc-lado-tit"></div>
           <div id="doc-lado" class="doc-firmantes barra-oscura"></div>
@@ -2503,19 +2547,18 @@
   // Se arman copiando el lienzo que ya se dibujó, en chiquito: volver a
   // pedirle la página a pdf.js sería dibujar el documento dos veces, y
   // en un contrato de veinte hojas eso se siente.
-  function pintarMiniaturas() {
-    const lista = $('minis-lista');
+  function pintarMiniaturasEn(hojas, lista, marco, cuenta) {
     lista.innerHTML = '';
-    $('minis-cuenta').textContent = paginas.length ? '1/' + paginas.length : '0/0';
+    cuenta.textContent = hojas.length ? '1/' + hojas.length : '0/0';
 
-    paginas.forEach((p) => {
+    hojas.forEach((p) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'mini-hoja' + (p.numero === 1 ? ' activa' : '');
       btn.dataset.pagina = String(p.numero);
 
       const mini = document.createElement('canvas');
-      const ANCHO_MINI = 104;
+      const ANCHO_MINI = Math.max(72, Math.min(108, lista.clientWidth - 16 || 104));
       const escala = ANCHO_MINI / p.lienzo.width;
       mini.width = ANCHO_MINI;
       mini.height = Math.round(p.lienzo.height * escala);
@@ -2528,33 +2571,41 @@
       btn.appendChild(mini);
       btn.appendChild(num);
       btn.addEventListener('click', () => {
-        p.caja.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        marco.scrollTo({ top: Math.max(0, p.caja.offsetTop - 8), behavior: 'smooth' });
       });
       lista.appendChild(btn);
     });
+  }
+
+  function pintarMiniaturas() {
+    pintarMiniaturasEn(paginas, $('minis-lista'), $('editor-doc'), $('minis-cuenta'));
   }
 
   // Cuál se está viendo, para marcarla en la tira y en el contador. Se
   // toma la hoja cuyo centro esté más cerca del centro del visor: con
   // "la primera que asome" el número saltaba de ida y vuelta mientras
   // se pasaba de una a otra.
-  function marcarMiniaturaVisible() {
-    if (!paginas.length) return;
-    const marco = $('editor-doc').getBoundingClientRect();
+  function marcarMiniaturaVisibleEn(hojas, visor, lista, cuenta) {
+    if (!hojas.length) return;
+    const marco = visor.getBoundingClientRect();
     const centro = marco.top + marco.height / 2;
 
-    let cual = paginas[0];
+    let cual = hojas[0];
     let mejor = Infinity;
-    paginas.forEach((p) => {
+    hojas.forEach((p) => {
       const r = p.caja.getBoundingClientRect();
       const dist = Math.abs((r.top + r.height / 2) - centro);
       if (dist < mejor) { mejor = dist; cual = p; }
     });
 
-    $('minis-cuenta').textContent = cual.numero + '/' + paginas.length;
-    $('minis-lista').querySelectorAll('.mini-hoja').forEach((b) => {
+    cuenta.textContent = cual.numero + '/' + hojas.length;
+    lista.querySelectorAll('.mini-hoja').forEach((b) => {
       b.classList.toggle('activa', Number(b.dataset.pagina) === cual.numero);
     });
+  }
+
+  function marcarMiniaturaVisible() {
+    marcarMiniaturaVisibleEn(paginas, $('editor-doc'), $('minis-lista'), $('minis-cuenta'));
   }
 
   async function pintarDocumento(bytes) {
@@ -4159,6 +4210,10 @@
     $('doc-lado-tit').textContent = '';
     $('doc-lado').innerHTML = '';
     $('doc-acciones').innerHTML = '';
+    $('doc-miniaturas').style.display = 'flex';
+    $('doc-minis-lista').innerHTML = '';
+    $('doc-minis-cuenta').textContent = '0/0';
+    $('doc-cuerpo').onscroll = null;
     // Los tres aros van escritos aquí: .kw-loader es nada más el hueco
     // que los centra, y vacío no dibuja nada. Así se veía el recuadro en
     // blanco con la línea de texto a media altura.
@@ -4286,7 +4341,7 @@
     // bajado.
     $('doc-acciones').innerHTML = url
       ? '<button type="button" class="det-btn principal" id="doc-bajar">' +
-          (conFirmas && !faltan ? 'Descargar firmado' : 'Descargar') + '</button>'
+          'Descargar</button>'
       : '';
 
     if (url) {
@@ -4323,6 +4378,7 @@
     }
 
     if (!url) {
+      $('doc-miniaturas').style.display = 'none';
       $('doc-cuerpo').innerHTML = '<div class="kw-vacio">No se pudo traer el archivo de weetrust en este momento. '
         + 'Vuelve a intentarlo en un rato.</div>';
       return;
@@ -4356,11 +4412,24 @@
       // Las hojas ya dibujadas entran con un fundido corto, en vez de
       // aparecer de golpe donde estaban los aros.
       $('doc-paginas').classList.add('aparece');
+      pintarMiniaturasEn(hojas, $('doc-minis-lista'), $('doc-cuerpo'), $('doc-minis-cuenta'));
+      let pendienteDoc = false;
+      $('doc-cuerpo').onscroll = () => {
+        if (pendienteDoc) return;
+        pendienteDoc = true;
+        requestAnimationFrame(() => {
+          pendienteDoc = false;
+          marcarMiniaturaVisibleEn(hojas, $('doc-cuerpo'), $('doc-minis-lista'), $('doc-minis-cuenta'));
+        });
+      };
+      marcarMiniaturaVisibleEn(hojas, $('doc-cuerpo'), $('doc-minis-lista'), $('doc-minis-cuenta'));
     } catch {
       // Si el archivo no se deja leer desde aquí, al menos se abre en el
       // visor del navegador. Ahí ya no se pueden pintar los recuadros
       // encima, así que se dice: mejor eso que dejar creer que el
       // documento no tiene ninguna firma colocada.
+      $('doc-miniaturas').style.display = 'none';
+      $('doc-cuerpo').onscroll = null;
       $('doc-cuerpo').innerHTML =
         ((f.posiciones || []).length
           ? '<div class="kw-nota">Este documento se está viendo con el visor del navegador, '
@@ -4963,7 +5032,12 @@
     bloquearFondo(false);
   }
 
-  function cerrarDoc() { $('modal-doc').style.display = 'none'; $('doc-cuerpo').innerHTML = ''; bloquearFondo(false); }
+  function cerrarDoc() {
+    $('modal-doc').style.display = 'none';
+    $('doc-cuerpo').onscroll = null;
+    $('doc-cuerpo').innerHTML = '';
+    bloquearFondo(false);
+  }
   $('doc-cerrar').addEventListener('click', cerrarDoc);
   $('modal-doc').addEventListener('click', (e) => { if (e.target === $('modal-doc')) cerrarDoc(); });
 
