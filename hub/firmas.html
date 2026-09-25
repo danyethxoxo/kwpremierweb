@@ -1839,6 +1839,7 @@
             <label for="f-estado">Estado</label>
             <select id="f-estado">
               <option value="activos" selected>Esperando firmas y completados</option>
+              <option value="mis-pendientes">Me faltan firmar</option>
               <option value="pendiente">Esperando firmas</option>
               <option value="completado">Completados</option>
               <option value="borrador">Borradores</option>
@@ -4087,6 +4088,22 @@
     });
   }
 
+  function correoNormalizado(correo) {
+    return String(correo || '').trim().toLowerCase();
+  }
+
+  function meFaltaFirmar(f) {
+    if (!f || f.estado !== 'pendiente') return false;
+    const correo = correoNormalizado(miPerfil.correo);
+    if (!correo) return false;
+    const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
+    return firmantes.some((x) => correoNormalizado(x.correo) === correo && !x.firmado);
+  }
+
+  function puedeAdministrarEnvio(f) {
+    return !!f && (veTodo || f.user_id === miUserId);
+  }
+
   function pintarEnvios() {
     pintarResumen();
     // Si el panel del lápiz o el de los tres puntos estaba abierto,
@@ -4109,7 +4126,11 @@
     // arriba de la tabla junto con la búsqueda: no se vuelve a crear en
     // cada pintada, solo se le ajusta si está marcado.
     const todos = $('elegir-todos');
-    if (todos) todos.checked = filas.length > 0 && filas.every((x) => elegidos.has(x.id));
+    const editables = filas.filter(puedeAdministrarEnvio);
+    if (todos) {
+      todos.disabled = editables.length === 0;
+      todos.checked = editables.length > 0 && editables.every((x) => elegidos.has(x.id));
+    }
 
     if (!filas.length) {
       // El texto cambia según por qué está vacío: no es lo mismo no
@@ -4130,6 +4151,7 @@
           const firmantes = Array.isArray(f.firmantes) ? f.firmantes : [];
           const yaFirmaron = firmantes.filter((x) => x.firmado).length;
           const pill = PILL[f.estado] || PILL.pendiente;
+          const puedeAdministrar = puedeAdministrarEnvio(f);
 
           // Los que no se pudieron atribuir a nadie se marcan, en vez de
           // dejar el hueco en blanco: así se ve cuáles hay que revisar.
@@ -4146,9 +4168,10 @@
           }).join('');
 
           return '<div class="tabla-fila' + (elegidos.has(f.id) ? ' elegida' : '') + '">' +
-            '<label class="fila-check" title="Seleccionar">' +
+            '<label class="fila-check" title="' + (puedeAdministrar ? 'Seleccionar' : 'Solo lectura') + '">' +
               '<input type="checkbox" data-elegir="' + f.id + '"' +
-                (elegidos.has(f.id) ? ' checked' : '') + '>' +
+                (elegidos.has(f.id) ? ' checked' : '') +
+                (!puedeAdministrar ? ' disabled' : '') + '>' +
             '</label>' +
             // Zona izquierda: abre el documento.
             '<button type="button" class="zona-doc" data-doc="' + i + '" title="' +
@@ -4169,7 +4192,7 @@
               '<span class="env-fecha">' + fecha(f.created_at) + '</span>' +
             '</button>' +
 
-            '<span class="fila-botones">' +
+            '<span class="fila-botones"' + (puedeAdministrar ? '' : ' style="visibility:hidden;pointer-events:none"') + '>' +
               '<button type="button" class="env-menu-btn" data-editar="' + i + '" aria-label="Editar asesor y etiquetas">' +
                 '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                   '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>' +
@@ -4401,10 +4424,11 @@
           // a quien ya firmó lo manda a un documento donde no puede
           // hacer nada.
           const caducada = x.url_expira && Number(x.url_expira) < Date.now();
+          const puedeVerLiga = puedeAdministrarEnvio(f) || correoNormalizado(x.correo) === correoNormalizado(miPerfil.correo);
           const abajo = x.firmado
             ? '<span class="doc-firmo">Ya firmó' +
                 (x.firmado_at ? ' · ' + fecha(x.firmado_at) : '') + '</span>'
-            : (x.url_firma && !caducada
+            : (x.url_firma && !caducada && puedeVerLiga
                 ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
                     '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                       '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
@@ -4765,7 +4789,7 @@
   // ── Tres puntos: acciones sobre el envío ──
   function abrirMenu(boton, i) {
     const f = visibles[i];
-    if (!f) return;
+    if (!puedeAdministrarEnvio(f)) return;
 
     // Reenviar y recordar solo tienen sentido mientras alguien deba
     // firmar. En un completado no hay a quién insistirle.
@@ -4834,7 +4858,7 @@
 
   function abrirEditar(i) {
     const f = visibles[i];
-    if (!f) return;
+    if (!puedeAdministrarEnvio(f)) return;
 
     $('editar-cuerpo').innerHTML = '<div class="editar-columnas">' +
       (veTodo
@@ -5060,11 +5084,12 @@
       // firmó, enseñarla invita a mandársela a alguien que se va a topar
       // con un documento donde ya no puede hacer nada.
       const caducada = x.url_expira && Number(x.url_expira) < Date.now();
+      const puedeVerLiga = puedeAdministrarEnvio(f) || correoNormalizado(x.correo) === correoNormalizado(miPerfil.correo);
       const derecha = x.firmado
         ? '<span class="det-firmo">Ya firmó' +
             (x.firmado_at ? '<span class="det-firmo-fecha">' + fecha(x.firmado_at) + '</span>' : '') +
           '</span>'
-        : (x.url_firma && !caducada
+        : (x.url_firma && !caducada && puedeVerLiga
             ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                   '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
@@ -5095,7 +5120,7 @@
       // ya venció no hay otra manera de darle a esa persona por dónde
       // firmar. De paso trae el estado más reciente de cada firmante,
       // que es lo que hacía el botón de antes.
-      (f.estado === 'pendiente'
+      (f.estado === 'pendiente' && puedeAdministrarEnvio(f)
         ? '<button type="button" class="det-btn principal" data-accion="regenerar_enlaces" data-id="' + f.id + '">Actualizar ligas</button>'
         : '') +
       (f.estado === 'completado' && f.pdf_firmado_url
@@ -5330,7 +5355,7 @@
     const todos = $('elegir-todos');
     todos.addEventListener('click', (e) => e.stopPropagation());
     todos.addEventListener('change', () => {
-      visibles.forEach((x) => {
+      visibles.filter(puedeAdministrarEnvio).forEach((x) => {
         if (todos.checked) elegidos.add(x.id);
         else elegidos.delete(x.id);
       });
@@ -5340,7 +5365,9 @@
 
   function envíosFiltrados() {
     const lista = envios.filter((e) => {
-      if (filtro === 'activos') {
+      if (filtro === 'mis-pendientes') {
+        if (!meFaltaFirmar(e)) return false;
+      } else if (filtro === 'activos') {
         if (!['pendiente', 'completado'].includes(e.estado)) return false;
       } else if (filtro !== 'todos' && e.estado !== filtro) return false;
 
@@ -5581,7 +5608,10 @@
 
     const { data: perfil } = await window.kwSupabase
       .from('profiles').select('nombre, email, role').eq('id', miUserId).single();
-    miPerfil = { nombre: perfil?.nombre || '', correo: perfil?.email || '' };
+    miPerfil = {
+      nombre: perfil?.nombre || '',
+      correo: userData.user.email || perfil?.email || '',
+    };
 
     // El liderazgo ve el historial de todo el equipo. Esto solo decide
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las
