@@ -21,7 +21,6 @@
 <script src="/assets/js/auth-guard.js"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260924a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -46,104 +45,46 @@
 
 
     /* ═══════════ PÁGINA ═══════════ */
-    .page { flex: 1;
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 100px 24px 60px;
-    }
-
-    .page-eyebrow {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .page-title {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
-      margin-bottom: 8px;
-    }
-
-    .page-desc {
-      font-size: 15px;
-      color: var(--muted);
-      margin-bottom: 48px;
-    }
-
-    /* ═══════════ GRID ═══════════
-       Dos tarjetas nada más: Internos se fue al hub, con el resto de
-       los accesos según el rol (Prospectos, Propiedades, etc.). */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    @media (max-width: 640px) {
-      .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-      .page-eyebrow, .page-title, .page-desc { display: none; }
-    }
-
-    /* ═══════════ LA BIFURCACIÓN POR ROL ═══════════ */
-    /* Un asociado entra directo a Acuerdos/Contratos: para él esta
-       pantalla siempre fue solo un cruce de caminos. Master, Admin y
-       Staff ven antes estas dos puertas, porque para ellos esta sección
-       son dos cosas distintas: el control de lo que ya se firmó (la
-       operatividad) y el formato en blanco de siempre.
-
-       El atributo "hidden" del navegador vale menos que cualquier clase
-       con display propio - sin esto .grid seguiría enseñándose por
-       debajo. Con el !important, "hidden" gana siempre y esconder algo
-       es una línea de JS en vez de acordarse de qué display tenía. */
     [hidden] { display: none !important; }
-
-    /* El botón "Crear un Acuerdo" reusa el look de las tarjetas de
-       enlace (.hover-card, en kw-base.css) pero es un <button>, no un
-       <a>: no navega a otra página, descubre la parrilla de siempre en
-       el mismo lugar. Se le quita el reset de <button> del navegador
-       para que el vidrio de .hover-card se vea igual que en la de al
-       lado. */
-    button.hover-card {
-      appearance: none; -webkit-appearance: none;
-      font-family: inherit; text-align: left; width: 100%;
+    body.kw-homogeneo > main.page {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: none !important;
+      min-height: 100vh;
+      margin: 0;
+      padding: 18px 24px 28px !important;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
-
-    /* El aro de carga del sitio es blanco porque siempre gira sobre el
-       fondo oscuro de la página. Aquí gira directo sobre el lienzo claro
-       de kw-claro.css, donde no se vería. */
-    #cargando .circle { border-top-color: var(--red); }
-
-    /* ═══════════ TARJETA ═══════════
-       El efecto de hover (relleno de color + flecha) vive en
-       assets/css/kw-base.css como .hover-card - aquí solo quedan los
-       colores de fondo de cada ícono en reposo, propios de esta página. */
-    .icon-acuerdos svg { color: var(--red); }
-
-    .icon-contratos svg { color: var(--red); }
-
-    /* ═══════════ FOOTER ═══════════ */
-    .footer {
-      margin-top: 56px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-      text-align: center; display: flex; justify-content: center; gap: 10px;
-      font-size: 12px;
-      color: var(--muted);
+    .page-title { margin: 0; font-size: 28px; line-height: 1.2; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .kw-campo-filtro { width: min(100%, 340px); margin: 0; }
+    .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .document-section { min-width: 0; padding: 20px 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; }
+    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+    .section-heading h2 { font-size: 19px; line-height: 1.3; }
+    .section-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .document-list { display: flex; flex-direction: column; }
+    .document-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; padding: 15px 2px; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; transition: color 140ms ease, background-color 140ms ease; }
+    .document-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+    .document-row:first-child { padding-top: 15px; }
+    .document-row:hover { color: var(--red); }
+    .document-copy { min-width: 0; }
+    .document-title { display: block; font-size: 14px; line-height: 1.4; font-weight: 600; color: var(--text); }
+    .document-desc { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .document-arrow { flex: 0 0 auto; width: 18px; height: 18px; color: #777; transition: transform 140ms ease, color 140ms ease; }
+    .document-row:hover .document-arrow { color: var(--red); transform: translateX(2px); }
+    .empty-search { padding: 18px 2px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 760px) {
+      body.kw-homogeneo > main.page { min-height: 100vh; padding: 68px 16px 20px !important; gap: 14px; }
+      .toolbar { align-items: stretch; flex-direction: column; gap: 12px; }
+      .page-title { font-size: 23px; }
+      .kw-campo-filtro { width: 100%; }
+      .columns { grid-template-columns: 1fr; gap: 12px; }
+      .document-section { padding: 16px; }
     }
-  .footer-social {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: #f5f5f5; color: #888;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, transform 0.15s;
-  }
-  .footer-social:hover { background: #ffe0e0; color: var(--red); transform: translateY(-2px); }
-  .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
+    @media (prefers-reduced-motion: reduce) { .document-row, .document-arrow { transition: none; } }
 
   </style>
   <link rel="stylesheet" href="/assets/css/kw-homogeneo.css?v=20260923a">
@@ -161,76 +102,72 @@
   </header>
 
   <main class="page">
-
-    <h1 class="page-title">Acuerdos & Contratos</h1>
-    <div id="kw-card-filter" class="kw-campo-filtro kw-homogeneo-filtro">
-      <label for="kw-card-search">Buscar</label>
-      <div class="kw-buscador">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/></svg>
-        <input id="kw-card-search" class="kw-input" type="search" placeholder="Buscar..." autocomplete="off">
+    <div class="toolbar">
+      <h1 class="page-title">Acuerdos &amp; Contratos</h1>
+      <div id="kw-card-filter" class="kw-campo-filtro kw-homogeneo-filtro">
+        <label for="kw-card-search">Buscar documentos</label>
+        <div class="kw-buscador">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/></svg>
+          <input id="kw-card-search" class="kw-input" type="search" placeholder="Buscar acuerdos o contratos..." autocomplete="off">
+        </div>
       </div>
     </div>
 
-<div class="grid" id="grid">
+    <div class="columns" id="grid">
+      <section class="document-section" aria-labelledby="acuerdos-heading">
+        <div class="section-heading"><h2 id="acuerdos-heading">Acuerdos</h2><span class="section-count">8 documentos</span></div>
+        <div class="document-list">
+          <a class="document-row" href="acuerdos/cartaterminacion.html"><span class="document-copy"><span class="document-title">Carta de Terminación Anticipada</span><span class="document-desc">Rescisión del contrato de servicios de intermediación antes de su vencimiento</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/cedularegistro.html"><span class="document-copy"><span class="document-title">Cédula de Registro de Cliente</span><span class="document-desc">Registro y reconocimiento de honorarios para colaboración entre inmobiliarias</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/checklist.html"><span class="document-copy"><span class="document-title">Check List Vendedor y Comprador</span><span class="document-desc">Listado de documentos requeridos por etapa para vendedor y comprador</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/contrapropuesta.html"><span class="document-copy"><span class="document-title">Contrapropuesta de Arrendamiento</span><span class="document-desc">Ajuste a las condiciones de renta, depósito y vigencia propuestas por el inquilino</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/referido.html"><span class="document-copy"><span class="document-title">Formato de Referido</span><span class="document-desc">Registro de cliente referido entre asesores con condiciones de comisión pactada</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/aceptacionoferta.html"><span class="document-copy"><span class="document-title">Aceptación de Oferta de Arrendamiento</span><span class="document-desc">Confirmación formal de las condiciones acordadas para el contrato de renta</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/colaboracion.html"><span class="document-copy"><span class="document-title">Acuerdo de Colaboración entre Asesores</span><span class="document-desc">División de comisión entre asesor que capta y asesor que cierra la operación</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="acuerdos/avisodeprivacidad.html"><span class="document-copy"><span class="document-title">Aviso de Privacidad</span><span class="document-desc">Aviso de tratamiento de datos personales conforme a la LFPDPPP</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        </div>
+      </section>
 
-      <!-- Acuerdos -->
-      <a href="acuerdos/index.html" class="hover-card">
-        <div class="hover-card-icon icon-acuerdos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
+      <section class="document-section" aria-labelledby="contratos-heading">
+        <div class="section-heading"><h2 id="contratos-heading">Contratos</h2><span class="section-count">3 documentos</span></div>
+        <div class="document-list">
+          <a class="document-row" href="contratos/profeco.html"><span class="document-copy"><span class="document-title">Contrato de Compraventa PROFECO</span><span class="document-desc">Contrato de venta residencial con el formato registrado ante PROFECO</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="contratos/renta.html"><span class="document-copy"><span class="document-title">Acuerdo de Renta</span><span class="document-desc">Acuerdo de arrendamiento en exclusiva o por opción</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          <a class="document-row" href="contratos/comercial.html"><span class="document-copy"><span class="document-title">Contrato de Venta Comercial</span><span class="document-desc">Venta de inmueble comercial en exclusiva o por opción</span></span><svg class="document-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
         </div>
-        <div class="hover-card-title">Acuerdos</div>
-        <div class="hover-card-desc">Toda la documentación que necesitas como asesor.</div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </div>
-      </a>
-
-      <!-- Contratos -->
-      <a href="contratos/index.html" class="hover-card">
-        <div class="hover-card-icon icon-contratos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-        </div>
-        <div class="hover-card-title">Contratos</div>
-        <div class="hover-card-desc">Compra-Venta: Residencial, comercial, Rentas, en exclusiva y opción.</div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </div>
-      </a>
-
+      </section>
+      <p class="empty-search" id="empty-search" hidden>No se encontraron documentos con esa búsqueda.</p>
     </div>
-
-    <div class="footer">
-      <a href="https://www.facebook.com/KWPremierOficial/?locale=es_LA" target="_blank" rel="noopener" class="footer-social" aria-label="Facebook">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
-      </a>
-      <a href="https://www.instagram.com/kwpremieroficial/" target="_blank" rel="noopener" class="footer-social" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-      </a>
-      <a href="https://www.tiktok.com/@kwpremieroficial" target="_blank" rel="noopener" class="footer-social" aria-label="TikTok">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.77 1.52V7.04a4.85 4.85 0 0 1-1-.35z"/></svg>
-      </a>
-    </div>
-
   </main>
 
 <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20260923b" data-filtros="#kw-card-filter"></script>
-<script src="/assets/js/kw-card-filter.js?v=20260923a" data-target="#grid"></script>
+<script>
+  (function () {
+    const search = document.getElementById('kw-card-search');
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty-search');
+    if (!search || !grid || !empty) return;
+    function applySearch() {
+      const term = search.value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      let anyVisible = false;
+      grid.querySelectorAll('.document-section').forEach((section) => {
+        const rows = Array.from(section.querySelectorAll('.document-row'));
+        let visibleCount = 0;
+        rows.forEach((row) => {
+          const text = row.textContent.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          row.hidden = Boolean(term) && !text.includes(term);
+          if (!row.hidden) visibleCount += 1;
+        });
+        section.hidden = visibleCount === 0;
+        section.querySelector('.section-count').textContent = visibleCount + (visibleCount === 1 ? ' documento' : ' documentos');
+        anyVisible = anyVisible || visibleCount > 0;
+      });
+      empty.hidden = anyVisible;
+    }
+    search.addEventListener('input', applySearch);
+    applySearch();
+  })();
+</script>
 </body>
 </html>
 
