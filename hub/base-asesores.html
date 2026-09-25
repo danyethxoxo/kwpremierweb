@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
 <script src="/assets/js/kw-ui.js?v=20260922"></script>
+<script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <style>
   /* Carga de transición al abrir Nuevo asesor, igual que Firmas. */
   #ficha-carga {
@@ -64,6 +65,29 @@
     text-align: left;
   }
   #vista-lista > .kw-page-encabezado .kw-page-titulo { text-align: left; }
+  #vista-lista .kw-page-acciones { gap: 10px; }
+  #vista-lista .btn-nuevo-asesor {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background var(--t-rapido), transform var(--t-rapido);
+  }
+  #vista-lista .btn-nuevo-asesor:hover { background: #710000; }
+  #vista-lista .btn-nuevo-asesor:active { transform: translateY(1px); }
+  #vista-lista .btn-nuevo-asesor svg { width: 15px; height: 15px; }
   .bd-etiqueta-oculta {
     position: absolute;
     width: 1px;
@@ -942,8 +966,27 @@
 
       <!-- ── Vista 1: la lista ───────────────────────────────────── -->
       <div id="vista-lista">
-        <div class="kw-page-encabezado">
+        <div class="kw-page-encabezado con-acciones">
           <h1 class="kw-page-titulo">Base de asesores</h1>
+          <div class="kw-page-acciones">
+            <div class="kw-menu-ancla">
+              <button type="button" class="kw-btn-icono" id="btn-engrane"
+                title="Más acciones" aria-label="Más acciones"
+                aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </button>
+              <div class="kw-menu" id="engrane-menu" role="menu" hidden>
+                <button type="button" class="kw-menu-op" role="menuitem" id="op-exportar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Descargar base en Excel</span>
+                </button>
+              </div>
+            </div>
+            <a href="base-asesores.html?nuevo=1" class="btn-nuevo-asesor" id="btn-nuevo-asesor">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+              Nuevo asesor
+            </a>
+          </div>
         </div>
 
         <!-- El campo se queda en la página pero no se ve: drawer.js lo
@@ -1334,6 +1377,71 @@
 
     window.kwUI.acordeon(cont);
   }
+
+  function abrirEngrane(abrir) {
+    const menu = $('engrane-menu');
+    const quiere = abrir === undefined ? menu.hidden : abrir;
+    menu.hidden = !quiere;
+    $('btn-engrane').setAttribute('aria-expanded', quiere ? 'true' : 'false');
+    if (quiere) window.kwUI.colgarMenu($('btn-engrane'), menu);
+  }
+
+  $('btn-engrane').addEventListener('click', function (e) {
+    e.stopPropagation();
+    abrirEngrane();
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.kw-menu-ancla')) abrirEngrane(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('engrane-menu').hidden) {
+      abrirEngrane(false);
+      $('btn-engrane').focus();
+    }
+  });
+
+  const COLUMNAS_EXCEL = [
+    ['Nombre', 'texto', 32, function (p) { return p.nombre; }],
+    ['Grupo', 'texto', 22, function (p) { return TITULO[p.grupo] || p.grupo; }],
+    ['KWID', 'texto', 16, function (p) { return p.kwid; }],
+    ['Correo KW', 'texto', 32, function (p) { return p.correo; }],
+    ['Teléfono', 'texto', 18, function (p) { return p.telefono; }],
+    ['Puesto', 'texto', 24, function (p) { return p.puesto; }],
+    ['Célula', 'texto', 22, function (p) { return p.celula; }],
+    ['Fecha de ingreso', 'texto', 18, function (p) { return p.fechaIngreso; }],
+    ['Fecha de baja', 'texto', 18, function (p) { return p.fechaBaja; }],
+    ['Correo personal', 'texto', 32, function (p) { return p.correoPersonal; }],
+    ['Cumpleaños', 'texto', 18, function (p) { return p.cumpleanos; }],
+    ['CURP', 'texto', 20, function (p) { return p.curp; }],
+    ['Usuario Command', 'texto', 24, function (p) { return p.usuarioCommand; }],
+    ['Tipo de asociado', 'texto', 22, function (p) { return p.tipoAsociado; }],
+    ['Clasificación', 'texto', 22, function (p) { return p.clasificacion; }],
+    ['Sponsor', 'texto', 28, function (p) { return p.sponsor; }],
+    ['Aniversario KW', 'texto', 18, function (p) { return p.aniversario; }],
+    ['Coach asignado', 'texto', 28, function (p) { return p.coachAsignado; }],
+    ['Asesor asignado', 'texto', 28, function (p) { return p.asesorAsignado; }],
+    ['Contactos', 'parrafo', 40, function (p) {
+      return p.contactos.map(function (c) {
+        return [c.nombre, c.parentesco, c.telefono, c.correo].filter(Boolean).join(' · ');
+      }).filter(Boolean).join('\n');
+    }],
+    ['Notas', 'parrafo', 42, function (p) { return p.notas; }],
+  ];
+
+  $('op-exportar').addEventListener('click', async function () {
+    abrirEngrane(false);
+    if (!asesores.length) {
+      await window.kwUI.alert('La base todavía no tiene asesores para exportar.');
+      return;
+    }
+    const hoy = new Date().toISOString().slice(0, 10);
+    window.kwXlsx.descargar({
+      columnas: COLUMNAS_EXCEL,
+      filas: asesores.map(persona),
+      hoja: 'Base de asesores',
+      archivo: 'base-de-asesores-' + hoy + '.xlsx',
+    });
+  });
 
   // Un solo escuchador para toda la lista: se repinta seguido y
   // colgarle uno a cada botón en cada repintado los va acumulando.
