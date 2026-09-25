@@ -469,7 +469,12 @@
     if (visibles) return visibles;
 
     const encabezados = Array.from(document.querySelectorAll('.kw-page-encabezado, .page-head'));
-    const encabezado = encabezados.find((el) => el.offsetParent !== null) || encabezados[0];
+    // Una vista puede conservar su encabezado en el DOM mientras está
+    // oculta (por ejemplo, el historial mientras se prepara un documento).
+    // No crear ahí otro grupo de acciones: al volver, su margen automático
+    // comparte el espacio con el grupo original y termina centrándolo.
+    const encabezado = encabezados.find((el) => el.offsetParent !== null);
+    if (!encabezado) return null;
     if (encabezado) {
       encabezado.classList.add('con-acciones', 'kw-acciones-universales');
       const accionDirecta = Array.from(encabezado.children).find((el) =>
