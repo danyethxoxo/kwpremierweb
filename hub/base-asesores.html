@@ -86,7 +86,7 @@
   }
   #vista-lista #btn-engrane { width: 40px; height: 40px; }
   #vista-lista #btn-engrane > svg:first-child { display: none; }
-  #vista-lista #btn-engrane > svg:last-child { width: 19px; height: 19px; }
+  #vista-lista #btn-engrane > svg:last-child { width: 22px; height: 22px; }
   #vista-lista .kw-page-acciones > #notif-bell-slot {
     position: relative;
     inset: auto;
@@ -1991,6 +1991,20 @@
       if (!puede) { $('denegado').style.display = ''; return; }
 
       $('contenido').style.display = '';
+      // drawer.js intenta acomodar la campana antes de que auth muestre
+      // esta vista; en ese instante los encabezados tienen display:none.
+      // Reubicarla ahora, cuando el grupo de acciones ya es medible.
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        const campana = document.getElementById('notif-bell-slot');
+        const acciones = document.querySelector('#vista-lista > .kw-page-encabezado .kw-page-acciones');
+        if (campana && acciones) {
+          const engrane = acciones.querySelector('.kw-menu-ancla');
+          const nuevo = acciones.querySelector('.btn-nuevo-asesor');
+          if (engrane) engrane.insertAdjacentElement('afterend', campana);
+          else acciones.insertBefore(campana, acciones.firstChild);
+          if (nuevo) acciones.appendChild(nuevo);
+        }
+      }
       armarCumple();
       if (window.kwUI) window.kwUI.selects($('vista-ficha'));
       await cargarListas();
