@@ -53,6 +53,29 @@
     font-weight: 600;
   }
 
+  /* La lista comparte la alineación y el ancho útil de las demás páginas
+     del Hub; el buscador lo presenta la barra lateral, no una etiqueta encima. */
+  #vista-lista > .kw-page-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    margin: 0 0 var(--sp-5);
+    text-align: left;
+  }
+  #vista-lista > .kw-page-encabezado .kw-page-titulo { text-align: left; }
+  .bd-etiqueta-oculta {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
     /* ── Lo único que solo esta pantalla tiene ──────────────────────
      El resto sale de las piezas compartidas: .kw-page-encabezado,
      .kw-resumen/.kw-conteo, .kw-lista/.kw-fila, .kw-datos.en-columnas,
@@ -160,6 +183,12 @@
     border-bottom: 1px solid var(--border);
   }
   @media (min-width: 1024px) {
+    body.kw-lateral-universal-activa > main.kw-page {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 90px 18px 24px;
+    }
     body.en-ficha-asesor > main.kw-page,
     body.cargando-nuevo > main.kw-page {
       width: 100%;
@@ -922,12 +951,12 @@
              en la lupa de arriba. O sea que el buscador sigue siendo
              este, nada más que se teclea allá. -->
         <div class="kw-campo-filtro">
-          <label for="bd-buscar">Buscar</label>
+          <label class="bd-etiqueta-oculta" for="bd-buscar">Buscar asesores</label>
           <div class="kw-buscador">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
               <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.7" y2="16.7"/>
             </svg>
-            <input type="text" id="bd-buscar" class="kw-input" placeholder="Nombre, correo o KWID" autocomplete="off">
+            <input type="text" id="bd-buscar" class="kw-input" placeholder="Nombre, correo o KWID" autocomplete="off" aria-label="Buscar asesores">
           </div>
         </div>
 
