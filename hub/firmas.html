@@ -509,6 +509,7 @@
   .kw-conteo.espera   { --tono: var(--pastel-crema-txt); --pastel: var(--pastel-crema); }
   .kw-conteo.firmado  { --tono: var(--pastel-menta-txt); --pastel: var(--pastel-menta); }
   .kw-conteo.borrador { --tono: #5b5b5b;                 --pastel: rgba(0,0,0,0.05); }
+  .mis-firmas-pendientes { width: 100%; margin-top: 8px; }
 
   /* ── Panel propio del historial ────────────────────────────
      En escritorio ocupa exactamente el lugar del menú global. La tabla
@@ -1839,7 +1840,6 @@
             <label for="f-estado">Estado</label>
             <select id="f-estado">
               <option value="activos" selected>Esperando firmas y completados</option>
-              <option value="mis-pendientes">Me faltan firmar</option>
               <option value="pendiente">Esperando firmas</option>
               <option value="completado">Completados</option>
               <option value="borrador">Borradores</option>
@@ -1883,6 +1883,11 @@
           </div>
         </div>
       </div>
+
+      <button type="button" class="kw-conteo espera mis-firmas-pendientes" id="btn-mis-firmas-pendientes">
+        <span class="kw-conteo-num" id="mis-firmas-pendientes-num">0</span>
+        <span class="kw-conteo-txt">Mis firmas pendientes</span>
+      </button>
 
       <div id="barra-seleccion" class="barra-sel" style="display:none;">
         <span id="sel-cuantos"></span>
@@ -2224,6 +2229,7 @@
       encabezado: vista.querySelector('.kw-page-encabezado'),
       resumen: vista.querySelector('.kw-resumen'),
       filtros: vista.querySelector('.kw-filtros-caja'),
+      misPendientes: vista.querySelector('#btn-mis-firmas-pendientes'),
       buscar: vista.querySelector('.tabla-buscar'),
       buscarFila: vista.querySelector('.tabla-buscar-fila'),
       seleccion: $('barra-seleccion'),
@@ -2234,7 +2240,7 @@
 
     function acomodar() {
       if (mq.matches) {
-        panel.append(piezas.resumen, piezas.filtros);
+        panel.append(piezas.resumen, piezas.filtros, piezas.misPendientes);
         if (piezas.buscar && piezas.resumen) panel.insertBefore(piezas.buscar, piezas.resumen);
         principal.append(
           piezas.encabezado, piezas.cupo, piezas.tabla, piezas.seleccion
@@ -2245,7 +2251,7 @@
         if (acciones && campana) acciones.insertBefore(campana, nuevo || null);
       } else {
         if (piezas.buscarFila && piezas.buscar) piezas.buscarFila.append(piezas.buscar);
-        [piezas.encabezado, piezas.resumen, piezas.filtros,
+        [piezas.encabezado, piezas.resumen, piezas.filtros, piezas.misPendientes,
           piezas.cupo, piezas.tabla, piezas.seleccion].forEach((pieza) => {
           if (pieza) vista.insertBefore(pieza, panel);
         });
@@ -4074,6 +4080,12 @@
         '<span class="kw-conteo-txt">' + texto + '</span>' +
       '</button>').join('');
 
+    const misPendientes = $('btn-mis-firmas-pendientes');
+    if (misPendientes) {
+      misPendientes.querySelector('.kw-conteo-num').textContent = String(envios.filter(meFaltaFirmar).length);
+      misPendientes.classList.toggle('activa', filtro === 'mis-pendientes');
+    }
+
     $('resumen').querySelectorAll('[data-estado]').forEach((b) => {
       b.addEventListener('click', () => {
         // La tarjeta y el desplegable de estado son el mismo filtro
@@ -5328,6 +5340,11 @@
 
   function armarFiltros() {
     $('f-estado').addEventListener('change', (e) => { filtro = e.target.value; pintarEnvios(); });
+    $('btn-mis-firmas-pendientes').addEventListener('click', () => {
+      filtro = filtro === 'mis-pendientes' ? 'activos' : 'mis-pendientes';
+      $('f-estado').value = 'activos';
+      pintarEnvios();
+    });
     $('f-falta').addEventListener('change', (e) => { faltaFirma = e.target.value || null; pintarEnvios(); });
     $('f-etiqueta').addEventListener('change', (e) => { etiqueta = e.target.value || null; pintarEnvios(); });
     $('f-orden').addEventListener('change', (e) => { orden = e.target.value; pintarEnvios(); });
