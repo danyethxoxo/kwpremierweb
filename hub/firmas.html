@@ -245,20 +245,20 @@
   .firmo-yo {
     display: flex; min-width: 0; min-height: 78px;
     padding: 0; border-radius: 12px;
-    background: rgba(198,32,39,0.06);
-    border: 1px solid rgba(198,32,39,0.18);
+    background: #fff;
+    border: 0;
   }
   .firma-opcion {
     width: 100%; min-width: 0; min-height: 78px;
     display: flex; align-items: center; justify-content: center;
-    padding: 10px 8px; border: 0; border-radius: 12px;
-    background: transparent; color: var(--text);
+    padding: 10px 8px; border: 1.5px solid var(--red); border-radius: 12px;
+    background: #fff; color: var(--text);
     font-family: inherit; font-size: 11.5px; font-weight: 700;
     line-height: 1.3; text-align: center; cursor: pointer;
-    transition: background var(--t-medio), color var(--t-medio);
+    transition: background var(--t-medio), color var(--t-medio), border-color var(--t-medio);
   }
-  .firma-opcion:hover { background: rgba(198,32,39,0.1); color: var(--red); }
-  .firma-opcion.elegido { background: rgba(198,32,39,0.14); color: var(--red); cursor: default; }
+  .firma-opcion:hover { background: rgba(198,32,39,0.04); color: var(--red); }
+  .firma-opcion.elegido { background: #fff; color: var(--red); border-color: var(--red); cursor: default; }
 
   .firma-agregar {
     display: inline-flex; align-items: center; gap: 6px;
@@ -1529,9 +1529,6 @@
     text-align: center; font-size: 11px; color: var(--muted);
     margin-top: 4px; margin-bottom: var(--sp-3);
   }
-  /* Mientras se está colocando una firma, la hoja invita a picarle. */
-  .editor-doc.colocando .pagina-capa { cursor: crosshair; background: rgba(198,32,39,0.05); }
-
   /* El recuadro de firma. Deja pasar algo del texto de abajo a
      propósito: se coloca encima de la rayita donde toca firmar, y si la
      tapara del todo habría que moverlo para comprobar que quedó en su
@@ -1551,6 +1548,18 @@
     display: flex; align-items: center; justify-content: center;
     cursor: grab; user-select: none;
     transition: box-shadow var(--t-medio), border-color var(--t-medio);
+  }
+  @keyframes firma-pop {
+    0% { opacity: 0; transform: scale(0.72); }
+    65% { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .marca-firma.firma-pop {
+    animation: firma-pop 300ms cubic-bezier(.22, 1, .36, 1);
+    transform-origin: center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marca-firma.firma-pop { animation: none; }
   }
   /* Los navegadores sin color-mix se quedarían con el recuadro
      transparente y no se vería nada; este respaldo va antes en la
@@ -2170,7 +2179,7 @@
   let paginas = [];
   // Los recuadros de firma colocados.
   let marcas = [];
-  // El renglón de firmante que está esperando que le piquen a la hoja.
+  // El renglón de firmante que se está colocando en la página visible.
   let filaArmada = null;
   // El borrador que se está editando, si se llegó al editor reabriendo
   // uno. Sirve para reusar su renglón al guardar o al mandar, en vez de
@@ -2706,11 +2715,9 @@
     // devolverlo al tamaño de antes.
     aplicarZoom();
     pintarMiniaturas();
-    // Solo en el editor las hojas reciben clics: en la vista previa del
-    // historial el documento se mira, no se toca.
-    paginas.forEach((p) => {
-      p.capa.addEventListener('click', (e) => colocarEnPagina(e, p));
-    });
+    // En el editor las capas quedan listas para pintar los recuadros; la
+    // firma se coloca desde el botón del firmante, sin pedir un segundo
+    // clic sobre la hoja.
   }
 
   // El contador y la miniatura marcada siguen al scroll de la hoja. Se
@@ -3099,23 +3106,58 @@
     return COLORES[filas.indexOf(fila) % COLORES.length];
   }
 
+  // La página que ocupa el centro del visor es la que la persona está
+  // mirando. Es la misma referencia que se usa para marcar la miniatura
+  // activa, así el botón siempre cae en la hoja que se ve en ese momento.
+  function paginaVisibleActual() {
+    if (!paginas.length) return null;
+
+    const marco = $('editor-doc').getBoundingClientRect();
+    const centro = marco.top + marco.height / 2;
+    let cual = null;
+    let mejor = Infinity;
+
+    paginas.forEach((p) => {
+      const r = p.caja.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const distancia = Math.abs((r.top + r.height / 2) - centro);
+      if (distancia < mejor) {
+        mejor = distancia;
+        cual = p;
+      }
+    });
+    return cual;
+  }
+
   function armarColocacion(fila) {
-    // Picarle otra vez al mismo botón desarma, para poder arrepentirse
-    // sin tener que colocar una firma de más y luego borrarla.
-    if (filaArmada === fila) return desarmar();
+    const pagina = paginaVisibleActual();
+    if (!pagina) {
+      aviso('Espera a que se muestre una página del documento.', 'error');
+      return;
+    }
+
+    // El punto se toma del centro de la parte de la hoja que está a la
+    // vista, no del centro total de una hoja que puede ser más alta que
+    // el visor. Así el recuadro aparece de inmediato donde se puede ver.
     filaArmada = fila;
-    $('editor-doc').classList.add('colocando');
-    refrescarBotonesFijar();
-    $('editor-doc').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const hoja = pagina.capa.getBoundingClientRect();
+    const visor = $('editor-doc').getBoundingClientRect();
+    const izquierda = Math.max(hoja.left, visor.left);
+    const derecha = Math.min(hoja.right, visor.right);
+    const arriba = Math.max(hoja.top, visor.top);
+    const abajo = Math.min(hoja.bottom, visor.bottom);
+    const clientX = derecha > izquierda ? izquierda + (derecha - izquierda) / 2 : hoja.left + hoja.width / 2;
+    const clientY = abajo > arriba ? arriba + (abajo - arriba) / 2 : hoja.top + hoja.height / 2;
+
+    colocarEnPagina({ clientX: clientX, clientY: clientY }, pagina, true);
   }
 
   function desarmar() {
     filaArmada = null;
-    $('editor-doc').classList.remove('colocando');
     refrescarBotonesFijar();
   }
 
-  function colocarEnPagina(e, pagina) {
+  function colocarEnPagina(e, pagina, animar) {
     if (!filaArmada) return;
 
     const nombre = filaArmada.querySelector('.firmante-nom').value.trim();
@@ -3146,6 +3188,7 @@
       anchoPct: anchoPct,
       altoPct: altoPct,
       color: colorDe(filaArmada),
+      animar: !!animar,
     });
 
     desarmar();
@@ -3160,7 +3203,9 @@
       if (!pag) return;
 
       const el = document.createElement('div');
-      el.className = 'marca-firma';
+      const animar = m.animar === true;
+      m.animar = false;
+      el.className = 'marca-firma' + (animar ? ' firma-pop' : '');
       el.style.left = m.x + '%';
       el.style.top = m.y + '%';
       el.style.width = m.anchoPct + '%';
@@ -3294,14 +3339,12 @@
       if (!btn) return;
       const cuantas = marcas.filter((m) => m.fila === fila).length;
       const correo = fila.querySelector('.firmante-mail').value.trim();
-      btn.classList.toggle('armado', filaArmada === fila);
       // Con el correo a medias no se puede fijar nada (la firma se
       // amarra al correo), así que tampoco se pinta: el color aparece
       // justo cuando el botón empieza a servir.
       btn.classList.toggle('listo', CORREO_OK.test(correo));
       btn.querySelector('.cuenta').textContent = String(cuantas);
-      btn.querySelector('.rotulo').textContent =
-        filaArmada === fila ? 'Pica en la hoja' : 'Fijar firma';
+      btn.querySelector('.rotulo').textContent = 'Fijar firma';
     });
   }
 
