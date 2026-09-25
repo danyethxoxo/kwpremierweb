@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════
-   TEMA CLARO
+   TEMA CLARO · LIENZO BLANCO
    ════════════════════════════════════════════════════════════
 
    El sitio nació sobre fondo guinda oscuro, y todo lo que va encima
@@ -8,10 +8,9 @@
    lienzo claro, ese mismo vidrio queda blanco a medias sobre casi
    blanco, o sea que desaparece.
 
-   Por eso esta hoja no cambia el color del fondo y ya: cambia el
-   MATERIAL. El vidrio translúcido se vuelve tarjeta blanca sólida con
-   borde de un pelo y sombra suave, que es lo que hace que un diseño
-   claro se lea ordenado en vez de plano.
+   El lienzo y las superficies son blancos y sólidos; bordes, espaciado
+   y estados de interacción separan el contenido sin recurrir a texturas,
+   transparencias ni manchas decorativas.
 
    ── Por qué vive en su propio archivo ──
    Mientras se prueba, solo la cargan las pantallas que ya se pasaron al
@@ -34,51 +33,24 @@
    <link> más en el HTML se baja en paralelo. */
 
 :root {
-  /* ── El lienzo ──
-     Blanco, con manchas de gris muy difuso repartidas. Las manchas son
-     las que hacen el trabajo que antes hacía el gris parejo: dan de qué
-     despegarse a la tarjeta. Sin ellas, blanco sobre blanco deja todo el
-     peso en la sombra y la pantalla se ve lavada.
-
-     Los grises van tibios (con más rojo que azul en la mezcla), no
-     neutros. Un gris frío al lado del guinda de la marca se ve azuloso,
-     y el conjunto queda con dos temperaturas peleadas. */
+  /* El blanco puro es el lienzo común de la plataforma. */
   --lienzo: #ffffff;
 
-  --bg:
-    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
-    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
-    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
-    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
+  --bg: #ffffff;
 
-  /* ── La textura ──
-     El fondo lleva cuadrícula de hoja de cuaderno; las tarjetas, puntos.
-     No es descuido que sean distintas: son dos planos, y darles la misma
-     textura los pega. La cuadrícula queda como el papel sobre el que se
-     apoyan las tarjetas, y el punteado como el grano del papel de la
-     tarjeta misma.
-
-     La línea va apenas encima de la nada. Una cuadrícula que se vea
-     compite con los bordes de las tarjetas y con los renglones de las
-     tablas, y entonces el fondo deja de ser fondo. Con este valor, de
-     cerca casi no se distingue y de lejos solo se siente. */
+  /* Compatibilidad con componentes existentes; ambas texturas apagadas. */
   --linea-cuadro: rgba(58,40,40,0.03);
   --paso-cuadro: 26px;
 
-  --puntos-tarjeta: radial-gradient(circle, rgba(46,26,26,0.032) 0.8px, transparent 1px);
+  --puntos-tarjeta: none;
   --paso-tarjeta: 16px;
 
-  /* ── La tarjeta ──
-     Blanca arriba y apenas gris abajo. La caída es de dos puntos de
-     luminosidad, nada más: lo suficiente para que la superficie tenga
-     dirección y no se lea como recorte de papel pegado. */
+  /* Superficies blancas, delimitadas por un borde neutro. */
   --card: #ffffff;
-  --card-degradado: linear-gradient(163deg, #ffffff 0%, #fdfcfc 44%, #f6f4f4 100%);
+  --card-degradado: #ffffff;
 
-  /* El borde es de un pelo y casi no se ve: sobre claro, lo que separa
-     una tarjeta del fondo es la sombra, no la línea. Un borde marcado
-     sobre blanco se lee como recuadro de formulario viejo. */
-  --border: rgba(23,10,10,0.09);
+  /* Contraste sutil suficiente para distinguir paneles sobre blanco. */
+  --border: #e7e7e7;
 
   /* El guinda de la marca. Va aquí y no solo en kw-base.css porque hay
      pantallas que cargan esta hoja sola (el login, el alta, la API), y
@@ -147,7 +119,7 @@
 /* El respaldo de <html> deja de ser negro: es el color que se asoma en
    la franja de rebote al llegar al tope o al fondo del scroll en
    celular, y en negro se veía como si la página se acabara. */
-html { background-color: var(--lienzo); }
+html { background-color: var(--lienzo); color-scheme: light; }
 
 /* El color del texto lo pone el tema, no cada página. Sin esta regla,
    lo que no traiga un color propio se queda con el negro del navegador,
@@ -180,18 +152,7 @@ body::before {
   will-change: transform;
   transform: translateZ(0);
 
-  background-image:
-    linear-gradient(to right,  var(--linea-cuadro) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--linea-cuadro) 1px, transparent 1px),
-    radial-gradient(46% 38% at 8% 6%,   rgba(74,58,58,0.075) 0%, transparent 68%),
-    radial-gradient(42% 34% at 94% 16%, rgba(74,58,58,0.06)  0%, transparent 66%),
-    radial-gradient(56% 42% at 46% 102%, rgba(74,58,58,0.07) 0%, transparent 70%),
-    linear-gradient(180deg, #ffffff 0%, #fdfdfc 58%, #f7f5f5 100%);
-  background-size:
-    var(--paso-cuadro) var(--paso-cuadro),
-    var(--paso-cuadro) var(--paso-cuadro),
-    100% 100%, 100% 100%, 100% 100%, 100% 100%;
-  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background: #ffffff;
 }
 
 /* ── El texto que colgaba sobre el fondo oscuro ──
@@ -521,4 +482,52 @@ h1.page-title,
     padding-left: 16px !important;
     padding-right: 16px !important;
   }
+}
+
+/* Acabado común: lienzo blanco, superficies lisas y feedback uniforme. */
+header.kw-header,
+html:not(.kw-riel) header.kw-header .kw-header-capsula,
+html.kw-riel header.kw-buscando .kw-header-capsula,
+header.kw-header .kw-header-sueltos > *:not(#notif-bell-slot) {
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: var(--sombra-1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.kw-card,
+.kw-fila,
+.tabla-envios,
+.hover-card {
+  background: #fff;
+  background-image: none;
+  border-color: var(--border);
+  box-shadow: var(--sombra-1);
+}
+.hover-card:hover {
+  background: #fff;
+  background-image: none;
+  border-color: rgba(138,0,0,0.32);
+  box-shadow: var(--sombra-2);
+  transform: translateY(-2px);
+}
+.kw-fila:has(.kw-fila-icono):hover {
+  background: #fff;
+  background-image: none;
+  border-color: rgba(138,0,0,0.28);
+}
+
+:where(button, [role="button"], a.btn, .btn):focus-visible {
+  outline: 2px solid rgba(138,0,0,0.55);
+  outline-offset: 2px;
+}
+:where(button:not(:disabled), [role="button"], a.btn, .btn) {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+:where(button:not(:disabled), [role="button"], a.btn, .btn):active { transform: scale(0.985); }
+@media (prefers-reduced-motion: reduce) {
+  :where(button, [role="button"], a.btn, .btn) { transition-duration: 0.01ms; }
 }
