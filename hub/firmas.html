@@ -133,7 +133,7 @@
        el movimiento de los demás íconos no debe desplazarla al pasar por
        un estado de hover incompleto. */
     html.kw-riel body.firmas-pagina #drawer-buscar .drawer-buscar-toggle {
-      line-height: 0; transform: translateZ(0);
+      line-height: 1.2; transform: translateZ(0);
     }
     html.kw-riel body.firmas-pagina #drawer-buscar .drawer-buscar-toggle svg {
       display: block; margin: 0; transform: translateX(0) scale(1) !important;
@@ -1340,6 +1340,7 @@
   .editor-zoom {
     flex: 0 0 auto;
     display: flex; align-items: center; gap: 6px;
+    min-width: 0;
     padding: 7px 12px;
     border-bottom: 1px solid rgba(0,0,0,0.09);
     background: #fafafa; position: relative;
@@ -1359,13 +1360,14 @@
   }
   .editor-zoom-titulo {
     position: absolute; left: 50%; transform: translateX(-50%);
-    max-width: 42%; min-width: 0; color: var(--text);
+    width: min(42%, max(0px, calc(100% - 190px)));
+    max-width: none; min-width: 0; color: var(--text);
     font-size: 12px; font-weight: 700; line-height: 1.1;
     text-align: center; overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap; pointer-events: none;
   }
   @media (max-width: 720px) {
-    .editor-zoom-titulo { max-width: 34%; }
+    .editor-zoom-titulo { width: min(34%, max(0px, calc(100% - 160px))); }
   }
   /* Vuelve la hoja al ancho de la columna. Se apaga cuando ya está así,
      que es cuando no haría nada. */
@@ -1483,6 +1485,7 @@
      vez de flotando a media columna. */
   .editor-scroll {
     flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    scrollbar-gutter: stable;
     margin: 0 calc(var(--sp-4) * -1);
     padding: 2px var(--sp-4) 4px;
   }
@@ -2761,7 +2764,8 @@
   function restablecerEstadoHistorial() {
     const drawer = document.getElementById('drawer');
     if (drawer) {
-      drawer.classList.remove('open', 'sin-hover', 'buscando', 'busqueda-cerrando', 'busqueda-con-resultados');
+      drawer.classList.remove('sin-hover', 'buscando', 'busqueda-cerrando', 'busqueda-con-resultados');
+      drawer.classList.add('open');
     }
     const header = document.getElementById('header-firmas');
     if (header) header.classList.remove('modo-editor', 'modo-archivos', 'kw-buscando');

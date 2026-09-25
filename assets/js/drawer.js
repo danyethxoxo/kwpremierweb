@@ -780,7 +780,8 @@
   }
 
   function esRielFijo(el) {
-    return enRiel(el) && !esInicioHub;
+    return enRiel(el) && !esInicioHub &&
+      !document.body.classList.contains('firmas-riel-contraido');
   }
 
   // En escritorio el menú del Hub es navegación permanente, no una
