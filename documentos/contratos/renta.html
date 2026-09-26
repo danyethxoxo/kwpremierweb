@@ -684,15 +684,33 @@
     font-size: 10.5px;
     line-height: 1.4;
   }
+  .arrendadores-fila {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .arrendadores-fila > * { min-width: 0; }
+  .arrendadores-cantidad { margin-bottom: 0 !important; }
+  .arrendadores-cantidad label { font-size: 10px !important; line-height: 1.2; }
+  .arrendadores-cantidad .kw-select,
+  .arrendadores-cantidad > select { width: 72px; }
+  .arrendadores-cantidad .kw-select-btn {
+    width: 72px;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .arrendadores-cantidad > select { min-height: 34px !important; padding: 6px 8px; font-size: 12px; }
   #clientes-fields {
-    margin: 2px 0 3px;
-    padding: 12px 12px 1px;
-    border: 1px solid #e8e3de;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.58);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
   #clientes-fields:empty { display: none; }
-  #clientes-fields .acuerdo-field:last-child { margin-bottom: 10px; }
+  #clientes-fields .acuerdo-field:last-child { margin-bottom: 0; }
   .monto-letra-display {
     min-height: 17px;
     margin-top: 7px;
@@ -882,14 +900,16 @@
       <input type="text" id="f-asesor" autocomplete="name" placeholder="Nombre completo del asesor" oninput="updatePreview()" />
     </div>
     <div class="form-section-title"><strong>Arrendadores</strong></div>
-    <div class="acuerdo-field">
-      <label for="f-num-clientes">Número de arrendadores</label>
-      <select id="f-num-clientes" onchange="renderClientesFields(); updatePreview();">
-        <!-- opciones generadas por JS -->
-      </select>
-      <div class="field-help">Puedes incluir hasta seis arrendadores en este acuerdo.</div>
+    <div class="arrendadores-fila">
+      <div class="acuerdo-field arrendadores-cantidad">
+        <label for="f-num-clientes">Número de arrendadores</label>
+        <select id="f-num-clientes" onchange="renderClientesFields(); updatePreview();">
+          <!-- opciones generadas por JS -->
+        </select>
+        <div class="field-help">Hasta seis.</div>
+      </div>
+      <div id="clientes-fields"></div>
     </div>
-    <div id="clientes-fields"></div>
     <div class="acuerdo-field">
       <label for="f-domicilio">Domicilio para notificaciones</label>
       <input type="text" id="f-domicilio" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía y CP" oninput="updatePreview()" />
