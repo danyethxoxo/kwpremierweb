@@ -825,29 +825,74 @@
 </style>
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20260911a">
 <style>
+  .kw-renta-revision-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border: 1px solid #d9baba;
+    border-radius: 10px;
+    background: #fffafa;
+    color: #8a0000;
+    font: 600 12px/1 'Poppins', Arial, sans-serif;
+    cursor: pointer;
+    transition: background .16s, border-color .16s, transform .12s;
+  }
+  .kw-renta-revision-back:hover { background: #f8eeee; border-color: #b97979; }
+  .kw-renta-revision-back:active { transform: scale(.97); }
+  .kw-renta-revision-back:focus-visible { outline: 2px solid #a40000; outline-offset: 2px; }
+  .kw-renta-revision-back svg { flex: 0 0 15px; width: 15px; height: 15px; }
+
   @media (min-width: 901px) {
     body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row {
       flex-wrap: nowrap !important;
       gap: 10px !important;
     }
-    body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row .btn-download {
-      flex: 1 1 0 !important;
+    body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row > #btn-firma-digital,
+    body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row > #btn-enlazar-dictamen,
+    body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row > #btn-copia {
+      flex: 0 1 auto !important;
       width: auto !important;
       min-width: 0 !important;
-      padding-left: 10px;
-      padding-right: 10px;
+      min-height: 38px;
+      padding: 0 11px !important;
+      font-size: 11.5px;
+      background: transparent !important;
+      box-shadow: none;
+    }
+    body:not(.doc-borrador) #acuerdos-form-col #btn-firma-digital:hover {
+      background: rgba(230, 244, 234, .62) !important;
+    }
+    body:not(.doc-borrador) #acuerdos-form-col #btn-enlazar-dictamen:hover {
+      background: rgba(240, 236, 249, .70) !important;
+    }
+    body:not(.doc-borrador) #acuerdos-form-col #btn-copia:hover {
+      background: rgba(253, 238, 227, .70) !important;
+    }
+    body:not(.doc-borrador) #acuerdos-form-col #btn-firma-digital svg,
+    body:not(.doc-borrador) #acuerdos-form-col #btn-enlazar-dictamen svg,
+    body:not(.doc-borrador) #acuerdos-form-col #btn-copia.kw-btn-revision svg {
+      flex: 0 0 15px;
+      width: 15px;
+      height: 15px;
     }
     body:not(.doc-borrador) #acuerdos-form-col #btn-pdf {
       order: 10;
       margin-left: 0 !important;
-      border-color: var(--pastel-rojo-txt) !important;
-      background: var(--pastel-rojo) !important;
-      color: var(--pastel-rojo-txt) !important;
-      box-shadow: 0 3px 10px rgba(125, 17, 19, .08);
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-width: 174px !important;
+      min-height: 42px;
+      padding: 0 18px !important;
+      border-color: var(--red) !important;
+      background: var(--red) !important;
+      color: #fff !important;
+      box-shadow: 0 4px 12px rgba(164, 0, 0, .16);
     }
     body:not(.doc-borrador) #acuerdos-form-col #btn-pdf:hover {
-      border-color: #b66a6c !important;
-      background: #f5dddd !important;
+      border-color: #820000 !important;
+      background: #820000 !important;
     }
   }
 </style>
@@ -2317,6 +2362,22 @@ function configurarHistorialRenta() {
   const tab = document.querySelector('[data-kw-revision-historial]');
   if (!enlace || !tab || enlace.dataset.conectado) return;
   const raiz = document.getElementById('acuerdos-form-col');
+  const panel = raiz && raiz.querySelector('.kw-revision-panel');
+  if (panel && !panel.dataset.kwRentaBackObserver) {
+    const agregarBotonVolver = () => {
+      if (!raiz.classList.contains('kw-revision-modo-historial') || panel.querySelector('.kw-renta-revision-back')) return;
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'kw-renta-revision-back';
+      boton.setAttribute('aria-label', 'Volver al acuerdo');
+      boton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg><span>Volver al acuerdo</span>';
+      boton.addEventListener('click', () => document.querySelector('[data-kw-revision-documento]')?.click());
+      panel.insertBefore(boton, panel.firstChild);
+    };
+    new MutationObserver(agregarBotonVolver).observe(panel, { childList: true });
+    panel.dataset.kwRentaBackObserver = '1';
+    agregarBotonVolver();
+  }
   const desplazable = raiz && raiz.querySelector('.kw-form-scroll');
   if (raiz && desplazable && enlace.parentElement === desplazable) raiz.insertBefore(enlace.parentElement, desplazable);
   enlace.dataset.conectado = '1';
