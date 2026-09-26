@@ -617,11 +617,12 @@
   .acuerdos-back {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    width: 32px;
     min-height: 32px;
     border: 0;
     border-radius: 8px;
-    padding: 5px 8px 5px 4px;
+    padding: 0;
     background: transparent;
     color: var(--muted);
     font: 600 12px/1 'Poppins', Arial, sans-serif;
@@ -630,7 +631,6 @@
   }
   .acuerdos-back:hover { background: rgba(92, 0, 0, 0.07); color: var(--red); }
   .acuerdos-back:focus-visible,
-  .form-overview:focus-visible,
   .mobile-tab:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
   .form-state {
@@ -655,74 +655,21 @@
   .form-state-error { color: #9d2020; border-color: rgba(157, 32, 32, 0.22); background: #fff4f4; }
   .form-state-error .form-state-dot { background: #c33a3a; }
 
-  .acuerdos-form-heading { margin: 24px 0 18px; }
-  .acuerdos-kicker {
-    color: var(--red);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
+  .acuerdos-form-heading { margin: 24px 0 8px; }
   .acuerdos-form-heading .acuerdos-form-title {
-    margin: 4px 0 6px;
+    margin: 0;
     color: var(--text);
     font-size: 24px;
     font-weight: 700;
     line-height: 1.15;
     text-align: left;
   }
-  .acuerdos-form-heading .acuerdos-form-sub {
-    max-width: 470px;
-    margin: 0;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.55;
   }
-
-  .form-overview {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 8px 10px;
-    border: 1px solid rgba(33, 28, 26, 0.09);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.60);
-    scrollbar-width: none;
-  }
-  .form-overview::-webkit-scrollbar { display: none; }
-  .form-overview span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    flex: 0 0 auto;
-    color: var(--muted);
-    font-size: 10px;
-    white-space: nowrap;
-  }
-  .form-overview span + span::before { content: '•'; margin-right: 2px; color: #b9b4ae; }
-  .form-overview b { color: var(--red); font-size: 10px; }
-
   .form-section-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: block;
     margin: 24px 0 11px;
     padding-top: 18px;
     border-top: 1px solid rgba(33, 28, 26, 0.10);
-  }
-  .form-section-title > span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    flex: 0 0 28px;
-    border-radius: 9px;
-    background: rgba(92, 0, 0, 0.09);
-    color: var(--red);
-    font-size: 10px;
-    font-weight: 700;
   }
   .form-section-title strong {
     display: block;
@@ -730,15 +677,6 @@
     font-size: 13px;
     line-height: 1.2;
   }
-  .form-section-title small {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1.35;
-  }
-  .acuerdos-form-col > .acuerdos-form-title.sr-only { display: none; }
-
   #acuerdos-form-col .acuerdo-field { margin-bottom: 13px; }
   #acuerdos-form-col .acuerdo-field label {
     margin-bottom: 6px;
@@ -843,7 +781,6 @@
     .acuerdos-form-col { padding: 18px 16px 24px; }
     .acuerdos-form-heading { margin-top: 20px; }
     .acuerdos-form-heading .acuerdos-form-title { font-size: 22px; }
-    .form-overview { margin-inline: -2px; }
     .form-section-title { margin-top: 22px; }
     .form-actions {
       position: sticky;
@@ -953,9 +890,8 @@
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
     <div class="acuerdos-form-topbar">
-      <button type="button" class="acuerdos-back" onclick="volverALista()" aria-label="Volver a acuerdos">
+      <button type="button" class="acuerdos-back" onclick="volverALista()" aria-label="Volver a acuerdos" title="Volver a acuerdos">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h10"/></svg>
-        Volver a acuerdos
       </button>
       <span class="form-state form-state-neutral" id="form-state" aria-live="polite">
         <span class="form-state-dot" aria-hidden="true"></span>
@@ -963,18 +899,9 @@
       </span>
     </div>
     <div class="acuerdos-form-heading">
-      <div class="acuerdos-kicker">Documento de trabajo</div>
       <div class="acuerdos-form-title">Acuerdo de Renta</div>
-      <p class="acuerdos-form-sub">Completa los datos para armar el documento. La vista previa se actualiza al instante.</p>
     </div>
-    <div class="form-overview" aria-label="Secciones del formulario">
-      <span><b>01</b> Acuerdo</span>
-      <span><b>02</b> Arrendadores</span>
-      <span><b>03</b> Inmueble y renta</span>
-    </div>
-    <div class="form-section-title"><span>01</span><div><strong>Datos del acuerdo</strong><small>Tipo, fecha y persona responsable.</small></div></div>
-
-    <div class="acuerdos-form-title sr-only">Acuerdo de Renta</div>
+    <div class="form-section-title"><strong>Datos del acuerdo</strong></div>
 
     <div class="acuerdo-field">
       <label for="f-tipo">Tipo de acuerdo</label>
@@ -991,7 +918,7 @@
       <label for="f-asesor">Nombre del asesor</label>
       <input type="text" id="f-asesor" autocomplete="name" placeholder="Nombre completo del asesor" oninput="updatePreview()" />
     </div>
-    <div class="form-section-title"><span>02</span><div><strong>Arrendadores</strong><small>Personas que aparecerán como clientes.</small></div></div>
+    <div class="form-section-title"><strong>Arrendadores</strong></div>
     <div class="acuerdo-field">
       <label for="f-num-clientes">Número de arrendadores</label>
       <select id="f-num-clientes" onchange="renderClientesFields(); updatePreview();">
@@ -1005,7 +932,7 @@
       <input type="text" id="f-domicilio" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía y CP" oninput="updatePreview()" />
       <div class="field-help">Se usará para las notificaciones del cliente en el documento.</div>
     </div>
-    <div class="form-section-title"><span>03</span><div><strong>Inmueble y renta</strong><small>Propiedad y monto mensual del encargo.</small></div></div>
+    <div class="form-section-title"><strong>Inmueble y renta</strong></div>
     <div class="acuerdo-field">
       <label for="f-inmueble">Dirección del inmueble</label>
       <input type="text" id="f-inmueble" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía y CP" oninput="updatePreview()" />
