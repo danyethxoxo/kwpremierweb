@@ -921,7 +921,7 @@
 <body class="doc-borrador">
 
 <!-- Vista de lista: documentos guardados de este tipo -->
-<div id="vista-lista" class="vista-lista">
+<div id="vista-lista" class="vista-lista" style="visibility:hidden;">
   <div class="lista-sticky-bar">
     <div class="vista-lista-header">
       <div class="vista-lista-title">Acuerdo de Renta</div>
@@ -1483,8 +1483,11 @@ function setGuardarMsg(text, kind) {
 // tenía nada que deshacer ahí adentro.
 function mostrarVista(vista, marcar) {
   document.body.classList.toggle('en-lista-documentos', vista === 'lista');
-  document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
-  document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
+  const lista = document.getElementById('vista-lista');
+  const formulario = document.getElementById('vista-formulario');
+  lista.style.display = vista === 'lista' ? '' : 'none';
+  lista.style.visibility = vista === 'lista' ? '' : 'hidden';
+  formulario.style.display = vista === 'formulario' ? '' : 'none';
   if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
   // Solo entrar al formulario agrega una entrada. Volver a la lista nunca
   // escribe historial: así Atrás y Adelante no pueden rebotar entre vistas.
@@ -1505,6 +1508,8 @@ window.addEventListener('popstate', function (ev) {
 // previa (que es lo que de verdad tarda), y al quitarse el documento
 // entra desde abajo.
 function abrirConAnimacion(texto, armar) {
+  const lista = document.getElementById('vista-lista');
+  if (lista) lista.style.visibility = 'hidden';
   var cerrar = (window.kwUI && window.kwUI.cargando)
     ? window.kwUI.cargando(texto)
     : function () {};
@@ -2281,7 +2286,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderClientesFields();
 
   updatePreview();
-  mostrarVista('lista', false);
   initSlideFinalizar();
 
   // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
@@ -2289,6 +2293,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const parametrosURL = new URLSearchParams(location.search);
   const docIdDesdeURL = parametrosURL.get('doc');
   const nuevoDesdeURL = parametrosURL.has('nuevo');
+  if (!docIdDesdeURL && !nuevoDesdeURL) mostrarVista('lista', false);
+  else {
+    const listaInicial = document.getElementById('vista-lista');
+    if (listaInicial) {
+      listaInicial.style.display = 'none';
+      listaInicial.style.visibility = 'hidden';
+    }
+  }
   // Una URL directa a nuevo/documento ya representa el formulario; la
   // lista normal representa su propia entrada para que Atrás sea estable.
   history.replaceState({ kwVista: (docIdDesdeURL || nuevoDesdeURL) ? 'formulario' : 'lista' }, '', location.href);

@@ -105,11 +105,11 @@
     }
   }
 
-  function abrirVersion(version) {
+  function abrirVersion(version, documentoId) {
     viendoHistorica = version.es_actual !== true;
     activar('documento');
     adaptador.abrir({
-      id: adaptador.id(),
+      id: documentoId || adaptador.id(),
       nombre_archivo: version.nombre_archivo,
       updated_at: version.updated_at,
       datos: version.datos || {},
@@ -179,7 +179,8 @@
   }
 
   async function cancelarCambios() {
-    if (!adaptador || !adaptador.id() || adaptador.estado() !== 'borrador' ||
+    var documentoId = adaptador && adaptador.id ? adaptador.id() : null;
+    if (!adaptador || !documentoId || adaptador.estado() !== 'borrador' ||
         !adaptador.revision || Number(adaptador.revision()) <= 0 || viendoHistorica) return;
     var boton = document.getElementById('btn-cancelar-revision');
     if (boton && boton.disabled) return;
@@ -191,7 +192,7 @@
     }
     try {
       var respuesta = await global.kwSupabase.rpc('listar_revisiones_documento', {
-        p_id: adaptador.id()
+        p_id: documentoId
       });
       if (respuesta.error) throw respuesta.error;
       var versiones = Array.isArray(respuesta.data) ? respuesta.data : [];
@@ -203,7 +204,7 @@
           return (Number(b.revision) || 0) - (Number(a.revision) || 0);
         })[0];
       if (!previa) throw new Error('No se encontró el documento anterior.');
-      abrirVersion(previa);
+      abrirVersion(previa, documentoId);
     } catch (err) {
       if (global.kwUI && global.kwUI.alert) {
         await global.kwUI.alert(err.message || 'No se pudo regresar al documento.');
