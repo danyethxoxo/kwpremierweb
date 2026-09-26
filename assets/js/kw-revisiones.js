@@ -169,7 +169,7 @@
     boton.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
-      'Realizar cambios';
+      'Editar';
     boton.addEventListener('click', realizarCambios);
   }
 
@@ -219,7 +219,7 @@
       btnFirma.type = 'button';
       btnFirma.id = 'btn-firma-digital';
       btnFirma.className = 'btn-download kw-btn-firma';
-      btnFirma.innerHTML = iconoFirma() + '<span>Firma digital</span>';
+      btnFirma.innerHTML = iconoFirma() + '<span>Firmar</span>';
       btnFirma.addEventListener('click', function () {
         if (!global.downloadPDF || btnFirma.disabled) return;
         btnFirma.disabled = true;
@@ -230,14 +230,14 @@
         } catch (err) {
           btnFirma.disabled = false;
           btnFirma.classList.remove('cargando');
-          btnFirma.querySelector('span').textContent = 'Firma digital';
+          btnFirma.querySelector('span').textContent = 'Firmar';
           if (global.kwUI && global.kwUI.alert) global.kwUI.alert(err.message || 'No se pudo preparar el documento.');
         }
         setTimeout(function () {
           if (!document.body.contains(btnFirma)) return;
           btnFirma.disabled = false;
           btnFirma.classList.remove('cargando');
-          btnFirma.querySelector('span').textContent = 'Firma digital';
+          btnFirma.querySelector('span').textContent = 'Firmar';
         }, 8000);
       });
       fila.insertBefore(btnFirma, cambios);
@@ -250,7 +250,7 @@
       btnDictamen.type = 'button';
       btnDictamen.id = 'btn-enlazar-dictamen';
       btnDictamen.className = 'btn-download kw-btn-dictamen';
-      btnDictamen.innerHTML = iconoEnlace() + '<span>Enlazar dictamen</span>';
+      btnDictamen.innerHTML = iconoEnlace() + '<span>Enlazar</span>';
       btnDictamen.addEventListener('click', abrirSelectorDictamen);
       fila.insertBefore(btnDictamen, cambios);
     } else {
@@ -343,7 +343,7 @@
       if (btnDictamen) {
         var ligado = filas.some(function (d) { return d.enlazado === true; });
         btnDictamen.classList.toggle('enlazado', ligado);
-        btnDictamen.querySelector('span').textContent = ligado ? 'Dictamen enlazado' : 'Enlazar dictamen';
+        btnDictamen.querySelector('span').textContent = ligado ? 'Enlazado' : 'Enlazar';
       }
     } catch (err) {
       lista.innerHTML = '<div class="kw-enlace-vacio error">' + esc(err.message || 'No se pudieron cargar los dictámenes.') + '</div>';
