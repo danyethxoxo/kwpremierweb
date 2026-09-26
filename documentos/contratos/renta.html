@@ -608,54 +608,13 @@
     scrollbar-color: rgba(92, 0, 0, 0.28) transparent;
   }
 
-  .acuerdos-form-topbar {
+  .acuerdos-form-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    margin: 24px 0 8px;
   }
-  .acuerdos-back {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    min-height: 32px;
-    border: 0;
-    border-radius: 8px;
-    padding: 0;
-    background: transparent;
-    color: var(--muted);
-    font: 600 12px/1 'Poppins', Arial, sans-serif;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-  }
-  .acuerdos-back:hover { background: rgba(92, 0, 0, 0.07); color: var(--red); }
-  .acuerdos-back:focus-visible,
-  .mobile-tab:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-
-  .form-state {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    min-height: 30px;
-    padding: 6px 10px;
-    border: 1px solid rgba(33, 28, 26, 0.10);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.70);
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .form-state-dot { width: 7px; height: 7px; border-radius: 50%; background: #9b968f; }
-  .form-state-dirty { color: #8a5a00; border-color: rgba(177, 116, 0, 0.24); background: #fff9ed; }
-  .form-state-dirty .form-state-dot { background: #c48600; }
-  .form-state-ok { color: #23683b; border-color: rgba(35, 104, 59, 0.20); background: #f1faf4; }
-  .form-state-ok .form-state-dot { background: #2d9a56; }
-  .form-state-error { color: #9d2020; border-color: rgba(157, 32, 32, 0.22); background: #fff4f4; }
-  .form-state-error .form-state-dot { background: #c33a3a; }
-
-  .acuerdos-form-heading { margin: 24px 0 8px; }
   .acuerdos-form-heading .acuerdos-form-title {
     margin: 0;
     color: var(--text);
@@ -664,7 +623,21 @@
     line-height: 1.15;
     text-align: left;
   }
+  .acuerdos-historial {
+    flex: 0 0 auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--red);
+    font: 600 12px/1.2 'Poppins', Arial, sans-serif;
+    cursor: pointer;
   }
+  .acuerdos-historial:hover { text-decoration: underline; }
+  .acuerdos-historial:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+  .mobile-tab:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .acuerdos-historial[hidden] { display: none; }
+  #acuerdos-form-col > .kw-revision-tabs { display: none !important; }
+  #acuerdos-form-col.kw-revision-modo-historial > .acuerdos-form-heading { display: flex !important; }
   .form-section-title {
     display: block;
     margin: 24px 0 11px;
@@ -889,17 +862,9 @@
 
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
-    <div class="acuerdos-form-topbar">
-      <button type="button" class="acuerdos-back" onclick="volverALista()" aria-label="Volver a acuerdos" title="Volver a acuerdos">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h10"/></svg>
-      </button>
-      <span class="form-state form-state-neutral" id="form-state" aria-live="polite">
-        <span class="form-state-dot" aria-hidden="true"></span>
-        <span id="form-state-text">Nuevo documento</span>
-      </span>
-    </div>
     <div class="acuerdos-form-heading">
       <div class="acuerdos-form-title">Acuerdo de Renta</div>
+      <button type="button" class="acuerdos-historial" id="btn-historial-renta" hidden aria-label="Ver historial">Historial</button>
     </div>
     <div class="form-section-title"><strong>Datos del acuerdo</strong></div>
 
@@ -1363,39 +1328,17 @@ function folioRevisionActual() {
     : (folioActual ? 'Folio: ' + folioActual : '');
 }
 
-function setFormState(text, kind) {
-  const state = document.getElementById('form-state');
-  const label = document.getElementById('form-state-text');
-  if (!state || !label) return;
-  state.classList.remove('form-state-neutral', 'form-state-dirty', 'form-state-ok', 'form-state-error');
-  state.classList.add('form-state-' + (kind || 'neutral'));
-  label.textContent = text;
-}
-
-function marcarCambiosPendientes() {
-  if (estadoActual !== 'finalizado') setFormState('Cambios sin guardar', 'dirty');
-}
-
 function setGuardarMsg(text, kind) {
   const el = document.getElementById('guardar-msg');
   if (!el) return;
   if (!text) {
     el.style.display = 'none';
-    setFormState(estadoActual === 'finalizado' ? 'Finalizado' : (documentoActualId ? 'Borrador' : 'Nuevo documento'), estadoActual === 'finalizado' ? 'ok' : 'neutral');
     return;
   }
   el.textContent = text;
   el.style.display = 'block';
   el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
-  setFormState(kind === 'error' ? 'Revisa los datos' : 'Guardado', kind === 'error' ? 'error' : 'ok');
 }
-
-document.addEventListener('input', function (event) {
-  if (event.target.closest && event.target.closest('#acuerdos-form-col')) marcarCambiosPendientes();
-}, true);
-document.addEventListener('change', function (event) {
-  if (event.target.closest && event.target.closest('#acuerdos-form-col')) marcarCambiosPendientes();
-}, true);
 
 // Entrar al formulario (nuevo o abrir uno guardado) se marca en el
 // historial del navegador (con pushState, sin cambiar la URL) para que
@@ -1448,9 +1391,11 @@ function actualizarVisibilidadBotones() {
   document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
   document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
-  setFormState(finalizado ? 'Finalizado' : (documentoActualId ? 'Borrador' : 'Nuevo documento'), finalizado ? 'ok' : 'neutral');
   actualizarFAB();
-  if (window.kwRevisiones) window.kwRevisiones.refrescar();
+  if (window.kwRevisiones) {
+    window.kwRevisiones.refrescar();
+    sincronizarHistorialRenta();
+  }
 }
 
 function actualizarFAB() {
@@ -2292,6 +2237,33 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
 <script src="/assets/js/kw-revisiones.js?v=20260922"></script>
 <script>
+function sincronizarHistorialRenta() {
+  const enlace = document.getElementById('btn-historial-renta');
+  const tab = document.querySelector('[data-kw-revision-historial]');
+  if (!enlace || !tab) return;
+  enlace.hidden = tab.hidden;
+  const historialActivo = document.getElementById('acuerdos-form-col')?.classList.contains('kw-revision-modo-historial');
+  enlace.textContent = historialActivo ? 'Volver al acuerdo' : 'Historial';
+  enlace.setAttribute('aria-label', historialActivo ? 'Volver al acuerdo' : 'Ver historial');
+}
+
+function configurarHistorialRenta() {
+  const enlace = document.getElementById('btn-historial-renta');
+  const tab = document.querySelector('[data-kw-revision-historial]');
+  if (!enlace || !tab || enlace.dataset.conectado) return;
+  const raiz = document.getElementById('acuerdos-form-col');
+  const desplazable = raiz && raiz.querySelector('.kw-form-scroll');
+  if (raiz && desplazable && enlace.parentElement === desplazable) raiz.insertBefore(enlace.parentElement, desplazable);
+  enlace.dataset.conectado = '1';
+  enlace.addEventListener('click', function () {
+    const documento = document.querySelector('[data-kw-revision-documento]');
+    if (raiz && raiz.classList.contains('kw-revision-modo-historial') && documento) documento.click();
+    else tab.click();
+    setTimeout(sincronizarHistorialRenta, 0);
+  });
+  sincronizarHistorialRenta();
+}
+
 window.kwRevisiones.iniciar({
   id: function () { return documentoActualId; },
   estado: function () { return estadoActual; },
@@ -2307,6 +2279,7 @@ window.kwRevisiones.iniciar({
     setGuardarMsg('Revisión ' + numero + ' iniciada. Realiza los cambios, guarda y finaliza nuevamente.', 'ok');
   }
 });
+setTimeout(configurarHistorialRenta, 0);
 </script>
 </body>
 </html>
