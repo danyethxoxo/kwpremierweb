@@ -596,6 +596,264 @@
   /* ── Impresión directa (Ctrl+P) de la pestaña principal: solo
      debe verse el documento, y si aún no está finalizado, se marca
      como borrador para que no sirva como versión oficial ── */
+  /* Propuesta de editor: jerarquia clara, controles legibles y estados visibles. */
+  .acuerdos-body {
+    grid-template-columns: minmax(420px, 0.82fr) minmax(0, 1.18fr);
+  }
+
+  .acuerdos-form-col {
+    padding: 22px 32px 28px;
+    background: #f6f5f3;
+    border-right: 1px solid rgba(33, 28, 26, 0.10);
+    scrollbar-color: rgba(92, 0, 0, 0.28) transparent;
+  }
+
+  .acuerdos-form-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .acuerdos-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    border: 0;
+    border-radius: 8px;
+    padding: 5px 8px 5px 4px;
+    background: transparent;
+    color: var(--muted);
+    font: 600 12px/1 'Poppins', Arial, sans-serif;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .acuerdos-back:hover { background: rgba(92, 0, 0, 0.07); color: var(--red); }
+  .acuerdos-back:focus-visible,
+  .form-overview:focus-visible,
+  .mobile-tab:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  .form-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    padding: 6px 10px;
+    border: 1px solid rgba(33, 28, 26, 0.10);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.70);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .form-state-dot { width: 7px; height: 7px; border-radius: 50%; background: #9b968f; }
+  .form-state-dirty { color: #8a5a00; border-color: rgba(177, 116, 0, 0.24); background: #fff9ed; }
+  .form-state-dirty .form-state-dot { background: #c48600; }
+  .form-state-ok { color: #23683b; border-color: rgba(35, 104, 59, 0.20); background: #f1faf4; }
+  .form-state-ok .form-state-dot { background: #2d9a56; }
+  .form-state-error { color: #9d2020; border-color: rgba(157, 32, 32, 0.22); background: #fff4f4; }
+  .form-state-error .form-state-dot { background: #c33a3a; }
+
+  .acuerdos-form-heading { margin: 24px 0 18px; }
+  .acuerdos-kicker {
+    color: var(--red);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .acuerdos-form-heading .acuerdos-form-title {
+    margin: 4px 0 6px;
+    color: var(--text);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: left;
+  }
+  .acuerdos-form-heading .acuerdos-form-sub {
+    max-width: 470px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .form-overview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border: 1px solid rgba(33, 28, 26, 0.09);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.60);
+    scrollbar-width: none;
+  }
+  .form-overview::-webkit-scrollbar { display: none; }
+  .form-overview span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .form-overview span + span::before { content: '•'; margin-right: 2px; color: #b9b4ae; }
+  .form-overview b { color: var(--red); font-size: 10px; }
+
+  .form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 24px 0 11px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(33, 28, 26, 0.10);
+  }
+  .form-section-title > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: 9px;
+    background: rgba(92, 0, 0, 0.09);
+    color: var(--red);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .form-section-title strong {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  .form-section-title small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .acuerdos-form-col > .acuerdos-form-title.sr-only { display: none; }
+
+  #acuerdos-form-col .acuerdo-field { margin-bottom: 13px; }
+  #acuerdos-form-col .acuerdo-field label {
+    margin-bottom: 6px;
+    color: #4b4743;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+  }
+  #acuerdos-form-col .acuerdo-field select,
+  #acuerdos-form-col .acuerdo-field input,
+  #acuerdos-form-col .acuerdo-field textarea {
+    min-height: 43px;
+    border: 1px solid #d8d4cf;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(38, 27, 22, 0.03);
+    font-size: 13px;
+  }
+  #acuerdos-form-col .acuerdo-field select:focus,
+  #acuerdos-form-col .acuerdo-field input:focus,
+  #acuerdos-form-col .acuerdo-field textarea:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(138, 0, 0, 0.10), 0 1px 2px rgba(38, 27, 22, 0.04);
+  }
+  #acuerdos-form-col .acuerdo-field select:focus-visible,
+  #acuerdos-form-col .acuerdo-field input:focus-visible,
+  #acuerdos-form-col .acuerdo-field textarea:focus-visible { outline: 2px solid rgba(138, 0, 0, 0.28); outline-offset: 1px; }
+  #acuerdos-form-col .acuerdo-field input::placeholder { color: #aaa39d; }
+
+  .field-help {
+    margin-top: 6px;
+    color: #817a73;
+    font-size: 10.5px;
+    line-height: 1.4;
+  }
+  #clientes-fields {
+    margin: 2px 0 3px;
+    padding: 12px 12px 1px;
+    border: 1px solid #e8e3de;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.58);
+  }
+  #clientes-fields:empty { display: none; }
+  #clientes-fields .acuerdo-field:last-child { margin-bottom: 10px; }
+  .monto-letra-display {
+    min-height: 17px;
+    margin-top: 7px;
+    color: #817a73;
+    font-size: 10.5px;
+    font-style: normal;
+    line-height: 1.4;
+  }
+  .monto-letra-display:not(:empty)::first-letter { color: var(--red); }
+
+  .form-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin: 20px -32px -28px !important;
+    padding: 14px 32px 7px;
+    border-top: 1px solid rgba(33, 28, 26, 0.10);
+    background: linear-gradient(180deg, rgba(246, 245, 243, 0.72), #f6f5f3 32%);
+  }
+  .form-actions .btn-download {
+    flex: 1 1 138px;
+    min-height: 42px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+  .form-actions #btn-guardar {
+    border-color: var(--red);
+    background: var(--red);
+    color: #fff;
+  }
+  .form-actions #btn-guardar:hover { background: #760000; }
+  .guardar-msg {
+    min-height: 19px;
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .acuerdos-preview-col {
+    background: #efeeec;
+    padding: 28px 24px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 900px) {
+    .acuerdos-form-col { padding: 18px 16px 24px; }
+    .acuerdos-form-heading { margin-top: 20px; }
+    .acuerdos-form-heading .acuerdos-form-title { font-size: 22px; }
+    .form-overview { margin-inline: -2px; }
+    .form-section-title { margin-top: 22px; }
+    .form-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      margin: 18px -16px -24px !important;
+      padding: 12px 16px 5px;
+    }
+  }
+
   @media print {
     #vista-lista, .mobile-tabs, .acuerdos-form-col, .modal-overlay {
       display: none !important;
@@ -694,45 +952,71 @@
 
   <!-- Columna formulario -->
   <div class="acuerdos-form-col" id="acuerdos-form-col">
-    <div class="acuerdos-form-title">Acuerdo de Renta</div>
+    <div class="acuerdos-form-topbar">
+      <button type="button" class="acuerdos-back" onclick="volverALista()" aria-label="Volver a acuerdos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h10"/></svg>
+        Volver a acuerdos
+      </button>
+      <span class="form-state form-state-neutral" id="form-state" aria-live="polite">
+        <span class="form-state-dot" aria-hidden="true"></span>
+        <span id="form-state-text">Nuevo documento</span>
+      </span>
+    </div>
+    <div class="acuerdos-form-heading">
+      <div class="acuerdos-kicker">Documento de trabajo</div>
+      <div class="acuerdos-form-title">Acuerdo de Renta</div>
+      <p class="acuerdos-form-sub">Completa los datos para armar el documento. La vista previa se actualiza al instante.</p>
+    </div>
+    <div class="form-overview" aria-label="Secciones del formulario">
+      <span><b>01</b> Acuerdo</span>
+      <span><b>02</b> Arrendadores</span>
+      <span><b>03</b> Inmueble y renta</span>
+    </div>
+    <div class="form-section-title"><span>01</span><div><strong>Datos del acuerdo</strong><small>Tipo, fecha y persona responsable.</small></div></div>
+
+    <div class="acuerdos-form-title sr-only">Acuerdo de Renta</div>
 
     <div class="acuerdo-field">
-      <label>Tipo de acuerdo</label>
+      <label for="f-tipo">Tipo de acuerdo</label>
       <select id="f-tipo" onchange="updatePreview()">
         <option value="exclusiva">Exclusiva</option>
         <option value="opcion">En Opción</option>
       </select>
     </div>
     <div class="acuerdo-field">
-      <label>Nombre del asesor</label>
-      <input type="text" id="f-asesor" oninput="updatePreview()" />
+      <label for="f-fecha">Fecha del acuerdo</label>
+      <input type="date" id="f-fecha" onchange="updatePreview()" />
     </div>
     <div class="acuerdo-field">
-      <label>Número de clientes (arrendadores)</label>
+      <label for="f-asesor">Nombre del asesor</label>
+      <input type="text" id="f-asesor" autocomplete="name" placeholder="Nombre completo del asesor" oninput="updatePreview()" />
+    </div>
+    <div class="form-section-title"><span>02</span><div><strong>Arrendadores</strong><small>Personas que aparecerán como clientes.</small></div></div>
+    <div class="acuerdo-field">
+      <label for="f-num-clientes">Número de arrendadores</label>
       <select id="f-num-clientes" onchange="renderClientesFields(); updatePreview();">
         <!-- opciones generadas por JS -->
       </select>
+      <div class="field-help">Puedes incluir hasta seis arrendadores en este acuerdo.</div>
     </div>
     <div id="clientes-fields"></div>
     <div class="acuerdo-field">
-      <label>Dirección del inmueble</label>
-      <input type="text" id="f-inmueble" placeholder="Calle, número, colonia, alcaldía, CP" oninput="updatePreview()" />
+      <label for="f-domicilio">Domicilio para notificaciones</label>
+      <input type="text" id="f-domicilio" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía y CP" oninput="updatePreview()" />
+      <div class="field-help">Se usará para las notificaciones del cliente en el documento.</div>
+    </div>
+    <div class="form-section-title"><span>03</span><div><strong>Inmueble y renta</strong><small>Propiedad y monto mensual del encargo.</small></div></div>
+    <div class="acuerdo-field">
+      <label for="f-inmueble">Dirección del inmueble</label>
+      <input type="text" id="f-inmueble" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía y CP" oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
-      <label>Monto mensual de renta (en número)</label>
-      <input type="number" id="f-monto" oninput="updateMontoLetra(); updatePreview();" />
+      <label for="f-monto">Monto mensual de renta</label>
+      <input type="number" id="f-monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00" oninput="updateMontoLetra(); updatePreview();" />
       <div class="monto-letra-display" id="monto-letra-display">El monto en letra aparecerá aquí automáticamente.</div>
     </div>
-    <div class="acuerdo-field">
-      <label>Domicilio del cliente (arrendador)</label>
-      <input type="text" id="f-domicilio" placeholder="Dirección donde recibe notificaciones" oninput="updatePreview()" />
-    </div>
-    <div class="acuerdo-field">
-      <label>Fecha del acuerdo</label>
-      <input type="date" id="f-fecha" oninput="updatePreview()" />
-    </div>
 
-    <div class="desktop-btn-row" style="display:flex;gap:8px;margin-top:14px;">
+    <div class="desktop-btn-row form-actions" style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn-download btn-outline-red" id="btn-pdf" style="display:none;" onclick="downloadPDF()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         PDF
@@ -750,7 +1034,7 @@
         Hacer una copia
       </button>
     </div>
-    <div id="guardar-msg" style="font-size:12px;margin-top:8px;display:none;"></div>
+    <div id="guardar-msg" class="guardar-msg" role="status" aria-live="polite"></div>
   </div>
 
   <!-- Columna vista previa -->
@@ -950,8 +1234,8 @@ function renderClientesFields() {
     const prevVal = prev ? prev.value : '';
     html += `
     <div class="acuerdo-field">
-      <label>Nombre del arrendador (cliente${n > 1 ? ' ' + (i + 1) : ''})</label>
-      <input type="text" id="f-cliente${i}" value="${prevVal.replace(/"/g,'&quot;')}" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
+      <label for="f-cliente${i}">Nombre del arrendador (cliente${n > 1 ? ' ' + (i + 1) : ''})</label>
+      <input type="text" id="f-cliente${i}" autocomplete="name" value="${prevVal.replace(/"/g,'&quot;')}" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
     </div>`;
   }
   cont.innerHTML = html;
@@ -1152,13 +1436,39 @@ function folioRevisionActual() {
     : (folioActual ? 'Folio: ' + folioActual : '');
 }
 
+function setFormState(text, kind) {
+  const state = document.getElementById('form-state');
+  const label = document.getElementById('form-state-text');
+  if (!state || !label) return;
+  state.classList.remove('form-state-neutral', 'form-state-dirty', 'form-state-ok', 'form-state-error');
+  state.classList.add('form-state-' + (kind || 'neutral'));
+  label.textContent = text;
+}
+
+function marcarCambiosPendientes() {
+  if (estadoActual !== 'finalizado') setFormState('Cambios sin guardar', 'dirty');
+}
+
 function setGuardarMsg(text, kind) {
   const el = document.getElementById('guardar-msg');
-  if (!text) { el.style.display = 'none'; return; }
+  if (!el) return;
+  if (!text) {
+    el.style.display = 'none';
+    setFormState(estadoActual === 'finalizado' ? 'Finalizado' : (documentoActualId ? 'Borrador' : 'Nuevo documento'), estadoActual === 'finalizado' ? 'ok' : 'neutral');
+    return;
+  }
   el.textContent = text;
   el.style.display = 'block';
   el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+  setFormState(kind === 'error' ? 'Revisa los datos' : 'Guardado', kind === 'error' ? 'error' : 'ok');
 }
+
+document.addEventListener('input', function (event) {
+  if (event.target.closest && event.target.closest('#acuerdos-form-col')) marcarCambiosPendientes();
+}, true);
+document.addEventListener('change', function (event) {
+  if (event.target.closest && event.target.closest('#acuerdos-form-col')) marcarCambiosPendientes();
+}, true);
 
 // Entrar al formulario (nuevo o abrir uno guardado) se marca en el
 // historial del navegador (con pushState, sin cambiar la URL) para que
@@ -1211,6 +1521,7 @@ function actualizarVisibilidadBotones() {
   document.getElementById('btn-finalizar').style.display = (!finalizado && documentoActualId) ? 'flex' : 'none';
   document.getElementById('btn-copia').style.display = finalizado ? 'flex' : 'none';
   document.body.classList.toggle('doc-borrador', !finalizado);
+  setFormState(finalizado ? 'Finalizado' : (documentoActualId ? 'Borrador' : 'Nuevo documento'), finalizado ? 'ok' : 'neutral');
   actualizarFAB();
   if (window.kwRevisiones) window.kwRevisiones.refrescar();
 }
