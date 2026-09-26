@@ -841,13 +841,24 @@
   // 20 ms se ve como un parpadeo, que molesta más que no ponerlo.
   var MINIMO_VISIBLE = 420;
 
-  function cargando(texto) {
+  function cargando(texto, opciones) {
+    opciones = opciones || {};
     var velo = document.createElement('div');
-    velo.className = 'kw-cargando-pantalla';
+    velo.className = 'kw-cargando-pantalla' + (opciones.formulario ? ' kw-cargando-formulario' : '');
     velo.setAttribute('role', 'status');
     velo.setAttribute('aria-live', 'polite');
     velo.innerHTML = '<div class="kw-cargando-aros"><span></span><span></span><span></span></div>' +
-      '<div class="kw-cargando-texto">' + esc(texto || 'Cargando…') + '</div>';
+      '<div class="kw-cargando-texto">' + esc(texto || 'Cargando…') + '</div>' +
+      (opciones.formulario
+        ? '<div class="kw-cargando-form-skeleton" aria-hidden="true">' +
+            '<span class="kw-skel kw-cargando-form-titulo"></span>' +
+            '<span class="kw-skel kw-cargando-form-seccion"></span>' +
+            '<span class="kw-skel kw-cargando-form-campo"></span>' +
+            '<span class="kw-skel kw-cargando-form-campo"></span>' +
+            '<span class="kw-skel kw-cargando-form-campo"></span>' +
+            '<span class="kw-skel kw-cargando-form-campo corto"></span>' +
+          '</div>'
+        : '');
     document.body.appendChild(velo);
 
     var desde = Date.now();

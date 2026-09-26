@@ -9,6 +9,7 @@
   var btnFirma = null;
   var btnDictamen = null;
   var btnCancelar = null;
+  var documentoEdicionOriginal = null;
   var viendoHistorica = false;
 
   function esc(valor) {
@@ -141,7 +142,8 @@
   }
 
   async function realizarCambios() {
-    if (!adaptador || !adaptador.id() || adaptador.estado() !== 'finalizado' || viendoHistorica) return;
+    var documentoId = adaptador && adaptador.id ? adaptador.id() : null;
+    if (!adaptador || !documentoId || adaptador.estado() !== 'finalizado' || viendoHistorica) return;
     var boton = document.getElementById('btn-copia');
     var etiqueta = boton && boton.querySelector('span');
     var textoOriginal = etiqueta ? etiqueta.textContent : 'Editar';
@@ -155,8 +157,26 @@
       if (etiqueta) etiqueta.textContent = 'Preparando…';
     }
     try {
+      var original = await global.kwSupabase
+        .from('documentos_guardados')
+        .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
+        .eq('id', documentoId)
+        .single();
+      if (original.error || !original.data) {
+        throw original.error || new Error('No se pudo recuperar el documento para editarlo.');
+      }
+      documentoEdicionOriginal = {
+        id: original.data.id,
+        nombre_archivo: original.data.nombre_archivo,
+        updated_at: original.data.updated_at,
+        datos: original.data.datos || {},
+        folio: original.data.folio,
+        estado: 'finalizado',
+        revision: Number(original.data.revision) || 0,
+        es_actual: false
+      };
       var respuesta = await global.kwSupabase.rpc('crear_revision_documento', {
-        p_id: adaptador.id()
+        p_id: documentoId
       });
       if (respuesta.error) throw respuesta.error;
       viendoHistorica = false;
@@ -191,18 +211,23 @@
       boton.textContent = 'Regresando…';
     }
     try {
-      var respuesta = await global.kwSupabase.rpc('listar_revisiones_documento', {
-        p_id: documentoId
-      });
-      if (respuesta.error) throw respuesta.error;
-      var versiones = Array.isArray(respuesta.data) ? respuesta.data : [];
-      var previa = versiones
-        .filter(function (version) {
-          return version.es_actual !== true && version.estado === 'finalizado';
-        })
-        .sort(function (a, b) {
-          return (Number(b.revision) || 0) - (Number(a.revision) || 0);
-        })[0];
+      var previa = documentoEdicionOriginal && documentoEdicionOriginal.id === documentoId
+        ? documentoEdicionOriginal
+        : null;
+      if (!previa) {
+        var respuesta = await global.kwSupabase.rpc('listar_revisiones_documento', {
+          p_id: documentoId
+        });
+        if (respuesta.error) throw respuesta.error;
+        var versiones = Array.isArray(respuesta.data) ? respuesta.data : [];
+        previa = versiones
+          .filter(function (version) {
+            return version.es_actual !== true && version.estado === 'finalizado';
+          })
+          .sort(function (a, b) {
+            return (Number(b.revision) || 0) - (Number(a.revision) || 0);
+          })[0];
+      }
       if (!previa) throw new Error('No se encontró el documento anterior.');
       abrirVersion(previa, documentoId);
     } catch (err) {

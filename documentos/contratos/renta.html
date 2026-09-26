@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/assets/css/kw-ui.css?v=20260906b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<script src="/assets/js/kw-ui.js?v=20260926c"></script>
+  <script src="/assets/js/kw-ui.js?v=20260926d"></script>
 <title>Acuerdo de Renta</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -856,6 +856,21 @@
   }
   .kw-cargando-aros span { border-top-color: var(--red) !important; }
   .kw-cargando-texto { color: #6f5b5b !important; }
+  .kw-cargando-formulario { padding: 24px; gap: 16px; }
+  .kw-cargando-form-skeleton {
+    width: min(560px, calc(100vw - 48px));
+    display: grid;
+    gap: 12px;
+    padding: 24px 26px 26px;
+    border: 1px solid #ece6e6;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(50, 25, 25, .08);
+  }
+  .kw-cargando-form-skeleton .kw-skel { display: block; height: 42px; border-radius: 10px; }
+  .kw-cargando-form-skeleton .kw-cargando-form-titulo { width: 42%; height: 18px; margin-bottom: 3px; }
+  .kw-cargando-form-skeleton .kw-cargando-form-seccion { width: 30%; height: 11px; }
+  .kw-cargando-form-skeleton .kw-cargando-form-campo.corto { width: 68%; }
 
   @media (min-width: 901px) {
     body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row {
@@ -1511,7 +1526,7 @@ function abrirConAnimacion(texto, armar) {
   const lista = document.getElementById('vista-lista');
   if (lista) lista.style.visibility = 'hidden';
   var cerrar = (window.kwUI && window.kwUI.cargando)
-    ? window.kwUI.cargando(texto)
+    ? window.kwUI.cargando(texto, { formulario: true })
     : function () {};
   requestAnimationFrame(function () {
     armar();
@@ -2390,7 +2405,7 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
-<script src="/assets/js/kw-revisiones.js?v=20260926b"></script>
+<script src="/assets/js/kw-revisiones.js?v=20260926c"></script>
 <script>
 function sincronizarHistorialRenta() {
   const enlace = document.getElementById('btn-historial-renta');
