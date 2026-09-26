@@ -496,8 +496,18 @@
     });
     pintarValor();
 
-    inp.addEventListener('click', function (e) { e.stopPropagation(); abrirCalendario(inp); });
-    inp.addEventListener('focus', function () { abrirCalendario(inp); });
+    inp.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (calendarioInput === inp) cerrarCalendario(false);
+      else abrirCalendario(inp);
+    });
+    // El foco llega antes que el clic cuando se abre con el ratón. Esperar
+    // un turno evita que ese primer clic abra y cierre el calendario a la vez.
+    inp.addEventListener('focus', function () {
+      setTimeout(function () {
+        if (document.activeElement === inp && calendarioInput !== inp) abrirCalendario(inp);
+      }, 0);
+    });
     inp.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault(); abrirCalendario(inp);
