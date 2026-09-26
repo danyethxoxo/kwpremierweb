@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/assets/css/kw-ui.css?v=20260906b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-  <script src="/assets/js/kw-ui.js?v=20260926d"></script>
+  <script src="/assets/js/kw-ui.js?v=20260926e"></script>
 <title>Acuerdo de Renta</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
@@ -856,21 +856,6 @@
   }
   .kw-cargando-aros span { border-top-color: var(--red) !important; }
   .kw-cargando-texto { color: #6f5b5b !important; }
-  .kw-cargando-formulario { padding: 24px; gap: 16px; }
-  .kw-cargando-form-skeleton {
-    width: min(560px, calc(100vw - 48px));
-    display: grid;
-    gap: 12px;
-    padding: 24px 26px 26px;
-    border: 1px solid #ece6e6;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(50, 25, 25, .08);
-  }
-  .kw-cargando-form-skeleton .kw-skel { display: block; height: 42px; border-radius: 10px; }
-  .kw-cargando-form-skeleton .kw-cargando-form-titulo { width: 42%; height: 18px; margin-bottom: 3px; }
-  .kw-cargando-form-skeleton .kw-cargando-form-seccion { width: 30%; height: 11px; }
-  .kw-cargando-form-skeleton .kw-cargando-form-campo.corto { width: 68%; }
 
   @media (min-width: 901px) {
     body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row {
@@ -1471,6 +1456,9 @@ let documentoActualId = null;
 let folioActual = null;
 let estadoActual = 'borrador';
 let revisionActual = 0;
+let modoEdicionRevision = false;
+let documentoRevisionOriginal = null;
+let revisionMaterializadaId = null;
 
 function folioRevisionActual() {
   return window.kwRevisiones
@@ -1526,7 +1514,7 @@ function abrirConAnimacion(texto, armar) {
   const lista = document.getElementById('vista-lista');
   if (lista) lista.style.visibility = 'hidden';
   var cerrar = (window.kwUI && window.kwUI.cargando)
-    ? window.kwUI.cargando(texto, { formulario: true })
+    ? window.kwUI.cargando(texto)
     : function () {};
   requestAnimationFrame(function () {
     armar();
@@ -1684,6 +1672,9 @@ function limpiarFormulario() {
 function crearNuevoDocumento() {
   if (!new URLSearchParams(location.search).has('nuevo')) { location.assign(location.pathname + '?nuevo=1'); return; }
   abrirConAnimacion('Preparando el documento…', function () {
+    modoEdicionRevision = false;
+    documentoRevisionOriginal = null;
+    revisionMaterializadaId = null;
     documentoActualId = null;
     folioActual = null;
     revisionActual = 0;
@@ -1698,6 +1689,9 @@ function crearNuevoDocumento() {
 
 function abrirDocumentoGuardado(row, marcar) {
   abrirConAnimacion('Abriendo documento…', function () {
+    modoEdicionRevision = false;
+    documentoRevisionOriginal = null;
+    revisionMaterializadaId = null;
     documentoActualId = row.id;
     folioActual = row.folio || null;
     estadoActual = row.estado || 'borrador';
@@ -1960,6 +1954,48 @@ async function guardarComoNuevo(nombre) {
   }
 }
 
+function nombreRevisionLocal() {
+  const base = (documentoRevisionOriginal && documentoRevisionOriginal.nombre_archivo) || nombreArchivoDoc();
+  return base + ' · Revisión ' + (revisionActual || 1);
+}
+
+async function materializarRevisionLocal(datos) {
+  if (!modoEdicionRevision || !documentoRevisionOriginal) return documentoActualId;
+  if (revisionMaterializadaId) return revisionMaterializadaId;
+  if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+
+  const { data: nuevoId, error: duplicarError } = await window.kwSupabase.rpc(
+    'duplicar_documento_como_borrador',
+    { p_id: documentoRevisionOriginal.id }
+  );
+  if (duplicarError || !nuevoId) throw duplicarError || new Error('No se pudo crear la revisión.');
+
+  const revision = Math.max(1, Number(revisionActual) || ((Number(documentoRevisionOriginal.revision) || 0) + 1));
+  const { error: actualizarError } = await window.kwSupabase
+    .from('documentos_guardados')
+    .update({
+      datos: datos,
+      nombre_archivo: nombreRevisionLocal(),
+      revision: revision,
+      // Una revisión conserva el folio del acuerdo original. La función
+      // que duplica documentos deja el folio vacío para las copias normales;
+      // aquí sí representa la misma operación jurídica y debe conservarlo.
+      folio: documentoRevisionOriginal.folio || null
+    })
+    .eq('id', nuevoId);
+  if (actualizarError) {
+    try { await window.kwSupabase.from('documentos_guardados').delete().eq('id', nuevoId); } catch (e) {}
+    throw actualizarError;
+  }
+
+  revisionMaterializadaId = nuevoId;
+  documentoActualId = nuevoId;
+  folioActual = documentoRevisionOriginal.folio || null;
+  estadoActual = 'borrador';
+  actualizarVisibilidadBotones();
+  return nuevoId;
+}
+
 async function guardarDocumento() {
   if (!documentoActualId) {
     abrirModalNombre();
@@ -1972,6 +2008,7 @@ async function guardarDocumento() {
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const datos = datosActuales();
+    await materializarRevisionLocal(datos);
 
     const { error } = await window.kwSupabase
       .from('documentos_guardados')
@@ -2001,11 +2038,15 @@ async function finalizarDocumento() {
   if (!documentoActualId) return;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
+    await materializarRevisionLocal(datosActuales());
     const { data, error } = await window.kwSupabase.rpc('finalizar_documento', { p_id: documentoActualId });
     if (error) throw error;
 
     folioActual = data;
     estadoActual = 'finalizado';
+    modoEdicionRevision = false;
+    documentoRevisionOriginal = null;
+    revisionMaterializadaId = null;
     updatePreview();
     bloquearFormulario(true);
     actualizarVisibilidadBotones();
@@ -2405,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
-<script src="/assets/js/kw-revisiones.js?v=20260926c"></script>
+<script src="/assets/js/kw-revisiones.js?v=20260926d"></script>
 <script>
 function sincronizarHistorialRenta() {
   const enlace = document.getElementById('btn-historial-renta');
@@ -2456,6 +2497,21 @@ window.kwRevisiones.iniciar({
   folio: function () { return folioActual; },
   revision: function () { return revisionActual; },
   abrir: function (row) { abrirDocumentoGuardado(row, false); },
+  iniciarEdicion: function (numero, original) {
+    modoEdicionRevision = true;
+    documentoRevisionOriginal = original || null;
+    revisionMaterializadaId = null;
+    revisionActual = numero;
+    folioActual = original && original.folio ? original.folio : folioActual;
+    estadoActual = 'borrador';
+    bloquearFormulario(false);
+    actualizarVisibilidadBotones();
+    updatePreview();
+    setGuardarMsg('');
+  },
+  esEdicionLocal: function () {
+    return modoEdicionRevision && estadoActual === 'borrador';
+  },
   revisionCreada: function (numero) {
     revisionActual = numero;
     estadoActual = 'borrador';

@@ -173,8 +173,12 @@
         folio: original.data.folio,
         estado: 'finalizado',
         revision: Number(original.data.revision) || 0,
-        es_actual: false
+        es_actual: true
       };
+      if (typeof adaptador.iniciarEdicion === 'function') {
+        adaptador.iniciarEdicion((Number(original.data.revision) || 0) + 1, documentoEdicionOriginal);
+        return;
+      }
       var respuesta = await global.kwSupabase.rpc('crear_revision_documento', {
         p_id: documentoId
       });
@@ -199,9 +203,14 @@
   }
 
   async function cancelarCambios() {
-    var documentoId = adaptador && adaptador.id ? adaptador.id() : null;
-    if (!adaptador || !documentoId || adaptador.estado() !== 'borrador' ||
-        !adaptador.revision || Number(adaptador.revision()) <= 0 || viendoHistorica) return;
+    var idActual = adaptador && adaptador.id ? adaptador.id() : null;
+    var puedeCancelar = adaptador && typeof adaptador.esEdicionLocal === 'function'
+      ? adaptador.esEdicionLocal()
+      : adaptador && adaptador.estado() === 'borrador' && adaptador.revision && Number(adaptador.revision()) > 0;
+    var documentoId = documentoEdicionOriginal && documentoEdicionOriginal.id
+      ? documentoEdicionOriginal.id
+      : idActual;
+    if (!adaptador || !idActual || !documentoId || !puedeCancelar || viendoHistorica) return;
     var boton = document.getElementById('btn-cancelar-revision');
     if (boton && boton.disabled) return;
     var textoOriginal = boton ? boton.textContent : 'Cancelar';
@@ -271,8 +280,13 @@
       if (finalizar) fila.insertBefore(btnCancelar, finalizar);
       else fila.appendChild(btnCancelar);
     }
-    var enEdicion = adaptador && adaptador.estado() === 'borrador' &&
-      adaptador.revision && Number(adaptador.revision()) > 0 && !viendoHistorica;
+    var enEdicion = false;
+    if (adaptador && typeof adaptador.esEdicionLocal === 'function') {
+      enEdicion = !!adaptador.esEdicionLocal() && !viendoHistorica;
+    } else if (adaptador) {
+      enEdicion = adaptador.estado() === 'borrador' && adaptador.revision &&
+        Number(adaptador.revision()) > 0 && !viendoHistorica;
+    }
     btnCancelar.style.display = enEdicion ? 'flex' : 'none';
     var cancelarMovil = document.getElementById('fab-item-cancelar-revision');
     if (cancelarMovil) {
