@@ -768,6 +768,66 @@
     font-size: 11px;
     line-height: 1.4;
   }
+  .guardar-exito {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, .28);
+    pointer-events: none;
+  }
+  .guardar-exito.visible {
+    display: flex;
+    animation: guardar-exito-entra .18s ease both;
+  }
+  .guardar-exito-caja {
+    width: min(320px, calc(100vw - 40px));
+    padding: 26px 28px 24px;
+    border: 1px solid #ccebd6;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 16px 44px rgba(24, 82, 42, .16), 0 2px 8px rgba(36, 28, 24, .06);
+    text-align: center;
+  }
+  .guardar-exito-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 12px;
+    border-radius: 50%;
+    background: #e8f7ed;
+    color: #198a49;
+    animation: guardar-exito-check .28s ease both;
+  }
+  .guardar-exito-icono svg { width: 28px; height: 28px; }
+  .guardar-exito-titulo {
+    color: #176c3d;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .guardar-exito-detalle {
+    margin-top: 6px;
+    color: #66706a;
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+  @keyframes guardar-exito-entra {
+    from { opacity: 0; transform: scale(.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes guardar-exito-check {
+    from { opacity: 0; transform: scale(.72); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .guardar-exito.visible, .guardar-exito-icono { animation: none; }
+  }
 
   .acuerdos-preview-col {
     background: #fff;
@@ -1153,6 +1213,18 @@
   </div>
 </div>
 
+<div id="guardar-exito" class="guardar-exito" aria-hidden="true">
+  <div class="guardar-exito-caja" role="status" aria-live="polite">
+    <div class="guardar-exito-icono" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="guardar-exito-titulo" id="guardar-exito-titulo">Guardado con éxito</div>
+    <div class="guardar-exito-detalle" id="guardar-exito-detalle" hidden></div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════
 // Acuerdo de Renta - KW Premier
@@ -1476,6 +1548,28 @@ function setGuardarMsg(text, kind) {
   el.textContent = text;
   el.style.display = 'block';
   el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+}
+
+let guardarExitoTimer = null;
+
+function mostrarGuardadoExito(titulo, detalle) {
+  const aviso = document.getElementById('guardar-exito');
+  const tituloEl = document.getElementById('guardar-exito-titulo');
+  const detalleEl = document.getElementById('guardar-exito-detalle');
+  if (!aviso || !tituloEl || !detalleEl) return;
+
+  clearTimeout(guardarExitoTimer);
+  tituloEl.textContent = titulo || 'Guardado con éxito';
+  detalleEl.textContent = detalle || '';
+  detalleEl.hidden = !detalle;
+  aviso.setAttribute('aria-hidden', 'false');
+  aviso.classList.remove('visible');
+  void aviso.offsetWidth;
+  aviso.classList.add('visible');
+  guardarExitoTimer = setTimeout(function () {
+    aviso.classList.remove('visible');
+    aviso.setAttribute('aria-hidden', 'true');
+  }, 1700);
 }
 
 // Entrar al formulario (nuevo o abrir uno guardado) se marca en el
@@ -1946,6 +2040,7 @@ async function guardarComoNuevo(nombre) {
     documentoActualId = data.id;
     actualizarVisibilidadBotones();
     setGuardarMsg('');
+    mostrarGuardadoExito();
   } catch (err) {
     setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
   } finally {
@@ -2016,7 +2111,8 @@ async function guardarDocumento() {
       .eq('id', documentoActualId);
 
     if (error) throw error;
-    setGuardarMsg('Cambios guardados.', 'ok');
+    setGuardarMsg('');
+    mostrarGuardadoExito();
   } catch (err) {
     setGuardarMsg(err.message || 'Ocurrió un error al guardar.', 'error');
   } finally {
@@ -2051,7 +2147,8 @@ async function finalizarDocumento() {
     bloquearFormulario(true);
     actualizarVisibilidadBotones();
     cerrarModalFinalizar();
-    setGuardarMsg('Documento finalizado. Folio: ' + folioActual, 'ok');
+    setGuardarMsg('');
+    mostrarGuardadoExito('Documento finalizado', 'Folio: ' + folioActual);
     cargarListaDocumentos();
   } catch (err) {
     cerrarModalFinalizar();
