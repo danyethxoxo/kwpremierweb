@@ -180,6 +180,7 @@
   .fab-label-guardar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
   .fab-label-finalizar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
   .fab-label-descargar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
+  .fab-label-cancelar { background: #fff; color: #6f6969; border: 1px solid #d4d0d0; }
   .fab-secundario {
     border: none;
     border-radius: 50%;
@@ -197,6 +198,8 @@
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
   .fab-descargar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
+  .fab-cancelar { background: #fff; color: #6f6969; border: 1px solid #d4d0d0; }
+  .fab-cancelar:hover { background: #f7f5f5; color: #4e4949; }
   .fab-wrap.abierto .fab-item {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -823,7 +826,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20260911a">
+<link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20260926b">
 <style>
   .kw-renta-revision-back {
     display: inline-flex;
@@ -843,6 +846,16 @@
   .kw-renta-revision-back:active { transform: scale(.97); }
   .kw-renta-revision-back:focus-visible { outline: 2px solid #a40000; outline-offset: 2px; }
   .kw-renta-revision-back svg { flex: 0 0 15px; width: 15px; height: 15px; }
+
+  /* Al entrar al acuerdo, la carga tapa por completo la lista que queda debajo. */
+  .kw-cargando-pantalla {
+    background: #fff !important;
+    color: var(--red) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .kw-cargando-aros span { border-top-color: var(--red) !important; }
+  .kw-cargando-texto { color: #6f5b5b !important; }
 
   @media (min-width: 901px) {
     body:not(.doc-borrador) #acuerdos-form-col .kw-form-acciones .desktop-btn-row {
@@ -1062,6 +1075,12 @@
       <span class="fab-label fab-label-guardar">Guardar Borrador</span>
       <button type="button" class="fab-principal" id="fab-guardar" onclick="onFabGuardarClick()" title="Guardar Borrador">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </button>
+    </div>
+    <div class="fab-item fab-inactivo" id="fab-item-cancelar-revision" style="display:none;">
+      <span class="fab-label fab-label-cancelar" data-default="Cancelar">Cancelar</span>
+      <button type="button" class="fab-secundario fab-cancelar" id="fab-cancelar-revision" onclick="onFabCancelarClick()" title="Cancelar edición">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
       </button>
     </div>
     <div class="fab-item fab-inactivo" id="fab-item-finalizar">
@@ -1567,6 +1586,14 @@ function onFabDescargarClick() {
     return;
   }
   downloadPDF();
+}
+
+function onFabCancelarClick() {
+  const wrap = document.getElementById('fab-wrap');
+  if (wrap) wrap.classList.remove('abierto');
+  if (window.kwRevisiones && window.kwRevisiones.cancelarCambios) {
+    window.kwRevisiones.cancelarCambios();
+  }
 }
 
 function onFabGuardarClick() {
@@ -2351,7 +2378,7 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
-<script src="/assets/js/kw-revisiones.js?v=20260926a"></script>
+<script src="/assets/js/kw-revisiones.js?v=20260926b"></script>
 <script>
 function sincronizarHistorialRenta() {
   const enlace = document.getElementById('btn-historial-renta');

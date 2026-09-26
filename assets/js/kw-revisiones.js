@@ -8,6 +8,7 @@
   var btnHistorial = null;
   var btnFirma = null;
   var btnDictamen = null;
+  var btnCancelar = null;
   var viendoHistorica = false;
 
   function esc(valor) {
@@ -142,7 +143,17 @@
   async function realizarCambios() {
     if (!adaptador || !adaptador.id() || adaptador.estado() !== 'finalizado' || viendoHistorica) return;
     var boton = document.getElementById('btn-copia');
-    if (boton) boton.disabled = true;
+    var etiqueta = boton && boton.querySelector('span');
+    var textoOriginal = etiqueta ? etiqueta.textContent : 'Editar';
+    var cerrar = global.kwUI && global.kwUI.cargando
+      ? global.kwUI.cargando('Preparando el editor…')
+      : function () {};
+    if (boton) {
+      boton.disabled = true;
+      boton.classList.add('cargando');
+      boton.setAttribute('aria-busy', 'true');
+      if (etiqueta) etiqueta.textContent = 'Preparando…';
+    }
     try {
       var respuesta = await global.kwSupabase.rpc('crear_revision_documento', {
         p_id: adaptador.id()
@@ -152,11 +163,57 @@
       adaptador.revisionCreada(Number(respuesta.data) || 1);
       refrescar();
     } catch (err) {
+      cerrar();
       if (global.kwUI && global.kwUI.alert) {
         await global.kwUI.alert(err.message || 'No se pudo iniciar la revisión.');
       }
     } finally {
-      if (boton) boton.disabled = false;
+      cerrar();
+      if (boton) {
+        boton.disabled = false;
+        boton.classList.remove('cargando');
+        boton.removeAttribute('aria-busy');
+        if (etiqueta) etiqueta.textContent = textoOriginal || 'Editar';
+      }
+    }
+  }
+
+  async function cancelarCambios() {
+    if (!adaptador || !adaptador.id() || adaptador.estado() !== 'borrador' ||
+        !adaptador.revision || Number(adaptador.revision()) <= 0 || viendoHistorica) return;
+    var boton = document.getElementById('btn-cancelar-revision');
+    if (boton && boton.disabled) return;
+    var textoOriginal = boton ? boton.textContent : 'Cancelar';
+    if (boton) {
+      boton.disabled = true;
+      boton.setAttribute('aria-busy', 'true');
+      boton.textContent = 'Regresando…';
+    }
+    try {
+      var respuesta = await global.kwSupabase.rpc('listar_revisiones_documento', {
+        p_id: adaptador.id()
+      });
+      if (respuesta.error) throw respuesta.error;
+      var versiones = Array.isArray(respuesta.data) ? respuesta.data : [];
+      var previa = versiones
+        .filter(function (version) {
+          return version.es_actual !== true && version.estado === 'finalizado';
+        })
+        .sort(function (a, b) {
+          return (Number(b.revision) || 0) - (Number(a.revision) || 0);
+        })[0];
+      if (!previa) throw new Error('No se encontró el documento anterior.');
+      abrirVersion(previa);
+    } catch (err) {
+      if (global.kwUI && global.kwUI.alert) {
+        await global.kwUI.alert(err.message || 'No se pudo regresar al documento.');
+      }
+    } finally {
+      if (boton) {
+        boton.disabled = false;
+        boton.removeAttribute('aria-busy');
+        boton.textContent = textoOriginal || 'Cancelar';
+      }
     }
   }
 
@@ -169,14 +226,40 @@
     boton.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
-      'Editar';
+      '<span>Editar</span>';
     boton.addEventListener('click', realizarCambios);
+  }
+
+  function prepararBotonCancelar() {
+    var fila = raiz && raiz.querySelector('.desktop-btn-row');
+    if (!fila) return;
+    btnCancelar = document.getElementById('btn-cancelar-revision');
+    if (!btnCancelar) {
+      btnCancelar = document.createElement('button');
+      btnCancelar.type = 'button';
+      btnCancelar.id = 'btn-cancelar-revision';
+      btnCancelar.className = 'btn-download kw-btn-cancelar-revision';
+      btnCancelar.textContent = 'Cancelar';
+      btnCancelar.addEventListener('click', cancelarCambios);
+      var finalizar = fila.querySelector('#btn-finalizar');
+      if (finalizar) fila.insertBefore(btnCancelar, finalizar);
+      else fila.appendChild(btnCancelar);
+    }
+    var enEdicion = adaptador && adaptador.estado() === 'borrador' &&
+      adaptador.revision && Number(adaptador.revision()) > 0 && !viendoHistorica;
+    btnCancelar.style.display = enEdicion ? 'flex' : 'none';
+    var cancelarMovil = document.getElementById('fab-item-cancelar-revision');
+    if (cancelarMovil) {
+      cancelarMovil.style.display = enEdicion ? 'flex' : 'none';
+      cancelarMovil.classList.toggle('fab-inactivo', !enEdicion);
+    }
   }
 
   function refrescar() {
     if (!adaptador || !raiz) return;
     prepararBotonCambios();
     prepararAccionesExternas();
+    prepararBotonCancelar();
     var terminado = adaptador.estado() === 'finalizado';
     btnHistorial.hidden = !adaptador.id() || !terminado;
     if (!terminado && raiz.classList.contains('kw-revision-modo-historial')) activar('documento');
@@ -412,6 +495,7 @@
 
     prepararFormularioFijo();
     prepararBotonCambios();
+    prepararBotonCancelar();
     refrescar();
   }
 
@@ -419,6 +503,7 @@
     iniciar: iniciar,
     refrescar: refrescar,
     realizarCambios: realizarCambios,
+    cancelarCambios: cancelarCambios,
     nombre: nombreRevision,
     folio: folio
   };
