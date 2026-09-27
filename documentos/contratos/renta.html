@@ -558,16 +558,37 @@
   .lista-revision-toggle svg { width: 15px; height: 15px; transition: transform .2s ease; }
   .lista-grupo.expandida .lista-revision-toggle svg { transform: rotate(180deg); }
   .lista-revisiones {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    display: grid;
+    grid-template-rows: 1fr;
     margin: -1px 8px 0 16px;
     padding: 8px 8px 6px 16px;
     border-left: 2px solid #e3caca;
     border-radius: 0 0 12px 12px;
     background: #fcf8f8;
+    opacity: 1;
+    transition: grid-template-rows .28s cubic-bezier(.16, 1, .3, 1),
+      opacity .2s ease, padding .28s ease, margin-top .28s ease,
+      border-color .2s ease;
   }
-  .lista-revisiones[hidden] { display: none !important; }
+  .lista-revisiones.cerrada {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-left-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .lista-revisiones-contenido {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    transform: translateY(0);
+    transition: transform .28s cubic-bezier(.16, 1, .3, 1);
+  }
+  .lista-revisiones.cerrada .lista-revisiones-contenido { transform: translateY(-6px); }
   .lista-revision-item {
     display: flex;
     align-items: center;
@@ -845,7 +866,7 @@
     background: rgba(255, 255, 255, .42);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
-    pointer-events: none;
+    pointer-events: auto;
   }
   .guardar-exito.visible {
     display: flex;
@@ -885,6 +906,21 @@
     font-size: 12.5px;
     line-height: 1.35;
   }
+  .guardar-exito-ok {
+    min-width: 104px;
+    margin-top: 18px;
+    padding: 9px 22px;
+    border: 1px solid #198a49;
+    border-radius: 999px;
+    background: #e8f7ed;
+    color: #176c3d;
+    font: 700 12.5px/1 'Poppins', Arial, sans-serif;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, transform .12s ease;
+  }
+  .guardar-exito-ok:hover { background: #198a49; color: #fff; }
+  .guardar-exito-ok:active { transform: scale(.97); }
+  .guardar-exito-ok:focus-visible { outline: 2px solid #198a49; outline-offset: 3px; }
   @keyframes guardar-exito-entra {
     from { opacity: 0; transform: scale(.96); }
     to { opacity: 1; transform: scale(1); }
@@ -1290,6 +1326,7 @@
     </div>
     <div class="guardar-exito-titulo" id="guardar-exito-titulo">Guardado con éxito</div>
     <div class="guardar-exito-detalle" id="guardar-exito-detalle" hidden></div>
+    <button type="button" class="guardar-exito-ok" onclick="cerrarGuardadoExito()">OK</button>
   </div>
 </div>
 
@@ -1618,7 +1655,13 @@ function setGuardarMsg(text, kind) {
   el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
 }
 
-let guardarExitoTimer = null;
+function cerrarGuardadoExito() {
+  const aviso = document.getElementById('guardar-exito');
+  if (!aviso) return;
+  aviso.classList.remove('visible');
+  aviso.style.display = 'none';
+  aviso.setAttribute('aria-hidden', 'true');
+}
 
 function mostrarGuardadoExito(titulo, detalle) {
   const aviso = document.getElementById('guardar-exito');
@@ -1626,7 +1669,7 @@ function mostrarGuardadoExito(titulo, detalle) {
   const detalleEl = document.getElementById('guardar-exito-detalle');
   if (!aviso || !tituloEl || !detalleEl) return;
 
-  clearTimeout(guardarExitoTimer);
+  cerrarGuardadoExito();
   tituloEl.textContent = titulo || 'Guardado con éxito';
   detalleEl.textContent = detalle || '';
   detalleEl.hidden = !detalle;
@@ -1635,11 +1678,8 @@ function mostrarGuardadoExito(titulo, detalle) {
   aviso.classList.remove('visible');
   void aviso.offsetWidth;
   aviso.classList.add('visible');
-  guardarExitoTimer = setTimeout(function () {
-    aviso.classList.remove('visible');
-    aviso.style.display = 'none';
-    aviso.setAttribute('aria-hidden', 'true');
-  }, 2600);
+  const ok = aviso.querySelector('.guardar-exito-ok');
+  if (ok) setTimeout(() => ok.focus(), 0);
 }
 
 // Entrar al formulario (nuevo o abrir uno guardado) se marca en el
@@ -2061,7 +2101,8 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
         ? `<button type="button" class="kw-menu-op lista-menu-eliminar" data-doc-id="${escapeHtml(row.id)}" role="menuitem">Eliminar</button>`
         : '';
       const revisionesHtml = tieneRevisiones ? `
-        <div class="lista-revisiones" id="${escapeHtml(grupoId)}" hidden>
+        <div class="lista-revisiones cerrada" id="${escapeHtml(grupoId)}" aria-hidden="true">
+          <div class="lista-revisiones-contenido">
           ${grupo.revisiones.map((revision) => {
             const revisionLista = numeroRevisionDe(revision);
             const revisionListaFinalizada = revision.estado === 'finalizado';
@@ -2080,6 +2121,7 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
             <svg class="lista-revision-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
           </div>`;
           }).join('')}
+          </div>
         </div>` : '';
       return `
     <div class="lista-grupo ${tieneRevisiones ? 'tiene-revisiones' : ''} kw-aparece-fila" data-group-id="${escapeHtml(grupoId)}" style="animation-delay:${Math.min(i,8)*30}ms;">
@@ -2180,8 +2222,9 @@ function alternarRevisionesLista(grupoEl) {
   const panel = grupoEl.querySelector('.lista-revisiones');
   const boton = grupoEl.querySelector('.lista-revision-toggle');
   if (!panel || !boton) return;
-  const abrir = panel.hidden;
-  panel.hidden = !abrir;
+  const abrir = panel.classList.contains('cerrada');
+  panel.classList.toggle('cerrada', !abrir);
+  panel.setAttribute('aria-hidden', abrir ? 'false' : 'true');
   grupoEl.classList.toggle('expandida', abrir);
   boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
   boton.setAttribute('title', abrir ? 'Ocultar revisiones' : 'Mostrar revisiones');
