@@ -567,6 +567,7 @@
     border-radius: 0 0 12px 12px;
     background: #fcf8f8;
   }
+  .lista-revisiones[hidden] { display: none !important; }
   .lista-revision-item {
     display: flex;
     align-items: center;
@@ -2046,7 +2047,7 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
       const row = grupo.original;
       const listo = row.estado === 'finalizado';
       const numeroRevision = numeroRevisionDe(row);
-      const tieneRevisiones = grupo.revisiones.length > 0;
+      const tieneRevisiones = row.estado === 'finalizado' && grupo.revisiones.length > 0;
       const grupoId = 'lista-revisiones-' + String(row.id || i).replace(/[^a-zA-Z0-9_-]/g, '');
       const metaPartes = [];
       if (row.folio) metaPartes.push('Folio ' + escapeHtml(row.folio));
