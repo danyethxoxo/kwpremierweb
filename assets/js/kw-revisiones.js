@@ -159,7 +159,7 @@
     try {
       var original = await global.kwSupabase
         .from('documentos_guardados')
-        .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
+        .select('id, nombre_archivo, tipo_documento, updated_at, datos, folio, estado, revision')
         .eq('id', documentoId)
         .single();
       if (original.error || !original.data) {
@@ -168,6 +168,7 @@
       documentoEdicionOriginal = {
         id: original.data.id,
         nombre_archivo: original.data.nombre_archivo,
+        tipo_documento: original.data.tipo_documento,
         updated_at: original.data.updated_at,
         datos: original.data.datos || {},
         folio: original.data.folio,
@@ -176,7 +177,24 @@
         es_actual: true
       };
       if (typeof adaptador.iniciarEdicion === 'function') {
-        adaptador.iniciarEdicion((Number(original.data.revision) || 0) + 1, documentoEdicionOriginal);
+        var numeroSiguiente = (Number(original.data.revision) || 0) + 1;
+        if (original.data.folio) {
+          var consultaRevisiones = global.kwSupabase
+            .from('documentos_guardados')
+            .select('revision')
+            .eq('folio', original.data.folio);
+          if (original.data.tipo_documento) {
+            consultaRevisiones = consultaRevisiones.eq('tipo_documento', original.data.tipo_documento);
+          }
+          var filasRevisiones = await consultaRevisiones;
+          if (!filasRevisiones.error && Array.isArray(filasRevisiones.data)) {
+            var mayorRevision = filasRevisiones.data.reduce(function (mayor, fila) {
+              return Math.max(mayor, Number(fila.revision) || 0);
+            }, 0);
+            numeroSiguiente = Math.max(numeroSiguiente, mayorRevision + 1);
+          }
+        }
+        adaptador.iniciarEdicion(numeroSiguiente, documentoEdicionOriginal);
         return;
       }
       var respuesta = await global.kwSupabase.rpc('crear_revision_documento', {
