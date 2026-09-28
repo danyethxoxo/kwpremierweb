@@ -12,6 +12,12 @@ const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPAB
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
 const MAX_PDF_BYTES = 7 * 1024 * 1024
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ROLES_DICTAMEN = ['mca', 'mcaa', 'MCA', 'MCAA']
+const RECIPIENTES_MANUALES = [
+  'fernanda.pacheco@kwmexico.mx',
+  'alberto.velazquez@kwpremier.com.mx',
+]
 
 function cors(_req: Request) { return {} }
 
@@ -102,9 +108,20 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
     }
 
     const destino = String(asesorAsignado.correo || '').trim().toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) {
+    if (!EMAIL_RE.test(destino)) {
       return response(req, { error: 'El asesor no tiene un correo válido registrado.' }, 400)
     }
+    // Los correos manuales cubren la operación actual. Cuando MCA y MCAA
+    // tengan cuentas en profiles, sus correos entran automáticamente por
+    // el rol y se deduplican con los manuales.
+    const { data: perfilesMca, error: perfilesMcaError } = await admin
+      .from('profiles').select('email, role').in('role', ROLES_DICTAMEN)
+    if (perfilesMcaError) console.warn('No se pudieron leer los destinatarios por rol', perfilesMcaError)
+    const destinatarios = Array.from(new Set([
+      destino,
+      ...RECIPIENTES_MANUALES,
+      ...(perfilesMca || []).map((perfil) => String(perfil.email || '').trim().toLowerCase()),
+    ].filter((correo) => EMAIL_RE.test(correo))))
     const direccion = String(dictamen.inmueble || 'sin dirección').trim()
     const asesor = String(asesorAsignado.nombre || 'Asesor(a)').trim()
     const asunto = 'Dictamen de Expediente, ' + direccion
@@ -114,10 +131,10 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: EMAIL_FROM,
-        to: [destino],
+        to: destinatarios,
         subject: asunto,
         html: `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px">
-          <p>Hola ${escapeHtml(asesor)},</p>
+          <p>Hola ${escapeHtml(asesor)} y equipo KW Premier,</p>
           <p>Adjuntamos el dictamen de expediente correspondiente a:</p>
           <p style="font-weight:700;color:#7d0000">${escapeHtml(direccion)}</p>
           <p>Incluye una versión con los datos y otra con las correcciones.</p>
@@ -133,7 +150,7 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
       console.error('Resend rechazó el dictamen', envio.status, await envio.text())
       return response(req, { error: 'El proveedor de correo rechazó el envío.' }, 502)
     }
-    return response(req, { ok: true, enviado_a: destino })
+    return response(req, { ok: true, enviado_a: destinatarios })
   } catch (error) {
     console.error(error)
     return response(req, { error: 'No se pudo enviar el dictamen.' }, 500)

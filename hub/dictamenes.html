@@ -28,6 +28,14 @@
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
+  .dic-guardado-pantalla { z-index: 410; gap: 12px; }
+  .dic-guardado-icono {
+    display: grid; place-items: center; width: 58px; height: 58px;
+    border: 2px solid rgba(255,255,255,0.9); border-radius: 50%;
+    color: #fff; font-size: 32px; font-weight: 700; line-height: 1;
+  }
+  .dic-guardado-texto { color: #fff; font-size: 14px; font-weight: 700; }
+
   /* ── Preparando un dictamen nuevo ──────────────────────────────
      Abrir el formulario trae catálogos y contratos antes de pintar los
      campos. Esta capa nombra esa espera para que no parezca que volvió a
@@ -1832,6 +1840,11 @@
 
         <div id="e-clientes"></div>
 
+        <div class="dic-campo">
+          <label for="e-inmueble">Dirección del inmueble</label>
+          <textarea id="e-inmueble" rows="2"></textarea>
+        </div>
+
         <h2 class="dic-subtitulo">Datos del inmueble</h2>
 
         <div class="dic-dos">
@@ -1850,11 +1863,6 @@
                  el catálogo para las siguientes, igual que las etiquetas. -->
             <input type="text" id="e-tipo-nuevo" class="kw-input" style="display:none;margin-top:8px;" autocomplete="off">
           </div>
-        </div>
-
-        <div class="dic-campo">
-          <label for="e-inmueble">Dirección del inmueble</label>
-          <textarea id="e-inmueble" rows="2"></textarea>
         </div>
 
         <div class="dic-dos">
@@ -1931,18 +1939,33 @@
               <option value="no">No</option>
             </select>
           </div>
-          <!-- La escritura del condominio solo se pide si dijo que sí:
-               preguntarla cuando no aplica es pedir un dato que no existe. -->
-          <div class="dic-campo" id="e-esc-condominio-caja" style="display:none;">
-            <label for="e-esc-condominio">Escritura del condominio</label>
-            <textarea id="e-esc-condominio" rows="2"></textarea>
+          <!-- La escritura y su fecha solo se piden si dijo que sí:
+               preguntarlas cuando no aplica es pedir datos que no existen. -->
+          <div class="dic-dos" id="e-esc-condominio-caja" style="display:none;grid-column:1 / -1;">
+            <div class="dic-campo">
+              <label for="e-esc-condominio">Escritura del condominio</label>
+              <textarea id="e-esc-condominio" rows="2"></textarea>
+            </div>
+            <div class="dic-campo">
+              <label for="e-esc-condominio-dia">Fecha de escrituración del condominio</label>
+              <div class="dic-fecha-partes">
+                <select id="e-esc-condominio-dia" aria-label="Día"></select>
+                <select id="e-esc-condominio-mes" aria-label="Mes"></select>
+                <select id="e-esc-condominio-anio" aria-label="Año"></select>
+              </div>
+              <input type="hidden" id="e-esc-condominio-fecha">
+            </div>
           </div>
         </div>
 
         <div class="dic-dos">
           <div class="dic-campo">
-            <label for="e-cfdi">CFDI</label>
-            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+            <label for="e-cfdi-tiene">¿Tiene CFDI?</label>
+            <select id="e-cfdi-tiene">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;margin-top:8px;" placeholder="Número de CFDI">
           </div>
           <div class="dic-campo">
             <label for="e-folio-real">Folio real</label>
@@ -1950,18 +1973,12 @@
           </div>
         </div>
 
-        <div class="dic-dos">
-          <div class="dic-campo">
-            <label for="e-sup-escritura">Superficie escritura</label>
+        <div class="dic-campo">
+          <label for="e-sup-escritura">Superficie escritura</label>
             <div class="dic-conunidad">
               <input type="text" id="e-sup-escritura" name="dic-sup-escritura" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" autocomplete="off">
               <span>m²</span>
             </div>
-          </div>
-          <div class="dic-campo">
-            <label for="e-cuenta-predial">Cuenta predial</label>
-            <input type="text" id="e-cuenta-predial" name="dic-predial" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
-          </div>
         </div>
 
         <div class="dic-dos">
@@ -2008,9 +2025,6 @@
           <button type="button" class="btn-nuevo" id="e-guardar">Guardar</button>
         </div>
 
-        <div class="dic-listo" id="e-listo">
-          <span id="e-listo-txt">Guardado.</span>
-        </div>
       </div>
     </div>
 
@@ -2141,10 +2155,13 @@
     $('e-esc-anio').innerHTML = '<option value="">Año</option>' + anos.join('');
   }
   function ponerFechaEscritura(valor) {
-    var m = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(valor || ''));
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor || ''));
     $('e-esc-anio').value = m ? m[1] : '';
     $('e-esc-mes').value = m ? m[2] : '';
     $('e-esc-dia').value = m ? m[3] : '';
+    ['e-esc-dia', 'e-esc-mes', 'e-esc-anio'].forEach(function (id) {
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    });
     sincronizarFechaEscritura();
   }
   function sincronizarFechaEscritura() {
@@ -2152,10 +2169,60 @@
     $('e-esc-fecha').value = a && m && d ? a + '-' + m + '-' + d : '';
   }
 
+  function prepararFechaCondominio() {
+    $('e-esc-condominio-dia').innerHTML = '<option value="">D\u00eda</option>' +
+      Array.from({ length: 31 }, function (_, i) {
+        var n = String(i + 1).padStart(2, '0'); return '<option value="' + n + '">' + n + '</option>';
+      }).join('');
+    $('e-esc-condominio-mes').innerHTML = '<option value="">Mes</option>' +
+      MESES.map(function (m, i) {
+        var n = String(i + 1).padStart(2, '0'); return '<option value="' + n + '">' + m + '</option>';
+      }).join('');
+    var actual = new Date().getFullYear();
+    var anos = [];
+    for (var a = actual; a >= 1900; a--) anos.push('<option value="' + a + '">' + a + '</option>');
+    $('e-esc-condominio-anio').innerHTML = '<option value="">A\u00f1o</option>' + anos.join('');
+  }
+  function ponerFechaCondominio(valor) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor || ''));
+    $('e-esc-condominio-anio').value = m ? m[1] : '';
+    $('e-esc-condominio-mes').value = m ? m[2] : '';
+    $('e-esc-condominio-dia').value = m ? m[3] : '';
+    ['e-esc-condominio-dia', 'e-esc-condominio-mes', 'e-esc-condominio-anio'].forEach(function (id) {
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    sincronizarFechaCondominio();
+  }
+  function sincronizarFechaCondominio() {
+    var a = $('e-esc-condominio-anio').value;
+    var m = $('e-esc-condominio-mes').value;
+    var d = $('e-esc-condominio-dia').value;
+    $('e-esc-condominio-fecha').value = a && m && d ? a + '-' + m + '-' + d : '';
+  }
+
   function aviso(caja, texto, tipo) {
     var el = $(caja);
     el.className = 'dic-msg' + (texto ? ' ' + tipo : '');
     el.textContent = texto || '';
+  }
+
+  var guardadoTimer = null;
+  function mostrarDictamenGuardado() {
+    if (guardadoTimer) clearTimeout(guardadoTimer);
+    var anterior = $('dic-guardado');
+    if (anterior) anterior.remove();
+    var velo = document.createElement('div');
+    velo.id = 'dic-guardado';
+    velo.className = 'kw-cargando-pantalla dic-guardado-pantalla';
+    velo.setAttribute('role', 'status');
+    velo.setAttribute('aria-live', 'polite');
+    velo.innerHTML = '<div class="dic-guardado-icono" aria-hidden="true">&#10003;</div>' +
+      '<div class="dic-guardado-texto">Dictamen guardado correctamente</div>';
+    document.body.appendChild(velo);
+    guardadoTimer = setTimeout(function () {
+      velo.classList.add('saliendo');
+      setTimeout(function () { if (velo.parentNode) velo.parentNode.removeChild(velo); }, 260);
+    }, 1500);
   }
 
   var TIPOS_CONTRATO_ORIGEN = {
@@ -3235,13 +3302,14 @@
       dato('Condominio', siNo(d.condominio), correccionDe(d, 'condominio')) +
       dato('Escritura del condominio', d.escritura_condominio,
         correccionDe(d, 'escritura_condominio')) +
+      dato('Fecha de escrituración del condominio', fecha(d.escritura_condominio_fecha),
+        correccionDe(d, 'escritura_condominio_fecha')) +
       dato('CFDI', d.cfdi, correccionDe(d, 'cfdi')) +
       dato('Folio real', d.folio_real, correccionDe(d, 'folio_real'));
 
     var medidas =
       dato('Superficie escritura', conUnidad(d.superficie_escritura),
         correccionDe(d, 'superficie_escritura')) +
-      dato('Cuenta predial', d.cuenta_predial, correccionDe(d, 'cuenta_predial')) +
       dato('Superficie terreno', conUnidad(d.superficie_terreno),
         correccionDe(d, 'superficie_terreno')) +
       dato('Superficie construcción', conUnidad(d.superficie_construccion),
@@ -3251,7 +3319,7 @@
       grupoDatos('Personas', personas, 'dic-grupo-personas') +
       grupoDatos('Inmueble y operación', operacion, 'dic-grupo-operacion') +
       grupoDatos('Escritura y registro', escritura, 'dic-grupo-escritura') +
-      grupoDatos('Superficies y predial', medidas, 'dic-grupo-medidas') +
+      grupoDatos('Superficies', medidas, 'dic-grupo-medidas') +
     '</div>';
 
     var obsTexto = separarCorrecciones(d.observaciones).texto;
@@ -3796,10 +3864,10 @@
     ['e-notario', 'notario_nombre'],
     ['e-notaria', 'notaria_numero'],
     ['e-esc-condominio', 'escritura_condominio'],
+    ['e-esc-condominio-fecha', 'escritura_condominio_fecha'],
     ['e-cfdi', 'cfdi'],
     ['e-folio-real', 'folio_real'],
     ['e-sup-escritura', 'superficie_escritura'],
-    ['e-cuenta-predial', 'cuenta_predial'],
     ['e-sup-terreno', 'superficie_terreno'],
     ['e-sup-construccion', 'superficie_construccion'],
   ];
@@ -4160,10 +4228,23 @@
     return [{ nombre: '', estado_civil: '' }];
   }
 
-  // La escritura del condominio solo se pide si se dijo que sí.
+  // La escritura y su fecha solo se piden si se dijo que sí.
   function acomodarCondominio() {
-    $('e-esc-condominio-caja').style.display =
-      $('e-condominio').value === 'si' ? '' : 'none';
+    var aplica = $('e-condominio').value === 'si';
+    $('e-esc-condominio-caja').style.display = aplica ? '' : 'none';
+    if (!aplica) {
+      $('e-esc-condominio').value = '';
+      ponerFechaCondominio('');
+    }
+  }
+
+  function acomodarCfdi() {
+    var tiene = $('e-cfdi-tiene').value === 'si';
+    $('e-cfdi').style.display = tiene ? '' : 'none';
+    if (!tiene) $('e-cfdi').value = '';
+    var caja = $('e-cfdi').closest('.dic-campo');
+    var correccion = caja && caja.querySelector('[data-correccion="cfdi"]');
+    if (correccion) correccion.style.display = tiene ? '' : 'none';
   }
 
   function abrirEditor(id) {
@@ -4206,15 +4287,18 @@
     $('e-tipo').value = borrador.tipo_inmueble_id;
     $('e-tipo-contrato').value = borrador.tipo_contrato;
     $('e-condominio').value = borrador.condominio;
+    $('e-cfdi-tiene').value = borrador.cfdi ? 'si' : 'no';
     $('e-tipo-nuevo').style.display = 'none';
     $('e-tipo-nuevo').value = '';
     // El desplegable del sitio pinta su rótulo escuchando "change", y
     // poner el valor desde el código no lo dispara.
-    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio'].forEach(function (x) {
+    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio', 'e-cfdi-tiene'].forEach(function (x) {
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
     CAMPOS.forEach(function (c) { $(c[0]).value = paraCampo(c[1], borrador[c[1]]); });
     ponerFechaEscritura(borrador.escritura_fecha);
+    ponerFechaCondominio(borrador.escritura_condominio_fecha);
+    acomodarCfdi();
     pintarCorrecciones();
     // kw-ui.js mantiene el campo como texto visible y guarda el ISO en su
     // descriptor interno. No se cambia de nuevo a type=date: hacerlo
@@ -4232,7 +4316,7 @@
     acomodarCondominio();
 
     aviso('editor-msg', '', '');
-    $('e-listo').classList.remove('visible');
+    // El resultado del guardado se muestra al centro de la pantalla.
     // Si ya se está editando un expediente guardado, sus PDFs y el envío
     // están disponibles desde el inicio. Solo un dictamen nuevo espera a
     // su primera guardada para tener id, folio y archivos descargables.
@@ -4308,6 +4392,7 @@
 
   function leerEditor() {
     sincronizarFechaEscritura();
+    sincronizarFechaCondominio();
     // En uno nuevo la fecha pertenece al día en que se guarda; al editar
     // se conserva la fecha con la que el dictamen fue creado.
     if (!borrador.id) borrador.fecha_dictamen = hoy();
@@ -4380,6 +4465,19 @@
     // De los clientes se guardan nada más los que traen nombre: las
     // casillas de más que hayan quedado abiertas por haber subido el
     // número y luego bajarlo no son clientes, son casillas vacías.
+    if ($('e-condominio').value === 'si' &&
+        ($('e-esc-condominio-anio').value || $('e-esc-condominio-mes').value || $('e-esc-condominio-dia').value)) {
+      if (!$('e-esc-condominio-fecha').value) {
+        return await fallo('Completa la fecha de escrituración del condominio.', 'e-esc-condominio-dia');
+      }
+      var fcond = new Date(Number($('e-esc-condominio-anio').value), Number($('e-esc-condominio-mes').value) - 1, Number($('e-esc-condominio-dia').value));
+      if (fcond.getFullYear() !== Number($('e-esc-condominio-anio').value) ||
+          fcond.getMonth() + 1 !== Number($('e-esc-condominio-mes').value) ||
+          fcond.getDate() !== Number($('e-esc-condominio-dia').value)) {
+        return await fallo('La fecha de escrituración del condominio no es válida.', 'e-esc-condominio-dia');
+      }
+    }
+
     var losClientes = borrador.clientes
       .slice(0, cuantosClientes())
       .filter(function (c) { return c && c.nombre; });
@@ -4408,7 +4506,11 @@
     fila.observaciones = juntarCorrecciones(borrador.observaciones_base, borrador.correcciones);
     // Si el condominio quedó en no, la escritura que se hubiera escrito
     // antes deja de tener a qué referirse.
-    if (borrador.condominio !== 'si') fila.escritura_condominio = null;
+    if (borrador.condominio !== 'si') {
+      fila.escritura_condominio = null;
+      fila.escritura_condominio_fecha = null;
+    }
+    if ($('e-cfdi-tiene').value !== 'si') fila.cfdi = null;
 
     var id = borrador.id;
     var eraEdicion = !!id;
@@ -4536,9 +4638,9 @@
       return tieneEscrituraDesglosada(d) ? '' : d.escritura_propiedad; }],
     ['Condominio', 'texto', 11, function (d) { return siNo(d.condominio); }],
     ['Escritura del condominio', 'texto', 30, function (d) { return d.escritura_condominio; }],
+    ['Fecha de escrituración del condominio', 'fecha', 28, function (d) { return d.escritura_condominio_fecha; }],
     ['CFDI', 'texto', 10, function (d) { return d.cfdi; }],
     ['Folio real', 'texto', 13, function (d) { return d.folio_real; }],
-    ['Cuenta predial', 'texto', 17, function (d) { return d.cuenta_predial; }],
     ['Superficie escritura m2', 'decimal', 18, function (d) { return soloNumero(d.superficie_escritura); }],
     ['Superficie terreno m2', 'decimal', 18, function (d) { return soloNumero(d.superficie_terreno); }],
     ['Superficie construcción m2', 'decimal', 20, function (d) { return soloNumero(d.superficie_construccion); }],
@@ -4719,7 +4821,7 @@
           pedazo = w.t;
         }
         // Una palabra sola más ancha que la celda (una dirección sin
-        // espacios, una cuenta predial larga) se parte por letras: es
+        // espacios, una dirección larga) se parte por letras: es
         // preferible a dejarla salirse del cuadro.
         while (anchoTexto(pedazo, tam, false) > ancho && pedazo.length > 1) {
           var corte = 1;
@@ -4929,11 +5031,12 @@
       ['condominio'], incluirCorrecciones)));
     filas.push(hojaFila('Escritura del condominio', textoPDF(d, d.escritura_condominio,
       ['escritura_condominio'], incluirCorrecciones)));
+    filas.push(hojaFila('Fecha de escrituración del condominio',
+      textoPDF(d, fecha(d.escritura_condominio_fecha),
+        ['escritura_condominio_fecha'], incluirCorrecciones)));
     filas.push(hojaFila('CFDI', textoPDF(d, d.cfdi, ['cfdi'], incluirCorrecciones)));
     filas.push(hojaFila('Superficie escritura', textoPDF(d, conUnidad(d.superficie_escritura),
       ['superficie_escritura'], incluirCorrecciones)));
-    filas.push(hojaFila('Cuenta predial', textoPDF(d, d.cuenta_predial,
-      ['cuenta_predial'], incluirCorrecciones)));
     filas.push(hojaFila('Superficie de terreno', textoPDF(d, conUnidad(d.superficie_terreno),
       ['superficie_terreno'], incluirCorrecciones)));
     filas.push(hojaFila('Superficie de construcción', textoPDF(d, conUnidad(d.superficie_construccion),
@@ -5142,7 +5245,11 @@
       return;
     }
     var aceptar = await window.kwUI.confirm(
-      'Se enviará el PDF del dictamen a ' + d.asesor_correo + '.\n\n¿Continuar?'
+      'Se enviará el PDF del dictamen al asesor, MCA y MCAA.\n\n' +
+      'Asesor: ' + d.asesor_correo +
+      '\nMCA: fernanda.pacheco@kwmexico.mx' +
+      '\nMCAA: alberto.velazquez@kwpremier.com.mx' +
+      '\n\n¿Continuar?'
     );
     if (!aceptar) return;
 
@@ -5179,7 +5286,10 @@
       );
       var datos = await respuesta.json().catch(function () { return {}; });
       if (!respuesta.ok || !datos.ok) throw new Error(datos.error || 'No se pudo enviar el correo.');
-      await window.kwUI.alert('Dictamen enviado correctamente a ' + datos.enviado_a + '.');
+      var enviados = Array.isArray(datos.enviado_a)
+        ? datos.enviado_a.join(', ')
+        : String(datos.enviado_a || '');
+      await window.kwUI.alert('Dictamen enviado correctamente a ' + enviados + '.');
     } catch (e) {
       await window.kwUI.alert(e.message || 'No se pudo enviar el dictamen por correo.');
     } finally {
@@ -5432,11 +5542,16 @@
   });
 
   $('e-condominio').addEventListener('change', acomodarCondominio);
+  $('e-cfdi-tiene').addEventListener('change', acomodarCfdi);
 
   prepararFechaEscritura();
+  prepararFechaCondominio();
   prepararCorrecciones();
   ['e-esc-dia', 'e-esc-mes', 'e-esc-anio'].forEach(function (id) {
     $(id).addEventListener('change', sincronizarFechaEscritura);
+  });
+  ['e-esc-condominio-dia', 'e-esc-condominio-mes', 'e-esc-condominio-anio'].forEach(function (id) {
+    $(id).addEventListener('change', sincronizarFechaCondominio);
   });
 
   // Precio conserva el formato monetario. Escritura y notaría aceptan
@@ -5511,41 +5626,43 @@
 
   $('e-guardar').addEventListener('click', async function () {
     var b = $('e-guardar');
-    b.disabled = true;
-    b.textContent = 'Guardando...';
-    var id = await guardar();
-    b.disabled = false;
-    b.textContent = 'Guardar';
-    if (!id) return;
+    var cerrarGuardando = window.kwUI && window.kwUI.cargando
+      ? window.kwUI.cargando('Guardando dictamen...')
+      : function () {};
+    try {
+      b.disabled = true;
+      b.textContent = 'Guardando...';
+      var id = await guardar();
+      if (!id) return;
 
-    // Guardar y dictaminar son un solo movimiento: se revisó el
-    // expediente y se llegó a una conclusión. Preguntarlo aquí es lo que
-    // hace que el folio y el PDF salgan en el mismo momento, en vez de
-    // dejar el expediente en borrador esperando a que alguien se acuerde.
-    var quedo = borrador.completo_para_dictaminar ? await preguntarEstado() : null;
-    if (quedo) {
-      var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
-      if (r.error) {
-        await fallo('Se guardó el expediente, pero no se le pudo poner el dictamen: '
-          + r.error.message);
+      // Guardar y dictaminar son un solo movimiento: se revisó el
+      // expediente y se llegó a una conclusión. Preguntarlo aquí es lo que
+      // hace que el folio y el PDF salgan en el mismo momento, en vez de
+      // dejar el expediente en borrador esperando a que alguien se acuerde.
+      var quedo = borrador.completo_para_dictaminar ? await preguntarEstado() : null;
+      if (quedo) {
+        var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
+        if (r.error) {
+          await fallo('Se guardó el expediente, pero no se le pudo poner el dictamen: '
+            + r.error.message);
+          return;
+        }
       }
+
+      await cargar();
+      aviso('editor-msg', '', '');
+
+      mostrarDictamenGuardado();
+      $('e-descargar-menu').disabled = false;
+      $('e-enviar-correo').disabled = false;
+      $('e-descargar').onclick = function () { cerrarMenusPDF(); imprimir(id, false); };
+      $('e-descargar-correcciones').onclick = function () { cerrarMenusPDF(); imprimir(id, true); };
+      $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
+    } finally {
+      cerrarGuardando();
+      b.disabled = false;
+      b.textContent = 'Guardar';
     }
-
-    await cargar();
-    aviso('editor-msg', '', '');
-
-    var d = dictamenes.find(function (x) { return x.id === id; });
-    $('e-listo-txt').textContent = (d && d.folio)
-      ? 'Listo. Quedó como ' + (ESTADOS[d.estado] || '').toLowerCase() +
-        ', con folio ' + d.folio +
-        (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '') + '.'
-      : 'Guardado como borrador. Le puedes poner el dictamen desde su etiqueta en la lista.';
-    $('e-listo').classList.add('visible');
-    $('e-descargar-menu').disabled = false;
-    $('e-enviar-correo').disabled = false;
-    $('e-descargar').onclick = function () { cerrarMenusPDF(); imprimir(id, false); };
-    $('e-descargar-correcciones').onclick = function () { cerrarMenusPDF(); imprimir(id, true); };
-    $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
   });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) {
