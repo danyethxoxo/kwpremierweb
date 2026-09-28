@@ -1048,6 +1048,16 @@
   }
   .det-cerrar:hover { background: rgba(0,0,0,0.1); }
   .firma-confirmacion-caja { position: relative; }
+  .firma-confirmacion-caja .btn-modal-confirmar {
+    background: var(--red);
+    color: #fff;
+    border-color: var(--red);
+    box-shadow: 0 6px 18px rgba(138,0,0,0.22);
+  }
+  .firma-confirmacion-caja .btn-modal-confirmar:hover {
+    background: #6f0000;
+    border-color: #6f0000;
+  }
 
   /* ── Editar (lápiz): asesor y etiquetas ──────────────────────
      Antes era un menú flotante pegado al icono, y eso era justo lo que
@@ -1697,8 +1707,8 @@
   }
   .firma-quien-verif.icono svg { width: 16px; height: 16px; }
 
-  /* La liga personal de firma. Se abre directamente para que pueda
-     revisarse o compartirse desde la pantalla de Firmas. */
+  /* La liga personal de firma se copia al portapapeles para poder
+     compartirla desde la pantalla de Firmas. */
   .firma-liga {
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 5px;
@@ -4563,11 +4573,11 @@
             ? '<span class="doc-firmo">Ya firmó' +
                 (x.firmado_at ? ' · ' + fecha(x.firmado_at) : '') + '</span>'
             : (x.url_firma && !caducada && puedeVerLiga
-                ? '<a class="firma-liga" href="' + escapar(x.url_firma) + '" target="_blank" rel="noopener noreferrer" title="Abrir URL de firma">' +
+                ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '" title="Copiar URL de firma">' +
                     '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                       '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
                       '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
-                    '</svg>URL de firma</a>' +
+                    '</svg>URL de firma</button>' +
                   (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
                 : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
 
@@ -5225,11 +5235,11 @@
             (x.firmado_at ? '<span class="det-firmo-fecha">' + fecha(x.firmado_at) + '</span>' : '') +
           '</span>'
         : (x.url_firma && !caducada && puedeVerLiga
-            ? '<a class="firma-liga" href="' + escapar(x.url_firma) + '" target="_blank" rel="noopener noreferrer" title="Abrir URL de firma">' +
+            ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '" title="Copiar URL de firma">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                   '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
                   '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
-                '</svg>URL de firma</a>' +
+                '</svg>URL de firma</button>' +
               (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
             : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
 
@@ -5342,14 +5352,31 @@
     raiz.querySelectorAll('[data-liga]').forEach((b) => {
       b.addEventListener('click', async () => {
         const original = b.innerHTML;
+        const liga = b.dataset.liga;
+        let copiada = false;
         try {
-          await navigator.clipboard.writeText(b.dataset.liga);
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(liga);
+            copiada = true;
+          }
+        } catch (_) {
+          // Se intenta el respaldo de abajo.
+        }
+        if (!copiada) {
+          const area = document.createElement('textarea');
+          area.value = liga;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try { copiada = document.execCommand('copy'); } catch (_) { /* sin respaldo */ }
+          area.remove();
+        }
+        if (copiada) {
           b.textContent = 'Copiada';
-        } catch {
-          // navigator.clipboard no existe fuera de https ni en algunos
-          // navegadores viejos. Ahí se enseña para copiar a mano, que es
-          // peor pero deja seguir.
-          window.prompt('Copia la liga de firma:', b.dataset.liga);
+        } else {
+          window.prompt('Copia la liga de firma:', liga);
         }
         setTimeout(() => { b.innerHTML = original; }, 1600);
       });
