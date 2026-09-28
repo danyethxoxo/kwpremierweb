@@ -37,7 +37,10 @@ desde Perfil.
   intentos; solo se permiten cinco envios por hora.
 - Copiar el token a otro navegador no autoriza ese segundo `session_id`.
 - Un navegador nuevo solicita codigo; el mismo navegador permanece confiable
-  mientras registre acceso al menos una vez cada siete dias.
+  mientras registre acceso al menos una vez cada cinco dias y conserve la
+  misma huella de IP.
+- La IP se conserva solamente como una huella irreversible para detectar un
+  cambio de red; nunca se guarda la direccion IP en texto claro.
 - Borrar el almacenamiento del navegador, usar modo privado, olvidar el
   dispositivo o cambiar/restablecer la contrasena vuelve a exigir codigo.
 - Una consulta REST o RPC antes de verificar devuelve que se requiere el

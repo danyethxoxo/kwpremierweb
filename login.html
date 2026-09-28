@@ -24,38 +24,43 @@
   /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
      propia capa de fondo. No se usa background-attachment: fixed
      porque en celular deja franjas blancas al desplazarse. */
-    /* Cápsula flotante, igual que el header del resto de la plataforma:
-     no va pegada de orilla a orilla, sino como una pastilla de vidrio
-     centrada con aire alrededor. */
+    /* El logotipo queda limpio, sin una cápsula que compita con el acceso. */
   header {
-    width: fit-content;
-    margin: 14px auto 0;
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-    border: 1px solid rgba(255,255,255,0.6);
-    border-radius: 999px;
-    backdrop-filter: blur(13px) saturate(140%);
-    -webkit-backdrop-filter: blur(13px) saturate(140%);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.75);
-    padding: 10px 30px;
+    width: auto;
+    margin: 30px auto 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .logo img { height: 44px; width: auto; display: block; }
+  .logo img { height: 54px; width: auto; display: block; }
 
   main {
     max-width: 380px;
     margin: 0 auto;
-    padding: 48px 20px 60px;
+    padding: 34px 20px 60px;
   }
   .card {
+    position: relative;
+    overflow: hidden;
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
-    border: 1px solid rgba(255,255,255,0.82);
-    border-radius: 14px;
-    padding: 28px 24px;
+    border: 1px solid rgba(138,0,0,0.12);
+    border-radius: 18px;
+    padding: 32px 26px 28px;
     backdrop-filter: blur(18px) saturate(165%);
     -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
+    box-shadow: 0 16px 42px rgba(66,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, #720000, #b51d1d, #720000);
   }
   .card h1 {
     font-size: 19px;
@@ -99,18 +104,17 @@
 
   .btn-submit {
     width: 100%;
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%);
-    color: var(--red);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%); border: none; border-radius: 40px;
+    background: linear-gradient(135deg, #720000, #a91414);
+    color: #fff;
+    border: none;
+    border-radius: 40px;
     padding: 12px 20px; font-size: 14px; font-weight: 700;
     font-family: inherit; cursor: pointer;
     margin-top: 6px;
-    box-shadow: 0 4px 18px rgba(138,0,0,0.3);
+    box-shadow: 0 8px 20px rgba(114,0,0,0.25);
     transition: filter 0.18s, transform 0.12s;
   }
-  .btn-submit:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
+  .btn-submit:hover { filter: brightness(1.08); box-shadow: 0 10px 25px rgba(114,0,0,0.32); }
   .btn-submit:active { transform: scale(0.97); }
   .btn-submit:disabled { opacity: 0.6; cursor: default; }
 
@@ -120,7 +124,7 @@
     font-size: 13px;
     color: var(--muted);
   }
-  .toggle-mode a { color: var(--red); font-weight: 700; text-decoration: none; cursor: pointer; }
+  .toggle-mode a { color: var(--red); font-weight: 400; text-decoration: none; cursor: pointer; }
   .toggle-mode a:hover { text-decoration: underline; }
 
   .msg {
@@ -309,7 +313,7 @@
           const envio = await llamarMFA({ accion: 'enviar', dispositivo_token: getDeviceToken() }, sesion.access_token);
           document.getElementById('mfa-destino').textContent = 'Te mandamos un código a ' + envio.enviado_a + '. Escríbelo aquí.';
         } catch (err) {
-          showMsg(err.message || 'No se pudo mandar el código.', 'error');
+          showMsg(window.kwSecurity.authErrorMessage(err, 'mfa'), 'error');
         }
         return;
       }
@@ -354,7 +358,7 @@
       mostrarCargando();
       location.replace(getRedirectTarget());
     } catch (err) {
-      showMsg(err.message || 'Código incorrecto, intenta de nuevo.', 'error');
+      showMsg(window.kwSecurity.authErrorMessage(err, 'mfa'), 'error');
       btn.disabled = false;
     }
   });
@@ -376,7 +380,7 @@
       if (error) throw error;
       await revisarSegundoPaso();
     } catch (err) {
-      showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
+      showMsg(window.kwSecurity.authErrorMessage(err, 'login'), 'error');
       submitBtn.disabled = false;
     }
   });
@@ -385,7 +389,9 @@
   // que le falte el segundo paso, que es justo lo que revisa esto).
   sb.auth.getSession().then(({ data }) => {
     if (data && data.session) {
-      revisarSegundoPaso();
+      revisarSegundoPaso().catch(function (err) {
+        showMsg(window.kwSecurity.authErrorMessage(err, 'login'), 'error');
+      });
     }
   });
 
@@ -419,7 +425,7 @@
       showMsg('Si ese correo tiene una cuenta, te llegará un link para restablecer tu contraseña.', 'ok');
       document.getElementById('olvide-form').style.display = 'none';
     } catch (err) {
-      showMsg(err.message || 'Ocurrió un error, intenta de nuevo.', 'error');
+      showMsg(window.kwSecurity.authErrorMessage(err, 'recovery'), 'error');
     } finally {
       btn.disabled = false;
     }

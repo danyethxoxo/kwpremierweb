@@ -1,4 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
+import { clientIp } from '../_shared/security-core.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -7,7 +8,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <seguridad@kwpremieroficial.com>'
 
 const CODE_MINUTES = 5
-const TRUST_DAYS = 7
+const TRUST_DAYS = 5
 const RESEND_SECONDS = 60
 const MAX_SENDS_PER_HOUR = 5
 
@@ -32,6 +33,13 @@ function jwtPayload(token: string): Record<string, unknown> {
 async function sha256(value: string) {
   const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
   return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+async function clientIpHash(req: Request) {
+  const ip = clientIp(req.headers, Deno.env.get('TRUSTED_IP_HEADER') || 'x-forwarded-for')
+  // The raw IP is never stored. The service secret makes the value useless
+  // as a public IP lookup while still letting us detect a changed network.
+  return ip === 'unknown' ? '' : sha256(`ip:${ip}:${SERVICE_ROLE_KEY}`)
 }
 
 function generateCode() {
@@ -84,6 +92,7 @@ secureServe({ name: 'mfa-correo', mfa: false, userLimit: 30 }, async (req) => {
     const action = String(body.accion || '')
     const rawDevice = deviceToken(body.dispositivo_token)
     const deviceHash = rawDevice ? await sha256(`${userId}:device:${rawDevice}:${SERVICE_ROLE_KEY}`) : ''
+    const ipHash = await clientIpHash(req)
     const now = new Date()
     const trustLimit = new Date(now.getTime() - TRUST_DAYS * 86400000).toISOString()
     const verifiedUntil = new Date(now.getTime() + TRUST_DAYS * 86400000).toISOString()
@@ -98,11 +107,11 @@ secureServe({ name: 'mfa-correo', mfa: false, userLimit: 30 }, async (req) => {
     const needsEnrollment = required && !active
     let trusted = false
     if (active && deviceHash) {
-      const { data: device, error: deviceLookupError } = await admin.from('mfa_dispositivos').select('id').eq('user_id', userId)
+      const { data: device, error: deviceLookupError } = await admin.from('mfa_dispositivos').select('id,ultimo_ip_hash').eq('user_id', userId)
         .eq('token_hash', deviceHash).is('revocado_en', null).gte('ultimo_acceso', trustLimit).maybeSingle()
       if (deviceLookupError) return response(req, { error: 'No se pudo comprobar este dispositivo.' }, 500)
-      if (device) {
-        const { error: touchError } = await admin.from('mfa_dispositivos').update({ ultimo_acceso: now.toISOString(), nombre: deviceName(req) }).eq('id', device.id)
+      if (device && ipHash && device.ultimo_ip_hash === ipHash) {
+        const { error: touchError } = await admin.from('mfa_dispositivos').update({ ultimo_acceso: now.toISOString(), ultimo_ip_hash: ipHash, nombre: deviceName(req) }).eq('id', device.id)
         const { error: sessionError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil })
         if (touchError || sessionError) return response(req, { error: 'No se pudo autorizar este dispositivo.' }, 500)
         trusted = true
@@ -192,7 +201,7 @@ secureServe({ name: 'mfa-correo', mfa: false, userLimit: 30 }, async (req) => {
         const { error: revokeOldError } = await admin.from('mfa_dispositivos').update({ revocado_en: now.toISOString() }).eq('user_id', userId).is('revocado_en', null)
         if (revokeOldError) return response(req, { error: 'No se pudieron renovar los dispositivos.' }, 500)
       }
-      const { error: deviceError } = await admin.from('mfa_dispositivos').upsert({ user_id: userId, token_hash: deviceHash, nombre: deviceName(req), ultimo_acceso: now.toISOString(), revocado_en: null }, { onConflict: 'user_id,token_hash' })
+      const { error: deviceError } = await admin.from('mfa_dispositivos').upsert({ user_id: userId, token_hash: deviceHash, nombre: deviceName(req), ultimo_acceso: now.toISOString(), ultimo_ip_hash: ipHash || null, revocado_en: null }, { onConflict: 'user_id,token_hash' })
       const { error: authorizeError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil })
       if (deviceError || authorizeError) return response(req, { error: 'El codigo fue valido, pero no se pudo autorizar el dispositivo. Solicita uno nuevo.' }, 500)
       return response(req, { ok: true, confiable_hasta: verifiedUntil })

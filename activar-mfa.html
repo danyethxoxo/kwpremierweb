@@ -116,7 +116,7 @@
           location.replace('/completar-registro.html');
         }
       } catch (error) {
-        message(error.message || 'No se pudo comprobar la seguridad de tu cuenta.');
+        message(window.kwSecurity.authErrorMessage(error, 'mfa'));
       }
     }
 
@@ -137,7 +137,7 @@
         document.getElementById('security-code').focus();
         message('Enviamos un código a ' + (sent.enviado_a || 'tu correo de seguridad') + '.', 'ok');
       } catch (error) {
-        message(error.message || 'No se pudo enviar el código.', 'error');
+        message(window.kwSecurity.authErrorMessage(error, 'mfa'), 'error');
         button.disabled = false;
       }
     });
@@ -155,7 +155,7 @@
         message('Cuenta protegida. Entrando al portal…', 'ok');
         setTimeout(() => location.replace(target()), 500);
       } catch (error) {
-        message(error.message || 'Código incorrecto o vencido.', 'error');
+        message(window.kwSecurity.authErrorMessage(error, 'mfa'), 'error');
         button.disabled = false;
       }
     });
