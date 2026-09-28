@@ -5348,40 +5348,63 @@
     },
   };
 
-  function cablearAcciones(raiz) {
-    raiz.querySelectorAll('[data-liga]').forEach((b) => {
-      b.addEventListener('click', async () => {
-        const original = b.innerHTML;
-        const liga = b.dataset.liga;
-        let copiada = false;
-        try {
-          if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(liga);
-            copiada = true;
-          }
-        } catch (_) {
-          // Se intenta el respaldo de abajo.
-        }
-        if (!copiada) {
-          const area = document.createElement('textarea');
-          area.value = liga;
-          area.setAttribute('readonly', '');
-          area.style.position = 'fixed';
-          area.style.opacity = '0';
-          document.body.appendChild(area);
-          area.select();
-          try { copiada = document.execCommand('copy'); } catch (_) { /* sin respaldo */ }
-          area.remove();
-        }
-        if (copiada) {
-          b.textContent = 'Copiada';
-        } else {
-          window.prompt('Copia la liga de firma:', liga);
-        }
-        setTimeout(() => { b.innerHTML = original; }, 1600);
-      });
-    });
+  function copiarLigaFirma(boton) {
+    const liga = boton.getAttribute('data-liga') || '';
+    if (!liga || boton.disabled) return;
 
+    const original = boton.innerHTML;
+    const restaurar = (texto, exito) => {
+      boton.disabled = false;
+      boton.textContent = texto;
+      setTimeout(() => { boton.innerHTML = original; }, exito ? 1600 : 2200);
+    };
+
+    boton.disabled = true;
+    boton.textContent = 'Copiando...';
+
+    // Este intento ocurre dentro del clic y funciona incluso cuando el
+    // navegador no concede navigator.clipboard a la página.
+    const area = document.createElement('textarea');
+    area.value = liga;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '0';
+    area.style.left = '-9999px';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.focus();
+    area.select();
+    try { area.setSelectionRange(0, area.value.length); } catch (_) { /* no aplica */ }
+
+    let copiada = false;
+    try { copiada = document.execCommand('copy'); } catch (_) { /* se intenta la API moderna */ }
+    area.remove();
+
+    if (copiada) {
+      restaurar('Copiada', true);
+      return;
+    }
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(liga)
+        .then(() => restaurar('Copiada', true))
+        .catch(() => restaurar('No se pudo copiar', false));
+      return;
+    }
+
+    restaurar('No se pudo copiar', false);
+  }
+
+  // Las ligas aparecen dentro de modales que se vuelven a pintar. La
+  // delegación evita que una nueva renderización deje el botón sin acción.
+  document.addEventListener('click', (e) => {
+    const boton = e.target instanceof Element ? e.target.closest('[data-liga]') : null;
+    if (!boton) return;
+    e.preventDefault();
+    copiarLigaFirma(boton);
+  });
+
+  function cablearAcciones(raiz) {
     raiz.querySelectorAll('[data-accion]').forEach((b) => {
       b.addEventListener('click', async () => {
         const accion = b.dataset.accion;
