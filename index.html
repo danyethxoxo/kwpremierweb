@@ -12,6 +12,9 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260924a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <script src="/assets/js/kw-ui.js?v=20260922"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet" />
 <style>
   /* ═══════════════════════════════════════════════════════════════
      Portada de KW Premier
@@ -348,6 +351,611 @@
     .pie-social { justify-content: center; }
   }
 </style>
+<style id="landing-editorial-theme">
+  /*
+     Direccion visual de la landing: papel calido, tipografia editorial y
+     un solo acento terracota. Este bloque vive aqui a proposito: no cambia
+     el lenguaje visual del portal, propiedades ni las demas paginas publicas.
+  */
+  :root {
+    --landing-canvas: #fef9ef;
+    --landing-paper: #f5eee1;
+    --landing-line: #d1c9bf;
+    --landing-ink: #2a2b2f;
+    --landing-charcoal: #333333;
+    --landing-graphite: #515151;
+    --landing-ash: #808988;
+    --landing-accent: #b05a36;
+    --landing-accent-dark: #8f4029;
+    --landing-display: 'Newsreader', Georgia, serif;
+    --landing-body: 'DM Sans', 'Poppins', Arial, sans-serif;
+
+    /* El tema compartido sigue viendo estos nombres dentro de esta pagina. */
+    --red: var(--landing-accent);
+    --text: var(--landing-ink);
+    --muted: var(--landing-graphite);
+    --border: rgba(209, 201, 191, 0.86);
+    --card: var(--landing-paper);
+  }
+
+  html { background: var(--landing-canvas); }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: transparent;
+    color: var(--landing-ink);
+    font-family: var(--landing-body);
+    letter-spacing: -0.023em;
+  }
+  body::before {
+    background: var(--landing-canvas);
+    background-image: none;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--landing-display);
+    font-weight: 400;
+    letter-spacing: normal;
+  }
+
+  /* Navegacion */
+  .tapa {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 16px clamp(18px, 4vw, 56px);
+    background: rgba(254, 249, 239, 0.94);
+    border-bottom: 1px solid var(--landing-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .tapa-social { display: none; }
+  .tapa-centro {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(22px, 3vw, 40px);
+  }
+  .tapa-logo { display: block; flex-shrink: 0; }
+  .tapa-logo img { height: 43px; width: auto; display: block; }
+  .tapa-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: clamp(16px, 2.3vw, 30px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .tapa-nav a {
+    padding: 8px 0;
+    border-radius: 0;
+    color: var(--landing-ink);
+    font-family: var(--landing-body);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.18s ease;
+  }
+  .tapa-nav a:hover { background: transparent; color: var(--landing-accent); }
+  .tapa-der {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: auto;
+  }
+  .tapa-iniciales {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--landing-paper);
+    border: 1px solid var(--landing-line);
+    color: var(--landing-accent);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .tapa-iniciales.visible { display: flex; }
+  .btn-tapa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 11px 20px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--landing-accent);
+    color: var(--landing-canvas);
+    box-shadow: none;
+    font-family: var(--landing-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s ease, transform 0.14s ease;
+  }
+  .btn-tapa:hover { background: var(--landing-accent-dark); filter: none; }
+  .btn-tapa:active { transform: translateY(1px); }
+
+  /* Hero */
+  .portada {
+    position: relative;
+    min-height: clamp(560px, calc(100svh - 78px), 780px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: clamp(92px, 13vw, 168px) clamp(24px, 7vw, 112px) clamp(56px, 8vw, 96px);
+    text-align: left;
+    color: var(--landing-canvas);
+    background-image:
+      linear-gradient(180deg, rgba(36, 20, 14, 0.12) 10%, rgba(27, 16, 12, 0.76) 100%),
+      url('/assets/img/equipo-kw-premier.jpg');
+    background-size: cover;
+    background-position: center 58%;
+  }
+  .portada-antes {
+    margin: 0 0 16px;
+    color: rgba(254, 249, 239, 0.9);
+    font-family: var(--landing-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .portada-titulo {
+    max-width: 10ch;
+    margin: 0;
+    color: var(--landing-canvas);
+    font-family: var(--landing-display);
+    font-size: clamp(54px, 8.5vw, 104px);
+    font-weight: 400;
+    line-height: 0.94;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .portada-titulo em { font-style: italic; font-weight: 400; }
+  .portada-acciones {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .btn-portada {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 12px 24px;
+    border: 1.5px solid var(--landing-accent);
+    border-radius: 9999px;
+    background: var(--landing-accent);
+    color: #fffaf3;
+    font-family: var(--landing-body);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.14s ease;
+  }
+  .btn-portada:hover { background: var(--landing-accent-dark); border-color: var(--landing-accent-dark); }
+  .btn-portada:active { transform: translateY(1px); }
+  .btn-portada.secundario {
+    background: transparent;
+    border-color: rgba(254, 249, 239, 0.8);
+    color: var(--landing-canvas);
+  }
+  .btn-portada.secundario:hover { background: rgba(254, 249, 239, 0.14); border-color: var(--landing-canvas); }
+  .portada-foto { display: none; }
+
+  /* Secciones */
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 clamp(18px, 4vw, 48px);
+  }
+  .bloque {
+    padding: clamp(72px, 8vw, 112px) 0;
+    border-top: 1px solid var(--landing-line);
+  }
+  .bloque:first-child { border-top: 0; }
+  .bloque-titulo {
+    max-width: 12ch;
+    margin: 0 0 48px;
+    color: var(--landing-ink);
+    font-size: clamp(48px, 6.5vw, 80px);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    text-align: left;
+    text-transform: none;
+    text-wrap: balance;
+  }
+  .bloque-rotulo {
+    margin: 0 0 24px;
+    color: var(--landing-ink);
+    font-size: clamp(34px, 4vw, 52px);
+    line-height: 1;
+  }
+  .tres {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .tres-col {
+    position: relative;
+    min-height: 330px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 40px 32px 32px;
+    border-radius: 24px;
+    background: var(--landing-paper);
+    text-align: left;
+  }
+  .tres-col::before {
+    content: counter(landing-step, decimal-leading-zero);
+    counter-increment: landing-step;
+    display: block;
+    margin-bottom: 46px;
+    color: var(--landing-accent);
+    font-family: var(--landing-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .tres { counter-reset: landing-step; }
+  .tres-col h3 {
+    margin: 0 0 14px;
+    color: var(--landing-ink);
+    font-size: 34px;
+    line-height: 1.04;
+  }
+  .tres-col p {
+    flex: 1;
+    max-width: 36ch;
+    margin: 0 0 24px;
+    color: var(--landing-charcoal);
+    font-family: var(--landing-body);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .mas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 18px;
+    border: 1.5px solid var(--landing-accent);
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--landing-accent);
+    font-family: var(--landing-body);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  }
+  .mas:hover { opacity: 1; background: var(--landing-accent); border-color: var(--landing-accent); color: #fffaf3; }
+
+  .editorial {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(32px, 6vw, 80px);
+    align-items: start;
+    padding: clamp(28px, 5vw, 64px);
+    border-top: 0;
+    border-radius: 24px;
+    background: var(--landing-paper);
+  }
+  .editorial-titulo {
+    margin: 0 0 24px;
+    color: var(--landing-ink);
+    font-size: clamp(38px, 4vw, 56px);
+    line-height: 0.98;
+  }
+  .editorial-foto {
+    aspect-ratio: 4 / 3;
+    margin-bottom: 22px;
+    border: 0;
+    border-radius: 24px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: none;
+  }
+  .editorial-izq p,
+  .editorial-cols p {
+    color: var(--landing-charcoal);
+    font-family: var(--landing-body);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .editorial-izq p { margin-bottom: 22px; }
+  .editorial-grande {
+    max-width: 11ch;
+    margin: 0 0 36px;
+    color: var(--landing-ink);
+    font-size: clamp(42px, 5vw, 64px);
+    line-height: 0.98;
+  }
+  .editorial-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 32px;
+  }
+  .editorial-cols > div {
+    padding-top: 16px;
+    border-top: 1px solid var(--landing-line);
+  }
+  .editorial-cols h4 {
+    margin: 0 0 9px;
+    color: var(--landing-ink);
+    font-size: 27px;
+    line-height: 1.05;
+  }
+  .editorial-cols .mas { margin-top: 16px; }
+
+  /* Resenas y oficina */
+  .resenas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .resena {
+    gap: 16px;
+    padding: 24px 0 0;
+    border: 0;
+    border-top: 1px solid var(--landing-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .resena-texto {
+    color: var(--landing-ink);
+    font-family: var(--landing-display);
+    font-size: 24px;
+    font-style: italic;
+    line-height: 1.15;
+  }
+  .resena-avatar { background: var(--landing-paper); color: var(--landing-accent); }
+  .resena-nombre { color: var(--landing-ink); font-family: var(--landing-body); }
+  .resena-rol { color: var(--landing-graphite); font-family: var(--landing-body); }
+  .oficina { gap: 24px; }
+  .oficina-mapa {
+    min-height: 420px;
+    border: 1px solid var(--landing-line);
+    border-radius: 24px;
+    background: var(--landing-paper);
+    box-shadow: none;
+  }
+  .oficina-datos { gap: 28px 44px; }
+  .oficina-dato > svg { color: var(--landing-accent); }
+  .oficina-dato-titulo { color: var(--landing-accent); font-family: var(--landing-body); }
+  .oficina-dato-valor { color: var(--landing-ink); font-family: var(--landing-body); }
+  .oficina-dato-valor a { color: var(--landing-accent); }
+
+  /* Llamado final */
+  .banda {
+    width: min(1184px, calc(100% - clamp(36px, 8vw, 96px)));
+    margin: 16px auto clamp(56px, 8vw, 96px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+    padding: clamp(32px, 5vw, 64px);
+    border-radius: 24px;
+    background: var(--landing-paper);
+    color: var(--landing-ink);
+    text-align: left;
+  }
+  .banda h2 {
+    max-width: 12ch;
+    margin: 0 0 12px;
+    color: var(--landing-ink);
+    font-size: clamp(42px, 5vw, 64px);
+    line-height: 0.98;
+    text-transform: none;
+  }
+  .banda p {
+    max-width: 52ch;
+    margin: 0;
+    color: var(--landing-charcoal);
+    font-family: var(--landing-body);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .btn-banda {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--landing-accent);
+    color: #fffaf3;
+    box-shadow: none;
+    font-family: var(--landing-body);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.14s ease;
+  }
+  .btn-banda:hover { background: var(--landing-accent-dark); }
+  .btn-banda:active { transform: translateY(1px); }
+  .btn-banda svg { width: 17px; height: 17px; }
+
+  /* Pie */
+  .pie {
+    width: min(1280px, 100%);
+    margin: 0 auto;
+    border-top: 1px solid var(--landing-line);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+    padding: 34px clamp(18px, 4vw, 48px) 42px;
+    background: var(--landing-canvas);
+  }
+  .pie-logo img { height: 40px; width: auto; display: block; }
+  .pie-dir { color: var(--landing-graphite); font-family: var(--landing-body); font-size: 14px; line-height: 1.5; text-align: center; }
+  .pie-social { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .pie-social a {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--landing-line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--landing-graphite);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  }
+  .pie-social a:hover { background: var(--landing-paper); border-color: var(--landing-accent); color: var(--landing-accent); transform: none; }
+
+  /* Modal de reclutamiento */
+  #modal-reclutamiento .modal-box {
+    max-width: 460px;
+    border: 1px solid var(--landing-line);
+    border-radius: 24px;
+    background: var(--landing-paper);
+    box-shadow: 12px 32px 80px rgba(42, 43, 47, 0.1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #modal-reclutamiento .modal-box h3 { margin-bottom: 8px; color: var(--landing-ink); font-size: 36px; line-height: 1; }
+  #modal-reclutamiento .modal-sub { color: var(--landing-graphite); font-family: var(--landing-body); font-size: 14px; line-height: 1.5; }
+  #modal-reclutamiento .field label { color: var(--landing-accent); font-family: var(--landing-body); }
+  #modal-reclutamiento .field input,
+  #modal-reclutamiento .field select,
+  #modal-reclutamiento .field textarea {
+    border: 1px solid var(--landing-ash);
+    border-radius: 9999px;
+    background: var(--landing-canvas);
+    color: var(--landing-ink);
+    font-family: var(--landing-body);
+  }
+  #modal-reclutamiento .field textarea { border-radius: 22px; }
+  #modal-reclutamiento .field input:focus,
+  #modal-reclutamiento .field select:focus,
+  #modal-reclutamiento .field textarea:focus {
+    border-color: var(--landing-accent);
+    box-shadow: 0 0 0 3px rgba(176, 90, 54, 0.2);
+  }
+  #modal-reclutamiento .btn-modal-cancelar,
+  #modal-reclutamiento .btn-modal-confirmar {
+    min-height: 44px;
+    border-radius: 9999px;
+    box-shadow: none;
+    font-family: var(--landing-body);
+  }
+  #modal-reclutamiento .btn-modal-cancelar { border: 1.5px solid var(--landing-line); background: transparent; color: var(--landing-ink); }
+  #modal-reclutamiento .btn-modal-confirmar { border: 0; background: var(--landing-accent); color: #fffaf3; }
+  #modal-reclutamiento .btn-modal-confirmar:disabled { background: #ded5c9; color: var(--landing-graphite); }
+
+  @media (max-width: 1000px) {
+    .tapa { gap: 18px; }
+    .tapa-nav { gap: 17px; }
+    .tapa-nav a { font-size: 13px; }
+    .tres { grid-template-columns: 1fr; }
+    .tres-col { min-height: 0; }
+    .editorial { grid-template-columns: 1fr; }
+    .editorial-grande { max-width: 14ch; }
+    .resenas { grid-template-columns: 1fr 1fr; }
+    .banda { align-items: flex-start; }
+  }
+
+  @media (max-width: 760px) {
+    .tapa {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      padding: 14px 16px 12px;
+    }
+    .tapa-centro {
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 0;
+    }
+    .tapa-logo { align-self: flex-start; }
+    .tapa-logo img { height: 38px; }
+    .tapa-der { margin-left: 0; flex: 0 0 auto; }
+    .tapa-nav {
+      width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      justify-content: flex-start;
+      gap: 20px;
+      scrollbar-width: none;
+    }
+    .tapa-nav::-webkit-scrollbar { display: none; }
+    .tapa-nav a { padding: 4px 0; font-size: 13px; }
+    .btn-tapa { min-height: 38px; padding: 9px 15px; font-size: 12.5px; }
+    .portada {
+      min-height: 650px;
+      padding: 80px 20px 44px;
+      background-image:
+        linear-gradient(180deg, rgba(36, 20, 14, 0.14) 8%, rgba(27, 16, 12, 0.78) 100%),
+        url('/assets/img/equipo-kw-premier-sm.jpg');
+      background-position: center 58%;
+    }
+    .portada-titulo { max-width: 9ch; font-size: clamp(52px, 15vw, 76px); }
+    .portada-acciones { align-items: stretch; flex-direction: column; width: 100%; }
+    .btn-portada { width: 100%; }
+    main { padding: 0 18px; }
+    .bloque { padding: 72px 0; }
+    .bloque-titulo { margin-bottom: 34px; font-size: clamp(48px, 14vw, 68px); }
+    .tres-col { padding: 32px 26px 28px; }
+    .tres-col::before { margin-bottom: 34px; }
+    .tres-col h3 { font-size: 32px; }
+    .editorial { padding: 26px 22px; border-radius: 22px; }
+    .editorial-cols { grid-template-columns: 1fr; gap: 22px; }
+    .editorial-grande { font-size: 48px; }
+    .resenas { grid-template-columns: 1fr; }
+    .banda {
+      width: calc(100% - 36px);
+      margin: 18px auto 56px;
+      flex-direction: column;
+      gap: 28px;
+      padding: 34px 24px;
+      border-radius: 22px;
+    }
+    .banda h2 { font-size: 48px; }
+    .btn-banda { width: 100%; }
+    .pie { grid-template-columns: 1fr; justify-items: center; gap: 18px; padding-top: 30px; }
+    .pie-dir { text-align: center; }
+    .pie-social { justify-content: center; }
+  }
+</style>
 </head>
 <body>
 
@@ -391,7 +999,11 @@
   <!-- ── Portada ── -->
   <section class="portada">
     <p class="portada-antes">Market Center de Keller Williams en la Ciudad de México</p>
-    <h1 class="portada-titulo">Bienes raíces con un equipo detrás</h1>
+    <h1 class="portada-titulo">Bienes raíces <em>con un equipo detrás</em></h1>
+    <div class="portada-acciones" aria-label="Acciones principales">
+      <a class="btn-portada" href="propiedades.html">Ver propiedades</a>
+      <a class="btn-portada secundario" href="#servicios">Conoce KW Premier</a>
+    </div>
   </section>
 
   <div class="portada-foto" role="img" aria-label="Equipo de asesores de KW Premier reunido en un evento de Keller Williams"></div>
