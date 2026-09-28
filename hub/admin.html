@@ -242,7 +242,13 @@
     border-radius: 7px; color: var(--text); text-decoration: none;
     font-size: 12.5px; font-weight: 700; white-space: nowrap;
   }
+  button.asesor-menu-opcion {
+    width: 100%; border: 0; background: transparent; font-family: inherit;
+    text-align: left; cursor: pointer;
+  }
   .asesor-menu-opcion:hover { background: #f6f6f6; color: var(--red); }
+  .asesor-menu-opcion.peligro { color: var(--red); }
+  .asesor-menu-opcion.peligro:hover { background: #fdeaea; color: #8d0000; }
   .asesor-menu-opcion svg { width: 15px; height: 15px; }
 
   /* Capa de espera para operaciones contra Google. Cubre la pantalla
@@ -2324,6 +2330,10 @@
     return clave === 'asesor_baja' || clave === 'back_office_baja' || clave === 'bajas';
   }
 
+  function grupoBajaDe(clave) {
+    return clave === 'back_office_activo' ? 'back_office_baja' : 'asesor_baja';
+  }
+
   function accesosDe(correo) {
     return estadoGoogle[String(correo || '').toLowerCase()] || null;
   }
@@ -2617,8 +2627,11 @@
       : (p.correo
         ? '<span class="btn-abrir-accesos' + (completo ? ' listo' : '') + (mostrando ? ' activo' : '') + '"' +
             ' data-correo="' + escapeHtml(p.correo) + '">' +
-            (completo ? ICONO_LISTO : '') + 'Alta</span>'
+            (completo ? ICONO_LISTO : '') + 'Accesos</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
+    const opcionBaja = !esBaja
+      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Dar de baja</button>'
+      : '';
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -2640,6 +2653,7 @@
             '<button type="button" class="asesor-menu-btn" aria-label="Abrir menú" aria-expanded="false">⋮</button>' +
             '<div class="asesor-menu-lista">' +
               '<a class="asesor-menu-opcion" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '">' + ICONO_LAPIZ + 'Editar</a>' +
+              opcionBaja +
             '</div>' +
           '</div>'
         : '') +
@@ -2863,9 +2877,22 @@
   });
 
   // El menú de tres puntos vive fuera del botón que abre la tarjeta.
-  // Solo contiene Editar por ahora y se cierra al picar en cualquier
-  // otro lugar.
+  // Contiene Editar y el cambio de estatus a baja; se cierra al picar en
+  // cualquier otro lugar.
   document.addEventListener('click', function (e) {
+    const botonBaja = e.target.closest('[data-baja-asesor]');
+    if (botonBaja) {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = botonBaja.closest('.asesor-menu');
+      if (menu) {
+        menu.classList.remove('abierto');
+        const b = menu.querySelector('.asesor-menu-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      }
+      pasarAsesorABaja(botonBaja);
+      return;
+    }
     const botonMenu = e.target.closest('.asesor-menu-btn');
     if (botonMenu) {
       e.preventDefault();
@@ -3073,6 +3100,49 @@
     const el = document.getElementById('asesores-msg');
     el.textContent = texto;
     el.className = 'msg ' + (clase || '');
+  }
+
+  async function pasarAsesorABaja(boton) {
+    if (!boton || boton.dataset.procesando === 'true') return;
+    boton.dataset.procesando = 'true';
+
+    const id = boton.dataset.bajaAsesor;
+    const destino = boton.dataset.bajaGrupo || 'asesor_baja';
+    const registro = bdAsesores.find(function (a) { return String(a.id) === String(id); });
+    const nombre = registro && registro.nombre ? registro.nombre : 'este asesor';
+    const confirmado = await window.kwUI.confirm('¿Dar de baja a ' + nombre + '?');
+    if (!confirmado) {
+      delete boton.dataset.procesando;
+      return;
+    }
+
+    boton.disabled = true;
+    try {
+      const { error } = await window.kwSupabase
+        .from('asesores')
+        .update({ grupo: destino })
+        .eq('id', id)
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      if (!await leerBaseDatos()) {
+        boton.disabled = false;
+        delete boton.dataset.procesando;
+        avisoAsesores('El cambio se guardó, pero no se pudo actualizar la lista.', 'error');
+        return;
+      }
+
+      grupoActivo = destino;
+      gruposAsesores = gruposDesdeBase();
+      armarTabsAsesores();
+      pintarGrupos();
+      avisoAsesores('Asesor pasado a ' + (BD_TITULO[destino] || 'bajas') + '.', '');
+    } catch (error) {
+      boton.disabled = false;
+      delete boton.dataset.procesando;
+      avisoAsesores('No se pudo dar de baja: ' + (error.message || 'error desconocido') + '.', 'error');
+    }
   }
 
   // ── Cargar ──
