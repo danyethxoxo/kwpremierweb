@@ -98,14 +98,6 @@
     gap: 12px; min-width: 0; margin-left: 0;
   }
   /* Solo sale con sesión abierta (lo prende reflejarSesion). */
-  .tapa-iniciales {
-    display: none; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-    background: #fff; border: 1.5px solid var(--border);
-    color: var(--red); font-size: 13px; font-weight: 700;
-  }
-  .tapa-iniciales.visible { display: flex; }
-
   /* El único botón relleno de la tapa: es a donde se quiere que la
      gente vaya, así que se lleva el guinda. */
   .btn-tapa {
@@ -455,6 +447,9 @@
   }
   .tapa-nav a:hover { background: transparent; color: var(--landing-accent); }
   .tapa-der {
+    position: static;
+    top: auto;
+    right: auto;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -463,21 +458,6 @@
     padding: 0;
     margin-left: auto;
   }
-  .tapa-iniciales {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: var(--landing-paper);
-    border: 1px solid var(--landing-line);
-    color: var(--landing-accent);
-    font-size: 13px;
-    font-weight: 700;
-  }
-  .tapa-iniciales.visible { display: flex; }
   .btn-tapa {
     display: inline-flex;
     align-items: center;
@@ -617,18 +597,6 @@
     background: var(--landing-paper);
     text-align: left;
   }
-  .tres-col::before {
-    content: counter(landing-step, decimal-leading-zero);
-    counter-increment: landing-step;
-    display: block;
-    margin-bottom: 46px;
-    color: var(--landing-accent);
-    font-family: var(--landing-body);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-  }
-  .tres { counter-reset: landing-step; }
   .tres-col h3 {
     margin: 0 0 14px;
     color: var(--landing-ink);
@@ -958,7 +926,6 @@
     .bloque { padding: 72px 0; }
     .bloque-titulo { margin-bottom: 34px; font-size: clamp(48px, 14vw, 68px); }
     .tres-col { padding: 32px 26px 28px; }
-    .tres-col::before { margin-bottom: 34px; }
     .tres-col h3 { font-size: 32px; }
     .editorial { padding: 26px 22px; border-radius: 22px; }
     .editorial-cols { grid-template-columns: 1fr; gap: 22px; }
@@ -1010,7 +977,6 @@
     </div>
 
     <div class="tapa-der">
-      <span class="tapa-iniciales" id="bienvenida-iniciales"></span>
       <button type="button" class="btn-tapa" id="btn-portal" onclick="irAlPortal(this)">
         <span id="btn-portal-texto">Iniciar Sesión</span>
       </button>
@@ -1022,7 +988,6 @@
     <p class="portada-antes">Market Center de Keller Williams en la Ciudad de México</p>
     <h1 class="portada-titulo">Bienes raíces <em>con un equipo detrás</em></h1>
     <div class="portada-acciones" aria-label="Acciones principales">
-      <a class="btn-portada" href="propiedades.html">Ver propiedades</a>
       <a class="btn-portada secundario" href="#servicios">Conoce KW Premier</a>
     </div>
   </section>
@@ -1038,12 +1003,10 @@
         <article class="tres-col">
           <h3>Compra o renta</h3>
           <p>Explora el inventario de KW Premier y encuentra la propiedad que buscas, con un asesor que te acompaña de la primera visita a la firma.</p>
-          <a class="mas" href="propiedades.html">Ver propiedades</a>
         </article>
         <article class="tres-col">
           <h3>Vende tu propiedad</h3>
           <p>Un asesor certificado se encarga de la valuación, la promoción y el papeleo, y responde por su trabajo en cada paso.</p>
-          <a class="mas" href="asesores.html">Conoce a los asesores</a>
         </article>
         <article class="tres-col">
           <h3>Sé parte del equipo</h3>
@@ -1076,12 +1039,10 @@
           <div>
             <h4>Equipo que te acompaña</h4>
             <p>Un staff dedicado a apoyarte en cada operación, no a dejarte solo.</p>
-            <a class="mas" href="staff.html">Conoce al liderazgo</a>
           </div>
           <div>
             <h4>Una comunidad</h4>
             <p>Asesores que comparten lo que saben, se recomiendan clientes y celebran los cierres de todos.</p>
-            <a class="mas" href="asesores.html">Ver a los asesores</a>
           </div>
         </div>
       </div>
@@ -1229,35 +1190,14 @@
     }
   }
 
-  // "Iniciar Sesión" a alguien que ya entró lo hacía dudar si su sesión
-  // seguía viva. Con sesión activa el botón cambia y salen sus iniciales.
+  // Cambia el texto del portal cuando existe una sesión activa.
   async function reflejarSesion() {
     try {
       var result = await sbPortal.auth.getSession();
       var session = result && result.data && result.data.session;
-      if (!session) return;
-
-      var iniciales = '';
-      try {
-        var perfil = await sbPortal.from('profiles').select('nombre, apellido').eq('id', session.user.id).single();
-        if (perfil.data) {
-          var pNombre = (perfil.data.nombre || '').trim();
-          var pApellido = (perfil.data.apellido || '').trim();
-          // Si no hay apellido, la segunda inicial sale de la siguiente
-          // palabra del nombre (para no repetir la misma letra dos veces).
-          iniciales = (pNombre.charAt(0) + (pApellido || pNombre.split(' ')[1] || '').charAt(0)).toUpperCase();
-        }
-      } catch (e) {}
-
-      document.getElementById('btn-portal-texto').textContent = 'Ir al Portal';
-      if (iniciales) {
-        var chip = document.getElementById('bienvenida-iniciales');
-        chip.textContent = iniciales;
-        chip.title = 'Tu sesión sigue abierta';
-        chip.classList.add('visible');
-      }
+      if (session) document.getElementById('btn-portal-texto').textContent = 'Ir al Portal';
     } catch (err) {
-      // Sin sesión o sin conexión: se queda el botón como "Iniciar Sesión".
+      // Sin sesión o sin conexión: se queda como "Iniciar Sesión".
     }
   }
 
