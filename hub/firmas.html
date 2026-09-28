@@ -1047,6 +1047,7 @@
     cursor: pointer; padding: 0;
   }
   .det-cerrar:hover { background: rgba(0,0,0,0.1); }
+  .firma-confirmacion-caja { position: relative; }
 
   /* ── Editar (lápiz): asesor y etiquetas ──────────────────────
      Antes era un menú flotante pegado al icono, y eso era justo lo que
@@ -1696,8 +1697,8 @@
   }
   .firma-quien-verif.icono svg { width: 16px; height: 16px; }
 
-  /* La liga personal de firma. weetrust cobra su propio envío por
-     WhatsApp; copiarla y mandarla uno mismo hace lo mismo sin costo. */
+  /* La liga personal de firma. Se abre directamente para que pueda
+     revisarse o compartirse desde la pantalla de Firmas. */
   .firma-liga {
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 5px;
@@ -1706,6 +1707,7 @@
     background: rgba(255,255,255,0.7);
     font-family: inherit; font-size: 11.5px; font-weight: 500;
     color: var(--text); cursor: pointer; white-space: nowrap;
+    text-decoration: none;
     transition: border-color var(--t-medio), color var(--t-medio);
   }
   .firma-liga:hover { border-color: var(--red); color: var(--red); }
@@ -2324,6 +2326,46 @@
   // coincida con lo que ahí se ve.
   function nombreDoc(f) {
     return f.nombre_archivo || f.titulo || 'Documento sin nombre';
+  }
+
+  // Confirmación específica para retirar un documento. A diferencia de los
+  // avisos generales, aquí solo dejamos la acción destructiva: la X, el clic
+  // fuera y Escape cancelan sin llenar el cuadro con otro botón.
+  function confirmarEliminacionDocumento() {
+    return new Promise((resolver) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML =
+        '<div class="modal-box firma-confirmacion-caja" role="alertdialog" aria-modal="true" aria-label="Confirmar eliminación">' +
+          '<button type="button" class="det-cerrar firma-confirmacion-cerrar" aria-label="Cerrar">' +
+            '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          '</button>' +
+          '<p class="kw-aviso-msg">¿Estás seguro que deseas eliminar este documento?</p>' +
+          '<div class="modal-actions"><button type="button" class="btn-modal-confirmar">Sí, eliminar</button></div>' +
+        '</div>';
+
+      let resuelto = false;
+      const cerrar = (aceptar) => {
+        if (resuelto) return;
+        resuelto = true;
+        document.removeEventListener('keydown', porTecla);
+        window.kwUI.cerrarModal(overlay, () => overlay.remove());
+        resolver(aceptar);
+      };
+      const porTecla = (e) => {
+        if (e.key === 'Escape') cerrar(false);
+      };
+
+      overlay.querySelector('.firma-confirmacion-cerrar').addEventListener('click', () => cerrar(false));
+      overlay.querySelector('.btn-modal-confirmar').addEventListener('click', () => cerrar(true));
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) cerrar(false);
+      });
+
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', porTecla);
+      overlay.querySelector('.btn-modal-confirmar').focus();
+    });
   }
 
   // ── Elegir el archivo ───────────────────────────────────────
@@ -4521,11 +4563,11 @@
             ? '<span class="doc-firmo">Ya firmó' +
                 (x.firmado_at ? ' · ' + fecha(x.firmado_at) : '') + '</span>'
             : (x.url_firma && !caducada && puedeVerLiga
-                ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
+                ? '<a class="firma-liga" href="' + escapar(x.url_firma) + '" target="_blank" rel="noopener noreferrer" title="Abrir URL de firma">' +
                     '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                       '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
                       '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
-                    '</svg>URL de firma</button>' +
+                    '</svg>URL de firma</a>' +
                   (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
                 : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
 
@@ -4917,8 +4959,7 @@
 
         if (accion === 'reenviar' && !(await window.kwUI.confirm(
           '¿Reenviar el correo a los firmantes que todavía faltan?'))) return;
-        if (accion === 'borrar' && !(await window.kwUI.confirm('¿Eliminar "' + nombreDoc(f) + '" del historial?\n\n'
-          + 'Se intenta retirar también de weetrust. Esto no se puede deshacer.'))) return;
+        if (accion === 'borrar' && !(await confirmarEliminacionDocumento())) return;
 
         const config = ACCIONES[accion] || {};
         try {
@@ -5184,11 +5225,11 @@
             (x.firmado_at ? '<span class="det-firmo-fecha">' + fecha(x.firmado_at) + '</span>' : '') +
           '</span>'
         : (x.url_firma && !caducada && puedeVerLiga
-            ? '<button type="button" class="firma-liga" data-liga="' + escapar(x.url_firma) + '">' +
+            ? '<a class="firma-liga" href="' + escapar(x.url_firma) + '" target="_blank" rel="noopener noreferrer" title="Abrir URL de firma">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
                   '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>' +
                   '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/>' +
-                '</svg>Copiar liga</button>' +
+                '</svg>URL de firma</a>' +
               (x.url_expira ? '<span class="det-expira">Expira: ' + fecha(Number(x.url_expira)) + '</span>' : '')
             : (caducada ? '<span class="det-expira">Liga vencida</span>' : ''));
 
