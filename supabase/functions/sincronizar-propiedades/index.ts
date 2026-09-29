@@ -60,6 +60,10 @@ const FEED_USER = Deno.env.get('FEED_USER')
 const FEED_PASS = Deno.env.get('FEED_PASS')
 const KWMEXICO_API_BASE = (Deno.env.get('KWMEXICO_API_BASE') ||
   'https://www.kwmexico.mx/api/properties').replace(/\/+$/, '')
+const KWMEXICO_MARKET_CENTERS_URL = (Deno.env.get('KWMEXICO_MARKET_CENTERS_URL') ||
+  KWMEXICO_API_BASE.replace(/\/properties$/, '/market-centers')).replace(/\/+$/, '')
+const KWMEXICO_ALL_MARKET_CENTERS =
+  (Deno.env.get('KWMEXICO_ALL_MARKET_CENTERS') || 'true').trim().toLowerCase() !== 'false'
 const KWMEXICO_MARKET_CENTER_ID = Deno.env.get('KWMEXICO_MARKET_CENTER_ID') || '21'
 const KWMEXICO_MARKET_CENTER_NAME = Deno.env.get('KWMEXICO_MARKET_CENTER_NAME') || 'KW PREMIER'
 const KWMEXICO_PAGE_SIZE = 30
@@ -70,6 +74,10 @@ const KWMEXICO_MAX_PAGES = Math.max(1, Math.min(
 const KWMEXICO_CONCURRENCY = Math.max(1, Math.min(
   Number(Deno.env.get('KWMEXICO_CONCURRENCY') || 4),
   6,
+))
+const KWMEXICO_DETAIL_LIMIT = Math.max(0, Math.min(
+  Number(Deno.env.get('KWMEXICO_DETAIL_LIMIT') || 300),
+  1000,
 ))
 
 const CORS_HEADERS = {}
@@ -86,7 +94,7 @@ type KwRegistro = Record<string, unknown>
 type KwRespuesta = {
   success?: boolean
   message?: string
-  data?: KwRegistro
+  data?: unknown
 }
 
 function kwTexto(value: unknown): string | null {
@@ -158,6 +166,18 @@ function kwImagenes(detalle: KwRespuesta | null, propiedad: KwRegistro): string[
   return [...new Set(fotos)]
 }
 
+function kwMarketCenterNombre(
+  propiedad: KwRegistro,
+  marketCenters: Map<string, string>,
+): string {
+  const id = kwTexto(propiedad.Market_Center_ID)
+  const nombreDirecto = kwTexto(propiedad.Market_Center)
+  if (nombreDirecto) return nombreDirecto
+  if (id && marketCenters.get(id)) return marketCenters.get(id) as string
+  if (!KWMEXICO_ALL_MARKET_CENTERS) return KWMEXICO_MARKET_CENTER_NAME
+  return id ? 'Market Center ' + id : 'KW México'
+}
+
 function kwCaracteristicas(propiedad: KwRegistro): string[] {
   const result: string[] = []
   if (Number(propiedad.Luxury) === 1) result.push('Lujo')
@@ -169,6 +189,7 @@ function kwCaracteristicas(propiedad: KwRegistro): string[] {
 function normalizarKwMexico(
   listado: KwRegistro,
   detalle: KwRespuesta | null,
+  marketCenters: Map<string, string>,
 ): Fila | null {
   const propiedad = kwLista(detalle?.data, 'Property_Data')[0] || listado
   const fuenteId = kwTexto(propiedad.ID) || kwTexto(listado.ID)
@@ -213,7 +234,7 @@ function normalizarKwMexico(
     lng: kwNumero(propiedad.Longitude),
     imagenes: fotos,
     caracteristicas,
-    market_center: KWMEXICO_MARKET_CENTER_NAME,
+    market_center: kwMarketCenterNombre(propiedad, marketCenters),
     asesor_nombre: nombreAgente,
     asesor_email: kwTexto(agente.Email),
     datos_origen: { listado, detalle },
@@ -266,6 +287,7 @@ async function traerCatalogoKwMexico(): Promise<{
   propiedades: KwRegistro[]
   total: number
   completa: boolean
+  marketCenters: Map<string, string>
 }> {
   const primera = await kwJson(KWMEXICO_API_BASE + '?init=0')
   const dataPrimera = primera.data || {}
@@ -282,17 +304,47 @@ async function traerCatalogoKwMexico(): Promise<{
     return kwLista(respuesta.data, 'Properties_Data')
   })
   const propiedades = loteInicial.concat(...lotes)
+  const marketCenters = await traerMarketCenters()
   return {
     propiedades,
     total,
     completa: paginas >= paginasTotales && propiedades.length >= total,
+    marketCenters,
   }
+}
+
+async function traerMarketCenters(): Promise<Map<string, string>> {
+  const resultado = new Map<string, string>()
+  try {
+    const respuesta = await kwJson(KWMEXICO_MARKET_CENTERS_URL)
+    const filas = Array.isArray(respuesta.data) ? respuesta.data : []
+    for (const fila of filas) {
+      if (!fila || typeof fila !== 'object') continue
+      const registro = fila as KwRegistro
+      const nombre = kwTexto(registro.Market_Center)
+      if (!nombre) continue
+      for (const clave of [registro.ID, registro.Market_Center_ID]) {
+        const id = kwTexto(clave)
+        if (id) resultado.set(id, nombre)
+      }
+    }
+  } catch {
+    // El nombre es auxiliar. Si el catálogo falla, las propiedades siguen
+    // entrando y conservan el identificador del Market Center.
+  }
+  return resultado
 }
 
 function kwListadoAnterior(datos: unknown): KwRegistro | null {
   if (!datos || typeof datos !== 'object') return null
   const listado = (datos as KwRegistro).listado
   return listado && typeof listado === 'object' ? listado as KwRegistro : null
+}
+
+function kwTieneDetalle(datos: unknown): boolean {
+  if (!datos || typeof datos !== 'object') return false
+  const detalle = (datos as KwRegistro).detalle
+  return !!detalle && typeof detalle === 'object' && !Array.isArray(detalle)
 }
 
 function kwCambioListado(actual: KwRegistro, anterior: KwRegistro | null): boolean {
@@ -417,7 +469,8 @@ async function sincronizarKwMexico(
   try {
     const catalogo = await traerCatalogoKwMexico()
     const candidatos = catalogo.propiedades.filter((propiedad) =>
-      String(propiedad.Market_Center_ID ?? '') === KWMEXICO_MARKET_CENTER_ID
+      KWMEXICO_ALL_MARKET_CENTERS ||
+      String(propiedad.Market_Center_ID ?? '') === KWMEXICO_MARKET_CENTER_ID,
     )
 
     const porId = new Map<string, KwRegistro>()
@@ -439,31 +492,48 @@ async function sincronizarKwMexico(
     }
     const existentes = [...existentesPorId.keys()]
 
-    const resultados = await enParalelo(unicos, KWMEXICO_CONCURRENCY, async (listado) => {
+    const pendientesDetalle = unicos.flatMap((listado) => {
       const id = kwTexto(listado.ID)
-      if (!id) return { fila: null, detalleFallido: false, omitida: false }
-      const anterior = kwListadoAnterior(existentesPorId.get(id)?.datos_origen)
-      if (!kwCambioListado(listado, anterior)) {
-        return { fila: null, detalleFallido: false, omitida: true }
-      }
+      if (!id) return []
+      const existente = existentesPorId.get(id)
+      const datosAnteriores = existente?.datos_origen
+      const anterior = kwListadoAnterior(datosAnteriores)
+      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || kwCambioListado(listado, anterior)
+      return necesitaDetalle ? [{ listado, existente, tieneDetalle: kwTieneDetalle(datosAnteriores) }] : []
+    })
+    const loteDetalle = pendientesDetalle.slice(0, KWMEXICO_DETAIL_LIMIT)
+
+    const resultados = await enParalelo(loteDetalle, KWMEXICO_CONCURRENCY, async ({ listado }) => {
       try {
-        const detalle = await kwJson(KWMEXICO_API_BASE + '/' + encodeURIComponent(id))
-        return { fila: normalizarKwMexico(listado, detalle), detalleFallido: false, omitida: false }
+        const detalle = await kwJson(KWMEXICO_API_BASE + '/' + encodeURIComponent(String(listado.ID)))
+        return {
+          fila: normalizarKwMexico(listado, detalle, catalogo.marketCenters),
+          detalleFallido: false,
+        }
       } catch {
-        return { fila: normalizarKwMexico(listado, null), detalleFallido: true, omitida: false }
+        return {
+          fila: normalizarKwMexico(listado, null, catalogo.marketCenters),
+          detalleFallido: true,
+        }
       }
     })
 
     const detalleFallido = resultados.filter((resultado) => resultado.detalleFallido).length
-    const detallesOmitidos = resultados.filter((resultado) => resultado.omitida).length
-    const filas = resultados
+    const detallesOmitidos = unicos.length - pendientesDetalle.length
+    const detallesPendientes = Math.max(0, pendientesDetalle.length - loteDetalle.length)
+    const filasDetalle = resultados
       .map((resultado) => resultado.fila)
       .filter((fila): fila is Fila => fila !== null)
-    const listas = await enlazarAsesores(admin, filas)
+    const filasListado = pendientesDetalle
+      .slice(KWMEXICO_DETAIL_LIMIT)
+      .filter(({ existente, tieneDetalle }) => !existente || !tieneDetalle)
+      .map(({ listado }) => normalizarKwMexico(listado, null, catalogo.marketCenters))
+      .filter((fila): fila is Fila => fila !== null)
+    const listas = await enlazarAsesores(admin, filasDetalle.concat(filasListado))
 
     let guardadas = 0
-    for (let i = 0; i < listas.length; i += 100) {
-      const lote = listas.slice(i, i + 100)
+    for (let i = 0; i < listas.length; i += 250) {
+      const lote = listas.slice(i, i + 250)
       const { error } = await admin
         .from('propiedades')
         .upsert(lote, { onConflict: 'fuente,fuente_id' })
@@ -475,8 +545,8 @@ async function sincronizarKwMexico(
     if (catalogo.completa) {
       const actuales = new Set(unicos.map((propiedad) => String(propiedad.ID)))
       const obsoletas = existentes.filter((id) => !actuales.has(id))
-      for (let i = 0; i < obsoletas.length; i += 100) {
-        const lote = obsoletas.slice(i, i + 100)
+      for (let i = 0; i < obsoletas.length; i += 250) {
+        const lote = obsoletas.slice(i, i + 250)
         const { error } = await admin
           .from('propiedades')
           .update({ estatus: 'suspendida', sincronizado_at: corrida })
@@ -498,8 +568,8 @@ async function sincronizarKwMexico(
     return respond({
       ok: true,
       modo: 'kwmexico',
-      market_center: KWMEXICO_MARKET_CENTER_NAME,
-      market_center_id: KWMEXICO_MARKET_CENTER_ID,
+      market_center: KWMEXICO_ALL_MARKET_CENTERS ? 'TODOS' : KWMEXICO_MARKET_CENTER_NAME,
+      market_center_id: KWMEXICO_ALL_MARKET_CENTERS ? null : KWMEXICO_MARKET_CENTER_ID,
       catalogo_total: catalogo.total,
       catalogo_leido: catalogo.propiedades.length,
       corrida_completa: catalogo.completa,
@@ -507,6 +577,10 @@ async function sincronizarKwMexico(
       propiedades_guardadas: guardadas,
       detalles_con_error: detalleFallido,
       detalles_sin_cambio: detallesOmitidos,
+      detalles_pendientes: detallesPendientes,
+      market_centers: [...new Set(unicos.map((propiedad) =>
+        kwMarketCenterNombre(propiedad, catalogo.marketCenters),
+      ))].sort(),
       marcadas_suspendidas: suspendidas,
     })
   } catch (err) {

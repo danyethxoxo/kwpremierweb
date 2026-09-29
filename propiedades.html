@@ -239,6 +239,9 @@
   .prop-dato svg { width: 13px; height: 13px; color: var(--muted); }
 
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 50px 0; grid-column: 1 / -1; }
+  .cargar-mas-wrap { grid-column: 1 / -1; display: flex; justify-content: center; padding: 8px 0 28px; }
+  .cargar-mas { border: 1px solid rgba(138,0,0,0.25); border-radius: 999px; background: #fff; color: var(--red); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 11px 22px; }
+  .cargar-mas:hover { background: #faf3f3; border-color: var(--red); }
 
   @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px) {
@@ -408,6 +411,7 @@
   var sb = window.kwSupabase;
 
   var todas = [];
+  var limiteTarjetas = 120;
 
   function escapeHtml(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -540,15 +544,30 @@
     marcarFiltrosEscondidos();
 
     var cont = document.getElementById('lista');
+    var limite = Math.min(limiteTarjetas, vis.length);
     document.getElementById('conteo').innerHTML =
       '<span>' + vis.length + (vis.length === 1 ? ' propiedad' : ' propiedades') +
-      (vis.length !== todas.length ? ' de ' + todas.length : '') + '</span>';
+      (vis.length !== todas.length ? ' de ' + todas.length : '') +
+      (limite < vis.length ? ' · mostrando ' + limite : '') + '</span>';
 
     if (!vis.length) {
       cont.innerHTML = '<div class="estado-msg">No encontramos propiedades con esos filtros.</div>';
       return;
     }
-    cont.innerHTML = vis.map(tarjeta).join('');
+    cont.innerHTML = vis.slice(0, limite).map(tarjeta).join('');
+    if (limite < vis.length) {
+      cont.innerHTML += '<div class="cargar-mas-wrap"><button type="button" class="cargar-mas" onclick="mostrarMas()">Mostrar 120 más</button></div>';
+    }
+  }
+
+  function mostrarMas() {
+    limiteTarjetas += 120;
+    pintar();
+  }
+
+  function repintarDesdeFiltro() {
+    limiteTarjetas = 120;
+    pintar();
   }
 
   // Si hay filtros aplicados dentro del plegable, se avisa con un número:
@@ -579,7 +598,7 @@
     // normal es querer ver lo que sí está a la venta.
     var e = document.getElementById('f-estatus');
     if (e) e.value = 'publicada';
-    pintar();
+    repintarDesdeFiltro();
   }
 
   function llenarSelect(id, valores) {
@@ -639,23 +658,33 @@
   async function cargar() {
     var cont = document.getElementById('lista');
     try {
-      var r = await sb.from('propiedades_inventario').select(CAMPOS)
-        .eq('fuente', 'kwmexico')
-        .eq('market_center', 'KW PREMIER')
-        .order('updated_at', { ascending: false }).limit(1000);
-      if (r.error) throw r.error;
+      var pagina = 500;
+      var offset = 0;
+      var acumuladas = [];
+      while (true) {
+        var r = await sb.from('propiedades_inventario').select(CAMPOS)
+          .eq('fuente', 'kwmexico')
+          .order('updated_at', { ascending: false })
+          .range(offset, offset + pagina - 1);
+        if (r.error) throw r.error;
+        var lote = r.data || [];
+        acumuladas = acumuladas.concat(lote);
+        if (lote.length < pagina) break;
+        offset += pagina;
+      }
 
       document.getElementById('filtro-estatus').hidden = false;
-      todas = r.data || [];
+      todas = acumuladas;
 
       if (!todas.length) {
         document.getElementById('conteo').textContent = '';
-        cont.innerHTML = '<div class="estado-msg">Todavía no hay propiedades de KW Premier sincronizadas.</div>';
+        cont.innerHTML = '<div class="estado-msg">Todavía no hay propiedades de KWMexico sincronizadas.</div>';
         return;
       }
 
       llenarListas();
       document.getElementById('f-estatus').value = 'publicada';
+      limiteTarjetas = 120;
       pintar();
     } catch (err) {
       cont.innerHTML = '<div class="estado-msg">No se pudieron cargar las propiedades.<br>' +
@@ -665,8 +694,8 @@
 
   ['filtros', 'filtros-extra'].forEach(function (id) {
     var caja = document.getElementById(id);
-    caja.addEventListener('change', pintar);
-    caja.addEventListener('input', pintar);
+    caja.addEventListener('change', repintarDesdeFiltro);
+    caja.addEventListener('input', repintarDesdeFiltro);
   });
 
   // Los filtros de siempre quedan a la vista y el resto se despliega, para
