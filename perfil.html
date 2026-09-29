@@ -118,6 +118,15 @@
   #pos-slider { width: 100%; margin: 16px 0 4px; accent-color: var(--red); }
 
   .ayuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .otp-inputs { display: flex; justify-content: center; gap: 8px; }
+  .otp-inputs .otp-cell {
+    width: 42px; padding: 10px 0; text-align: center; font-size: 20px;
+    font-weight: 700; border: 1.5px solid var(--border); border-radius: 10px;
+    background: #fff; color: var(--text); outline: none;
+  }
+  .otp-inputs .otp-cell:focus {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.12);
+  }
 
   .enlace-publico { display: flex; gap: 8px; margin-bottom: 14px; }
   .enlace-publico input {
@@ -310,7 +319,7 @@
       </div>
       <div class="field" id="password-codigo-wrap" style="display:none;">
         <label>Código de seguridad enviado a tu correo</label>
-        <input type="text" id="password-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+        <input type="text" id="password-codigo" data-otp-length="6" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
       </div>
       <button type="button" class="btn-guardar" id="btn-cambiar-password" onclick="cambiarPasswordPerfil()">Actualizar contraseña</button>
       <div class="msg" id="password-msg"></div>
@@ -333,7 +342,7 @@
         <div id="mfa-paso-codigo" style="display:none;margin-top:16px;">
           <p class="kw-nota" id="mfa-instruccion">Escribe o pega el código que enviamos. Vence en 5 minutos.</p>
           <div class="field"><label for="mfa-codigo">Código de 6 dígitos</label>
-            <input type="text" id="mfa-codigo" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-describedby="mfa-instruccion" />
+            <input type="text" id="mfa-codigo" data-otp-length="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-describedby="mfa-instruccion" />
           </div>
           <button type="button" class="btn-guardar" id="btn-mfa-confirmar" onclick="confirmarActivacionMFA()" disabled>Confirmar código</button>
         </div>
@@ -398,6 +407,8 @@
   const ROLE_LABELS = { master: 'Master', admin: 'Admin', staff: 'Liderazgo', asociado: 'Asociado' };
   let miUserId = null;
   let miNombreCompleto = '';
+  window.kwSecurity.setupOtpInput(document.getElementById('password-codigo'), { label: 'Código de seguridad' });
+  window.kwSecurity.setupOtpInput(document.getElementById('mfa-codigo'), { label: 'Código de 6 dígitos' });
 
   // El sitio se publica en / (igual que en auth-guard.js)
   const BASE_PATH = '';
@@ -836,7 +847,7 @@
       setMsg('password-msg', 'Contraseña actualizada. Cerrando las sesiones por seguridad…', 'ok');
       document.getElementById('nueva-password').value = '';
       document.getElementById('nueva-password2').value = '';
-      document.getElementById('password-codigo').value = '';
+      window.kwSecurity.clearOtpInput(document.getElementById('password-codigo'));
       codigoWrap.style.display = 'none';
       await window.kwSupabase.auth.signOut({ scope: 'global' });
       setTimeout(function () { location.replace('/login.html'); }, 900);
@@ -847,7 +858,7 @@
           const { error: reauthError } = await window.kwSupabase.auth.reauthenticate();
           if (reauthError) throw reauthError;
           document.getElementById('password-codigo-wrap').style.display = '';
-          document.getElementById('password-codigo').focus();
+          window.kwSecurity.focusOtpInput(document.getElementById('password-codigo'));
           setMsg('password-msg', 'Te enviamos un código de seguridad. Escríbelo y vuelve a pulsar Actualizar contraseña.', 'ok');
         } catch (reauthErr) {
           setMsg('password-msg', reauthErr.message || 'No se pudo enviar el código de seguridad.', 'error');
@@ -912,7 +923,7 @@
     if (mfaReenvioTimer) clearInterval(mfaReenvioTimer);
     document.getElementById('mfa-correo-alternativo').value = '';
     document.getElementById('mfa-correo-alternativo').readOnly = false;
-    document.getElementById('mfa-codigo').value = '';
+    window.kwSecurity.clearOtpInput(document.getElementById('mfa-codigo'));
     document.getElementById('btn-mfa-confirmar').disabled = true;
     document.getElementById('mfa-paso-codigo').style.display = 'none';
     const btnEnviar = document.getElementById('btn-mfa-enviar');
@@ -952,7 +963,7 @@
       document.getElementById('mfa-paso-codigo').style.display = 'block';
       setMsg('mfa-msg', 'Código enviado a ' + envio.enviado_a + '. Revisa también spam o promociones.', 'ok');
       iniciarEsperaReenvio(60);
-      document.getElementById('mfa-codigo').focus();
+      window.kwSecurity.focusOtpInput(document.getElementById('mfa-codigo'));
     } catch (err) {
       setMsg('mfa-msg', err.message || 'No se pudo mandar el código.', 'error');
     } finally {

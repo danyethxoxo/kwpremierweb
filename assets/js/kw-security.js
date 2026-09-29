@@ -38,6 +38,130 @@
       return typeof value === 'string' && value.length <= 254 &&
         /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(value);
     },
+    setupOtpInput: function (input, options) {
+      if (!input || !input.parentNode) return null;
+      if (input._kwOtpInput) return input._kwOtpInput;
+      options = options || {};
+      var length = Number(options.length || input.maxLength || 6);
+      if (!Number.isInteger(length) || length < 4 || length > 8) length = 6;
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'otp-inputs';
+      wrapper.setAttribute('role', 'group');
+      wrapper.setAttribute('aria-label', options.label || input.getAttribute('aria-label') || 'Código de verificación');
+      var cells = [];
+      for (var i = 0; i < length; i += 1) {
+        var cell = document.createElement('input');
+        cell.className = 'otp-cell';
+        cell.type = 'text';
+        cell.inputMode = 'numeric';
+        cell.pattern = '[0-9]*';
+        cell.autocomplete = i === 0 ? 'one-time-code' : 'off';
+        cell.maxLength = 1;
+        cell.setAttribute('aria-label', 'Dígito ' + (i + 1) + ' de ' + length);
+        cell.setAttribute('enterkeyhint', 'done');
+        wrapper.appendChild(cell);
+        cells.push(cell);
+      }
+
+      input.type = 'hidden';
+      input.value = '';
+      input.required = false;
+      input.removeAttribute('autocomplete');
+      input.removeAttribute('placeholder');
+      input.tabIndex = -1;
+      input.setAttribute('aria-hidden', 'true');
+      input.setAttribute('data-otp-value', 'true');
+      input.parentNode.insertBefore(wrapper, input);
+
+      function value() {
+        return cells.map(function (cell) { return cell.value; }).join('');
+      }
+
+      function sync() {
+        input.value = value();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      function complete() {
+        var code = value();
+        if (code.length === length && typeof options.onComplete === 'function') options.onComplete(code);
+      }
+
+      function setValue(raw, shouldFocus) {
+        var digits = String(raw == null ? '' : raw).replace(/\D/g, '').slice(0, length);
+        cells.forEach(function (cell, index) { cell.value = digits[index] || ''; });
+        sync();
+        if (shouldFocus) {
+          var focusIndex = digits.length >= length ? length - 1 : digits.length;
+          cells[focusIndex].focus();
+          cells[focusIndex].select();
+        }
+        complete();
+      }
+
+      cells.forEach(function (cell, index) {
+        cell.addEventListener('input', function () {
+          var digits = cell.value.replace(/\D/g, '');
+          if (digits.length > 1) {
+            setValue(value().slice(0, index) + digits, true);
+            return;
+          }
+          cell.value = digits;
+          sync();
+          if (digits && index < length - 1) cells[index + 1].focus();
+          complete();
+        });
+        cell.addEventListener('paste', function (event) {
+          var pasted = event.clipboardData ? event.clipboardData.getData('text') : '';
+          var digits = pasted.replace(/\D/g, '');
+          if (!digits) return;
+          event.preventDefault();
+          setValue(value().slice(0, index) + digits, true);
+        });
+        cell.addEventListener('keydown', function (event) {
+          if (event.key === 'Backspace') {
+            if (!cell.value && index > 0) {
+              cells[index - 1].value = '';
+              cells[index - 1].focus();
+            } else {
+              cell.value = '';
+            }
+            sync();
+            event.preventDefault();
+          } else if (event.key === 'Delete') {
+            cell.value = '';
+            sync();
+            event.preventDefault();
+          } else if (event.key === 'ArrowLeft' && index > 0) {
+            cells[index - 1].focus();
+            event.preventDefault();
+          } else if (event.key === 'ArrowRight' && index < length - 1) {
+            cells[index + 1].focus();
+            event.preventDefault();
+          } else if (event.key === 'Enter') {
+            complete();
+          }
+        });
+        cell.addEventListener('focus', function () { cell.select(); });
+      });
+
+      input._kwOtpInput = {
+        focus: function () { cells[0].focus(); },
+        clear: function () { setValue('', false); },
+        setValue: function (raw) { setValue(raw, true); },
+        value: value,
+      };
+      return input._kwOtpInput;
+    },
+    focusOtpInput: function (input) {
+      if (input && input._kwOtpInput) input._kwOtpInput.focus();
+      else if (input) input.focus();
+    },
+    clearOtpInput: function (input) {
+      if (input && input._kwOtpInput) input._kwOtpInput.clear();
+      else if (input) input.value = '';
+    },
     authErrorMessage: function (error, context) {
       var code = String(error && (error.code || error.name || '') || '').toLowerCase();
       var raw = String(error && (error.message || error.error_description || error.error || '') || '').trim();

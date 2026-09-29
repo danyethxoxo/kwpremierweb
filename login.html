@@ -101,6 +101,27 @@
     border-color: var(--red);
     box-shadow: 0 0 0 3px rgba(138,0,0,0.08);
   }
+  .otp-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .otp-inputs .otp-cell {
+    width: 42px;
+    padding: 11px 0;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .otp-inputs .otp-cell:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(138,0,0,0.12);
+  }
+  @media (max-width: 360px) {
+    .otp-inputs { gap: 5px; }
+    .otp-inputs .otp-cell { width: 36px; }
+  }
 
   .btn-submit {
     width: 100%;
@@ -185,8 +206,8 @@
       <form id="mfa-form" style="display:none;">
         <p class="sub" id="mfa-destino" style="margin-bottom:14px;">Te mandamos un código a tu correo alternativo. Escríbelo aquí.</p>
         <div class="field">
-          <label>Código</label>
-          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
+          <label>Código de 6 dígitos</label>
+          <input type="text" id="mfa-codigo" data-otp-length="6" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required />
         </div>
         <button type="submit" class="btn-submit" id="mfa-btn">Verificar</button>
         <div class="toggle-mode" style="margin-top:14px;">
@@ -268,6 +289,8 @@
   }
 
   const MFA_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/mfa-correo';
+  const RECOVERY_URL = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/solicitar-recuperacion';
+  window.kwSecurity.setupOtpInput(document.getElementById('mfa-codigo'), { label: 'Código de 6 dígitos' });
 
   async function llamarMFA(cuerpo, tokenSesion) {
     const res = await fetch(MFA_URL, {
@@ -333,7 +356,7 @@
     document.getElementById('form-title').textContent = 'Verificación en dos pasos';
     document.getElementById('form-sub').textContent = 'Un paso más para entrar.';
     clearMsg();
-    document.getElementById('mfa-codigo').focus();
+    window.kwSecurity.focusOtpInput(document.getElementById('mfa-codigo'));
   }
 
   function cancelarMFA() {
@@ -418,11 +441,18 @@
     const btn = document.getElementById('olvide-btn');
     btn.disabled = true;
     try {
-      const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://www.kwpremieroficial.com/restablecer-password.html'
+      const response = await fetch(RECOVERY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
+        body: JSON.stringify({ email }),
       });
-      if (error) throw error;
-      showMsg('Si ese correo tiene una cuenta, te llegará un link para restablecer tu contraseña.', 'ok');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(payload.error || 'No se pudo enviar el enlace.');
+        error.status = response.status;
+        throw error;
+      }
+      showMsg(payload.mensaje || 'Si ese correo tiene una cuenta, te llegará un enlace para restablecer tu contraseña.', 'ok');
       document.getElementById('olvide-form').style.display = 'none';
     } catch (err) {
       showMsg(window.kwSecurity.authErrorMessage(err, 'recovery'), 'error');

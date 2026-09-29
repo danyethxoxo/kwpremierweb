@@ -19,6 +19,9 @@
     .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; line-height: 1.55; text-align: center; }
     label { display: block; margin: 0 0 6px; color: var(--red); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
     input { width: 100%; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 10px; font: inherit; }
+    .otp-inputs { display: flex; justify-content: center; gap: 8px; }
+    .otp-inputs .otp-cell { width: 42px; padding: 11px 0; text-align: center; font-size: 20px; font-weight: 700; }
+    .otp-inputs .otp-cell:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.12); outline: none; }
     button { width: 100%; margin-top: 14px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--red); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: .55; cursor: default; }
     .secondary { margin-top: 10px; background: transparent; color: var(--red); border: 1px solid var(--border); }
@@ -47,7 +50,7 @@
 
     <div id="code-block">
       <label for="security-code">Código de 6 dígitos</label>
-      <input id="security-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+      <input id="security-code" type="text" data-otp-length="6" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
       <button id="verify-btn" type="button" disabled>Verificar y continuar</button>
     </div>
     <button id="logout-btn" class="secondary" type="button">Cerrar sesión</button>
@@ -59,6 +62,7 @@
     const MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
     const DEVICE_KEY = 'kw_device_token_v1';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
+    window.kwSecurity.setupOtpInput(document.getElementById('security-code'), { label: 'Código de 6 dígitos' });
     let volatileDeviceToken = '';
 
     function getDeviceToken() {
@@ -134,7 +138,7 @@
         const sent = await callMfa({ accion: 'preparar', correo_alternativo: email });
         document.getElementById('security-email').readOnly = true;
         document.getElementById('code-block').classList.add('show');
-        document.getElementById('security-code').focus();
+        window.kwSecurity.focusOtpInput(document.getElementById('security-code'));
         message('Enviamos un código a ' + (sent.enviado_a || 'tu correo de seguridad') + '.', 'ok');
       } catch (error) {
         message(window.kwSecurity.authErrorMessage(error, 'mfa'), 'error');
