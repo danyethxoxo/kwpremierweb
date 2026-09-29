@@ -15,7 +15,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth guard no respondio a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/login.html');
+    }
+  }, 4000);
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+<script src="/assets/js/auth-guard.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -395,7 +405,7 @@
 <script>
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
+  var sb = window.kwSupabase;
 
   var todas = [];
 
@@ -449,7 +459,8 @@
 
     var pie = [p.asesor_nombre, p.market_center].filter(Boolean).join(' · ');
 
-    return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="/propiedad.html?id=' + encodeURIComponent(p.id) + '">' +
+    var enlaceKw = 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id);
+    return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlaceKw) + '" target="_blank" rel="noopener noreferrer">' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
@@ -602,9 +613,9 @@
     llenarSelect('f-colonia', distintos('colonia'));
   }
 
-  var CAMPOS = 'id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
+  var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, calle, colonia, municipio, estado, ' +
-               'imagenes, asesor_nombre, market_center';
+               'imagenes, asesor_nombre, market_center, updated_at';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');
@@ -628,43 +639,23 @@
   async function cargar() {
     var cont = document.getElementById('lista');
     try {
-      try {
-        var asesorRef = await window.kwRefAsesor.capturar(sb);
-        pintarBannerRef(asesorRef);
-      } catch (e) { /* si falla, se navega igual sin la marca */ }
-
-      // Con sesión se ve el inventario completo (para poder filtrar por
-      // vendidas, rentadas o borradores); sin ella, solo lo publicado.
-      var hayIngreso = false;
-      try {
-        var ses = await sb.auth.getSession();
-        hayIngreso = !!(ses && ses.data && ses.data.session);
-      } catch (e) { hayIngreso = false; }
-
-      var origen = hayIngreso ? 'propiedades_inventario' : 'propiedades_publicas';
-      var r = await sb.from(origen).select(CAMPOS)
-        .order('updated_at', { ascending: false }).limit(500);
-
-      // Si la vista interna todavía no existe en la base, no se rompe la
-      // página: se cae a la pública y se esconde el filtro de estatus.
-      if (r.error && hayIngreso) {
-        hayIngreso = false;
-        r = await sb.from('propiedades_publicas').select(CAMPOS)
-          .order('updated_at', { ascending: false }).limit(500);
-      }
+      var r = await sb.from('propiedades_inventario').select(CAMPOS)
+        .eq('fuente', 'kwmexico')
+        .eq('market_center', 'KW PREMIER')
+        .order('updated_at', { ascending: false }).limit(1000);
       if (r.error) throw r.error;
 
-      document.getElementById('filtro-estatus').hidden = !hayIngreso;
+      document.getElementById('filtro-estatus').hidden = false;
       todas = r.data || [];
 
       if (!todas.length) {
         document.getElementById('conteo').textContent = '';
-        cont.innerHTML = '<div class="estado-msg">Todavía no hay propiedades publicadas.</div>';
+        cont.innerHTML = '<div class="estado-msg">Todavía no hay propiedades de KW Premier sincronizadas.</div>';
         return;
       }
 
       llenarListas();
-      if (hayIngreso) document.getElementById('f-estatus').value = 'publicada';
+      document.getElementById('f-estatus').value = 'publicada';
       pintar();
     } catch (err) {
       cont.innerHTML = '<div class="estado-msg">No se pudieron cargar las propiedades.<br>' +
@@ -703,9 +694,10 @@
     }
   });
 
-  cargar();
+  if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
+  else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/drawer.js?v=20260922c" data-menu="publico"></script>
+<script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
 </body>
 </html>

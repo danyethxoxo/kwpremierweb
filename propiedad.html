@@ -13,7 +13,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<script>
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('kw-auth-ok')) {
+      console.error('auth guard no respondio a tiempo; redirigiendo al login por seguridad.');
+      location.replace('/login.html');
+    }
+  }, 4000);
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+<script src="/assets/js/auth-guard.js"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <!-- El mapa (Google Maps, o OpenStreetMap mientras no haya llave) se
      carga solo cuando la propiedad trae coordenadas: ver montarMapa. -->
@@ -306,7 +316,7 @@
 <script>
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
+  var sb = window.kwSupabase;
 
   // Llave de Google Maps. Va aquí a la vista a propósito: las llaves de
   // Maps son públicas por diseño (viajan en la URL del script), y lo que
@@ -430,24 +440,15 @@
   });
 
   // ── Compartir ──
-  async function compartir() {
-    var s = await sb.auth.getSession();
-    var sesion = s && s.data && s.data.session;
+  function enlaceOrigen(p) {
+    if (p && p.fuente === 'kwmexico' && p.fuente_id) {
+      return 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id);
+    }
+    return location.origin + '/propiedad.html?id=' + encodeURIComponent(p && p.id ? p.id : ID);
+  }
 
-    if (!sesion) {
-      // Sin sesión se comparte el enlace normal
-      copiar(location.origin + '/propiedad.html?id=' + encodeURIComponent(ID));
-      return;
-    }
-    try {
-      var r = await sb.rpc('crear_enlace_compartido', { p_propiedad_id: ID });
-      if (r.error) throw r.error;
-      copiar(location.origin + '/propiedad.html?ref=' + r.data);
-      toast('Enlace copiado. Quien lo abra verá tus datos de contacto.');
-      return;
-    } catch (err) {
-      copiar(location.origin + '/propiedad.html?id=' + encodeURIComponent(ID));
-    }
+  async function compartir() {
+    copiar(enlaceOrigen(propiedad));
   }
 
   function copiar(url) {
@@ -785,7 +786,10 @@
           cont.innerHTML = '<div class="estado-msg">Falta el identificador de la propiedad.</div>';
           return;
         }
-        var q = await sb.from('propiedades_publicas').select('*').eq('id', ID).maybeSingle();
+        var q = await sb.from('propiedades_inventario').select('*')
+          .eq('id', ID)
+          .eq('fuente', 'kwmexico')
+          .maybeSingle();
         if (q.error) throw q.error;
         if (!q.data) {
           cont.innerHTML = '<div class="estado-msg">No encontramos esta propiedad.<br><a href="/propiedades.html">Ver todas las propiedades</a></div>';
@@ -816,9 +820,10 @@
     }
   }
 
-  cargar();
+  if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
+  else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/drawer.js?v=20260922c" data-menu="publico"></script>
+<script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
 </body>
 </html>

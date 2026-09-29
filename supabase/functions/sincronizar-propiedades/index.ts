@@ -58,6 +58,19 @@ const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
 const FEED_URL = Deno.env.get('FEED_URL')
 const FEED_USER = Deno.env.get('FEED_USER')
 const FEED_PASS = Deno.env.get('FEED_PASS')
+const KWMEXICO_API_BASE = (Deno.env.get('KWMEXICO_API_BASE') ||
+  'https://www.kwmexico.mx/api/properties').replace(/\/+$/, '')
+const KWMEXICO_MARKET_CENTER_ID = Deno.env.get('KWMEXICO_MARKET_CENTER_ID') || '21'
+const KWMEXICO_MARKET_CENTER_NAME = Deno.env.get('KWMEXICO_MARKET_CENTER_NAME') || 'KW PREMIER'
+const KWMEXICO_PAGE_SIZE = 30
+const KWMEXICO_MAX_PAGES = Math.max(1, Math.min(
+  Number(Deno.env.get('KWMEXICO_MAX_PAGES') || 300),
+  500,
+))
+const KWMEXICO_CONCURRENCY = Math.max(1, Math.min(
+  Number(Deno.env.get('KWMEXICO_CONCURRENCY') || 4),
+  6,
+))
 
 const CORS_HEADERS = {}
 
@@ -66,6 +79,232 @@ function respond(body: unknown, status = 200) {
     status,
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
+}
+
+type KwRegistro = Record<string, unknown>
+
+type KwRespuesta = {
+  success?: boolean
+  message?: string
+  data?: KwRegistro
+}
+
+function kwTexto(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  const result = String(value).trim()
+  return result || null
+}
+
+function kwNumero(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const result = Number(String(value).replace(/,/g, ''))
+  return Number.isFinite(result) ? result : null
+}
+
+function kwLista(data: unknown, key: string): KwRegistro[] {
+  if (!data || typeof data !== 'object') return []
+  const value = (data as KwRegistro)[key]
+  return Array.isArray(value)
+    ? value.filter((item): item is KwRegistro => !!item && typeof item === 'object')
+    : []
+}
+
+function kwTipo(id: unknown): string {
+  const nombres: Record<string, string> = {
+    '1': 'Casa',
+    '2': 'Oficina',
+    '3': 'Local comercial',
+    '4': 'Condominio',
+    '5': 'Estacionamiento',
+    '6': 'Duplex',
+    '7': 'Edificio',
+    '8': 'Departamento',
+    '9': 'Bodega',
+    '10': 'Terreno',
+    '11': 'Nave industrial',
+    '12': 'Rancho',
+    '13': 'Rancho',
+    '14': 'Casa adosada',
+    '15': 'Casa independiente',
+    '16': 'Villa',
+    '17': 'Consultorio',
+    '18': 'Terreno comercial',
+    '19': 'Terreno industrial',
+    '20': 'Casa en condominio',
+  }
+  return nombres[String(id)] || 'Propiedad'
+}
+
+function kwOperacion(id: unknown): string | null {
+  if (String(id) === '1') return 'renta'
+  if (String(id) === '2') return 'venta'
+  return null
+}
+
+function kwEstatus(id: unknown): string {
+  return String(id) === '1' ? 'publicada' : 'suspendida'
+}
+
+function kwImagenes(detalle: KwRespuesta | null, propiedad: KwRegistro): string[] {
+  const fotos = kwLista(detalle?.data, 'Property_Photos')
+    .sort((a, b) => (kwNumero(a.Photo_Order) ?? 9999) - (kwNumero(b.Photo_Order) ?? 9999))
+    .map((foto) => kwTexto(foto.Photo_URL))
+    .filter((url): url is string => !!url && /^https?:\/\//i.test(url))
+
+  const principal = kwTexto(propiedad.Photo_URL)
+  if (principal && /^https?:\/\//i.test(principal) && !fotos.includes(principal)) {
+    fotos.unshift(principal)
+  }
+  return [...new Set(fotos)]
+}
+
+function kwCaracteristicas(propiedad: KwRegistro): string[] {
+  const result: string[] = []
+  if (Number(propiedad.Luxury) === 1) result.push('Lujo')
+  if (Number(propiedad.Has_Garage) === 1) result.push('Cochera')
+  if (Number(propiedad.Has_Parking) === 1) result.push('Estacionamiento')
+  return result
+}
+
+function normalizarKwMexico(
+  listado: KwRegistro,
+  detalle: KwRespuesta | null,
+): Fila | null {
+  const propiedad = kwLista(detalle?.data, 'Property_Data')[0] || listado
+  const fuenteId = kwTexto(propiedad.ID) || kwTexto(listado.ID)
+  if (!fuenteId) return null
+
+  const agentes = kwLista(detalle?.data, 'Property_Agent')
+  const agente = agentes[0] || {}
+  const nombreAgente = [kwTexto(agente.First_Name), kwTexto(agente.Last_Name)]
+    .filter(Boolean)
+    .join(' ') || null
+  const descripcion = kwTexto(propiedad.Description) || kwTexto(listado.Description)
+  const titulo = kwTexto(propiedad.Title) || kwTexto(listado.Title) || 'Propiedad ' + fuenteId
+  const fotos = kwImagenes(detalle, propiedad)
+  const caracteristicas = kwCaracteristicas(propiedad)
+  const m2Construccion = kwNumero(
+    propiedad.Living_Area ?? propiedad.Building_Area ?? propiedad.Construction_Area,
+  )
+  const m2Terreno = kwNumero(propiedad.Lot_Size_Area)
+
+  return {
+    fuente: 'kwmexico',
+    fuente_id: fuenteId,
+    titulo,
+    descripcion,
+    operacion: kwOperacion(propiedad.Property_Operation_ID),
+    estatus: kwEstatus(propiedad.Property_Status_ID),
+    tipo: kwTipo(propiedad.Property_Type_ID),
+    precio: kwNumero(propiedad.Current_Price),
+    moneda: kwTexto(propiedad.Currency) || 'MXN',
+    recamaras: kwNumero(propiedad.Total_Bed),
+    banos: kwNumero(propiedad.Total_Bath),
+    estacionamientos: kwNumero(propiedad.Parking_Total),
+    m2_construccion: m2Construccion,
+    m2_terreno: m2Terreno,
+    calle: kwTexto(propiedad.Geo_Calle) || kwTexto(propiedad.Street),
+    colonia: kwTexto(propiedad.Geo_Colonia) || kwTexto(propiedad.Colony),
+    municipio: kwTexto(propiedad.Geo_Municipio) || kwTexto(propiedad.City),
+    estado: kwTexto(propiedad.Geo_Estado) || kwTexto(propiedad.State),
+    cp: kwTexto(propiedad.Geo_Codigo_Postal) || kwTexto(propiedad.Postal_Code),
+    pais: 'MX',
+    lat: kwNumero(propiedad.Latitude),
+    lng: kwNumero(propiedad.Longitude),
+    imagenes: fotos,
+    caracteristicas,
+    market_center: KWMEXICO_MARKET_CENTER_NAME,
+    asesor_nombre: nombreAgente,
+    asesor_email: kwTexto(agente.Email),
+    datos_origen: { listado, detalle },
+  }
+}
+
+async function kwJson(url: string): Promise<KwRespuesta> {
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'https:') throw new Error('La fuente de KW México debe usar HTTPS.')
+
+  const response = await fetch(parsed, {
+    headers: { Accept: 'application/json' },
+    redirect: 'error',
+    signal: AbortSignal.timeout(30000),
+  })
+  if (!response.ok) {
+    throw new Error('KW México respondió ' + response.status + ' en ' + parsed.pathname)
+  }
+
+  const body = await response.json() as KwRespuesta
+  if (body.success === false) {
+    throw new Error(body.message || 'KW México devolvió un error.')
+  }
+  return body
+}
+
+async function enParalelo<T, R>(
+  items: T[],
+  workers: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const result = new Array<R>(items.length)
+  let siguiente = 0
+
+  async function trabajar() {
+    while (true) {
+      const indice = siguiente++
+      if (indice >= items.length) return
+      result[indice] = await fn(items[indice])
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(workers, items.length) }, () => trabajar()),
+  )
+  return result
+}
+
+async function traerCatalogoKwMexico(): Promise<{
+  propiedades: KwRegistro[]
+  total: number
+  completa: boolean
+}> {
+  const primera = await kwJson(KWMEXICO_API_BASE + '?init=0')
+  const dataPrimera = primera.data || {}
+  const loteInicial = kwLista(dataPrimera, 'Properties_Data')
+  const total = kwNumero(dataPrimera.Total_Properties) || loteInicial.length
+  const paginasTotales = Math.ceil(total / KWMEXICO_PAGE_SIZE)
+  const paginas = Math.min(paginasTotales, KWMEXICO_MAX_PAGES)
+  const offsets = Array.from(
+    { length: Math.max(0, paginas - 1) },
+    (_, indice) => (indice + 1) * KWMEXICO_PAGE_SIZE,
+  )
+  const lotes = await enParalelo(offsets, KWMEXICO_CONCURRENCY, async (offset) => {
+    const respuesta = await kwJson(KWMEXICO_API_BASE + '?init=' + offset)
+    return kwLista(respuesta.data, 'Properties_Data')
+  })
+  const propiedades = loteInicial.concat(...lotes)
+  return {
+    propiedades,
+    total,
+    completa: paginas >= paginasTotales && propiedades.length >= total,
+  }
+}
+
+function kwListadoAnterior(datos: unknown): KwRegistro | null {
+  if (!datos || typeof datos !== 'object') return null
+  const listado = (datos as KwRegistro).listado
+  return listado && typeof listado === 'object' ? listado as KwRegistro : null
+}
+
+function kwCambioListado(actual: KwRegistro, anterior: KwRegistro | null): boolean {
+  if (!anterior) return true
+  const campos = [
+    'Title', 'Description', 'Current_Price', 'Property_Status_ID',
+    'Property_Operation_ID', 'Property_Type_ID', 'Photo_URL', 'Total_Bed',
+    'Total_Bath', 'Parking_Total', 'Living_Area', 'Lot_Size_Area',
+    'Property_Status_Updated_Date', 'Latitude', 'Longitude', 'State',
+    'City', 'Street', 'Market_Center_ID',
+  ]
+  return campos.some((campo) => String(actual[campo] ?? '') !== String(anterior[campo] ?? ''))
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -170,6 +409,116 @@ function mapOperacion(v: string | null): string | null {
 }
 
 type Fila = Record<string, unknown> & { asesor_email?: string | null }
+
+async function sincronizarKwMexico(
+  admin: ReturnType<typeof createClient<any>>,
+  corrida: string,
+): Promise<Response> {
+  try {
+    const catalogo = await traerCatalogoKwMexico()
+    const candidatos = catalogo.propiedades.filter((propiedad) =>
+      String(propiedad.Market_Center_ID ?? '') === KWMEXICO_MARKET_CENTER_ID
+    )
+
+    const porId = new Map<string, KwRegistro>()
+    for (const propiedad of candidatos) {
+      const id = kwTexto(propiedad.ID)
+      if (id) porId.set(id, propiedad)
+    }
+    const unicos = [...porId.values()]
+
+    const existentesRespuesta = await admin
+      .from('propiedades')
+      .select('fuente_id, datos_origen')
+      .eq('fuente', 'kwmexico')
+    if (existentesRespuesta.error) throw existentesRespuesta.error
+    const existentesPorId = new Map<string, KwRegistro>()
+    for (const fila of existentesRespuesta.data || []) {
+      const id = kwTexto(fila.fuente_id)
+      if (id) existentesPorId.set(id, fila as KwRegistro)
+    }
+    const existentes = [...existentesPorId.keys()]
+
+    const resultados = await enParalelo(unicos, KWMEXICO_CONCURRENCY, async (listado) => {
+      const id = kwTexto(listado.ID)
+      if (!id) return { fila: null, detalleFallido: false, omitida: false }
+      const anterior = kwListadoAnterior(existentesPorId.get(id)?.datos_origen)
+      if (!kwCambioListado(listado, anterior)) {
+        return { fila: null, detalleFallido: false, omitida: true }
+      }
+      try {
+        const detalle = await kwJson(KWMEXICO_API_BASE + '/' + encodeURIComponent(id))
+        return { fila: normalizarKwMexico(listado, detalle), detalleFallido: false, omitida: false }
+      } catch {
+        return { fila: normalizarKwMexico(listado, null), detalleFallido: true, omitida: false }
+      }
+    })
+
+    const detalleFallido = resultados.filter((resultado) => resultado.detalleFallido).length
+    const detallesOmitidos = resultados.filter((resultado) => resultado.omitida).length
+    const filas = resultados
+      .map((resultado) => resultado.fila)
+      .filter((fila): fila is Fila => fila !== null)
+    const listas = await enlazarAsesores(admin, filas)
+
+    let guardadas = 0
+    for (let i = 0; i < listas.length; i += 100) {
+      const lote = listas.slice(i, i + 100)
+      const { error } = await admin
+        .from('propiedades')
+        .upsert(lote, { onConflict: 'fuente,fuente_id' })
+      if (error) throw error
+      guardadas += lote.length
+    }
+
+    let suspendidas = 0
+    if (catalogo.completa) {
+      const actuales = new Set(unicos.map((propiedad) => String(propiedad.ID)))
+      const obsoletas = existentes.filter((id) => !actuales.has(id))
+      for (let i = 0; i < obsoletas.length; i += 100) {
+        const lote = obsoletas.slice(i, i + 100)
+        const { error } = await admin
+          .from('propiedades')
+          .update({ estatus: 'suspendida', sincronizado_at: corrida })
+          .eq('fuente', 'kwmexico')
+          .in('fuente_id', lote)
+        if (error) throw error
+        suspendidas += lote.length
+      }
+    }
+
+    await admin.from('propiedades_sync').upsert({
+      fuente: 'kwmexico',
+      ultimo_cursor: corrida,
+      ultima_corrida: corrida,
+      ultimo_error: null,
+      propiedades_afectadas: guardadas,
+    }, { onConflict: 'fuente' })
+
+    return respond({
+      ok: true,
+      modo: 'kwmexico',
+      market_center: KWMEXICO_MARKET_CENTER_NAME,
+      market_center_id: KWMEXICO_MARKET_CENTER_ID,
+      catalogo_total: catalogo.total,
+      catalogo_leido: catalogo.propiedades.length,
+      corrida_completa: catalogo.completa,
+      candidatas_market_center: unicos.length,
+      propiedades_guardadas: guardadas,
+      detalles_con_error: detalleFallido,
+      detalles_sin_cambio: detallesOmitidos,
+      marcadas_suspendidas: suspendidas,
+    })
+  } catch (err) {
+    const mensaje = (err as Error).message || 'Error desconocido al consultar KW México.'
+    await admin.from('propiedades_sync').upsert({
+      fuente: 'kwmexico',
+      ultima_corrida: corrida,
+      ultimo_error: mensaje.slice(0, 500),
+    }, { onConflict: 'fuente' })
+    return respond({ error: mensaje, modo: 'kwmexico' }, 502)
+  }
+}
 
 function normalizar(registro: Record<string, unknown>): Fila | null {
   const p = aplanar(registro)
@@ -350,6 +699,12 @@ secureServe({ name: 'sincronizar-propiedades', auth: (req) => Deno.env.get('SYNC
     const contentType = (req.headers.get('Content-Type') || '').toLowerCase()
     const crudo = await req.text()
     const corrida = new Date().toISOString()
+
+    // Una petición vacía usa el catálogo de KW Premier cuando no hay un
+    // FEED_URL de Command. También se puede pedir explícitamente.
+    const esKwMexico = req.headers.get('x-sync-source') === 'kwmexico' ||
+      (!crudo.trim() && !FEED_URL)
+    if (esKwMexico) return await sincronizarKwMexico(admin, corrida)
 
     // ── Conseguir el feed ──
     let cuerpo: string
