@@ -110,7 +110,7 @@ export async function forwardData(req: Request, context: { userId?: string; toke
   if (!secret || !anon) throw new HttpError(503, 'Servicio no disponible')
   const target = gatewayTarget(req.url, base)
   const table = target.pathname.split('/').at(-1)!
-  let outboundBody: BodyInit | undefined = ['GET', 'HEAD'].includes(req.method) ? undefined : req.body
+  let outboundBody: BodyInit | undefined = ['GET', 'HEAD'].includes(req.method) ? undefined : (req.body ?? undefined)
   if (req.method === 'POST' && PUBLIC_FORM_TABLES.has(table)) {
     let form: unknown
     try { form = await req.clone().json() } catch { throw new HttpError(400, 'Formulario invalido') }
