@@ -10,6 +10,7 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260929c">
 <script src="/assets/js/kw-ui.js?v=20260922"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -94,12 +95,8 @@
   }
 
   /* ── Panel lateral de filtros ── */
-  .propiedades-layout {
-    display: grid;
-    grid-template-columns: minmax(245px, 276px) minmax(0, 1fr);
-    align-items: start;
-    gap: 24px;
-  }
+  .propiedades-layout { display: block; min-width: 0; }
+  .propiedades-resultados { min-width: 0; }
   .propiedades-sidebar {
     position: sticky;
     top: 78px;
@@ -127,6 +124,29 @@
   }
   .propiedades-sidebar h2 {
     color: var(--text); font-size: 17px; line-height: 1.2; letter-spacing: -0.25px;
+  }
+  /* En escritorio el filtro vive dentro del switch lateral universal de KW.
+     Al sacarlo de su tarjeta original, conserva solo la lectura visual del
+     contenido y deja que kw-lateral.css controle el panel. En celular vuelve
+     a su punto original y recupera la tarjeta completa. */
+  .kw-lateral-contenido > .propiedades-sidebar {
+    position: static;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    scrollbar-width: auto;
+  }
+  .kw-lateral-contenido > .propiedades-sidebar .propiedades-buscador {
+    min-height: 38px;
+    margin-bottom: 13px;
+    background: #f7f7f7;
   }
   .propiedades-buscador {
     display: flex; align-items: center; gap: 8px;
@@ -285,7 +305,7 @@
 
   @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 900px) {
-    .propiedades-layout { grid-template-columns: 1fr; gap: 18px; }
+    .propiedades-layout { display: block; }
     .propiedades-sidebar { position: relative; top: auto; max-height: none; overflow: visible; }
     .propiedades-sidebar-cabecera { margin-bottom: 13px; }
   }
@@ -363,18 +383,21 @@
             </div>
             <div class="filtro">
               <label for="f-mc">Market Center</label>
-              <input type="search" id="f-mc" list="lista-mc" placeholder="Todos" autocomplete="off" />
-              <datalist id="lista-mc"></datalist>
+              <select id="f-mc">
+                <option value="">Todos</option>
+              </select>
             </div>
             <div class="filtro">
               <label for="f-asesor">Asesor</label>
-              <input type="search" id="f-asesor" list="lista-asesores" placeholder="Todos" autocomplete="off" />
-              <datalist id="lista-asesores"></datalist>
+              <select id="f-asesor">
+                <option value="">Todos</option>
+              </select>
             </div>
             <div class="filtro">
               <label for="f-tipo">Tipo de propiedad</label>
-              <input type="search" id="f-tipo" list="lista-tipos" placeholder="Todos" autocomplete="off" />
-              <datalist id="lista-tipos"></datalist>
+              <select id="f-tipo">
+                <option value="">Todos</option>
+              </select>
             </div>
             <div class="filtro" id="filtro-estatus" hidden>
               <label for="f-estatus">Estatus</label>
@@ -394,18 +417,21 @@
             <h3>Ubicación</h3>
             <div class="filtro">
               <label for="f-estado">Estado / ciudad</label>
-              <input type="search" id="f-estado" list="lista-estados" placeholder="Todas" autocomplete="off" />
-              <datalist id="lista-estados"></datalist>
+              <select id="f-estado">
+                <option value="">Todas</option>
+              </select>
             </div>
             <div class="filtro">
               <label for="f-municipio">Alcaldía / municipio</label>
-              <input type="search" id="f-municipio" list="lista-municipios" placeholder="Todas" autocomplete="off" />
-              <datalist id="lista-municipios"></datalist>
+              <select id="f-municipio">
+                <option value="">Todas</option>
+              </select>
             </div>
             <div class="filtro">
               <label for="f-colonia">Colonia</label>
-              <input type="search" id="f-colonia" list="lista-colonias" placeholder="Todas" autocomplete="off" />
-              <datalist id="lista-colonias"></datalist>
+              <select id="f-colonia">
+                <option value="">Todas</option>
+              </select>
             </div>
             <p class="filtro-ayuda">Las opciones se ajustan según la ubicación anterior.</p>
           </section>
@@ -745,16 +771,25 @@
     repintarDesdeFiltro();
   }
 
-  function llenarDatalist(id, valores) {
+  function llenarSelect(id, valores, textoVacio) {
     var lista = document.getElementById(id);
     if (!lista) return;
+    var actual = lista.value;
     lista.innerHTML = '';
+    var vacio = document.createElement('option');
+    vacio.value = '';
+    vacio.textContent = textoVacio || 'Todos';
+    lista.appendChild(vacio);
     valores.sort(function (a, b) { return String(a).localeCompare(String(b), 'es'); })
       .forEach(function (v) {
         var o = document.createElement('option');
         o.value = v;
+        o.textContent = v;
         lista.appendChild(o);
       });
+    if (actual && valores.some(function (v) { return String(v) === actual; })) {
+      lista.value = actual;
+    }
   }
 
   function distintos(campo, predicado) {
@@ -779,22 +814,22 @@
     }
     var estado = val('f-estado');
     var municipio = val('f-municipio');
-    llenarDatalist('lista-estados', distintos('estado'));
-    llenarDatalist('lista-municipios', distintos('municipio', function (p) {
+    llenarSelect('f-estado', distintos('estado'), 'Todas');
+    llenarSelect('f-municipio', distintos('municipio', function (p) {
       return coincide(p.estado, estado);
-    }));
-    llenarDatalist('lista-colonias', distintos('colonia', function (p) {
+    }), 'Todas');
+    llenarSelect('f-colonia', distintos('colonia', function (p) {
       return coincide(p.estado, estado) && coincide(p.municipio, municipio);
-    }));
+    }), 'Todas');
   }
 
   // Las listas se arman con lo que de verdad hay en el inventario. Las de
   // ubicación se recalculan para que municipio y colonia dependan del campo
   // anterior, igual que en un portal inmobiliario.
   function llenarListas() {
-    llenarDatalist('lista-tipos', distintos('tipo'));
-    llenarDatalist('lista-mc', distintos('market_center'));
-    llenarDatalist('lista-asesores', distintos('asesor_nombre'));
+    llenarSelect('f-tipo', distintos('tipo'), 'Todos');
+    llenarSelect('f-mc', distintos('market_center'), 'Todos');
+    llenarSelect('f-asesor', distintos('asesor_nombre'), 'Todos');
     actualizarListasUbicacion();
   }
 
@@ -931,5 +966,6 @@
 </script>
 
 <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
+<script src="/assets/js/kw-lateral.js?v=20260923b" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
 </html>
