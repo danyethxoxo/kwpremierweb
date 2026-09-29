@@ -19,13 +19,20 @@
     color: var(--text);
   }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
-  body { background: transparent; }
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+  }
   html { background-color: var(--lienzo); }
   /* Esta página no carga kw-base.css ni kw-ui.css, así que trae su
      propia capa de fondo. No se usa background-attachment: fixed
      porque en celular deja franjas blancas al desplazarse. */
     /* El logotipo queda limpio, sin una cápsula que compita con el acceso. */
   header {
+    flex: 0 0 auto;
     width: auto;
     margin: 30px auto 0;
     background: transparent;
@@ -40,11 +47,19 @@
   .logo img { height: 54px; width: auto; display: block; }
 
   main {
-    max-width: 380px;
-    margin: 0 auto;
+    /* Esta pantalla necesita centrar la tarjeta en el viewport restante,
+       no desplazarla con un margen fijo debajo del logo. */
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 34px 20px 60px;
   }
   .card {
+    width: 100%;
+    max-width: 380px;
     position: relative;
     overflow: hidden;
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
