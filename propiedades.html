@@ -419,6 +419,8 @@
   var todas = [];
   var paginaActual = 1;
   var PROPIEDADES_POR_PAGINA = 20;
+  var catalogoCargando = true;
+  var totalCatalogo = 0;
 
   function escapeHtml(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -551,20 +553,26 @@
     marcarFiltrosEscondidos();
 
     var cont = document.getElementById('lista');
-    var totalPaginas = Math.max(1, Math.ceil(vis.length / PROPIEDADES_POR_PAGINA));
+    var totalPaginas = catalogoCargando
+      ? 1
+      : Math.max(1, Math.ceil(vis.length / PROPIEDADES_POR_PAGINA));
     if (paginaActual > totalPaginas) paginaActual = totalPaginas;
     var inicio = (paginaActual - 1) * PROPIEDADES_POR_PAGINA;
     var pagina = vis.slice(inicio, inicio + PROPIEDADES_POR_PAGINA);
+    var conteo = catalogoCargando && totalCatalogo
+      ? totalCatalogo + ' propiedades · mostrando las primeras ' + pagina.length
+      : vis.length + (vis.length === 1 ? ' propiedad' : ' propiedades') +
+        (vis.length !== todas.length ? ' de ' + todas.length : '') +
+        (vis.length ? ' · página ' + paginaActual + ' de ' + totalPaginas : '');
     document.getElementById('conteo').innerHTML =
-      '<span>' + vis.length + (vis.length === 1 ? ' propiedad' : ' propiedades') +
-      (vis.length !== todas.length ? ' de ' + todas.length : '') +
-      (vis.length ? ' · página ' + paginaActual + ' de ' + totalPaginas : '') + '</span>';
+      '<span>' + conteo + (catalogoCargando ? ' · cargando inventario…' : '') + '</span>';
 
     if (!vis.length) {
       cont.innerHTML = '<div class="estado-msg">No encontramos propiedades con esos filtros.</div>';
       return;
     }
-    cont.innerHTML = pagina.map(tarjeta).join('') + renderPaginacion(totalPaginas);
+    cont.innerHTML = pagina.map(tarjeta).join('') +
+      (catalogoCargando ? '' : renderPaginacion(totalPaginas));
   }
 
   function renderPaginacion(totalPaginas) {
@@ -698,38 +706,95 @@
     pintarBannerRef(null);
   }
 
+  function cambiarEstadoFiltros(cargando) {
+    document.querySelectorAll('#filtros input, #filtros select, #filtros-extra input, #filtros-extra select')
+      .forEach(function (el) { el.disabled = cargando; });
+    var mas = document.getElementById('btn-mas-filtros');
+    if (mas) mas.disabled = cargando;
+  }
+
+  function consultaPropiedades(desde, hasta, contar) {
+    var consulta = contar
+      ? sb.from('propiedades_inventario').select(CAMPOS, { count: 'exact' })
+      : sb.from('propiedades_inventario').select(CAMPOS);
+    return consulta
+      .eq('fuente', 'kwmexico')
+      .order('updated_at', { ascending: false })
+      .range(desde, hasta);
+  }
+
+  async function cargarResto(desde, total) {
+    var tamanoLote = 500;
+    if (!total) {
+      var acumuladas = [];
+      var offsetSecuencial = desde;
+      while (true) {
+        var secuencial = await consultaPropiedades(offsetSecuencial, offsetSecuencial + tamanoLote - 1, false);
+        if (secuencial.error) throw secuencial.error;
+        var loteSecuencial = secuencial.data || [];
+        acumuladas = acumuladas.concat(loteSecuencial);
+        if (loteSecuencial.length < tamanoLote) return acumuladas;
+        offsetSecuencial += tamanoLote;
+      }
+    }
+    if (total <= desde) return [];
+
+    var offsets = [];
+    for (var offset = desde; offset < total; offset += tamanoLote) offsets.push(offset);
+    var lotes = new Array(offsets.length);
+    var siguiente = 0;
+
+    async function trabajador() {
+      while (true) {
+        var indice = siguiente++;
+        if (indice >= offsets.length) return;
+        var inicio = offsets[indice];
+        var fin = Math.min(inicio + tamanoLote - 1, total - 1);
+        var r = await consultaPropiedades(inicio, fin, false);
+        if (r.error) throw r.error;
+        lotes[indice] = r.data || [];
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(4, offsets.length) }, trabajador));
+    return lotes.reduce(function (todo, lote) { return todo.concat(lote || []); }, []);
+  }
+
   async function cargar() {
     var cont = document.getElementById('lista');
+    cambiarEstadoFiltros(true);
     try {
-      var pagina = 500;
-      var offset = 0;
-      var acumuladas = [];
-      while (true) {
-        var r = await sb.from('propiedades_inventario').select(CAMPOS)
-          .eq('fuente', 'kwmexico')
-          .order('updated_at', { ascending: false })
-          .range(offset, offset + pagina - 1);
-        if (r.error) throw r.error;
-        var lote = r.data || [];
-        acumuladas = acumuladas.concat(lote);
-        if (lote.length < pagina) break;
-        offset += pagina;
-      }
+      var r = await consultaPropiedades(0, PROPIEDADES_POR_PAGINA - 1, true);
+      if (r.error) throw r.error;
+      var loteInicial = r.data || [];
+      totalCatalogo = Number(r.count) || 0;
 
       document.getElementById('filtro-estatus').hidden = false;
-      todas = acumuladas;
+      todas = loteInicial;
 
       if (!todas.length) {
+        catalogoCargando = false;
+        cambiarEstadoFiltros(false);
         document.getElementById('conteo').textContent = '';
         cont.innerHTML = '<div class="estado-msg">Todavía no hay propiedades de KWMexico sincronizadas.</div>';
         return;
       }
 
-      llenarListas();
       document.getElementById('f-estatus').value = 'publicada';
       paginaActual = 1;
       pintar();
+
+      var resto = await cargarResto(PROPIEDADES_POR_PAGINA, totalCatalogo);
+      todas = todas.concat(resto);
+      totalCatalogo = todas.length;
+      catalogoCargando = false;
+      llenarListas();
+      cambiarEstadoFiltros(false);
+      paginaActual = 1;
+      pintar();
     } catch (err) {
+      catalogoCargando = false;
+      cambiarEstadoFiltros(false);
       cont.innerHTML = '<div class="estado-msg">No se pudieron cargar las propiedades.<br>' +
         escapeHtml(err.message || '') + '</div>';
     }
