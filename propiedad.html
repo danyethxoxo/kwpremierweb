@@ -440,15 +440,19 @@
   });
 
   // ── Compartir ──
+  function enlaceInterno(p) {
+    return location.origin + '/propiedad.html?id=' + encodeURIComponent(p && p.id ? p.id : ID);
+  }
+
   function enlaceOrigen(p) {
     if (p && p.fuente === 'kwmexico' && p.fuente_id) {
       return 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id);
     }
-    return location.origin + '/propiedad.html?id=' + encodeURIComponent(p && p.id ? p.id : ID);
+    return enlaceInterno(p);
   }
 
   async function compartir() {
-    copiar(enlaceOrigen(propiedad));
+    copiar(enlaceInterno(propiedad));
   }
 
   function copiar(url) {
@@ -650,6 +654,10 @@
       botones += '<a class="btn-contacto btn-mail" href="/asesores.html">' + ICO.mail + 'Contactar a un asesor</a>';
     }
     botones += '<button type="button" class="btn-contacto btn-compartir" onclick="compartir()">' + ICO.share + 'Compartir</button>';
+    if (p.fuente === 'kwmexico' && p.fuente_id) {
+      botones += '<a class="btn-contacto" target="_blank" rel="noopener noreferrer" href="' +
+        escapeHtml(enlaceOrigen(p)) + '">' + ICO.flecha + 'Ver publicación original</a>';
+    }
 
     var formulario = hayDestino
       ? '<form class="form-lead" id="form-lead" autocomplete="on">' +
