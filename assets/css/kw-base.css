@@ -1438,7 +1438,7 @@ header > *:last-child { margin-left: auto; }
      empezaba seis pixeles arriba de donde termina la campana y se le
      encimaba a ella y al header. Medido contra el 100%, queda debajo
      sin importar de qué alto sea la pastilla. */
-  position: absolute; top: calc(100% + 8px); right: 0; width: 320px; max-height: 420px;
+  position: absolute; top: calc(100% + 8px); right: 0; width: 380px; max-width: 82vw; max-height: 420px;
   background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
@@ -1460,7 +1460,7 @@ header > *:last-child { margin-left: auto; }
 @media (max-width: 1023px) {
   .notif-dropdown {
     position: fixed; top: 10px; right: 12px; bottom: 10px; left: auto;
-    width: var(--panel-ancho, 280px); max-width: calc(100vw - 24px); max-height: none;
+    width: min(360px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: none;
     border-radius: 22px; z-index: 201;
     transform: translateX(calc(100% + 16px));
     transform-origin: center right;
@@ -1486,7 +1486,21 @@ header > *:last-child { margin-left: auto; }
   border: none; background: none; color: var(--red); font-size: 11px; font-weight: 700;
   cursor: pointer; font-family: inherit; order: 3; width: 100%; text-align: left; padding: 0;
 }
-.notif-dropdown-list { overflow-y: auto; overscroll-behavior: contain; }
+.notif-dropdown-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.94) transparent;
+}
+.notif-dropdown-list::-webkit-scrollbar { width: 9px; }
+.notif-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+.notif-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.94);
+  border: 2px solid rgba(205,198,195,0.28);
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.notif-dropdown-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,1); }
 .notif-item {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   width: 100%; padding: 11px 14px; border: none; border-bottom: 1px solid var(--border);
@@ -1538,7 +1552,7 @@ header > *:last-child { margin-left: auto; }
 @media (min-width: 1024px) {
   html.kw-riel .notif-dropdown {
     position: fixed; top: 10px; right: 12px; bottom: 10px; left: auto;
-    width: var(--panel-ancho, 280px); max-width: 82vw; max-height: none;
+    width: min(380px, 82vw); max-width: 82vw; max-height: none;
     border-radius: 22px;
     background:
       radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%),

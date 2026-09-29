@@ -20,7 +20,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/auth-guard.js"></script>
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20260924a">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
 <script src="/assets/js/kw-ui.js?v=20260922"></script>
@@ -1222,6 +1222,17 @@
   }
   #e-descargar-menu svg, #e-enviar-correo svg {
     width: 15px; height: 15px; flex: 0 0 auto;
+  }
+  .dic-send-spinner {
+    width: 15px; height: 15px; flex: 0 0 15px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: dic-send-spin .7s linear infinite;
+  }
+  @keyframes dic-send-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .dic-send-spinner { animation-duration: 1.8s; }
   }
   .dic-pdf-menu { position: relative; display: inline-flex; }
   .dic-pdf-opciones {
@@ -5256,13 +5267,17 @@
     var boton = botonEnvio || $('e-enviar-correo');
     var contenidoOriginal = boton.innerHTML;
     boton.disabled = true;
-    boton.textContent = 'Preparando PDFs...';
+    boton.setAttribute('aria-busy', 'true');
+    boton.classList.add('dic-enviando');
+    var iconoOriginal = boton.querySelector('svg');
+    if (iconoOriginal) {
+      iconoOriginal.outerHTML = '<span class="dic-send-spinner" aria-hidden="true"></span>';
+    }
     try {
       var pdfs = await Promise.all([
         crearPDF(d, false),
         crearPDF(d, true),
       ]);
-      boton.textContent = 'Enviando correo...';
       var sesion = await window.kwSupabase.auth.getSession();
       var token = sesion.data.session && sesion.data.session.access_token;
       if (!token) throw new Error('Tu sesión expiró. Inicia sesión de nuevo para enviar el dictamen.');
@@ -5294,6 +5309,8 @@
       await window.kwUI.alert(e.message || 'No se pudo enviar el dictamen por correo.');
     } finally {
       boton.disabled = false;
+      boton.removeAttribute('aria-busy');
+      boton.classList.remove('dic-enviando');
       boton.innerHTML = contenidoOriginal;
     }
   }

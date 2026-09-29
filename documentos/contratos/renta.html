@@ -636,8 +636,25 @@
   .lista-item-menu-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text); }
   .lista-item-menu { position: fixed; right: auto; left: auto; z-index: 250; }
   .vista-lista { overflow-x: hidden; }
+  .lista-item-texto { flex-wrap: wrap; }
+  .lista-abrir-original {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    order: 3;
+    margin-top: 2px;
+    padding: 3px 7px;
+    border: 0;
+    border-radius: 7px;
+    background: #f8eeee;
+    color: var(--red);
+    font: 700 10.5px/1.2 'Poppins', Arial, sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .lista-abrir-original:hover { background: #f2dddd; }
   @media (min-width: 901px) {
-    body.en-lista-documentos { height: 100vh; overflow: hidden; }
+    body.en-lista-documentos { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     body.en-lista-documentos #vista-lista { display: flex !important; flex: 1; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 26px 24px 20px; }
     body.en-lista-documentos .lista-columnas { flex: 1; min-height: 0; align-items: stretch; }
     body.en-lista-documentos .lista-columna { display: flex; flex-direction: column; min-height: 0; }
@@ -1187,9 +1204,8 @@
       <div id="clientes-fields"></div>
     </div>
     <div class="acuerdo-field">
-      <label for="f-domicilio">Domicilio para notificaciones</label>
+      <label for="f-domicilio">Domicilio del cliente</label>
       <input type="text" id="f-domicilio" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía, ciudad..." oninput="updatePreview()" />
-      <div class="field-help">Se usará para las notificaciones del cliente en el documento.</div>
     </div>
     <div class="form-section-title"><strong>Inmueble y renta</strong></div>
     <div class="acuerdo-field">
@@ -1198,8 +1214,7 @@
     </div>
     <div class="acuerdo-field">
       <label for="f-monto">Monto mensual de renta</label>
-      <input type="number" id="f-monto" data-kw-no min="0" step="0.01" inputmode="decimal" placeholder="0.00" oninput="updateMontoLetra(); updatePreview();" />
-      <div class="monto-letra-display" id="monto-letra-display">El monto en letra aparecerá aquí automáticamente.</div>
+      <input type="text" id="f-monto" data-kw-no data-formato-miles inputmode="decimal" autocomplete="off" placeholder="0.00" oninput="formatearMonto(this); updateMontoLetra(); updatePreview();" />
     </div>
 
     <div class="desktop-btn-row form-actions" style="display:flex;gap:8px;margin-top:14px;">
@@ -1307,12 +1322,12 @@
 
 <!-- Modal: confirmación para eliminar un borrador -->
 <div id="modal-eliminar-doc" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:420px; padding:28px 30px 24px; border-radius:18px;">
     <h3>¿Eliminar este borrador?</h3>
-    <p class="modal-sub">Esta acción no se puede deshacer.</p>
-    <div class="modal-actions">
+    <p class="modal-sub" style="margin:12px 0 0; line-height:1.5;">Esta acción no se puede deshacer.</p>
+    <div class="modal-actions" style="margin-top:22px; gap:12px;">
       <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEliminarDoc()">No</button>
-      <button type="button" class="btn-modal-confirmar" style="background:#a30000;" onclick="confirmarEliminarDoc()">Sí, eliminar</button>
+      <button type="button" class="btn-modal-confirmar" style="background:#a30000; color:#fff; border:1px solid #a30000; box-shadow:0 5px 14px rgba(163,0,0,.22);" onclick="confirmarEliminarDoc()">Sí, eliminar</button>
     </div>
   </div>
 </div>
@@ -1400,14 +1415,48 @@ function numeroALetra(num) {
   return texto;
 }
 
-function updateMontoLetra() {
-  const val = parseFloat(document.getElementById('f-monto').value);
-  const display = document.getElementById('monto-letra-display');
-  if (!val || val <= 0) {
-    display.textContent = 'El monto en letra aparecerá aquí automáticamente.';
-  } else {
-    display.textContent = '→ ' + numeroALetra(val);
+function numeroDesdeMonto(valor) {
+  const limpio = String(valor == null ? '' : valor).replace(/,/g, '').replace(/[^\d.]/g, '');
+  const numero = Number(limpio);
+  return Number.isFinite(numero) && numero >= 0 ? numero : 0;
+}
+
+function formatearMontoTexto(valor) {
+  const limpio = String(valor == null ? '' : valor).replace(/[^\d.]/g, '');
+  const punto = limpio.indexOf('.');
+  const tieneDecimal = punto !== -1;
+  let entero = tieneDecimal ? limpio.slice(0, punto) : limpio;
+  let decimal = tieneDecimal ? limpio.slice(punto + 1).replace(/\./g, '').slice(0, 2) : '';
+  entero = entero.replace(/^0+(?=\d)/, '');
+  if (!entero && tieneDecimal) entero = '0';
+  const enteroFormateado = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return enteroFormateado + (tieneDecimal ? '.' + decimal : '');
+}
+
+function formatearMonto(input) {
+  if (!input) return;
+  const anterior = input.value || '';
+  const posicion = typeof input.selectionStart === 'number' ? input.selectionStart : anterior.length;
+  const digitosAntes = (anterior.slice(0, posicion).match(/\d/g) || []).length;
+  const nuevoValor = formatearMontoTexto(anterior);
+  input.value = nuevoValor;
+  if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
+    let nuevaPosicion = 0;
+    let contados = 0;
+    while (nuevaPosicion < nuevoValor.length && contados < digitosAntes) {
+      if (/\d/.test(nuevoValor[nuevaPosicion])) contados++;
+      nuevaPosicion++;
+    }
+    input.setSelectionRange(nuevaPosicion, nuevaPosicion);
   }
+}
+
+function leerMonto() {
+  return numeroDesdeMonto(document.getElementById('f-monto')?.value);
+}
+
+function updateMontoLetra() {
+  return leerMonto();
 }
 
 // ── Formatear fecha en español ──
@@ -1509,7 +1558,7 @@ function updatePreview() {
     ? nombresClientes.join(', ').replace(/,([^,]*)$/, nombresClientes.length > 1 ? ' y$1' : '$1')
     : '';
   const inmueble   = document.getElementById('f-inmueble')?.value || '';
-  const montoNum   = parseFloat(document.getElementById('f-monto')?.value) || 0;
+  const montoNum   = leerMonto();
   const domicilio  = document.getElementById('f-domicilio')?.value || '';
   const fecha      = document.getElementById('f-fecha')?.value || '';
   const montoLetra = montoNum > 0 ? numeroALetra(montoNum) : '';
@@ -1903,7 +1952,10 @@ function abrirDocumentoGuardado(row, marcar) {
     const datos = row.datos || {};
     CAMPOS_GUARDABLES.forEach(id => {
       const el = document.getElementById(id);
-      if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
+      if (el && Object.prototype.hasOwnProperty.call(datos, id)) {
+        el.value = datos[id];
+        if (id === 'f-monto') formatearMonto(el);
+      }
     });
     renderClientesFields();
     (datos.clientes || []).forEach((val, i) => {
@@ -1932,7 +1984,19 @@ function escapeHtml(str) {
 function fmtFechaCorta(iso) {
   if (!iso) return '';
   try {
-    return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+    const fecha = new Date(iso);
+    if (Number.isNaN(fecha.getTime())) return '';
+    return fecha.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) { return ''; }
+}
+
+function fmtFechaHora(iso) {
+  if (!iso) return '';
+  try {
+    const fecha = new Date(iso);
+    if (Number.isNaN(fecha.getTime())) return '';
+    return fecha.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
+      + ' · ' + fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   } catch (e) { return ''; }
 }
 
@@ -1950,7 +2014,7 @@ async function cargarListaDocumentos() {
 
     const { data, error } = await window.kwSupabase
       .from('documentos_guardados')
-      .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
+      .select('id, nombre_archivo, created_at, updated_at, datos, folio, estado, revision')
       .eq('user_id', userData.user.id)
       .eq('tipo_documento', TIPO_DOCUMENTO)
       .order('updated_at', { ascending: false });
@@ -2093,9 +2157,12 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
       if (row.folio) metaPartes.push('Folio ' + escapeHtml(row.folio));
       metaPartes.push(numeroRevision === 0 ? 'Original' : 'Revisión ' + numeroRevision);
       if (tieneRevisiones) metaPartes.push(grupo.revisiones.length + (grupo.revisiones.length === 1 ? ' revisión' : ' revisiones'));
-      metaPartes.push(fmtFechaCorta(row.updated_at));
+      metaPartes.push('Creado ' + fmtFechaHora(row.created_at || row.updated_at));
       const menuAbrir = tieneRevisiones
         ? `<button type="button" class="kw-menu-op lista-menu-abrir" data-doc-id="${escapeHtml(row.id)}" role="menuitem">Abrir original</button>`
+        : '';
+      const botonAbrirOriginal = tieneRevisiones
+        ? `<button type="button" class="lista-abrir-original" data-doc-id="${escapeHtml(row.id)}">Abrir original</button>`
         : '';
       const menuEliminar = !listo && numeroRevision === 0
         ? `<button type="button" class="kw-menu-op lista-menu-eliminar" data-doc-id="${escapeHtml(row.id)}" role="menuitem">Eliminar</button>`
@@ -2109,7 +2176,7 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
             const revisionMeta = [
               revision.folio ? 'Folio ' + escapeHtml(revision.folio) : '',
               revisionListaFinalizada ? 'Finalizado' : 'Borrador',
-              fmtFechaCorta(revision.updated_at)
+              'Creado ' + fmtFechaHora(revision.created_at || revision.updated_at)
             ].filter(Boolean).join(' · ');
             return `
           <div class="lista-revision-item" data-doc-id="${escapeHtml(revision.id)}" role="button" tabindex="0">
@@ -2134,6 +2201,7 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
         <span class="kw-fila-texto lista-item-texto">
           <span class="kw-fila-titulo">${escapeHtml(row.nombre_archivo || 'Documento sin nombre')}</span>
           <span class="lista-item-meta">${metaPartes.join(' · ')}</span>
+          ${botonAbrirOriginal}
         </span>
         <span class="kw-acciones">
           <span class="lista-item-menu-ancla">
@@ -2156,12 +2224,18 @@ function pintarColumnaLista(cont, grupos, vacioTexto) {
   Array.from(cont.querySelectorAll('.lista-item-original')).forEach((el) => {
     const grupo = grupos.find((item) => item.original.id === el.dataset.docId);
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.lista-item-menu-ancla') || e.target.closest('.lista-revision-toggle')) return;
+      if (e.target.closest('.lista-item-menu-ancla') || e.target.closest('.lista-revision-toggle') || e.target.closest('.lista-abrir-original')) return;
       if (grupo && grupo.revisiones.length) {
         alternarRevisionesLista(el.closest('.lista-grupo'));
       } else {
         location.assign(location.pathname + '?doc=' + encodeURIComponent(el.dataset.docId));
       }
+    });
+  });
+  Array.from(cont.querySelectorAll('.lista-abrir-original')).forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      location.assign(location.pathname + '?doc=' + encodeURIComponent(btn.dataset.docId));
     });
   });
   Array.from(cont.querySelectorAll('.lista-revision-toggle')).forEach((btn) => {
@@ -2453,7 +2527,7 @@ async function abrirDocumentoPorId(id) {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data, error } = await window.kwSupabase
       .from('documentos_guardados')
-      .select('id, nombre_archivo, updated_at, datos, folio, estado, revision')
+      .select('id, nombre_archivo, created_at, updated_at, datos, folio, estado, revision')
       .eq('id', id)
       .single();
     if (error || !data) throw new Error('No se encontró el documento, o no tienes permiso para verlo.');
