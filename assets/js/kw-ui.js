@@ -951,9 +951,82 @@
     if (corrimiento) menu.style.right = (-corrimiento) + 'px';
   }
 
+  /* Menús de las listas de documentos.
+     Estas listas viven dentro de columnas que tienen su propio scroll y
+     algunas filas entran con animación. Si el menú se queda dentro de una
+     fila, cualquier transform o stacking context de un ancestro puede
+     convertir un position:fixed en una coordenada relativa a otra zona.
+     Al abrirlo lo colgamos temporalmente de body, lo medimos contra el
+     botón y al cerrarlo lo devolvemos a su sitio para que el repintado de
+     la lista no deje nodos huérfanos. */
+  var listaMenuAbierto = null;
+
+  function restaurarMenuLista(menu) {
+    if (!menu) return;
+    menu.hidden = true;
+    var boton = menu._kwListaBoton;
+    if (boton) boton.setAttribute('aria-expanded', 'false');
+
+    var padre = menu._kwListaPadre;
+    if (padre && document.documentElement.contains(padre) && menu.parentNode === document.body) {
+      var siguiente = menu._kwListaSiguiente;
+      if (siguiente && siguiente.parentNode === padre) padre.insertBefore(menu, siguiente);
+      else padre.appendChild(menu);
+    } else if (menu.parentNode === document.body && (!padre || !document.documentElement.contains(padre))) {
+      menu.remove();
+    }
+
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.removeProperty('position');
+    menu._kwListaBoton = null;
+    menu._kwListaPadre = null;
+    menu._kwListaSiguiente = null;
+  }
+
+  function cerrarMenusLista() {
+    document.querySelectorAll('.lista-item-menu:not([hidden])').forEach(restaurarMenuLista);
+    listaMenuAbierto = null;
+  }
+
+  function colocarMenuLista(boton, menu) {
+    var r = boton.getBoundingClientRect();
+    var margen = 8;
+    var alto = menu.offsetHeight;
+    var ancho = menu.offsetWidth;
+    var top = r.bottom + 6;
+    if (top + alto > global.innerHeight - margen) top = r.top - alto - 6;
+    top = Math.max(margen, Math.min(top, global.innerHeight - alto - margen));
+    var left = r.right - ancho;
+    left = Math.max(margen, Math.min(left, global.innerWidth - ancho - margen));
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  }
+
+  function abrirMenuLista(boton, menu) {
+    if (!boton || !menu) return;
+    if (listaMenuAbierto === menu && !menu.hidden) {
+      cerrarMenusLista();
+      return;
+    }
+    cerrarMenusLista();
+    menu._kwListaBoton = boton;
+    menu._kwListaPadre = menu.parentNode;
+    menu._kwListaSiguiente = menu.nextSibling;
+    document.body.appendChild(menu);
+    menu.style.setProperty('position', 'fixed', 'important');
+    menu.style.top = '0px';
+    menu.style.left = '0px';
+    menu.hidden = false;
+    colocarMenuLista(boton, menu);
+    listaMenuAbierto = menu;
+  }
+
   global.kwUI = {
     iniciar: iniciar,
     colgarMenu: colgarMenu,
+    abrirMenuLista: abrirMenuLista,
+    cerrarMenusLista: cerrarMenusLista,
     selects: armarSelects,
     fechas: armarFechas,
     numeros: armarNumeros,

@@ -4880,7 +4880,13 @@
   // fuera se ve como que el botón no hace nada.
   let botonAbierto = null;
 
-  function cerrarFlotante() {
+  function cerrarFlotante(e) {
+    // El mismo clic que abre el menú también llega al documento. Si no se
+    // ignora aquí, la tarjeta se crea y se elimina en el mismo evento.
+    // También dejamos pasar los clics dentro de la tarjeta para que sus
+    // búsquedas y opciones no la cierren antes de ejecutarse.
+    const objetivo = e && e.target && e.target.closest ? e.target : null;
+    if (objetivo && (objetivo.closest('.env-menu-btn') || objetivo.closest('.env-menu'))) return;
     if (flotante) { flotante.remove(); flotante = null; }
     botonAbierto = null;
     tagAbierta = null;
@@ -4917,6 +4923,7 @@
     flotante = caja;
     colocar(caja, boton, ancho);
     caja.addEventListener('click', (e) => e.stopPropagation());
+    caja.addEventListener('pointerdown', (e) => e.stopPropagation());
     return caja;
   }
 
