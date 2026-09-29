@@ -290,7 +290,9 @@ async function traerCatalogoKwMexico(): Promise<{
   marketCenters: Map<string, string>
 }> {
   const primera = await kwJson(KWMEXICO_API_BASE + '?init=0')
-  const dataPrimera = primera.data || {}
+  const dataPrimera = (primera.data && typeof primera.data === 'object'
+    ? primera.data
+    : {}) as KwRegistro
   const loteInicial = kwLista(dataPrimera, 'Properties_Data')
   const total = kwNumero(dataPrimera.Total_Properties) || loteInicial.length
   const paginasTotales = Math.ceil(total / KWMEXICO_PAGE_SIZE)
