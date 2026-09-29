@@ -53,19 +53,6 @@
      z-index del menú desplegable dentro de la barra, y las tarjetas, que
      van después en el HTML, le pasaban por encima. Subiendo la barra
      entera por encima de la lista, los menús vuelven a verse. */
-  .filtros {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 12px;
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-    border-radius: 14px; padding: 16px; margin-bottom: 20px;
-    align-items: end;
-    position: relative; z-index: 30;
-  }
   #lista { position: relative; z-index: 1; }
   .filtro { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   /* `display: flex` le gana al atributo `hidden`, y el filtro de estatus
@@ -99,17 +86,6 @@
   }
   .btn-limpiar:hover { background: #ececec; }
 
-  .btn-mas-filtros {
-    align-self: end; display: inline-flex; align-items: center; gap: 7px;
-    height: var(--control-h); padding: 0 14px;
-    border-radius: var(--r-campo);
-    border: 1.5px solid var(--border); background: #fff;
-    font-size: 12.5px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif;
-    color: var(--text); cursor: pointer; transition: background 0.15s;
-  }
-  .btn-mas-filtros:hover { background: #fafafa; }
-  .btn-mas-filtros .chevron { width: 15px; height: 15px; transition: transform 0.18s; }
-  .btn-mas-filtros[aria-expanded="true"] .chevron { transform: rotate(180deg); }
   .cuenta-filtros[hidden] { display: none; }
   .cuenta-filtros {
     min-width: 18px; height: 18px; padding: 0 5px; border-radius: 20px;
@@ -117,28 +93,86 @@
     display: inline-flex; align-items: center; justify-content: center;
   }
 
-  /* El bloque de abajo se pega visualmente al de arriba cuando se abre.
-     La apertura se anima con grid-template-rows de 0fr a 1fr: es la
-     forma de animar hacia una altura "automática" sin fijar un máximo a
-     mano, que se rompería según cuántos filtros quepan por renglón.
-     Antes solo se prendía y apagaba con [hidden], y por eso la lista de
-     abajo pegaba el brinco. */
-  .extra-wrap {
-    display: grid; grid-template-rows: 0fr;
-    transition: grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative; z-index: 29;
+  /* ── Panel lateral de filtros ── */
+  .propiedades-layout {
+    display: grid;
+    grid-template-columns: minmax(245px, 276px) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
   }
-  .extra-wrap > div { overflow: hidden; min-height: 0; }
-  .extra-wrap.abierto { grid-template-rows: 1fr; }
-  /* El contenido entra un pelín después que la altura, para que no se
-     vea aplastado mientras el bloque todavía se está abriendo. */
-  .extra-wrap .filtros-extra { opacity: 0; transition: opacity 0.22s ease 0.06s; }
-  .extra-wrap.abierto .filtros-extra { opacity: 1; }
-  .filtros-extra { margin-top: -12px; border-top-left-radius: 0; border-top-right-radius: 0; }
-  #filtros:has(+ .extra-wrap.abierto) {
-    margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-    border-bottom-color: transparent;
+  .propiedades-sidebar {
+    position: sticky;
+    top: 78px;
+    z-index: 20;
+    max-height: calc(100vh - 98px);
+    overflow-y: auto;
+    padding: 18px;
+    border: 1px solid rgba(255,255,255,0.84);
+    border-radius: 16px;
+    background: radial-gradient(70% 42% at 90% 0%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0) 72%), linear-gradient(145deg, rgba(255,255,255,0.88), rgba(255,255,255,0.68));
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(35,27,27,0.06);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(138,0,0,0.22) transparent;
   }
+  .propiedades-sidebar-cabecera {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    margin-bottom: 15px;
+  }
+  .propiedades-sidebar-kicker {
+    display: block; margin-bottom: 3px;
+    color: var(--red); font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .propiedades-sidebar h2 {
+    color: var(--text); font-size: 17px; line-height: 1.2; letter-spacing: -0.25px;
+  }
+  .propiedades-buscador {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 42px; padding: 0 11px;
+    border: 1.5px solid rgba(0,0,0,0.11); border-radius: 10px;
+    background: rgba(255,255,255,0.78); color: var(--muted);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .propiedades-buscador:focus-within {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08);
+  }
+  .propiedades-buscador input {
+    width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: inherit; font-size: 12.5px;
+  }
+  .propiedades-buscador input::placeholder { color: #92908f; }
+  .filtros-sidebar { display: flex; flex-direction: column; }
+  .filtro-seccion { padding: 17px 0 15px; border-top: 1px solid rgba(0,0,0,0.08); }
+  .filtro-seccion:first-child { border-top: 0; }
+  .filtro-seccion h3 {
+    margin-bottom: 11px; color: var(--text); font-size: 10.5px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  #filtros .filtro { width: 100%; min-width: 0; margin-top: 10px; }
+  #filtros .filtro:first-of-type { margin-top: 0; }
+  #filtros .filtro label { font-size: 10px; }
+  #filtros .filtro input,
+  #filtros .filtro select {
+    width: 100%; min-width: 0; height: 40px; padding: 0 10px;
+    font-size: 12px; background: rgba(255,255,255,0.9);
+  }
+  #filtros .rango { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  #filtros .filtro-rango { margin-top: 0; }
+  .filtro-ayuda { margin-top: 9px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+  .filtros-dos-columnas {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; margin-top: 12px;
+  }
+  .filtros-dos-columnas .filtro { margin-top: 0 !important; }
+  .filtro-seccion-final { padding-bottom: 0; }
+  #filtros .btn-limpiar { width: 100%; margin-top: 12px; }
+  .resultados-cabecera {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 32px; margin-bottom: 10px;
+  }
+  .resultados-cabecera .conteo { margin-bottom: 0; }
+  .resultado-nota { color: var(--muted); font-size: 11px; white-space: nowrap; }
 
   .prop-pie {
     font-size: 11.5px; color: var(--muted); margin-top: 8px;
@@ -250,6 +284,11 @@
   .paginacion-info { color: var(--muted); font-size: 12px; margin: 0 7px; }
 
   @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 900px) {
+    .propiedades-layout { grid-template-columns: 1fr; gap: 18px; }
+    .propiedades-sidebar { position: relative; top: auto; max-height: none; overflow: visible; }
+    .propiedades-sidebar-cabecera { margin-bottom: 13px; }
+  }
   @media (max-width: 640px) {
     /* El título se va al header (kw-header-title), así que aquí solo
        hay que dejar el aire de la barra fija. */
@@ -269,8 +308,9 @@
     /* Dos filtros por renglón fijos. Con `auto-fill` dependía del ancho
        exacto del teléfono: en uno de 480px salían dos y en uno de 412px
        uno solo, y la tarjeta se estiraba a lo largo. */
-    .filtros { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .filtro { min-width: 0; }
+    .propiedades-sidebar { padding: 15px; }
+    .resultados-cabecera { align-items: flex-start; }
+    .resultado-nota { display: none; }
   }
 </style>
 </head>
@@ -293,109 +333,139 @@
 
     <div class="banner-ref" id="banner-ref" style="display:none;"></div>
 
-    <div class="filtros" id="filtros" autocomplete="off">
-      <div class="filtro">
-        <label for="f-buscar">Buscar</label>
-        <input type="search" id="f-buscar" placeholder="Título, colonia, calle…" />
-      </div>
-      <div class="filtro">
-        <label for="f-operacion">Operación</label>
-        <select id="f-operacion">
-          <option value="">Todas</option>
-          <option value="venta">Venta</option>
-          <option value="renta">Renta</option>
-        </select>
-      </div>
-      <div class="filtro">
-        <label for="f-mc">Market Center</label>
-        <select id="f-mc"><option value="">Todos</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-asesor">Asesor</label>
-        <select id="f-asesor"><option value="">Todos</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-tipo">Tipo de propiedad</label>
-        <select id="f-tipo"><option value="">Todos</option></select>
-      </div>
-      <!-- El estatus solo tiene sentido para quien trabaja aquí; hacia
-           afuera solo existe lo publicado, así que se muestra únicamente
-           con sesión iniciada (ver cargar). -->
-      <div class="filtro" id="filtro-estatus" hidden>
-        <label for="f-estatus">Estatus</label>
-        <select id="f-estatus">
-          <option value="publicada">Activa</option>
-          <option value="vendida">Vendida</option>
-          <option value="rentada">Rentada</option>
-          <option value="no_publicada">Borrador</option>
-          <option value="reservada">Reservada</option>
-          <option value="suspendida">Suspendida</option>
-          <option value="">Todos los estatus</option>
-        </select>
-      </div>
-      <button type="button" class="btn-mas-filtros" id="btn-mas-filtros"
-              aria-expanded="false" aria-controls="filtros-extra">
-        <span id="txt-mas-filtros">Más opciones</span>
-        <span class="cuenta-filtros" id="cuenta-filtros" hidden></span>
-        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      </button>
-    </div>
-
-    <div class="extra-wrap" id="extra-wrap"><div>
-    <div class="filtros filtros-extra" id="filtros-extra">
-      <div class="filtro">
-        <label for="f-estado">Ciudad / Estado</label>
-        <select id="f-estado"><option value="">Todas</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-municipio">Alcaldía / Municipio</label>
-        <select id="f-municipio"><option value="">Todas</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-colonia">Colonia</label>
-        <select id="f-colonia"><option value="">Todas</option></select>
-      </div>
-      <div class="filtro filtro-rango">
-        <label>Precio</label>
-        <div class="rango">
-          <input type="number" id="f-min" placeholder="Desde" min="0" step="100000" />
-          <input type="number" id="f-max" placeholder="Hasta" min="0" step="100000" />
+    <div class="propiedades-layout">
+      <aside class="propiedades-sidebar" id="filtros" aria-label="Filtros de propiedades" autocomplete="off">
+        <div class="propiedades-sidebar-cabecera">
+          <div>
+            <span class="propiedades-sidebar-kicker">Inventario interno</span>
+            <h2>Buscar propiedades</h2>
+          </div>
+          <span class="cuenta-filtros" id="cuenta-filtros" hidden></span>
         </div>
-      </div>
-      <div class="filtro">
-        <label for="f-recamaras">Recámaras (mín.)</label>
-        <select id="f-recamaras"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-banos">Baños (mín.)</label>
-        <select id="f-banos"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-estacionamientos">Estacionamientos (mín.)</label>
-        <select id="f-estacionamientos"><option value="">Cualquiera</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
-      </div>
-      <div class="filtro">
-        <label for="f-m2">m² construcción (mín.)</label>
-        <input type="number" id="f-m2" placeholder="Sin mínimo" min="0" step="10" />
-      </div>
-      <div class="filtro">
-        <label for="f-orden">Ordenar por</label>
-        <select id="f-orden">
-          <option value="reciente">Más recientes</option>
-          <option value="precio-asc">Precio: menor a mayor</option>
-          <option value="precio-desc">Precio: mayor a menor</option>
-          <option value="m2-desc">Más grandes</option>
-        </select>
-      </div>
-      <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
-    </div>
-    </div></div>
 
-<div class="conteo" id="conteo"></div>
+        <label class="propiedades-buscador" for="f-buscar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.7" y2="16.7"></line>
+          </svg>
+          <input type="search" id="f-buscar" placeholder="Título, asesor o dirección" autocomplete="off" />
+        </label>
 
-    <div class="grid" id="lista">
-      <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+        <div class="filtros-sidebar">
+          <section class="filtro-seccion">
+            <h3>Operación y origen</h3>
+            <div class="filtro">
+              <label for="f-operacion">Tipo de operación</label>
+              <select id="f-operacion">
+                <option value="">Todas</option>
+                <option value="venta">Venta</option>
+                <option value="renta">Renta</option>
+              </select>
+            </div>
+            <div class="filtro">
+              <label for="f-mc">Market Center</label>
+              <input type="search" id="f-mc" list="lista-mc" placeholder="Todos" autocomplete="off" />
+              <datalist id="lista-mc"></datalist>
+            </div>
+            <div class="filtro">
+              <label for="f-asesor">Asesor</label>
+              <input type="search" id="f-asesor" list="lista-asesores" placeholder="Todos" autocomplete="off" />
+              <datalist id="lista-asesores"></datalist>
+            </div>
+            <div class="filtro">
+              <label for="f-tipo">Tipo de propiedad</label>
+              <input type="search" id="f-tipo" list="lista-tipos" placeholder="Todos" autocomplete="off" />
+              <datalist id="lista-tipos"></datalist>
+            </div>
+            <div class="filtro" id="filtro-estatus" hidden>
+              <label for="f-estatus">Estatus</label>
+              <select id="f-estatus">
+                <option value="publicada">Activa</option>
+                <option value="vendida">Vendida</option>
+                <option value="rentada">Rentada</option>
+                <option value="no_publicada">Borrador</option>
+                <option value="reservada">Reservada</option>
+                <option value="suspendida">Suspendida</option>
+                <option value="">Todos los estatus</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="filtro-seccion">
+            <h3>Ubicación</h3>
+            <div class="filtro">
+              <label for="f-estado">Estado / ciudad</label>
+              <input type="search" id="f-estado" list="lista-estados" placeholder="Todas" autocomplete="off" />
+              <datalist id="lista-estados"></datalist>
+            </div>
+            <div class="filtro">
+              <label for="f-municipio">Alcaldía / municipio</label>
+              <input type="search" id="f-municipio" list="lista-municipios" placeholder="Todas" autocomplete="off" />
+              <datalist id="lista-municipios"></datalist>
+            </div>
+            <div class="filtro">
+              <label for="f-colonia">Colonia</label>
+              <input type="search" id="f-colonia" list="lista-colonias" placeholder="Todas" autocomplete="off" />
+              <datalist id="lista-colonias"></datalist>
+            </div>
+            <p class="filtro-ayuda">Las opciones se ajustan según la ubicación anterior.</p>
+          </section>
+
+          <section class="filtro-seccion">
+            <h3>Características</h3>
+            <div class="filtro filtro-rango">
+              <label>Precio</label>
+              <div class="rango">
+                <input type="number" id="f-min" placeholder="Desde" min="0" step="100000" aria-label="Precio mínimo" />
+                <input type="number" id="f-max" placeholder="Hasta" min="0" step="100000" aria-label="Precio máximo" />
+              </div>
+            </div>
+            <div class="filtros-dos-columnas">
+              <div class="filtro">
+                <label for="f-recamaras">Recámaras mín.</label>
+                <input type="number" id="f-recamaras" list="lista-recamaras" placeholder="Cualquiera" min="0" step="1" />
+                <datalist id="lista-recamaras"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option></datalist>
+              </div>
+              <div class="filtro">
+                <label for="f-banos">Baños mín.</label>
+                <input type="number" id="f-banos" list="lista-banos" placeholder="Cualquiera" min="0" step="0.5" />
+                <datalist id="lista-banos"><option value="1"></option><option value="1.5"></option><option value="2"></option><option value="2.5"></option><option value="3"></option><option value="4"></option></datalist>
+              </div>
+              <div class="filtro">
+                <label for="f-estacionamientos">Estacionamientos mín.</label>
+                <input type="number" id="f-estacionamientos" list="lista-estacionamientos" placeholder="Cualquiera" min="0" step="1" />
+                <datalist id="lista-estacionamientos"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
+              </div>
+              <div class="filtro">
+                <label for="f-m2">m² construcción mín.</label>
+                <input type="number" id="f-m2" placeholder="Cualquiera" min="0" step="10" />
+              </div>
+            </div>
+          </section>
+
+          <section class="filtro-seccion filtro-seccion-final">
+            <div class="filtro">
+              <label for="f-orden">Ordenar por</label>
+              <select id="f-orden">
+                <option value="reciente">Más recientes</option>
+                <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="precio-desc">Precio: mayor a menor</option>
+                <option value="m2-desc">Más grandes</option>
+              </select>
+            </div>
+            <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
+          </section>
+        </div>
+      </aside>
+
+      <section class="propiedades-resultados" aria-live="polite">
+        <div class="resultados-cabecera">
+          <div class="conteo" id="conteo"></div>
+          <span class="resultado-nota">20 por página</span>
+        </div>
+        <div class="grid" id="lista">
+          <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -496,6 +566,19 @@
     return isFinite(n) && n > 0 ? n : 0;
   }
 
+  function normalizarTexto(valor) {
+    return String(valor == null ? '' : valor)
+      .toLocaleLowerCase('es-MX')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // Los campos con datalist aceptan tanto una opción como texto escrito a
+  // mano. Por eso los filtros de catálogo buscan coincidencias parciales.
+  function coincide(valor, filtro) {
+    return !filtro || normalizarTexto(valor).indexOf(normalizarTexto(filtro)) !== -1;
+  }
+
   function ordenar(lista, modo) {
     var copia = lista.slice();
     if (modo === 'precio-asc') {
@@ -529,12 +612,12 @@
     var vis = todas.filter(function (p) {
       if (op && p.operacion !== op) return false;
       if (estatus && p.estatus !== estatus) return false;
-      if (tipo && p.tipo !== tipo) return false;
-      if (mc && p.market_center !== mc) return false;
-      if (asesor && p.asesor_nombre !== asesor) return false;
-      if (estado && p.estado !== estado) return false;
-      if (municipio && p.municipio !== municipio) return false;
-      if (colonia && p.colonia !== colonia) return false;
+      if (tipo && !coincide(p.tipo, tipo)) return false;
+      if (mc && !coincide(p.market_center, mc)) return false;
+      if (asesor && !coincide(p.asesor_nombre, asesor)) return false;
+      if (estado && !coincide(p.estado, estado)) return false;
+      if (municipio && !coincide(p.municipio, municipio)) return false;
+      if (colonia && !coincide(p.colonia, colonia)) return false;
       if (minPrecio && Number(p.precio || 0) < minPrecio) return false;
       if (maxPrecio && Number(p.precio || 0) > maxPrecio) return false;
       if (rec && Number(p.recamaras || 0) < rec) return false;
@@ -542,9 +625,10 @@
       if (est && Number(p.estacionamientos || 0) < est) return false;
       if (m2 && Number(p.m2_construccion || 0) < m2) return false;
       if (texto) {
-        var donde = [p.titulo, p.calle, p.colonia, p.municipio, p.estado, p.tipo, p.asesor_nombre]
-          .filter(Boolean).join(' ').toLowerCase();
-        if (donde.indexOf(texto) === -1) return false;
+        var donde = [p.titulo, p.asesor_nombre, p.calle, p.colonia, p.municipio,
+          p.estado, p.cp, p.tipo, p.market_center]
+          .filter(Boolean).join(' ');
+        if (normalizarTexto(donde).indexOf(normalizarTexto(texto)) === -1) return false;
       }
       return true;
     });
@@ -616,9 +700,14 @@
     if (lista) lista.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function repintarDesdeFiltro() {
+  var repintadoPendiente = null;
+  function repintarDesdeFiltro(evento) {
     paginaActual = 1;
-    pintar();
+    if (evento && (evento.target.id === 'f-estado' || evento.target.id === 'f-municipio')) {
+      actualizarListasUbicacion(evento.target.id);
+    }
+    window.clearTimeout(repintadoPendiente);
+    repintadoPendiente = window.setTimeout(pintar, 90);
   }
 
   // Si hay filtros aplicados dentro del plegable, se avisa con un número:
@@ -626,13 +715,16 @@
   // Solo los que viven dentro del plegable: Market Center y Asesor ya
   // están a la vista en la barra, así que contarlos aquí marcaría el
   // aviso por un filtro que la persona sí puede ver.
-  var CAMPOS_EXTRA = ['f-estado', 'f-municipio', 'f-colonia',
-                      'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'];
+  var CAMPOS_FILTRO = ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor',
+                       'f-estado', 'f-municipio', 'f-colonia', 'f-min', 'f-max',
+                       'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'];
 
   function marcarFiltrosEscondidos() {
-    var puestos = CAMPOS_EXTRA.filter(function (id) { return val(id) !== ''; }).length;
+    var puestos = CAMPOS_FILTRO.filter(function (id) { return val(id) !== ''; }).length;
     if (val('f-orden') !== 'reciente') puestos++;
+    if (val('f-estatus') && val('f-estatus') !== 'publicada') puestos++;
     var chip = document.getElementById('cuenta-filtros');
+    if (!chip) return;
     chip.textContent = puestos;
     chip.hidden = puestos === 0;
   }
@@ -649,42 +741,65 @@
     // normal es querer ver lo que sí está a la venta.
     var e = document.getElementById('f-estatus');
     if (e) e.value = 'publicada';
+    actualizarListasUbicacion();
     repintarDesdeFiltro();
   }
 
-  function llenarSelect(id, valores) {
-    var sel = document.getElementById(id);
-    if (!sel) return;
+  function llenarDatalist(id, valores) {
+    var lista = document.getElementById(id);
+    if (!lista) return;
+    lista.innerHTML = '';
     valores.sort(function (a, b) { return String(a).localeCompare(String(b), 'es'); })
       .forEach(function (v) {
         var o = document.createElement('option');
-        o.value = v; o.textContent = v;
-        sel.appendChild(o);
+        o.value = v;
+        lista.appendChild(o);
       });
   }
 
-  function distintos(campo) {
+  function distintos(campo, predicado) {
     var vistos = {};
     todas.forEach(function (p) {
+      if (predicado && !predicado(p)) return;
       var v = p[campo];
       if (v !== null && v !== undefined && String(v).trim() !== '') vistos[v] = true;
     });
     return Object.keys(vistos);
   }
 
-  // Las listas se arman con lo que de verdad hay en el inventario, no con
-  // catálogos fijos: cuando llegue lo de Command, los valores salen solos.
+  function actualizarListasUbicacion(campoOrigen) {
+    if (campoOrigen === 'f-estado') {
+      var municipioEl = document.getElementById('f-municipio');
+      var coloniaEl = document.getElementById('f-colonia');
+      if (municipioEl) municipioEl.value = '';
+      if (coloniaEl) coloniaEl.value = '';
+    } else if (campoOrigen === 'f-municipio') {
+      var coloniaDependiente = document.getElementById('f-colonia');
+      if (coloniaDependiente) coloniaDependiente.value = '';
+    }
+    var estado = val('f-estado');
+    var municipio = val('f-municipio');
+    llenarDatalist('lista-estados', distintos('estado'));
+    llenarDatalist('lista-municipios', distintos('municipio', function (p) {
+      return coincide(p.estado, estado);
+    }));
+    llenarDatalist('lista-colonias', distintos('colonia', function (p) {
+      return coincide(p.estado, estado) && coincide(p.municipio, municipio);
+    }));
+  }
+
+  // Las listas se arman con lo que de verdad hay en el inventario. Las de
+  // ubicación se recalculan para que municipio y colonia dependan del campo
+  // anterior, igual que en un portal inmobiliario.
   function llenarListas() {
-    llenarSelect('f-tipo', distintos('tipo'));
-    llenarSelect('f-mc', distintos('market_center'));
-    llenarSelect('f-asesor', distintos('asesor_nombre'));
-    llenarSelect('f-estado', distintos('estado'));
-    llenarSelect('f-municipio', distintos('municipio'));
-    llenarSelect('f-colonia', distintos('colonia'));
+    llenarDatalist('lista-tipos', distintos('tipo'));
+    llenarDatalist('lista-mc', distintos('market_center'));
+    llenarDatalist('lista-asesores', distintos('asesor_nombre'));
+    actualizarListasUbicacion();
   }
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
-               'estacionamientos, m2_construccion, calle, colonia, municipio, estado, ' +
+               'estacionamientos, m2_construccion, calle, colonia, municipio, estado, cp, ' +
                'imagenes, asesor_nombre, market_center, updated_at';
 
   function pintarBannerRef(asesor) {
@@ -707,10 +822,8 @@
   }
 
   function cambiarEstadoFiltros(cargando) {
-    document.querySelectorAll('#filtros input, #filtros select, #filtros-extra input, #filtros-extra select')
+    document.querySelectorAll('#filtros input, #filtros select')
       .forEach(function (el) { el.disabled = cargando; });
-    var mas = document.getElementById('btn-mas-filtros');
-    if (mas) mas.disabled = cargando;
   }
 
   function consultaPropiedades(desde, hasta, contar) {
@@ -764,10 +877,14 @@
     var cont = document.getElementById('lista');
     cambiarEstadoFiltros(true);
     try {
-      var r = await consultaPropiedades(0, PROPIEDADES_POR_PAGINA - 1, true);
+      // La primera página y el conteo viajan en paralelo. Así la persona ve
+      // tarjetas en cuanto llega el primer lote, sin esperar el count exacto.
+      var primeraPaginaPromise = consultaPropiedades(0, PROPIEDADES_POR_PAGINA - 1, false);
+      var totalPromise = consultaPropiedades(0, 0, true);
+      var r = await primeraPaginaPromise;
       if (r.error) throw r.error;
       var loteInicial = r.data || [];
-      totalCatalogo = Number(r.count) || 0;
+      totalCatalogo = 0;
 
       document.getElementById('filtro-estatus').hidden = false;
       todas = loteInicial;
@@ -784,6 +901,9 @@
       paginaActual = 1;
       pintar();
 
+      var totalR = await totalPromise;
+      if (totalR.error) throw totalR.error;
+      totalCatalogo = Number(totalR.count) || todas.length;
       var resto = await cargarResto(PROPIEDADES_POR_PAGINA, totalCatalogo);
       todas = todas.concat(resto);
       totalCatalogo = todas.length;
@@ -800,36 +920,11 @@
     }
   }
 
-  ['filtros', 'filtros-extra'].forEach(function (id) {
-    var caja = document.getElementById(id);
-    caja.addEventListener('change', repintarDesdeFiltro);
-    caja.addEventListener('input', repintarDesdeFiltro);
-  });
-
-  // Los filtros de siempre quedan a la vista y el resto se despliega, para
-  // que la barra no llegue saturada de entrada.
-  document.getElementById('btn-mas-filtros').addEventListener('click', function () {
-    var wrap = document.getElementById('extra-wrap');
-    var caja = wrap.firstElementChild;
-    var abierto = wrap.classList.toggle('abierto');
-    this.setAttribute('aria-expanded', String(abierto));
-    document.getElementById('txt-mas-filtros').textContent = abierto ? 'Menos opciones' : 'Más opciones';
-
-    // El overflow:hidden es lo que deja animar la altura, pero también
-    // recorta los menús de los filtros de adentro. Se suelta en cuanto
-    // termina de abrir y se vuelve a poner al cerrar. Se revisa que
-    // siga abierto por si alguien alcanzó a cerrarlo antes de que
-    // terminara la animación.
-    if (abierto) {
-      wrap.addEventListener('transitionend', function unaVez(e) {
-        if (e.target !== wrap) return;
-        wrap.removeEventListener('transitionend', unaVez);
-        if (wrap.classList.contains('abierto')) caja.style.overflow = 'visible';
-      });
-    } else {
-      caja.style.overflow = '';
-    }
-  });
+  var cajaFiltros = document.getElementById('filtros');
+  if (cajaFiltros) {
+    cajaFiltros.addEventListener('change', repintarDesdeFiltro);
+    cajaFiltros.addEventListener('input', repintarDesdeFiltro);
+  }
 
   if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
