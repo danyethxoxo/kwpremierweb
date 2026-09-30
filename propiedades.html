@@ -1049,6 +1049,23 @@
   var temporizadorPaginaServidor = null;
   var catalogoServidorVersion = 0;
   var catalogosServidor = {};
+  var versionesCatalogoRelacionado = {};
+  var actualizandoRelaciones = false;
+  var versionUbicacion = 0;
+  function ubicacionColonia(valor) {
+    if (String(valor).indexOf('ubic:') !== 0) return null;
+    try { return JSON.parse(valor.slice(5)); } catch (error) { return null; }
+  }
+  function ponerFiltroRelacionado(id, valor) {
+    var select = document.getElementById(id);
+    if (valor && !Array.from(select.options).some(function (o) { return o.value === valor; })) {
+      select.add(new Option(valor, valor));
+    }
+    select.value = valor || '';
+    actualizandoRelaciones = true;
+    try { select.dispatchEvent(new Event('change', { bubbles: true })); }
+    finally { actualizandoRelaciones = false; }
+  }
   var CAMPOS_CATALOGO_SERVIDOR = {
     'f-tipo': 'tipo',
     'f-mc': 'market_center',
@@ -1077,7 +1094,7 @@
       asesor: val('f-asesor'),
       estado: val('f-estado'),
       municipio: val('f-municipio'),
-      colonia: val('f-colonia'),
+      colonia: (ubicacionColonia(val('f-colonia')) || {}).colonia || val('f-colonia'),
       minimo: num('f-min'),
       maximo: num('f-max'),
       recamaras: num('f-recamaras'),
@@ -1161,30 +1178,93 @@
   }
 
   async function cargarCatalogoServidor(id, campo, version) {
+    var revision = (versionesCatalogoRelacionado[id] || 0) + 1;
+    versionesCatalogoRelacionado[id] = revision;
     var desde = 0;
     var select = document.getElementById(id);
     var textoVacio = (id === 'f-estado' || id === 'f-municipio' || id === 'f-colonia') ? 'Todas' : 'Todos';
+    var contexto = { mc: val('f-mc'), estado: val('f-estado'), municipio: val('f-municipio') };
+    var valores = new Set();
+    var colonias = new Map();
+    if (select) select.setAttribute('aria-busy', 'true');
 
-    while (version === catalogoServidorVersion) {
-      var respuesta = await sb.from('propiedades_inventario')
-        .select(campo)
+    while (version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
+      var consulta = sb.from('propiedades_inventario')
+        .select(id === 'f-colonia' ? 'colonia, municipio, estado' : campo)
         .eq('fuente', 'kwmexico')
         .not(campo, 'is', null)
         .order(campo, { ascending: true })
+        .order('id', { ascending: true })
         .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
+      if (id === 'f-asesor' && contexto.mc) consulta = consulta.eq('market_center', contexto.mc);
+      if ((id === 'f-municipio' || id === 'f-colonia') && contexto.estado) consulta = consulta.eq('estado', contexto.estado);
+      if (id === 'f-colonia' && contexto.municipio) consulta = consulta.eq('municipio', contexto.municipio);
+      var respuesta = await consulta;
       if (respuesta.error) throw respuesta.error;
+      if (revision !== versionesCatalogoRelacionado[id] || version !== catalogoServidorVersion) return;
 
       var lote = respuesta.data || [];
-      opcionesCatalogoActualizadas(campo, lote);
-      if (select && version === catalogoServidorVersion) {
-        llenarSelect(id, catalogosServidor[campo], textoVacio);
+      lote.forEach(function (fila) {
+        if (!fila[campo]) return;
+        if (id === 'f-colonia') {
+          var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
+          colonias.set('ubic:' + JSON.stringify(lugar), lugar);
+        } else valores.add(String(fila[campo]));
+      });
+      if (select) {
+        var anterior = select.value;
+        if (id === 'f-colonia') {
+          var opciones = Array.from(colonias.entries()).sort(function (a, b) { return a[1].colonia.localeCompare(b[1].colonia, 'es'); });
+          select.replaceChildren(new Option(textoVacio, ''));
+          opciones.forEach(function (entrada) {
+            var lugar = entrada[1];
+            select.add(new Option([lugar.colonia, lugar.municipio, lugar.estado].filter(Boolean).join(' · '), entrada[0]));
+          });
+        } else llenarSelect(id, Array.from(valores), textoVacio);
+        // No perder una selección mientras todavía llegan bloques del catálogo.
+        if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) {
+          var lugarAnterior = ubicacionColonia(anterior);
+          select.add(new Option(lugarAnterior ? lugarAnterior.colonia : anterior, anterior));
+        }
+        select.value = anterior;
       }
       if (lote.length < TAMANO_LOTE_CATALOGO) break;
       desde += lote.length;
     }
 
-    if (select && version === catalogoServidorVersion) {
+    if (select && version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
       select.removeAttribute('aria-busy');
+    }
+  }
+
+  function refrescarRelacionado(id) {
+    var select = document.getElementById(id);
+    var elegida = select.options[select.selectedIndex];
+    var conservar = elegida && elegida.value ? new Option(elegida.textContent, elegida.value, false, true) : null;
+    select.replaceChildren(new Option(id === 'f-asesor' ? 'Todos' : 'Todas', ''));
+    if (conservar) select.add(conservar);
+    return cargarCatalogoServidor(id, CAMPOS_CATALOGO_SERVIDOR[id], catalogoServidorVersion).catch(function (error) {
+      document.getElementById(id).removeAttribute('aria-busy');
+      console.warn('No se pudo actualizar ' + id, error);
+    });
+  }
+
+  async function completarCiudadMunicipio(municipio, revision) {
+    var estados = new Set();
+    for (var desde = 0; ; desde += TAMANO_LOTE_CATALOGO) {
+      var respuesta = await sb.from('propiedades_inventario').select('estado')
+        .eq('fuente', 'kwmexico').eq('municipio', municipio).order('id')
+        .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
+      if (respuesta.error) throw respuesta.error;
+      if (revision !== versionUbicacion) return;
+      (respuesta.data || []).forEach(function (fila) { if (fila.estado) estados.add(fila.estado); });
+      if ((respuesta.data || []).length < TAMANO_LOTE_CATALOGO) break;
+    }
+    if (estados.size === 1 && revision === versionUbicacion) {
+      ponerFiltroRelacionado('f-estado', Array.from(estados)[0]);
+      refrescarRelacionado('f-municipio');
+      refrescarRelacionado('f-colonia');
+      programarCargaServidor();
     }
   }
 
@@ -1305,13 +1385,33 @@
   };
 
   repintarDesdeFiltro = function (evento) {
-    if (evento && evento.target.id === 'f-estado') {
-      document.getElementById('f-municipio').value = '';
-      document.getElementById('f-colonia').value = '';
-      document.getElementById('f-municipio').dispatchEvent(new Event('change', { bubbles: true }));
-    } else if (evento && evento.target.id === 'f-municipio') {
-      document.getElementById('f-colonia').value = '';
-      document.getElementById('f-colonia').dispatchEvent(new Event('change', { bubbles: true }));
+    if (actualizandoRelaciones) return;
+    var id = evento && evento.target.id;
+    // Los selects nativos disparan input y change; procesar cada elección una sola vez.
+    if (evento && evento.type === 'input' && evento.target.tagName === 'SELECT') return;
+    if (id === 'f-mc') {
+      ponerFiltroRelacionado('f-asesor', '');
+      refrescarRelacionado('f-asesor');
+    } else if (id === 'f-estado') {
+      ++versionUbicacion;
+      ponerFiltroRelacionado('f-municipio', '');
+      ponerFiltroRelacionado('f-colonia', '');
+      refrescarRelacionado('f-municipio');
+      refrescarRelacionado('f-colonia');
+    } else if (id === 'f-municipio') {
+      var revision = ++versionUbicacion;
+      ponerFiltroRelacionado('f-colonia', '');
+      refrescarRelacionado('f-colonia');
+      if (val('f-municipio') && !val('f-estado')) completarCiudadMunicipio(val('f-municipio'), revision).catch(console.warn);
+    } else if (id === 'f-colonia') {
+      ++versionUbicacion;
+      var lugar = ubicacionColonia(val('f-colonia'));
+      if (lugar) {
+        ponerFiltroRelacionado('f-estado', lugar.estado);
+        ponerFiltroRelacionado('f-municipio', lugar.municipio);
+        refrescarRelacionado('f-municipio');
+        refrescarRelacionado('f-colonia');
+      }
     }
     programarCargaServidor();
   };
