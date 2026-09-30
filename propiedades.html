@@ -296,11 +296,14 @@
   .resultado-nota { color: var(--muted); font-size: 11px; white-space: nowrap; }
 
   .prop-pie {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start;
     font-size: 11.5px; color: var(--muted); margin-top: 8px;
     line-height: 1.5; min-height: calc(1.5em + 9px);
     padding-top: 8px; border-top: 1px solid var(--border);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    overflow: hidden;
   }
+  .prop-pie span { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .prop-asesor { text-align: right; }
 
   .conteo {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -774,7 +777,8 @@
         escapeHtml(ETIQUETA_ESTATUS[p.estatus] || p.estatus) + '</span>'
       : '';
 
-    var pie = [p.asesor_nombre, nombreMarketCenter(p.market_center)].filter(Boolean).join(' · ');
+    var pie = '<span class="prop-market-center">' + escapeHtml(nombreMarketCenter(p.market_center)) + '</span>' +
+      '<span class="prop-asesor">' + escapeHtml(p.asesor_nombre || '') + '</span>';
 
     var enlacePropiedad = p.enlace_kw || (p.fuente === 'kwmexico' && p.fuente_id
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
@@ -789,7 +793,7 @@
         '<div class="prop-titulo">' + escapeHtml(p.titulo) + '</div>' +
         '<div class="prop-ubic">' + (ubic ? ICO.pin + '<span class="prop-ubic-texto">' + escapeHtml(ubic) + '</span>' : '') + '</div>' +
         '<div class="prop-datos">' + datos.join('') + '</div>' +
-        '<div class="prop-pie">' + escapeHtml(pie) + '</div>' +
+        '<div class="prop-pie">' + pie + '</div>' +
       '</div>' +
     '</a>';
   }
