@@ -128,6 +128,25 @@
     .match-desglose p { margin: 6px 0; }
     @media(max-width:640px) { .clientes-tabla .cliente { flex-wrap: wrap; gap: 8px; } .cliente-info { flex-basis: 100%; } }
     @media(max-width:640px) { .page { padding: 84px 14px 40px; } .panel { padding: 18px; } .campos { grid-template-columns: 1fr; } h1 { font-size: 23px; } }
+    .matches-grid { grid-template-columns: repeat(5,minmax(0,1fr)); justify-content: start; gap: 14px; overflow-x: auto; padding: 8px 0; }
+    .match-prop { position: relative; height: 540px; max-width: none; perspective: 1000px; overflow: hidden; }
+    .match-giro { height: 100%; width: 100%; position: relative; transform-style: preserve-3d; transition: transform .55s ease; }
+    .match-prop.girada .match-giro { transform: rotateY(180deg); }
+    .match-frente,.match-atras { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; background: #fff; }
+    .match-frente { display: flex; flex-direction: column; }
+    .match-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .match-titulo { display: -webkit-box !important; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .match-foto { height: 210px; flex-shrink: 0; }
+    .match-atras { transform: rotateY(180deg); overflow-y: auto; padding: 20px 16px; font-size: 12px; }
+    .match-atras h3 { color: var(--match-color); font-size: 17px; margin: 0 0 18px; }
+    .match-atras p { border-bottom: 1px solid var(--border); padding: 8px 0; line-height: 1.5; }
+    .clientes-tabla .match-ver { margin-top: auto; width: 100%; min-height: 34px; border-color: var(--match-color); color: var(--match-color); background: #fff; border-radius: 9px; }
+    .match-carrusel-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; font-size: 12px; color: var(--muted); }
+    .clientes-tabla .match-carrusel-nav button { width: 40px; height: 40px; border-radius: 50%; font-size: 22px; padding: 0; }
+    .pagina-entra { animation: match-pagina .25s ease; }
+    @keyframes match-pagina { from { opacity: .4; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+    @media(max-width:1200px) { .matches-grid { grid-template-columns: repeat(5,220px); } }
+    @media(prefers-reduced-motion:reduce) { .match-giro { transition: none; } .pagina-entra { animation: none; } }
   </style>
 </head>
 <body class="comprador-pagina" data-vista-comprador="clientes">
@@ -173,7 +192,7 @@
   <script src="/assets/js/kw-ui.js?v=20260922"></script>
   <script src="/assets/js/kw-sitio-asesor.js"></script>
   <script src="/assets/js/comprador-matches.js?v=20260930c"></script>
-  <script src="/assets/js/perfil-comprador.js?v=20260930m"></script>
+  <script src="/assets/js/perfil-comprador.js?v=20260930n"></script>
   <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
 </body>
 </html>

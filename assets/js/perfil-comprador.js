@@ -267,9 +267,20 @@
     agregarTexto(body,'div',[p.colonia,p.municipio].filter(Boolean).join(', ')).className = 'match-ubic';
     agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
     var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); agregarTexto(pie,'span',p.asesor_nombre || ''); body.append(pie);
-    var desglose = document.createElement('details'); desglose.className = 'match-desglose'; agregarTexto(desglose,'summary',match.porcentaje + '% de compatibilidad · Ver desglose');
+    var interior = document.createElement('div'); interior.className = 'match-giro';
+    var frente = document.createElement('div'); frente.className = 'match-frente';
+    var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
+    agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
     match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ': ' + c.detalle + ' · ' + c.aporte + '/' + c.peso + ' puntos'); });
-    body.append(desglose); card.append(foto,body); padre.append(card);
+    var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
+    var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
+    function girar(atras) {
+      card.classList.toggle('girada',atras); frente.inert = atras; desglose.inert = !atras;
+      frente.setAttribute('aria-hidden',String(atras)); desglose.setAttribute('aria-hidden',String(!atras));
+      (atras ? volver : ver).focus({preventScroll:true});
+    }
+    ver.addEventListener('click',function () { girar(true); }); volver.addEventListener('click',function () { girar(false); });
+    desglose.setAttribute('aria-hidden','true'); frente.append(foto,body); interior.append(frente,desglose); card.append(interior); padre.append(card);
   }
   function pintar() {
     lista.replaceChildren();
@@ -295,16 +306,24 @@
         if (errorMatches) { cargarUbicaciones(); return; }
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
         if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
-          agregarTexto(celdaMatches,'p','Coincidencias desde ' + p.umbral_match + '%. Operación, tipo de inmueble y ciudad deben coincidir. El porcentaje mide compatibilidad, no probabilidad de compra.');
           var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
           var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
           var modulo = 0, limite = 0, grupo = [];
           var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,grid);
-          var masProps = agregarTexto(celdaMatches,'button','Mostrar más de este nivel'); masProps.type = 'button';
+          var carruselNav = document.createElement('div'); carruselNav.className = 'match-carrusel-nav';
+          var prevProps = agregarTexto(carruselNav,'button','←'); prevProps.type = 'button'; prevProps.setAttribute('aria-label','Página anterior de propiedades');
+          var paginaProps = agregarTexto(carruselNav,'span','');
+          var masProps = agregarTexto(carruselNav,'button','→'); masProps.type = 'button'; masProps.setAttribute('aria-label','Página siguiente de propiedades'); celdaMatches.append(carruselNav);
           var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
           var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
-          var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,masProps,siguienteNivel); celdaMatches.append(navegacion);
-          function siguientes() { grupo.slice(limite,limite+24).forEach(function (r) { pintarPropiedad(r,grid); }); limite += 24; masProps.hidden = limite >= grupo.length; }
+          var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,siguienteNivel); celdaMatches.append(navegacion);
+          function pagina() {
+            grid.replaceChildren(); grupo.slice(limite,limite+5).forEach(function (r) { pintarPropiedad(r,grid); });
+            grid.classList.remove('pagina-entra'); void grid.offsetWidth; grid.classList.add('pagina-entra'); grid.scrollLeft = 0;
+            prevProps.disabled = limite === 0; masProps.disabled = limite + 5 >= grupo.length;
+            carruselNav.hidden = grupo.length <= 5;
+            paginaProps.textContent = 'Página ' + (Math.floor(limite/5)+1) + ' de ' + Math.ceil(grupo.length/5);
+          }
           function mostrarModulo() {
             grid.replaceChildren(); limite = 0;
             var nivel = niveles[modulo];
@@ -314,10 +333,11 @@
             siguienteNivel.hidden = modulo >= niveles.length-1; anteriorNivel.hidden = modulo === 0;
             siguienteNivel.textContent = 'Ver coincidencias al ' + niveles[modulo+1] + '%';
             anteriorNivel.textContent = 'Ver coincidencias al ' + niveles[modulo-1] + '%';
+            pagina();
             if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.');
-            siguientes();
           }
-          masProps.addEventListener('click',siguientes);
+          masProps.addEventListener('click',function () { limite += 5; pagina(); });
+          prevProps.addEventListener('click',function () { limite = Math.max(0,limite-5); pagina(); });
           siguienteNivel.addEventListener('click',function () { modulo++; mostrarModulo(); });
           anteriorNivel.addEventListener('click',function () { modulo--; mostrarModulo(); }); mostrarModulo();
         }
