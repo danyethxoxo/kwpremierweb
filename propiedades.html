@@ -136,8 +136,11 @@
   .kw-lateral-contenido > .propiedades-sidebar {
     position: static;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     max-height: none;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -148,9 +151,8 @@
     scrollbar-width: auto;
   }
   .kw-lateral-contenido > .propiedades-sidebar .propiedades-buscador {
-    min-height: 38px;
-    margin-bottom: 13px;
-    background: #f7f7f7;
+    min-height: 44px;
+    margin-bottom: 14px;
   }
   /* La barra lateral mantiene su ancho y altura. Solo su contenido puede
      desplazarse, sin cambiar el ancho de la pagina ni mostrar otra barra. */
@@ -171,33 +173,38 @@
   .kw-lateral-universal .kw-lateral-contenido::-webkit-scrollbar { display: none; }
   .propiedades-buscador {
     display: flex; align-items: center; gap: 8px;
-    min-height: 42px; padding: 0 11px;
-    border: 1.5px solid rgba(0,0,0,0.11); border-radius: 10px;
-    background: rgba(255,255,255,0.78); color: var(--muted);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%; max-width: 100%;
+    min-height: 44px; padding: 8px 12px;
+    border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px;
+    background: rgba(255,255,255,0.75); color: var(--muted);
+    transition: border-color 0.15s;
   }
   .propiedades-buscador:focus-within {
-    border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08);
+    border-color: var(--red);
   }
+  .propiedades-buscador svg { flex: 0 0 auto; }
   .propiedades-buscador input {
     width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
-    color: var(--text); font: inherit; font-size: 12.5px;
+    color: var(--text); font: inherit; font-size: 13px;
   }
   .propiedades-buscador input::placeholder { color: #92908f; }
-  .filtros-sidebar { display: flex; flex-direction: column; }
-  .filtro-seccion { padding: 17px 0 15px; border-top: 1px solid rgba(0,0,0,0.08); }
+  .filtros-sidebar { display: flex; flex-direction: column; width: 100%; min-width: 0; max-width: 100%; }
+  .filtro-seccion { min-width: 0; max-width: 100%; padding: 17px 0 15px; border-top: 1px solid rgba(0,0,0,0.08); }
   .filtro-seccion:first-child { border-top: 0; }
   .filtro-seccion h3 {
     margin-bottom: 11px; color: var(--text); font-size: 10.5px;
     letter-spacing: 0.06em; text-transform: uppercase;
   }
-  #filtros .filtro { width: 100%; min-width: 0; margin-top: 10px; }
+  #filtros .filtro { width: 100%; min-width: 0; max-width: 100%; margin-top: 10px; }
   #filtros .filtro:first-of-type { margin-top: 0; }
   #filtros .filtro label { font-size: 10px; }
   #filtros .filtro input,
   #filtros .filtro select {
-    width: 100%; min-width: 0; height: 40px; padding: 0 10px;
+    width: 100%; min-width: 0; max-width: 100%; height: 40px; padding: 0 10px;
     font-size: 12px; background: rgba(255,255,255,0.9);
+  }
+  #filtros .filtro select {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   #filtros .rango { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
   #filtros .filtro-rango { margin-top: 0; }
@@ -378,13 +385,25 @@
     <div class="propiedades-layout">
       <aside class="propiedades-sidebar" id="filtros" aria-label="Filtros de propiedades" autocomplete="off">
         <label class="propiedades-buscador" for="f-buscar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
             <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.7" y2="16.7"></line>
           </svg>
-          <input type="search" id="f-buscar" aria-label="Texto de búsqueda" placeholder="Título, asesor o dirección" autocomplete="off" />
+          <input type="search" id="f-buscar" aria-label="Buscar" placeholder="Buscar" autocomplete="off" />
         </label>
 
         <div class="filtros-sidebar">
+          <section class="filtro-seccion">
+            <div class="filtro">
+              <label for="f-orden">Ordenar por</label>
+              <select id="f-orden">
+                <option value="reciente">Más recientes</option>
+                <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="precio-desc">Precio: mayor a menor</option>
+                <option value="m2-desc">Más grandes</option>
+              </select>
+            </div>
+          </section>
+
           <section class="filtro-seccion">
             <h3>Operación y origen</h3>
             <div class="filtro">
@@ -462,7 +481,7 @@
             <div class="filtros-dos-columnas">
               <div class="filtro">
                 <label for="f-recamaras">Recámaras mín.</label>
-                <input type="number" id="f-recamaras" list="lista-recamaras" placeholder="Cualquiera" min="0" step="1" />
+                <input type="number" id="f-recamaras" list="lista-recamaras" min="0" step="1" />
                 <datalist id="lista-recamaras"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option></datalist>
               </div>
               <div class="filtro">
@@ -472,26 +491,21 @@
               </div>
               <div class="filtro">
                 <label for="f-estacionamientos">Estacionamientos mín.</label>
-                <input type="number" id="f-estacionamientos" list="lista-estacionamientos" placeholder="Cualquiera" min="0" step="1" />
+                <input type="number" id="f-estacionamientos" list="lista-estacionamientos" min="0" step="1" />
                 <datalist id="lista-estacionamientos"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
               </div>
               <div class="filtro">
-                <label for="f-m2">m² construcción mín.</label>
-                <input type="number" id="f-m2" placeholder="Cualquiera" min="0" step="10" />
+                <label for="f-m2-min">m² construcción mín.</label>
+                <input type="number" id="f-m2-min" min="0" step="10" />
+              </div>
+              <div class="filtro">
+                <label for="f-m2-max">m² construcción máx.</label>
+                <input type="number" id="f-m2-max" min="0" step="10" />
               </div>
             </div>
           </section>
 
           <section class="filtro-seccion filtro-seccion-final">
-            <div class="filtro">
-              <label for="f-orden">Ordenar por</label>
-              <select id="f-orden">
-                <option value="reciente">Más recientes</option>
-                <option value="precio-asc">Precio: menor a mayor</option>
-                <option value="precio-desc">Precio: mayor a menor</option>
-                <option value="m2-desc">Más grandes</option>
-              </select>
-            </div>
             <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
           </section>
         </div>
@@ -646,7 +660,8 @@
     var rec = num('f-recamaras');
     var banos = num('f-banos');
     var est = num('f-estacionamientos');
-    var m2 = num('f-m2');
+    var m2Min = num('f-m2-min');
+    var m2Max = num('f-m2-max');
 
     var vis = todas.filter(function (p) {
       if (op && p.operacion !== op) return false;
@@ -662,7 +677,8 @@
       if (rec && Number(p.recamaras || 0) < rec) return false;
       if (banos && Number(p.banos || 0) < banos) return false;
       if (est && Number(p.estacionamientos || 0) < est) return false;
-      if (m2 && Number(p.m2_construccion || 0) < m2) return false;
+      if (m2Min && Number(p.m2_construccion || 0) < m2Min) return false;
+      if (m2Max && Number(p.m2_construccion || 0) > m2Max) return false;
       if (texto) {
         var donde = [p.titulo, p.asesor_nombre, p.calle, p.colonia, p.municipio,
           p.estado, p.cp, p.tipo, p.market_center]
@@ -756,7 +772,7 @@
   // aviso por un filtro que la persona sí puede ver.
   var CAMPOS_FILTRO = ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor',
                        'f-estado', 'f-municipio', 'f-colonia', 'f-min', 'f-max',
-                       'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'];
+                       'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2-min', 'f-m2-max'];
 
   function marcarFiltrosEscondidos() {
     var puestos = CAMPOS_FILTRO.filter(function (id) { return val(id) !== ''; }).length;
@@ -770,7 +786,7 @@
 
   function limpiarFiltros() {
     ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
-     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'
+     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2-min', 'f-m2-max'
     ].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
@@ -1012,7 +1028,8 @@
       recamaras: num('f-recamaras'),
       banos: num('f-banos'),
       estacionamientos: num('f-estacionamientos'),
-      m2: num('f-m2'),
+      m2Min: num('f-m2-min'),
+      m2Max: num('f-m2-max'),
       orden: val('f-orden') || 'reciente'
     };
   }
@@ -1036,7 +1053,8 @@
     if (filtros.recamaras) consulta = consulta.gte('recamaras', filtros.recamaras);
     if (filtros.banos) consulta = consulta.gte('banos', filtros.banos);
     if (filtros.estacionamientos) consulta = consulta.gte('estacionamientos', filtros.estacionamientos);
-    if (filtros.m2) consulta = consulta.gte('m2_construccion', filtros.m2);
+    if (filtros.m2Min) consulta = consulta.gte('m2_construccion', filtros.m2Min);
+    if (filtros.m2Max) consulta = consulta.lte('m2_construccion', filtros.m2Max);
 
     var texto = escaparLikeServidor(filtros.texto);
     if (texto) {
@@ -1244,7 +1262,7 @@
 
   limpiarFiltros = function () {
     ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
-     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'
+     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2-min', 'f-m2-max'
     ].forEach(function (id) {
       var elemento = document.getElementById(id);
       if (elemento) elemento.value = '';
