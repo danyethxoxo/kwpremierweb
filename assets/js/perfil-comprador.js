@@ -15,22 +15,93 @@
     input.type = 'checkbox'; input.name = 'tipos'; input.value = tipo;
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
-  ['Aguascalientes','Baja California','Baja California Sur','Campeche','Chiapas','Chihuahua','Ciudad de México','Coahuila','Colima','Durango','Estado de México','Guanajuato','Guerrero','Hidalgo','Jalisco','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'].forEach(function (estado) {
-    var option = document.createElement('option'); option.value = estado; document.getElementById('estados').append(option);
+  var ubicaciones = [];
+  function vista(editor) {
+    document.getElementById('vista-formulario').hidden = !editor;
+    document.getElementById('vista-clientes').hidden = editor;
+    document.getElementById('abrir-cliente').hidden = editor;
+    window.scrollTo(0, 0);
+  }
+  function actualizarPrecios() {
+    var renta = form.elements.operacion.value === 'renta';
+    document.getElementById('campo-precio-min').hidden = renta;
+    form.elements.precio_min.disabled = renta;
+    document.getElementById('precio-max-titulo').textContent = renta ? 'Renta mensual máxima *' : 'Presupuesto máximo *';
+  }
+  function opciones(campo, valores, vacio) {
+    var select = form.elements[campo], anterior = select.value;
+    select.replaceChildren(new Option(vacio, ''));
+    Array.from(new Set(valores.filter(Boolean))).sort(function (a,b) { return a.localeCompare(b,'es'); }).forEach(function (v) { select.add(new Option(v,v)); });
+    if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) select.add(new Option(anterior,anterior));
+    select.value = anterior;
+    select.dispatchEvent(new Event('change', { bubbles: false }));
+  }
+  var actualizandoUbicacion = false;
+  function refrescarUbicacion() {
+    if (actualizandoUbicacion) return;
+    actualizandoUbicacion = true;
+    var estado = form.elements.estado.value, municipio = form.elements.municipio.value;
+    opciones('estado', ubicaciones.map(function (p) { return p.estado; }), 'Seleccionar ciudad');
+    opciones('municipio', ubicaciones.filter(function (p) { return !estado || p.estado === estado; }).map(function (p) { return p.municipio; }), 'Todas');
+    opciones('colonias', ubicaciones.filter(function (p) { return (!estado || p.estado === estado) && (!municipio || p.municipio === municipio); }).map(function (p) { return p.colonia; }), 'Todas');
+    actualizandoUbicacion = false;
+    window.kwUI.selects();
+  }
+  async function cargarUbicaciones() {
+    try {
+      var todas = [], desde = 0;
+      while (true) {
+        var res = await window.kwSupabase.from('propiedades_inventario').select('estado,municipio,colonia').eq('fuente','kwmexico').order('id').range(desde,desde+999);
+        if (res.error) throw res.error;
+        todas = todas.concat(res.data.filter(function (p) { return p.estado && p.estado.toLowerCase() !== 'antioquia'; }));
+        if (res.data.length < 1000) break;
+        desde += 1000;
+      }
+      ubicaciones = todas; refrescarUbicacion();
+    } catch (e) { avisar('No se pudieron cargar las ubicaciones del inventario. Recarga para intentar de nuevo.',true); }
+  }
+  form.elements.estado.addEventListener('change', function () {
+    if (actualizandoUbicacion) return;
+    form.elements.municipio.value = ''; form.elements.colonias.value = ''; refrescarUbicacion();
+  });
+  form.elements.municipio.addEventListener('change', function () {
+    if (actualizandoUbicacion) return;
+    form.elements.colonias.value = ''; refrescarUbicacion();
+  });
+  form.elements.operacion.addEventListener('change', actualizarPrecios);
+  ['recamaras_min','banos_min','estacionamientos_min','superficie_min'].forEach(function (key) {
+    var input = form.elements[key], caja = document.createElement('div'); caja.className = 'cantidad';
+    input.setAttribute('data-kw-no','');
+    input.parentNode.insertBefore(caja,input); caja.append(input);
+    [-1,1].forEach(function (signo) {
+      var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = signo < 0 ? '−' : '+';
+      btn.setAttribute('aria-label', (signo < 0 ? 'Disminuir ' : 'Aumentar ') + input.parentNode.parentNode.firstChild.textContent);
+      btn.addEventListener('click', function () {
+        if (ocupado) return;
+        var paso = key === 'banos_min' ? .5 : 1;
+        input.value = Math.max(0,Math.min(Number(input.max),Math.round(((Number(input.value)||0)+signo*paso)*100)/100));
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      if (signo < 0) caja.prepend(btn); else caja.append(btn);
+    });
   });
   function avisar(texto, error) { mensaje.textContent = texto; mensaje.classList.toggle('error', Boolean(error)); }
   function resetear() {
     form.reset(); editando = null;
     document.getElementById('titulo-formulario').textContent = 'Nuevo perfil';
-    guardar.textContent = 'Guardar perfil'; nuevo.textContent = 'Limpiar formulario';
+    guardar.textContent = 'Guardar perfil'; nuevo.textContent = 'Limpiar';
+    actualizarPrecios(); refrescarUbicacion();
+    form.elements.operacion.dispatchEvent(new Event('change'));
+    form.elements.moneda.dispatchEvent(new Event('change'));
   }
   function datos() {
     var d = {};
     textos.forEach(function (key) { d[key] = form.elements[key].value.trim(); });
     numeros.forEach(function (key) { var valor = form.elements[key].value; d[key] = valor === '' ? null : Number(valor); });
     d.tipos = Array.from(form.querySelectorAll('input[name=tipos]:checked')).map(function (input) { return input.value; });
-    d.avisos_campana = form.elements.avisos_campana.checked;
-    d.avisos_correo = form.elements.avisos_correo.checked;
+    d.avisos_campana = true;
+    d.avisos_correo = true;
+    if (d.operacion === 'renta') d.precio_min = null;
     if (!d.telefono && !d.correo) throw new Error('Registra al menos un teléfono o correo del cliente.');
     if (d.nombre.length < 2 || d.estado.length < 2) throw new Error('Completa el nombre y el estado.');
     if (!d.tipos.length) throw new Error('Selecciona al menos un tipo de inmueble.');
@@ -54,11 +125,17 @@
       editar.addEventListener('click', function () {
         if (ocupado) return;
         resetear(); editando = p.id;
-        textos.concat(numeros).forEach(function (key) { form.elements[key].value = p[key] == null ? '' : p[key]; });
+        textos.concat(numeros).forEach(function (key) {
+          var input = form.elements[key], valor = p[key] == null ? '' : p[key];
+          if (input.tagName === 'SELECT' && valor && !Array.from(input.options).some(function (o) { return o.value === valor; })) input.add(new Option(valor,valor));
+          input.value = valor;
+        });
         form.querySelectorAll('input[name=tipos]').forEach(function (input) { input.checked = p.tipos.includes(input.value); });
-        form.elements.avisos_campana.checked = p.avisos_campana; form.elements.avisos_correo.checked = p.avisos_correo;
         document.getElementById('titulo-formulario').textContent = 'Editar perfil';
-        guardar.textContent = 'Guardar cambios'; nuevo.textContent = 'Cancelar edición';
+        guardar.textContent = 'Guardar cambios'; nuevo.textContent = 'Limpiar';
+        actualizarPrecios(); refrescarUbicacion();
+        form.elements.operacion.dispatchEvent(new Event('change'));
+        form.elements.moneda.dispatchEvent(new Event('change')); vista(true);
         avisar(p.activo ? '' : 'Este perfil está pausado. Puedes reactivarlo en la tarjeta.'); form.elements.nombre.focus();
       });
       var pausar = agregarTexto(acciones, 'button', p.activo ? 'Pausar' : 'Reactivar'); pausar.type = 'button';
@@ -102,15 +179,18 @@
       if (res.error) throw res.error;
       var indice = perfiles.findIndex(function (p) { return p.id === res.data.id; });
       if (indice === -1) perfiles.unshift(res.data); else perfiles[indice] = res.data;
-      resetear(); pintar(); avisar('Perfil guardado. Los matches y avisos se activarán en la siguiente etapa.');
+      resetear(); pintar(); vista(false); avisar('Perfil guardado.');
     } catch (error) { avisar('No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo; tus datos siguen en el formulario.', true); }
     finally {
       ocupado = false; guardar.disabled = false; nuevo.disabled = false;
-      controles.forEach(function (el) { el.disabled = false; }); guardar.textContent = editando ? 'Guardar cambios' : 'Guardar perfil';
+      controles.forEach(function (el) { el.disabled = false; }); actualizarPrecios(); guardar.textContent = editando ? 'Guardar cambios' : 'Guardar perfil';
     }
   });
   nuevo.addEventListener('click', function () { if (!ocupado) { resetear(); avisar(''); } });
   mas.addEventListener('click', function () { cargar(true); });
-  if (document.documentElement.classList.contains('kw-auth-ok')) cargar(false);
-  else window.addEventListener('kw-auth-ready', function () { cargar(false); }, { once: true });
+  document.getElementById('abrir-cliente').addEventListener('click', function () { resetear(); avisar(''); vista(true); });
+  document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) vista(false); });
+  function iniciar() { cargar(false); cargarUbicaciones(); }
+  if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
+  else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();

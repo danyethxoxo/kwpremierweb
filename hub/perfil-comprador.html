@@ -19,7 +19,18 @@
   <style>
     * { box-sizing: border-box; }
     body { min-height: 100vh; color: var(--text); }
-    .page { max-width: 1000px; margin: auto; padding: 94px 24px 60px; }
+    .page { width: 100%; max-width: none; margin: auto; padding: 94px 24px 100px; }
+    [hidden] { display: none !important; }
+    .encabezado { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
+    .pie-form { position: fixed; bottom: 0; left: 292px; right: 0; z-index: 180; padding: 7px 18px max(7px, env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid var(--border); box-shadow: 0 -10px 28px rgba(35,27,27,.10); backdrop-filter: blur(12px); display: flex; justify-content: flex-end; gap: 12px; }
+    .pie-form button { min-height: 34px; padding: 7px 14px; border-radius: 9px; font-size: 12px; }
+    .cantidad { display: flex; align-items: center; border: 1px solid #d9d5d5; border-radius: 10px; overflow: hidden; }
+    .cantidad input { border: 0 !important; text-align: center; appearance: textfield; min-width: 0; }
+    .cantidad input::-webkit-inner-spin-button { appearance: none; }
+    .cantidad button { border: 0; border-radius: 0; width: 44px; padding: 0; flex-shrink: 0; font-size: 22px; }
+    .campo .kw-select { width: 100%; }
+    .campo .kw-select-btn { width: 100%; min-height: 44px; }
+    @media(max-width:1023px) { .pie-form { left: 0; } }
     h1 { font-size: 26px; margin: 0 0 8px; }
     .intro, .nota { color: var(--muted); font-size: 13px; line-height: 1.6; }
     .panel { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 24px; margin: 20px 0; }
@@ -51,28 +62,27 @@
 <body>
   <header class="kw-header"><span class="kw-header-title">Perfil comprador</span><a href="/portal.html" class="back-btn">← Inicio</a></header>
   <main class="page">
-    <h1>Perfil comprador</h1>
-    <p class="intro">Guarda lo que busca cada cliente, ya sea para comprar o rentar. Estos perfiles son privados y solo tú puedes verlos.</p>
-    <section class="panel" aria-labelledby="titulo-formulario">
+    <div class="encabezado"><h1>Perfil comprador</h1><button type="button" id="abrir-cliente" class="principal">+ Nuevo cliente</button></div>
+    <section class="panel" id="vista-clientes" aria-labelledby="titulo-lista"><h2 id="titulo-lista">Mis clientes</h2><div id="clientes" aria-live="polite">Cargando perfiles…</div><button id="mas" type="button" hidden>Cargar más</button></section>
+    <section class="panel" id="vista-formulario" hidden aria-labelledby="titulo-formulario">
       <h2 id="titulo-formulario">Nuevo perfil</h2>
-      <p class="nota">Primera etapa de pruebas: captura y edición. Los porcentajes de match y los avisos por campana y correo todavía no están activos.</p>
       <form id="comprador-form">
         <fieldset><legend>Datos del cliente</legend><div class="campos">
           <label class="campo ancho">Nombre *<input name="nombre" required minlength="2" maxlength="120" autocomplete="off" /></label>
           <label class="campo">Teléfono<input name="telefono" type="tel" maxlength="40" autocomplete="off" /></label>
           <label class="campo">Correo<input name="correo" type="email" maxlength="160" autocomplete="off" /></label>
-        </div><p class="nota">Registra al menos un teléfono o correo.</p></fieldset>
+        </div></fieldset>
         <fieldset><legend>¿Qué está buscando?</legend><div class="campos">
           <label class="campo">Operación *<select name="operacion" required><option value="venta">Comprar</option><option value="renta">Rentar</option></select></label>
           <label class="campo">Moneda *<select name="moneda"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares (USD)</option></select></label>
           <div class="campo ancho"><span>Tipo de inmueble * · puedes elegir varios</span><div class="opciones" id="tipos"></div></div>
-          <label class="campo">Presupuesto mínimo<input name="precio_min" type="number" min="0" max="100000000000" step="0.01" /></label>
-          <label class="campo">Presupuesto máximo *<input name="precio_max" type="number" min="0.01" max="100000000000" step="0.01" required /></label>
-        </div><p class="nota">Para renta, indica el presupuesto mensual.</p></fieldset>
+          <label class="campo" id="campo-precio-min">Presupuesto mínimo<input name="precio_min" type="number" min="0" max="100000000000" step="0.01" /></label>
+          <label class="campo"><span id="precio-max-titulo">Presupuesto máximo *</span><input name="precio_max" type="number" min="0.01" max="100000000000" step="0.01" required /></label>
+        </div></fieldset>
         <fieldset><legend>Ubicación deseada</legend><div class="campos">
-          <label class="campo">Estado *<input name="estado" required minlength="2" maxlength="100" list="estados" /><datalist id="estados"></datalist></label>
-          <label class="campo">Municipio o alcaldía<input name="municipio" maxlength="120" /></label>
-          <label class="campo ancho">Colonias o zonas<input name="colonias" maxlength="1000" placeholder="Separa las zonas con comas" /></label>
+          <label class="campo">Ciudad / estado *<select name="estado" required><option value="">Seleccionar ciudad</option></select></label>
+          <label class="campo">Alcaldía / municipio<select name="municipio"><option value="">Todas</option></select></label>
+          <label class="campo ancho">Colonia<select name="colonias"><option value="">Todas</option></select></label>
         </div></fieldset>
         <fieldset><legend>Características mínimas</legend><div class="campos">
           <label class="campo">Recámaras<input name="recamaras_min" type="number" min="0" max="100" step="1" /></label>
@@ -80,19 +90,17 @@
           <label class="campo">Estacionamientos<input name="estacionamientos_min" type="number" min="0" max="100" step="1" /></label>
           <label class="campo">Superficie mínima (m²)<input name="superficie_min" type="number" min="0" max="10000000" step="0.01" /></label>
           <label class="campo ancho">Otras necesidades o comentarios<textarea name="notas" rows="3" maxlength="2000" placeholder="Jardín, mascotas, elevador, accesibilidad…"></textarea></label>
-        </div><p class="nota">Deja en blanco lo que no sea requisito. Las notas quedan como referencia, no se evaluarán automáticamente en esta etapa.</p></fieldset>
+        </div></fieldset>
         <fieldset><legend>Preferencias para los futuros avisos</legend><div class="campos">
           <label class="campo">Compatibilidad mínima (%)<input name="umbral_match" type="number" min="1" max="100" step="1" value="70" required /></label>
-          <div class="campo"><span>Avisar al asesor por</span><div class="opciones"><label><input name="avisos_campana" type="checkbox" checked />Campana</label><label><input name="avisos_correo" type="checkbox" checked />Correo</label></div></div>
-        </div><p class="nota">Cuando activemos el motor, el correo será el de tu cuenta de asesor, no el del cliente.</p></fieldset>
-        <div class="acciones"><button type="submit" id="guardar" class="principal">Guardar perfil</button><button type="button" id="nuevo">Limpiar formulario</button></div>
+        </div></fieldset>
+        <div class="pie-form"><button type="button" id="cerrar-form">Cancelar</button><button type="button" id="nuevo">Limpiar</button><button type="submit" id="guardar" class="principal">Guardar perfil</button></div>
         <p id="mensaje" role="status" aria-live="polite"></p>
       </form>
     </section>
-    <section class="panel" aria-labelledby="titulo-lista"><h2 id="titulo-lista">Mis clientes</h2><div id="clientes" aria-live="polite">Cargando perfiles…</div><button id="mas" type="button" hidden>Cargar más</button></section>
   </main>
-  <script src="/assets/js/perfil-comprador.js?v=20260930a"></script>
+  <script src="/assets/js/kw-ui.js?v=20260922"></script>
+  <script src="/assets/js/perfil-comprador.js?v=20260930b"></script>
   <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
-  <script src="/assets/js/kw-lateral.js?v=20260923b"></script>
 </body>
 </html>
