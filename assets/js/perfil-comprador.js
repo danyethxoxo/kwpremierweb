@@ -202,7 +202,7 @@
       btn.setAttribute('aria-label', (signo < 0 ? 'Disminuir ' : 'Aumentar ') + input.parentNode.parentNode.firstChild.textContent);
       btn.addEventListener('click', function () {
         if (ocupado) return;
-        var paso = key === 'banos_min' ? .5 : 1;
+        var paso = key === 'banos_min' ? .5 : key === 'superficie_min' ? 10 : 1;
         input.value = Math.max(0,Math.min(Number(input.max),Math.round(((Number(input.value)||0)+signo*paso)*100)/100));
         input.dispatchEvent(new Event('change',{bubbles:true}));
       });
