@@ -391,7 +391,7 @@
       if (res.error) throw res.error;
       var indice = perfiles.findIndex(function (p) { return p.id === res.data.id; });
       if (indice === -1) perfiles.unshift(res.data); else perfiles[indice] = res.data;
-      location.href = '/hub/clientes.html';
+      location.href = '/hub/perfil-comprador.html';
     } catch (error) { avisar('No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo; tus datos siguen en el formulario.', true); }
     finally {
       ocupado = false; guardar.disabled = false; nuevo.disabled = false;
@@ -401,7 +401,7 @@
   nuevo.addEventListener('click', function () { if (!ocupado) { resetear(); avisar(''); } });
   mas.addEventListener('click', function () { cargar(true); });
   document.getElementById('abrir-cliente').addEventListener('click', function () { location.href = '/hub/cliente-formulario.html'; });
-  document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) location.href = '/hub/clientes.html'; });
+  document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) location.href = '/hub/perfil-comprador.html'; });
   document.addEventListener('click',function (e) { document.querySelectorAll('.cliente-menu[open]').forEach(function (menu) { if (!menu.contains(e.target)) menu.open = false; }); });
   async function cargarSitio() {
     try {
