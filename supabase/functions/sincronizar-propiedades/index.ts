@@ -491,12 +491,16 @@ async function sincronizarKwMexico(
     const unicos = [...porId.values()]
 
     const existentesPorId = new Map<string, KwRegistro>()
+    const nombresPorAgente = new Map<string, string>()
     for (let desde = 0; ; desde += 1000) {
       const respuesta = await admin.from('propiedades')
-        .select('fuente_id, estatus, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
+        .select('fuente_id, estatus, asesor_nombre, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
         .eq('fuente', 'kwmexico').order('id').range(desde, desde + 999)
       if (respuesta.error) throw respuesta.error
       for (const fila of respuesta.data || []) {
+        const agenteId = kwTexto(kwListadoAnterior({ listado: fila.listado })?.Agent_ID)
+        const nombre = kwTexto(fila.asesor_nombre)
+        if (agenteId && nombre) nombresPorAgente.set(agenteId, nombre)
         const id = kwTexto(fila.fuente_id)
         if (id) existentesPorId.set(id, {
           fuente_id: id,
@@ -560,7 +564,14 @@ async function sincronizarKwMexico(
       .slice(KWMEXICO_DETAIL_LIMIT)
       .map(({ listado, existente }) => normalizarDetallePendiente(listado, existente, catalogo.marketCenters))
       .filter((fila): fila is Fila => fila !== null)
-    const listas = await enlazarAsesores(admin, filasDetalle.concat(filasListado))
+    const filasCompletas = filasDetalle.concat(filasListado)
+    for (const fila of filasCompletas) {
+      const agenteId = kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
+      if (agenteId && !kwTexto(fila.asesor_nombre)) {
+        fila.asesor_nombre = nombresPorAgente.get(agenteId) || null
+      }
+    }
+    const listas = await enlazarAsesores(admin, filasCompletas)
 
     let guardadas = 0
     for (let i = 0; i < listas.length; i += 250) {
