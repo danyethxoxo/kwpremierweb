@@ -654,9 +654,9 @@
 
     var pie = [p.asesor_nombre, nombreMarketCenter(p.market_center)].filter(Boolean).join(' · ');
 
-    var enlacePropiedad = p.fuente === 'kwmexico' && p.fuente_id
+    var enlacePropiedad = p.enlace_kw || (p.fuente === 'kwmexico' && p.fuente_id
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
-      : '/propiedad.html?id=' + encodeURIComponent(p.id);
+      : '/propiedad.html?id=' + encodeURIComponent(p.id));
     return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer">' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
@@ -941,7 +941,7 @@
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, calle, colonia, municipio, estado, cp, ' +
-               'imagenes, asesor_nombre, market_center, updated_at';
+               'imagenes, asesor_nombre, market_center, updated_at, enlace_kw';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');
