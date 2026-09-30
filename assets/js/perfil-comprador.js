@@ -300,7 +300,8 @@
     var frente = document.createElement('div'); frente.className = 'match-frente';
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
     agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
-    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ' · ' + c.detalle); });
+    var detalleCriterios = document.createElement('div'); detalleCriterios.className = 'match-criterios'; desglose.append(detalleCriterios);
+    match.criterios.forEach(function (c) { agregarTexto(detalleCriterios,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ' · ' + c.detalle); });
     var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
     var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
     function girar(atras) {
