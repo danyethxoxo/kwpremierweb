@@ -182,26 +182,23 @@
     if (!perfiles.length) { inventarioMatches = []; pintar(); return; }
     var estados = Array.from(new Set(perfiles.map(function (p) { return p.estado; })));
     var operaciones = Array.from(new Set(perfiles.map(function (p) { return p.operacion; })));
-    var tiposCliente = Array.from(new Set(perfiles.flatMap(function (p) { return p.tipos; })));
     var campos = 'id,fuente_id,titulo,descripcion,operacion,estatus,tipo,tipos_filtro,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,estado,municipio,colonia,imagenes,asesor_nombre,market_center,enlace_kw';
-    function consulta(desde, contar) {
-      return window.kwSupabase.from('propiedades_inventario').select(campos, contar ? { count: 'exact' } : {})
-        .eq('fuente','kwmexico').eq('estatus','publicada').in('estado',estados).in('operacion',operaciones).overlaps('tipos_filtro',tiposCliente).order('id').range(desde,desde+499);
+    function consulta(desde) {
+      return window.kwSupabase.from('propiedades_inventario').select(campos)
+        .eq('fuente','kwmexico').eq('estatus','publicada').in('estado',estados).in('operacion',operaciones).order('id').range(desde,desde+499);
     }
     try {
-      var primero = await consulta(0,true); if (primero.error) throw primero.error;
-      var todas = primero.data, total = primero.count;
-      if (total == null) throw new Error('No se recibió el total de candidatos');
-      for (var desde = 500; desde < total; desde += 1500) {
-        var peticiones = [];
-        for (var offset = desde; offset < Math.min(total,desde+1500); offset += 500) peticiones.push(consulta(offset,false));
-        var lotes = await Promise.all(peticiones);
-        lotes.forEach(function (lote) { if (lote.error) throw lote.error; todas = todas.concat(lote.data); });
+      var todas = [], desde = 0;
+      while (true) {
+        var lote = await consulta(desde); if (lote.error) throw lote.error;
+        todas = todas.concat(lote.data || []);
         if (revision !== revisionMatches) return;
+        if (!lote.data || lote.data.length < 500) break;
+        desde += 500;
       }
       if (revision !== revisionMatches) return;
       inventarioMatches = todas; pintar();
-    } catch (e) { if (revision !== revisionMatches) return; errorMatches = true; pintar(); }
+    } catch (e) { if (revision !== revisionMatches) return; console.error('Error al cargar coincidencias:',e); errorMatches = true; pintar(); }
   }
   form.elements.estado.addEventListener('change', function () {
     if (actualizandoUbicacion) return;
