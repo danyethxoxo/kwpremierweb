@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta charset="UTF-8" />
@@ -250,11 +251,12 @@
     <div class="card">
       <h2>Enlaces</h2>
       <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 16px;">Aparecen en tu tarjeta y en tu perfil público. Todo es opcional - lo que dejes vacío no se muestra.</p>
-      <div class="field"><label>Sitio web</label>
+      <div class="field"><label for="perfil-sitio">Sitio web</label>
         <div class="campo-icono">
           <svg class="sin-relleno" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          <input type="url" id="perfil-sitio" placeholder="https://tusitio.com" />
+          <input type="text" id="perfil-sitio" inputmode="url" autocomplete="url" maxlength="254" placeholder="daniguerrero.kw.com" aria-describedby="perfil-sitio-ayuda" />
         </div>
+        <div class="ayuda-campo" id="perfil-sitio-ayuda">Si colocas tu sitio de KW, las propiedades se abrirán con tus datos de contacto. Acepta daniguerrero.kw.com o https://daniguerrero.kw.com.</div>
       </div>
       <div class="field"><label>WhatsApp</label>
         <div class="campo-icono">
@@ -792,10 +794,19 @@
     btn.disabled = true;
     try {
       const valor = (id) => document.getElementById(id).value.trim() || null;
+      const sitioCapturado = valor('perfil-sitio');
+      const sitioKw = window.kwSitioAsesor.normalizar(sitioCapturado);
+      let sitioWeb = sitioKw;
+      if (sitioCapturado && !sitioKw) {
+        const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(sitioCapturado) ? sitioCapturado : 'https://' + sitioCapturado);
+        if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new Error('Escribe un sitio web válido.');
+        url.protocol = 'https:';
+        sitioWeb = url.href;
+      }
       const { error } = await window.kwSupabase
         .from('profiles')
         .update({
-          sitio_web: valor('perfil-sitio'),
+          sitio_web: sitioWeb,
           whatsapp: valor('perfil-whatsapp'),
           instagram: valor('perfil-instagram'),
           facebook: valor('perfil-facebook'),
@@ -805,6 +816,7 @@
         .eq('id', miUserId);
       if (error) throw error;
       setMsg('publico-msg', 'Enlaces actualizados.', 'ok');
+      document.getElementById('perfil-sitio').value = sitioWeb || '';
     } catch (err) {
       setMsg('publico-msg', err.message || 'Ocurrió un error al guardar.', 'error');
     } finally {

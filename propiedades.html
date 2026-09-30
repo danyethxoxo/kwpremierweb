@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260929c">
 <script src="/assets/js/kw-ui.js?v=20260922"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
+<script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -574,6 +575,7 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
+        <p id="aviso-sitio-asesor" hidden style="font-size:12px;color:var(--muted);margin-bottom:12px;"></p>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -603,6 +605,33 @@
   var PROPIEDADES_POR_PAGINA = 20;
   var catalogoCargando = true;
   var totalCatalogo = 0;
+  var sitioAsesor = null;
+  var sitioAsesorPromesa = null;
+
+  function cargarSitioAsesor() {
+    if (!sitioAsesorPromesa) {
+      sitioAsesorPromesa = (async function () {
+        var sesion = await sb.auth.getSession();
+        if (sesion.error) throw sesion.error;
+        var usuario = sesion.data && sesion.data.session && sesion.data.session.user;
+        if (!usuario) throw new Error('Inicia sesión para abrir propiedades con tu sitio.');
+        var respuesta = await sb.from('profiles').select('sitio_web').eq('id', usuario.id).single();
+        if (respuesta.error) throw respuesta.error;
+        sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
+        var aviso = document.getElementById('aviso-sitio-asesor');
+        if (sitioAsesor) {
+          aviso.textContent = 'Las propiedades se abrirán en ' + new URL(sitioAsesor).hostname + '.';
+        } else {
+          aviso.innerHTML = 'Agrega tu sitio de KW en <a href="/perfil.html">Mi perfil → Enlaces</a> para abrir las propiedades con tus datos de contacto.';
+        }
+        aviso.hidden = false;
+      })().catch(function (error) {
+        sitioAsesorPromesa = null;
+        throw error;
+      });
+    }
+    return sitioAsesorPromesa;
+  }
 
   function escapeHtml(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -657,6 +686,7 @@
     var enlacePropiedad = p.enlace_kw || (p.fuente === 'kwmexico' && p.fuente_id
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
       : '/propiedad.html?id=' + encodeURIComponent(p.id));
+    enlacePropiedad = window.kwSitioAsesor.personalizar(enlacePropiedad, sitioAsesor);
     return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer">' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
@@ -1369,6 +1399,8 @@
     if (conteo) conteo.textContent = 'Cargando propiedades…';
 
     try {
+      await cargarSitioAsesor();
+      if (solicitud !== solicitudPaginaServidor) return;
       var respuesta = await consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales());
       if (solicitud !== solicitudPaginaServidor) return;
       if (respuesta.error) throw respuesta.error;
