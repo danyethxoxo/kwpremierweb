@@ -44,7 +44,7 @@
     input.type = 'checkbox'; input.name = 'tipos'; input.value = tipo;
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
-  var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '';
+  var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '', cacheMatches = new Map();
   var etiquetas = [], entradaEtiqueta = document.getElementById('agregar-etiqueta');
   function pintarEtiquetas() {
     var caja = document.getElementById('etiquetas');
@@ -169,7 +169,7 @@
         if (res.data.length < 1000) break;
         desde += 1000;
       }
-      ubicaciones = todas; inventarioMatches = todas; errorMatches = false; refrescarUbicacion(); pintar();
+      ubicaciones = todas; inventarioMatches = todas; cacheMatches.clear(); errorMatches = false; refrescarUbicacion(); pintar();
     } catch (e) { errorMatches = true; pintar(); avisar('No se pudo cargar el inventario. Recarga para intentar de nuevo.',true); }
   }
   form.elements.estado.addEventListener('change', function () {
@@ -238,9 +238,13 @@
   }
   function agregarTexto(padre, tag, texto) { var el = document.createElement(tag); el.textContent = texto; padre.append(el); return el; }
   function matchesCliente(cliente) {
-    return (inventarioMatches || []).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
+    var clave = JSON.stringify(cliente);
+    if (cacheMatches.has(clave)) return cacheMatches.get(clave);
+    var resultados = (inventarioMatches || []).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
       .filter(function (r) { return r.match && r.match.porcentaje >= cliente.umbral_match; })
       .sort(function (a,b) { return b.match.porcentaje - a.match.porcentaje; });
+    if (inventarioMatches) cacheMatches.set(clave,resultados);
+    return resultados;
   }
   function pintarPropiedad(resultado, padre) {
     var p = resultado.propiedad, match = resultado.match;
@@ -260,7 +264,7 @@
     agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
     var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); agregarTexto(pie,'span',p.asesor_nombre || ''); body.append(pie);
     var desglose = document.createElement('details'); desglose.className = 'match-desglose'; agregarTexto(desglose,'summary',match.porcentaje + '% de compatibilidad · Ver desglose');
-    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ': ' + c.detalle); });
+    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ': ' + c.detalle + ' · ' + c.aporte + '/' + c.peso + ' puntos'); });
     body.append(desglose); card.append(foto,body); padre.append(card);
   }
   function pintar() {
@@ -272,8 +276,9 @@
       var fila = document.createElement('tr'), celda = document.createElement('td'); fila.append(celda); tbody.append(fila);
       var contenedor = document.createElement('div'); contenedor.className = 'cliente';
       var card = document.createElement('div'); card.className = 'cliente-info';
-      var estado = agregarTexto(card, 'span', p.activo ? 'Activo' : 'Pausado'); estado.className = 'estado';
-      agregarTexto(card, 'h3', p.nombre);
+      var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
+      agregarTexto(identidad, 'h3', p.nombre);
+      var estado = agregarTexto(identidad, 'span', p.activo ? 'Activo' : 'Pausado'); estado.className = 'estado';
       agregarTexto(card, 'p', [p.telefono, p.correo].filter(Boolean).join(' · '));
       var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
       agregarTexto(card, 'p', (p.operacion === 'venta' ? 'Compra' : 'Renta') + ' · ' + p.tipos.join(', ') + ' · ' + (p.precio_min === null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda);
@@ -287,11 +292,30 @@
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
         if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
           agregarTexto(celdaMatches,'p','Coincidencias desde ' + p.umbral_match + '%. Operación, tipo de inmueble y ciudad deben coincidir. El porcentaje mide compatibilidad, no probabilidad de compra.');
+          var reglas = document.createElement('details'); agregarTexto(reglas,'summary','¿Cómo se calcula el porcentaje?');
+          agregarTexto(reglas,'p','Presupuesto 30%, ubicación 30%, tipo de inmueble 20%, características 10% y etiquetas 10%. La ubicación reparte su peso entre ciudad, alcaldía y colonia solicitadas; las características y etiquetas reparten el suyo entre los requisitos capturados. Si no se pide un grupo, los pesos restantes se ajustan proporcionalmente hasta sumar 100%.');
+          agregarTexto(reglas,'p','Un precio hasta 10% por encima del máximo obtiene la mitad de los puntos de presupuesto. Los datos faltantes no suman. Operación, tipo y ciudad son obligatorios; no se mezclan monedas distintas. Cada propiedad muestra los puntos que obtuvo en el desglose.'); celdaMatches.append(reglas);
           var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
-          var limite = 0;
-          function siguientes() { coincidencias.slice(limite,limite+24).forEach(function (r) { pintarPropiedad(r,grid); }); limite += 24; masProps.hidden = limite >= coincidencias.length; }
-          var masProps = agregarTexto(celdaMatches,'button','Mostrar más propiedades'); masProps.type = 'button'; masProps.addEventListener('click',siguientes);
-          if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.'); siguientes();
+          var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
+          var modulo = 0, limite = 0, grupo = [];
+          var tituloModulo = document.createElement('p'); celdaMatches.insertBefore(tituloModulo,grid);
+          var masProps = agregarTexto(celdaMatches,'button','Mostrar más de este nivel'); masProps.type = 'button';
+          var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
+          var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
+          function siguientes() { grupo.slice(limite,limite+24).forEach(function (r) { pintarPropiedad(r,grid); }); limite += 24; masProps.hidden = limite >= grupo.length; }
+          function mostrarModulo() {
+            grid.replaceChildren(); limite = 0;
+            var nivel = niveles[modulo];
+            grupo = coincidencias.filter(function (r) { return Math.floor(r.match.porcentaje / 10) * 10 === nivel; });
+            tituloModulo.textContent = niveles.length ? 'Compatibilidad ' + nivel + (nivel < 100 ? '–' + (nivel+9) : '') + '% · ' + grupo.length + ' propiedades' : '';
+            siguienteNivel.hidden = modulo >= niveles.length-1; anteriorNivel.hidden = modulo === 0;
+            siguienteNivel.textContent = 'Ver coincidencias al ' + niveles[modulo+1] + '%';
+            if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.');
+            siguientes();
+          }
+          masProps.addEventListener('click',siguientes);
+          siguienteNivel.addEventListener('click',function () { modulo++; mostrarModulo(); });
+          anteriorNivel.addEventListener('click',function () { modulo--; mostrarModulo(); }); mostrarModulo();
         }
       });
       var menu = document.createElement('details'); menu.className = 'cliente-menu'; agregarTexto(menu,'summary','⋮').setAttribute('aria-label','Acciones de ' + p.nombre);
@@ -375,7 +399,7 @@
       if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
     } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
   }
-  function iniciar() { cargar(false); cargarSitio().finally(cargarUbicaciones); }
+  function iniciar() { cargar(false); cargarSitio(); cargarUbicaciones(); }
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
