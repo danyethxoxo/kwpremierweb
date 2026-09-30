@@ -35,6 +35,14 @@
     .cantidad button { border: 0; border-radius: 0; width: 44px; padding: 0; flex-shrink: 0; font-size: 22px; }
     .campo .kw-select { width: 100%; }
     .campo .kw-select-btn { width: 100%; min-height: 44px; }
+    #comprador-acciones > #notif-bell-slot { width: 40px; flex-basis: 40px; }
+    #comprador-acciones > #notif-bell-slot .notif-bell-btn { width: 40px; min-width: 40px; height: 40px; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+    #comprador-acciones > #notif-bell-slot .notif-bell-btn:hover { color: var(--red); }
+    .campos.tres { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .campos.cuatro { grid-template-columns: repeat(4,minmax(0,1fr)); }
+    .campos.operacion-renta { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    @media(max-width:900px) { .campos.tres,.campos.cuatro,.campos.operacion-renta { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media(max-width:640px) { .campos.tres,.campos.cuatro,.campos.operacion-renta { grid-template-columns: 1fr; } }
     @media(max-width:1023px) { .pie-form { left: 0; } }
     h1 { font-size: 26px; margin: 0 0 8px; }
     .intro, .nota { color: var(--muted); font-size: 13px; line-height: 1.6; }
@@ -70,31 +78,31 @@
     <div class="encabezado"><h1>Perfil comprador</h1><div class="encabezado-acciones" id="comprador-acciones"><button type="button" id="abrir-cliente" class="principal">+ Nuevo cliente</button></div></div>
     <section class="panel" id="vista-clientes" aria-labelledby="titulo-lista"><h2 id="titulo-lista">Mis clientes</h2><div id="clientes" aria-live="polite">Cargando perfiles…</div><button id="mas" type="button" hidden>Cargar más</button></section>
     <section class="panel" id="vista-formulario" hidden aria-labelledby="titulo-formulario">
-      <h2 id="titulo-formulario">Nuevo perfil</h2>
+      <h2 id="titulo-formulario" hidden>Nuevo perfil</h2>
       <form id="comprador-form">
-        <fieldset><legend>Datos del cliente</legend><div class="campos">
-          <label class="campo ancho">Nombre *<input name="nombre" required minlength="2" maxlength="120" autocomplete="off" /></label>
+        <fieldset><legend>Datos del cliente</legend><div class="campos tres">
+          <label class="campo">Nombre *<input name="nombre" required minlength="2" maxlength="120" autocomplete="off" /></label>
           <label class="campo">Teléfono<input name="telefono" type="tel" maxlength="40" autocomplete="off" /></label>
           <label class="campo">Correo<input name="correo" type="email" maxlength="160" autocomplete="off" /></label>
         </div></fieldset>
-        <fieldset><legend>¿Qué está buscando?</legend><div class="campos">
+        <fieldset><legend>¿Qué está buscando?</legend><div class="campos cuatro" id="fila-presupuesto">
           <label class="campo">Operación *<select name="operacion" required><option value="venta">Comprar</option><option value="renta">Rentar</option></select></label>
           <label class="campo">Moneda *<select name="moneda"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares (USD)</option></select></label>
-          <div class="campo ancho"><span>Tipo de inmueble * · puedes elegir varios</span><div class="opciones" id="tipos"></div></div>
           <label class="campo" id="campo-precio-min">Presupuesto mínimo<input name="precio_min" type="number" min="0" max="100000000000" step="0.01" /></label>
           <label class="campo"><span id="precio-max-titulo">Presupuesto máximo *</span><input name="precio_max" type="number" min="0.01" max="100000000000" step="0.01" required /></label>
+          <div class="campo ancho"><span>Tipo de inmueble * · puedes elegir varios</span><div class="opciones" id="tipos"></div></div>
         </div></fieldset>
-        <fieldset><legend>Ubicación deseada</legend><div class="campos">
+        <fieldset><legend>Ubicación deseada</legend><div class="campos tres">
           <label class="campo">Ciudad / estado *<select name="estado" required><option value="">Seleccionar ciudad</option></select></label>
           <label class="campo">Alcaldía / municipio<select name="municipio"><option value="">Todas</option></select></label>
-          <label class="campo ancho">Colonia<select name="colonias"><option value="">Todas</option></select></label>
+          <label class="campo">Colonia<select name="colonias"><option value="">Todas</option></select></label>
         </div></fieldset>
-        <fieldset><legend>Características mínimas</legend><div class="campos">
+        <fieldset><legend>Características</legend><div class="campos cuatro">
           <label class="campo">Recámaras<input name="recamaras_min" type="number" min="0" max="100" step="1" /></label>
           <label class="campo">Baños<input name="banos_min" type="number" min="0" max="100" step="0.5" /></label>
           <label class="campo">Estacionamientos<input name="estacionamientos_min" type="number" min="0" max="100" step="1" /></label>
           <label class="campo">Superficie mínima (m²)<input name="superficie_min" type="number" min="0" max="10000000" step="0.01" /></label>
-          <label class="campo ancho">Otras necesidades o comentarios<textarea name="notas" rows="3" maxlength="2000" placeholder="Jardín, mascotas, elevador, accesibilidad…"></textarea></label>
+          <label class="campo ancho">Características específicas<textarea name="notas" rows="3" maxlength="2000" placeholder="Jardín, mascotas, elevador, accesibilidad…"></textarea></label>
         </div></fieldset>
         <fieldset><legend>Preferencias para los futuros avisos</legend><div class="campos">
           <label class="campo">Compatibilidad mínima (%)<input name="umbral_match" type="number" min="1" max="100" step="1" value="70" required /></label>
@@ -105,7 +113,7 @@
     </section>
   </main>
   <script src="/assets/js/kw-ui.js?v=20260922"></script>
-  <script src="/assets/js/perfil-comprador.js?v=20260930c"></script>
+  <script src="/assets/js/perfil-comprador.js?v=20260930d"></script>
   <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
 </body>
 </html>

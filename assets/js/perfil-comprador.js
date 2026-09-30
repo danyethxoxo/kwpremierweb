@@ -34,6 +34,7 @@
   function actualizarPrecios() {
     var renta = form.elements.operacion.value === 'renta';
     document.getElementById('campo-precio-min').hidden = renta;
+    document.getElementById('fila-presupuesto').classList.toggle('operacion-renta',renta);
     form.elements.precio_min.disabled = renta;
     document.getElementById('precio-max-titulo').textContent = renta ? 'Renta mensual máxima *' : 'Presupuesto máximo *';
   }
