@@ -45,6 +45,30 @@
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
   var ubicaciones = [];
+  var etiquetas = [], entradaEtiqueta = document.getElementById('agregar-etiqueta');
+  function pintarEtiquetas() {
+    var caja = document.getElementById('etiquetas');
+    caja.querySelectorAll('.etiqueta').forEach(function (el) { el.remove(); });
+    etiquetas.forEach(function (texto,indice) {
+      var chip = document.createElement('span'); chip.className = 'etiqueta'; chip.append(document.createTextNode(texto));
+      var quitar = document.createElement('button'); quitar.type = 'button'; quitar.textContent = '×'; quitar.setAttribute('aria-label','Quitar ' + texto);
+      quitar.addEventListener('click',function () { if (!ocupado) { etiquetas.splice(indice,1); pintarEtiquetas(); } });
+      chip.append(quitar); caja.insertBefore(chip,entradaEtiqueta);
+    });
+    form.elements.notas.value = etiquetas.join('\n');
+  }
+  function agregarEtiqueta() {
+    var texto = entradaEtiqueta.value.trim().replace(/\s+/g,' ');
+    if (!texto) return;
+    if (!etiquetas.some(function (t) { return normalizarBusqueda(t) === normalizarBusqueda(texto); })) {
+      if (etiquetas.concat(texto).join('\n').length > 2000) throw new Error('Las etiquetas no pueden superar 2,000 caracteres.');
+      etiquetas.push(texto);
+    }
+    entradaEtiqueta.value = ''; pintarEtiquetas();
+  }
+  entradaEtiqueta.addEventListener('keydown',function (e) {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (!ocupado) { try { agregarEtiqueta(); } catch (error) { avisar(error.message,true); } } }
+  });
   function normalizarBusqueda(texto) { return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
   function prepararBusquedaUbicacion() {
     ['estado','municipio','colonias'].forEach(function (campo) {
@@ -108,13 +132,29 @@
     select.dispatchEvent(new Event('change', { bubbles: false }));
   }
   var actualizandoUbicacion = false;
+  function opcionesLugar(campo, filas, columna, estado, municipio) {
+    var select = form.elements[campo], anterior = select.value, mapa = new Map();
+    select.replaceChildren(new Option('Todas',''));
+    filas.forEach(function (p) {
+      if (!p[columna]) return;
+      var clave = JSON.stringify([p.estado,p.municipio,columna === 'colonia' ? p.colonia : '']);
+      mapa.set(clave,p);
+    });
+    Array.from(mapa.values()).sort(function (a,b) { return a[columna].localeCompare(b[columna],'es'); }).forEach(function (p) {
+      var texto = [p[columna], columna === 'colonia' && !municipio ? p.municipio : '', !estado ? p.estado : ''].filter(Boolean).join(' · ');
+      var option = new Option(texto,p[columna]); option.dataset.estado = p.estado; option.dataset.municipio = p.municipio;
+      select.add(option);
+    });
+    if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) select.add(new Option(anterior,anterior));
+    select.value = anterior; select.dispatchEvent(new Event('change'));
+  }
   function refrescarUbicacion() {
     if (actualizandoUbicacion) return;
     actualizandoUbicacion = true;
     var estado = form.elements.estado.value, municipio = form.elements.municipio.value;
     opciones('estado', ubicaciones.map(function (p) { return p.estado; }), 'Seleccionar ciudad');
-    opciones('municipio', ubicaciones.filter(function (p) { return !estado || p.estado === estado; }).map(function (p) { return p.municipio; }), 'Todas');
-    opciones('colonias', ubicaciones.filter(function (p) { return (!estado || p.estado === estado) && (!municipio || p.municipio === municipio); }).map(function (p) { return p.colonia; }), 'Todas');
+    opcionesLugar('municipio', ubicaciones.filter(function (p) { return !estado || p.estado === estado; }), 'municipio',estado,municipio);
+    opcionesLugar('colonias', ubicaciones.filter(function (p) { return (!estado || p.estado === estado) && (!municipio || p.municipio === municipio); }), 'colonia',estado,municipio);
     actualizandoUbicacion = false;
     window.kwUI.selects();
     prepararBusquedaUbicacion();
@@ -138,7 +178,19 @@
   });
   form.elements.municipio.addEventListener('change', function () {
     if (actualizandoUbicacion) return;
+    var opcion = form.elements.municipio.selectedOptions[0];
+    if (opcion && opcion.dataset.estado) form.elements.estado.value = opcion.dataset.estado;
     form.elements.colonias.value = ''; refrescarUbicacion();
+  });
+  form.elements.colonias.addEventListener('change', function () {
+    if (actualizandoUbicacion) return;
+    var opcion = form.elements.colonias.selectedOptions[0];
+    if (opcion && opcion.dataset.estado) {
+      form.elements.estado.value = opcion.dataset.estado;
+      var municipio = opcion.dataset.municipio;
+      if (!Array.from(form.elements.municipio.options).some(function (o) { return o.value === municipio; })) form.elements.municipio.add(new Option(municipio,municipio));
+      form.elements.municipio.value = municipio; refrescarUbicacion();
+    }
   });
   form.elements.operacion.addEventListener('change', actualizarPrecios);
   ['recamaras_min','banos_min','estacionamientos_min','superficie_min'].forEach(function (key) {
@@ -160,6 +212,7 @@
   function avisar(texto, error) { mensaje.textContent = texto; mensaje.classList.toggle('error', Boolean(error)); }
   function resetear() {
     form.reset(); editando = null;
+    etiquetas = []; entradaEtiqueta.value = ''; pintarEtiquetas();
     document.getElementById('titulo-formulario').textContent = 'Nuevo perfil';
     guardar.textContent = 'Guardar perfil'; nuevo.textContent = 'Limpiar';
     actualizarPrecios(); refrescarUbicacion();
@@ -167,6 +220,7 @@
     form.elements.moneda.dispatchEvent(new Event('change'));
   }
   function datos() {
+    agregarEtiqueta();
     var d = {};
     textos.forEach(function (key) { d[key] = form.elements[key].value.trim(); });
     numeros.forEach(function (key) { var valor = form.elements[key].value.replace(/,/g,''); d[key] = valor === '' ? null : Number(valor); });
@@ -204,6 +258,7 @@
           if (input.tagName === 'SELECT' && valor && !Array.from(input.options).some(function (o) { return o.value === valor; })) input.add(new Option(valor,valor));
           input.value = key === 'precio_min' || key === 'precio_max' ? formatearPresupuesto(valor) : valor;
         });
+        etiquetas = String(p.notas || '').split(/[\n,;]+/).map(function (t) { return t.trim(); }).filter(Boolean); pintarEtiquetas();
         form.querySelectorAll('input[name=tipos]').forEach(function (input) { input.checked = p.tipos.includes(input.value); });
         document.getElementById('titulo-formulario').textContent = 'Editar perfil';
         guardar.textContent = 'Guardar cambios'; nuevo.textContent = 'Limpiar';
