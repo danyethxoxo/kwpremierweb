@@ -213,7 +213,12 @@
   #conteo { flex: 1; text-align: center; justify-content: center; margin: 0; line-height: 1.4; }
   .propiedades-encabezado { align-items: baseline !important; }
   #filtros .catalogo-select .kw-select-valor { visibility: hidden; }
-  #filtros .catalogo-select .catalogo-buscar { position: absolute; top: 0; left: var(--catalogo-inset, 15px); width: calc(100% - var(--catalogo-inset, 15px) - 42px); height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); box-shadow: none; }
+  #filtros .catalogo-select .catalogo-buscar { position: absolute; top: 0; left: var(--catalogo-inset, 15px); width: calc(100% - var(--catalogo-inset, 15px) - 76px); height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); box-shadow: none; }
+  #filtros .catalogo-limpiar { position: absolute; right: 38px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--red); cursor: pointer; }
+  #filtros .catalogo-limpiar[hidden] { display: none; }
+  #filtros .catalogo-limpiar svg { width: 16px; height: 16px; }
+  #filtros .catalogo-limpiar:hover { background: #fff3f3; }
+  #filtros .catalogo-limpiar:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
   #filtros .catalogo-select .catalogo-buscar::placeholder { color: var(--catalogo-color, var(--muted)); opacity: 1; }
   #filtros .kw-select:focus-within .kw-select-btn,
   #filtros .kw-select.abierto .kw-select-btn,
@@ -869,7 +874,19 @@
     vacio.value = '';
     vacio.textContent = textoVacio || 'Todos';
     lista.appendChild(vacio);
-    valores.sort(function (a, b) { return String(a).localeCompare(String(b), 'es'); })
+    valores.sort(function (a, b) {
+      function prioridad(valor) {
+        var texto = normalizarTexto(valor).trim();
+        if (id === 'f-mc') return texto === 'kw premier' ? 0 : 1;
+        if (id === 'f-tipo') {
+          var orden = ['casa', 'departamento', 'terreno', 'oficina', 'local comercial', 'bodega'];
+          var indice = orden.indexOf(texto);
+          return indice === -1 ? orden.length : indice;
+        }
+        return 0;
+      }
+      return prioridad(a) - prioridad(b) || String(a).localeCompare(String(b), 'es');
+    })
       .forEach(function (v) {
         var o = document.createElement('option');
         o.value = v;
@@ -1211,6 +1228,7 @@
       var lote = respuesta.data || [];
       lote.forEach(function (fila) {
         if (!fila[campo]) return;
+        if ((id === 'f-estado' || id === 'f-colonia') && normalizarTexto(fila.estado).trim() === 'antioquia') return;
         if (id === 'f-colonia') {
           var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
           colonias.set('ubic:' + JSON.stringify(lugar), lugar);
@@ -1262,7 +1280,9 @@
         .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
       if (respuesta.error) throw respuesta.error;
       if (revision !== versionUbicacion) return;
-      (respuesta.data || []).forEach(function (fila) { if (fila.estado) estados.add(fila.estado); });
+      (respuesta.data || []).forEach(function (fila) {
+        if (fila.estado && normalizarTexto(fila.estado).trim() !== 'antioquia') estados.add(fila.estado);
+      });
       if ((respuesta.data || []).length < TAMANO_LOTE_CATALOGO) break;
     }
     if (estados.size === 1 && revision === versionUbicacion) {
@@ -1476,7 +1496,23 @@
       btn.tabIndex = -1;
       btn.setAttribute('aria-label', 'Abrir opciones');
       buscar.setAttribute('aria-label', 'Buscar en ' + document.querySelector('label[for="' + id + '"]').textContent);
+      var limpiar = document.createElement('button');
+      limpiar.type = 'button';
+      limpiar.className = 'catalogo-limpiar';
+      limpiar.setAttribute('aria-label', 'Borrar filtro ' + document.querySelector('label[for="' + id + '"]').textContent);
+      limpiar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
+      limpiar.addEventListener('click', function (evento) {
+        evento.stopPropagation();
+        buscar.value = '';
+        select.value = '';
+        if (caja.classList.contains('abierto')) btn.click();
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        buscar.actualizarCatalogo();
+        buscar.focus();
+      });
       function filtrar() {
+        limpiar.hidden = !select.value && !buscar.value;
+        limpiar.disabled = select.disabled;
         var texto = normalizarTexto(buscar.value);
         menu.querySelectorAll('.kw-select-opcion').forEach(function (opcion) {
           opcion.hidden = normalizarTexto(opcion.textContent).indexOf(texto) === -1;
@@ -1521,6 +1557,7 @@
         if (evento.target.closest('.kw-select-opcion')) buscar.focus();
       });
       caja.appendChild(buscar);
+      caja.appendChild(limpiar);
       buscar.actualizarCatalogo();
     });
   }
