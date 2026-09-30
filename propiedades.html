@@ -459,6 +459,13 @@
         <div class="filtros-sidebar">
           <section class="filtro-seccion">
             <div class="filtro">
+              <label for="mi-sitio-web">Mi Sitio Web</label>
+              <input type="text" id="mi-sitio-web" data-kw-no inputmode="url" autocomplete="url" maxlength="254" placeholder="daniguerrero.kw.com" aria-describedby="mi-sitio-estado" disabled />
+              <p id="mi-sitio-estado" style="font-size:11px;color:var(--muted);margin-top:6px;" role="status">Cargando tu sitio…</p>
+            </div>
+          </section>
+          <section class="filtro-seccion">
+            <div class="filtro">
               <label for="f-orden">Ordenar por</label>
               <select id="f-orden">
                 <option value="reciente">Más recientes</option>
@@ -575,7 +582,6 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
-        <p id="aviso-sitio-asesor" hidden style="font-size:12px;color:var(--muted);margin-bottom:12px;"></p>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -607,6 +613,49 @@
   var totalCatalogo = 0;
   var sitioAsesor = null;
   var sitioAsesorPromesa = null;
+  var sitioAsesorUsuario = null;
+  var sitioGuardadoPromesa = Promise.resolve();
+
+  function mostrarEstadoSitio(texto, error) {
+    var estado = document.getElementById('mi-sitio-estado');
+    estado.textContent = texto;
+    estado.style.color = error ? 'var(--red)' : 'var(--muted)';
+  }
+
+  function actualizarEnlacesSitio() {
+    document.querySelectorAll('.prop-card[data-enlace-kw]').forEach(function (tarjeta) {
+      var enlace = tarjeta.getAttribute('data-enlace-kw');
+      if (enlace) tarjeta.href = window.kwSitioAsesor.personalizar(enlace, sitioAsesor);
+    });
+  }
+
+  function guardarSitioAsesor() {
+    var campo = document.getElementById('mi-sitio-web');
+    var capturado = campo.value.trim();
+    var normalizado = window.kwSitioAsesor.normalizar(capturado);
+    if (capturado && !normalizado) {
+      campo.setAttribute('aria-invalid', 'true');
+      mostrarEstadoSitio('Escribe tu sitio de KW, por ejemplo daniguerrero.kw.com.', true);
+      return Promise.resolve();
+    }
+    campo.removeAttribute('aria-invalid');
+    mostrarEstadoSitio('Guardando…');
+    sitioGuardadoPromesa = sitioGuardadoPromesa.then(async function () {
+      await cargarSitioAsesor();
+      var respuesta = await sb.from('profiles').update({ sitio_web: normalizado })
+        .eq('id', sitioAsesorUsuario).select('sitio_web').single();
+      if (respuesta.error) throw respuesta.error;
+      sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
+      actualizarEnlacesSitio();
+      if (campo.value.trim() === capturado) {
+        campo.value = sitioAsesor ? new URL(sitioAsesor).hostname : '';
+        mostrarEstadoSitio(sitioAsesor ? 'Guardado. Las propiedades abrirán con tu sitio.' : 'Guardado. Las propiedades abrirán en kw.com.');
+      }
+    }).catch(function () {
+      mostrarEstadoSitio('No se pudo guardar. Presiona Enter para reintentar.', true);
+    });
+    return sitioGuardadoPromesa;
+  }
 
   function cargarSitioAsesor() {
     if (!sitioAsesorPromesa) {
@@ -615,16 +664,14 @@
         if (sesion.error) throw sesion.error;
         var usuario = sesion.data && sesion.data.session && sesion.data.session.user;
         if (!usuario) throw new Error('Inicia sesión para abrir propiedades con tu sitio.');
+        sitioAsesorUsuario = usuario.id;
         var respuesta = await sb.from('profiles').select('sitio_web').eq('id', usuario.id).single();
         if (respuesta.error) throw respuesta.error;
         sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
-        var aviso = document.getElementById('aviso-sitio-asesor');
-        if (sitioAsesor) {
-          aviso.textContent = 'Las propiedades se abrirán en ' + new URL(sitioAsesor).hostname + '.';
-        } else {
-          aviso.innerHTML = 'Agrega tu sitio de KW en <a href="/perfil.html">Mi perfil → Enlaces</a> para abrir las propiedades con tus datos de contacto.';
-        }
-        aviso.hidden = false;
+        var campo = document.getElementById('mi-sitio-web');
+        campo.value = sitioAsesor ? new URL(sitioAsesor).hostname : '';
+        campo.disabled = false;
+        mostrarEstadoSitio(sitioAsesor ? 'Guardado. Las propiedades abrirán con tu sitio.' : 'Se guarda al salir del campo o presionar Enter.');
       })().catch(function (error) {
         sitioAsesorPromesa = null;
         throw error;
@@ -687,7 +734,7 @@
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
       : '/propiedad.html?id=' + encodeURIComponent(p.id));
     enlacePropiedad = window.kwSitioAsesor.personalizar(enlacePropiedad, sitioAsesor);
-    return '<a class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer">' +
+    return '<a class="prop-card kw-aparece" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer">' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
@@ -1442,6 +1489,7 @@
   };
 
   repintarDesdeFiltro = function (evento) {
+    if (evento && evento.target.id === 'mi-sitio-web') return;
     if (actualizandoRelaciones) return;
     var id = evento && evento.target.id;
     // Los selects nativos disparan input y change; procesar cada elección una sola vez.
@@ -1507,6 +1555,18 @@
   };
 
   var cajaFiltros = document.getElementById('filtros');
+  var campoSitio = document.getElementById('mi-sitio-web');
+  campoSitio.addEventListener('change', guardarSitioAsesor);
+  campoSitio.addEventListener('input', function () {
+    this.removeAttribute('aria-invalid');
+    mostrarEstadoSitio('Se guarda al salir del campo o presionar Enter.');
+  });
+  campoSitio.addEventListener('keydown', function (evento) {
+    if (evento.key === 'Enter') {
+      evento.preventDefault();
+      guardarSitioAsesor();
+    }
+  });
   function prepararBusquedasCatalogo() {
     ['f-mc', 'f-asesor', 'f-tipo', 'f-estado', 'f-municipio', 'f-colonia'].forEach(function (id) {
       var select = document.getElementById(id);

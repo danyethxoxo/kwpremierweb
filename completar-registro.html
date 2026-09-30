@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
   <script src="/assets/js/kw-security.js?v=20260922"></script>
-  <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta charset="UTF-8" />
@@ -192,11 +191,6 @@
           <input type="email" id="correo-seguridad" autocomplete="email" maxlength="254" required placeholder="Un correo diferente al de acceso" />
         </div>
         <p class="sub" style="margin-bottom:12px;">Enviaremos un código para comprobar este correo y confiar en este dispositivo durante 5 días de actividad.</p>
-        <div class="field">
-          <label for="sitio-web">Sitio web</label>
-          <input type="text" id="sitio-web" inputmode="url" autocomplete="url" maxlength="254" placeholder="daniguerrero.kw.com" aria-describedby="sitio-web-ayuda" />
-          <p id="sitio-web-ayuda" style="font-size:12px;color:var(--muted);margin-top:6px;">Coloca tu sitio de KW para abrir las propiedades con tus datos de contacto. Puedes agregarlo después en Mi perfil.</p>
-        </div>
         <button type="submit" class="btn-submit" id="submit-btn">Enviar código de seguridad</button>
         <div id="paso-codigo" style="display:none;margin-top:18px;">
           <div class="field">
@@ -334,15 +328,7 @@
     const password = document.getElementById('password').value;
     const password2 = document.getElementById('password2').value;
     const correoSeguridad = document.getElementById('correo-seguridad').value.trim();
-    const sitioCapturado = document.getElementById('sitio-web').value.trim();
-    const sitioWeb = window.kwSitioAsesor.normalizar(sitioCapturado);
     const submitBtn = document.getElementById('submit-btn');
-
-    if (sitioCapturado && !sitioWeb) {
-      showMsg('Escribe tu sitio de KW, por ejemplo daniguerrero.kw.com.', 'error');
-      document.getElementById('sitio-web').focus();
-      return;
-    }
 
     if (!window.kwSecurity.validPassword(password)) {
       showMsg('Usa al menos 12 caracteres y como máximo 72 bytes.', 'error');
@@ -363,7 +349,7 @@
       if (passError) throw passError;
 
       const envio = await llamarMFA({ accion: 'preparar', correo_alternativo: correoSeguridad });
-      registroPendiente = { userId, nombre, apellido, sitioWeb };
+      registroPendiente = { userId, nombre, apellido };
       document.querySelectorAll('#completar-form > .field, #completar-form > p.sub, #submit-btn').forEach((elemento) => { elemento.style.display = 'none'; });
       document.getElementById('paso-codigo').style.display = 'block';
       showMsg('Código enviado a ' + envio.enviado_a + '. Revisa también spam o promociones.', 'ok');
@@ -390,7 +376,6 @@
       const { error: profileError } = await sb.from('profiles').update({
         nombre: registroPendiente.nombre,
         apellido: registroPendiente.apellido,
-        ...(registroPendiente.sitioWeb ? { sitio_web: registroPendiente.sitioWeb } : {}),
       }).eq('id', registroPendiente.userId);
       if (profileError) throw profileError;
       showMsg('¡Cuenta protegida! Entrando...', 'ok');

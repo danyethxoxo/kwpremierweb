@@ -49,7 +49,7 @@ test('la tarjeta abre la ficha del asesor en nueva pestaña y mantiene kw.com si
 });
 
 test('consulta el sitio del usuario de la sesión y reintenta si falla la lectura', async () => {
-  const aviso = {};
+  const aviso = { style: {} };
   let intentos = 0;
   const context = contexto({ document: { getElementById: () => aviso }, sb: {
     auth: { getSession: async () => ({ data: { session: { user: { id: 'asesor-actual' } } } }) },
@@ -72,13 +72,13 @@ test('consulta el sitio del usuario de la sesión y reintenta si falla la lectur
   await assert.rejects(context.cargarSitioAsesor(), /Error temporal/);
   await context.cargarSitioAsesor();
   assert.equal(context.sitioAsesor, 'https://daniguerrero.kw.com');
-  assert.equal(aviso.hidden, false);
-  assert.match(aviso.textContent, /daniguerrero.kw.com/);
+  assert.equal(aviso.disabled, false);
+  assert.equal(aviso.value, 'daniguerrero.kw.com');
   await context.cargarSitioAsesor();
   assert.equal(intentos, 2);
 });
 
-test('registro guarda el sitio normalizado únicamente tras confirmar el código', async () => {
+test('el registro conserva el flujo de confirmación sin pedir el sitio', async () => {
   const elements = new Map();
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, { value: '', style: {}, handlers: {}, addEventListener(event, handler) { this.handlers[event] = handler; }, focus() {} });
@@ -108,12 +108,64 @@ test('registro guarda el sitio normalizado únicamente tras confirmar el código
   element('apellido').value = 'Guerrero';
   element('password').value = element('password2').value = 'password-prueba';
   element('correo-seguridad').value = 'recuperacion@example.com';
-  element('sitio-web').value = 'daniguerrero.kw.com';
   await element('completar-form').handlers.submit({ preventDefault() {} });
   assert.equal(updates.length, 0);
   element('codigo-seguridad').value = '123456';
   await element('confirmar-codigo').handlers.click.call(element('confirmar-codigo'));
   assert.deepEqual(mfa, ['preparar', 'confirmar']);
-  assert.equal(updates[0].data.sitio_web, 'https://daniguerrero.kw.com');
+  assert.equal(updates[0].data.sitio_web, undefined);
   assert.equal(updates[0].id, 'nuevo-asesor');
+});
+
+test('guarda en la cuenta actual, actualiza tarjetas y recupera el sitio al volver', async () => {
+  const campo = { value: '', setAttribute() {}, removeAttribute() {} };
+  const estado = { style: {} };
+  const tarjeta = { href: general, getAttribute: () => general };
+  let guardado = null;
+  let fallo = false;
+  let escrituras = 0;
+  const sb = {
+    auth: { getSession: async () => ({ data: { session: { user: { id: 'mi-cuenta' } } } }) },
+    from: () => ({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { sitio_web: guardado } }) }) }),
+      update: (data) => ({ eq: (field, id) => {
+        assert.equal(field, 'id');
+        assert.equal(id, 'mi-cuenta');
+        return { select: () => ({ single: async () => {
+          escrituras++;
+          if (fallo) return { error: new Error('No se pudo guardar') };
+          guardado = data.sitio_web;
+          return { data: { sitio_web: guardado } };
+        } }) };
+      } })
+    })
+  };
+  const context = contexto({ sb, document: {
+    getElementById: (id) => id === 'mi-sitio-web' ? campo : estado,
+    querySelectorAll: () => [tarjeta]
+  } });
+  const html = readFileSync(new URL('propiedades.html', root), 'utf8');
+  vm.runInContext(html.slice(html.indexOf('  var sitioAsesor ='), html.indexOf('  function escapeHtml')), context);
+  await context.cargarSitioAsesor();
+  campo.value = 'daniguerrero.kw.com';
+  await context.guardarSitioAsesor();
+  assert.equal(guardado, 'https://daniguerrero.kw.com');
+  assert.equal(tarjeta.href, general.replace('https://kw.com', 'https://daniguerrero.kw.com'));
+  assert.match(estado.textContent, /^Guardado/);
+  campo.value = 'daniguerrero.kw.com.ejemplo.com';
+  await context.guardarSitioAsesor();
+  assert.equal(escrituras, 1);
+  fallo = true;
+  campo.value = 'otro.kw.com';
+  await context.guardarSitioAsesor();
+  assert.match(estado.textContent, /No se pudo guardar/);
+  assert.equal(context.sitioAsesor, 'https://daniguerrero.kw.com');
+  context.sitioAsesorPromesa = null;
+  await context.cargarSitioAsesor();
+  assert.equal(campo.value, 'daniguerrero.kw.com');
+  fallo = false;
+  campo.value = '';
+  await context.guardarSitioAsesor();
+  assert.equal(guardado, null);
+  assert.equal(tarjeta.href, general);
 });
