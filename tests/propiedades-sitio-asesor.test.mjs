@@ -119,7 +119,7 @@ test('el registro conserva el flujo de confirmación sin pedir el sitio', async 
 
 test('guarda en la cuenta actual, actualiza tarjetas y recupera el sitio al volver', async () => {
   const campo = { value: '', setAttribute() {}, removeAttribute() {}, focus() {} };
-  const estado = { style: {} };
+  const estado = { style: {}, setAttribute() {} };
   const tarjeta = { href: general, getAttribute: () => general };
   let guardado = null;
   let fallo = false;

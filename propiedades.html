@@ -35,6 +35,12 @@
   .sitio-web-quitar { flex: none; margin-left: 5px; border: 0; border-radius: 6px; background: transparent; color: var(--red); cursor: pointer; font-size: 20px; width: 28px; height: 30px; }
   .sitio-web-quitar:hover { background: #fff0f0; }
   .sitio-web-quitar[hidden] { display: none; }
+  .sitio-web-quitar { display: flex; align-items: center; justify-content: center; }
+  .sitio-web-quitar svg { width: 20px; height: 20px; animation: sitio-girando .8s linear infinite; }
+  .sitio-web-quitar:disabled { cursor: wait; }
+  @keyframes sitio-girando { to { transform: rotate(360deg); } }
+  .modal-overlay .btn-modal-confirmar { background: #800020; color: #fff; border-color: #800020; }
+  .modal-overlay .btn-modal-confirmar:hover { background: #68001a; }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     min-height: 100%;
@@ -667,7 +673,13 @@
       return Promise.resolve();
     }
     campo.removeAttribute('aria-invalid');
-    mostrarEstadoSitio('Guardando…');
+    mostrarEstadoSitio('');
+    var botonQuitar = document.getElementById('mi-sitio-quitar');
+    botonQuitar.hidden = false;
+    botonQuitar.disabled = true;
+    botonQuitar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    botonQuitar.setAttribute('aria-label', 'Guardando sitio web');
+    campo.disabled = true;
     sitioGuardadoPromesa = sitioGuardadoPromesa.then(async function () {
       await cargarSitioAsesor();
       var respuesta = await sb.from('profiles').update({ sitio_web: normalizado })
@@ -681,6 +693,12 @@
       }
     }).catch(function () {
       mostrarEstadoSitio('No se pudo guardar. Presiona Enter para reintentar.', true);
+    }).finally(function () {
+      botonQuitar.innerHTML = '×';
+      botonQuitar.disabled = false;
+      botonQuitar.hidden = !sitioAsesor;
+      botonQuitar.setAttribute('aria-label', 'Quitar mi sitio web');
+      campo.disabled = false;
     });
     return sitioGuardadoPromesa;
   }
