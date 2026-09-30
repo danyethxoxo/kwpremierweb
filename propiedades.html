@@ -642,7 +642,7 @@
         escapeHtml(ETIQUETA_ESTATUS[p.estatus] || p.estatus) + '</span>'
       : '';
 
-    var pie = [p.asesor_nombre, p.market_center].filter(Boolean).join(' · ');
+    var pie = [p.asesor_nombre, nombreMarketCenter(p.market_center)].filter(Boolean).join(' · ');
 
     var enlacePropiedad = p.fuente === 'kwmexico' && p.fuente_id
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
@@ -851,6 +851,10 @@
     repintarDesdeFiltro();
   }
 
+  function nombreMarketCenter(valor) {
+    return String(valor || '').replace(/M\u00c3\u00a9xico/g, 'México');
+  }
+
   function llenarSelect(id, valores, textoVacio) {
     var lista = document.getElementById(id);
     if (!lista) return;
@@ -864,7 +868,7 @@
       .forEach(function (v) {
         var o = document.createElement('option');
         o.value = v;
-        o.textContent = v;
+        o.textContent = id === 'f-mc' ? nombreMarketCenter(v) : v;
         lista.appendChild(o);
       });
     if (actual && valores.some(function (v) { return String(v) === actual; })) {
