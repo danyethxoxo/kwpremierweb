@@ -191,7 +191,7 @@ function normalizarKwMexico(
   detalle: KwRespuesta | null,
   marketCenters: Map<string, string>,
 ): Fila | null {
-  const propiedad = kwLista(detalle?.data, 'Property_Data')[0] || listado
+  const propiedad = { ...(kwLista(detalle?.data, 'Property_Data')[0] || {}), ...listado }
   const fuenteId = kwTexto(propiedad.ID) || kwTexto(listado.ID)
   if (!fuenteId) return null
 
@@ -345,6 +345,7 @@ function kwListadoAnterior(datos: unknown): KwRegistro | null {
 
 function kwTieneDetalle(datos: unknown): boolean {
   if (!datos || typeof datos !== 'object') return false
+  if ((datos as KwRegistro).detalle_pendiente) return false
   const detalle = (datos as KwRegistro).detalle
   return !!detalle && typeof detalle === 'object' && !Array.isArray(detalle)
 }
@@ -464,6 +465,13 @@ function mapOperacion(v: string | null): string | null {
 
 type Fila = Record<string, unknown> & { asesor_email?: string | null }
 
+function normalizarDetallePendiente(listado: KwRegistro, existente: KwRegistro | undefined, centros: Map<string, string>): Fila | null {
+  const detalle = (existente?.datos_origen as KwRegistro)?.detalle as KwRespuesta || null
+  const fila = normalizarKwMexico(listado, detalle, centros)
+  if (fila) fila.datos_origen = { listado, detalle, detalle_pendiente: true }
+  return fila
+}
+
 async function sincronizarKwMexico(
   admin: ReturnType<typeof createClient<any>>,
   corrida: string,
@@ -482,15 +490,17 @@ async function sincronizarKwMexico(
     }
     const unicos = [...porId.values()]
 
-    const existentesRespuesta = await admin
-      .from('propiedades')
-      .select('fuente_id, datos_origen')
-      .eq('fuente', 'kwmexico')
-    if (existentesRespuesta.error) throw existentesRespuesta.error
     const existentesPorId = new Map<string, KwRegistro>()
-    for (const fila of existentesRespuesta.data || []) {
-      const id = kwTexto(fila.fuente_id)
-      if (id) existentesPorId.set(id, fila as KwRegistro)
+    for (let desde = 0; ; desde += 1000) {
+      const respuesta = await admin.from('propiedades')
+        .select('fuente_id, datos_origen, estatus')
+        .eq('fuente', 'kwmexico').order('id').range(desde, desde + 999)
+      if (respuesta.error) throw respuesta.error
+      for (const fila of respuesta.data || []) {
+        const id = kwTexto(fila.fuente_id)
+        if (id) existentesPorId.set(id, fila as KwRegistro)
+      }
+      if ((respuesta.data || []).length < 1000) break
     }
     const existentes = [...existentesPorId.keys()]
 
@@ -500,12 +510,12 @@ async function sincronizarKwMexico(
       const existente = existentesPorId.get(id)
       const datosAnteriores = existente?.datos_origen
       const anterior = kwListadoAnterior(datosAnteriores)
-      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || kwCambioListado(listado, anterior)
+      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || kwCambioListado(listado, anterior) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
       return necesitaDetalle ? [{ listado, existente, tieneDetalle: kwTieneDetalle(datosAnteriores) }] : []
     })
     const loteDetalle = pendientesDetalle.slice(0, KWMEXICO_DETAIL_LIMIT)
 
-    const resultados = await enParalelo(loteDetalle, KWMEXICO_CONCURRENCY, async ({ listado }) => {
+    const resultados = await enParalelo(loteDetalle, KWMEXICO_CONCURRENCY, async ({ listado, existente }) => {
       try {
         const detalle = await kwJson(KWMEXICO_API_BASE + '/' + encodeURIComponent(String(listado.ID)))
         return {
@@ -514,7 +524,7 @@ async function sincronizarKwMexico(
         }
       } catch {
         return {
-          fila: normalizarKwMexico(listado, null, catalogo.marketCenters),
+          fila: normalizarDetallePendiente(listado, existente, catalogo.marketCenters),
           detalleFallido: true,
         }
       }
@@ -528,8 +538,7 @@ async function sincronizarKwMexico(
       .filter((fila): fila is Fila => fila !== null)
     const filasListado = pendientesDetalle
       .slice(KWMEXICO_DETAIL_LIMIT)
-      .filter(({ existente, tieneDetalle }) => !existente || !tieneDetalle)
-      .map(({ listado }) => normalizarKwMexico(listado, null, catalogo.marketCenters))
+      .map(({ listado, existente }) => normalizarDetallePendiente(listado, existente, catalogo.marketCenters))
       .filter((fila): fila is Fila => fila !== null)
     const listas = await enlazarAsesores(admin, filasDetalle.concat(filasListado))
 
@@ -546,13 +555,14 @@ async function sincronizarKwMexico(
     let suspendidas = 0
     if (catalogo.completa) {
       const actuales = new Set(unicos.map((propiedad) => String(propiedad.ID)))
-      const obsoletas = existentes.filter((id) => !actuales.has(id))
+      const obsoletas = existentes.filter((id) => !actuales.has(id) && existentesPorId.get(id)?.estatus === 'publicada')
       for (let i = 0; i < obsoletas.length; i += 250) {
         const lote = obsoletas.slice(i, i + 250)
         const { error } = await admin
           .from('propiedades')
           .update({ estatus: 'suspendida', sincronizado_at: corrida })
           .eq('fuente', 'kwmexico')
+          .eq('estatus', 'publicada')
           .in('fuente_id', lote)
         if (error) throw error
         suspendidas += lote.length

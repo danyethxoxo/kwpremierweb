@@ -202,7 +202,10 @@
     gap: 18px; margin-bottom: 20px !important;
   }
   .propiedades-encabezado .page-title { margin: 0; text-align: left; }
-  #conteo { flex: 1; text-align: center; justify-content: center; margin: 0; }
+  #conteo { flex: 1; text-align: center; justify-content: center; margin: 0; line-height: 1.4; }
+  .propiedades-encabezado { align-items: baseline !important; }
+  #filtros .kw-select-menu .catalogo-buscar { position: sticky; top: 0; z-index: 1; width: 100%; height: 34px; margin-bottom: 5px; background: #f7f7f7; font-size: 12px; }
+  #filtros .kw-select-opcion[hidden] { display: none; }
   #filtros .kw-numero > input[type="number"] { padding-left: 9px; padding-right: 43px !important; font-size: 13px; }
   #filtros .kw-numero-controles { right: 3px; gap: 1px; padding-left: 2px; }
   #filtros .kw-numero-controles button { width: 17px; height: 23px; min-width: 0; min-height: 0; font-size: 14px; border-radius: 4px; }
@@ -475,11 +478,7 @@
               <label for="f-estatus">Estatus</label>
               <select id="f-estatus">
                 <option value="publicada">Activa</option>
-                <option value="vendida">Vendida</option>
-                <option value="rentada">Rentada</option>
-                <option value="no_publicada">Borrador</option>
-                <option value="reservada">Reservada</option>
-                <option value="suspendida">Suspendida</option>
+                <option value="inactiva">Inactiva</option>
                 <option value="">Todos los estatus</option>
               </select>
             </div>
@@ -512,8 +511,8 @@
             <div class="filtro filtro-rango">
               <label>Precio</label>
               <div class="rango">
-                <input type="number" id="f-min" placeholder="Min" min="0" step="100000" aria-label="Precio mínimo" />
-                <input type="number" id="f-max" placeholder="Max" min="0" step="100000" aria-label="Precio máximo" />
+                <input type="number" id="f-min" data-kw-no placeholder="Min" min="0" step="100000" aria-label="Precio mínimo" />
+                <input type="number" id="f-max" data-kw-no placeholder="Max" min="0" step="100000" aria-label="Precio máximo" />
               </div>
             </div>
             <div class="filtros-dos-columnas">
@@ -1080,7 +1079,8 @@
       .eq('fuente', 'kwmexico');
 
     if (filtros.operacion) consulta = consulta.eq('operacion', filtros.operacion);
-    if (filtros.estatus) consulta = consulta.eq('estatus', filtros.estatus);
+    if (filtros.estatus === 'inactiva') consulta = consulta.neq('estatus', 'publicada');
+    else if (filtros.estatus) consulta = consulta.eq('estatus', filtros.estatus);
     if (filtros.tipo) consulta = consulta.eq('tipo', filtros.tipo);
     if (filtros.marketCenter) consulta = consulta.eq('market_center', filtros.marketCenter);
     if (filtros.asesor) consulta = consulta.eq('asesor_nombre', filtros.asesor);
@@ -1332,6 +1332,40 @@
   };
 
   var cajaFiltros = document.getElementById('filtros');
+  function prepararBusquedasCatalogo() {
+    ['f-mc', 'f-asesor', 'f-tipo', 'f-estado', 'f-municipio', 'f-colonia'].forEach(function (id) {
+      var select = document.getElementById(id);
+      var caja = select && select.closest('.kw-select');
+      var menu = caja && caja.querySelector('.kw-select-menu');
+      if (!menu || menu.querySelector('.catalogo-buscar')) return;
+      var buscar = document.createElement('input');
+      buscar.type = 'text';
+      buscar.className = 'catalogo-buscar';
+      buscar.placeholder = 'Escribe para encontrar…';
+      buscar.setAttribute('aria-label', 'Buscar en ' + document.querySelector('label[for="' + id + '"]').textContent);
+      buscar.addEventListener('click', function (evento) { evento.stopPropagation(); });
+      buscar.addEventListener('input', function (evento) {
+        evento.stopPropagation();
+        var texto = normalizarTexto(buscar.value);
+        menu.querySelectorAll('.kw-select-opcion').forEach(function (opcion) {
+          opcion.hidden = normalizarTexto(opcion.textContent).indexOf(texto) === -1;
+        });
+      });
+      buscar.addEventListener('keydown', function (evento) {
+        evento.stopPropagation();
+        if (evento.key === 'ArrowDown') {
+          var primera = menu.querySelector('.kw-select-opcion:not([hidden]):not([disabled])');
+          if (primera) { evento.preventDefault(); primera.focus(); }
+        } else if (evento.key === 'Escape') {
+          caja.querySelector('.kw-select-btn').click();
+          caja.querySelector('.kw-select-btn').focus();
+        }
+      });
+      menu.prepend(buscar);
+    });
+  }
+  new MutationObserver(prepararBusquedasCatalogo).observe(cajaFiltros, { childList: true, subtree: true });
+  prepararBusquedasCatalogo();
   if (cajaFiltros) {
     cajaFiltros.addEventListener('change', repintarDesdeFiltro);
     cajaFiltros.addEventListener('input', repintarDesdeFiltro);
