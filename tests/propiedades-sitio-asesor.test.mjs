@@ -73,7 +73,7 @@ test('consulta el sitio del usuario de la sesión y reintenta si falla la lectur
   await context.cargarSitioAsesor();
   assert.equal(context.sitioAsesor, 'https://daniguerrero.kw.com');
   assert.equal(aviso.disabled, false);
-  assert.equal(aviso.value, 'daniguerrero.kw.com');
+  assert.equal(aviso.value, 'daniguerrero');
   await context.cargarSitioAsesor();
   assert.equal(intentos, 2);
 });
@@ -118,7 +118,7 @@ test('el registro conserva el flujo de confirmación sin pedir el sitio', async 
 });
 
 test('guarda en la cuenta actual, actualiza tarjetas y recupera el sitio al volver', async () => {
-  const campo = { value: '', setAttribute() {}, removeAttribute() {} };
+  const campo = { value: '', setAttribute() {}, removeAttribute() {}, focus() {} };
   const estado = { style: {} };
   const tarjeta = { href: general, getAttribute: () => general };
   let guardado = null;
@@ -147,25 +147,36 @@ test('guarda en la cuenta actual, actualiza tarjetas y recupera el sitio al volv
   const html = readFileSync(new URL('propiedades.html', root), 'utf8');
   vm.runInContext(html.slice(html.indexOf('  var sitioAsesor ='), html.indexOf('  function escapeHtml')), context);
   await context.cargarSitioAsesor();
-  campo.value = 'daniguerrero.kw.com';
+  campo.value = 'sitio.invalido';
+  await context.guardarSitioAsesor();
+  assert.equal(escrituras, 0);
+  campo.value = 'daniguerrero';
   await context.guardarSitioAsesor();
   assert.equal(guardado, 'https://daniguerrero.kw.com');
   assert.equal(tarjeta.href, general.replace('https://kw.com', 'https://daniguerrero.kw.com'));
-  assert.match(estado.textContent, /^Guardado/);
+  assert.equal(campo.readOnly, true);
+  assert.equal(estado.textContent, '');
   campo.value = 'daniguerrero.kw.com.ejemplo.com';
   await context.guardarSitioAsesor();
   assert.equal(escrituras, 1);
   fallo = true;
-  campo.value = 'otro.kw.com';
-  await context.guardarSitioAsesor();
+  context.window.kwUI = { confirm: async () => true };
+  await context.quitarSitioAsesor();
   assert.match(estado.textContent, /No se pudo guardar/);
   assert.equal(context.sitioAsesor, 'https://daniguerrero.kw.com');
   context.sitioAsesorPromesa = null;
   await context.cargarSitioAsesor();
-  assert.equal(campo.value, 'daniguerrero.kw.com');
+  assert.equal(campo.value, 'daniguerrero');
   fallo = false;
-  campo.value = '';
-  await context.guardarSitioAsesor();
+  context.window.kwUI.confirm = async () => false;
+  await context.quitarSitioAsesor();
+  assert.equal(guardado, 'https://daniguerrero.kw.com');
+  context.window.kwUI.confirm = async (mensaje) => {
+    assert.match(mensaje, /seguro.*quitar este sitio web/);
+    return true;
+  };
+  await context.quitarSitioAsesor();
   assert.equal(guardado, null);
+  assert.equal(campo.readOnly, false);
   assert.equal(tarjeta.href, general);
 });

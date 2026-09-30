@@ -29,6 +29,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/auth-guard.js"></script>
 <style>
+  .sitio-web-campo { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; background: #fff; padding-right: 7px; }
+  #filtros .sitio-web-campo input { min-width: 0; width: 100%; border: 0; background: transparent; padding: 10px 8px; }
+  .sitio-web-sufijo { flex: none; font-size: 12px; color: var(--muted); }
+  .sitio-web-quitar { flex: none; margin-left: 5px; border: 0; border-radius: 6px; background: transparent; color: var(--red); cursor: pointer; font-size: 20px; width: 28px; height: 30px; }
+  .sitio-web-quitar:hover { background: #fff0f0; }
+  .sitio-web-quitar[hidden] { display: none; }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     min-height: 100%;
@@ -460,7 +466,11 @@
           <section class="filtro-seccion">
             <div class="filtro">
               <label for="mi-sitio-web">Mi Sitio Web</label>
-              <input type="text" id="mi-sitio-web" data-kw-no inputmode="url" autocomplete="url" maxlength="254" placeholder="daniguerrero.kw.com" aria-describedby="mi-sitio-estado" disabled />
+              <div class="sitio-web-campo">
+                <input type="text" id="mi-sitio-web" data-kw-no autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="63" placeholder="daniguerrero" aria-describedby="mi-sitio-sufijo mi-sitio-estado" disabled />
+                <span class="sitio-web-sufijo" id="mi-sitio-sufijo">.kw.com</span>
+                <button type="button" class="sitio-web-quitar" id="mi-sitio-quitar" aria-label="Quitar mi sitio web" hidden>×</button>
+              </div>
               <p id="mi-sitio-estado" style="font-size:11px;color:var(--muted);margin-top:6px;" role="status">Cargando tu sitio…</p>
             </div>
           </section>
@@ -619,6 +629,7 @@
   function mostrarEstadoSitio(texto, error) {
     var estado = document.getElementById('mi-sitio-estado');
     estado.textContent = texto;
+    estado.hidden = !texto;
     estado.style.color = error ? 'var(--red)' : 'var(--muted)';
   }
 
@@ -629,13 +640,30 @@
     });
   }
 
-  function guardarSitioAsesor() {
+  function reflejarSitioGuardado() {
+    var campo = document.getElementById('mi-sitio-web');
+    campo.value = sitioAsesor ? new URL(sitioAsesor).hostname.replace(/\.kw\.com$/, '') : '';
+    campo.readOnly = !!sitioAsesor;
+    document.getElementById('mi-sitio-quitar').hidden = !sitioAsesor;
+  }
+
+  async function quitarSitioAsesor() {
+    if (!sitioAsesor) return;
+    var confirmado = await window.kwUI.confirm('¿Estás seguro de que quieres quitar este sitio web?');
+    if (!confirmado) return;
+    await guardarSitioAsesor(true);
+    if (!sitioAsesor) document.getElementById('mi-sitio-web').focus();
+  }
+
+  function guardarSitioAsesor(quitar) {
     var campo = document.getElementById('mi-sitio-web');
     var capturado = campo.value.trim();
-    var normalizado = window.kwSitioAsesor.normalizar(capturado);
-    if (capturado && !normalizado) {
+    quitar = quitar === true;
+    if (!quitar && (sitioAsesor || !capturado)) return Promise.resolve();
+    var normalizado = quitar ? null : window.kwSitioAsesor.normalizar(capturado + '.kw.com');
+    if (!quitar && !normalizado) {
       campo.setAttribute('aria-invalid', 'true');
-      mostrarEstadoSitio('Escribe tu sitio de KW, por ejemplo daniguerrero.kw.com.', true);
+      mostrarEstadoSitio('Escribe solo el nombre de tu sitio, por ejemplo daniguerrero.', true);
       return Promise.resolve();
     }
     campo.removeAttribute('aria-invalid');
@@ -648,8 +676,8 @@
       sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
       actualizarEnlacesSitio();
       if (campo.value.trim() === capturado) {
-        campo.value = sitioAsesor ? new URL(sitioAsesor).hostname : '';
-        mostrarEstadoSitio(sitioAsesor ? 'Guardado. Las propiedades abrirán con tu sitio.' : 'Guardado. Las propiedades abrirán en kw.com.');
+        reflejarSitioGuardado();
+        mostrarEstadoSitio('');
       }
     }).catch(function () {
       mostrarEstadoSitio('No se pudo guardar. Presiona Enter para reintentar.', true);
@@ -669,9 +697,9 @@
         if (respuesta.error) throw respuesta.error;
         sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
         var campo = document.getElementById('mi-sitio-web');
-        campo.value = sitioAsesor ? new URL(sitioAsesor).hostname : '';
+        reflejarSitioGuardado();
         campo.disabled = false;
-        mostrarEstadoSitio(sitioAsesor ? 'Guardado. Las propiedades abrirán con tu sitio.' : 'Se guarda al salir del campo o presionar Enter.');
+        mostrarEstadoSitio('');
       })().catch(function (error) {
         sitioAsesorPromesa = null;
         throw error;
@@ -1557,9 +1585,10 @@
   var cajaFiltros = document.getElementById('filtros');
   var campoSitio = document.getElementById('mi-sitio-web');
   campoSitio.addEventListener('change', guardarSitioAsesor);
+  document.getElementById('mi-sitio-quitar').addEventListener('click', quitarSitioAsesor);
   campoSitio.addEventListener('input', function () {
     this.removeAttribute('aria-invalid');
-    mostrarEstadoSitio('Se guarda al salir del campo o presionar Enter.');
+    mostrarEstadoSitio('');
   });
   campoSitio.addEventListener('keydown', function (evento) {
     if (evento.key === 'Enter') {
