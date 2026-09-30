@@ -304,6 +304,11 @@
   }
   .prop-pie span { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   .prop-asesor { text-align: right; }
+  .prop-asesor a { position: relative; z-index: 2; color: inherit; text-decoration: none; }
+  .prop-asesor a:hover { color: var(--red); text-decoration: underline; }
+  .prop-card { position: relative; }
+  .prop-enlace { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+  .prop-enlace:focus-visible { outline: 2px solid var(--red); outline-offset: -3px; }
 
   .conteo {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -643,7 +648,7 @@
   }
 
   function actualizarEnlacesSitio() {
-    document.querySelectorAll('.prop-card[data-enlace-kw]').forEach(function (tarjeta) {
+    document.querySelectorAll('.prop-enlace[data-enlace-kw]').forEach(function (tarjeta) {
       var enlace = tarjeta.getAttribute('data-enlace-kw');
       if (enlace) tarjeta.href = window.kwSitioAsesor.personalizar(enlace, sitioAsesor);
     });
@@ -777,14 +782,21 @@
         escapeHtml(ETIQUETA_ESTATUS[p.estatus] || p.estatus) + '</span>'
       : '';
 
+    var asesor = escapeHtml(p.asesor_nombre || '');
+    if (p.asesor_nombre && /^\d+$/.test(p.asesor_kw_id || '')) {
+      var slugAsesor = p.asesor_nombre.trim().toLocaleLowerCase('es-MX').replace(/\s+/g, '-');
+      var enlaceAsesor = 'https://kw.com/es-419/agent/' + encodeURIComponent(slugAsesor) + '/' + p.asesor_kw_id;
+      asesor = '<a href="' + escapeHtml(enlaceAsesor) + '" target="_blank" rel="noopener noreferrer">' + asesor + '</a>';
+    }
     var pie = '<span class="prop-market-center">' + escapeHtml(nombreMarketCenter(p.market_center)) + '</span>' +
-      '<span class="prop-asesor">' + escapeHtml(p.asesor_nombre || '') + '</span>';
+      '<span class="prop-asesor">' + asesor + '</span>';
 
     var enlacePropiedad = p.enlace_kw || (p.fuente === 'kwmexico' && p.fuente_id
       ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id)
       : '/propiedad.html?id=' + encodeURIComponent(p.id));
     enlacePropiedad = window.kwSitioAsesor.personalizar(enlacePropiedad, sitioAsesor);
-    return '<a class="prop-card kw-aparece" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer">' +
+    return '<article class="prop-card kw-aparece" style="animation-delay:' + (Math.min(i, 8) * 45) + 'ms">' +
+      '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(p.titulo || 'Ver propiedad') + '"></a>' +
       '<div class="prop-foto">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
@@ -795,7 +807,7 @@
         '<div class="prop-datos">' + datos.join('') + '</div>' +
         '<div class="prop-pie">' + pie + '</div>' +
       '</div>' +
-    '</a>';
+    '</article>';
   }
 
   function val(id) {
@@ -1068,7 +1080,7 @@
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, calle, colonia, municipio, estado, cp, ' +
-               'imagenes, asesor_nombre, market_center, updated_at, enlace_kw';
+               'imagenes, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');

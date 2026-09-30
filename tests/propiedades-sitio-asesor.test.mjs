@@ -44,6 +44,12 @@ test('la tarjeta abre la ficha del asesor en nueva pestaña y mantiene kw.com si
   assert(card.includes('href="' + general.replace('https://kw.com', 'https://daniguerrero.kw.com') + '"'));
   assert(card.includes('target="_blank" rel="noopener noreferrer"'));
   assert(card.includes('<span class="prop-market-center">KW Central Qro</span><span class="prop-asesor">Asesor que listó</span>'));
+  const perfil = context.tarjeta({ ...propiedad, asesor_nombre: 'Félix Villagrán Aguilera', asesor_kw_id: '581930' }, 0);
+  assert(perfil.includes('href="https://kw.com/es-419/agent/f%C3%A9lix-villagr%C3%A1n-aguilera/581930"'));
+  assert(perfil.startsWith('<article'));
+  assert.equal((perfil.match(/<a\b/g) || []).length, 2);
+  assert.equal((perfil.match(/<\/a>/g) || []).length, 2);
+  assert(perfil.indexOf('</a>') < perfil.indexOf('<span class="prop-asesor"><a'));
   context.sitioAsesor = null;
   card = context.tarjeta(propiedad, 0);
   assert(card.includes('href="' + general + '"'));

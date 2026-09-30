@@ -236,6 +236,7 @@ function normalizarKwMexico(
     caracteristicas,
     market_center: kwMarketCenterNombre(propiedad, marketCenters),
     asesor_nombre: nombreAgente,
+    asesor_kw_id: kwTexto(agente.Agent_Command_ID),
     asesor_email: kwTexto(agente.Email),
     datos_origen: { listado, detalle },
   }
@@ -492,15 +493,18 @@ async function sincronizarKwMexico(
 
     const existentesPorId = new Map<string, KwRegistro>()
     const nombresPorAgente = new Map<string, string>()
+    const idsPorAgente = new Map<string, string>()
     for (let desde = 0; ; desde += 1000) {
       const respuesta = await admin.from('propiedades')
-        .select('fuente_id, estatus, asesor_nombre, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
+        .select('fuente_id, estatus, asesor_nombre, asesor_kw_id, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
         .eq('fuente', 'kwmexico').order('id').range(desde, desde + 999)
       if (respuesta.error) throw respuesta.error
       for (const fila of respuesta.data || []) {
         const agenteId = kwTexto(kwListadoAnterior({ listado: fila.listado })?.Agent_ID)
         const nombre = kwTexto(fila.asesor_nombre)
         if (agenteId && nombre) nombresPorAgente.set(agenteId, nombre)
+        const commandId = kwTexto(fila.asesor_kw_id)
+        if (agenteId && commandId) idsPorAgente.set(agenteId, commandId)
         const id = kwTexto(fila.fuente_id)
         if (id) existentesPorId.set(id, {
           fuente_id: id,
@@ -569,6 +573,9 @@ async function sincronizarKwMexico(
       const agenteId = kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
       if (agenteId && !kwTexto(fila.asesor_nombre)) {
         fila.asesor_nombre = nombresPorAgente.get(agenteId) || null
+      }
+      if (agenteId && !kwTexto(fila.asesor_kw_id)) {
+        fila.asesor_kw_id = idsPorAgente.get(agenteId) || null
       }
     }
     const listas = await enlazarAsesores(admin, filasCompletas)
