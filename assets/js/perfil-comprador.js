@@ -165,14 +165,43 @@
     try {
       var todas = [], desde = 0;
       while (true) {
-        var res = await window.kwSupabase.from('propiedades_inventario').select('id,fuente_id,titulo,descripcion,operacion,estatus,tipo,tipos_filtro,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,estado,municipio,colonia,imagenes,asesor_nombre,market_center,enlace_kw').eq('fuente','kwmexico').order('id').range(desde,desde+999);
+        var res = await window.kwSupabase.from('propiedades_inventario').select('estado,municipio,colonia').eq('fuente','kwmexico').order('id').range(desde,desde+999);
         if (res.error) throw res.error;
         todas = todas.concat(res.data.filter(function (p) { return p.estado && p.estado.toLowerCase() !== 'antioquia'; }));
         if (res.data.length < 1000) break;
         desde += 1000;
       }
-      ubicaciones = todas; inventarioMatches = todas; cacheMatches.clear(); errorMatches = false; refrescarUbicacion(); pintar();
-    } catch (e) { errorMatches = true; pintar(); avisar('No se pudo cargar el inventario. Recarga para intentar de nuevo.',true); }
+      ubicaciones = todas; refrescarUbicacion();
+    } catch (e) { avisar('No se pudieron cargar las ubicaciones. Recarga para intentar de nuevo.',true); }
+  }
+  var revisionMatches = 0;
+  async function cargarInventarioMatches() {
+    if (esFormulario) return;
+    var revision = ++revisionMatches;
+    inventarioMatches = null; errorMatches = false; cacheMatches.clear(); pintar();
+    if (!perfiles.length) { inventarioMatches = []; pintar(); return; }
+    var estados = Array.from(new Set(perfiles.map(function (p) { return p.estado; })));
+    var operaciones = Array.from(new Set(perfiles.map(function (p) { return p.operacion; })));
+    var tiposCliente = Array.from(new Set(perfiles.flatMap(function (p) { return p.tipos; })));
+    var campos = 'id,fuente_id,titulo,descripcion,operacion,estatus,tipo,tipos_filtro,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,estado,municipio,colonia,imagenes,asesor_nombre,market_center,enlace_kw';
+    function consulta(desde, contar) {
+      return window.kwSupabase.from('propiedades_inventario').select(campos, contar ? { count: 'exact' } : {})
+        .eq('fuente','kwmexico').eq('estatus','publicada').in('estado',estados).in('operacion',operaciones).overlaps('tipos_filtro',tiposCliente).order('id').range(desde,desde+499);
+    }
+    try {
+      var primero = await consulta(0,true); if (primero.error) throw primero.error;
+      var todas = primero.data, total = primero.count;
+      if (total == null) throw new Error('No se recibió el total de candidatos');
+      for (var desde = 500; desde < total; desde += 1500) {
+        var peticiones = [];
+        for (var offset = desde; offset < Math.min(total,desde+1500); offset += 500) peticiones.push(consulta(offset,false));
+        var lotes = await Promise.all(peticiones);
+        lotes.forEach(function (lote) { if (lote.error) throw lote.error; todas = todas.concat(lote.data); });
+        if (revision !== revisionMatches) return;
+      }
+      if (revision !== revisionMatches) return;
+      inventarioMatches = todas; pintar();
+    } catch (e) { if (revision !== revisionMatches) return; errorMatches = true; pintar(); }
   }
   form.elements.estado.addEventListener('change', function () {
     if (actualizandoUbicacion) return;
@@ -271,7 +300,7 @@
     var frente = document.createElement('div'); frente.className = 'match-frente';
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
     agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
-    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ': ' + c.detalle + ' · ' + c.aporte + '/' + c.peso + ' puntos'); });
+    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ' · ' + c.detalle); });
     var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
     var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
     function girar(atras) {
@@ -303,10 +332,11 @@
       var desplegar = agregarTexto(acciones,'button',inventarioMatches ? coincidencias.length + ' coincidencias' : errorMatches ? 'Reintentar' : 'Calculando…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !inventarioMatches && !errorMatches; desplegar.setAttribute('aria-expanded','false');
       var filaMatches = document.createElement('tr'), celdaMatches = document.createElement('td'); filaMatches.hidden = true; filaMatches.append(celdaMatches); tbody.append(filaMatches);
       desplegar.addEventListener('click',function () {
-        if (errorMatches) { cargarUbicaciones(); return; }
+        if (errorMatches) { cargarInventarioMatches(); return; }
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
         if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
           var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
+          var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.insertBefore(carrusel,grid); carrusel.append(grid);
           var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
           var modulo = 0, limite = 0, grupo = [];
           var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,grid);
@@ -314,6 +344,7 @@
           var prevProps = agregarTexto(carruselNav,'button','←'); prevProps.type = 'button'; prevProps.setAttribute('aria-label','Página anterior de propiedades');
           var paginaProps = agregarTexto(carruselNav,'span','');
           var masProps = agregarTexto(carruselNav,'button','→'); masProps.type = 'button'; masProps.setAttribute('aria-label','Página siguiente de propiedades'); celdaMatches.append(carruselNav);
+          prevProps.className = 'match-flecha match-flecha-prev'; masProps.className = 'match-flecha match-flecha-next'; carrusel.append(prevProps,masProps);
           var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
           var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
           var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,siguienteNivel); celdaMatches.append(navegacion);
@@ -322,6 +353,7 @@
             grid.classList.remove('pagina-entra'); void grid.offsetWidth; grid.classList.add('pagina-entra'); grid.scrollLeft = 0;
             prevProps.disabled = limite === 0; masProps.disabled = limite + 5 >= grupo.length;
             carruselNav.hidden = grupo.length <= 5;
+            prevProps.hidden = grupo.length <= 5; masProps.hidden = grupo.length <= 5;
             paginaProps.textContent = 'Página ' + (Math.floor(limite/5)+1) + ' de ' + Math.ceil(grupo.length/5);
           }
           function mostrarModulo() {
@@ -389,6 +421,7 @@
       if (res.error) throw res.error;
       perfiles = adicional ? perfiles.concat(res.data) : res.data;
       pintar(); mas.hidden = res.data.length < 50;
+      if (!esFormulario) cargarInventarioMatches();
       if (esFormulario && clienteEditar) {
         var editarBoton = lista.querySelector('[data-editar-cliente]');
         if (editarBoton) editarBoton.click(); else avisar('El cliente no existe o no pertenece a tu cuenta.',true);
@@ -431,7 +464,7 @@
       if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
     } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
   }
-  function iniciar() { vista(esFormulario); if (!esFormulario || clienteEditar) cargar(false); cargarSitio(); cargarUbicaciones(); }
+  function iniciar() { vista(esFormulario); if (!esFormulario || clienteEditar) cargar(false); cargarSitio(); if (esFormulario) cargarUbicaciones(); }
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();

@@ -25,7 +25,7 @@
       var valor = propiedad[c[1]];
       if (c[0] === 'superficie_min' && cliente.tipos.every(function (t) { return t === 'Terreno'; })) valor = propiedad.m2_terreno;
       var libre = cliente[c[0]] == null || Number(cliente[c[0]]) === 0;
-      agregar(c[2],5,libre || (valor != null && Number(valor) >= Number(cliente[c[0]])) ? 1 : 0,libre ? 'Sin restricción' : valor == null ? 'Sin información' : String(valor) + ' · mínimo ' + cliente[c[0]]);
+      agregar(c[2],5,libre || (valor != null && Number(valor) >= Number(cliente[c[0]])) ? 1 : 0,libre ? 'Sin requisito' : 'Requerido ' + cliente[c[0]] + (c[0] === 'superficie_min' ? ' m²' : '') + ' · tiene ' + (valor == null ? 'sin información' : String(valor) + (c[0] === 'superficie_min' ? ' m²' : '')));
     });
     var etiquetas = String(cliente.notas || '').split(/[\n,;]+/).map(function (t) { return t.trim(); }).filter(Boolean);
     var descripcion = ' ' + normalizar(propiedad.descripcion) + ' ';
