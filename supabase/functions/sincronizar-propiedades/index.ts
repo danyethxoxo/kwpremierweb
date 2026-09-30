@@ -76,8 +76,8 @@ const KWMEXICO_CONCURRENCY = Math.max(1, Math.min(
   6,
 ))
 const KWMEXICO_DETAIL_LIMIT = Math.max(0, Math.min(
-  Number(Deno.env.get('KWMEXICO_DETAIL_LIMIT') || 300),
-  1000,
+  Number(Deno.env.get('KWMEXICO_DETAIL_LIMIT') || 25),
+  25,
 ))
 
 const CORS_HEADERS = {}
@@ -493,12 +493,20 @@ async function sincronizarKwMexico(
     const existentesPorId = new Map<string, KwRegistro>()
     for (let desde = 0; ; desde += 1000) {
       const respuesta = await admin.from('propiedades')
-        .select('fuente_id, datos_origen, estatus')
+        .select('fuente_id, estatus, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
         .eq('fuente', 'kwmexico').order('id').range(desde, desde + 999)
       if (respuesta.error) throw respuesta.error
       for (const fila of respuesta.data || []) {
         const id = kwTexto(fila.fuente_id)
-        if (id) existentesPorId.set(id, fila as KwRegistro)
+        if (id) existentesPorId.set(id, {
+          fuente_id: id,
+          estatus: fila.estatus,
+          datos_origen: {
+            listado: fila.listado,
+            detalle_pendiente: fila.detalle_pendiente,
+            detalle: fila.detalle_ok ? {} : null,
+          },
+        })
       }
       if ((respuesta.data || []).length < 1000) break
     }
@@ -513,6 +521,18 @@ async function sincronizarKwMexico(
       const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || kwCambioListado(listado, anterior) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
       return necesitaDetalle ? [{ listado, existente, tieneDetalle: kwTieneDetalle(datosAnteriores) }] : []
     })
+    // Solo cargar fotografías y detalles completos de los registros que cambian.
+    // El inventario completo puede exceder la memoria del worker si se lee todo.
+    const idsPendientes = pendientesDetalle.filter(item => item.existente).map(item => String(item.listado.ID))
+    for (let i = 0; i < idsPendientes.length; i += 100) {
+      const respuesta = await admin.from('propiedades').select('fuente_id, datos_origen')
+        .eq('fuente', 'kwmexico').in('fuente_id', idsPendientes.slice(i, i + 100))
+      if (respuesta.error) throw respuesta.error
+      for (const fila of respuesta.data || []) {
+        const existente = existentesPorId.get(String(fila.fuente_id))
+        if (existente) existente.datos_origen = fila.datos_origen
+      }
+    }
     const loteDetalle = pendientesDetalle.slice(0, KWMEXICO_DETAIL_LIMIT)
 
     const resultados = await enParalelo(loteDetalle, KWMEXICO_CONCURRENCY, async ({ listado, existente }) => {
