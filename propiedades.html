@@ -202,7 +202,10 @@
     gap: 18px; margin-bottom: 20px !important;
   }
   .propiedades-encabezado .page-title { margin: 0; text-align: left; }
-  #conteo { width: 100%; text-align: center; justify-content: center; margin: 0 0 14px; }
+  #conteo { flex: 1; text-align: center; justify-content: center; margin: 0; }
+  #filtros .kw-numero > input[type="number"] { padding-left: 9px; padding-right: 43px !important; font-size: 13px; }
+  #filtros .kw-numero-controles { right: 3px; gap: 1px; padding-left: 2px; }
+  #filtros .kw-numero-controles button { width: 17px; height: 23px; min-width: 0; min-height: 0; font-size: 14px; border-radius: 4px; }
   @media (max-width: 640px) {
     .propiedades-encabezado { flex-wrap: wrap; gap: 8px; }
   }
@@ -413,6 +416,7 @@
   <main>
     <div class="kw-page-encabezado propiedades-encabezado">
       <h1 class="page-title">Propiedades</h1>
+      <div class="conteo" id="conteo" aria-live="polite"></div>
     </div>
 
     <div class="banner-ref" id="banner-ref" style="display:none;"></div>
@@ -508,32 +512,35 @@
             <div class="filtro filtro-rango">
               <label>Precio</label>
               <div class="rango">
-                <input type="number" id="f-min" placeholder="Desde" min="0" step="100000" aria-label="Precio mínimo" />
-                <input type="number" id="f-max" placeholder="Hasta" min="0" step="100000" aria-label="Precio máximo" />
+                <input type="number" id="f-min" placeholder="Min" min="0" step="100000" aria-label="Precio mínimo" />
+                <input type="number" id="f-max" placeholder="Max" min="0" step="100000" aria-label="Precio máximo" />
               </div>
             </div>
             <div class="filtros-dos-columnas">
               <div class="filtro">
                 <label for="f-recamaras">Recámaras mín.</label>
-                <input type="number" id="f-recamaras" list="lista-recamaras" min="0" step="1" />
+                <input type="number" id="f-recamaras" min="0" step="1" />
                 <datalist id="lista-recamaras"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option></datalist>
               </div>
               <div class="filtro">
-                <label for="f-banos">Baños mín.</label>
-                <input type="number" id="f-banos" list="lista-banos" placeholder="Cualquiera" min="0" step="0.5" />
-                <datalist id="lista-banos"><option value="1"></option><option value="1.5"></option><option value="2"></option><option value="2.5"></option><option value="3"></option><option value="4"></option></datalist>
+                <label for="f-recamaras-max">Recámaras máx.</label>
+                <input type="number" id="f-recamaras-max" min="0" step="1" />
               </div>
               <div class="filtro">
-                <label for="f-estacionamientos">Estacionamientos mín.</label>
-                <input type="number" id="f-estacionamientos" list="lista-estacionamientos" min="0" step="1" />
+                <label for="f-estacionamientos">Estacionamientos</label>
+                <input type="number" id="f-estacionamientos" min="0" step="1" />
                 <datalist id="lista-estacionamientos"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
               </div>
               <div class="filtro">
-                <label for="f-m2-min">m² construcción mín.</label>
+                <label for="f-banos">Baños</label>
+                <input type="number" id="f-banos" min="0" step="0.5" />
+              </div>
+              <div class="filtro">
+                <label for="f-m2-min">m² mín.</label>
                 <input type="number" id="f-m2-min" min="0" step="10" />
               </div>
               <div class="filtro">
-                <label for="f-m2-max">m² construcción máx.</label>
+                <label for="f-m2-max">m² máx.</label>
                 <input type="number" id="f-m2-max" min="0" step="10" />
               </div>
             </div>
@@ -546,7 +553,6 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
-        <div class="conteo" id="conteo" aria-live="polite"></div>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -1058,6 +1064,7 @@
       minimo: num('f-min'),
       maximo: num('f-max'),
       recamaras: num('f-recamaras'),
+      recamarasMax: num('f-recamaras-max'),
       banos: num('f-banos'),
       estacionamientos: num('f-estacionamientos'),
       m2Min: num('f-m2-min'),
@@ -1083,6 +1090,7 @@
     if (filtros.minimo) consulta = consulta.gte('precio', filtros.minimo);
     if (filtros.maximo) consulta = consulta.lte('precio', filtros.maximo);
     if (filtros.recamaras) consulta = consulta.gte('recamaras', filtros.recamaras);
+    if (filtros.recamarasMax) consulta = consulta.lte('recamaras', filtros.recamarasMax);
     if (filtros.banos) consulta = consulta.gte('banos', filtros.banos);
     if (filtros.estacionamientos) consulta = consulta.gte('estacionamientos', filtros.estacionamientos);
     if (filtros.m2Min) consulta = consulta.gte('m2_construccion', filtros.m2Min);
@@ -1291,6 +1299,7 @@
   };
 
   limpiarFiltros = function () {
+    document.getElementById('f-recamaras-max').value = '';
     ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
      'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2-min', 'f-m2-max'
     ].forEach(function (id) {
