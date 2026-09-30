@@ -251,6 +251,8 @@
   function pintarPropiedad(resultado, padre) {
     var p = resultado.propiedad, match = resultado.match;
     var card = document.createElement('article'); card.className = 'match-prop';
+    var tono = Math.max(0,Math.min(120,(match.porcentaje-50)*2.4));
+    card.style.setProperty('--match-color','hsl(' + tono + ', 58%, 40%)');
     var foto = document.createElement('div'); foto.className = 'match-foto';
     var enlace = p.enlace_kw || 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id);
     enlace = window.kwSitioAsesor.personalizar(enlace,sitioAsesor);
@@ -294,24 +296,24 @@
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
         if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
           agregarTexto(celdaMatches,'p','Coincidencias desde ' + p.umbral_match + '%. Operación, tipo de inmueble y ciudad deben coincidir. El porcentaje mide compatibilidad, no probabilidad de compra.');
-          var reglas = document.createElement('details'); agregarTexto(reglas,'summary','¿Cómo se calcula el porcentaje?');
-          agregarTexto(reglas,'p','Presupuesto 30%, ubicación 30%, tipo de inmueble 20%, características 10% y etiquetas 10%. La ubicación reparte su peso entre ciudad, alcaldía y colonia solicitadas; las características y etiquetas reparten el suyo entre los requisitos capturados. Si no se pide un grupo, los pesos restantes se ajustan proporcionalmente hasta sumar 100%.');
-          agregarTexto(reglas,'p','Un precio hasta 10% por encima del máximo obtiene la mitad de los puntos de presupuesto. Los datos faltantes no suman. Operación, tipo y ciudad son obligatorios; no se mezclan monedas distintas. Cada propiedad muestra los puntos que obtuvo en el desglose.'); celdaMatches.append(reglas);
           var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
           var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
           var modulo = 0, limite = 0, grupo = [];
-          var tituloModulo = document.createElement('p'); celdaMatches.insertBefore(tituloModulo,grid);
+          var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,grid);
           var masProps = agregarTexto(celdaMatches,'button','Mostrar más de este nivel'); masProps.type = 'button';
           var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
           var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
+          var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,masProps,siguienteNivel); celdaMatches.append(navegacion);
           function siguientes() { grupo.slice(limite,limite+24).forEach(function (r) { pintarPropiedad(r,grid); }); limite += 24; masProps.hidden = limite >= grupo.length; }
           function mostrarModulo() {
             grid.replaceChildren(); limite = 0;
             var nivel = niveles[modulo];
             grupo = coincidencias.filter(function (r) { return Math.floor(r.match.porcentaje / 10) * 10 === nivel; });
             tituloModulo.textContent = niveles.length ? 'Compatibilidad ' + nivel + (nivel < 100 ? '–' + (nivel+9) : '') + '% · ' + grupo.length + ' propiedades' : '';
+            tituloModulo.style.setProperty('--nivel-color','hsl(' + Math.max(0,Math.min(120,(nivel-50)*2.4)) + ', 58%, 40%)');
             siguienteNivel.hidden = modulo >= niveles.length-1; anteriorNivel.hidden = modulo === 0;
             siguienteNivel.textContent = 'Ver coincidencias al ' + niveles[modulo+1] + '%';
+            anteriorNivel.textContent = 'Ver coincidencias al ' + niveles[modulo-1] + '%';
             if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.');
             siguientes();
           }
