@@ -44,7 +44,7 @@
     input.type = 'checkbox'; input.name = 'tipos'; input.value = tipo;
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
-  var ubicaciones = [];
+  var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '';
   var etiquetas = [], entradaEtiqueta = document.getElementById('agregar-etiqueta');
   function pintarEtiquetas() {
     var caja = document.getElementById('etiquetas');
@@ -163,14 +163,14 @@
     try {
       var todas = [], desde = 0;
       while (true) {
-        var res = await window.kwSupabase.from('propiedades_inventario').select('estado,municipio,colonia').eq('fuente','kwmexico').order('id').range(desde,desde+999);
+        var res = await window.kwSupabase.from('propiedades_inventario').select('id,fuente_id,titulo,descripcion,operacion,estatus,tipo,tipos_filtro,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,estado,municipio,colonia,imagenes,asesor_nombre,market_center,enlace_kw').eq('fuente','kwmexico').order('id').range(desde,desde+999);
         if (res.error) throw res.error;
         todas = todas.concat(res.data.filter(function (p) { return p.estado && p.estado.toLowerCase() !== 'antioquia'; }));
         if (res.data.length < 1000) break;
         desde += 1000;
       }
-      ubicaciones = todas; refrescarUbicacion();
-    } catch (e) { avisar('No se pudieron cargar las ubicaciones del inventario. Recarga para intentar de nuevo.',true); }
+      ubicaciones = todas; inventarioMatches = todas; errorMatches = false; refrescarUbicacion(); pintar();
+    } catch (e) { errorMatches = true; pintar(); avisar('No se pudo cargar el inventario. Recarga para intentar de nuevo.',true); }
   }
   form.elements.estado.addEventListener('change', function () {
     if (actualizandoUbicacion) return;
@@ -237,19 +237,66 @@
     return d;
   }
   function agregarTexto(padre, tag, texto) { var el = document.createElement(tag); el.textContent = texto; padre.append(el); return el; }
+  function matchesCliente(cliente) {
+    return (inventarioMatches || []).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
+      .filter(function (r) { return r.match && r.match.porcentaje >= cliente.umbral_match; })
+      .sort(function (a,b) { return b.match.porcentaje - a.match.porcentaje; });
+  }
+  function pintarPropiedad(resultado, padre) {
+    var p = resultado.propiedad, match = resultado.match;
+    var card = document.createElement('article'); card.className = 'match-prop';
+    var foto = document.createElement('div'); foto.className = 'match-foto';
+    var enlace = p.enlace_kw || 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id);
+    enlace = window.kwSitioAsesor.personalizar(enlace,sitioAsesor);
+    var link = document.createElement('a'); link.href = enlace; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.setAttribute('aria-label', p.titulo || 'Ver propiedad');
+    var urlFoto = p.imagenes && p.imagenes[0];
+    if (urlFoto && /^https:\/\//i.test(urlFoto)) { var img = document.createElement('img'); img.src = urlFoto; img.loading = 'lazy'; img.alt = p.titulo || ''; img.addEventListener('error',function () { img.remove(); }); link.append(img); }
+    foto.append(link); var badge = agregarTexto(foto,'span',p.operacion === 'renta' ? 'Renta' : 'Venta'); badge.className = 'match-badge';
+    var body = document.createElement('div'); body.className = 'match-body';
+    var precio = agregarTexto(body,'div',Number(p.precio) > 0 ? new Intl.NumberFormat('es-MX',{style:'currency',currency:p.moneda || 'MXN',maximumFractionDigits:0}).format(p.precio) : 'Precio a consultar'); precio.className = 'match-precio';
+    var titulo = agregarTexto(body,'a',p.titulo); titulo.className = 'match-titulo'; titulo.style.display = 'block'; titulo.href = enlace; titulo.target = '_blank'; titulo.rel = 'noopener noreferrer';
+    agregarTexto(body,'div',[p.colonia,p.municipio].filter(Boolean).join(', ')).className = 'match-ubic';
+    agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
+    var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); agregarTexto(pie,'span',p.asesor_nombre || ''); body.append(pie);
+    var desglose = document.createElement('details'); desglose.className = 'match-desglose'; agregarTexto(desglose,'summary',match.porcentaje + '% de compatibilidad · Ver desglose');
+    match.criterios.forEach(function (c) { agregarTexto(desglose,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ': ' + c.detalle); });
+    body.append(desglose); card.append(foto,body); padre.append(card);
+  }
   function pintar() {
     lista.replaceChildren();
     if (!perfiles.length) agregarTexto(lista, 'p', 'Todavía no tienes perfiles. Crea el primero con el formulario.');
+    var tabla = document.createElement('table'); tabla.className = 'clientes-tabla'; tabla.setAttribute('aria-label','Mis clientes');
+    var tbody = document.createElement('tbody'); tabla.append(tbody); if (perfiles.length) lista.append(tabla);
     perfiles.forEach(function (p) {
-      var card = document.createElement('article'); card.className = 'cliente';
+      var fila = document.createElement('tr'), celda = document.createElement('td'); fila.append(celda); tbody.append(fila);
+      var contenedor = document.createElement('div'); contenedor.className = 'cliente';
+      var card = document.createElement('div'); card.className = 'cliente-info';
       var estado = agregarTexto(card, 'span', p.activo ? 'Activo' : 'Pausado'); estado.className = 'estado';
       agregarTexto(card, 'h3', p.nombre);
       agregarTexto(card, 'p', [p.telefono, p.correo].filter(Boolean).join(' · '));
-      var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 2 });
+      var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
       agregarTexto(card, 'p', (p.operacion === 'venta' ? 'Compra' : 'Renta') + ' · ' + p.tipos.join(', ') + ' · ' + (p.precio_min === null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda);
       agregarTexto(card, 'p', [p.estado, p.municipio, p.colonias].filter(Boolean).join(' · '));
       var acciones = document.createElement('div'); acciones.className = 'acciones';
-      var editar = agregarTexto(acciones, 'button', 'Editar'); editar.type = 'button';
+      var coincidencias = matchesCliente(p);
+      var desplegar = agregarTexto(acciones,'button',inventarioMatches ? coincidencias.length + ' coincidencias' : errorMatches ? 'Reintentar' : 'Calculando…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !inventarioMatches && !errorMatches; desplegar.setAttribute('aria-expanded','false');
+      var filaMatches = document.createElement('tr'), celdaMatches = document.createElement('td'); filaMatches.hidden = true; filaMatches.append(celdaMatches); tbody.append(filaMatches);
+      desplegar.addEventListener('click',function () {
+        if (errorMatches) { cargarUbicaciones(); return; }
+        filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
+        if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
+          agregarTexto(celdaMatches,'p','Coincidencias desde ' + p.umbral_match + '%. Operación, tipo de inmueble y ciudad deben coincidir. El porcentaje mide compatibilidad, no probabilidad de compra.');
+          var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
+          var limite = 0;
+          function siguientes() { coincidencias.slice(limite,limite+24).forEach(function (r) { pintarPropiedad(r,grid); }); limite += 24; masProps.hidden = limite >= coincidencias.length; }
+          var masProps = agregarTexto(celdaMatches,'button','Mostrar más propiedades'); masProps.type = 'button'; masProps.addEventListener('click',siguientes);
+          if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.'); siguientes();
+        }
+      });
+      var menu = document.createElement('details'); menu.className = 'cliente-menu'; agregarTexto(menu,'summary','⋮').setAttribute('aria-label','Acciones de ' + p.nombre);
+      var opcionesMenu = document.createElement('div'); menu.append(opcionesMenu); acciones.append(menu);
+      var editar = agregarTexto(opcionesMenu, 'button', 'Editar'); editar.type = 'button';
       editar.addEventListener('click', function () {
         if (ocupado) return;
         resetear(); editando = p.id;
@@ -267,7 +314,7 @@
         form.elements.moneda.dispatchEvent(new Event('change')); vista(true);
         avisar(p.activo ? '' : 'Este perfil está pausado. Puedes reactivarlo en la tarjeta.'); form.elements.nombre.focus();
       });
-      var pausar = agregarTexto(acciones, 'button', p.activo ? 'Pausar' : 'Reactivar'); pausar.type = 'button';
+      var pausar = agregarTexto(opcionesMenu, 'button', p.activo ? 'Pausar' : 'Reactivar'); pausar.type = 'button';
       pausar.addEventListener('click', async function () {
         if (ocupado) return;
         pausar.disabled = true;
@@ -278,7 +325,7 @@
         } catch (error) { avisar('No se pudo cambiar el estado del perfil. Intenta de nuevo.', true); }
         finally { pausar.disabled = false; }
       });
-      card.append(acciones); lista.append(card);
+      contenedor.append(card,acciones); celda.append(contenedor);
     });
   }
   async function cargar(adicional) {
@@ -319,7 +366,16 @@
   mas.addEventListener('click', function () { cargar(true); });
   document.getElementById('abrir-cliente').addEventListener('click', function () { resetear(); avisar(''); vista(true); });
   document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) vista(false); });
-  function iniciar() { cargar(false); cargarUbicaciones(); }
+  document.addEventListener('click',function (e) { document.querySelectorAll('.cliente-menu[open]').forEach(function (menu) { if (!menu.contains(e.target)) menu.open = false; }); });
+  async function cargarSitio() {
+    try {
+      var usuario = await window.kwSupabase.auth.getUser();
+      if (!usuario.data.user) return;
+      var perfil = await window.kwSupabase.from('profiles').select('sitio_web').eq('id',usuario.data.user.id).single();
+      if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
+    } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
+  }
+  function iniciar() { cargar(false); cargarSitio().finally(cargarUbicaciones); }
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
