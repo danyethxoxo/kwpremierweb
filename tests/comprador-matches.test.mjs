@@ -3,10 +3,22 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 const context = vm.createContext({window:{}});
+vm.runInContext(readFileSync(new URL('../assets/js/colonias-cdmx.js',import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../assets/js/comprador-matches.js',import.meta.url),'utf8'),context);
 const evaluar = context.window.kwCompradorMatches.evaluar;
 const cliente = {operacion:'venta',tipos:['Casa'],estado:'Ciudad de México',municipio:'Benito Juárez',precio_max:7000000,moneda:'MXN',recamaras_min:3,notas:'Roof garden\nJardín'};
 const propiedad = {estatus:'publicada',operacion:'venta',tipos_filtro:['Casa'],tipo:'Casa',estado:'Ciudad de México',municipio:'Benito Juárez',precio:6500000,moneda:'MXN',recamaras:3,descripcion:'Amplio ROOF GARDEN y jardín privado.'};
+test('cercanía entre Del Valle Centro y Nápoles otorga 12 de 20 puntos',()=>{
+  const resultado = evaluar({...cliente,colonias:'Del Valle Centro'},{...propiedad,colonia:'Nápoles'});
+  assert.equal(resultado.criterios.find(c=>c.nombre==='Colonia').aporte,12);
+  assert.equal(resultado.porcentaje,92);
+});
+test('colonias lejanas y nombres fuera de CDMX no reciben puntos de cercanía',()=>{
+  const resultado = evaluar({...cliente,colonias:'Del Valle Centro'},{...propiedad,colonia:'Roma Norte',municipio:'Cuauhtémoc'});
+  assert.equal(resultado.criterios.find(c=>c.nombre==='Colonia').aporte,0);
+  assert.equal(context.window.kwColonias.buscar('Jalisco','Benito Juárez','Del Valle Centro'),null);
+  assert.equal(context.window.kwColonias.buscar('Ciudad de México','Coyoacán','Del Valle Centro'),null);
+});
 test('presupuesto ponderado 40 puntos y descuento proporcional hasta el 16%',()=>{
   for (const [exceso,esperado] of [[0,40],[.01,37.5],[.02,35],[.10,15],[.16,0],[.2,0]]) {
     const resultado = evaluar(cliente,{...propiedad,precio:cliente.precio_max*(1+exceso)});

@@ -14,7 +14,12 @@
     var puntosPrecio = conocido ? Math.max(0,40 - 250 * excedente) : 0;
     agregar('Presupuesto',40,puntosPrecio / 40,!conocido ? 'Precio o moneda sin información' : precio < minimo ? 'Por debajo del mínimo: ahorro, sin penalización' : excedente === 0 ? 'Dentro del presupuesto' : 'Supera el máximo en ' + (100 * excedente).toFixed(1) + '%');
     agregar('Alcaldía / municipio',10,!cliente.municipio || normalizar(cliente.municipio) === normalizar(propiedad.municipio) ? 1 : 0,!cliente.municipio ? 'Sin restricción' : propiedad.municipio || 'Sin información');
-    agregar('Colonia',20,!cliente.colonias || normalizar(cliente.colonias) === normalizar(propiedad.colonia) ? 1 : 0,!cliente.colonias ? 'Sin restricción' : (propiedad.colonia || 'Sin información') + ' · cercanía pendiente de coordenadas');
+    var coloniaExacta = normalizar(cliente.colonias) === normalizar(propiedad.colonia);
+    var origen = global.kwColonias && global.kwColonias.buscar(cliente.estado,cliente.municipio,cliente.colonias);
+    var destino = global.kwColonias && global.kwColonias.buscar(propiedad.estado,propiedad.municipio,propiedad.colonia);
+    var distancia = origen && destino ? global.kwColonias.distancia(origen,destino) : null;
+    var colindante = !coloniaExacta && distancia !== null && distancia <= 2;
+    agregar('Colonia',20,!cliente.colonias || coloniaExacta ? 1 : colindante ? .6 : 0,!cliente.colonias ? 'Sin restricción' : coloniaExacta ? propiedad.colonia + ' · colonia exacta' : (propiedad.colonia || 'Sin información') + (distancia !== null ? ' · distancia aproximada entre colonias: ' + distancia.toFixed(2) + ' km' : ' · sin coordenadas de referencia para evaluar cercanía'));
     var caracteristicas = [['recamaras_min','recamaras','Recámaras'],['banos_min','banos','Baños'],['estacionamientos_min','estacionamientos','Estacionamientos'],['superficie_min','m2_construccion','Superficie']];
     caracteristicas.forEach(function (c) {
       var valor = propiedad[c[1]];
