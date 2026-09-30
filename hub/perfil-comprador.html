@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+  <title>Perfil comprador · KW Premier</title>
+  <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
+  <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+  <script>setTimeout(function () { if (!document.documentElement.classList.contains('kw-auth-ok')) location.replace('/login.html'); }, 4000);</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+  <script src="/assets/js/auth-guard.js"></script>
+  <script src="/assets/js/notif-bell.js?v=20260922"></script>
+  <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a" />
+  <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e" />
+  <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b" />
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; color: var(--text); }
+    .page { max-width: 1000px; margin: auto; padding: 94px 24px 60px; }
+    h1 { font-size: 26px; margin: 0 0 8px; }
+    .intro, .nota { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .panel { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 24px; margin: 20px 0; }
+    fieldset { border: 0; padding: 0; margin: 0 0 24px; min-width: 0; }
+    legend { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+    .campos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .campo { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 600; }
+    .ancho { grid-column: 1 / -1; }
+    input:not([type=checkbox]), select, textarea { width: 100%; min-height: 44px; border: 1px solid #d9d5d5; border-radius: 10px; background: #fff; padding: 10px 12px; font: inherit; color: var(--text); }
+    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid #800020; outline-offset: 3px; }
+    textarea { resize: vertical; }
+    .opciones { display: flex; flex-wrap: wrap; gap: 10px; }
+    .opciones label { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); padding: 10px 12px; border-radius: 12px; font-size: 13px; cursor: pointer; }
+    input[type=checkbox] { accent-color: #800020; width: 17px; height: 17px; }
+    .acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 10px; min-height: 42px; padding: 10px 16px; }
+    .principal { background: #800020; color: #fff; border-color: #800020; font-weight: 600; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #mensaje { margin: 12px 0 0; font-size: 13px; min-height: 20px; }
+    #mensaje.error { color: #a00024; }
+    .cliente { border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin: 12px 0; }
+    .cliente h3 { margin: 0 0 6px; font-size: 16px; overflow-wrap: anywhere; }
+    .cliente p { margin: 6px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .cliente .acciones { margin-top: 12px; }
+    .estado { font-size: 11px; background: #f6eeee; color: #800020; border-radius: 20px; padding: 4px 9px; display: inline-block; margin-bottom: 8px; }
+    @media(max-width:640px) { .page { padding: 84px 14px 40px; } .panel { padding: 18px; } .campos { grid-template-columns: 1fr; } h1 { font-size: 23px; } }
+  </style>
+</head>
+<body>
+  <header class="kw-header"><span class="kw-header-title">Perfil comprador</span><a href="/portal.html" class="back-btn">← Inicio</a></header>
+  <main class="page">
+    <h1>Perfil comprador</h1>
+    <p class="intro">Guarda lo que busca cada cliente, ya sea para comprar o rentar. Estos perfiles son privados y solo tú puedes verlos.</p>
+    <section class="panel" aria-labelledby="titulo-formulario">
+      <h2 id="titulo-formulario">Nuevo perfil</h2>
+      <p class="nota">Primera etapa de pruebas: captura y edición. Los porcentajes de match y los avisos por campana y correo todavía no están activos.</p>
+      <form id="comprador-form">
+        <fieldset><legend>Datos del cliente</legend><div class="campos">
+          <label class="campo ancho">Nombre *<input name="nombre" required minlength="2" maxlength="120" autocomplete="off" /></label>
+          <label class="campo">Teléfono<input name="telefono" type="tel" maxlength="40" autocomplete="off" /></label>
+          <label class="campo">Correo<input name="correo" type="email" maxlength="160" autocomplete="off" /></label>
+        </div><p class="nota">Registra al menos un teléfono o correo.</p></fieldset>
+        <fieldset><legend>¿Qué está buscando?</legend><div class="campos">
+          <label class="campo">Operación *<select name="operacion" required><option value="venta">Comprar</option><option value="renta">Rentar</option></select></label>
+          <label class="campo">Moneda *<select name="moneda"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares (USD)</option></select></label>
+          <div class="campo ancho"><span>Tipo de inmueble * · puedes elegir varios</span><div class="opciones" id="tipos"></div></div>
+          <label class="campo">Presupuesto mínimo<input name="precio_min" type="number" min="0" max="100000000000" step="0.01" /></label>
+          <label class="campo">Presupuesto máximo *<input name="precio_max" type="number" min="0.01" max="100000000000" step="0.01" required /></label>
+        </div><p class="nota">Para renta, indica el presupuesto mensual.</p></fieldset>
+        <fieldset><legend>Ubicación deseada</legend><div class="campos">
+          <label class="campo">Estado *<input name="estado" required minlength="2" maxlength="100" list="estados" /><datalist id="estados"></datalist></label>
+          <label class="campo">Municipio o alcaldía<input name="municipio" maxlength="120" /></label>
+          <label class="campo ancho">Colonias o zonas<input name="colonias" maxlength="1000" placeholder="Separa las zonas con comas" /></label>
+        </div></fieldset>
+        <fieldset><legend>Características mínimas</legend><div class="campos">
+          <label class="campo">Recámaras<input name="recamaras_min" type="number" min="0" max="100" step="1" /></label>
+          <label class="campo">Baños<input name="banos_min" type="number" min="0" max="100" step="0.5" /></label>
+          <label class="campo">Estacionamientos<input name="estacionamientos_min" type="number" min="0" max="100" step="1" /></label>
+          <label class="campo">Superficie mínima (m²)<input name="superficie_min" type="number" min="0" max="10000000" step="0.01" /></label>
+          <label class="campo ancho">Otras necesidades o comentarios<textarea name="notas" rows="3" maxlength="2000" placeholder="Jardín, mascotas, elevador, accesibilidad…"></textarea></label>
+        </div><p class="nota">Deja en blanco lo que no sea requisito. Las notas quedan como referencia, no se evaluarán automáticamente en esta etapa.</p></fieldset>
+        <fieldset><legend>Preferencias para los futuros avisos</legend><div class="campos">
+          <label class="campo">Compatibilidad mínima (%)<input name="umbral_match" type="number" min="1" max="100" step="1" value="70" required /></label>
+          <div class="campo"><span>Avisar al asesor por</span><div class="opciones"><label><input name="avisos_campana" type="checkbox" checked />Campana</label><label><input name="avisos_correo" type="checkbox" checked />Correo</label></div></div>
+        </div><p class="nota">Cuando activemos el motor, el correo será el de tu cuenta de asesor, no el del cliente.</p></fieldset>
+        <div class="acciones"><button type="submit" id="guardar" class="principal">Guardar perfil</button><button type="button" id="nuevo">Limpiar formulario</button></div>
+        <p id="mensaje" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <section class="panel" aria-labelledby="titulo-lista"><h2 id="titulo-lista">Mis clientes</h2><div id="clientes" aria-live="polite">Cargando perfiles…</div><button id="mas" type="button" hidden>Cargar más</button></section>
+  </main>
+  <script src="/assets/js/perfil-comprador.js?v=20260930a"></script>
+  <script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
+  <script src="/assets/js/kw-lateral.js?v=20260923b"></script>
+</body>
+</html>
