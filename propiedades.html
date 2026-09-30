@@ -1228,7 +1228,7 @@
     finally { actualizandoRelaciones = false; }
   }
   var CAMPOS_CATALOGO_SERVIDOR = {
-    'f-tipo': 'tipo',
+    'f-tipo': 'tipos_filtro',
     'f-mc': 'market_center',
     'f-asesor': 'asesor_nombre',
     'f-estado': 'estado',
@@ -1277,7 +1277,7 @@
     if (filtros.operacion) consulta = consulta.eq('operacion', filtros.operacion);
     if (filtros.estatus === 'inactiva') consulta = consulta.neq('estatus', 'publicada');
     else if (filtros.estatus) consulta = consulta.eq('estatus', filtros.estatus);
-    if (filtros.tipo) consulta = consulta.eq('tipo', filtros.tipo);
+    if (filtros.tipo) consulta = consulta.contains('tipos_filtro', [filtros.tipo]);
     if (filtros.marketCenter) consulta = consulta.eq('market_center', filtros.marketCenter);
     if (filtros.asesor) consulta = consulta.eq('asesor_nombre', filtros.asesor);
     if (filtros.estado) consulta = consulta.eq('estado', filtros.estado);
@@ -1371,6 +1371,8 @@
         if (id === 'f-colonia') {
           var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
           colonias.set('ubic:' + JSON.stringify(lugar), lugar);
+        } else if (Array.isArray(fila[campo])) {
+          fila[campo].forEach(function (tipo) { if (tipo) valores.add(String(tipo)); });
         } else valores.add(String(fila[campo]));
       });
       if (select) {
