@@ -6,6 +6,8 @@
   var guardar = document.getElementById('guardar');
   var nuevo = document.getElementById('nuevo');
   var mas = document.getElementById('mas');
+  var esFormulario = document.body.dataset.vistaComprador === 'formulario';
+  var clienteEditar = new URLSearchParams(location.search).get('id');
   // La campana comparte el renglón de acciones, como en Firmas Digitales.
   function ubicarCampana() {
     var slot = document.getElementById('notif-bell-slot');
@@ -321,7 +323,9 @@
       var menu = document.createElement('details'); menu.className = 'cliente-menu'; agregarTexto(menu,'summary','⋮').setAttribute('aria-label','Acciones de ' + p.nombre);
       var opcionesMenu = document.createElement('div'); menu.append(opcionesMenu); acciones.append(menu);
       var editar = agregarTexto(opcionesMenu, 'button', 'Editar'); editar.type = 'button';
+      editar.dataset.editarCliente = p.id;
       editar.addEventListener('click', function () {
+        if (!esFormulario) { location.href = '/hub/cliente-formulario.html?id=' + encodeURIComponent(p.id); return; }
         if (ocupado) return;
         resetear(); editando = p.id;
         textos.concat(numeros).forEach(function (key) {
@@ -357,10 +361,16 @@
     cargando = true; mas.disabled = true;
     try {
       var desde = adicional ? perfiles.length : 0;
-      var res = await window.kwSupabase.from('perfiles_comprador').select('*').order('created_at', { ascending: false }).order('id').range(desde, desde + 49);
+      var consulta = window.kwSupabase.from('perfiles_comprador').select('*').order('created_at', { ascending: false }).order('id').range(desde, desde + 49);
+      if (esFormulario && clienteEditar) consulta = consulta.eq('id',clienteEditar);
+      var res = await consulta;
       if (res.error) throw res.error;
       perfiles = adicional ? perfiles.concat(res.data) : res.data;
       pintar(); mas.hidden = res.data.length < 50;
+      if (esFormulario && clienteEditar) {
+        var editarBoton = lista.querySelector('[data-editar-cliente]');
+        if (editarBoton) editarBoton.click(); else avisar('El cliente no existe o no pertenece a tu cuenta.',true);
+      }
     } catch (error) {
       if (!perfiles.length) lista.textContent = 'No se pudieron cargar tus perfiles. Recarga para intentar de nuevo.';
       avisar('No se pudieron cargar los perfiles. Los datos del formulario se conservan.', true);
@@ -379,7 +389,7 @@
       if (res.error) throw res.error;
       var indice = perfiles.findIndex(function (p) { return p.id === res.data.id; });
       if (indice === -1) perfiles.unshift(res.data); else perfiles[indice] = res.data;
-      resetear(); pintar(); vista(false); avisar('Perfil guardado.');
+      location.href = '/hub/clientes.html';
     } catch (error) { avisar('No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo; tus datos siguen en el formulario.', true); }
     finally {
       ocupado = false; guardar.disabled = false; nuevo.disabled = false;
@@ -388,8 +398,8 @@
   });
   nuevo.addEventListener('click', function () { if (!ocupado) { resetear(); avisar(''); } });
   mas.addEventListener('click', function () { cargar(true); });
-  document.getElementById('abrir-cliente').addEventListener('click', function () { resetear(); avisar(''); vista(true); });
-  document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) vista(false); });
+  document.getElementById('abrir-cliente').addEventListener('click', function () { location.href = '/hub/cliente-formulario.html'; });
+  document.getElementById('cerrar-form').addEventListener('click', function () { if (!ocupado) location.href = '/hub/clientes.html'; });
   document.addEventListener('click',function (e) { document.querySelectorAll('.cliente-menu[open]').forEach(function (menu) { if (!menu.contains(e.target)) menu.open = false; }); });
   async function cargarSitio() {
     try {
@@ -399,7 +409,7 @@
       if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
     } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
   }
-  function iniciar() { cargar(false); cargarSitio(); cargarUbicaciones(); }
+  function iniciar() { vista(esFormulario); if (!esFormulario || clienteEditar) cargar(false); cargarSitio(); cargarUbicaciones(); }
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
