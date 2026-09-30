@@ -202,7 +202,7 @@
     gap: 18px; margin-bottom: 20px !important;
   }
   .propiedades-encabezado .page-title { margin: 0; text-align: left; }
-  .propiedades-encabezado .conteo { margin: 0; text-align: right; justify-content: flex-end; }
+  #conteo { width: 100%; text-align: center; justify-content: center; margin: 0 0 14px; }
   @media (max-width: 640px) {
     .propiedades-encabezado { flex-wrap: wrap; gap: 8px; }
   }
@@ -413,7 +413,6 @@
   <main>
     <div class="kw-page-encabezado propiedades-encabezado">
       <h1 class="page-title">Propiedades</h1>
-      <div class="conteo" id="conteo" aria-live="polite"></div>
     </div>
 
     <div class="banner-ref" id="banner-ref" style="display:none;"></div>
@@ -547,6 +546,7 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
+        <div class="conteo" id="conteo" aria-live="polite"></div>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -1178,17 +1178,7 @@
   function actualizarConteoServidor(total, pagina, cantidad) {
     var conteo = document.getElementById('conteo');
     if (!conteo) return;
-    if (!total) {
-      conteo.textContent = '0 propiedades';
-      return;
-    }
-    var inicio = ((pagina - 1) * PROPIEDADES_POR_PAGINA) + 1;
-    var fin = Math.min(pagina * PROPIEDADES_POR_PAGINA, total);
-    if (cantidad === 1 && total === 1) {
-      conteo.textContent = '1 propiedad';
-      return;
-    }
-    conteo.textContent = 'Mostrando ' + inicio + ' a ' + fin + ' de ' + total + ' propiedades';
+    conteo.textContent = 'Mostrando ' + cantidad + ' de ' + total + ' listados';
   }
 
   function renderPaginacionServidor(totalPaginas) {
