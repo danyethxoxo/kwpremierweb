@@ -25,6 +25,47 @@
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
   var ubicaciones = [];
+  function normalizarBusqueda(texto) { return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+  function prepararBusquedaUbicacion() {
+    ['estado','municipio','colonias'].forEach(function (campo) {
+      var select = form.elements[campo], caja = select.closest('.kw-select');
+      if (!caja) return;
+      var existente = caja.querySelector('.catalogo-buscar');
+      if (existente) { existente.actualizarCatalogo(); return; }
+      var btn = caja.querySelector('.kw-select-btn'), menu = caja.querySelector('.kw-select-menu');
+      caja.classList.add('catalogo-select');
+      var buscar = document.createElement('input'); buscar.type = 'text'; buscar.className = 'catalogo-buscar'; buscar.autocomplete = 'off';
+      buscar.setAttribute('role','combobox'); buscar.setAttribute('aria-autocomplete','list'); buscar.setAttribute('aria-label','Buscar ' + campo);
+      menu.id = 'comprador-ubicacion-' + campo; buscar.setAttribute('aria-controls',menu.id); btn.tabIndex = -1;
+      var limpiar = document.createElement('button'); limpiar.type = 'button'; limpiar.className = 'catalogo-limpiar'; limpiar.textContent = '×'; limpiar.setAttribute('aria-label','Borrar ' + campo);
+      function filtrar() {
+        var texto = normalizarBusqueda(buscar.value);
+        menu.querySelectorAll('.kw-select-opcion').forEach(function (op) { op.hidden = !normalizarBusqueda(op.textContent).includes(texto); });
+        limpiar.hidden = !select.value && !buscar.value;
+      }
+      buscar.actualizarCatalogo = function () {
+        var abierto = caja.classList.contains('abierto');
+        buscar.setAttribute('aria-expanded',String(abierto)); buscar.disabled = select.disabled; limpiar.disabled = select.disabled;
+        var opcion = select.options[select.selectedIndex]; buscar.placeholder = opcion ? opcion.textContent : 'Seleccionar';
+        if (!abierto) buscar.value = '';
+        filtrar();
+      };
+      function abrir() { if (!caja.classList.contains('abierto')) btn.click(); filtrar(); }
+      buscar.addEventListener('click',function (e) { e.stopPropagation(); abrir(); });
+      buscar.addEventListener('input',function (e) { e.stopPropagation(); abrir(); });
+      buscar.addEventListener('keydown',function (e) {
+        e.stopPropagation();
+        if (e.key === 'ArrowDown' || e.key === 'Enter') {
+          e.preventDefault(); abrir(); var primera = menu.querySelector('.kw-select-opcion:not([hidden]):not([disabled])'); if (primera) primera.focus();
+        } else if ((e.key === 'Escape' || e.key === 'Tab') && caja.classList.contains('abierto')) btn.click();
+      });
+      limpiar.addEventListener('click',function (e) { e.stopPropagation(); select.value = ''; buscar.value = ''; if (caja.classList.contains('abierto')) btn.click(); select.dispatchEvent(new Event('change',{bubbles:true})); buscar.actualizarCatalogo(); buscar.focus(); });
+      select.addEventListener('change',function () { buscar.value = ''; buscar.actualizarCatalogo(); });
+      menu.addEventListener('click',function (e) { if (e.target.closest('.kw-select-opcion')) buscar.focus(); });
+      caja.append(buscar,limpiar); buscar.actualizarCatalogo();
+    });
+  }
+  new MutationObserver(prepararBusquedaUbicacion).observe(form,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
   function vista(editor) {
     document.getElementById('vista-formulario').hidden = !editor;
     document.getElementById('vista-clientes').hidden = editor;
@@ -56,6 +97,7 @@
     opciones('colonias', ubicaciones.filter(function (p) { return (!estado || p.estado === estado) && (!municipio || p.municipio === municipio); }).map(function (p) { return p.colonia; }), 'Todas');
     actualizandoUbicacion = false;
     window.kwUI.selects();
+    prepararBusquedaUbicacion();
   }
   async function cargarUbicaciones() {
     try {
