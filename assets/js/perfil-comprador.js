@@ -19,6 +19,26 @@
   var tipos = ['Casa','Departamento','Terreno','Oficina','Local comercial','Bodega','Duplex','Nave industrial','Edificio','Rancho'];
   var textos = ['nombre','telefono','correo','operacion','moneda','estado','municipio','colonias','notas'];
   var numeros = ['precio_min','precio_max','recamaras_min','banos_min','estacionamientos_min','superficie_min','umbral_match'];
+  function formatearPresupuesto(valor) {
+    var partes = String(valor).replace(/,/g,'').replace(/[^0-9.]/g,'').split('.');
+    var entero = partes.shift().replace(/^0+(?=\d)/,'');
+    var decimal = partes.length ? '.' + partes.join('').slice(0,2) : '';
+    return entero.replace(/\B(?=(\d{3})+(?!\d))/g,',') + decimal;
+  }
+  ['precio_min','precio_max'].forEach(function (campo) {
+    var input = form.elements[campo];
+    input.addEventListener('input',function () {
+      var antes = input.value, posicion = input.selectionStart;
+      var caracteres = antes.slice(0,posicion).replace(/,/g,'').length;
+      input.value = formatearPresupuesto(antes);
+      var cursor = 0, contados = 0;
+      while (cursor < input.value.length && contados < caracteres) { if (input.value[cursor] !== ',') contados++; cursor++; }
+      input.setSelectionRange(cursor,cursor);
+    });
+    input.addEventListener('blur',function () {
+      if (input.value) input.value = formatearPresupuesto(String(Number(input.value.replace(/,/g,''))));
+    });
+  });
   tipos.forEach(function (tipo) {
     var label = document.createElement('label'), input = document.createElement('input');
     input.type = 'checkbox'; input.name = 'tipos'; input.value = tipo;
@@ -149,7 +169,7 @@
   function datos() {
     var d = {};
     textos.forEach(function (key) { d[key] = form.elements[key].value.trim(); });
-    numeros.forEach(function (key) { var valor = form.elements[key].value; d[key] = valor === '' ? null : Number(valor); });
+    numeros.forEach(function (key) { var valor = form.elements[key].value.replace(/,/g,''); d[key] = valor === '' ? null : Number(valor); });
     d.tipos = Array.from(form.querySelectorAll('input[name=tipos]:checked')).map(function (input) { return input.value; });
     d.avisos_campana = true;
     d.avisos_correo = true;
@@ -157,6 +177,8 @@
     if (!d.telefono && !d.correo) throw new Error('Registra al menos un teléfono o correo del cliente.');
     if (d.nombre.length < 2 || d.estado.length < 2) throw new Error('Completa el nombre y el estado.');
     if (!d.tipos.length) throw new Error('Selecciona al menos un tipo de inmueble.');
+    if (!Number.isFinite(d.precio_max) || d.precio_max <= 0 || d.precio_max > 100000000000) throw new Error('Ingresa un presupuesto máximo válido, mayor que cero.');
+    if (d.precio_min !== null && (!Number.isFinite(d.precio_min) || d.precio_min < 0 || d.precio_min > 100000000000)) throw new Error('Ingresa un presupuesto mínimo válido.');
     if (d.precio_min !== null && d.precio_min > d.precio_max) throw new Error('El presupuesto mínimo no puede superar al máximo.');
     return d;
   }
@@ -180,7 +202,7 @@
         textos.concat(numeros).forEach(function (key) {
           var input = form.elements[key], valor = p[key] == null ? '' : p[key];
           if (input.tagName === 'SELECT' && valor && !Array.from(input.options).some(function (o) { return o.value === valor; })) input.add(new Option(valor,valor));
-          input.value = valor;
+          input.value = key === 'precio_min' || key === 'precio_max' ? formatearPresupuesto(valor) : valor;
         });
         form.querySelectorAll('input[name=tipos]').forEach(function (input) { input.checked = p.tipos.includes(input.value); });
         document.getElementById('titulo-formulario').textContent = 'Editar perfil';
