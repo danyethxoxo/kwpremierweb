@@ -33,6 +33,7 @@
     min-height: 100%;
     font-family: 'Poppins', Arial, sans-serif;
     color: var(--text);
+    overflow-x: clip;
   }
   /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
@@ -43,7 +44,7 @@
      igual que en el resto del sitio. */
   /* Sin tope de ancho: en pantalla grande entran más tarjetas por
      renglón en vez de dejar dos franjas vacías a los lados. */
-  main { flex: 1; width: 100%; margin: 0 auto; padding: 90px clamp(20px, 3vw, 48px) 60px; }
+  main { flex: 1; width: 100%; min-width: 0; margin: 0 auto; padding: 90px clamp(20px, 3vw, 48px) 60px; }
 
   .page-title { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; text-align: center; margin-bottom: 22px; color: var(--text); }
 
@@ -100,9 +101,12 @@
   .propiedades-sidebar {
     position: sticky;
     top: 78px;
+    width: 100%;
+    min-width: 0;
     z-index: 20;
-    max-height: calc(100vh - 98px);
-    overflow-y: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     padding: 18px;
     border: 1px solid rgba(255,255,255,0.84);
     border-radius: 16px;
@@ -148,6 +152,23 @@
     margin-bottom: 13px;
     background: #f7f7f7;
   }
+  /* La barra lateral mantiene su ancho y altura. Solo su contenido puede
+     desplazarse, sin cambiar el ancho de la pagina ni mostrar otra barra. */
+  .kw-lateral-universal {
+    width: 292px !important;
+    max-width: 292px;
+    overflow: hidden !important;
+  }
+  .kw-lateral-universal .kw-lateral-contenido {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .kw-lateral-universal .kw-lateral-contenido::-webkit-scrollbar { display: none; }
   .propiedades-buscador {
     display: flex; align-items: center; gap: 8px;
     min-height: 42px; padding: 0 11px;
@@ -295,6 +316,7 @@
   .prop-dato svg { width: 13px; height: 13px; color: var(--muted); }
 
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 50px 0; grid-column: 1 / -1; }
+  .lista-cargando { opacity: 0.58; transition: opacity 0.15s ease; }
   .paginacion { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 10px 0 28px; }
   .paginacion button { min-width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: #555; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 0 10px; }
   .paginacion button:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
@@ -355,19 +377,11 @@
 
     <div class="propiedades-layout">
       <aside class="propiedades-sidebar" id="filtros" aria-label="Filtros de propiedades" autocomplete="off">
-        <div class="propiedades-sidebar-cabecera">
-          <div>
-            <span class="propiedades-sidebar-kicker">Inventario interno</span>
-            <h2>Buscar propiedades</h2>
-          </div>
-          <span class="cuenta-filtros" id="cuenta-filtros" hidden></span>
-        </div>
-
         <label class="propiedades-buscador" for="f-buscar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
             <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.7" y2="16.7"></line>
           </svg>
-          <input type="search" id="f-buscar" placeholder="Título, asesor o dirección" autocomplete="off" />
+          <input type="search" id="f-buscar" aria-label="Texto de búsqueda" placeholder="Título, asesor o dirección" autocomplete="off" />
         </label>
 
         <div class="filtros-sidebar">
@@ -486,7 +500,6 @@
       <section class="propiedades-resultados" aria-live="polite">
         <div class="resultados-cabecera">
           <div class="conteo" id="conteo"></div>
-          <span class="resultado-nota">20 por página</span>
         </div>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
@@ -716,7 +729,7 @@
     return html +
       '<button type="button" onclick="irAPagina(' + (paginaActual + 1) + ')"' +
       (paginaActual === totalPaginas ? ' disabled' : '') + '>Siguiente</button>' +
-      '<span class="paginacion-info">20 por página</span></nav>';
+      '</nav>';
   }
 
   function irAPagina(numero) {
@@ -954,6 +967,303 @@
         escapeHtml(err.message || '') + '</div>';
     }
   }
+
+  /*
+   * La vista anterior descargaba todo el inventario para poder filtrar en el
+   * navegador. Ese flujo bloqueaba los catalogos y mantenia una solicitud
+   * grande despues de pintar la primera pagina. Estas funciones reemplazan
+   * ese comportamiento por consultas paginadas y catalogos independientes.
+   */
+  var solicitudPaginaServidor = 0;
+  var temporizadorPaginaServidor = null;
+  var catalogoServidorVersion = 0;
+  var catalogosServidor = {};
+  var CAMPOS_CATALOGO_SERVIDOR = {
+    'f-tipo': 'tipo',
+    'f-mc': 'market_center',
+    'f-asesor': 'asesor_nombre',
+    'f-estado': 'estado',
+    'f-municipio': 'municipio',
+    'f-colonia': 'colonia'
+  };
+  var TAMANO_LOTE_CATALOGO = 1000;
+
+  function escaparLikeServidor(valor) {
+    return String(valor == null ? '' : valor)
+      .trim()
+      .replace(/\\/g, ' ')
+      .replace(/[%,()_]/g, ' ')
+      .replace(/\s+/g, ' ');
+  }
+
+  function filtrosServidorActuales() {
+    return {
+      texto: val('f-buscar'),
+      operacion: val('f-operacion'),
+      estatus: val('f-estatus'),
+      tipo: val('f-tipo'),
+      marketCenter: val('f-mc'),
+      asesor: val('f-asesor'),
+      estado: val('f-estado'),
+      municipio: val('f-municipio'),
+      colonia: val('f-colonia'),
+      minimo: num('f-min'),
+      maximo: num('f-max'),
+      recamaras: num('f-recamaras'),
+      banos: num('f-banos'),
+      estacionamientos: num('f-estacionamientos'),
+      m2: num('f-m2'),
+      orden: val('f-orden') || 'reciente'
+    };
+  }
+
+  function consultaPaginaServidor(pagina, filtros) {
+    var inicio = (pagina - 1) * PROPIEDADES_POR_PAGINA;
+    var consulta = sb.from('propiedades_inventario')
+      .select(CAMPOS, { count: 'exact' })
+      .eq('fuente', 'kwmexico');
+
+    if (filtros.operacion) consulta = consulta.eq('operacion', filtros.operacion);
+    if (filtros.estatus) consulta = consulta.eq('estatus', filtros.estatus);
+    if (filtros.tipo) consulta = consulta.eq('tipo', filtros.tipo);
+    if (filtros.marketCenter) consulta = consulta.eq('market_center', filtros.marketCenter);
+    if (filtros.asesor) consulta = consulta.eq('asesor_nombre', filtros.asesor);
+    if (filtros.estado) consulta = consulta.eq('estado', filtros.estado);
+    if (filtros.municipio) consulta = consulta.eq('municipio', filtros.municipio);
+    if (filtros.colonia) consulta = consulta.eq('colonia', filtros.colonia);
+    if (filtros.minimo) consulta = consulta.gte('precio', filtros.minimo);
+    if (filtros.maximo) consulta = consulta.lte('precio', filtros.maximo);
+    if (filtros.recamaras) consulta = consulta.gte('recamaras', filtros.recamaras);
+    if (filtros.banos) consulta = consulta.gte('banos', filtros.banos);
+    if (filtros.estacionamientos) consulta = consulta.gte('estacionamientos', filtros.estacionamientos);
+    if (filtros.m2) consulta = consulta.gte('m2_construccion', filtros.m2);
+
+    var texto = escaparLikeServidor(filtros.texto);
+    if (texto) {
+      consulta = consulta.or([
+        'titulo.ilike.%' + texto + '%',
+        'asesor_nombre.ilike.%' + texto + '%',
+        'calle.ilike.%' + texto + '%',
+        'colonia.ilike.%' + texto + '%',
+        'municipio.ilike.%' + texto + '%',
+        'estado.ilike.%' + texto + '%',
+        'tipo.ilike.%' + texto + '%',
+        'market_center.ilike.%' + texto + '%'
+      ].join(','));
+    }
+
+    if (filtros.orden === 'precio-asc') {
+      consulta = consulta.order('precio', { ascending: true });
+    } else if (filtros.orden === 'precio-desc') {
+      consulta = consulta.order('precio', { ascending: false });
+    } else if (filtros.orden === 'm2-desc') {
+      consulta = consulta.order('m2_construccion', { ascending: false });
+    } else {
+      consulta = consulta.order('updated_at', { ascending: false });
+    }
+
+    return consulta.order('id', { ascending: true })
+      .range(inicio, inicio + PROPIEDADES_POR_PAGINA - 1);
+  }
+
+  function opcionesCatalogoActualizadas(campo, lote) {
+    var actuales = catalogosServidor[campo] || [];
+    var vistos = {};
+    actuales.forEach(function (valor) { vistos[String(valor)] = true; });
+    (lote || []).forEach(function (fila) {
+      var valor = fila && fila[campo];
+      if (valor !== null && valor !== undefined && String(valor).trim() !== '') {
+        if (!vistos[String(valor)]) {
+          vistos[String(valor)] = true;
+          actuales.push(String(valor).trim());
+        }
+      }
+    });
+    actuales.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+    catalogosServidor[campo] = actuales;
+    return actuales;
+  }
+
+  async function cargarCatalogoServidor(id, campo, version) {
+    var desde = 0;
+    var select = document.getElementById(id);
+    var textoVacio = (id === 'f-estado' || id === 'f-municipio' || id === 'f-colonia') ? 'Todas' : 'Todos';
+
+    while (version === catalogoServidorVersion) {
+      var respuesta = await sb.from('propiedades_inventario')
+        .select(campo)
+        .eq('fuente', 'kwmexico')
+        .not(campo, 'is', null)
+        .order(campo, { ascending: true })
+        .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
+      if (respuesta.error) throw respuesta.error;
+
+      var lote = respuesta.data || [];
+      opcionesCatalogoActualizadas(campo, lote);
+      if (select && version === catalogoServidorVersion) {
+        llenarSelect(id, catalogosServidor[campo], textoVacio);
+      }
+      if (lote.length < TAMANO_LOTE_CATALOGO) break;
+      desde += lote.length;
+    }
+
+    if (select && version === catalogoServidorVersion) {
+      select.removeAttribute('aria-busy');
+    }
+  }
+
+  function cargarCatalogosServidor() {
+    var version = ++catalogoServidorVersion;
+    Object.keys(CAMPOS_CATALOGO_SERVIDOR).forEach(function (id) {
+      var select = document.getElementById(id);
+      var campo = CAMPOS_CATALOGO_SERVIDOR[id];
+      if (select) select.setAttribute('aria-busy', 'true');
+      cargarCatalogoServidor(id, campo, version).catch(function (error) {
+        if (select) select.removeAttribute('aria-busy');
+        console.warn('No se pudo cargar el filtro ' + campo, error);
+      });
+    });
+  }
+
+  function actualizarConteoServidor(total, pagina, cantidad) {
+    var conteo = document.getElementById('conteo');
+    if (!conteo) return;
+    if (!total) {
+      conteo.textContent = '0 propiedades';
+      return;
+    }
+    var inicio = ((pagina - 1) * PROPIEDADES_POR_PAGINA) + 1;
+    var fin = Math.min(pagina * PROPIEDADES_POR_PAGINA, total);
+    if (cantidad === 1 && total === 1) {
+      conteo.textContent = '1 propiedad';
+      return;
+    }
+    conteo.textContent = 'Mostrando ' + inicio + ' a ' + fin + ' de ' + total + ' propiedades';
+  }
+
+  function renderPaginacionServidor(totalPaginas) {
+    if (totalPaginas <= 1) return '';
+    var paginas = [];
+    function agregar(numero) {
+      if (paginas.indexOf(numero) === -1) paginas.push(numero);
+    }
+    if (totalPaginas <= 7) {
+      for (var i = 1; i <= totalPaginas; i++) agregar(i);
+    } else {
+      agregar(1);
+      if (paginaActual > 4) paginas.push('...');
+      for (var n = Math.max(2, paginaActual - 2); n <= Math.min(totalPaginas - 1, paginaActual + 2); n++) agregar(n);
+      if (paginaActual < totalPaginas - 3) paginas.push('...');
+      agregar(totalPaginas);
+    }
+
+    var html = '<nav class="paginacion" aria-label="Paginación de propiedades">' +
+      '<button type="button" onclick="irAPagina(' + (paginaActual - 1) + ')"' +
+      (paginaActual === 1 ? ' disabled' : '') + '>Anterior</button>';
+    paginas.forEach(function (numero) {
+      if (numero === '...') {
+        html += '<span class="separador" aria-hidden="true">…</span>';
+        return;
+      }
+      html += '<button type="button" class="' + (numero === paginaActual ? 'activa' : '') + '"' +
+        (numero === paginaActual ? ' aria-current="page"' : '') +
+        ' onclick="irAPagina(' + numero + ')">' + numero + '</button>';
+    });
+    return html +
+      '<button type="button" onclick="irAPagina(' + (paginaActual + 1) + ')"' +
+      (paginaActual === totalPaginas ? ' disabled' : '') + '>Siguiente</button></nav>';
+  }
+
+  function renderizarPaginaServidor(filas, total) {
+    var lista = document.getElementById('lista');
+    var totalPaginas = total ? Math.ceil(total / PROPIEDADES_POR_PAGINA) : 0;
+    actualizarConteoServidor(total, paginaActual, filas.length);
+    lista.classList.remove('lista-cargando');
+    lista.removeAttribute('aria-busy');
+    if (!filas.length) {
+      lista.innerHTML = '<div class="estado-msg">No encontramos propiedades con esos filtros.</div>';
+      return;
+    }
+    lista.innerHTML = filas.map(tarjeta).join('') + renderPaginacionServidor(totalPaginas);
+  }
+
+  async function cargarPaginaServidor(numero) {
+    var lista = document.getElementById('lista');
+    var conteo = document.getElementById('conteo');
+    var paginaSolicitada = Math.max(1, Number(numero) || 1);
+    var solicitud = ++solicitudPaginaServidor;
+    paginaActual = paginaSolicitada;
+    lista.classList.add('lista-cargando');
+    lista.setAttribute('aria-busy', 'true');
+    if (conteo) conteo.textContent = 'Cargando propiedades…';
+
+    try {
+      var respuesta = await consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales());
+      if (solicitud !== solicitudPaginaServidor) return;
+      if (respuesta.error) throw respuesta.error;
+      var filas = respuesta.data || [];
+      var total = Number(respuesta.count);
+      if (!isFinite(total)) total = ((paginaSolicitada - 1) * PROPIEDADES_POR_PAGINA) + filas.length;
+      if (total && paginaSolicitada > Math.ceil(total / PROPIEDADES_POR_PAGINA)) {
+        cargarPaginaServidor(Math.ceil(total / PROPIEDADES_POR_PAGINA));
+        return;
+      }
+      totalResultados = total;
+      renderizarPaginaServidor(filas, total);
+    } catch (error) {
+      if (solicitud !== solicitudPaginaServidor) return;
+      lista.classList.remove('lista-cargando');
+      lista.removeAttribute('aria-busy');
+      if (conteo) conteo.textContent = 'No se pudieron cargar las propiedades';
+      lista.innerHTML = '<div class="estado-msg">Intenta nuevamente en unos segundos.<br>' +
+        escapeHtml(error.message || '') + '</div>';
+    }
+  }
+
+  function programarCargaServidor() {
+    paginaActual = 1;
+    window.clearTimeout(temporizadorPaginaServidor);
+    temporizadorPaginaServidor = window.setTimeout(function () {
+      cargarPaginaServidor(1);
+    }, 180);
+  }
+
+  pintar = function () {
+    programarCargaServidor();
+  };
+
+  irAPagina = function (numero) {
+    cargarPaginaServidor(numero);
+    var lista = document.getElementById('lista');
+    if (lista) lista.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  repintarDesdeFiltro = function () {
+    programarCargaServidor();
+  };
+
+  limpiarFiltros = function () {
+    ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
+     'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2'
+    ].forEach(function (id) {
+      var elemento = document.getElementById(id);
+      if (elemento) elemento.value = '';
+    });
+    var estatus = document.getElementById('f-estatus');
+    if (estatus) estatus.value = 'publicada';
+    var orden = document.getElementById('f-orden');
+    if (orden) orden.value = 'reciente';
+    programarCargaServidor();
+  };
+
+  cargar = function () {
+    var filtroEstatus = document.getElementById('filtro-estatus');
+    var estatus = document.getElementById('f-estatus');
+    if (filtroEstatus) filtroEstatus.hidden = false;
+    if (estatus && !estatus.value) estatus.value = 'publicada';
+    cargarCatalogosServidor();
+    cargarPaginaServidor(1);
+  };
 
   var cajaFiltros = document.getElementById('filtros');
   if (cajaFiltros) {
