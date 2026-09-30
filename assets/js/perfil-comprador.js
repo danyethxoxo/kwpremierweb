@@ -6,6 +6,15 @@
   var guardar = document.getElementById('guardar');
   var nuevo = document.getElementById('nuevo');
   var mas = document.getElementById('mas');
+  // La campana comparte el renglón de acciones, como en Firmas Digitales.
+  function ubicarCampana() {
+    var slot = document.getElementById('notif-bell-slot');
+    var acciones = document.getElementById('comprador-acciones');
+    if (slot && slot.parentNode !== acciones) acciones.prepend(slot);
+  }
+  var observadorHeader = new MutationObserver(ubicarCampana);
+  observadorHeader.observe(document.body, { childList: true, subtree: true });
+  ubicarCampana();
   var perfiles = [], editando = null, ocupado = false, cargando = false;
   var tipos = ['Casa','Departamento','Terreno','Oficina','Local comercial','Bodega','Duplex','Nave industrial','Edificio','Rancho'];
   var textos = ['nombre','telefono','correo','operacion','moneda','estado','municipio','colonias','notas'];
