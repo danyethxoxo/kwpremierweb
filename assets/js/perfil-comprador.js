@@ -337,7 +337,7 @@
           var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.insertBefore(carrusel,grid); carrusel.append(grid);
           var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
           var modulo = 0, limite = 0, grupo = [];
-          var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,grid);
+          var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,carrusel);
           var carruselNav = document.createElement('div'); carruselNav.className = 'match-carrusel-nav';
           var prevProps = agregarTexto(carruselNav,'button','←'); prevProps.type = 'button'; prevProps.setAttribute('aria-label','Página anterior de propiedades');
           var paginaProps = agregarTexto(carruselNav,'span','');
