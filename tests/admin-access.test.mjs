@@ -6,6 +6,56 @@ import { stripTypeScriptTypes } from 'node:module';
 
 const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8');
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
+const base = readFileSync(new URL('../hub/base-asesores.html', import.meta.url), 'utf8');
+
+test('activating provisions both accounts; baja preserves contacts; unchanged status does not resend grants', async () => {
+  const calls = [];
+  let ok = true;
+  const context = vm.createContext({ asesores: [], estatusDe: (a) => a.grupo,
+    window: { kwSupabase: { functions: { invoke: async (name, request) => { calls.push(request.body); return { data: { ok } }; } } } },
+  });
+  vm.runInContext(base.slice(base.indexOf('  async function sincronizarAccesosDeEstatus('), base.indexOf('  // ── Fechas')), context);
+  const activo = { id: '1', correo: 'test@example.com', grupo: 'asesor_activo' };
+  const baja = { ...activo, grupo: 'asesor_baja' };
+  await context.sincronizarAccesosDeEstatus(activo, baja);
+  assert.equal(calls[0].todasCuentas, true);
+  assert.deepEqual(Array.from(calls[0].pasos), ['contactos', 'drive', 'calendario']);
+  await context.sincronizarAccesosDeEstatus(baja, activo);
+  assert.equal(calls[1].quitar, true);
+  assert.deepEqual(Array.from(calls[1].pasos), ['drive', 'calendario']);
+  await context.sincronizarAccesosDeEstatus(activo, activo);
+  assert.equal(calls.length, 2);
+  await context.sincronizarAccesosDeEstatus(activo, null);
+  assert.equal(calls.length, 3);
+  await assert.rejects(() => context.sincronizarAccesosDeEstatus({ ...activo, correo: '' }, null), /Falta el correo/);
+  ok = false;
+  await assert.rejects(() => context.sincronizarAccesosDeEstatus(activo, baja), /estado no se cambió/);
+  ok = true;
+  calls.length = 0;
+  await context.sincronizarAccesosDeEstatus({ ...activo, correo: 'nuevo@example.com' }, activo);
+  assert.equal(calls[0].quitar, true);
+  assert.equal(calls[0].personas[0].correo, activo.correo);
+  assert.equal(calls[1].quitar, false);
+});
+
+test('automatic grants create contacts once across accounts and grant Drive/Calendar separately per account', async () => {
+  const calls = [];
+  const context = vm.createContext({
+    moverAcceso: async (paso, quitar, token, cuentas) => { calls.push({ paso, quitar, cuentas }); return { paso, ok: true, detalle: 'ok' }; },
+    moverAccesos: async (pasos, quitar, token, cuentas) => { calls.push({ pasos, quitar, token, cuentas }); return pasos.map((paso) => ({ paso, ok: true, detalle: 'ok' })); },
+  });
+  vm.runInContext(stripTypeScriptTypes(edge.slice(edge.indexOf('async function otorgarAccesosPorCuenta('), edge.indexOf('async function retirarAccesosPorCuenta('))), context);
+  const cuentas = [{ clave: 'original', nombre: 'Dani', token: 'one', accesosCompletos: true }, { clave: 'premier', nombre: 'Premier', token: 'two', accesosCompletos: true }];
+  const estado = { drivePorCuenta: new Map(), calendarioPorCuenta: new Map() };
+  const results = await context.otorgarAccesosPorCuenta(['contactos', 'drive', 'calendario'], cuentas, {}, estado, true);
+  assert.equal(results.length, 5);
+  assert.equal(calls[0].cuentas.length, 2);
+  assert.equal(calls[1].token, 'one');
+  assert.equal(calls[2].token, 'two');
+  assert.deepEqual(Array.from(calls[1].pasos), ['drive', 'calendario']);
+  cuentas[1].accesosCompletos = false;
+  assert.ok((await context.otorgarAccesosPorCuenta(['drive'], cuentas, {}, estado, true)).some((r) => !r.ok));
+});
 
 test('access cards show only permission dates and never substitute advisor dates', () => {
   const context = vm.createContext({
@@ -60,8 +110,8 @@ test('removing all or selected Google accesses never includes contacts', () => {
   assert.ok(!edge.includes('borrarContacto'));
 });
 
-test('giving an advisor a baja revokes Drive/Calendar before changing the group; failures preserve the group', async () => {
-  for (const ok of [true, false]) {
+test('card status actions synchronize grants or removals before changing the group; failures preserve the group', async () => {
+  for (const destino of ['asesor_activo', 'asesor_baja']) for (const ok of [true, false]) {
     const calls = [];
     const chain = { update: (data) => { calls.push({ kind: 'group', data }); return chain; }, eq: () => chain, select: () => chain, single: async () => ({}) };
     const context = vm.createContext({
@@ -70,15 +120,16 @@ test('giving an advisor a baja revokes Drive/Calendar before changing the group;
       llamarAlta: async (data) => { calls.push({ kind: 'access', data }); return { ok, estado: [] }; },
       aplicarEstado() {}, mensajeDeResultado: () => 'Error al retirar accesos', leerBaseDatos: async () => true,
       gruposDesdeBase: () => [], armarTabsAsesores() {}, pintarGrupos() {}, avisoAsesores() {}, BD_TITULO: {},
-      grupoActivo: '', gruposAsesores: []
+      grupoActivo: '', gruposAsesores: [], esDeBaja: (grupo) => grupo === 'asesor_baja',
     });
     const start = html.indexOf('  async function pasarAsesorABaja(');
     const end = html.indexOf('  // ── Cargar', start);
     vm.runInContext(html.slice(start, end), context);
-    await context.pasarAsesorABaja({ dataset: { bajaAsesor: '1' } });
+    await context.pasarAsesorABaja({ dataset: { bajaAsesor: '1', bajaGrupo: destino } });
     assert.equal(calls[0].kind, 'access');
-    assert.deepEqual(Array.from(calls[0].data.pasos), ['drive', 'calendario']);
-    assert.equal(calls[0].data.quitar, true);
+    assert.deepEqual(Array.from(calls[0].data.pasos), destino === 'asesor_baja' ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario']);
+    assert.equal(calls[0].data.quitar, destino === 'asesor_baja');
+    assert.equal(calls[0].data.todasCuentas, true);
     assert.equal(calls.some((call) => call.kind === 'group'), ok);
   }
 });

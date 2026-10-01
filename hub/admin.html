@@ -2656,8 +2656,8 @@
             (completo ? ICONO_LISTO : '') + 'Accesos</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
     const opcionBaja = !esBaja
-      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Dar de baja</button>'
-      : '';
+      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
+      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (g.clave === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -3140,9 +3140,12 @@
 
     const id = boton.dataset.bajaAsesor;
     const destino = boton.dataset.bajaGrupo || 'asesor_baja';
+    const quitar = esDeBaja(destino);
     const registro = bdAsesores.find(function (a) { return String(a.id) === String(id); });
     const nombre = registro && registro.nombre ? registro.nombre : 'este asesor';
-    const confirmado = await window.kwUI.confirm('¿Dar de baja a ' + nombre + '? Se retirarán Drive y Calendario y se conservará su contacto.');
+    const confirmado = await window.kwUI.confirm(quitar
+      ? '¿Dar de baja a ' + nombre + '? Se retirarán Drive y Calendario y se conservará su contacto.'
+      : '¿Dar de alta a ' + nombre + '? Se creará el contacto y se darán Drive y Calendario en ambas cuentas.');
     if (!confirmado) {
       delete boton.dataset.procesando;
       return;
@@ -3150,11 +3153,13 @@
 
     boton.disabled = true;
     try {
-      if (!registro || !registro.correo) throw new Error('Falta el correo para retirar los accesos');
-      const accesos = await llamarAlta({ accion: 'acceso', quitar: true, pasos: ['drive', 'calendario'],
-        personas: [{ correo: registro.correo, nombre: registro.nombre, grupo: destino }] });
+      if (!registro || !registro.correo) throw new Error('Falta el correo para sincronizar los accesos');
+      const accesos = await llamarAlta({ accion: 'acceso', quitar: quitar, todasCuentas: true,
+        pasos: quitar ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario'],
+        personas: [{ correo: registro.correo, nombre: registro.nombre, telefono: registro.telefono,
+          cumpleanos: registro.cumpleanos, grupo: destino }] });
       aplicarEstado(accesos.estado);
-      if (!accesos.ok) throw new Error(mensajeDeResultado(accesos, true));
+      if (!accesos.ok) throw new Error(mensajeDeResultado(accesos, quitar));
       const { error } = await window.kwSupabase
         .from('asesores')
         .update({ grupo: destino })
@@ -3178,7 +3183,7 @@
     } catch (error) {
       boton.disabled = false;
       delete boton.dataset.procesando;
-      avisoAsesores('No se pudo dar de baja: ' + (error.message || 'error desconocido') + '.', 'error');
+      avisoAsesores('No se pudo dar de ' + (quitar ? 'baja' : 'alta') + ': ' + (error.message || 'error desconocido') + '.', 'error');
     }
   }
 

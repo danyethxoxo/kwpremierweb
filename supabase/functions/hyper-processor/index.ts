@@ -1153,6 +1153,27 @@ async function moverAccesos(
 }
 
 // Qué pasos vienen en la petición. Sin nada, los tres.
+async function otorgarAccesosPorCuenta(pasos: Paso[], cuentas: CuentaConToken[], persona: DatosPersona, estado: EstadoGoogle, detallado: boolean) {
+  const resultados = []
+  if (pasos.includes('contactos')) {
+    resultados.push(await moverAcceso('contactos', false, cuentas[0].token, cuentas, persona, estado, detallado))
+  }
+  const permisos = pasos.filter((paso) => paso !== 'contactos')
+  const completas = cuentas.filter((cuenta) => cuenta.accesosCompletos)
+  if (permisos.length && completas.length !== cuentas.length) {
+    resultados.push({ paso: 'drive' as Paso, ok: false, detalle: 'Faltan permisos de Google en una cuenta configurada; no se puede completar el alta en ambas cuentas' })
+    return resultados
+  }
+  for (const cuenta of completas) {
+    const porCuenta: EstadoGoogle = { ...estado,
+      drive: estado.drivePorCuenta.get(cuenta.clave) || new Map(),
+      calendario: estado.calendarioPorCuenta.get(cuenta.clave) || new Map() }
+    const otorgados = await moverAccesos(permisos, false, cuenta.token, [cuenta], persona, porCuenta, detallado)
+    resultados.push(...otorgados.map((resultado) => ({ ...resultado, detalle: `${cuenta.nombre}: ${resultado.detalle}` })))
+  }
+  return resultados
+}
+
 async function retirarAccesosPorCuenta(pasos: Paso[], cuentas: CuentaConToken[], persona: DatosPersona, estado: EstadoGoogle) {
   const resultados = []
   const completas = cuentas.filter((cuenta) => cuenta.accesosCompletos)
@@ -1578,7 +1599,9 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
       for (const persona of gente) {
         const resultados = quitar
           ? await retirarAccesosPorCuenta(pasos, cuentasOperacion, persona, estado)
-          : await moverAccesos(pasos, false, tokenOperacion, cuentasOperacion, persona, estadoOperacion, soyMaster)
+          : body.todasCuentas === true
+            ? await otorgarAccesosPorCuenta(pasos, cuentasOperacion, persona, estado, soyMaster)
+            : await moverAccesos(pasos, false, tokenOperacion, cuentasOperacion, persona, estadoOperacion, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1602,7 +1625,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
       // El estado de después, para que la pantalla se repinte con lo que
       // de verdad quedó en Google en vez de suponerlo.
-      let estadoPosterior = quitar ? await leerEstadoGoogle(tokenPrincipal, cuentasContactos) : estado
+      let estadoPosterior = quitar || body.todasCuentas === true ? await leerEstadoGoogle(tokenPrincipal, cuentasContactos) : estado
       // Google puede tardar un instante en reflejar un DELETE. Solo se
       // repite la lectura, nunca el retiro ni otra acción sobre la cuenta.
       if (quitar && hechas.every((hecha) => hecha.ok)) {
