@@ -47,6 +47,19 @@
     label.append(input, document.createTextNode(tipo)); document.getElementById('tipos').append(label);
   });
   var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '', cacheMatches = new Map();
+  var indiceCiudad = new Map(), catalogoIndexado = null;
+  var estadoCatalogo = document.createElement('p'); estadoCatalogo.className = 'catalogo-estado'; estadoCatalogo.setAttribute('role','status');
+  document.querySelector('.encabezado').insertAdjacentElement('afterend',estadoCatalogo);
+  function indexarInventario(filas) {
+    if (catalogoIndexado === filas) return;
+    catalogoIndexado = filas; indiceCiudad.clear(); cacheMatches.clear();
+    filas.forEach(function (p) {
+      if (p.estatus !== 'publicada') return;
+      var clave = p.operacion + '|' + normalizarBusqueda(p.estado).trim();
+      if (!indiceCiudad.has(clave)) indiceCiudad.set(clave,[]);
+      indiceCiudad.get(clave).push(p);
+    });
+  }
   var etiquetas = [], entradaEtiqueta = document.getElementById('agregar-etiqueta');
   function pintarEtiquetas() {
     var caja = document.getElementById('etiquetas');
@@ -163,15 +176,10 @@
   }
   async function cargarUbicaciones() {
     try {
-      var todas = [], desde = 0;
-      while (true) {
-        var res = await window.kwSupabase.from('propiedades_inventario').select('estado,municipio,colonia').eq('fuente','kwmexico').order('id').range(desde,desde+999);
-        if (res.error) throw res.error;
-        todas = todas.concat(res.data.filter(function (p) { return p.estado && p.estado.toLowerCase() !== 'antioquia'; }));
-        if (res.data.length < 1000) break;
-        desde += 1000;
-      }
-      ubicaciones = todas; refrescarUbicacion();
+      await window.kwInventarioLocal.cargar(window.kwSupabase,{
+        datos: function (filas) { ubicaciones = filas.filter(function (p) { return p.estado && normalizarBusqueda(p.estado) !== 'antioquia'; }); refrescarUbicacion(); },
+        estado: function (texto) { estadoCatalogo.textContent = texto; }
+      });
     } catch (e) { avisar('No se pudieron cargar las ubicaciones. Recarga para intentar de nuevo.',true); }
   }
   var revisionMatches = 0;
@@ -180,24 +188,14 @@
     var revision = ++revisionMatches;
     inventarioMatches = null; errorMatches = false; cacheMatches.clear(); pintar();
     if (!perfiles.length) { inventarioMatches = []; pintar(); return; }
-    var estados = Array.from(new Set(perfiles.map(function (p) { return p.estado; })));
-    var operaciones = Array.from(new Set(perfiles.map(function (p) { return p.operacion; })));
-    var campos = 'id,fuente_id,titulo,descripcion,operacion,estatus,tipo,tipos_filtro,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,estado,municipio,colonia,imagenes,asesor_nombre,market_center,enlace_kw';
-    function consulta(desde) {
-      return window.kwSupabase.from('propiedades_inventario').select(campos)
-        .eq('fuente','kwmexico').eq('estatus','publicada').in('estado',estados).in('operacion',operaciones).order('id').range(desde,desde+499);
-    }
     try {
-      var todas = [], desde = 0;
-      while (true) {
-        var lote = await consulta(desde); if (lote.error) throw lote.error;
-        todas = todas.concat(lote.data || []);
-        if (revision !== revisionMatches) return;
-        if (!lote.data || lote.data.length < 500) break;
-        desde += 500;
-      }
-      if (revision !== revisionMatches) return;
-      inventarioMatches = todas; pintar();
+      await window.kwInventarioLocal.cargar(window.kwSupabase,{
+        datos: function (filas) {
+          if (revision !== revisionMatches) return;
+          inventarioMatches = filas; indexarInventario(filas); errorMatches = false; pintar();
+        },
+        estado: function (texto) { if (revision === revisionMatches) estadoCatalogo.textContent = texto; }
+      });
     } catch (e) { if (revision !== revisionMatches) return; console.error('Error al cargar coincidencias:',e); errorMatches = true; pintar(); }
   }
   form.elements.estado.addEventListener('change', function () {
@@ -268,7 +266,14 @@
   function matchesCliente(cliente) {
     var clave = JSON.stringify(cliente);
     if (cacheMatches.has(clave)) return cacheMatches.get(clave);
-    var resultados = (inventarioMatches || []).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
+    var candidatos = indiceCiudad.get(cliente.operacion + '|' + normalizarBusqueda(cliente.estado).trim()) || [];
+    var resultados = candidatos.filter(function (p) {
+      if (p.moneda && p.moneda !== cliente.moneda) return false;
+      var precio = Number(p.precio), maximo = Number(cliente.precio_max);
+      var precioPuntos = p.moneda === cliente.moneda && precio > 0 ? Math.max(0,40 - 250 * Math.max(0,precio/maximo-1)) : 0;
+      if (Math.round(60 + precioPuntos) < cliente.umbral_match) return false;
+      return cliente.tipos.some(function (tipo) { return (p.tipos_filtro || [p.tipo]).includes(tipo); });
+    }).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
       .filter(function (r) { return r.match && r.match.porcentaje >= cliente.umbral_match; })
       .sort(function (a,b) { return b.match.porcentaje - a.match.porcentaje; });
     if (inventarioMatches) cacheMatches.set(clave,resultados);
