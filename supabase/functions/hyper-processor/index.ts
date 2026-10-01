@@ -1013,7 +1013,7 @@ async function quitarCarpeta(token: string, correo: string, permisos?: PorCorreo
   const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(ALTA_DRIVE_FOLDER_ID)}` +
     `/permissions/${encodeURIComponent(permiso)}?supportsAllDrives=true`
   const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  if (!res.ok && res.status !== 404) throw new Error(`${res.status} ${await res.text()}`)
   mapa.delete(correo.toLowerCase())
   return 'Acceso a la carpeta retirado'
 }
@@ -1027,7 +1027,7 @@ async function quitarAccesoCalendario(token: string, correo: string, reglas?: Po
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}` +
     `/acl/${encodeURIComponent(regla)}`
   const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  if (!res.ok && res.status !== 404) throw new Error(`${res.status} ${await res.text()}`)
   mapa.delete(correo.toLowerCase())
   return 'Acceso al calendario retirado'
 }
@@ -1153,6 +1153,21 @@ async function moverAccesos(
 }
 
 // Qué pasos vienen en la petición. Sin nada, los tres.
+async function retirarAccesosPorCuenta(pasos: Paso[], cuentas: CuentaConToken[], persona: DatosPersona, estado: EstadoGoogle) {
+  const resultados = []
+  const completas = cuentas.filter((cuenta) => cuenta.accesosCompletos)
+  if (!completas.length) return pasos.map((paso) => ({ paso, ok: false, detalle: 'No hay una cuenta con permisos para retirar este acceso' }))
+  for (const cuenta of completas) {
+    const porCuenta: EstadoGoogle = { ...estado,
+      drive: estado.drivePorCuenta.get(cuenta.clave) || new Map(),
+      calendario: estado.calendarioPorCuenta.get(cuenta.clave) || new Map() }
+    const retirados = await moverAccesos(pasos.filter((paso) => paso !== 'contactos'), true,
+      cuenta.token, [cuenta], persona, porCuenta, false)
+    resultados.push(...retirados.map((resultado) => ({ ...resultado, detalle: `${cuenta.nombre}: ${resultado.detalle}` })))
+  }
+  return resultados
+}
+
 function pasosPedidos(valor: unknown, quitar = false): Paso[] {
   const permitidos = quitar ? PASOS.filter((p) => p !== 'contactos') : [...PASOS]
   if (!Array.isArray(valor) || !valor.length) return permitidos
@@ -1561,7 +1576,9 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
       const hechas = []
       for (const persona of gente) {
-        const resultados = await moverAccesos(pasos, quitar, tokenOperacion, cuentasOperacion, persona, estadoOperacion, soyMaster)
+        const resultados = quitar
+          ? await retirarAccesosPorCuenta(pasos, cuentasOperacion, persona, estado)
+          : await moverAccesos(pasos, false, tokenOperacion, cuentasOperacion, persona, estadoOperacion, soyMaster)
         const completo = resultados.every((r) => r.ok)
         const detalle: Record<string, unknown> = {}
         for (const r of resultados) detalle[r.paso] = { ok: r.ok, detalle: r.detalle }
@@ -1585,16 +1602,42 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
       // El estado de después, para que la pantalla se repinte con lo que
       // de verdad quedó en Google en vez de suponerlo.
+      let estadoPosterior = quitar ? await leerEstadoGoogle(tokenPrincipal, cuentasContactos) : estado
+      // Google puede tardar un instante en reflejar un DELETE. Solo se
+      // repite la lectura, nunca el retiro ni otra acción sobre la cuenta.
+      if (quitar && hechas.every((hecha) => hecha.ok)) {
+        for (let intento = 0; intento < 2; intento++) {
+          const quedaAcceso = gente.some((persona: DatosPersona) => cuentasOperacion.filter((c) => c.accesosCompletos).some((cuenta) =>
+            pasos.some((paso) => (paso === 'drive' ? estadoPosterior.drivePorCuenta : estadoPosterior.calendarioPorCuenta)
+              .get(cuenta.clave)?.has(persona.correo.toLowerCase()))))
+          if (!quedaAcceso) break
+          await new Promise((resolve) => setTimeout(resolve, 600 * (intento + 1)))
+          estadoPosterior = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
+        }
+      }
+      if (quitar) {
+        for (const hecha of hechas) {
+          for (const cuenta of cuentasOperacion.filter((c) => c.accesosCompletos)) {
+            for (const paso of pasos) {
+              const porCuenta = paso === 'drive' ? estadoPosterior.drivePorCuenta : estadoPosterior.calendarioPorCuenta
+              if (porCuenta.get(cuenta.clave)?.has(hecha.correo.toLowerCase())) {
+                hecha.ok = false
+                hecha.resultados.push({ paso, ok: false, detalle: `${cuenta.nombre}: Google todavía muestra este acceso` })
+              }
+            }
+          }
+        }
+      }
       const estadoFinal = gente.map((p: DatosPersona) => {
         const c = p.correo.toLowerCase()
         return {
           correo: p.correo,
-          contactos: contactoCompleto(estado.contactos, c),
-          contactosPorCuenta: soyMaster ? desglosePorCuenta(estado.contactos, c) : undefined,
-          drive: Array.from(estado.drivePorCuenta.values()).some((m) => m.has(c)),
-          calendario: Array.from(estado.calendarioPorCuenta.values()).some((m) => m.has(c)),
-          drivePorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.drivePorCuenta, c) : undefined,
-          calendarioPorCuenta: soyMaster ? desgloseAccesoPorCuenta(estado.calendarioPorCuenta, c) : undefined,
+          contactos: contactoCompleto(estadoPosterior.contactos, c),
+          contactosPorCuenta: soyMaster ? desglosePorCuenta(estadoPosterior.contactos, c) : undefined,
+          drive: Array.from(estadoPosterior.drivePorCuenta.values()).some((m) => m.has(c)),
+          calendario: Array.from(estadoPosterior.calendarioPorCuenta.values()).some((m) => m.has(c)),
+          drivePorCuenta: soyMaster ? desgloseAccesoPorCuenta(estadoPosterior.drivePorCuenta, c) : undefined,
+          calendarioPorCuenta: soyMaster ? desgloseAccesoPorCuenta(estadoPosterior.calendarioPorCuenta, c) : undefined,
         }
       })
 

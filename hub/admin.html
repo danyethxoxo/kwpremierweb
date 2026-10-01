@@ -343,6 +343,7 @@
   .verif-chip.no { color: #8d9299; }
   .verif-chip.no:hover:not(:disabled) { border-color: #1a7a1a; color: #1a7a1a; background: #f2fbf3; }
   .verif-chip:disabled { opacity: 0.45; cursor: default; }
+  .verif-chip.procesando { color: var(--muted); background: var(--lienzo); border-color: var(--border); opacity: 1; }
 
   .verif-acciones { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; padding-top: 2px; }
   .verif-todo {
@@ -3491,6 +3492,21 @@
     msg.className = 'msg ' + clase;
   }
 
+  function marcarVerifProcesando(correos, pasos, quitar) {
+    document.querySelectorAll('#verificar-cont .verif-item').forEach(function (item) {
+      const marca = item.querySelector('input[data-marcar]');
+      if (!marca || !correos.includes(marca.dataset.marcar)) return;
+      item.querySelectorAll('button').forEach(function (boton) { boton.disabled = true; });
+      item.querySelectorAll('button.verif-chip').forEach(function (boton) {
+        const acceso = boton.dataset.acceso;
+        if (pasos && !pasos.includes(acceso)) return;
+        boton.classList.remove('si', 'no');
+        boton.classList.add('procesando');
+        boton.innerHTML = ICONO_RELOJ + (quitar ? 'Retirando ' : 'Otorgando ') + NOMBRE_ACCESO[acceso] + '…';
+      });
+    });
+  }
+
   // Cambia accesos desde el modal: a una persona o a las seleccionadas.
   async function accesoDesdeVerif(correos, pasos, quitar) {
     if (verificacionOcupada) return;
@@ -3522,6 +3538,8 @@
     const cont = document.getElementById('verificar-cont');
     cont.classList.add('ocupado');
     document.getElementById('modal-verificar').setAttribute('aria-busy', 'true');
+    marcarVerifProcesando(gente.map(function (p) { return p.correo; }), pasos, quitar);
+    mostrarMsgVerif(quitar ? 'Retirando accesos y comprobando el resultado en Google…' : 'Otorgando accesos…', 'ok');
     try {
       const data = await llamarAlta({
         accion: 'acceso', quitar: quitar, pasos: pasos || undefined, personas: gente,
@@ -3537,7 +3555,7 @@
       });
       pintarVerificacion();
       pintarGrupos();
-      data.ok ? mostrarMsgVerif('', '') : mostrarMsgVerif(mensajeDeResultado(data, quitar), 'error');
+      mostrarMsgVerif(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
     } catch (err) {
       mostrarMsgVerif(err.message || 'No se pudo cambiar el acceso.', 'error');
     } finally {
@@ -3546,7 +3564,7 @@
     } finally {
       verificacionOcupada = false;
       document.getElementById('modal-verificar').setAttribute('aria-busy', 'false');
-      pintarSeleccion();
+      pintarVerificacion();
     }
   }
 
