@@ -3469,7 +3469,7 @@
       const alguno = p.drive || p.calendario;
       const abierto = verifAbiertos.has(p.correo);
       return '<div class="kw-fila verif-item' + (marcado ? ' marcado' : '') + (abierto ? ' abierta' : '') + '">' +
-        '<div class="verif-renglon">' +
+        '<div class="verif-renglon" data-tarjeta="' + escapeHtml(p.correo) + '">' +
         '<label class="verif-marca">' +
           '<input type="checkbox" data-marcar="' + escapeHtml(p.correo) + '"' + (marcado ? ' checked' : '') + ' />' +
         '</label>' +
@@ -3483,7 +3483,6 @@
             ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Agregar contacto y dar Drive y Calendario">' + ICONO_LISTO + '<span>Dar accesos</span></button>' +
           '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
             ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario de ambas cuentas; conservar contacto">' + (alguno ? ICONO_EQUIS : ICONO_LISTO) + '<span>' + (alguno ? 'Retirar accesos' : 'Sin accesos') + '</span></button>' +
-          '<button type="button" class="verif-todo" data-detalle="' + escapeHtml(p.correo) + '" aria-expanded="' + abierto + '">' + (abierto ? 'Cerrar detalles' : 'Ver detalles') + '</button>' +
         '</div></div>' +
         '<div class="verif-detalle"' + (abierto ? '' : ' hidden') + '>' + detallePersonaVerifHtml(p) + '</div>' +
       '</div>';
@@ -3624,9 +3623,10 @@
     const cont = document.getElementById('verificar-cont');
 
     cont.addEventListener('click', function (e) {
-      const detalle = e.target.closest('[data-detalle]');
+      const detalle = e.target.closest('[data-detalle]') ||
+        (!e.target.closest('button, input, label, .verif-chip') && e.target.closest('[data-tarjeta]'));
       if (detalle) {
-        const correo = detalle.dataset.detalle;
+        const correo = detalle.dataset.detalle || detalle.dataset.tarjeta;
         if (verifAbiertos.has(correo)) verifAbiertos.delete(correo);
         else verifAbiertos.add(correo);
         const posicion = cont.scrollTop;
