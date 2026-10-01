@@ -299,10 +299,12 @@
   .verif-barra-seleccion {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
     padding: 9px 12px; margin-bottom: var(--sp-2);
-    border-radius: var(--r-campo); background: #fff5f5; border: 1px solid #f0cfcf;
-    font-size: 12.5px; font-weight: 700; color: var(--red);
+    border-radius: var(--r-campo); background: var(--lienzo); border: 1px solid var(--border);
+    font-size: 12.5px; font-weight: 500; color: var(--text);
   }
-  .verif-barra-seleccion .verif-todo { margin-left: 0; width: auto; padding: 0 11px; gap: 6px; }
+  .verif-barra-seleccion .verif-todo { flex: 1 1 auto; }
+  #verif-seleccion-num { flex: 0 0 100%; }
+  .verif-ayuda { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 
   #verificar-msg { flex-shrink: 0; }
   /* Al final de la lista el scroll no se encadena a la página de atrás,
@@ -328,25 +330,26 @@
      apagado si no (picarlo lo da). */
   .verif-chip {
     display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: var(--r-pastilla);
+    padding: 8px 12px; min-height: 36px; border-radius: 9px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    font-family: inherit; font-size: 11.5px; font-weight: 500;
     white-space: nowrap; cursor: pointer;
     transition: background var(--t-rapido), border-color var(--t-rapido), color var(--t-rapido);
   }
   .verif-chip svg { width: 11px; height: 11px; }
   .verif-chip.si { color: #1a7a1a; border-color: #cfe9d2; background: #f2fbf3; }
-  .verif-chip.si:hover { border-color: var(--red); color: var(--red); background: #fdeaea; }
+  button.verif-chip.si:hover { border-color: var(--red); color: var(--red); background: #fdeaea; }
+  span.verif-chip { cursor: default; }
   .verif-chip.no { color: #8d9299; }
   .verif-chip.no:hover:not(:disabled) { border-color: #1a7a1a; color: #1a7a1a; background: #f2fbf3; }
   .verif-chip:disabled { opacity: 0.45; cursor: default; }
 
-  .verif-acciones { display: flex; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+  .verif-acciones { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; padding-top: 2px; }
   .verif-todo {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%;
+    min-height: 38px; padding: 8px 12px; gap: 6px; border-radius: 9px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 12px; font-weight: 700;
+    font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1.25;
     cursor: pointer; transition: background var(--t-rapido), border-color var(--t-rapido);
   }
   .verif-todo svg { width: 14px; height: 14px; }
@@ -355,10 +358,14 @@
   .verif-todo.quitar { color: var(--red); }
   .verif-todo.quitar:hover:not(:disabled) { background: #fdeaea; border-color: var(--red); }
   .verif-todo:disabled { opacity: 0.35; cursor: default; }
+  .verif-todo:focus-visible, .verif-chip:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  #modal-verificar[aria-busy="true"] .verif-barra-seleccion { opacity: 0.55; }
 
   @media (max-width: 640px) {
     .verif-item { flex-wrap: wrap; }
-    .verif-acciones { margin-left: auto; }
+    .verif-acciones { flex: 1 1 100%; flex-direction: row; margin-left: 26px; }
+    .verif-acciones .verif-todo { flex: 1; }
+    .verif-barra-seleccion .verif-todo { flex-basis: 100%; }
   }
 
 </style>
@@ -1525,6 +1532,8 @@
   <!-- Modal: revisar y mover los accesos de Google -->
   <div id="modal-verificar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
+      <h3>Accesos de Google</h3>
+      <p class="verif-ayuda">Al retirar Drive y Calendario, el contacto se conserva.</p>
       <div class="verif-cabeza">
         <div class="buscador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1544,11 +1553,11 @@
         <span id="verif-seleccion-num"></span>
         <button type="button" class="verif-todo dar" id="verif-dar-todos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          Dar todos los accesos
+          Dar accesos
         </button>
         <button type="button" class="verif-todo quitar" id="verif-quitar-todos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          Quitar todos los accesos
+          Retirar Drive y Calendario
         </button>
       </div>
 
@@ -2569,7 +2578,7 @@
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
+            (estado === null || (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
@@ -2798,7 +2807,7 @@
     });
     const hayParaQuitar = seleccionados.some(function (check) {
       const acceso = check.closest('.acceso');
-      return acceso && acceso.classList.contains('si');
+      return check.value !== 'contactos' && acceso && acceso.classList.contains('si');
     });
     const dar = caja.querySelector('.acceso-seleccion-accion.dar');
     const quitar = caja.querySelector('.acceso-seleccion-accion.quitar');
@@ -2999,6 +3008,10 @@
   // más no debe bastar.
   const NOMBRE_ACCESO = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
 
+  function pasosDeOperacion(pasos, quitar) {
+    return quitar ? (pasos || ['drive', 'calendario']).filter(function (paso) { return paso !== 'contactos'; }) : pasos;
+  }
+
   function textoDeAccesos(pasos) {
     if (!pasos) return 'los tres accesos';
     return pasos.map(function (p) { return NOMBRE_ACCESO[p] || p; }).join(', ');
@@ -3021,6 +3034,8 @@
   }
 
   async function moverAcceso(correo, pasos, quitar) {
+    pasos = pasosDeOperacion(pasos, quitar);
+    if (quitar && !pasos.length) return avisoAsesores('El contacto se conserva. Selecciona Drive o Calendario para retirar accesos.', 'error');
     const encontrado = personaPorCorreo(correo);
     if (!encontrado) return;
     const { persona, grupo } = encontrado;
@@ -3103,7 +3118,7 @@
     const destino = boton.dataset.bajaGrupo || 'asesor_baja';
     const registro = bdAsesores.find(function (a) { return String(a.id) === String(id); });
     const nombre = registro && registro.nombre ? registro.nombre : 'este asesor';
-    const confirmado = await window.kwUI.confirm('¿Dar de baja a ' + nombre + '?');
+    const confirmado = await window.kwUI.confirm('¿Dar de baja a ' + nombre + '? Se retirarán Drive y Calendario y se conservará su contacto.');
     if (!confirmado) {
       delete boton.dataset.procesando;
       return;
@@ -3111,6 +3126,11 @@
 
     boton.disabled = true;
     try {
+      if (!registro || !registro.correo) throw new Error('Falta el correo para retirar los accesos');
+      const accesos = await llamarAlta({ accion: 'acceso', quitar: true, pasos: ['drive', 'calendario'],
+        personas: [{ correo: registro.correo, nombre: registro.nombre, grupo: destino }] });
+      aplicarEstado(accesos.estado);
+      if (!accesos.ok) throw new Error(mensajeDeResultado(accesos, true));
       const { error } = await window.kwSupabase
         .from('asesores')
         .update({ grupo: destino })
@@ -3352,6 +3372,7 @@
   // varios seleccionados.
   let ultimaVerificacion = [];
   let seleccionados = new Set();
+  let verificacionOcupada = false;
 
   async function abrirVerificacion() {
     const cont = document.getElementById('verificar-cont');
@@ -3410,6 +3431,7 @@
       const daDeAlta = grupoDaDeAlta(p.grupo);
       const chips = ACCESOS.map(function (a) {
         const tiene = p[a.clave];
+        if (a.clave === 'contactos' && tiene) return '<span class="verif-chip si" title="El contacto se conserva al retirar accesos">' + ICONO_LISTO + 'Contacto guardado</span>';
         const bloqueado = !tiene && !daDeAlta;
         return '<button type="button" class="verif-chip ' + (tiene ? 'si' : 'no') + '"' +
           ' data-correo="' + escapeHtml(p.correo) + '" data-acceso="' + a.clave + '"' +
@@ -3419,7 +3441,7 @@
       }).join('');
 
       const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
-      const alguno = ACCESOS.some(function (a) { return p[a.clave]; });
+      const alguno = p.drive || p.calendario;
       const desglose = desgloseContactosHtml({ contactosPorCuenta: p.contactosPorCuenta }, 'verif-cuentas');
 
       return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
@@ -3434,9 +3456,9 @@
         '</div>' +
         '<div class="verif-acciones">' +
           '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
-            ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Dar los tres accesos">' + ICONO_LISTO + '</button>' +
+            ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Agregar contacto y dar Drive y Calendario">' + ICONO_LISTO + '<span>Dar accesos</span></button>' +
           '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
-            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Quitar los tres accesos">' + ICONO_EQUIS + '</button>' +
+            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario; conservar contacto">' + ICONO_EQUIS + '<span>Retirar accesos</span></button>' +
         '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -3448,8 +3470,19 @@
     const barra = document.getElementById('verif-seleccion');
     const n = seleccionados.size;
     barra.style.display = n ? '' : 'none';
+    const visibles = verifVisibles();
+    const marcados = visibles.filter(function (p) { return seleccionados.has(p.correo); }).length;
+    const todos = document.getElementById('verif-marcar-todos');
+    todos.checked = visibles.length > 0 && marcados === visibles.length;
+    todos.indeterminate = marcados > 0 && marcados < visibles.length;
+    todos.disabled = verificacionOcupada || !visibles.length;
     if (n) document.getElementById('verif-seleccion-num').textContent =
-      n + (n === 1 ? ' seleccionado' : ' seleccionados');
+      n + (n === 1 ? ' seleccionado' : ' seleccionados') + (n > marcados ? ' (' + (n - marcados) + ' fuera de la búsqueda)' : '');
+    const elegidos = ultimaVerificacion.filter(function (p) { return seleccionados.has(p.correo); });
+    document.getElementById('verif-dar-todos').disabled = verificacionOcupada || !elegidos.some(function (p) {
+      return grupoDaDeAlta(p.grupo) && ACCESOS.some(function (a) { return !p[a.clave]; });
+    });
+    document.getElementById('verif-quitar-todos').disabled = verificacionOcupada || !elegidos.some(function (p) { return p.drive || p.calendario; });
   }
 
   function mostrarMsgVerif(texto, clase) {
@@ -3460,8 +3493,15 @@
 
   // Cambia accesos desde el modal: a una persona o a las seleccionadas.
   async function accesoDesdeVerif(correos, pasos, quitar) {
+    if (verificacionOcupada) return;
+    pasos = pasosDeOperacion(pasos, quitar);
+    if (quitar && !pasos.length) return mostrarMsgVerif('El contacto se conserva.', '');
+    verificacionOcupada = true;
+    pintarSeleccion();
+    try {
     const gente = correos.map(function (c) {
       const fila = ultimaVerificacion.find(function (p) { return p.correo === c; });
+      if (fila && quitar && !pasos.some(function (paso) { return fila[paso]; })) return null;
       // Dar accesos se salta a los de baja; quitar sí les aplica.
       if (fila && !quitar && !grupoDaDeAlta(fila.grupo)) return null;
       return fila ? {
@@ -3470,7 +3510,7 @@
       } : null;
     }).filter(Boolean);
     if (!gente.length) {
-      mostrarMsgVerif('Nadie de los seleccionados puede recibir accesos: los de baja se saltan.', 'error');
+      mostrarMsgVerif(quitar ? 'Las personas seleccionadas ya no tienen esos accesos.' : 'Nadie de los seleccionados puede recibir accesos: los de baja se saltan.', 'error');
       return;
     }
 
@@ -3481,6 +3521,7 @@
 
     const cont = document.getElementById('verificar-cont');
     cont.classList.add('ocupado');
+    document.getElementById('modal-verificar').setAttribute('aria-busy', 'true');
     try {
       const data = await llamarAlta({
         accion: 'acceso', quitar: quitar, pasos: pasos || undefined, personas: gente,
@@ -3502,6 +3543,11 @@
     } finally {
       cont.classList.remove('ocupado');
     }
+    } finally {
+      verificacionOcupada = false;
+      document.getElementById('modal-verificar').setAttribute('aria-busy', 'false');
+      pintarSeleccion();
+    }
   }
 
   (function armarModalVerificar() {
@@ -3509,7 +3555,7 @@
     const cont = document.getElementById('verificar-cont');
 
     cont.addEventListener('click', function (e) {
-      const chip = e.target.closest('.verif-chip');
+      const chip = e.target.closest('button.verif-chip');
       if (chip) return accesoDesdeVerif([chip.dataset.correo], [chip.dataset.acceso], chip.dataset.hacer === 'quitar');
       const todo = e.target.closest('.verif-todo');
       if (todo) return accesoDesdeVerif([todo.dataset.correo], null, todo.dataset.hacer === 'quitar');
@@ -3529,7 +3575,7 @@
 
     document.getElementById('verif-marcar-todos').addEventListener('change', function (e) {
       if (e.target.checked) verifVisibles().forEach(function (p) { seleccionados.add(p.correo); });
-      else seleccionados = new Set();
+      else verifVisibles().forEach(function (p) { seleccionados.delete(p.correo); });
       pintarVerificacion();
     });
 

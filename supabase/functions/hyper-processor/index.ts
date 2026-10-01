@@ -1003,37 +1003,6 @@ async function darAccesoCalendario(token: string, correo: string) {
 // tenía y ya, porque el resultado que se pedía (que no lo tenga) es el
 // que hay.
 
-async function borrarContacto(
-  cuentas: { clave: string; nombre: string; token: string }[],
-  correo: string,
-  contactosExistentes: ContactosPorCuenta,
-  detallado: boolean,
-) {
-  const c = correo.toLowerCase()
-  const detalles: string[] = []
-  let algunoSeBorro = false
-
-  for (const cuenta of cuentas) {
-    const mapa = contactosExistentes.get(cuenta.clave) ?? new Map<string, string>()
-    const recurso = mapa.get(c)
-    if (!recurso) {
-      if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: no estaba`)
-      continue
-    }
-
-    const res = await fetch(`https://people.googleapis.com/v1/${recurso}:deleteContact`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${cuenta.token}` },
-    })
-    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
-    mapa.delete(c)
-    algunoSeBorro = true
-    if (detallado && cuentas.length > 1) detalles.push(`${cuenta.nombre}: borrado`)
-  }
-
-  if (detalles.length) return detalles.join(' · ')
-  return algunoSeBorro ? 'Contacto borrado' : 'No estaba en Contactos'
-}
 
 async function quitarCarpeta(token: string, correo: string, permisos?: PorCorreo) {
   if (!ALTA_DRIVE_FOLDER_ID) throw new Error('Falta configurar ALTA_DRIVE_FOLDER_ID.')
@@ -1145,8 +1114,7 @@ async function moverAcceso(
 
   if (paso === 'contactos') {
     if (quitar) {
-      if (!algunContacto(estado.contactos, c)) return { paso, ok: true, detalle: 'No lo tenía' }
-      return await intentar(paso, () => borrarContacto(cuentasContactos, persona.correo, estado.contactos, detalladoContactos))
+      return { paso, ok: true, detalle: 'Contacto conservado' }
     }
     // Contactos es la excepción a "si ya está, no lo toco": la etiqueta
     // se vuelve a poner aunque el contacto ya existiera en alguna cuenta,
@@ -1185,10 +1153,11 @@ async function moverAccesos(
 }
 
 // Qué pasos vienen en la petición. Sin nada, los tres.
-function pasosPedidos(valor: unknown): Paso[] {
-  if (!Array.isArray(valor) || !valor.length) return [...PASOS]
+function pasosPedidos(valor: unknown, quitar = false): Paso[] {
+  const permitidos = quitar ? PASOS.filter((p) => p !== 'contactos') : [...PASOS]
+  if (!Array.isArray(valor) || !valor.length) return permitidos
   const pedidos = valor.map((p) => String(p)) as Paso[]
-  return PASOS.filter((p) => pedidos.includes(p))
+  return permitidos.filter((p) => pedidos.includes(p))
 }
 
 secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => {
@@ -1554,7 +1523,8 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
     // sean 80 personas: son 3 llamadas, no 3 por persona.
     if (accion === 'acceso') {
       const quitar = body.quitar === true
-      const pasos = pasosPedidos(body.pasos)
+      const pasos = pasosPedidos(body.pasos, quitar)
+      if (!pasos.length) return respond({ error: 'Los contactos se conservan. Selecciona Drive o Calendario para retirar accesos.' }, 400)
       const cuentaContactosPedida = String(body.cuentaContactos || '').trim()
       const gente = (Array.isArray(body.personas) ? body.personas : [body])
         .map((p: Record<string, unknown>) => ({
