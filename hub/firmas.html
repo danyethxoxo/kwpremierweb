@@ -3501,14 +3501,9 @@
         '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
       '</button>' +
       '</div>' +
-      // Las verificaciones, como iconos que se prenden y apagan. Todas
-      // arrancan apagadas: cada una se cobra aparte y por firmante.
-      //
-      // Las tres primeras son el mismo campo de weetrust (identification),
-      // que solo admite un valor, así que prender una apaga las otras.
-      // Background Check es aparte y solo tiene sentido junto a la
-      // facial, que es lo que weetrust exige.
-      '<div class="firmante-verif">' + VERIFICACIONES.map((v) =>
+      // Solo Foto ID se puede solicitar en nuevos envíos.
+      // El catálogo completo se conserva para mostrar el historial.
+      '<div class="firmante-verif">' + VERIFICACIONES.filter((v) => v.id === 'face').map((v) =>
         '<button type="button" class="verif-btn" data-verif="' + v.id + '"' +
           ' data-grupo="' + v.grupo + '" title="' + v.titulo + '" aria-label="' + v.titulo + '">' +
           v.icono + '<span class="verif-txt">' + v.rotulo + '</span>' +
@@ -3532,34 +3527,30 @@
 
     fila.querySelectorAll('.verif-btn').forEach((b) => {
       b.addEventListener('click', () => {
-        const prendido = b.classList.toggle('activo');
-
-        // Las tres de identificación son el mismo campo en weetrust y
-        // solo cabe un valor, así que prender una apaga a sus hermanas.
-        if (prendido && b.dataset.grupo === 'ident') {
-          fila.querySelectorAll('.verif-btn[data-grupo="ident"]').forEach((otro) => {
-            if (otro !== b) otro.classList.remove('activo');
-          });
-        }
-        ajustarBackgroundCheck(fila);
+        b.classList.toggle('activo');
+        ajustarVerificacionesFirmante(fila);
       });
     });
 
-    ajustarBackgroundCheck(fila);
+    fila.querySelector('.firmante-mail').addEventListener('input', () => ajustarVerificacionesFirmante(fila));
+    ajustarVerificacionesFirmante(fila);
     return fila;
   }
 
-  // weetrust solo hace el Background Check cuando la verificación es la
-  // facial. Se apaga el botón en vez de dejar prenderlo y que el envío
-  // truene después: el error llegaría cuando la persona ya llenó todo.
-  function ajustarBackgroundCheck(fila) {
-    const facial = fila.querySelector('.verif-btn[data-verif="face"]');
-    const check = fila.querySelector('.verif-btn[data-verif="check"]');
-    if (!facial || !check) return;
+  function permiteFotoId(correo) {
+    return !['gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx']
+      .includes(String(correo || '').trim().toLowerCase());
+  }
 
-    const hayFacial = facial.classList.contains('activo');
-    check.disabled = !hayFacial;
-    if (!hayFacial) check.classList.remove('activo');
+  function ajustarVerificacionesFirmante(fila) {
+    const permitido = permiteFotoId(fila.querySelector('.firmante-mail').value);
+    const caja = fila.querySelector('.firmante-verif');
+    caja.hidden = !permitido;
+    caja.style.display = permitido ? '' : 'none';
+    caja.querySelectorAll('.verif-btn').forEach((boton) => {
+      boton.disabled = !permitido;
+      if (!permitido) boton.classList.remove('activo');
+    });
   }
 
   function marcarUnico() {
@@ -3621,13 +3612,13 @@
 
   function leerFirmantes() {
     return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => {
-      const ident = f.querySelector('.verif-btn[data-grupo="ident"].activo');
-      const check = f.querySelector('.verif-btn[data-verif="check"].activo');
+      ajustarVerificacionesFirmante(f);
+      const ident = f.querySelector('.verif-btn[data-verif="face"].activo');
       return {
         nombre: f.querySelector('.firmante-nom').value.trim(),
         correo: f.querySelector('.firmante-mail').value.trim(),
         identificacion: ident ? ident.dataset.verif : '',
-        check: !!check,
+        check: false,
       };
     }).filter((f) => f.nombre || f.correo);
   }
@@ -4799,6 +4790,7 @@
           const b = fila.querySelector('[data-verif="check"]');
           if (b) b.classList.add('activo');
         }
+        ajustarVerificacionesFirmante(fila);
       });
     } else {
       agregarFirmante('', '');
@@ -5728,6 +5720,7 @@
         if (vacia) {
           vacia.querySelector('.firmante-nom').value = b.dataset.nombre;
           vacia.querySelector('.firmante-mail').value = b.dataset.correo;
+          ajustarVerificacionesFirmante(vacia);
         } else {
           agregarFirmante(b.dataset.nombre, b.dataset.correo);
         }
