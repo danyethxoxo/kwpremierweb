@@ -607,6 +607,11 @@ async function sincronizarKwMexico(
       }
     }
 
+    if (catalogo.completa) {
+      const matches = await admin.rpc('comprador_marcar_inventario')
+      if (matches.error) throw matches.error
+    }
+
     await admin.from('propiedades_sync').upsert({
       fuente: 'kwmexico',
       ultimo_cursor: corrida,

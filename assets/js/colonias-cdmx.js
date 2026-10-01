@@ -46,4 +46,4 @@
     return 6371 * 2 * Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
   }
   global.kwColonias = { buscar: buscar, distancia: distancia };
-})(window);
+})(typeof window === 'undefined' ? globalThis : window);

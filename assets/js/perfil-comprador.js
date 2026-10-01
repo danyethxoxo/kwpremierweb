@@ -48,6 +48,7 @@
   });
   var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '', cacheMatches = new Map();
   var indiceCiudad = new Map(), catalogoIndexado = null;
+  var estadosServidor = new Map(), sondeoEstado = null;
   var estadoCatalogo = document.createElement('p'); estadoCatalogo.className = 'catalogo-estado'; estadoCatalogo.setAttribute('role','status');
   document.querySelector('.encabezado').insertAdjacentElement('afterend',estadoCatalogo);
   function indexarInventario(filas) {
@@ -183,19 +184,24 @@
     } catch (e) { avisar('No se pudieron cargar las ubicaciones. Recarga para intentar de nuevo.',true); }
   }
   var revisionMatches = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && !esFormulario && Array.from(estadosServidor.values()).some(function (e) { return e.pendiente; })) cargarInventarioMatches();
+  });
   async function cargarInventarioMatches() {
     if (esFormulario) return;
     var revision = ++revisionMatches;
     inventarioMatches = null; errorMatches = false; cacheMatches.clear(); pintar();
     if (!perfiles.length) { inventarioMatches = []; pintar(); return; }
     try {
-      await window.kwInventarioLocal.cargar(window.kwSupabase,{
-        datos: function (filas) {
-          if (revision !== revisionMatches) return;
-          inventarioMatches = filas; indexarInventario(filas); errorMatches = false; pintar();
-        },
-        estado: function (texto) { if (revision === revisionMatches) estadoCatalogo.textContent = texto; }
-      });
+      var res = await window.kwSupabase.from('comprador_estados').select('perfil_id,total,niveles,pendiente,calculado_at,ultimo_error').in('perfil_id',perfiles.map(function (p) { return p.id; }));
+      if (res.error) throw res.error;
+      if (revision !== revisionMatches) return;
+      estadosServidor.clear(); res.data.forEach(function (e) { estadosServidor.set(e.perfil_id,e); });
+      inventarioMatches = []; errorMatches = false; pintar();
+      var pendientes = res.data.some(function (e) { return e.pendiente; });
+      estadoCatalogo.textContent = pendientes ? 'Actualizando las coincidencias guardadas…' : '';
+      clearTimeout(sondeoEstado);
+      if (pendientes) sondeoEstado = setTimeout(function () { if (!document.hidden) cargarInventarioMatches(); },5000);
     } catch (e) { if (revision !== revisionMatches) return; console.error('Error al cargar coincidencias:',e); errorMatches = true; pintar(); }
   }
   form.elements.estado.addEventListener('change', function () {
@@ -331,8 +337,9 @@
       agregarTexto(card, 'p', (p.operacion === 'venta' ? 'Compra' : 'Renta') + ' · ' + p.tipos.join(', ') + ' · ' + (p.precio_min === null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda);
       agregarTexto(card, 'p', [p.estado, p.municipio, p.colonias].filter(Boolean).join(' · '));
       var acciones = document.createElement('div'); acciones.className = 'acciones';
-      var coincidencias = matchesCliente(p);
-      var desplegar = agregarTexto(acciones,'button',inventarioMatches ? coincidencias.length + ' coincidencias' : errorMatches ? 'Reintentar' : 'Calculando…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !inventarioMatches && !errorMatches; desplegar.setAttribute('aria-expanded','false');
+      var estadoGuardado = estadosServidor.get(p.id), listo = estadoGuardado && !estadoGuardado.pendiente;
+      var coincidencias = [];
+      var desplegar = agregarTexto(acciones,'button',listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : 'Calculando…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false');
       var filaMatches = document.createElement('tr'), celdaMatches = document.createElement('td'); filaMatches.hidden = true; filaMatches.append(celdaMatches); tbody.append(filaMatches);
       desplegar.addEventListener('click',function () {
         if (errorMatches) { cargarInventarioMatches(); return; }
@@ -340,7 +347,7 @@
         if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
           var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
           var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.insertBefore(carrusel,grid); carrusel.append(grid);
-          var niveles = Array.from(new Set(coincidencias.map(function (r) { return Math.floor(r.match.porcentaje / 10) * 10; }))).sort(function (a,b) { return b-a; });
+          var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
           var modulo = 0, limite = 0, grupo = [];
           var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,carrusel);
           var carruselNav = document.createElement('div'); carruselNav.className = 'match-carrusel-nav';
@@ -351,25 +358,38 @@
           var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
           var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
           var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,siguienteNivel); celdaMatches.append(navegacion);
-          function pagina() {
-            grid.replaceChildren(); grupo.slice(limite,limite+5).forEach(function (r) { pintarPropiedad(r,grid); });
+          var solicitudPagina = 0;
+          async function pagina() {
+            var solicitud = ++solicitudPagina, nivelActual = niveles[modulo];
+            grid.replaceChildren();
+            if (nivelActual == null) { agregarTexto(grid,'p','No hay propiedades que alcancen el porcentaje solicitado.'); carruselNav.hidden = true; prevProps.hidden = masProps.hidden = true; return; }
+            agregarTexto(grid,'p','Cargando propiedades…'); prevProps.disabled = masProps.disabled = true;
+            var respuesta;
+            try { respuesta = await window.kwSupabase.rpc('comprador_matches_pagina',{p_perfil:p.id,p_nivel:nivelActual,p_offset:limite}); }
+            catch (e) { respuesta = {error:e}; }
+            if (solicitud !== solicitudPagina) return;
+            grid.replaceChildren();
+            if (respuesta.error) {
+              agregarTexto(grid,'p','No se pudieron cargar las propiedades.');
+              var reintentar = agregarTexto(grid,'button','Reintentar'); reintentar.type = 'button'; reintentar.addEventListener('click',pagina); return;
+            }
+            respuesta.data.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid); });
             grid.classList.remove('pagina-entra'); void grid.offsetWidth; grid.classList.add('pagina-entra'); grid.scrollLeft = 0;
-            prevProps.disabled = limite === 0; masProps.disabled = limite + 5 >= grupo.length;
-            carruselNav.hidden = grupo.length <= 5;
-            prevProps.hidden = grupo.length <= 5; masProps.hidden = grupo.length <= 5;
-            paginaProps.textContent = 'Página ' + (Math.floor(limite/5)+1) + ' de ' + Math.ceil(grupo.length/5);
+            var cantidad = Number(estadoGuardado.niveles[nivelActual] || 0);
+            prevProps.disabled = limite === 0; masProps.disabled = limite + 5 >= cantidad;
+            carruselNav.hidden = cantidad <= 5;
+            prevProps.hidden = cantidad <= 5; masProps.hidden = cantidad <= 5;
+            paginaProps.textContent = 'Página ' + (Math.floor(limite/5)+1) + ' de ' + Math.ceil(cantidad/5);
           }
           function mostrarModulo() {
             grid.replaceChildren(); limite = 0;
             var nivel = niveles[modulo];
-            grupo = coincidencias.filter(function (r) { return Math.floor(r.match.porcentaje / 10) * 10 === nivel; });
-            tituloModulo.textContent = niveles.length ? 'Compatibilidad ' + nivel + (nivel < 100 ? '–' + (nivel+9) : '') + '% · ' + grupo.length + ' propiedades' : '';
+            tituloModulo.textContent = niveles.length ? 'Compatibilidad ' + nivel + (nivel < 100 ? '–' + (nivel+9) : '') + '% · ' + estadoGuardado.niveles[nivel] + ' propiedades' : '';
             tituloModulo.style.setProperty('--nivel-color','hsl(' + Math.max(0,Math.min(120,(nivel-50)*2.4)) + ', 58%, 40%)');
             siguienteNivel.hidden = modulo >= niveles.length-1; anteriorNivel.hidden = modulo === 0;
             siguienteNivel.textContent = 'Ver coincidencias al ' + niveles[modulo+1] + '%';
             anteriorNivel.textContent = 'Ver coincidencias al ' + niveles[modulo-1] + '%';
             pagina();
-            if (!coincidencias.length) agregarTexto(grid,'p','No hay propiedades que alcancen este porcentaje con los criterios actuales.');
           }
           masProps.addEventListener('click',function () { limite += 5; pagina(); });
           prevProps.addEventListener('click',function () { limite = Math.max(0,limite-5); pagina(); });
@@ -406,7 +426,7 @@
         try {
           var res = await window.kwSupabase.from('perfiles_comprador').update({ activo: !p.activo }).eq('id', p.id).select('id,activo').single();
           if (res.error) throw res.error;
-          p.activo = res.data.activo; pintar();
+          p.activo = res.data.activo; pintar(); cargarInventarioMatches();
         } catch (error) { avisar('No se pudo cambiar el estado del perfil. Intenta de nuevo.', true); }
         finally { pausar.disabled = false; }
       });
@@ -447,6 +467,9 @@
       if (res.error) throw res.error;
       var indice = perfiles.findIndex(function (p) { return p.id === res.data.id; });
       if (indice === -1) perfiles.unshift(res.data); else perfiles[indice] = res.data;
+      // Guardar el cliente y calcular su búsqueda son operaciones distintas:
+      // si el cálculo falla, el worker programado lo reintentará sin duplicar al cliente.
+      try { await window.kwSupabase.functions.invoke('matches-comprador',{body:{perfil_id:res.data.id}}); } catch (e) { console.warn('Cálculo pendiente del worker'); }
       location.href = '/hub/perfil-comprador.html';
     } catch (error) { avisar('No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo; tus datos siguen en el formulario.', true); }
     finally {

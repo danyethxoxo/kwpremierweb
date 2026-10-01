@@ -39,4 +39,4 @@
     return { porcentaje: Math.round(100 * puntos / total), criterios: criterios };
   }
   global.kwCompradorMatches = { evaluar: evaluar };
-})(window);
+})(typeof window === 'undefined' ? globalThis : window);

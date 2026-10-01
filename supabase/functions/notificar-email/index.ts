@@ -44,7 +44,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <onboarding@resend.dev>'
 const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET')
 
-const SITIO = 'https://danyethxoxo.github.io/kwpremierweb'
+const SITIO = 'https://www.kwpremieroficial.com'
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
