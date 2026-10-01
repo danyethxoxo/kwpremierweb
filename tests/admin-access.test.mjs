@@ -8,6 +8,30 @@ const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8')
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 const base = readFileSync(new URL('../hub/base-asesores.html', import.meta.url), 'utf8');
 
+test('Excel import uses bounded batches, stops on failures and preserves the real error', async () => {
+  const calls = [];
+  let failure = null;
+  const context = vm.createContext({
+    console: { error() {} }, window: { kwSupabase: { rpc: async (name, args) => {
+      calls.push(args.p_personas); return { error: calls.length === 2 ? failure : null };
+    } } },
+  });
+  const start = html.indexOf('  async function sincronizarBaseDesdeLibro(');
+  vm.runInContext(html.slice(start, html.indexOf('  if (document.documentElement', start)), context);
+  const personas = Array.from({ length: 47 }, (_, i) => ({ correo: 'asesor' + i + '@example.com' }));
+  await context.sincronizarBaseDesdeLibro([{ clave: 'activos', hoja: 'Activos', personas }]);
+  assert.deepEqual(calls.map((batch) => batch.length), [20, 20, 7]);
+  assert.equal(calls.flat().length, 47);
+  assert.ok(calls.flat().every((p) => p.grupo === 'activos' && p.hoja === 'Activos'));
+  calls.length = 0;
+  failure = { code: '57014' };
+  await assert.rejects(() => context.sincronizarBaseDesdeLibro([{ personas }]), /Filas 21 a 40: Código 57014/);
+  assert.equal(calls.length, 2);
+  calls.length = 0;
+  failure = 'Servicio no disponible';
+  await assert.rejects(() => context.sincronizarBaseDesdeLibro([{ personas }]), /Servicio no disponible/);
+});
+
 test('opening a populated directory still imports Excel; overlapping refreshes are skipped', async () => {
   const calls = [];
   let release;

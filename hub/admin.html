@@ -3955,11 +3955,19 @@
     });
     if (!personas.length) return;
     try {
-      const { error } = await window.kwSupabase.rpc('asesores_sincronizar', { p_personas: personas });
-      if (error) throw error;
+      // La RPC actualiza cada fila. Todo el libro junto superaba el límite
+      // de ocho segundos de la base; cada lote conserva su propia transacción.
+      for (let inicio = 0; inicio < personas.length; inicio += 20) {
+        const { error } = await window.kwSupabase.rpc('asesores_sincronizar', { p_personas: personas.slice(inicio, inicio + 20) });
+        if (error) {
+          const detalle = typeof error === 'string' ? error :
+            (error.message || error.details || error.error || (error.code ? 'Código ' + error.code : 'La base no completó la solicitud'));
+          throw new Error('Filas ' + (inicio + 1) + ' a ' + Math.min(inicio + 20, personas.length) + ': ' + detalle);
+        }
+      }
     } catch (e) {
       console.error('No se pudo copiar el libro a la base de asesores:', e);
-      throw new Error('No se pudo sincronizar el Excel con la base: ' + (e.message || 'error desconocido'));
+      throw new Error('No se pudo sincronizar el Excel con la base: ' + (e.message || String(e)));
     }
   }
 
