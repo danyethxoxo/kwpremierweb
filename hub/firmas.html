@@ -214,6 +214,10 @@
   .firmante-nom { flex: 1 1 auto; min-width: 0; }
   .firmante-cola { display: flex; gap: 8px; align-items: center; }
   .firmante-mail { flex: 1 1 auto; min-width: 0; }
+  /* Las dos acciones del editor de firmas comparten una fila,
+     también en celular, debajo del correo para conservar su ancho. */
+  .firmante-acciones { display: flex; gap: 8px; align-items: stretch; margin-top: 9px; }
+  .firmante-acciones .firmante-fijar { height: 40px; }
 
   .firmante-quitar {
     flex: 0 0 auto;
@@ -1731,8 +1735,7 @@
      opciones que cuestan dinero: quien las prende tiene que saber cuál
      está prendiendo sin tener que investigarlo. */
   .firmante-verif {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px; margin-top: 9px;
+    display: flex; margin: 0;
   }
   .verif-btn {
     display: flex; align-items: center; gap: 7px;
@@ -3495,12 +3498,13 @@
       '</div>' +
       '<div class="firmante-cola">' +
         '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '</div>' +
+      '<div class="firmante-acciones">' +
       '<button type="button" class="firmante-fijar">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M3 17c3.5 0 3.5-10 7-10s3.5 10 7 10"/><line x1="3" y1="21" x2="21" y2="21"/>' +
         '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
       '</button>' +
-      '</div>' +
       // Solo Foto ID se puede solicitar en nuevos envíos.
       // El catálogo completo se conserva para mostrar el historial.
       '<div class="firmante-verif">' + VERIFICACIONES.filter((v) => v.id === 'face').map((v) =>
@@ -3508,7 +3512,7 @@
           ' data-grupo="' + v.grupo + '" title="' + v.titulo + '" aria-label="' + v.titulo + '">' +
           v.icono + '<span class="verif-txt">' + v.rotulo + '</span>' +
         '</button>').join('') +
-      '</div>';
+      '</div></div>';
     fila.querySelector('.firmante-fijar').addEventListener('click', () => armarColocacion(fila));
 
     fila.querySelector('.firmante-quitar').addEventListener('click', () => {
