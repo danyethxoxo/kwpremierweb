@@ -272,7 +272,7 @@
      la lista hace scroll, así lo de arriba sigue a la mano sin tener
      que subir hasta el principio. */
   #modal-verificar .modal-box {
-    max-width: 680px; max-height: 86vh;
+    max-width: 1120px; height: 92vh; height: 92dvh; max-height: calc(100dvh - 40px);
     display: flex; flex-direction: column; overflow: hidden;
   }
   .verif-cabeza { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sp-3); flex-shrink: 0; }
@@ -302,6 +302,12 @@
     border-radius: var(--r-campo); background: var(--lienzo); border: 1px solid var(--border);
     font-size: 12.5px; font-weight: 500; color: var(--text);
   }
+  /* El desglose necesita espacio propio para mostrar el resultado por cuenta. */
+  .verif-cuentas-detalle { display: grid; gap: 5px; margin-top: 9px; font-size: 11px; }
+  .verif-cuenta-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; }
+  .verif-cuenta-nombre { min-width: 220px; color: var(--muted); overflow-wrap: anywhere; }
+  .verif-cuenta-estado { font-weight: 700; color: var(--muted); }
+  .verif-cuenta-estado.si { color: #1a7a1a; }
   .verif-barra-seleccion .verif-todo { flex: 1 1 auto; }
   #verif-seleccion-num { flex: 0 0 100%; }
   .verif-ayuda { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
@@ -3438,12 +3444,12 @@
           ' data-correo="' + escapeHtml(p.correo) + '" data-acceso="' + a.clave + '"' +
           ' data-hacer="' + (tiene ? 'quitar' : 'dar') + '"' + (bloqueado ? ' disabled' : '') +
           ' title="' + (bloqueado ? 'Dado de baja' : (tiene ? 'Quitar ' : 'Dar ') + a.nombre) + '">' +
-          (tiene ? ICONO_LISTO : ICONO_EQUIS) + a.nombre + '</button>';
+          (tiene ? ICONO_LISTO : ICONO_EQUIS) + a.nombre + (a.clave === 'contactos' ? '' : (tiene ? ': con acceso' : ': sin acceso')) + '</button>';
       }).join('');
 
       const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
       const alguno = p.drive || p.calendario;
-      const desglose = desgloseContactosHtml({ contactosPorCuenta: p.contactosPorCuenta }, 'verif-cuentas');
+      const desglose = desgloseAccesosVerifHtml(p);
 
       return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
         '<label class="verif-marca">' +
@@ -3459,12 +3465,30 @@
           '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
             ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Agregar contacto y dar Drive y Calendario">' + ICONO_LISTO + '<span>Dar accesos</span></button>' +
           '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
-            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario; conservar contacto">' + ICONO_EQUIS + '<span>Retirar accesos</span></button>' +
+            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario de ambas cuentas; conservar contacto">' + (alguno ? ICONO_EQUIS : ICONO_LISTO) + '<span>' + (alguno ? 'Retirar accesos' : 'Sin accesos') + '</span></button>' +
         '</div>' +
       '</div>';
     }).join('') + '</div>';
 
     pintarSeleccion();
+  }
+
+  function desgloseAccesosVerifHtml(persona) {
+    if (!esMaster() || !persona.drivePorCuenta || !persona.calendarioPorCuenta) {
+      return desgloseContactosHtml(persona, 'verif-cuentas');
+    }
+    return '<div class="verif-cuentas-detalle">' + cuentasContactosInfo.filter(function (cuenta) {
+      return cuenta.accesosCompletos;
+    }).map(function (cuenta) {
+      const estados = ['drive', 'calendario'].map(function (clave) {
+        const tiene = persona[clave + 'PorCuenta'][cuenta.clave];
+        const conocido = typeof tiene === 'boolean';
+        return '<span class="verif-cuenta-estado' + (tiene === true ? ' si' : '') + '">' +
+          (clave === 'drive' ? 'Drive' : 'Calendario') + ': ' +
+          (conocido ? (tiene ? 'con acceso' : 'sin acceso') : 'por comprobar') + '</span>';
+      }).join('');
+      return '<div class="verif-cuenta-fila"><span class="verif-cuenta-nombre">' + escapeHtml(cuenta.nombre) + '</span>' + estados + '</div>';
+    }).join('') + '</div>' + desgloseContactosHtml(persona, 'verif-cuentas');
   }
 
   function pintarSeleccion() {
@@ -3551,6 +3575,8 @@
         if (fila) {
           fila.contactos = e.contactos; fila.drive = e.drive; fila.calendario = e.calendario;
           fila.contactosPorCuenta = e.contactosPorCuenta || fila.contactosPorCuenta;
+          fila.drivePorCuenta = e.drivePorCuenta || fila.drivePorCuenta;
+          fila.calendarioPorCuenta = e.calendarioPorCuenta || fila.calendarioPorCuenta;
         }
       });
       pintarVerificacion();

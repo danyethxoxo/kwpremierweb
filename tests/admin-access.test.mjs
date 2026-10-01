@@ -7,6 +7,22 @@ import { stripTypeScriptTypes } from 'node:module';
 const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8');
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 
+test('account breakdown shows confirmed statuses for both accounts, without assuming unknown means removed', () => {
+  const context = vm.createContext({
+    esMaster: () => true, escapeHtml: (value) => value, desgloseContactosHtml: () => '',
+    cuentasContactosInfo: [{ clave: 'dani', nombre: 'Dani', accesosCompletos: true }, { clave: 'premier', nombre: 'Premier', accesosCompletos: true }],
+  });
+  vm.runInContext(html.slice(html.indexOf('  function desgloseAccesosVerifHtml('), html.indexOf('  function pintarSeleccion(')), context);
+  const result = context.desgloseAccesosVerifHtml({ drivePorCuenta: { dani: false, premier: false }, calendarioPorCuenta: { dani: false, premier: true } });
+  assert.match(result, /Dani/);
+  assert.match(result, /Premier/);
+  assert.equal((result.match(/sin acceso/g) || []).length, 3);
+  assert.equal((result.match(/con acceso/g) || []).length, 1);
+  assert.match(context.desgloseAccesosVerifHtml({ drivePorCuenta: {}, calendarioPorCuenta: {} }), /por comprobar/);
+  assert.match(html, /fila\.drivePorCuenta = e\.drivePorCuenta/);
+  assert.match(html, /fila\.calendarioPorCuenta = e\.calendarioPorCuenta/);
+});
+
 test('removing all or selected Google accesses never includes contacts', () => {
   const client = vm.createContext({});
   vm.runInContext(html.slice(html.indexOf('  function pasosDeOperacion('), html.indexOf('  function textoDeAccesos(')), client);
