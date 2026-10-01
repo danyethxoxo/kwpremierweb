@@ -7,6 +7,23 @@ import { stripTypeScriptTypes } from 'node:module';
 const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8');
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 
+test('access cards keep account details collapsed and show real advisor dates only', () => {
+  const context = vm.createContext({
+    bdAsesores: [{ correo: 'asesor@example.com' }],
+    personaDesdeBase: () => ({ fechaIngreso: '2026-01-02', fechaBaja: '2026-09-30' }),
+    escapeHtml: (value) => value, desgloseAccesosVerifHtml: () => '<div>Por cuenta</div>',
+  });
+  vm.runInContext(html.slice(html.indexOf('  function detallePersonaVerifHtml('), html.indexOf('  function desgloseAccesosVerifHtml(')), context);
+  const result = context.detallePersonaVerifHtml({ correo: 'asesor@example.com' });
+  assert.match(result, /2026-01-02/);
+  assert.match(result, /2026-09-30/);
+  assert.match(result, /sin registro histórico disponible/);
+  assert.match(context.detallePersonaVerifHtml({ correo: 'otro@example.com' }), /Sin registro/);
+  assert.ok(!html.includes('<p class="verif-ayuda">'));
+  assert.match(html, /class="verif-detalle".*abierto \? '' : ' hidden'/);
+  assert.match(html, /verifAbiertos\.has\(p\.correo\)/);
+});
+
 test('account breakdown shows confirmed statuses for both accounts, without assuming unknown means removed', () => {
   const context = vm.createContext({
     esMaster: () => true, escapeHtml: (value) => value, desgloseContactosHtml: () => '',

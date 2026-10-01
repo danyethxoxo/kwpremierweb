@@ -375,6 +375,23 @@
     .verif-barra-seleccion .verif-todo { flex-basis: 100%; }
   }
 
+  /* Tarjetas compartidas, con columnas y acciones propias del modal de accesos. */
+  #modal-verificar h3 { flex-shrink: 0; }
+  .verif-lista { display: grid; gap: 10px; border: 0; background: transparent; overflow: visible; }
+  .verif-item.kw-fila { display: block; padding: 0; }
+  .verif-item + .verif-item { border-top: 1px solid var(--border); }
+  .verif-renglon { display: flex; align-items: center; gap: 10px; padding: 12px; }
+  .verif-desplegar { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+  .verif-renglon .verif-cuerpo { flex: 1 1 240px; }
+  .verif-renglon .verif-acciones { flex-direction: row; align-items: center; gap: 5px; padding: 0; margin: 0; }
+  .verif-renglon .verif-chip, .verif-renglon .verif-todo { min-height: 34px; padding: 6px 8px; font-size: 11px; white-space: nowrap; flex: none; }
+  .verif-detalle { border-top: 1px solid var(--border); padding: 14px 38px; background: var(--lienzo); }
+  .verif-detalle[hidden] { display: none; }
+  @media (max-width: 1000px) {
+    .verif-renglon { flex-wrap: wrap; }
+    .verif-renglon .verif-acciones { flex: 0 0 calc(100% - 26px); margin-left: 26px; overflow-x: auto; padding-bottom: 4px; }
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261001"></script>
@@ -1540,7 +1557,6 @@
   <div id="modal-verificar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3>Accesos de Google</h3>
-      <p class="verif-ayuda">Al retirar Drive y Calendario, el contacto se conserva.</p>
       <div class="verif-cabeza">
         <div class="buscador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -3380,6 +3396,7 @@
   let ultimaVerificacion = [];
   let seleccionados = new Set();
   let verificacionOcupada = false;
+  const verifAbiertos = new Set();
 
   async function abrirVerificacion() {
     const cont = document.getElementById('verificar-cont');
@@ -3449,28 +3466,37 @@
 
       const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
       const alguno = p.drive || p.calendario;
-      const desglose = desgloseAccesosVerifHtml(p);
-
-      return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
+      const abierto = verifAbiertos.has(p.correo);
+      return '<div class="kw-fila verif-item' + (marcado ? ' marcado' : '') + (abierto ? ' abierta' : '') + '">' +
+        '<div class="verif-renglon">' +
         '<label class="verif-marca">' +
           '<input type="checkbox" data-marcar="' + escapeHtml(p.correo) + '"' + (marcado ? ' checked' : '') + ' />' +
         '</label>' +
         '<div class="verif-cuerpo">' +
-          '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
+          '<button type="button" class="verif-desplegar" data-detalle="' + escapeHtml(p.correo) + '" aria-expanded="' + abierto + '"><span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
           '<span class="verif-correo">' + escapeHtml(p.correo) +
-            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
-          '<div class="verif-chips">' + chips + '</div>' + desglose +
+            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span></button>' +
         '</div>' +
-        '<div class="verif-acciones">' +
+        '<div class="verif-acciones">' + chips +
           '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
             ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Agregar contacto y dar Drive y Calendario">' + ICONO_LISTO + '<span>Dar accesos</span></button>' +
           '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
             ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario de ambas cuentas; conservar contacto">' + (alguno ? ICONO_EQUIS : ICONO_LISTO) + '<span>' + (alguno ? 'Retirar accesos' : 'Sin accesos') + '</span></button>' +
-        '</div>' +
+          '<button type="button" class="verif-todo" data-detalle="' + escapeHtml(p.correo) + '" aria-expanded="' + abierto + '">' + (abierto ? 'Cerrar detalles' : 'Ver detalles') + '</button>' +
+        '</div></div>' +
+        '<div class="verif-detalle"' + (abierto ? '' : ' hidden') + '>' + detallePersonaVerifHtml(p) + '</div>' +
       '</div>';
     }).join('') + '</div>';
 
     pintarSeleccion();
+  }
+
+  function detallePersonaVerifHtml(persona) {
+    const base = bdAsesores.find(function (a) { return String(a.correo).toLowerCase() === String(persona.correo).toLowerCase(); });
+    const datos = base ? personaDesdeBase(base) : persona;
+    return '<div class="kw-datos en-columnas"><div>Fecha de alta: ' + escapeHtml(datos.fechaIngreso || persona.fechaIngreso || 'Sin registro') + '</div>' +
+      '<div>Fecha de baja: ' + escapeHtml(datos.fechaBaja || persona.fechaBaja || 'Sin registro') + '</div>' +
+      '<div>Fechas de permisos de Google: sin registro histórico disponible</div></div>' + desgloseAccesosVerifHtml(persona);
   }
 
   function desgloseAccesosVerifHtml(persona) {
@@ -3480,15 +3506,15 @@
     return '<div class="verif-cuentas-detalle">' + cuentasContactosInfo.filter(function (cuenta) {
       return cuenta.accesosCompletos;
     }).map(function (cuenta) {
-      const estados = ['drive', 'calendario'].map(function (clave) {
-        const tiene = persona[clave + 'PorCuenta'][cuenta.clave];
+      const estados = ['contactos', 'drive', 'calendario'].map(function (clave) {
+        const tiene = (persona[clave + 'PorCuenta'] || {})[cuenta.clave];
         const conocido = typeof tiene === 'boolean';
         return '<span class="verif-cuenta-estado' + (tiene === true ? ' si' : '') + '">' +
-          (clave === 'drive' ? 'Drive' : 'Calendario') + ': ' +
+          (clave === 'contactos' ? 'Contacto' : clave === 'drive' ? 'Drive' : 'Calendario') + ': ' +
           (conocido ? (tiene ? 'con acceso' : 'sin acceso') : 'por comprobar') + '</span>';
       }).join('');
       return '<div class="verif-cuenta-fila"><span class="verif-cuenta-nombre">' + escapeHtml(cuenta.nombre) + '</span>' + estados + '</div>';
-    }).join('') + '</div>' + desgloseContactosHtml(persona, 'verif-cuentas');
+    }).join('') + '</div>';
   }
 
   function pintarSeleccion() {
@@ -3599,6 +3625,16 @@
     const cont = document.getElementById('verificar-cont');
 
     cont.addEventListener('click', function (e) {
+      const detalle = e.target.closest('[data-detalle]');
+      if (detalle) {
+        const correo = detalle.dataset.detalle;
+        if (verifAbiertos.has(correo)) verifAbiertos.delete(correo);
+        else verifAbiertos.add(correo);
+        const posicion = cont.scrollTop;
+        pintarVerificacion();
+        cont.scrollTop = posicion;
+        return;
+      }
       const chip = e.target.closest('button.verif-chip');
       if (chip) return accesoDesdeVerif([chip.dataset.correo], [chip.dataset.acceso], chip.dataset.hacer === 'quitar');
       const todo = e.target.closest('.verif-todo');
