@@ -290,10 +290,10 @@
   .verif-todos-marca {
     display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     font-size: 12.5px; color: var(--muted); font-weight: 700;
-    padding: 0 2px var(--sp-2); cursor: pointer;
+    padding: 0 12px var(--sp-2); cursor: pointer;
   }
   .verif-todos-marca input, .verif-marca input {
-    width: 16px; height: 16px; accent-color: var(--red); cursor: pointer;
+    width: 16px; height: 16px; margin: 0; flex: 0 0 16px; accent-color: var(--red); cursor: pointer;
   }
 
   .verif-barra-seleccion {
@@ -326,7 +326,7 @@
   .verif-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; }
   .verif-item + .verif-item { border-top: 1px solid var(--border); }
   .verif-item.marcado { background: #fff7f7; }
-  .verif-marca { display: flex; padding-top: 3px; }
+  .verif-marca { display: flex; align-items: center; padding: 0; }
   .verif-cuerpo { flex: 1; min-width: 0; }
   .verif-nombre { display: block; font-weight: 700; font-size: 13.5px; }
   .verif-correo { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
@@ -385,7 +385,8 @@
   .verif-renglon .verif-cuerpo { flex: 1 1 240px; }
   .verif-renglon .verif-acciones { flex-direction: row; align-items: center; gap: 5px; padding: 0; margin: 0; }
   .verif-renglon .verif-chip, .verif-renglon .verif-todo { min-height: 34px; padding: 6px 8px; font-size: 11px; white-space: nowrap; flex: none; }
-  .verif-detalle { border-top: 1px solid var(--border); padding: 14px 38px; background: var(--lienzo); }
+  .verif-detalle { border-top: 1px solid var(--border); padding: 12px 38px; background: var(--lienzo); font-size: 11.5px; color: var(--muted); }
+  .verif-fechas-accesos { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: inherit; }
   .verif-detalle[hidden] { display: none; }
   @media (max-width: 1000px) {
     .verif-renglon { flex-wrap: wrap; }
@@ -1569,7 +1570,7 @@
 
       <label class="verif-todos-marca">
         <input type="checkbox" id="verif-marcar-todos" />
-        <span>Seleccionar todos los que se ven</span>
+        <span>Seleccionar todo</span>
       </label>
 
       <div class="verif-barra-seleccion" id="verif-seleccion" style="display:none;">
@@ -3492,11 +3493,9 @@
   }
 
   function detallePersonaVerifHtml(persona) {
-    const base = bdAsesores.find(function (a) { return String(a.correo).toLowerCase() === String(persona.correo).toLowerCase(); });
-    const datos = base ? personaDesdeBase(base) : persona;
-    return '<div class="kw-datos en-columnas"><div>Fecha de alta: ' + escapeHtml(datos.fechaIngreso || persona.fechaIngreso || 'Sin registro') + '</div>' +
-      '<div>Fecha de baja: ' + escapeHtml(datos.fechaBaja || persona.fechaBaja || 'Sin registro') + '</div>' +
-      '<div>Fechas de permisos de Google: sin registro histórico disponible</div></div>' + desgloseAccesosVerifHtml(persona);
+    // Las fechas del asesor no son fechas de permisos. No se sustituyen entre sí.
+    return '<div class="verif-fechas-accesos"><span>Accesos otorgados: sin fecha registrada</span>' +
+      '<span>Accesos retirados: sin fecha registrada</span></div>';
   }
 
   function desgloseAccesosVerifHtml(persona) {

@@ -7,7 +7,7 @@ import { stripTypeScriptTypes } from 'node:module';
 const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8');
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 
-test('access cards keep account details collapsed and show real advisor dates only', () => {
+test('access cards show only permission dates and never substitute advisor dates', () => {
   const context = vm.createContext({
     bdAsesores: [{ correo: 'asesor@example.com' }],
     personaDesdeBase: () => ({ fechaIngreso: '2026-01-02', fechaBaja: '2026-09-30' }),
@@ -15,10 +15,12 @@ test('access cards keep account details collapsed and show real advisor dates on
   });
   vm.runInContext(html.slice(html.indexOf('  function detallePersonaVerifHtml('), html.indexOf('  function desgloseAccesosVerifHtml(')), context);
   const result = context.detallePersonaVerifHtml({ correo: 'asesor@example.com' });
-  assert.match(result, /2026-01-02/);
-  assert.match(result, /2026-09-30/);
-  assert.match(result, /sin registro histórico disponible/);
-  assert.match(context.detallePersonaVerifHtml({ correo: 'otro@example.com' }), /Sin registro/);
+  assert.ok(!result.includes('2026-01-02'));
+  assert.ok(!result.includes('2026-09-30'));
+  assert.ok(!result.includes('Por cuenta'));
+  assert.match(result, /Accesos otorgados: sin fecha registrada/);
+  assert.match(result, /Accesos retirados: sin fecha registrada/);
+  assert.match(html, /<span>Seleccionar todo<\/span>/);
   assert.ok(!html.includes('<p class="verif-ayuda">'));
   assert.match(html, /class="verif-detalle".*abierto \? '' : ' hidden'/);
   assert.match(html, /verifAbiertos\.has\(p\.correo\)/);
