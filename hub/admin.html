@@ -2446,15 +2446,16 @@
     tabs.setAttribute('data-kw-tabs', 'asesores-paneles');
     window.kwUI.tabs(document.querySelector('[data-panel="asesores"]'));
 
-    grupoActivo = gruposAsesores.length ? gruposAsesores[0].clave : '';
+    grupoActivo = gruposAsesores.some(function (g) { return g.clave === grupoActivo; })
+      ? grupoActivo : (gruposAsesores.length ? gruposAsesores[0].clave : '');
     mostrarGrupoAsesores(grupoActivo);
-    tabs.addEventListener('click', function (e) {
+    tabs.onclick = function (e) {
       const b = e.target.closest('.kw-tab');
       if (!b) return;
       grupoActivo = b.dataset.tab;
       mostrarGrupoAsesores(grupoActivo);
       actualizarBarra();
-    });
+    };
   }
 
   function actualizarBarra() {
@@ -3204,12 +3205,18 @@
   // sale la lista, pero sirve para poder explicar por qué una hoja no
   // trajo a nadie.
   let hojasDelLibro = {};
+  let recargaAsesoresEnCurso = false;
+  let ultimaLecturaLibro = 0;
+  let puedeSincronizarLibro = false;
 
   // El camino es: se lee el libro, se guarda en la base, y de la base
   // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
   // ya no deja al panel sin lista: lo que se ve es lo que la casa tiene
   // guardado, y el libro nada más lo alimenta mientras siga vivo.
   async function cargarAsesores(recargarLibro) {
+    if (recargaAsesoresEnCurso) return;
+    recargaAsesoresEnCurso = true;
+    try {
     const op = document.getElementById('op-recargar');
     const paneles = document.getElementById('asesores-paneles');
     op.disabled = true;
@@ -3241,14 +3248,10 @@
         armarTabsAsesores();
         pintarGrupos();
         cargarEstadoGoogle();
-        terminarRecarga();
-        return;
       }
     }
 
-    // Google queda para la recarga explícita y como respaldo de una base
-    // todavía vacía. Así se conserva la sincronización sin frenar el uso
-    // normal del Panel Master.
+    // La copia local se muestra primero; el libro siempre se sincroniza después.
     let gruposLibro = null;
     let fallaLibro = null;
     try {
@@ -3264,6 +3267,7 @@
         hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
       });
       await sincronizarBaseDesdeLibro(gruposLibro);
+      ultimaLecturaLibro = Date.now();
     } catch (err) {
       fallaLibro = err;
     }
@@ -3325,7 +3329,19 @@
         : '',
       fallaLibro ? 'error' : '');
     terminarRecarga();
+    } finally {
+      recargaAsesoresEnCurso = false;
+      terminarRecarga();
+    }
   }
+
+  function actualizarLibroAutomaticamente() {
+    if (!puedeSincronizarLibro || document.hidden || recargaAsesoresEnCurso || verificacionOcupada) return;
+    if (Date.now() - ultimaLecturaLibro < 120000) return;
+    cargarAsesores(true);
+  }
+  setInterval(actualizarLibroAutomaticamente, 120000);
+  document.addEventListener('visibilitychange', actualizarLibroAutomaticamente);
 
   function terminarRecarga() {
     const op = document.getElementById('op-recargar');
@@ -3708,6 +3724,7 @@
       // Function, que comprueba lo mismo del lado del servidor.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
+      puedeSincronizarLibro = puedeAltas;
       if (!puedeAltas) quitarTabPanel('asesores');
       else document.getElementById('acceso-nuevo-asesor').style.display = '';
 
@@ -3926,9 +3943,8 @@
   // que se ve. Así es como el libro deja de ser el origen sin tener que
   // apagarlo de un día para otro.
   //
-  // Se traga sus propios errores: que la copia falle (todavía no se
-  // corre la migración, se cayó la red) no puede dejar sin lista al
-  // panel, que es a lo que la persona vino.
+  // Si la copia falla, el llamador conserva la lista guardada y avisa
+  // que la sincronización no se completó, en lugar de simular éxito.
   async function sincronizarBaseDesdeLibro(grupos) {
     const personas = [];
     (grupos || []).forEach(function (g) {
@@ -3943,6 +3959,7 @@
       if (error) throw error;
     } catch (e) {
       console.error('No se pudo copiar el libro a la base de asesores:', e);
+      throw new Error('No se pudo sincronizar el Excel con la base: ' + (e.message || 'error desconocido'));
     }
   }
 

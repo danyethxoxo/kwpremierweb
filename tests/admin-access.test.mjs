@@ -8,6 +8,58 @@ const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8')
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 const base = readFileSync(new URL('../hub/base-asesores.html', import.meta.url), 'utf8');
 
+test('opening a populated directory still imports Excel; overlapping refreshes are skipped', async () => {
+  const calls = [];
+  let release;
+  const pending = new Promise((resolve) => { release = resolve; });
+  const element = { disabled: false, classList: { add() {}, remove() {} } };
+  const context = vm.createContext({
+    recargaAsesoresEnCurso: false, ultimaLecturaLibro: 0, Date,
+    document: { getElementById: () => element }, gruposAsesores: [{ clave: 'asesor_activo' }], bdAsesores: [{ correo: 'viejo@example.com' }],
+    leerBaseDatos: async () => true, gruposDesdeBase: () => [{ clave: 'asesor_activo' }],
+    armarTabsAsesores() {}, pintarGrupos() {}, cargarEstadoGoogle() {}, terminarRecarga() {}, avisoAsesores() {}, hojasDelLibro: {},
+    llamarAlta: async () => { calls.push('read'); await pending; return { grupos: [{ clave: 'activos', personas: [{ correo: 'nuevo@example.com' }] }] }; },
+    sincronizarBaseDesdeLibro: async (grupos) => { calls.push(grupos[0].personas[0].correo); },
+  });
+  vm.runInContext(html.slice(html.indexOf('  async function cargarAsesores('), html.indexOf('  function actualizarLibroAutomaticamente(')), context);
+  const loading = context.cargarAsesores();
+  await new Promise((resolve) => setImmediate(resolve));
+  await context.cargarAsesores(true);
+  assert.deepEqual(calls, ['read']);
+  release();
+  await loading;
+  assert.deepEqual(calls, ['read', 'nuevo@example.com']);
+  assert.equal(context.recargaAsesoresEnCurso, false);
+  assert.ok(context.ultimaLecturaLibro > 0);
+});
+
+test('automatic Excel polling waits two minutes and pauses while hidden or editing accesses', () => {
+  let calls = 0;
+  const context = vm.createContext({ puedeSincronizarLibro: true, document: { hidden: false }, recargaAsesoresEnCurso: false,
+    verificacionOcupada: false, ultimaLecturaLibro: Date.now(), Date, cargarAsesores: () => { calls++; } });
+  vm.runInContext(html.slice(html.indexOf('  function actualizarLibroAutomaticamente('), html.indexOf('  setInterval(actualizarLibroAutomaticamente')), context);
+  context.actualizarLibroAutomaticamente();
+  assert.equal(calls, 0);
+  context.ultimaLecturaLibro = 0;
+  context.actualizarLibroAutomaticamente();
+  assert.equal(calls, 1);
+  context.document.hidden = true;
+  context.actualizarLibroAutomaticamente();
+  assert.equal(calls, 1);
+  context.document.hidden = false;
+  context.verificacionOcupada = true;
+  context.actualizarLibroAutomaticamente();
+  assert.equal(calls, 1);
+});
+
+test('Excel ranges include new rows beyond the historical 500-row limit', () => {
+  for (const configured of ['A1:Z500', "'Activos'!A1:Z500", 'A:Z']) {
+    const context = vm.createContext({ ALTA_SHEET_RANGO: configured });
+    vm.runInContext(edge.slice(edge.indexOf('const RANGO_CONFIGURADO ='), edge.indexOf('// Sin hoja se lee')), context);
+    assert.equal(vm.runInContext('RANGO_CELDAS', context), 'A:Z');
+  }
+});
+
 test('activating provisions both accounts; baja preserves contacts; unchanged status does not resend grants', async () => {
   const calls = [];
   let ok = true;

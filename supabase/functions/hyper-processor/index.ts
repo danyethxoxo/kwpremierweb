@@ -59,7 +59,7 @@ import { secureServe } from '../_shared/security.ts'
 // C) Project Settings > Edge Functions > Secrets:
 //      ALTA_SHEET_ID          el id del Google Sheet (va en su URL,
 //                             entre /d/ y /edit)
-//      ALTA_SHEET_RANGO       opcional, por defecto 'A1:Z500'. Es el
+//      ALTA_SHEET_RANGO       opcional, por defecto 'A:Z'. Es el
 //                             pedazo de celdas que se lee de CADA hoja;
 //                             el nombre de la hoja no va aquí.
 //      ALTA_DRIVE_FOLDER_ID   el id de la carpeta de Drive (va en su
@@ -102,7 +102,7 @@ const GOOGLE_REFRESH_TOKEN_CONTACTOS = Deno.env.get('GOOGLE_REFRESH_TOKEN_CONTAC
 const GOOGLE_REFRESH_TOKEN_KWPREMIER = Deno.env.get('GOOGLE_REFRESH_TOKEN_KWPREMIER') || ''
 
 const ALTA_SHEET_ID = Deno.env.get('ALTA_SHEET_ID')
-const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A1:Z500'
+const ALTA_SHEET_RANGO = Deno.env.get('ALTA_SHEET_RANGO') || 'A:Z'
 const ALTA_DRIVE_FOLDER_ID = Deno.env.get('ALTA_DRIVE_FOLDER_ID')
 const ALTA_EMAILS = Deno.env.get('ALTA_EMAILS') || ''
 
@@ -316,9 +316,11 @@ async function detectarHojas(token: string): Promise<HojaDelLibro[]> {
 // ALTA_SHEET_RANGO puede traer todavía el nombre de una hoja pegado
 // ("Hoja1!A1:Z500"), de cuando esto leía una sola: de ahí se usa nada
 // más el pedazo de celdas, y la hoja la pone quien llama.
-const RANGO_CELDAS = ALTA_SHEET_RANGO.includes('!')
+const RANGO_CONFIGURADO = ALTA_SHEET_RANGO.includes('!')
   ? ALTA_SHEET_RANGO.slice(ALTA_SHEET_RANGO.lastIndexOf('!') + 1)
   : ALTA_SHEET_RANGO
+// El rango histórico de 500 filas no debe ocultar nuevas entradas del directorio.
+const RANGO_CELDAS = RANGO_CONFIGURADO.replace(/^([A-Z]+)1:([A-Z]+)\d+$/i, '$1:$2')
 
 // Sin hoja se lee la primera del libro, que es lo que esto hacía antes.
 // Las comillas simples son lo que permite nombres con espacios; una
