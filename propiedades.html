@@ -190,6 +190,17 @@
     background: #fff; border: 1px solid #d5d5d5; border-radius: 999px;
   }
   .kw-lateral-universal .kw-lateral-contenido::-webkit-scrollbar-button { display: none; }
+  /* En escritorio el riel completo es fijo, así que las acciones también
+     deben quedar ancladas a su borde inferior y no al final del contenido. */
+  @media (min-width: 1024px) {
+    .kw-lateral-universal #filtros .filtros-sidebar { padding-bottom: 92px; }
+    .kw-lateral-universal #filtros .filtro-seccion-final {
+      position: fixed; left: 0; bottom: 0; width: 292px; box-sizing: border-box;
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--border);
+      background: linear-gradient(to bottom, rgba(255,255,255,0), #fff 18px, #fff 100%);
+    }
+  }
   #filtros .kw-select { width: 100% !important; min-width: 0 !important; max-width: 100%; }
   #filtros .kw-select-menu {
     width: 100% !important; min-width: 0 !important; max-width: 100% !important;
@@ -279,8 +290,34 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; margin-top: 12px;
   }
   .filtros-dos-columnas .filtro { margin-top: 0 !important; }
-  .filtro-seccion-final { padding-bottom: 0; }
-  #filtros .btn-limpiar { width: 100%; margin-top: 12px; }
+  /* Las acciones permanecen visibles mientras el contenido del riel se
+     desplaza; así los filtros se pueden revisar y aplicar desde cualquier
+     punto del panel. */
+  .filtro-seccion-final {
+    position: sticky; bottom: 0; z-index: 4;
+    padding: 12px 0 8px;
+    border-top: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), #fff 18px, #fff 100%);
+  }
+  .filtros-acciones {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 8px;
+    padding: 9px; border: 1px solid var(--border); border-radius: 12px;
+    background: rgba(255,255,255,0.97); box-shadow: 0 -4px 16px rgba(35,27,27,0.08);
+  }
+  #filtros .filtros-acciones button {
+    width: 100%; min-width: 0; height: 40px; margin: 0; padding: 0 10px;
+    border-radius: var(--r-campo); font: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  #filtros .filtros-acciones .btn-limpiar {
+    border: 1.5px solid var(--border); background: #f7f7f6; color: #555;
+  }
+  #filtros .filtros-acciones .btn-limpiar:hover { background: #ececec; }
+  #filtros .btn-aplicar {
+    border: 1.5px solid var(--red); background: var(--red); color: #fff;
+  }
+  #filtros .btn-aplicar:hover { background: var(--pastel-rojo-txt); border-color: var(--pastel-rojo-txt); }
+  #filtros .filtros-acciones button:disabled { opacity: 0.5; cursor: wait; }
   .resultados-cabecera {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     min-height: 32px; margin-bottom: 10px;
@@ -593,7 +630,10 @@
           </section>
 
           <section class="filtro-seccion filtro-seccion-final">
-            <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
+            <div class="filtros-acciones" role="group" aria-label="Acciones de filtros">
+              <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
+              <button type="button" class="btn-aplicar" id="aplicar-filtros" onclick="aplicarFiltros()">Aplicar filtros</button>
+            </div>
           </section>
         </div>
       </aside>
@@ -1201,6 +1241,7 @@
    */
   var solicitudPaginaServidor = 0;
   var temporizadorPaginaServidor = null;
+  var filtrosAplicados = null;
   var catalogoServidorVersion = 0;
   var catalogosServidor = {};
   var versionesCatalogoRelacionado = {};
@@ -1238,7 +1279,7 @@
       .replace(/\s+/g, ' ');
   }
 
-  function filtrosServidorActuales() {
+  function leerFiltrosServidor() {
     return {
       texto: val('f-buscar'),
       operacion: val('f-operacion'),
@@ -1259,6 +1300,10 @@
       m2Max: num('f-m2-max'),
       orden: val('f-orden') || 'reciente'
     };
+  }
+
+  function filtrosServidorActuales() {
+    return filtrosAplicados || leerFiltrosServidor();
   }
 
   function consultaPaginaServidor(pagina, filtros) {
@@ -1423,7 +1468,7 @@
       ponerFiltroRelacionado('f-estado', Array.from(estados)[0]);
       refrescarRelacionado('f-municipio');
       refrescarRelacionado('f-colonia');
-      programarCargaServidor();
+      marcarFiltrosEscondidos();
     }
   }
 
@@ -1535,6 +1580,12 @@
     }, 180);
   }
 
+  aplicarFiltros = function () {
+    filtrosAplicados = leerFiltrosServidor();
+    marcarFiltrosEscondidos();
+    programarCargaServidor();
+  };
+
   pintar = function () {
     programarCargaServidor();
   };
@@ -1575,7 +1626,7 @@
         refrescarRelacionado('f-colonia');
       }
     }
-    programarCargaServidor();
+    marcarFiltrosEscondidos();
   };
 
   limpiarFiltros = function () {
@@ -1599,7 +1650,7 @@
       orden.value = 'reciente';
       orden.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    programarCargaServidor();
+    aplicarFiltros();
   };
 
   cargar = function () {
@@ -1607,6 +1658,8 @@
     var estatus = document.getElementById('f-estatus');
     if (filtroEstatus) filtroEstatus.hidden = false;
     if (estatus && !estatus.value) estatus.value = 'publicada';
+    filtrosAplicados = leerFiltrosServidor();
+    marcarFiltrosEscondidos();
     cargarCatalogosServidor();
     cargarPaginaServidor(1);
   };
