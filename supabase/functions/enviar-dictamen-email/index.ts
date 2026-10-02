@@ -128,18 +128,19 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
 
     const envio = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({
         from: EMAIL_FROM,
         to: destinatarios,
         subject: asunto,
-        html: `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px">
+        html: `<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body style="margin:0">
+          <div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px">
           <p>Hola ${escapeHtml(asesor)} y equipo KW Premier,</p>
           <p>Adjuntamos el dictamen de expediente correspondiente a:</p>
           <p style="font-weight:700;color:#7d0000">${escapeHtml(direccion)}</p>
           <p>Incluye una versión con los datos y otra con las correcciones.</p>
           <p>Saludos,<br>KW Premier</p>
-        </div>`,
+        </div></body></html>`,
         attachments: [
           { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
           { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },

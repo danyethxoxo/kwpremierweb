@@ -3,7 +3,7 @@ const WORKBOOK_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 const REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 const PACKAGE_REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships'
 
-export type XlsxStyle = 'title' | 'header' | 'date' | 'integer' | 'number' | 'note'
+export type XlsxStyle = 'title' | 'section' | 'header' | 'date' | 'integer' | 'number' | 'note'
 
 export type XlsxCell = {
   value: string | number | boolean | null
@@ -20,6 +20,7 @@ export type XlsxSheet = {
 
 const STYLE_IDS: Record<XlsxStyle, number> = {
   title: 1,
+  section: 7,
   header: 2,
   date: 3,
   integer: 4,
@@ -84,7 +85,9 @@ function worksheetXml(sheet: XlsxSheet): string {
     ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${freezeRows}" topLeftCell="A${freezeRows + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A${freezeRows + 1}" sqref="A${freezeRows + 1}"/></sheetView></sheetViews>`
     : '<sheetViews><sheetView workbookViewId="0"/></sheetViews>'
   const sheetRows = rows.map((row, rowIndex) => {
-    const height = rowIndex === 0 && sheet.name === 'Resumen' ? ' ht="24" customHeight="1"' : ''
+    const height = rowIndex === 0 || row.some((cell) => cell.style === 'section')
+      ? ' ht="24" customHeight="1"'
+      : ''
     const cells = row.map((cell, columnIndex) => cellXml(cell, rowIndex + 1, columnIndex)).join('')
     return `<row r="${rowIndex + 1}"${height}>${cells}</row>`
   }).join('')
@@ -108,11 +111,12 @@ function stylesXml(): string {
     <numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/>
     <numFmt numFmtId="165" formatCode="#,##0.00"/>
   </numFmts>
-  <fonts count="4">
+  <fonts count="5">
     <font><sz val="10"/><name val="Arial"/><color rgb="FF222222"/></font>
     <font><b/><sz val="14"/><name val="Arial"/><color rgb="FFB00020"/></font>
     <font><b/><sz val="10"/><name val="Arial"/><color rgb="FFFFFFFF"/></font>
     <font><i/><sz val="10"/><name val="Arial"/><color rgb="FF666666"/></font>
+    <font><b/><sz val="10"/><name val="Arial"/><color rgb="FFB00020"/></font>
   </fonts>
   <fills count="4">
     <fill><patternFill patternType="none"/></fill>
@@ -122,7 +126,7 @@ function stylesXml(): string {
   </fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="7">
+  <cellXfs count="8">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
     <xf numFmtId="0" fontId="1" fillId="0" borderId="0" applyFont="1"/>
     <xf numFmtId="0" fontId="2" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
@@ -130,6 +134,7 @@ function stylesXml(): string {
     <xf numFmtId="3" fontId="0" fillId="0" borderId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="center"/></xf>
     <xf numFmtId="165" fontId="0" fillId="0" borderId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="center"/></xf>
     <xf numFmtId="0" fontId="3" fillId="0" borderId="0" applyFont="1"/>
+    <xf numFmtId="0" fontId="4" fillId="3" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
   <dxfs count="0"/>

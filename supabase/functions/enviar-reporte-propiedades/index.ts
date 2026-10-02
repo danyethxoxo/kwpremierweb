@@ -30,6 +30,7 @@ type Reporte = {
   publicadasActuales: number
   suspendidasActuales: number
   totalActual: number
+  inventarioAnterior: number
   nuevas: Historial[]
   reactivadas: Historial[]
   desactivadas: Historial[]
@@ -113,70 +114,57 @@ function cell(value: string | number | null, style?: XlsxCell['style']): XlsxCel
   return { value, ...(style ? { style } : {}) }
 }
 
-function filaPropiedad(historial: Historial, tipoAlta?: string): XlsxCell[] {
+function filaPropiedad(historial: Historial): XlsxCell[] {
   const propiedad = historial.snapshot || {}
   const precio = numero(propiedad.precio)
-  const fila: XlsxCell[] = []
-  if (tipoAlta) fila.push(cell(tipoAlta))
-  fila.push(
-    cell(fechaExcel(historial.registrado_at), 'date'),
-    cell(texto(historial.fuente_id || propiedad.fuente_id)),
+  return [
+    cell(texto(propiedad.market_center || propiedad.mc)),
+    cell(direccion(propiedad)),
+    cell(precio, precio === null ? undefined : 'number'),
+    cell(texto(propiedad.moneda)),
+    cell(texto(propiedad.asesor_nombre || propiedad.asesor)),
     cell(texto(propiedad.titulo)),
     cell(texto(propiedad.tipo)),
     cell(texto(propiedad.operacion)),
-    cell(precio, precio === null ? undefined : 'number'),
-    cell(texto(propiedad.moneda)),
-    cell(direccion(propiedad)),
-    cell(texto(propiedad.estado)),
-    cell(texto(propiedad.municipio)),
-    cell(texto(propiedad.asesor_nombre)),
-    cell(texto(propiedad.market_center)),
+    cell(texto(historial.fuente_id || propiedad.fuente_id)),
+    cell(fechaExcel(historial.registrado_at), 'date'),
     cell(enlacePropiedad(historial)),
-  )
-  return fila
+  ]
 }
 
 function reporteXlsx(reporte: Reporte): Uint8Array {
-  const resumen: XlsxSheet = {
-    name: 'Resumen',
-    widths: [42, 24],
-    rows: [
-      [cell('Reporte diario de propiedades', 'title')],
-      [cell('Última lectura, hora de Ciudad de México'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
-      [cell('Propiedades leídas'), cell(reporte.propiedadesLeidas, 'integer')],
-      [cell('Altas nuevas'), cell(reporte.nuevas.length, 'integer')],
-      [cell('Reactivadas'), cell(reporte.reactivadas.length, 'integer')],
-      [cell('Desactivadas'), cell(reporte.desactivadas.length, 'integer')],
-      [cell('Inventario actual'), cell(reporte.totalActual, 'integer')],
-      [cell('Publicadas actuales'), cell(reporte.publicadasActuales, 'integer')],
-      [cell('Suspendidas actuales'), cell(reporte.suspendidasActuales, 'integer')],
-      [cell('Las reactivaciones aparecen también en la hoja Nuevas como Reactivada', 'note')],
-    ],
-  }
-
   const encabezados = [
-    'Tipo de alta', 'Fecha y hora', 'ID de origen', 'Título', 'Tipo', 'Operación',
-    'Precio', 'Moneda', 'Dirección', 'Estado', 'Municipio', 'Asesor', 'Market Center', 'Enlace',
+    'MC', 'Dirección', 'Precio', 'Moneda', 'Asesor', 'Título', 'Tipo', 'Operación',
+    'ID de origen', 'Fecha', 'Enlace',
   ].map((value) => cell(value, 'header'))
-  const nuevas: XlsxSheet = {
-    name: 'Nuevas',
-    widths: [16, 19, 15, 42, 20, 12, 16, 10, 48, 24, 24, 28, 24, 58],
-    freezeRows: 1,
-    autofilter: true,
-    rows: [encabezados, ...reporte.nuevas.map((historial) => filaPropiedad(historial, 'Nueva')),
-      ...reporte.reactivadas.map((historial) => filaPropiedad(historial, 'Reactivada'))],
-  }
+  const rows: XlsxCell[][] = [
+    [cell('Reporte diario de propiedades', 'title')],
+    [cell('Última actualización:'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
+    [cell('Propiedades nuevas:'), cell(reporte.nuevas.length, 'integer')],
+    [cell('Propiedades desactivadas:'), cell(reporte.desactivadas.length, 'integer')],
+    [cell('Reactivadas:'), cell(reporte.reactivadas.length, 'integer')],
+    [cell('Inventario Total actual:'), cell(reporte.publicadasActuales, 'integer')],
+    [cell('Inventario Anterior:'), cell(reporte.inventarioAnterior, 'integer')],
+    [],
+    [cell(`Propiedades nuevas (${reporte.nuevas.length})`, 'section')],
+    encabezados,
+    ...reporte.nuevas.map(filaPropiedad),
+    [],
+    [cell(`Propiedades desactivadas (${reporte.desactivadas.length})`, 'section')],
+    encabezados,
+    ...reporte.desactivadas.map(filaPropiedad),
+    [],
+    [cell(`Reactivadas (${reporte.reactivadas.length})`, 'section')],
+    encabezados,
+    ...reporte.reactivadas.map(filaPropiedad),
+  ]
 
-  const encabezadosDesactivadas = encabezados.slice(1)
-  const desactivadas: XlsxSheet = {
-    name: 'Desactivadas',
-    widths: [19, 15, 42, 20, 12, 16, 10, 48, 24, 24, 28, 24, 58],
-    freezeRows: 1,
-    autofilter: true,
-    rows: [encabezadosDesactivadas, ...reporte.desactivadas.map((historial) => filaPropiedad(historial))],
+  const reporteSheet: XlsxSheet = {
+    name: 'Reporte',
+    widths: [24, 48, 16, 10, 28, 42, 20, 14, 16, 19, 58],
+    rows,
   }
-
-  return buildXlsx([resumen, nuevas, desactivadas])
+  return buildXlsx([reporteSheet])
 }
 
 function base64(bytes: Uint8Array): string {
@@ -234,6 +222,7 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
     item.estatus_anterior === 'suspendida' && item.estatus_nuevo === 'publicada')
   const desactivadas = historial.filter((item) =>
     item.estatus_anterior === 'publicada' && item.estatus_nuevo === 'suspendida')
+  const inventarioAnterior = Math.max(0, publicadasActuales - nuevas.length - reactivadas.length + desactivadas.length)
 
   return {
     ultimaCorrida: sync.ultima_corrida,
@@ -241,6 +230,7 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
     publicadasActuales,
     suspendidasActuales,
     totalActual,
+    inventarioAnterior,
     nuevas,
     reactivadas,
     desactivadas,
@@ -288,8 +278,8 @@ function armarCorreo(reporte: Reporte) {
   const desactivadas = reporte.desactivadas.length
   const html = plantillaCorreo({
     title: 'Reporte diario de propiedades',
-    intro: `La última lectura terminó el ${fecha}.`,
-    content: `Se encontraron ${altas} altas nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. El inventario actual tiene ${reporte.totalActual} registros, de los cuales ${reporte.publicadasActuales} están publicados.`,
+    intro: `La última actualización terminó el ${fecha}.`,
+    content: `Se encontraron ${altas} propiedades nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. El inventario publicado pasó de ${reporte.inventarioAnterior} a ${reporte.publicadasActuales} propiedades. En total hay ${reporte.totalActual} registros, incluidos ${reporte.suspendidasActuales} suspendidos.`,
     actionLabel: 'Abrir propiedades',
     actionUrl: SITIO_PROPIEDADES,
     note: 'El detalle de las altas y desactivaciones está en el archivo Excel adjunto.',
@@ -297,12 +287,14 @@ function armarCorreo(reporte: Reporte) {
   })
   const texto = [
     'Reporte diario de propiedades',
-    `Última lectura: ${fecha}`,
+    `Última actualización: ${fecha}`,
     `Altas nuevas: ${altas}`,
     `Reactivaciones: ${reactivadas}`,
     `Desactivaciones: ${desactivadas}`,
-    `Inventario actual: ${reporte.totalActual}`,
-    `Publicadas: ${reporte.publicadasActuales}`,
+    `Inventario Total actual: ${reporte.publicadasActuales}`,
+    `Inventario Anterior: ${reporte.inventarioAnterior}`,
+    `Registros totales: ${reporte.totalActual}`,
+    `Suspendidas actuales: ${reporte.suspendidasActuales}`,
     '',
     'El detalle va en el archivo Excel adjunto.',
   ].join('\n')

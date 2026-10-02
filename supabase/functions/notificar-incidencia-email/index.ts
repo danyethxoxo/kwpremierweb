@@ -92,7 +92,10 @@ secureServe({ name: 'notificar-incidencia-email', userLimit: 10 }, async (req) =
       return respond({ ok: false, aviso: 'No hay ningún perfil con puesto "Technology Director" configurado.' })
     }
 
-    const html = `
+    const html = `<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;">
       <div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.5;">
         <p><strong>${escapeHtml(nombreReportante)}</strong> reportó una nueva incidencia técnica:</p>
         <p style="font-size:16px;font-weight:700;margin:14px 0 4px;">${escapeHtml(titulo)}</p>
@@ -100,13 +103,15 @@ secureServe({ name: 'notificar-incidencia-email', userLimit: 10 }, async (req) =
         <p style="margin-top:20px;">
           <a href="${SITE_TICKETS_URL}" style="color:#CC0000;">Ver en la plataforma</a>
         </p>
-      </div>`
+      </div>
+</body>
+</html>`
 
     const resendResp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify({
         from: EMAIL_FROM,

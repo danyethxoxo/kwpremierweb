@@ -114,7 +114,10 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     const nombre = String(perfil.nombre || '').trim() || 'Hola'
     const liga = ligaCompleta(fila?.url)
 
-    const html = `
+    const html = `<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;">
       <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.55;max-width:560px;">
         <p style="margin:0 0 16px;">${escapeHtml(nombre)}, tienes un aviso nuevo en la plataforma:</p>
         <div style="border-left:3px solid #CC0000;padding:2px 0 2px 14px;margin:0 0 20px;">
@@ -129,13 +132,15 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
         <p style="margin:0;color:#999;font-size:12px;">
           Te llega porque tienes cuenta en el portal de KW Premier.
         </p>
-      </div>`
+      </div>
+</body>
+</html>`
 
     const resendResp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify({
         from: EMAIL_FROM,

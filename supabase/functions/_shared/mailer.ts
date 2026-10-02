@@ -68,7 +68,7 @@ export async function enviarCorreo(correo: {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
     },
     body: JSON.stringify({
       from: EMAIL_FROM,
