@@ -2,6 +2,12 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
 const LOGO_URL = 'https://www.kwpremieroficial.com/assets/img/logo-kw-premier.png'
 
+export type AdjuntoCorreo = {
+  filename: string
+  content: string
+  content_type?: string
+}
+
 export function escaparHtml(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;',
@@ -50,7 +56,13 @@ export function plantillaCorreo(params: {
 </html>`
 }
 
-export async function enviarCorreo(correo: { to: string; subject: string; html: string; text: string }) {
+export async function enviarCorreo(correo: {
+  to: string
+  subject: string
+  html: string
+  text: string
+  attachments?: AdjuntoCorreo[]
+}) {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY no configurada')
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -64,6 +76,7 @@ export async function enviarCorreo(correo: { to: string; subject: string; html: 
       subject: correo.subject,
       html: correo.html,
       text: correo.text,
+      ...(correo.attachments?.length ? { attachments: correo.attachments } : {}),
     }),
   })
   if (!response.ok) {
