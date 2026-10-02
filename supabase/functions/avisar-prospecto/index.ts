@@ -67,7 +67,10 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
        </td>
      </tr>`
 
-  const html = `
+  const html = `<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;">
 <div style="background:#f2f2f1;padding:28px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
     <div style="background:#CC0000;padding:22px 26px;">
@@ -98,7 +101,9 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
       </p>
     </div>
   </div>
-</div>`
+</div>
+  </body>
+</html>`
 
   const texto = [
     'Tienes un prospecto nuevo en KW Premier.',
@@ -155,7 +160,7 @@ secureServe({ name: 'avisar-prospecto', auth: 'service', ipLimit: 60 }, async (r
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + RESEND_API_KEY,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify({
         from: CORREO_REMITENTE,
