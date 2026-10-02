@@ -4,9 +4,8 @@
 // en las políticas de RLS de Supabase, no en este script: esto solo
 // evita que alguien sin sesión vea el HTML del sitio por casualidad.
 //
-// También cierra la sesión sola tras un rato de inactividad (Supabase
-// por defecto refresca el token indefinidamente mientras se use el
-// sitio, así que sin esto una sesión nunca expira sola).
+// Pide contraseña cada 24 horas. El servidor conserva la confianza del
+// dispositivo/IP mientras no transcurran cinco días sin actividad.
 //
 // Y pone la pantalla de carga mientras comprueba: cada página protegida
 // se esconde hasta saber si hay sesión, y sin esto lo que se ve
@@ -17,25 +16,14 @@
   var BASE_PATH = '';
   var SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
-  var MFA_URL = SUPABASE_URL + '/functions/v1/mfa-correo';
-  var INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias sin uso
   var ACTIVITY_KEY = 'kw_last_activity';
-  var DEVICE_KEY = 'kw_device_token_v1';
-  var volatileDeviceToken = '';
+  var ultimaActividad = 0;
+  var ultimaComprobacion = 0;
+  var comprobacionPendiente = null;
+  var sesionPreparada = false;
 
   function getDeviceToken() {
-    try {
-      var current = localStorage.getItem(DEVICE_KEY);
-      if (/^[A-Za-z0-9_-]{43}$/.test(current || '')) return current;
-    } catch (e) {}
-    if (volatileDeviceToken) return volatileDeviceToken;
-    var bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    var binary = '';
-    bytes.forEach(function (byte) { binary += String.fromCharCode(byte); });
-    volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
-    return volatileDeviceToken;
+    return window.kwSession.deviceToken();
   }
   window.kwGetDeviceToken = getDeviceToken;
 
@@ -120,92 +108,102 @@
   }
 
   function marcarActividad() {
+    if (Date.now() - ultimaActividad < 60000) return;
+    ultimaActividad = Date.now();
     try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch (e) {}
+    if (Date.now() - ultimaComprobacion >= 5 * 60 * 1000) comprobarSesion();
   }
 
-  function inactivoDemasiado() {
-    try {
-      var last = parseInt(localStorage.getItem(ACTIVITY_KEY), 10);
-      return !!last && (Date.now() - last) > INACTIVITY_MS;
-    } catch (e) { return false; }
-  }
-
-  function cerrarPorInactividad() {
-    try { localStorage.removeItem(ACTIVITY_KEY); } catch (e) {}
-    window.kwSupabase.auth.signOut().finally(redirectToLogin);
-  }
-
-  if (!window.supabase || !window.supabase.createClient) {
-    // Sin la librería no podemos verificar sesión; por seguridad, no
-    // dejamos ver el contenido.
-    redirectToLogin();
+  if (!window.supabase || !window.supabase.createClient || !window.kwSession) {
+    mostrarErrorConexion();
     return;
   }
 
   window.kwSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
 
-  // Primero se pregunta si hay sesión y hasta después se mira el reloj
-  // de inactividad. Al revés se caía en un doble inicio de sesión: quien
-  // no entraba en más de cuatro horas se autenticaba, llegaba aquí, el
-  // reloj traía la marca vieja (login.html no la tocaba) y lo mandaba de
-  // regreso; a la segunda ya entraba, porque al salir la marca se borra.
-  // Si la cuenta tiene verificación en dos pasos por correo activada
-  // (app_metadata.mfa_correo_activo, escrito solo por la Edge Function
-  // mfa-correo con la llave de servicio - el navegador no se lo puede
-  // inventar solo), la sesión no vale hasta que login.html complete el
-  // código: mfa_correo_ok_hasta trae hasta cuándo. Una sesión sin eso
-  // vigente no debe dejar ver ninguna página protegida, aunque quien la
-  // tenga llegue aquí navegando directo por la URL (no por login).
-  function faltaSegundoPaso(session) {
-    return fetch(MFA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
-      body: JSON.stringify({ accion: 'estado', dispositivo_token: getDeviceToken() }),
-      cache: 'no-store'
-    }).then(function (respuesta) {
-      if (!respuesta.ok) throw new Error('No se pudo comprobar el segundo paso');
-      return respuesta.json();
-    }).then(function (estado) {
-      if (estado.requerido === true && estado.activo !== true) {
-        location.replace(BASE_PATH + (estado.requiere_alta ? '/completar-registro.html' : '/activar-mfa.html'));
-        return new Promise(function () {});
-      }
-      return estado.activo === true && estado.verificado !== true;
+  // Un problema de conexión conserva la sesión y permite reintentar.
+  // El contenido sigue oculto hasta recibir autorización del servidor.
+  function mostrarErrorConexion() {
+    document.documentElement.classList.remove('kw-auth-ok');
+    montarCargando();
+    var capa = capaCargando;
+    capa.replaceChildren();
+    var caja = document.createElement('div');
+    caja.style.cssText = 'max-width:340px;padding:24px;text-align:center;background:white;border-radius:16px;color:#333';
+    var mensaje = document.createElement('p');
+    mensaje.textContent = 'No pudimos comprobar tu sesión. Revisa la conexión y vuelve a intentar.';
+    var boton = document.createElement('button');
+    boton.textContent = 'Reintentar';
+    boton.type = 'button';
+    boton.style.cssText = 'margin-top:16px;padding:10px 20px;border:0;border-radius:20px;background:#8a0000;color:white;cursor:pointer';
+    boton.addEventListener('click', function () {
+      boton.disabled = true;
+      if (!window.kwSupabase) return location.reload();
+      comprobarSesion();
     });
+    caja.append(mensaje, boton);
+    capa.appendChild(caja);
   }
 
-  window.kwSupabase.auth.getSession().then(function (result) {
-    var session = result && result.data && result.data.session;
-    if (!session) return redirectToLogin();
-    return faltaSegundoPaso(session).then(function (falta) {
-      if (falta) return redirectToLogin();
+  function comprobarSesion() {
+    if (comprobacionPendiente) return comprobacionPendiente;
+    comprobacionPendiente = window.kwSession.mfaState(window.kwSupabase).then(async function (estado) {
+      if (estado.sin_sesion) return redirectToLogin();
+      if (estado.requiere_login) {
+        var salida = await window.kwSupabase.auth.signOut({ scope: 'local' });
+        if (salida.error) throw salida.error;
+        return redirectToLogin();
+      }
+      if (estado.requerido === true && estado.activo !== true) {
+        location.replace(BASE_PATH + (estado.requiere_alta ? '/completar-registro.html' : '/activar-mfa.html'));
+        return;
+      }
+      if (estado.activo === true && estado.verificado !== true) return redirectToLogin();
+      ultimaComprobacion = Date.now();
       continuarConSesion();
-    });
-  }).catch(redirectToLogin);
+    }).catch(mostrarErrorConexion).finally(function () { comprobacionPendiente = null; });
+    return comprobacionPendiente;
+  }
+  window.kwRevisarSesion = comprobarSesion;
+  comprobarSesion();
 
   function continuarConSesion() {
-    // Sesión recién hecha y sin marca: se estrena ahora, no se juzga.
-    var conMarca = false;
-    try { conMarca = !!localStorage.getItem(ACTIVITY_KEY); } catch (e) {}
-    if (conMarca && inactivoDemasiado()) return cerrarPorInactividad();
-
-    marcarActividad();
     document.documentElement.classList.add('kw-auth-ok');
     quitarCargando();
+    if (sesionPreparada) return;
+    sesionPreparada = true;
+    marcarActividad();
     window.dispatchEvent(new CustomEvent('kw-auth-ready'));
 
     ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(function (evt) {
       document.addEventListener(evt, marcarActividad, { passive: true });
     });
     setInterval(function () {
-      if (inactivoDemasiado()) cerrarPorInactividad();
+      if (document.visibilityState !== 'visible') return;
+      window.kwSupabase.auth.getSession().then(function (result) {
+        var session = result.data && result.data.session;
+        if (!session || window.kwSession.loginExpired(session) ||
+            (Date.now() - ultimaActividad < 60000 && Date.now() - ultimaComprobacion >= 5 * 60 * 1000)) comprobarSesion();
+      }).catch(mostrarErrorConexion);
     }, 60 * 1000);
   }
+
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      document.documentElement.classList.remove('kw-auth-ok');
+      montarCargando();
+      comprobarSesion();
+    }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') { ultimaActividad = Date.now(); comprobarSesion(); }
+  });
+  window.addEventListener('online', comprobarSesion);
 
   window.kwLogout = function () {
     try { localStorage.removeItem(ACTIVITY_KEY); } catch (e) {}
     montarCargando();
-    window.kwSupabase.auth.signOut().then(function () {
+    window.kwSupabase.auth.signOut({ scope: 'local' }).then(function () {
       location.replace(BASE_PATH + '/login.html');
     });
   };

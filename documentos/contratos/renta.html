@@ -12,16 +12,9 @@
 <title>Acuerdo de Renta</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
-<script>
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
-      location.replace('/login.html');
-    }
-  }, 4000);
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/auth-guard.js"></script>
+<script src="/assets/js/kw-session.js?v=20261001"></script>
+<script src="/assets/js/auth-guard.js?v=20261001"></script>
 <script src="/assets/js/kw-prellenar.js?v=20260829" data-campos="f-asesor"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1098,7 +1091,7 @@
   }
 </style>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script defer src="/assets/js/kw-pdf-vector.js?v=20260907a"></script>
+<script defer src="/assets/js/kw-pdf-vector.js?v=20261001r"></script>
 </head>
 <body class="doc-borrador">
 
@@ -1205,7 +1198,7 @@
       <div id="clientes-fields"></div>
     </div>
     <div class="acuerdo-field">
-      <label for="f-domicilio">Domicilio del cliente</label>
+      <label for="f-domicilio">Domicilio del arrendador 1</label>
       <input type="text" id="f-domicilio" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía, ciudad..." oninput="updatePreview()" />
     </div>
     <div class="form-section-title"><strong>Inmueble y renta</strong></div>
@@ -1472,7 +1465,7 @@ function formatFechaLarga(iso) {
 // ── Campo con estilo: rojo si vacío, negro si lleno ──
 function campo(val, placeholder) {
   if (val && val.trim()) {
-    return `<span class="doc-campo filled">${val.trim()}</span>`;
+    return `<span class="doc-campo filled">${escapeHtml(val.trim().replace(/\s+/g, ' '))}</span>`;
   }
   return `<span class="doc-campo">${placeholder}</span>`;
 }
@@ -1486,11 +1479,14 @@ function renderClientesFields() {
   for (let i = 0; i < n; i++) {
     const prev = document.getElementById('f-cliente' + i);
     const prevVal = prev ? prev.value : '';
+    const domicilioPrev = document.getElementById('f-domicilio-cliente' + i);
     html += `
     <div class="acuerdo-field">
       <label for="f-cliente${i}">Nombre del arrendador (cliente${n > 1 ? ' ' + (i + 1) : ''})</label>
-      <input type="text" id="f-cliente${i}" autocomplete="name" value="${prevVal.replace(/"/g,'&quot;')}" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
+      <input type="text" id="f-cliente${i}" autocomplete="name" value="${escapeHtml(prevVal)}" placeholder="Nombre completo del propietario" oninput="updatePreview()" />
     </div>`;
+    if (i > 0) html += `<div class="acuerdo-field"><label for="f-domicilio-cliente${i}">Domicilio del arrendador ${i + 1}</label>
+      <input type="text" id="f-domicilio-cliente${i}" autocomplete="street-address" value="${escapeHtml(domicilioPrev ? domicilioPrev.value : '')}" placeholder="Calle, número, colonia, alcaldía, ciudad y código postal" oninput="updatePreview()" /></div>`;
   }
   cont.innerHTML = html;
 }
@@ -1554,7 +1550,7 @@ function updatePreview() {
   const tipo       = document.getElementById('f-tipo')?.value || 'exclusiva';
   const esExclusiva = tipo === 'exclusiva';
   const asesor     = document.getElementById('f-asesor')?.value || '';
-  const nombresClientes = clientes.map(v => v.trim()).filter(Boolean);
+  const nombresClientes = clientes.map(v => v.trim().replace(/\s+/g, ' ')).filter(Boolean);
   const arrendador = nombresClientes.length
     ? nombresClientes.join(', ').replace(/,([^,]*)$/, nombresClientes.length > 1 ? ' y$1' : '$1')
     : '';
@@ -1562,6 +1558,11 @@ function updatePreview() {
   const montoNum   = leerMonto();
   const domicilio  = document.getElementById('f-domicilio')?.value || '';
   const fecha      = document.getElementById('f-fecha')?.value || '';
+  const domiciliosClientesHTML = clientes.map((nombre, i) => {
+    const direccion = i === 0 ? domicilio : (document.getElementById('f-domicilio-cliente' + i)?.value || '');
+    const normalizada = direccion.trim().replace(/\s+/g, ' ').toLocaleUpperCase('es-MX').replace(/(?:,?\s*C\.?\s*P\.?)?\s+(\d{5})$/, ', C.P. $1');
+    return `<div class="doc-p"><strong>ARRENDADOR ${i + 1}:</strong> ${campo(nombre, 'Nombre del arrendador ' + (i + 1))}. Domicilio: ${campo(normalizada, 'Domicilio del arrendador ' + (i + 1))}.</div>`;
+  }).join('');
   const montoLetra = montoNum > 0 ? numeroALetra(montoNum) : '';
   const montoFmt   = montoNum > 0 ? '$' + montoNum.toLocaleString('es-MX') : '';
 
@@ -1585,7 +1586,7 @@ function updatePreview() {
     'Profesional Inmobiliario<br><span class="doc-firma-bold">"EL PROFESIONAL"</span>'
   );
   const clienteCells = nombresClientes.length
-    ? nombresClientes.map(nom => firmaCell(`<span class="doc-firma-bold">${nom}</span>`, '<span class="doc-firma-bold">"EL CLIENTE"</span>'))
+    ? nombresClientes.map(nom => firmaCell(`<span class="doc-firma-bold">${escapeHtml(nom)}</span>`, '<span class="doc-firma-bold">"EL CLIENTE"</span>'))
     : [firmaCell('(Nombre y firma)', '<span class="doc-firma-bold">"EL CLIENTE"</span>')];
 
   const filas = [];
@@ -1609,15 +1610,15 @@ function updatePreview() {
       PREMIUM, S.A.P.I. DE C.V. A QUIEN EN LO SUCESIVO SE DENOMINARÁ <strong>"KW PREMIER"</strong>
       CON LA PARTICIPACIÓN DE: ${campo(asesor,'NOMBRE DEL ASESOR INMOBILIARIO')}. A QUIEN EN LO
       SUCESIVO SE LE DENOMINARÁ <strong>"EL PROFESIONAL"</strong>; Y POR LA OTRA PARTE, POR SU
-      PROPIO DERECHO ${campo(arrendador,'NOMBRE DEL ARRENDADOR')}. A QUIEN EN LO SUCESIVO SE LE
+      PROPIO DERECHO ${campo(arrendador,'NOMBRE DEL ARRENDADOR')}. ${numClientes > 1 ? 'A QUIENES EN CONJUNTO' : 'A QUIEN'} EN LO SUCESIVO ${numClientes > 1 ? 'SE LES' : 'SE LE'}
       DENOMINARÁ <strong>"EL CLIENTE"</strong>, SUJETÁNDOSE A LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:
     </div>
 
     <div class="doc-seccion">DECLARACIONES:</div>
 
-    <div class="doc-p"><strong>PRIMERA.</strong> Declara <strong>"KW PREMIER"</strong> ser una empresa legalmente constituida conforme a las leyes mexicanas, y que cuenta con todos los medios y experiencia para promover la RENTA del INMUEBLE.</div>
+    <div class="doc-p"><strong>PRIMERA.</strong> Declara <strong>"KW PREMIER"</strong> ser una empresa legalmente constituida conforme a las leyes mexicanas, y que cuenta con todos los medios y experiencia para promover la renta del inmueble que se define a continuación.</div>
 
-    <div class="doc-p"><strong>SEGUNDA.</strong> Declara <strong>"EL CLIENTE"</strong> ser el legítimo propietario del inmueble ubicado en: ${campo(inmueble,'Dirección del inmueble')}.</div>
+    <div class="doc-p"><strong>SEGUNDA.</strong> ${numClientes > 1 ? 'Los arrendadores declaran ser los legítimos propietarios' : 'Declara "EL CLIENTE" ser el legítimo propietario'} del inmueble ubicado en: ${campo(inmueble,'Dirección del inmueble')}, al que en lo sucesivo se denominará <strong>"EL INMUEBLE"</strong>.</div>
 
     <div class="doc-p"><strong>TERCERA.</strong> Las partes declaran tener plena capacidad legal para obligarse en los términos que más adelante se señalan. Asimismo, manifiestan que en la celebración del presente Acuerdo no ha mediado error o vicio del consentimiento alguno que pudiera afectar la validez del mismo.</div>
 
@@ -1626,33 +1627,31 @@ function updatePreview() {
     <div class="doc-seccion">CLÁUSULAS:</div>
 
     <div class="doc-p"><span class="doc-clausula-titulo">PRIMERA.</span> El objeto del presente Acuerdo es la prestación de los siguientes servicios:</div>
-    <div class="doc-p"><strong>ASESORÍA.</strong> - "EL PROFESIONAL" analizará el Inmueble a fin de sugerir una opinión del valor de la renta mensual en el mercado y la forma más adecuada para promover su arrendamiento, tomando en consideración sus características físicas y comerciales.</div>
+    <div class="doc-p"><strong>ASESORÍA.</strong> - "EL PROFESIONAL" analizará "EL INMUEBLE" a fin de sugerir una opinión del valor de la renta mensual en el mercado y la forma más adecuada para promover su arrendamiento, tomando en consideración sus características físicas y comerciales.</div>
     <div class="doc-p"><strong>ORIENTACIÓN.</strong> - "EL PROFESIONAL" sugerirá a "EL CLIENTE" los instrumentos jurídicos necesarios para el manejo de la transacción, y la integración de la documentación necesaria para la operación.</div>
-    <div class="doc-p"><strong>PROMOCIÓN.</strong> - "EL PROFESIONAL" promoverá el arrendamiento del INMUEBLE, utilizando los medios de difusión que considere adecuados conforme a sus características y proporcionará información a los posibles arrendatarios que la soliciten.</div>
+    <div class="doc-p"><strong>PROMOCIÓN.</strong> - "EL PROFESIONAL" promoverá el arrendamiento de "EL INMUEBLE", utilizando los medios de difusión que considere adecuados conforme a sus características y proporcionará información a los posibles arrendatarios que la soliciten.</div>
     <div class="doc-p"><strong>MEDIACIÓN.</strong> - "EL PROFESIONAL" realizará labores de intermediación a fin de lograr la celebración del Contrato respectivo.</div>
     <div class="doc-p"><strong>INFORMACIÓN.</strong> - "EL PROFESIONAL" rendirá periódicamente a "EL CLIENTE" un informe de los resultados de las labores que haya realizado.</div>
-    <div class="doc-p"><strong>FILTRO DE ARRENDATARIOS:</strong> Investigación y perfilamiento de posibles inquilinos.</div>
+    <div class="doc-p"><strong>FILTRO DE ARRENDATARIOS:</strong>&nbsp; Investigación y perfilamiento de posibles inquilinos.</div>
 
-    <div class="doc-p"><span class="doc-clausula-titulo">SEGUNDA.</span> - "EL CLIENTE" señala que es su intención rentar el Inmueble en la cantidad de ${campo(montoFmt,'$Monto en número')} (${campo(montoLetra,'MONTO EN LETRA')} pesos 00/100 M.N.), estando obligado "EL PROFESIONAL" a pasar a la consideración de "EL CLIENTE" las ofertas que se presenten sobre "EL INMUEBLE".</div>
+    <div class="doc-p"><span class="doc-clausula-titulo">SEGUNDA.</span> - "EL CLIENTE" señala que es su intención rentar "EL INMUEBLE" en la cantidad de ${campo(montoFmt,'$Monto en número')} (${campo(montoLetra,'MONTO EN LETRA')}), estando obligado "EL PROFESIONAL" a pasar a la consideración de "EL CLIENTE" las ofertas que se presenten sobre "EL INMUEBLE".</div>
 
     <div class="doc-p"><span class="doc-clausula-titulo">TERCERA.</span> - Por su parte <strong>"EL CLIENTE"</strong> se obliga a:</div>
-    <ul class="doc-lista">
-      <li>Entregar oportunamente la documentación relacionada con el Inmueble, cuando lo solicite "EL PROFESIONAL".</li>
-      <li>Mantener al corriente los pagos de derechos y servicios contratados para el inmueble.</li>
-      <li>Dar todas las facilidades a "EL PROFESIONAL" para mostrar el Inmueble a los posibles arrendatarios.</li>
-      <li>Autorizar a "EL PROFESIONAL" para que reciba en su nombre, el apartado que el posible arrendatario entregue como seriedad de su oferta. El apartado deberá ser mediante transferencia bancaria a nombre de INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.</li>
-      <li>Otorgar a "EL PROFESIONAL" la ${esExclusiva ? '<strong>autorización exclusiva</strong> para la promoción del arrendamiento de "EL INMUEBLE"' : 'autorización para la promoción del arrendamiento <strong>en opción</strong> de "EL INMUEBLE"'} por un período de 120 días naturales.</li>
-      <li>En caso de no celebrarse el arrendamiento durante la vigencia del presente acuerdo, "EL CLIENTE" respetará a los prospectos que "EL PROFESIONAL" haya atendido, por un período de 30 días a partir del término del presente Acuerdo.</li>
-      <li>A pagar los servicios de "EL PROFESIONAL": la cantidad equivalente a un mes del monto del arrendamiento más IVA si fuera por 1 año; o dos meses más IVA si el arrendamiento se firmara por dos a cinco años.</li>
-    </ul>
+    <div class="doc-p">1. Entregar oportunamente la documentación relacionada con "EL INMUEBLE", cuando lo solicite "EL PROFESIONAL".</div>
+    <div class="doc-p">2. Mantener al corriente los pagos de derechos y servicios contratados para "EL INMUEBLE".</div>
+    <div class="doc-p">3. Dar todas las facilidades a "EL PROFESIONAL" para mostrar "EL INMUEBLE" a los posibles arrendatarios.</div>
+    <div class="doc-p">4. Autorizar a "EL PROFESIONAL" para que reciba en su nombre, el apartado que el posible arrendatario entregue como seriedad de su oferta. El apartado deberá ser mediante transferencia bancaria a nombre de INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.</div>
+    <div class="doc-p">5. Otorgar a "EL PROFESIONAL" la ${esExclusiva ? '<strong>autorización exclusiva</strong> para la promoción del arrendamiento de "EL INMUEBLE"' : 'autorización para la promoción del arrendamiento <strong>en opción</strong> de "EL INMUEBLE"'} por un período de 120 días naturales, contado a partir del ${formatFechaLarga(fecha)}, fecha de firma del presente acuerdo.</div>
+    <div class="doc-p">6. En caso de no celebrarse el arrendamiento durante la vigencia del presente acuerdo, "EL CLIENTE" respetará a los prospectos que "EL PROFESIONAL" haya atendido, por un período de 30 días a partir del término del presente Acuerdo.</div>
+    <div class="doc-p">7. A pagar los servicios de "EL PROFESIONAL": la cantidad equivalente a un mes del monto del arrendamiento más IVA si fuera por 1 año; o dos meses más IVA si el arrendamiento se firmara por dos a cinco años.</div>
 
-    <div class="doc-p"><span class="doc-clausula-titulo">CUARTA.</span> - El pago de la comisión lo deberá hacer "EL CLIENTE" al "PROFESIONAL" por medio de transferencia bancaria a nombre de INMUEBLES VALLE PREMIUM SAPI DE CV, a la firma del contrato de arrendamiento.${esExclusiva ? ' En caso de que "EL CLIENTE" arriende el inmueble directamente o a través de otro intermediario durante la vigencia del presente acuerdo, deberá cubrir íntegramente la comisión pactada a "EL PROFESIONAL".' : ''}</div>
+    <div class="doc-p"><span class="doc-clausula-titulo">CUARTA.</span> - El pago de la comisión lo deberá hacer "EL CLIENTE" a "EL PROFESIONAL" por medio de transferencia bancaria a nombre de INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V., a la firma del contrato de arrendamiento.${esExclusiva ? ' En caso de que "EL CLIENTE" arriende "EL INMUEBLE" directamente o a través de otro intermediario durante la vigencia del presente acuerdo, deberá cubrir íntegramente la comisión pactada a "EL PROFESIONAL".' : ''}</div>
 
     <div class="doc-p"><span class="doc-clausula-titulo">QUINTA.</span> Las partes convienen en someterse a las normas vigentes en la Ciudad de México, renunciando a cualquier otra en razón de sus domicilios presentes o futuros.</div>
 
     <div class="doc-p"><span class="doc-clausula-titulo">SEXTA.</span> Las Partes señalan como domicilio para oír notificaciones los siguientes:</div>
     <div class="doc-p"><strong>EL PROFESIONAL:</strong> San Francisco No. 25 Piso 2, interior 201, Col. Del Valle, Benito Juárez 03103, CDMX</div>
-    <div class="doc-p"><strong>EL CLIENTE:</strong> ${campo(domicilio,'Dirección del cliente arrendador')}.</div>
+    ${domiciliosClientesHTML}
 
     <div class="doc-p"><span class="doc-clausula-titulo">SÉPTIMA.</span> Aviso de Privacidad. Las partes aceptan que los datos personales establecidos en el presente instrumento se utilizan únicamente para su objeto, absteniéndose de difundirlos a terceros bajo pena de cubrir daños, perjuicios, multas y/o sanciones que establezcan las leyes mexicanas.</div>
 
@@ -1961,6 +1960,10 @@ function abrirDocumentoGuardado(row, marcar) {
     renderClientesFields();
     (datos.clientes || []).forEach((val, i) => {
       const el = document.getElementById('f-cliente' + i);
+      if (el) el.value = val;
+    });
+    (datos.domiciliosClientes || []).forEach((val, i) => {
+      const el = document.getElementById(i === 0 ? 'f-domicilio' : 'f-domicilio-cliente' + i);
       if (el) el.value = val;
     });
     updateMontoLetra();
@@ -2327,6 +2330,7 @@ function datosActuales() {
   CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
   const n = parseInt(g('f-num-clientes') || '1') || 1;
   datos.clientes = Array.from({ length: n }, (_, i) => g('f-cliente' + i));
+  datos.domiciliosClientes = Array.from({ length: n }, (_, i) => g(i === 0 ? 'f-domicilio' : 'f-domicilio-cliente' + i));
   return datos;
 }
 

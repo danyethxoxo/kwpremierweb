@@ -9,16 +9,9 @@
 <title>Firmas Digitales</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
-<script>
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
-      location.replace('/login.html');
-    }
-  }, 4000);
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/auth-guard.js"></script>
+<script src="/assets/js/kw-session.js?v=20261001"></script>
+<script src="/assets/js/auth-guard.js?v=20261001"></script>
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
@@ -214,6 +207,13 @@
   .firmante-nom { flex: 1 1 auto; min-width: 0; }
   .firmante-cola { display: flex; gap: 8px; align-items: center; }
   .firmante-mail { flex: 1 1 auto; min-width: 0; }
+  /* Las dos acciones del editor de firmas comparten una fila,
+     también en celular, debajo del correo para conservar su ancho. */
+  .firmante-acciones { display: flex; gap: 8px; align-items: stretch; margin-top: 9px; }
+  .firmante-acciones > .firmante-fijar,
+  .firmante-acciones > .firmante-verif { flex: 1 1 0; min-width: 0; }
+  .firmante-acciones .firmante-fijar { height: 40px; justify-content: center; }
+  .firmante-acciones .verif-btn { width: 100%; justify-content: center; }
 
   .firmante-quitar {
     flex: 0 0 auto;
@@ -1731,8 +1731,7 @@
      opciones que cuestan dinero: quien las prende tiene que saber cuál
      está prendiendo sin tener que investigarlo. */
   .firmante-verif {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px; margin-top: 9px;
+    display: flex; margin: 0;
   }
   .verif-btn {
     display: flex; align-items: center; gap: 7px;
@@ -3495,25 +3494,21 @@
       '</div>' +
       '<div class="firmante-cola">' +
         '<input type="email" class="kw-input firmante-mail" placeholder="correo@ejemplo.com" value="' + escapar(correo || '') + '">' +
+      '</div>' +
+      '<div class="firmante-acciones">' +
       '<button type="button" class="firmante-fijar">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M3 17c3.5 0 3.5-10 7-10s3.5 10 7 10"/><line x1="3" y1="21" x2="21" y2="21"/>' +
         '</svg><span class="rotulo">Fijar firma</span><span class="cuenta">0</span>' +
       '</button>' +
-      '</div>' +
-      // Las verificaciones, como iconos que se prenden y apagan. Todas
-      // arrancan apagadas: cada una se cobra aparte y por firmante.
-      //
-      // Las tres primeras son el mismo campo de weetrust (identification),
-      // que solo admite un valor, así que prender una apaga las otras.
-      // Background Check es aparte y solo tiene sentido junto a la
-      // facial, que es lo que weetrust exige.
-      '<div class="firmante-verif">' + VERIFICACIONES.map((v) =>
+      // Solo Foto ID se puede solicitar en nuevos envíos.
+      // El catálogo completo se conserva para mostrar el historial.
+      '<div class="firmante-verif">' + VERIFICACIONES.filter((v) => v.id === 'face').map((v) =>
         '<button type="button" class="verif-btn" data-verif="' + v.id + '"' +
           ' data-grupo="' + v.grupo + '" title="' + v.titulo + '" aria-label="' + v.titulo + '">' +
           v.icono + '<span class="verif-txt">' + v.rotulo + '</span>' +
         '</button>').join('') +
-      '</div>';
+      '</div></div>';
     fila.querySelector('.firmante-fijar').addEventListener('click', () => armarColocacion(fila));
 
     fila.querySelector('.firmante-quitar').addEventListener('click', () => {
@@ -3532,34 +3527,30 @@
 
     fila.querySelectorAll('.verif-btn').forEach((b) => {
       b.addEventListener('click', () => {
-        const prendido = b.classList.toggle('activo');
-
-        // Las tres de identificación son el mismo campo en weetrust y
-        // solo cabe un valor, así que prender una apaga a sus hermanas.
-        if (prendido && b.dataset.grupo === 'ident') {
-          fila.querySelectorAll('.verif-btn[data-grupo="ident"]').forEach((otro) => {
-            if (otro !== b) otro.classList.remove('activo');
-          });
-        }
-        ajustarBackgroundCheck(fila);
+        b.classList.toggle('activo');
+        ajustarVerificacionesFirmante(fila);
       });
     });
 
-    ajustarBackgroundCheck(fila);
+    fila.querySelector('.firmante-mail').addEventListener('input', () => ajustarVerificacionesFirmante(fila));
+    ajustarVerificacionesFirmante(fila);
     return fila;
   }
 
-  // weetrust solo hace el Background Check cuando la verificación es la
-  // facial. Se apaga el botón en vez de dejar prenderlo y que el envío
-  // truene después: el error llegaría cuando la persona ya llenó todo.
-  function ajustarBackgroundCheck(fila) {
-    const facial = fila.querySelector('.verif-btn[data-verif="face"]');
-    const check = fila.querySelector('.verif-btn[data-verif="check"]');
-    if (!facial || !check) return;
+  function permiteFotoId(correo) {
+    return !['gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx']
+      .includes(String(correo || '').trim().toLowerCase());
+  }
 
-    const hayFacial = facial.classList.contains('activo');
-    check.disabled = !hayFacial;
-    if (!hayFacial) check.classList.remove('activo');
+  function ajustarVerificacionesFirmante(fila) {
+    const permitido = permiteFotoId(fila.querySelector('.firmante-mail').value);
+    const caja = fila.querySelector('.firmante-verif');
+    caja.hidden = !permitido;
+    caja.style.display = permitido ? '' : 'none';
+    caja.querySelectorAll('.verif-btn').forEach((boton) => {
+      boton.disabled = !permitido;
+      if (!permitido) boton.classList.remove('activo');
+    });
   }
 
   function marcarUnico() {
@@ -3621,13 +3612,13 @@
 
   function leerFirmantes() {
     return Array.from($('firmantes').querySelectorAll('.firmante-fila')).map((f) => {
-      const ident = f.querySelector('.verif-btn[data-grupo="ident"].activo');
-      const check = f.querySelector('.verif-btn[data-verif="check"].activo');
+      ajustarVerificacionesFirmante(f);
+      const ident = f.querySelector('.verif-btn[data-verif="face"].activo');
       return {
         nombre: f.querySelector('.firmante-nom').value.trim(),
         correo: f.querySelector('.firmante-mail').value.trim(),
         identificacion: ident ? ident.dataset.verif : '',
-        check: !!check,
+        check: false,
       };
     }).filter((f) => f.nombre || f.correo);
   }
@@ -4799,6 +4790,7 @@
           const b = fila.querySelector('[data-verif="check"]');
           if (b) b.classList.add('activo');
         }
+        ajustarVerificacionesFirmante(fila);
       });
     } else {
       agregarFirmante('', '');
@@ -5728,6 +5720,7 @@
         if (vacia) {
           vacia.querySelector('.firmante-nom').value = b.dataset.nombre;
           vacia.querySelector('.firmante-mail').value = b.dataset.correo;
+          ajustarVerificacionesFirmante(vacia);
         } else {
           agregarFirmante(b.dataset.nombre, b.dataset.correo);
         }

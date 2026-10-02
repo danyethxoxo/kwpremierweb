@@ -272,7 +272,7 @@
      la lista hace scroll, así lo de arriba sigue a la mano sin tener
      que subir hasta el principio. */
   #modal-verificar .modal-box {
-    max-width: 680px; max-height: 86vh;
+    max-width: 1120px; height: 92vh; height: 92dvh; max-height: calc(100dvh - 40px);
     display: flex; flex-direction: column; overflow: hidden;
   }
   .verif-cabeza { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sp-3); flex-shrink: 0; }
@@ -290,19 +290,27 @@
   .verif-todos-marca {
     display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     font-size: 12.5px; color: var(--muted); font-weight: 700;
-    padding: 0 2px var(--sp-2); cursor: pointer;
+    padding: 0 12px var(--sp-2); cursor: pointer;
   }
   .verif-todos-marca input, .verif-marca input {
-    width: 16px; height: 16px; accent-color: var(--red); cursor: pointer;
+    width: 16px; height: 16px; margin: 0; flex: 0 0 16px; accent-color: var(--red); cursor: pointer;
   }
 
   .verif-barra-seleccion {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
     padding: 9px 12px; margin-bottom: var(--sp-2);
-    border-radius: var(--r-campo); background: #fff5f5; border: 1px solid #f0cfcf;
-    font-size: 12.5px; font-weight: 700; color: var(--red);
+    border-radius: var(--r-campo); background: var(--lienzo); border: 1px solid var(--border);
+    font-size: 12.5px; font-weight: 500; color: var(--text);
   }
-  .verif-barra-seleccion .verif-todo { margin-left: 0; width: auto; padding: 0 11px; gap: 6px; }
+  /* El desglose necesita espacio propio para mostrar el resultado por cuenta. */
+  .verif-cuentas-detalle { display: grid; gap: 5px; margin-top: 9px; font-size: 11px; }
+  .verif-cuenta-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; }
+  .verif-cuenta-nombre { min-width: 220px; color: var(--muted); overflow-wrap: anywhere; }
+  .verif-cuenta-estado { font-weight: 700; color: var(--muted); }
+  .verif-cuenta-estado.si { color: #1a7a1a; }
+  .verif-barra-seleccion .verif-todo { flex: 1 1 auto; }
+  #verif-seleccion-num { flex: 0 0 100%; }
+  .verif-ayuda { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 
   #verificar-msg { flex-shrink: 0; }
   /* Al final de la lista el scroll no se encadena a la página de atrás,
@@ -318,7 +326,7 @@
   .verif-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; }
   .verif-item + .verif-item { border-top: 1px solid var(--border); }
   .verif-item.marcado { background: #fff7f7; }
-  .verif-marca { display: flex; padding-top: 3px; }
+  .verif-marca { display: flex; align-items: center; padding: 0; }
   .verif-cuerpo { flex: 1; min-width: 0; }
   .verif-nombre { display: block; font-weight: 700; font-size: 13.5px; }
   .verif-correo { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
@@ -328,25 +336,27 @@
      apagado si no (picarlo lo da). */
   .verif-chip {
     display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: var(--r-pastilla);
+    padding: 8px 12px; min-height: 36px; border-radius: 9px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 11.5px; font-weight: 700;
+    font-family: inherit; font-size: 11.5px; font-weight: 500;
     white-space: nowrap; cursor: pointer;
     transition: background var(--t-rapido), border-color var(--t-rapido), color var(--t-rapido);
   }
   .verif-chip svg { width: 11px; height: 11px; }
   .verif-chip.si { color: #1a7a1a; border-color: #cfe9d2; background: #f2fbf3; }
-  .verif-chip.si:hover { border-color: var(--red); color: var(--red); background: #fdeaea; }
+  button.verif-chip.si:hover { border-color: var(--red); color: var(--red); background: #fdeaea; }
+  span.verif-chip { cursor: default; }
   .verif-chip.no { color: #8d9299; }
   .verif-chip.no:hover:not(:disabled) { border-color: #1a7a1a; color: #1a7a1a; background: #f2fbf3; }
   .verif-chip:disabled { opacity: 0.45; cursor: default; }
+  .verif-chip.procesando { color: var(--muted); background: var(--lienzo); border-color: var(--border); opacity: 1; }
 
-  .verif-acciones { display: flex; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+  .verif-acciones { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; padding-top: 2px; }
   .verif-todo {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%;
+    min-height: 38px; padding: 8px 12px; gap: 6px; border-radius: 9px;
     border: 1.5px solid var(--border); background: #fff;
-    font-family: inherit; font-size: 12px; font-weight: 700;
+    font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1.25;
     cursor: pointer; transition: background var(--t-rapido), border-color var(--t-rapido);
   }
   .verif-todo svg { width: 14px; height: 14px; }
@@ -355,23 +365,38 @@
   .verif-todo.quitar { color: var(--red); }
   .verif-todo.quitar:hover:not(:disabled) { background: #fdeaea; border-color: var(--red); }
   .verif-todo:disabled { opacity: 0.35; cursor: default; }
+  .verif-todo:focus-visible, .verif-chip:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  #modal-verificar[aria-busy="true"] .verif-barra-seleccion { opacity: 0.55; }
 
   @media (max-width: 640px) {
     .verif-item { flex-wrap: wrap; }
-    .verif-acciones { margin-left: auto; }
+    .verif-acciones { flex: 1 1 100%; flex-direction: row; margin-left: 26px; }
+    .verif-acciones .verif-todo { flex: 1; }
+    .verif-barra-seleccion .verif-todo { flex-basis: 100%; }
+  }
+
+  /* Tarjetas compartidas, con columnas y acciones propias del modal de accesos. */
+  #modal-verificar h3 { flex-shrink: 0; }
+  .verif-lista { display: grid; gap: 10px; border: 0; background: transparent; overflow: visible; }
+  .verif-item.kw-fila { display: block; padding: 0; }
+  .verif-item + .verif-item { border-top: 1px solid var(--border); }
+  .verif-renglon { display: flex; align-items: center; gap: 10px; padding: 12px; }
+  .verif-desplegar { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+  .verif-renglon .verif-cuerpo { flex: 1 1 240px; }
+  .verif-renglon .verif-acciones { flex-direction: row; align-items: center; gap: 5px; padding: 0; margin: 0; }
+  .verif-renglon .verif-chip, .verif-renglon .verif-todo { min-height: 34px; padding: 6px 8px; font-size: 11px; white-space: nowrap; flex: none; }
+  .verif-detalle { border-top: 1px solid var(--border); padding: 12px 38px; background: var(--lienzo); font-size: 11.5px; color: var(--muted); }
+  .verif-fechas-accesos { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: inherit; }
+  .verif-detalle[hidden] { display: none; }
+  @media (max-width: 1000px) {
+    .verif-renglon { flex-wrap: wrap; }
+    .verif-renglon .verif-acciones { flex: 0 0 calc(100% - 26px); margin-left: 26px; overflow-x: auto; padding-bottom: 4px; }
   }
 
 </style>
-<script>
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
-      location.replace('/login.html');
-    }
-  }, 4000);
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/auth-guard.js"></script>
+<script src="/assets/js/kw-session.js?v=20261001"></script>
+<script src="/assets/js/auth-guard.js?v=20261001"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
@@ -1532,6 +1557,7 @@
   <!-- Modal: revisar y mover los accesos de Google -->
   <div id="modal-verificar" class="modal-overlay" style="display:none;">
     <div class="modal-box">
+      <h3>Accesos de Google</h3>
       <div class="verif-cabeza">
         <div class="buscador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1544,18 +1570,18 @@
 
       <label class="verif-todos-marca">
         <input type="checkbox" id="verif-marcar-todos" />
-        <span>Seleccionar todos los que se ven</span>
+        <span>Seleccionar todo</span>
       </label>
 
       <div class="verif-barra-seleccion" id="verif-seleccion" style="display:none;">
         <span id="verif-seleccion-num"></span>
         <button type="button" class="verif-todo dar" id="verif-dar-todos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          Dar todos los accesos
+          Dar accesos
         </button>
         <button type="button" class="verif-todo quitar" id="verif-quitar-todos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          Quitar todos los accesos
+          Retirar Drive y Calendario
         </button>
       </div>
 
@@ -2420,15 +2446,16 @@
     tabs.setAttribute('data-kw-tabs', 'asesores-paneles');
     window.kwUI.tabs(document.querySelector('[data-panel="asesores"]'));
 
-    grupoActivo = gruposAsesores.length ? gruposAsesores[0].clave : '';
+    grupoActivo = gruposAsesores.some(function (g) { return g.clave === grupoActivo; })
+      ? grupoActivo : (gruposAsesores.length ? gruposAsesores[0].clave : '');
     mostrarGrupoAsesores(grupoActivo);
-    tabs.addEventListener('click', function (e) {
+    tabs.onclick = function (e) {
       const b = e.target.closest('.kw-tab');
       if (!b) return;
       grupoActivo = b.dataset.tab;
       mostrarGrupoAsesores(grupoActivo);
       actualizarBarra();
-    });
+    };
   }
 
   function actualizarBarra() {
@@ -2576,7 +2603,7 @@
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
+            (estado === null || (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
         '</label>' +
@@ -2630,8 +2657,8 @@
             (completo ? ICONO_LISTO : '') + 'Accesos</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
     const opcionBaja = !esBaja
-      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Dar de baja</button>'
-      : '';
+      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
+      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (g.clave === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -2805,7 +2832,7 @@
     });
     const hayParaQuitar = seleccionados.some(function (check) {
       const acceso = check.closest('.acceso');
-      return acceso && acceso.classList.contains('si');
+      return check.value !== 'contactos' && acceso && acceso.classList.contains('si');
     });
     const dar = caja.querySelector('.acceso-seleccion-accion.dar');
     const quitar = caja.querySelector('.acceso-seleccion-accion.quitar');
@@ -3006,6 +3033,10 @@
   // más no debe bastar.
   const NOMBRE_ACCESO = { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' };
 
+  function pasosDeOperacion(pasos, quitar) {
+    return quitar ? (pasos || ['drive', 'calendario']).filter(function (paso) { return paso !== 'contactos'; }) : pasos;
+  }
+
   function textoDeAccesos(pasos) {
     if (!pasos) return 'los tres accesos';
     return pasos.map(function (p) { return NOMBRE_ACCESO[p] || p; }).join(', ');
@@ -3028,6 +3059,8 @@
   }
 
   async function moverAcceso(correo, pasos, quitar) {
+    pasos = pasosDeOperacion(pasos, quitar);
+    if (quitar && !pasos.length) return avisoAsesores('El contacto se conserva. Selecciona Drive o Calendario para retirar accesos.', 'error');
     const encontrado = personaPorCorreo(correo);
     if (!encontrado) return;
     const { persona, grupo } = encontrado;
@@ -3108,9 +3141,12 @@
 
     const id = boton.dataset.bajaAsesor;
     const destino = boton.dataset.bajaGrupo || 'asesor_baja';
+    const quitar = esDeBaja(destino);
     const registro = bdAsesores.find(function (a) { return String(a.id) === String(id); });
     const nombre = registro && registro.nombre ? registro.nombre : 'este asesor';
-    const confirmado = await window.kwUI.confirm('¿Dar de baja a ' + nombre + '?');
+    const confirmado = await window.kwUI.confirm(quitar
+      ? '¿Dar de baja a ' + nombre + '? Se retirarán Drive y Calendario y se conservará su contacto.'
+      : '¿Dar de alta a ' + nombre + '? Se creará el contacto y se darán Drive y Calendario en ambas cuentas.');
     if (!confirmado) {
       delete boton.dataset.procesando;
       return;
@@ -3118,6 +3154,13 @@
 
     boton.disabled = true;
     try {
+      if (!registro || !registro.correo) throw new Error('Falta el correo para sincronizar los accesos');
+      const accesos = await llamarAlta({ accion: 'acceso', quitar: quitar, todasCuentas: true,
+        pasos: quitar ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario'],
+        personas: [{ correo: registro.correo, nombre: registro.nombre, telefono: registro.telefono,
+          cumpleanos: registro.cumpleanos, grupo: destino }] });
+      aplicarEstado(accesos.estado);
+      if (!accesos.ok) throw new Error(mensajeDeResultado(accesos, quitar));
       const { error } = await window.kwSupabase
         .from('asesores')
         .update({ grupo: destino })
@@ -3141,7 +3184,7 @@
     } catch (error) {
       boton.disabled = false;
       delete boton.dataset.procesando;
-      avisoAsesores('No se pudo dar de baja: ' + (error.message || 'error desconocido') + '.', 'error');
+      avisoAsesores('No se pudo dar de ' + (quitar ? 'baja' : 'alta') + ': ' + (error.message || 'error desconocido') + '.', 'error');
     }
   }
 
@@ -3162,12 +3205,18 @@
   // sale la lista, pero sirve para poder explicar por qué una hoja no
   // trajo a nadie.
   let hojasDelLibro = {};
+  let recargaAsesoresEnCurso = false;
+  let ultimaLecturaLibro = 0;
+  let puedeSincronizarLibro = false;
 
   // El camino es: se lee el libro, se guarda en la base, y de la base
   // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
   // ya no deja al panel sin lista: lo que se ve es lo que la casa tiene
   // guardado, y el libro nada más lo alimenta mientras siga vivo.
   async function cargarAsesores(recargarLibro) {
+    if (recargaAsesoresEnCurso) return;
+    recargaAsesoresEnCurso = true;
+    try {
     const op = document.getElementById('op-recargar');
     const paneles = document.getElementById('asesores-paneles');
     op.disabled = true;
@@ -3199,14 +3248,10 @@
         armarTabsAsesores();
         pintarGrupos();
         cargarEstadoGoogle();
-        terminarRecarga();
-        return;
       }
     }
 
-    // Google queda para la recarga explícita y como respaldo de una base
-    // todavía vacía. Así se conserva la sincronización sin frenar el uso
-    // normal del Panel Master.
+    // La copia local se muestra primero; el libro siempre se sincroniza después.
     let gruposLibro = null;
     let fallaLibro = null;
     try {
@@ -3222,6 +3267,7 @@
         hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
       });
       await sincronizarBaseDesdeLibro(gruposLibro);
+      ultimaLecturaLibro = Date.now();
     } catch (err) {
       fallaLibro = err;
     }
@@ -3283,7 +3329,19 @@
         : '',
       fallaLibro ? 'error' : '');
     terminarRecarga();
+    } finally {
+      recargaAsesoresEnCurso = false;
+      terminarRecarga();
+    }
   }
+
+  function actualizarLibroAutomaticamente() {
+    if (!puedeSincronizarLibro || document.hidden || recargaAsesoresEnCurso || verificacionOcupada) return;
+    if (Date.now() - ultimaLecturaLibro < 120000) return;
+    cargarAsesores(true);
+  }
+  setInterval(actualizarLibroAutomaticamente, 120000);
+  document.addEventListener('visibilitychange', actualizarLibroAutomaticamente);
 
   function terminarRecarga() {
     const op = document.getElementById('op-recargar');
@@ -3359,6 +3417,8 @@
   // varios seleccionados.
   let ultimaVerificacion = [];
   let seleccionados = new Set();
+  let verificacionOcupada = false;
+  const verifAbiertos = new Set();
 
   async function abrirVerificacion() {
     const cont = document.getElementById('verificar-cont');
@@ -3417,46 +3477,82 @@
       const daDeAlta = grupoDaDeAlta(p.grupo);
       const chips = ACCESOS.map(function (a) {
         const tiene = p[a.clave];
+        if (a.clave === 'contactos' && tiene) return '<span class="verif-chip si" title="El contacto se conserva al retirar accesos">' + ICONO_LISTO + 'Contacto guardado</span>';
         const bloqueado = !tiene && !daDeAlta;
         return '<button type="button" class="verif-chip ' + (tiene ? 'si' : 'no') + '"' +
           ' data-correo="' + escapeHtml(p.correo) + '" data-acceso="' + a.clave + '"' +
           ' data-hacer="' + (tiene ? 'quitar' : 'dar') + '"' + (bloqueado ? ' disabled' : '') +
           ' title="' + (bloqueado ? 'Dado de baja' : (tiene ? 'Quitar ' : 'Dar ') + a.nombre) + '">' +
-          (tiene ? ICONO_LISTO : ICONO_EQUIS) + a.nombre + '</button>';
+          (tiene ? ICONO_LISTO : ICONO_EQUIS) + a.nombre + (a.clave === 'contactos' ? '' : (tiene ? ': con acceso' : ': sin acceso')) + '</button>';
       }).join('');
 
       const faltan = daDeAlta && ACCESOS.some(function (a) { return !p[a.clave]; });
-      const alguno = ACCESOS.some(function (a) { return p[a.clave]; });
-      const desglose = desgloseContactosHtml({ contactosPorCuenta: p.contactosPorCuenta }, 'verif-cuentas');
-
-      return '<div class="verif-item' + (marcado ? ' marcado' : '') + '">' +
+      const alguno = p.drive || p.calendario;
+      const abierto = verifAbiertos.has(p.correo);
+      return '<div class="kw-fila verif-item' + (marcado ? ' marcado' : '') + (abierto ? ' abierta' : '') + '">' +
+        '<div class="verif-renglon" data-tarjeta="' + escapeHtml(p.correo) + '">' +
         '<label class="verif-marca">' +
           '<input type="checkbox" data-marcar="' + escapeHtml(p.correo) + '"' + (marcado ? ' checked' : '') + ' />' +
         '</label>' +
         '<div class="verif-cuerpo">' +
-          '<span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
+          '<button type="button" class="verif-desplegar" data-detalle="' + escapeHtml(p.correo) + '" aria-expanded="' + abierto + '"><span class="verif-nombre">' + escapeHtml(p.nombre || p.correo) + '</span>' +
           '<span class="verif-correo">' + escapeHtml(p.correo) +
-            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span>' +
-          '<div class="verif-chips">' + chips + '</div>' + desglose +
+            (p.grupoTitulo ? ' · ' + escapeHtml(p.grupoTitulo) : '') + '</span></button>' +
         '</div>' +
-        '<div class="verif-acciones">' +
+        '<div class="verif-acciones">' + chips +
           '<button type="button" class="verif-todo dar" data-correo="' + escapeHtml(p.correo) + '"' +
-            ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Dar los tres accesos">' + ICONO_LISTO + '</button>' +
+            ' data-hacer="dar"' + (faltan ? '' : ' disabled') + ' title="Agregar contacto y dar Drive y Calendario">' + ICONO_LISTO + '<span>Dar accesos</span></button>' +
           '<button type="button" class="verif-todo quitar" data-correo="' + escapeHtml(p.correo) + '"' +
-            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Quitar los tres accesos">' + ICONO_EQUIS + '</button>' +
-        '</div>' +
+            ' data-hacer="quitar"' + (alguno ? '' : ' disabled') + ' title="Retirar Drive y Calendario de ambas cuentas; conservar contacto">' + (alguno ? ICONO_EQUIS : ICONO_LISTO) + '<span>' + (alguno ? 'Retirar accesos' : 'Sin accesos') + '</span></button>' +
+        '</div></div>' +
+        '<div class="verif-detalle"' + (abierto ? '' : ' hidden') + '>' + detallePersonaVerifHtml(p) + '</div>' +
       '</div>';
     }).join('') + '</div>';
 
     pintarSeleccion();
   }
 
+  function detallePersonaVerifHtml(persona) {
+    // Las fechas del asesor no son fechas de permisos. No se sustituyen entre sí.
+    return '<div class="verif-fechas-accesos"><span>Accesos otorgados: sin fecha registrada</span>' +
+      '<span>Accesos retirados: sin fecha registrada</span></div>';
+  }
+
+  function desgloseAccesosVerifHtml(persona) {
+    if (!esMaster() || !persona.drivePorCuenta || !persona.calendarioPorCuenta) {
+      return desgloseContactosHtml(persona, 'verif-cuentas');
+    }
+    return '<div class="verif-cuentas-detalle">' + cuentasContactosInfo.filter(function (cuenta) {
+      return cuenta.accesosCompletos;
+    }).map(function (cuenta) {
+      const estados = ['contactos', 'drive', 'calendario'].map(function (clave) {
+        const tiene = (persona[clave + 'PorCuenta'] || {})[cuenta.clave];
+        const conocido = typeof tiene === 'boolean';
+        return '<span class="verif-cuenta-estado' + (tiene === true ? ' si' : '') + '">' +
+          (clave === 'contactos' ? 'Contacto' : clave === 'drive' ? 'Drive' : 'Calendario') + ': ' +
+          (conocido ? (tiene ? 'con acceso' : 'sin acceso') : 'por comprobar') + '</span>';
+      }).join('');
+      return '<div class="verif-cuenta-fila"><span class="verif-cuenta-nombre">' + escapeHtml(cuenta.nombre) + '</span>' + estados + '</div>';
+    }).join('') + '</div>';
+  }
+
   function pintarSeleccion() {
     const barra = document.getElementById('verif-seleccion');
     const n = seleccionados.size;
     barra.style.display = n ? '' : 'none';
+    const visibles = verifVisibles();
+    const marcados = visibles.filter(function (p) { return seleccionados.has(p.correo); }).length;
+    const todos = document.getElementById('verif-marcar-todos');
+    todos.checked = visibles.length > 0 && marcados === visibles.length;
+    todos.indeterminate = marcados > 0 && marcados < visibles.length;
+    todos.disabled = verificacionOcupada || !visibles.length;
     if (n) document.getElementById('verif-seleccion-num').textContent =
-      n + (n === 1 ? ' seleccionado' : ' seleccionados');
+      n + (n === 1 ? ' seleccionado' : ' seleccionados') + (n > marcados ? ' (' + (n - marcados) + ' fuera de la búsqueda)' : '');
+    const elegidos = ultimaVerificacion.filter(function (p) { return seleccionados.has(p.correo); });
+    document.getElementById('verif-dar-todos').disabled = verificacionOcupada || !elegidos.some(function (p) {
+      return grupoDaDeAlta(p.grupo) && ACCESOS.some(function (a) { return !p[a.clave]; });
+    });
+    document.getElementById('verif-quitar-todos').disabled = verificacionOcupada || !elegidos.some(function (p) { return p.drive || p.calendario; });
   }
 
   function mostrarMsgVerif(texto, clase) {
@@ -3465,10 +3561,32 @@
     msg.className = 'msg ' + clase;
   }
 
+  function marcarVerifProcesando(correos, pasos, quitar) {
+    document.querySelectorAll('#verificar-cont .verif-item').forEach(function (item) {
+      const marca = item.querySelector('input[data-marcar]');
+      if (!marca || !correos.includes(marca.dataset.marcar)) return;
+      item.querySelectorAll('button').forEach(function (boton) { boton.disabled = true; });
+      item.querySelectorAll('button.verif-chip').forEach(function (boton) {
+        const acceso = boton.dataset.acceso;
+        if (pasos && !pasos.includes(acceso)) return;
+        boton.classList.remove('si', 'no');
+        boton.classList.add('procesando');
+        boton.innerHTML = ICONO_RELOJ + (quitar ? 'Retirando ' : 'Otorgando ') + NOMBRE_ACCESO[acceso] + '…';
+      });
+    });
+  }
+
   // Cambia accesos desde el modal: a una persona o a las seleccionadas.
   async function accesoDesdeVerif(correos, pasos, quitar) {
+    if (verificacionOcupada) return;
+    pasos = pasosDeOperacion(pasos, quitar);
+    if (quitar && !pasos.length) return mostrarMsgVerif('El contacto se conserva.', '');
+    verificacionOcupada = true;
+    pintarSeleccion();
+    try {
     const gente = correos.map(function (c) {
       const fila = ultimaVerificacion.find(function (p) { return p.correo === c; });
+      if (fila && quitar && !pasos.some(function (paso) { return fila[paso]; })) return null;
       // Dar accesos se salta a los de baja; quitar sí les aplica.
       if (fila && !quitar && !grupoDaDeAlta(fila.grupo)) return null;
       return fila ? {
@@ -3477,7 +3595,7 @@
       } : null;
     }).filter(Boolean);
     if (!gente.length) {
-      mostrarMsgVerif('Nadie de los seleccionados puede recibir accesos: los de baja se saltan.', 'error');
+      mostrarMsgVerif(quitar ? 'Las personas seleccionadas ya no tienen esos accesos.' : 'Nadie de los seleccionados puede recibir accesos: los de baja se saltan.', 'error');
       return;
     }
 
@@ -3488,6 +3606,9 @@
 
     const cont = document.getElementById('verificar-cont');
     cont.classList.add('ocupado');
+    document.getElementById('modal-verificar').setAttribute('aria-busy', 'true');
+    marcarVerifProcesando(gente.map(function (p) { return p.correo; }), pasos, quitar);
+    mostrarMsgVerif(quitar ? 'Retirando accesos y comprobando el resultado en Google…' : 'Otorgando accesos…', 'ok');
     try {
       const data = await llamarAlta({
         accion: 'acceso', quitar: quitar, pasos: pasos || undefined, personas: gente,
@@ -3499,15 +3620,22 @@
         if (fila) {
           fila.contactos = e.contactos; fila.drive = e.drive; fila.calendario = e.calendario;
           fila.contactosPorCuenta = e.contactosPorCuenta || fila.contactosPorCuenta;
+          fila.drivePorCuenta = e.drivePorCuenta || fila.drivePorCuenta;
+          fila.calendarioPorCuenta = e.calendarioPorCuenta || fila.calendarioPorCuenta;
         }
       });
       pintarVerificacion();
       pintarGrupos();
-      data.ok ? mostrarMsgVerif('', '') : mostrarMsgVerif(mensajeDeResultado(data, quitar), 'error');
+      mostrarMsgVerif(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
     } catch (err) {
       mostrarMsgVerif(err.message || 'No se pudo cambiar el acceso.', 'error');
     } finally {
       cont.classList.remove('ocupado');
+    }
+    } finally {
+      verificacionOcupada = false;
+      document.getElementById('modal-verificar').setAttribute('aria-busy', 'false');
+      pintarVerificacion();
     }
   }
 
@@ -3516,7 +3644,18 @@
     const cont = document.getElementById('verificar-cont');
 
     cont.addEventListener('click', function (e) {
-      const chip = e.target.closest('.verif-chip');
+      const detalle = e.target.closest('[data-detalle]') ||
+        (!e.target.closest('button, input, label, .verif-chip') && e.target.closest('[data-tarjeta]'));
+      if (detalle) {
+        const correo = detalle.dataset.detalle || detalle.dataset.tarjeta;
+        if (verifAbiertos.has(correo)) verifAbiertos.delete(correo);
+        else verifAbiertos.add(correo);
+        const posicion = cont.scrollTop;
+        pintarVerificacion();
+        cont.scrollTop = posicion;
+        return;
+      }
+      const chip = e.target.closest('button.verif-chip');
       if (chip) return accesoDesdeVerif([chip.dataset.correo], [chip.dataset.acceso], chip.dataset.hacer === 'quitar');
       const todo = e.target.closest('.verif-todo');
       if (todo) return accesoDesdeVerif([todo.dataset.correo], null, todo.dataset.hacer === 'quitar');
@@ -3536,7 +3675,7 @@
 
     document.getElementById('verif-marcar-todos').addEventListener('change', function (e) {
       if (e.target.checked) verifVisibles().forEach(function (p) { seleccionados.add(p.correo); });
-      else seleccionados = new Set();
+      else verifVisibles().forEach(function (p) { seleccionados.delete(p.correo); });
       pintarVerificacion();
     });
 
@@ -3585,6 +3724,7 @@
       // Function, que comprueba lo mismo del lado del servidor.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
+      puedeSincronizarLibro = puedeAltas;
       if (!puedeAltas) quitarTabPanel('asesores');
       else document.getElementById('acceso-nuevo-asesor').style.display = '';
 
@@ -3803,9 +3943,8 @@
   // que se ve. Así es como el libro deja de ser el origen sin tener que
   // apagarlo de un día para otro.
   //
-  // Se traga sus propios errores: que la copia falle (todavía no se
-  // corre la migración, se cayó la red) no puede dejar sin lista al
-  // panel, que es a lo que la persona vino.
+  // Si la copia falla, el llamador conserva la lista guardada y avisa
+  // que la sincronización no se completó, en lugar de simular éxito.
   async function sincronizarBaseDesdeLibro(grupos) {
     const personas = [];
     (grupos || []).forEach(function (g) {
@@ -3816,10 +3955,19 @@
     });
     if (!personas.length) return;
     try {
-      const { error } = await window.kwSupabase.rpc('asesores_sincronizar', { p_personas: personas });
-      if (error) throw error;
+      // La RPC actualiza cada fila. Todo el libro junto superaba el límite
+      // de ocho segundos de la base; cada lote conserva su propia transacción.
+      for (let inicio = 0; inicio < personas.length; inicio += 20) {
+        const { error } = await window.kwSupabase.rpc('asesores_sincronizar', { p_personas: personas.slice(inicio, inicio + 20) });
+        if (error) {
+          const detalle = typeof error === 'string' ? error :
+            (error.message || error.details || error.error || (error.code ? 'Código ' + error.code : 'La base no completó la solicitud'));
+          throw new Error('Filas ' + (inicio + 1) + ' a ' + Math.min(inicio + 20, personas.length) + ': ' + detalle);
+        }
+      }
     } catch (e) {
       console.error('No se pudo copiar el libro a la base de asesores:', e);
+      throw new Error('No se pudo sincronizar el Excel con la base: ' + (e.message || String(e)));
     }
   }
 

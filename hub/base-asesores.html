@@ -9,16 +9,9 @@
 <title>Base de asesores</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
-<script>
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('kw-auth-ok')) {
-      console.error('auth-guard.js no respondió a tiempo; redirigiendo al login por seguridad.');
-      location.replace('/login.html');
-    }
-  }, 4000);
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/auth-guard.js"></script>
+<script src="/assets/js/kw-session.js?v=20261001"></script>
+<script src="/assets/js/auth-guard.js?v=20261001"></script>
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20260929a">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
@@ -1546,11 +1539,50 @@
   // Repartir a alguien es cambiarle el grupo. Con eso queda repartido
   // también en las pestañas del Panel, que salen de esta misma tabla.
   async function moverDeGrupo(id, grupo, btn) {
+    if (btn.disabled) return;
     btn.disabled = true;
-    const { error } = await window.kwSupabase.from('asesores').update({ grupo: grupo }).eq('id', id);
-    btn.disabled = false;
-    if (error) { await window.kwUI.alert('No se pudo mover: ' + error.message); return; }
-    if (await leer()) pintar();
+    try {
+      const anterior = asesores.find(function (a) { return String(a.id) === String(id); });
+      if (!anterior) throw new Error('No se encontró al asesor. Actualiza la lista.');
+      await sincronizarAccesosDeEstatus(Object.assign({}, anterior, { grupo: grupo }), anterior);
+      const { error } = await window.kwSupabase.from('asesores').update({ grupo: grupo }).eq('id', id).select('id').single();
+      if (error) throw error;
+      if (await leer()) pintar();
+    } catch (error) {
+      await window.kwUI.alert('No se pudo completar el cambio: ' + error.message);
+    } finally { btn.disabled = false; }
+  }
+
+  async function sincronizarAccesosDeEstatus(fila, anterior) {
+    const grupo = estatusDe(fila);
+    const activo = grupo === 'asesor_activo' || grupo === 'back_office_activo';
+    const baja = grupo === 'asesor_baja' || grupo === 'back_office_baja';
+    const correo = String(fila.correo || '').trim().toLowerCase();
+    const correoAnterior = String(anterior && anterior.correo || '').trim().toLowerCase();
+    if (anterior && estatusDe(anterior) === grupo && correo === correoAnterior) return;
+    if (!activo && !baja) return;
+    if (!correo) throw new Error('Falta el correo de KW para sincronizar los accesos.');
+    if (asesores.some(function (a) { return String(a.correo || '').toLowerCase() === correo && (!anterior || String(a.id) !== String(anterior.id)); })) {
+      throw new Error('Ese correo ya pertenece a otro asesor.');
+    }
+    const llamar = async function (persona, quitar) {
+      const { data, error } = await window.kwSupabase.functions.invoke('hyper-processor', {
+        body: { accion: 'acceso', quitar: quitar, todasCuentas: true,
+          pasos: quitar ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario'],
+          personas: [{ correo: persona.correo, nombre: persona.nombre, telefono: persona.telefono,
+            cumpleanos: persona.cumpleanos, grupo: persona.grupo }] },
+      });
+      if (error) throw new Error('No se pudo sincronizar con Google: ' + error.message);
+      if (!data || !data.ok) {
+        const fallos = (data && data.hechas || []).flatMap(function (h) {
+          return (h.resultados || []).filter(function (r) { return !r.ok; }).map(function (r) { return r.detalle; });
+        });
+        throw new Error('Google no completó los accesos. El estado no se cambió. ' + (fallos.join('; ') || 'Intenta nuevamente.'));
+      }
+    };
+    // Cambiar el correo no debe dejar permisos vigentes en el correo anterior.
+    if (correoAnterior && correoAnterior !== correo) await llamar(anterior, true);
+    await llamar(Object.assign({}, fila, { correo: correo }), baja);
   }
 
   // ── Fechas ────────────────────────────────────────────────────
@@ -1936,6 +1968,7 @@
   }
 
   async function guardarFicha() {
+    if ($('ficha-guardar').disabled) return;
     const a = editando || {};
     const fila = {};
     CAMPOS.forEach(function (par) {
@@ -1969,12 +2002,16 @@
     btn.disabled = true;
     aviso('Guardando...', '');
     let error;
+    try {
+      aviso('Sincronizando accesos y guardando...', '');
+      await sincronizarAccesosDeEstatus(fila, editando);
     if (editando) {
-      ({ error } = await window.kwSupabase.from('asesores').update(fila).eq('id', editando.id));
+      ({ error } = await window.kwSupabase.from('asesores').update(fila).eq('id', editando.id).select('id').single());
     } else {
       fila.origen = 'sitio';
-      ({ error } = await window.kwSupabase.from('asesores').insert(fila));
+      ({ error } = await window.kwSupabase.from('asesores').insert(fila).select('id').single());
     }
+    } catch (e) { error = e; }
     btn.disabled = false;
     if (error) {
       aviso(String(error.message).includes('asesores_correo_unico')

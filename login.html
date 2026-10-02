@@ -234,26 +234,14 @@
     </div>
   </main>
 
+<script src="/assets/js/kw-session.js?v=20261001"></script>
 <script>
   const SUPABASE_URL = 'https://iloetojomzqtadkithtv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_ZvaIC0_lkd6OQ0VMihOvjA_BIgpbClq';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
-  const DEVICE_KEY = 'kw_device_token_v1';
-  let volatileDeviceToken = '';
 
   function getDeviceToken() {
-    try {
-      const stored = localStorage.getItem(DEVICE_KEY);
-      if (/^[A-Za-z0-9_-]{43}$/.test(stored || '')) return stored;
-    } catch (e) {}
-    if (volatileDeviceToken) return volatileDeviceToken;
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    let binary = '';
-    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-    volatileDeviceToken = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    try { localStorage.setItem(DEVICE_KEY, volatileDeviceToken); } catch (e) {}
-    return volatileDeviceToken;
+    return window.kwSession.deviceToken();
   }
 
   function getRedirectTarget() {
@@ -332,15 +320,14 @@
       const { data } = await sb.auth.getSession();
       const sesion = data && data.session;
       if (!sesion) return;
-      let estado;
-      try {
-        estado = await llamarMFA({ accion: 'estado', dispositivo_token: getDeviceToken() }, sesion.access_token);
-      } catch (estadoError) {
-        if (estadoError.status !== 400) throw estadoError;
-        const meta = sesion.user && sesion.user.app_metadata;
-        const activoAnterior = meta && meta.mfa_correo_activo === true;
-        const okAnterior = meta && meta.mfa_correo_ok_hasta;
-        estado = { activo: activoAnterior, verificado: !activoAnterior || (okAnterior && new Date(okAnterior).getTime() > Date.now()) };
+      const estado = await window.kwSession.mfaState(sb);
+      if (estado.sin_sesion || estado.requiere_login) {
+        if (estado.requiere_login) {
+          const { error } = await sb.auth.signOut({ scope: 'local' });
+          if (error) throw error;
+        }
+        showMsg('Inicia sesión para continuar. La contraseña se solicita cada 24 horas.', 'ok');
+        return;
       }
       if (estado.requerido && !estado.activo) {
         mostrarCargando();
@@ -350,7 +337,8 @@
       if (estado.activo && !estado.verificado) {
         mostrarFormMFA();
         try {
-          const envio = await llamarMFA({ accion: 'enviar', dispositivo_token: getDeviceToken() }, sesion.access_token);
+          const { data: actual } = await sb.auth.getSession();
+          const envio = await llamarMFA({ accion: 'enviar', dispositivo_token: getDeviceToken() }, actual.session.access_token);
           document.getElementById('mfa-destino').textContent = 'Te mandamos un código a ' + envio.enviado_a + '. Escríbelo aquí.';
         } catch (err) {
           showMsg(window.kwSecurity.authErrorMessage(err, 'mfa'), 'error');
@@ -377,7 +365,7 @@
   }
 
   function cancelarMFA() {
-    sb.auth.signOut().then(function () { location.reload(); });
+    sb.auth.signOut({ scope: 'local' }).then(function () { location.reload(); });
     return false;
   }
 
