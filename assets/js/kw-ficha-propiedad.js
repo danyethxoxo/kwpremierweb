@@ -37,12 +37,13 @@
     '.kw-ficha-canvas{display:block;width:100%;height:auto;border-radius:7px;box-shadow:0 5px 18px rgba(38,30,30,.18)}',
     '.kw-ficha-cargando{color:#777;font-size:12px;text-align:center;padding:70px 20px}',
     '.kw-ficha-estado{min-height:18px;margin:11px 2px 8px;color:#777;font-size:11.5px;text-align:center}',
+    '.kw-ficha-cargando .kw-loader{min-height:60px;padding:0}.kw-ficha-estado .kw-loader{min-height:36px;height:36px;padding:0;transform:scale(.5)}',
     '.kw-ficha-estado:empty{display:none}.kw-ficha-botones{margin-top:12px}',
     '.kw-ficha-botones{display:grid;grid-template-columns:1fr 1fr;gap:9px}',
     '.kw-ficha-boton{min-height:43px;padding:10px 12px;border-radius:11px;font:600 12.5px Poppins,Arial,sans-serif;',
     'cursor:pointer;transition:filter .15s,transform .12s}',
     '.kw-ficha-boton:active{transform:translateY(1px)}',
-    '.kw-ficha-boton:disabled{cursor:wait;opacity:.55}',
+    '.kw-ficha-boton:disabled{cursor:default;opacity:.55}',
     '.kw-ficha-boton-png{border:1.5px solid #d9d5d3;background:#fff;color:#302c2c}',
     '.kw-ficha-boton-png:hover:not(:disabled){background:#faf8f7;border-color:#bdb7b4}',
     '.kw-ficha-boton-pdf{border:0;background:#cc0000;color:#fff;box-shadow:0 3px 10px rgba(204,0,0,.22)}',
@@ -1020,7 +1021,7 @@
     overlay.innerHTML = '<div class="kw-ficha-dialog" role="dialog" aria-modal="true" aria-labelledby="kw-ficha-titulo">' +
       '<div class="kw-ficha-top"><div class="kw-ficha-titulo" id="kw-ficha-titulo">Ficha técnica</div>' +
       '<button type="button" class="kw-ficha-cerrar" aria-label="Cerrar">' + iconoCerrar() + '</button></div>' +
-      '<div class="kw-ficha-vista"><div class="kw-ficha-cargando">Preparando ficha técnica...</div></div>' +
+      '<div class="kw-ficha-vista"><div class="kw-ficha-cargando"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div></div>' +
       '<div class="kw-ficha-estado" role="status" aria-live="polite"></div>' +
       '<div class="kw-ficha-botones"><button type="button" class="kw-ficha-boton kw-ficha-boton-png" disabled>Descargar PNG</button>' +
       '<button type="button" class="kw-ficha-boton kw-ficha-boton-pdf" disabled>Descargar PDF</button></div>' +
@@ -1098,8 +1099,8 @@
 
     async function descargarFormato(tipo, boton) {
       boton.disabled = true;
-      boton.textContent = tipo === 'png' ? 'Generando PNG...' : 'Generando PDF...';
-      estado.textContent = tipo === 'png' ? 'Generando PDF base y convirtiéndolo a PNG...' : 'Preparando PDF en alta calidad...';
+      boton.setAttribute('aria-busy','true');
+      estado.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try {
         var pdf = await obtenerPDF();
         var blob = tipo === 'png' ? await convertirPNGDesdePDF(pdf) : pdf;
@@ -1108,7 +1109,7 @@
       } catch (error) {
         estado.textContent = error.message || 'No se pudo generar el archivo.';
       } finally {
-        boton.disabled = false;
+        boton.disabled = false; boton.removeAttribute('aria-busy');
         boton.textContent = tipo === 'png' ? 'Descargar PNG' : 'Descargar PDF';
       }
     }

@@ -20,6 +20,11 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   const original=readFileSync(new URL('../supabase/migrations/20261001001343_comprador_matches_guardados.sql',import.meta.url),'utf8');
   await db.exec(original.slice(0,original.indexOf('-- SCHEDULE:')));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003201850_comprador_carga_ligera_y_avisos.sql',import.meta.url),'utf8'));
+  await db.exec(`alter table propiedades add column asesor_kw_id text,add column calle text,add column cp text,add column pais text,add column descripcion text,add column caracteristicas jsonb;
+   create or replace view propiedades_inventario with(security_invoker=true) as select * from propiedades;
+   create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;`);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261003210800_comprador_carrusel_cuatro.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261003215055_comprador_catalogo_directo_y_tarjetas.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
@@ -29,6 +34,7 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,e.revision,resultados]);
   assert.equal((await db.query('select notificado_at from comprador_resultados')).rows[0].notificado_at,null);
   await db.exec(`set role authenticated;set test.uid='${a}'`);
+  await assert.rejects(db.query("select * from comprador_catalogo_calculo('CDMX','venta',0)"));
   assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,1);
   await db.exec(`set test.uid='${b}'`);
   assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,0);

@@ -183,6 +183,11 @@
       ubicaciones = respuesta.data || []; refrescarUbicacion();
     } catch (e) { avisar('No se pudieron cargar las ubicaciones. Recarga para intentar de nuevo.',true); }
   }
+  function animacionCarga(elemento,compacta) {
+    elemento.replaceChildren(); elemento.setAttribute('aria-label','Cargando');
+    var loader = document.createElement('div'); loader.className = 'kw-loader' + (compacta ? ' comprador-loader-mini' : ''); loader.setAttribute('aria-hidden','true');
+    ['uno','dos','tres'].forEach(function (clase) { var circulo = document.createElement('div'); circulo.className = 'circle ' + clase; loader.append(circulo); }); elemento.append(loader);
+  }
   var revisionMatches = 0;
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && !esFormulario && Array.from(estadosServidor.values()).some(function (e) { return e.pendiente; })) cargarInventarioMatches();
@@ -201,7 +206,11 @@
       inventarioMatches = []; errorMatches = false;
       if (anterior !== JSON.stringify(Array.from(estadosServidor.values()))) pintar();
       var pendientes = res.data.some(function (e) { return e.pendiente; });
-      estadoCatalogo.textContent = pendientes ? 'Actualizando las coincidencias guardadas…' : '';
+      estadoCatalogo.replaceChildren(); if (pendientes) animacionCarga(estadoCatalogo,true);
+      res.data.filter(function(e) { return e.calculado_at && (!e.pendiente || e.motivo === 'inventario'); }).slice(0,2).forEach(function(e) {
+        var nivel = Math.max.apply(null,Object.keys(e.niveles || {}).map(Number));
+        if (isFinite(nivel)) window.kwCompradorCargas.pagina(window.kwSupabase,e.perfil_id,e.calculado_at,nivel,0).catch(function() {});
+      });
       clearTimeout(sondeoEstado);
       if (pendientes) sondeoEstado = setTimeout(function () { if (!document.hidden) cargarInventarioMatches(); },5000);
     } catch (e) { if (revision !== revisionMatches) return; console.error('Error al cargar coincidencias:',e); errorMatches = true; pintar(); }
@@ -300,7 +309,7 @@
     var original = p.imagenes && p.imagenes[0], urlFoto = p.miniatura_url || original;
     if (urlFoto && /^https:\/\//i.test(urlFoto)) { var img = document.createElement('img'); img.src = urlFoto; img.loading = 'lazy'; img.decoding = 'async'; img.alt = p.titulo || ''; img.addEventListener('error',function () { if (original && img.src !== original) img.src = original; else { img.remove(); agregarTexto(link,'span','Foto no disponible'); } }); link.append(img); }
     else agregarTexto(link,'span','Foto no disponible');
-    foto.append(link); var badge = agregarTexto(foto,'span',p.operacion === 'renta' ? 'Renta' : 'Venta'); badge.className = 'match-badge';
+    foto.append(link); window.kwCompradorAcciones.agregar(foto,p,function() { return window.kwSitioAsesor.personalizar(p.enlace_kw || enlace,sitioAsesor); }); var badge = agregarTexto(foto,'span',p.operacion === 'renta' ? 'Renta' : 'Venta'); badge.className = 'match-badge';
     agregarTexto(foto,'span',match.porcentaje + '% compatible').className = 'match-score';
     var body = document.createElement('div'); body.className = 'match-body';
     var precio = agregarTexto(body,'div',Number(p.precio) > 0 ? new Intl.NumberFormat('es-MX',{style:'currency',currency:p.moneda || 'MXN',maximumFractionDigits:0}).format(p.precio) : 'Precio a consultar'); precio.className = 'match-precio';
@@ -308,7 +317,8 @@
     titulo.title = p.titulo || 'Ver propiedad';
     agregarTexto(body,'div',[p.colonia,p.municipio].filter(Boolean).join(', ')).className = 'match-ubic';
     agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
-    var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); agregarTexto(pie,'span',p.asesor_nombre || ''); body.append(pie);
+    var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); var autor = agregarTexto(pie,/^\d+$/.test(p.asesor_kw_id || '') ? 'a' : 'span',p.asesor_nombre || '');
+    if (autor.tagName === 'A') { autor.href = 'https://kw.com/es-419/agent/' + encodeURIComponent(String(p.asesor_nombre || '').toLowerCase().replace(/[^a-z0-9]+/g,'-')) + '/' + p.asesor_kw_id; autor.target = '_blank'; autor.rel = 'noopener noreferrer'; } body.append(pie);
     var interior = document.createElement('div'); interior.className = 'match-giro';
     var frente = document.createElement('div'); frente.className = 'match-frente';
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
@@ -353,7 +363,7 @@
       var acciones = document.createElement('div'); acciones.className = 'acciones';
       var estadoGuardado = estadosServidor.get(p.id), listo = p.activo && estadoGuardado && (!estadoGuardado.pendiente || (estadoGuardado.calculado_at && estadoGuardado.motivo === 'inventario'));
       var coincidencias = [];
-      var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : 'Buscando propiedades…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false');
+      var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : ''); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false'); if (!listo && !errorMatches && p.activo) animacionCarga(desplegar,true);
       var filaMatches = document.createElement('section'), celdaMatches = document.createElement('div'); filaMatches.className = 'comprador-coincidencias'; filaMatches.hidden = true; filaMatches.id = 'coincidencias-' + p.id; filaMatches.append(celdaMatches); fila.append(filaMatches); desplegar.setAttribute('aria-controls',filaMatches.id);
       function alternarMatches() {
         if (errorMatches) { cargarInventarioMatches(); return; }
@@ -362,7 +372,6 @@
         if (filaMatches.hidden || celdaMatches.childNodes.length) return;
         var cabecera = document.createElement('div'); cabecera.className = 'matches-encabezado'; celdaMatches.append(cabecera);
 
-        if (estadoGuardado.pendiente) agregarTexto(cabecera,'p','Actualizando el inventario; puedes consultar las coincidencias anteriores.').className = 'matches-actualizando';
         var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
         var vistaGuardada = vistasMatches.get(p.id) || {}, modulo = Math.max(0,niveles.indexOf(vistaGuardada.nivel)), limite = vistaGuardada.offset || 0;
         var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); var toolbar = document.createElement('div'); toolbar.className = 'match-toolbar'; celdaMatches.append(toolbar); toolbar.append(tabs);
@@ -389,7 +398,7 @@
           botones.forEach(function (b,i) { b.classList.toggle('seleccionado',i===modulo); b.setAttribute('aria-pressed',String(i===modulo)); });
           grid.replaceChildren();
           if (nivel == null) { agregarTexto(grid,'p','Todavía no hay propiedades que alcancen la compatibilidad mínima. Revisaremos las nuevas propiedades automáticamente.').className = 'kw-vacio'; nav.hidden = tabs.hidden = true; return; }
-          estadoPagina.textContent = 'Cargando propiedades…'; anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
+          animacionCarga(estadoPagina,true); anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
           for(var i=0;i<Math.min(4,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
           try {
             var filas = await window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset);
@@ -462,7 +471,7 @@
   }
   async function cargar(adicional) {
     if (cargando) return;
-    cargando = true; mas.disabled = true;
+    cargando = true; mas.disabled = true; if (!perfiles.length) animacionCarga(lista,false);
     try {
       var desde = adicional ? perfiles.length : 0;
       var consulta = window.kwSupabase.from('perfiles_comprador').select('*').order('created_at', { ascending: false }).order('id').range(desde, desde + 49);
@@ -487,7 +496,7 @@
     try { payload = datos(); } catch (error) { avisar(error.message, true); return; }
     ocupado = true; guardar.disabled = true; nuevo.disabled = true;
     var controles = Array.from(form.querySelectorAll('input,select,textarea')); controles.forEach(function (el) { el.disabled = true; });
-    guardar.textContent = 'Guardando…'; avisar('');
+    animacionCarga(guardar,true); avisar('');
     try {
       var query = window.kwSupabase.from('perfiles_comprador');
       var res = await (editando ? query.update(payload).eq('id', editando) : query.insert(payload)).select('*').single();
