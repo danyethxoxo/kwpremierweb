@@ -241,7 +241,7 @@
     var trabajadores = Math.min(3, urls.length);
 
     function trabajador() {
-      if (exitosas >= 3) return Promise.resolve();
+      if (exitosas >= 4) return Promise.resolve();
       var indice = siguiente++;
       if (indice >= urls.length) return Promise.resolve();
       return cargarImagen(urls[indice]).then(function (imagen) {
@@ -255,7 +255,7 @@
 
     return Promise.all(Array.from({ length: trabajadores }, trabajador))
       .then(function () {
-        return resultados.filter(function (imagen) { return imagen && imagen.naturalWidth; }).slice(0, 3);
+        return resultados.filter(function (imagen) { return imagen && imagen.naturalWidth; }).slice(0, 4);
       });
   }
 
@@ -386,46 +386,43 @@
     textoEnvuelto(ctx, dato.etiqueta, x, y + 88, w - 12, 21, 2);
   }
 
-  function dibujarIconoFicha(ctx, etiqueta, x, y) {
+  function trazosCaracteristica(etiqueta) {
     var nombre = texto(etiqueta).toLowerCase();
+    if (nombre.indexOf('rec') !== -1 || nombre.indexOf('cama') !== -1) return [
+      [[-30,20],[-30,-16],[-25,-22],[25,-22],[30,-16],[30,20]],
+      [[-34,9],[-34,-3],[-29,-8],[29,-8],[34,-3],[34,9],[-34,9]],
+      [[-25,-8],[-25,-17],[-3,-17],[-3,-8]], [[3,-8],[3,-17],[25,-17],[25,-8]],
+      [[-28,10],[-28,20]], [[28,10],[28,20]]
+    ];
+    if (nombre.indexOf('ba') !== -1) return [
+      [[-34,-3],[34,-3],[29,12],[19,20],[-19,20],[-29,12],[-34,-3]],
+      [[-23,-3],[-23,-30],[-18,-35],[-9,-35],[-5,-29]],
+      [[-12,-25],[-2,-29]], [[-20,20],[-23,26]], [[20,20],[23,26]]
+    ];
+    if (nombre.indexOf('coch') !== -1 || nombre.indexOf('estac') !== -1) return [
+      [[-32,17],[-32,-5],[-24,-11],[-17,-26],[17,-26],[24,-11],[32,-5],[32,17],[-32,17]],
+      [[-24,-11],[24,-11]], [[-17,-21],[17,-21],[21,-12],[-21,-12],[-17,-21]],
+      [[-24,0],[-14,0],[-14,7],[-24,7],[-24,0]], [[14,0],[24,0],[24,7],[14,7],[14,0]],
+      [[-10,12],[10,12]], [[-25,18],[-25,24],[-17,24],[-17,18]], [[17,18],[17,24],[25,24],[25,18]]
+    ];
+    return [
+      [[-22,-25],[25,-25],[25,22],[-22,22],[-22,-25]],
+      [[-35,-25],[-35,22]], [[-39,-20],[-35,-25],[-31,-20]], [[-39,17],[-35,22],[-31,17]],
+      [[-22,34],[25,34]], [[-17,30],[-22,34],[-17,38]], [[20,30],[25,34],[20,38]]
+    ];
+  }
+
+  function dibujarIconoFicha(ctx, etiqueta, x, y) {
     ctx.save();
     ctx.strokeStyle = COLORES.rojo;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    if (nombre.indexOf('rec') !== -1 || nombre.indexOf('cama') !== -1) {
-      ctx.strokeRect(x - 30, y - 12, 60, 22);
+    trazosCaracteristica(etiqueta).forEach(function (puntos) {
       ctx.beginPath();
-      ctx.moveTo(x - 30, y - 12); ctx.lineTo(x - 30, y + 20);
-      ctx.moveTo(x + 30, y - 12); ctx.lineTo(x + 30, y + 20);
-      ctx.moveTo(x - 20, y - 3); ctx.lineTo(x + 20, y - 3);
+      puntos.forEach(function (punto, i) { ctx[i ? 'lineTo' : 'moveTo'](x + punto[0] * .8, y + punto[1] * .8); });
       ctx.stroke();
-    } else if (nombre.indexOf('ba') !== -1) {
-      ctx.beginPath();
-      ctx.moveTo(x - 31, y - 2); ctx.lineTo(x + 30, y - 2);
-      ctx.quadraticCurveTo(x + 25, y + 19, x + 5, y + 19);
-      ctx.lineTo(x - 17, y + 19);
-      ctx.quadraticCurveTo(x - 29, y + 14, x - 31, y - 2);
-      ctx.moveTo(x - 21, y - 2); ctx.lineTo(x - 21, y - 20);
-      ctx.quadraticCurveTo(x - 21, y - 28, x - 13, y - 28);
-      ctx.lineTo(x - 5, y - 28);
-      ctx.stroke();
-    } else if (nombre.indexOf('coch') !== -1 || nombre.indexOf('estac') !== -1) {
-      ctx.strokeRect(x - 31, y - 10, 62, 27);
-      ctx.beginPath();
-      ctx.moveTo(x - 22, y - 10); ctx.lineTo(x - 13, y - 26); ctx.lineTo(x + 13, y - 26); ctx.lineTo(x + 22, y - 10);
-      ctx.moveTo(x - 24, y + 10); ctx.arc(x - 16, y + 10, 3, 0, Math.PI * 2);
-      ctx.moveTo(x + 24, y + 10); ctx.arc(x + 16, y + 10, 3, 0, Math.PI * 2);
-      ctx.stroke();
-    } else {
-      ctx.strokeRect(x - 23, y - 23, 46, 46);
-      ctx.beginPath();
-      ctx.moveTo(x - 33, y - 23); ctx.lineTo(x - 33, y + 23);
-      ctx.moveTo(x + 33, y - 23); ctx.lineTo(x + 33, y + 23);
-      ctx.moveTo(x - 37, y - 23); ctx.lineTo(x - 29, y - 23);
-      ctx.moveTo(x + 29, y + 23); ctx.lineTo(x + 37, y + 23);
-      ctx.stroke();
-    }
+    });
     ctx.restore();
   }
 
@@ -434,10 +431,10 @@
     ctx.fillStyle = COLORES.texto;
     ctx.font = '700 25px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(texto(dato.valor, '-'), x, y + 72);
+    ctx.fillText(texto(dato.valor, '-'), x, y + 48);
     ctx.fillStyle = COLORES.gris;
     ctx.font = '500 16px Arial, sans-serif';
-    textoEnvuelto(ctx, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, 130, 20, 2, 'center');
+    textoEnvuelto(ctx, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 76, 190, 20, 1, 'center');
     ctx.textAlign = 'left';
   }
 
@@ -449,18 +446,24 @@
     ctx.lineJoin = 'round';
     ctx.beginPath();
     if (tipo === 0) {
-      ctx.lineWidth = 7;
-      ctx.moveTo(x + 1, y - 14);
-      ctx.quadraticCurveTo(x - 6, y - 8, x - 1, y + 2);
-      ctx.quadraticCurveTo(x + 7, y + 15, x + 19, y + 12);
-      ctx.quadraticCurveTo(x + 28, y + 10, x + 27, y + 3);
-      ctx.stroke();
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(x + 1, y - 14);
-      ctx.lineTo(x + 9, y - 8);
-      ctx.moveTo(x + 19, y + 12);
-      ctx.lineTo(x + 27, y + 3);
+      ctx.fillStyle = COLORES.texto;
+      ctx.moveTo(x + 2, y + -19);
+      ctx.lineTo(x + 10, y + -12);
+      ctx.lineTo(x + 6, y + -5);
+      ctx.lineTo(x + 10, y + 3);
+      ctx.lineTo(x + 18, y + 8);
+      ctx.lineTo(x + 25, y + 3);
+      ctx.lineTo(x + 32, y + 11);
+      ctx.lineTo(x + 27, y + 18);
+      ctx.lineTo(x + 19, y + 19);
+      ctx.lineTo(x + 7, y + 12);
+      ctx.lineTo(x + -1, y + 2);
+      ctx.lineTo(x + -5, y + -10);
+      ctx.lineTo(x + -2, y + -17);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      return;
     } else if (tipo === 1) {
       ctx.rect(x - 11, y - 14, 38, 28);
       ctx.moveTo(x - 10, y - 12);
@@ -516,7 +519,7 @@
 
   function dibujarPrecioFicha(ctx, modelo) {
     var x = 80;
-    var y = 1548;
+    var y = 1201;
     var limiteDerecho = 600;
     var separacion = 26;
     var moneda = texto(modelo.moneda, 'MXN');
@@ -555,18 +558,20 @@
     ctx.fillRect(0, 0, ANCHO, ALTO);
 
     var anchoPanel = 680;
-    var altoFotos = 1565;
+    var altoFotos = 1230;
     var hayFotos = modelo._fotos.some(function (foto) { return foto && foto.naturalWidth; });
     if (hayFotos) {
       imagenCubierta(ctx, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, 0, true);
-      imagenCubierta(ctx, modelo._fotos[1], anchoPanel, 1240, 450, 325, 0, false);
-      imagenCubierta(ctx, modelo._fotos[2], 1140, 1240, 460, 325, 0, false);
+
     } else {
       marcaSinFoto(ctx, anchoPanel, 0, ANCHO - anchoPanel, altoFotos, true);
     }
 
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, anchoPanel, altoFotos);
+    for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
+      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], 24 + fotoIndice * 522, 1246, 510, 301, 0, false);
+    }
 
     if (modelo._logo && modelo._logo.naturalWidth) {
       var logoAncho = 286;
@@ -582,25 +587,25 @@
 
     ctx.fillStyle = COLORES.texto;
     ctx.font = '400 154px Georgia, serif';
-    ctx.fillText(modelo.operacion, 58, 435);
+    ctx.fillText(modelo.operacion, 58, 470);
     ctx.fillStyle = COLORES.texto;
     ctx.font = '500 36px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 635, 570, 42, 2, 'center');
+    textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center');
 
     ctx.strokeStyle = COLORES.rojo;
     ctx.lineWidth = 3;
-    ctx.strokeRect(36, 975, 590, 455);
+    ctx.strokeRect(36, 745, 590, 345);
     ctx.fillStyle = COLORES.rojo;
     ctx.font = '400 42px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('DIRECCI\u00d3N:', 331, 1064);
+    ctx.fillText('DIRECCI\u00d3N:', 331, 818);
     ctx.fillStyle = COLORES.gris;
     ctx.font = '500 27px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 1150, 505, 34, 6, 'center');
+    textoEnvuelto(ctx, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 900, 505, 34, 6, 'center');
     ctx.textAlign = 'left';
 
     ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(40, 1470, 590, 125);
+    ctx.fillRect(40, 1134, 590, 96);
     dibujarPrecioFicha(ctx, modelo);
 
     ctx.fillStyle = '#eeeeec';
@@ -631,8 +636,8 @@
     ctx.fillRect(1088, 1635, 3, 200);
     var datos = modelo.features.slice(0, 4);
     var posicionesDatos = [
-      { x: 1260, y: 1635 }, { x: 1490, y: 1635 },
-      { x: 1260, y: 1755 }, { x: 1490, y: 1755 }
+      { x: 1260, y: 1650 }, { x: 1490, y: 1650 },
+      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
     ];
     datos.forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
@@ -641,7 +646,7 @@
     if (modelo.extras.length) {
       ctx.fillStyle = COLORES.gris;
       ctx.font = '500 16px Arial, sans-serif';
-      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1370, 505, 20, 2, 'center');
+      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1060, 505, 20, 2, 'center');
     }
     return canvas;
   }
@@ -800,55 +805,30 @@
   }
 
   function pdfIconoFicha(pdf, etiqueta, x, y, escala) {
-    var nombre = texto(etiqueta).toLowerCase();
     pdf.setDrawColor(COLORES.rojo);
-    pdf.setLineWidth(3 * escala);
-    if (nombre.indexOf('rec') !== -1 || nombre.indexOf('cama') !== -1) {
-      pdf.rect((x - 30) * escala, (y - 12) * escala, 60 * escala, 22 * escala, 'S');
-      pdf.line((x - 30) * escala, (y - 12) * escala, (x - 30) * escala, (y + 20) * escala);
-      pdf.line((x + 30) * escala, (y - 12) * escala, (x + 30) * escala, (y + 20) * escala);
-      pdf.line((x - 20) * escala, (y - 3) * escala, (x + 20) * escala, (y - 3) * escala);
-    } else if (nombre.indexOf('ba') !== -1) {
-      pdf.line((x - 31) * escala, (y - 2) * escala, (x + 30) * escala, (y - 2) * escala);
-      pdf.ellipse((x - 5) * escala, (y + 7) * escala, 26 * escala, 12 * escala, 'S');
-      pdf.line((x - 21) * escala, (y - 2) * escala, (x - 21) * escala, (y - 20) * escala);
-      pdf.line((x - 21) * escala, (y - 20) * escala, (x - 5) * escala, (y - 20) * escala);
-    } else if (nombre.indexOf('coch') !== -1 || nombre.indexOf('estac') !== -1) {
-      pdf.rect((x - 31) * escala, (y - 10) * escala, 62 * escala, 27 * escala, 'S');
-      pdf.line((x - 22) * escala, (y - 10) * escala, (x - 13) * escala, (y - 26) * escala);
-      pdf.line((x - 13) * escala, (y - 26) * escala, (x + 13) * escala, (y - 26) * escala);
-      pdf.line((x + 13) * escala, (y - 26) * escala, (x + 22) * escala, (y - 10) * escala);
-      pdf.circle((x - 16) * escala, (y + 10) * escala, 3 * escala, 'S');
-      pdf.circle((x + 16) * escala, (y + 10) * escala, 3 * escala, 'S');
-    } else {
-      pdf.rect((x - 23) * escala, (y - 23) * escala, 46 * escala, 46 * escala, 'S');
-      pdf.line((x - 33) * escala, (y - 23) * escala, (x - 33) * escala, (y + 23) * escala);
-      pdf.line((x + 33) * escala, (y - 23) * escala, (x + 33) * escala, (y + 23) * escala);
-      pdf.line((x - 37) * escala, (y - 23) * escala, (x - 29) * escala, (y - 23) * escala);
-      pdf.line((x + 29) * escala, (y + 23) * escala, (x + 37) * escala, (y + 23) * escala);
-    }
+    pdf.setLineWidth(2.5 * escala);
+    pdf.setLineCap('round');
+    pdf.setLineJoin('round');
+    trazosCaracteristica(etiqueta).forEach(function (puntos) {
+      var segmentos = puntos.slice(1).map(function (punto, i) {
+        return [(punto[0] - puntos[i][0]) * .8, (punto[1] - puntos[i][1]) * .8];
+      });
+      pdf.lines(segmentos, (x + puntos[0][0] * .8) * escala, (y + puntos[0][1] * .8) * escala, [escala, escala], 'S', false);
+    });
   }
 
   function pdfDatoFicha(pdf, dato, x, y, ancho, escala) {
     pdfIconoFicha(pdf, dato.etiqueta, x, y, escala);
     pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 72, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
-    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, ancho - 12, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, ancho - 12, 20, 1, 'center', 16, COLORES.gris, 'normal', escala);
   }
 
   function pdfIconoContacto(pdf, tipo, x, y, escala) {
     pdf.setDrawColor(COLORES.texto);
     pdf.setLineWidth(4 * escala);
     if (tipo === 0) {
-      pdf.setLineWidth(7 * escala);
-      pdf.line((x + 1) * escala, (y - 14) * escala, (x - 4) * escala, (y - 9) * escala);
-      pdf.line((x - 4) * escala, (y - 9) * escala, (x - 1) * escala, (y + 2) * escala);
-      pdf.line((x - 1) * escala, (y + 2) * escala, (x + 5) * escala, (y + 10) * escala);
-      pdf.line((x + 5) * escala, (y + 10) * escala, (x + 14) * escala, (y + 13) * escala);
-      pdf.line((x + 14) * escala, (y + 13) * escala, (x + 21) * escala, (y + 10) * escala);
-      pdf.line((x + 21) * escala, (y + 10) * escala, (x + 27) * escala, (y + 3) * escala);
-      pdf.setLineWidth(5 * escala);
-      pdf.line((x + 1) * escala, (y - 14) * escala, (x + 9) * escala, (y - 8) * escala);
-      pdf.line((x + 19) * escala, (y + 12) * escala, (x + 27) * escala, (y + 3) * escala);
+      pdf.setFillColor(COLORES.texto);
+      pdf.lines([[8,7],[-4,7],[4,8],[8,5],[7,-5],[7,8],[-5,7],[-8,1],[-12,-7],[-8,-10],[-4,-12],[3,-7]], (x + 2) * escala, (y - 19) * escala, [escala, escala], 'F', true);
     } else if (tipo === 1) {
       pdf.rect((x - 11) * escala, (y - 14) * escala, 38 * escala, 28 * escala, 'S');
       pdf.line((x - 10) * escala, (y - 12) * escala, (x + 8) * escala, (y + 2) * escala);
@@ -884,13 +864,14 @@
 
   function dibujarPDFVector(pdf, modelo, escala) {
     var anchoPanel = 680;
-    var altoFotos = 1565;
+    var altoFotos = 1230;
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, ANCHO * escala, ALTO * escala, 'F');
 
     pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
-    pdfImagenCubierta(pdf, modelo._fotos[1], anchoPanel, 1240, 450, 325, false, escala);
-    pdfImagenCubierta(pdf, modelo._fotos[2], 1140, 1240, 460, 325, false, escala);
+    for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
+      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], 24 + fotoIndice * 522, 1246, 510, 301, false, escala);
+    }
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
 
@@ -908,20 +889,20 @@
 
     pdfFuente(pdf, 154 * escala, COLORES.texto, 'normal');
     pdf.setFont('times', 'normal');
-    pdf.text(modelo.operacion, 58 * escala, 435 * escala);
-    pdfTextoEnvuelto(pdf, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 635, 570, 42, 2, 'center', 36, COLORES.texto, 'normal', escala);
+    pdf.text(modelo.operacion, 58 * escala, 470 * escala);
+    pdfTextoEnvuelto(pdf, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center', 36, COLORES.texto, 'normal', escala);
 
     pdf.setDrawColor(COLORES.rojo);
     pdf.setLineWidth(3 * escala);
-    pdf.rect(36 * escala, 975 * escala, 590 * escala, 455 * escala, 'S');
-    pdfTextoEnvuelto(pdf, 'DIRECCIÓN:', 331, 1064, 590, 42, 1, 'center', 42, COLORES.rojo, 'normal', escala);
-    pdfTextoEnvuelto(pdf, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 1150, 505, 34, 6, 'center', 27, COLORES.gris, 'normal', escala);
+    pdf.rect(36 * escala, 745 * escala, 590 * escala, 345 * escala, 'S');
+    pdfTextoEnvuelto(pdf, 'DIRECCIÓN:', 331, 818, 590, 42, 1, 'center', 42, COLORES.rojo, 'normal', escala);
+    pdfTextoEnvuelto(pdf, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 900, 505, 34, 6, 'center', 27, COLORES.gris, 'normal', escala);
     if (modelo.extras.length) {
-      pdfTextoEnvuelto(pdf, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1370, 505, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
+      pdfTextoEnvuelto(pdf, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1060, 505, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
     }
 
     pdf.setFillColor(COLORES.rojo);
-    pdf.rect(40 * escala, 1470 * escala, 590 * escala, 125 * escala, 'F');
+    pdf.rect(40 * escala, 1134 * escala, 590 * escala, 96 * escala, 'F');
     var precioTexto = modelo.precio || 'PRECIO A CONSULTAR';
     var moneda = texto(modelo.moneda, 'MXN');
     var tamanoPrecio = 53;
@@ -933,10 +914,10 @@
       tamanoPrecio--;
       pdfFuente(pdf, tamanoPrecio * escala, COLORES.blanco, 'bold');
     }
-    pdf.text(precioTexto, 80 * escala, 1548 * escala);
+    pdf.text(precioTexto, 80 * escala, 1201 * escala);
     if (modelo.precio) {
       pdfFuente(pdf, 28 * escala, COLORES.blanco, 'bold');
-      pdf.text(moneda, 600 * escala, 1548 * escala, { align: 'right' });
+      pdf.text(moneda, 600 * escala, 1201 * escala, { align: 'right' });
     }
 
     pdf.setFillColor('#eeeeec');
@@ -952,8 +933,8 @@
     pdf.setFillColor(COLORES.rojo);
     pdf.rect(1088 * escala, 1635 * escala, 3 * escala, 200 * escala, 'F');
     var posicionesDatos = [
-      { x: 1260, y: 1635 }, { x: 1490, y: 1635 },
-      { x: 1260, y: 1755 }, { x: 1490, y: 1755 }
+      { x: 1260, y: 1650 }, { x: 1490, y: 1650 },
+      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
     ];
     modelo.features.slice(0, 4).forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
