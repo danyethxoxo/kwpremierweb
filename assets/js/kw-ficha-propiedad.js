@@ -440,6 +440,10 @@
 
   function dibujarContactoIcono(ctx, tipo, x, y) {
     ctx.save();
+    ctx.translate(x + 8, y);
+    ctx.scale(.7, .7);
+    x = -8;
+    y = 0;
     ctx.strokeStyle = COLORES.texto;
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
@@ -447,19 +451,26 @@
     ctx.beginPath();
     if (tipo === 0) {
       ctx.fillStyle = COLORES.texto;
-      ctx.moveTo(x + 2, y + -19);
-      ctx.lineTo(x + 10, y + -12);
-      ctx.lineTo(x + 6, y + -5);
-      ctx.lineTo(x + 10, y + 3);
-      ctx.lineTo(x + 18, y + 8);
-      ctx.lineTo(x + 25, y + 3);
-      ctx.lineTo(x + 32, y + 11);
-      ctx.lineTo(x + 27, y + 18);
-      ctx.lineTo(x + 19, y + 19);
-      ctx.lineTo(x + 7, y + 12);
-      ctx.lineTo(x + -1, y + 2);
-      ctx.lineTo(x + -5, y + -10);
-      ctx.lineTo(x + -2, y + -17);
+      ctx.moveTo(x + -7, y + -18);
+      ctx.lineTo(x + 0, y + -20);
+      ctx.lineTo(x + 5, y + -19);
+      ctx.lineTo(x + 9, y + -8);
+      ctx.lineTo(x + 8, y + -4);
+      ctx.lineTo(x + 3, y + 0);
+      ctx.lineTo(x + 7, y + 7);
+      ctx.lineTo(x + 14, y + 12);
+      ctx.lineTo(x + 19, y + 7);
+      ctx.lineTo(x + 23, y + 6);
+      ctx.lineTo(x + 33, y + 11);
+      ctx.lineTo(x + 34, y + 16);
+      ctx.lineTo(x + 31, y + 22);
+      ctx.lineTo(x + 25, y + 24);
+      ctx.lineTo(x + 15, y + 21);
+      ctx.lineTo(x + 5, y + 15);
+      ctx.lineTo(x + -3, y + 6);
+      ctx.lineTo(x + -8, y + -4);
+      ctx.lineTo(x + -10, y + -12);
+      ctx.lineTo(x + -7, y + -18);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
@@ -570,7 +581,7 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, anchoPanel, altoFotos);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], 24 + fotoIndice * 522, 1246, 510, 301, 0, false);
+      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1600 / 3), 1230, 1600 / 3, 335, 0, false);
     }
 
     if (modelo._logo && modelo._logo.naturalWidth) {
@@ -633,11 +644,11 @@
     contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 370, 1745 + i * 46, i); });
 
     ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(1088, 1635, 3, 200);
+    ctx.fillRect(1140, 1625, 3, 230);
     var datos = modelo.features.slice(0, 4);
     var posicionesDatos = [
-      { x: 1260, y: 1650 }, { x: 1490, y: 1650 },
-      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+      { x: 1280, y: 1648 }, { x: 1470, y: 1648 },
+      { x: 1280, y: 1785 }, { x: 1470, y: 1785 }
     ];
     datos.forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
@@ -819,16 +830,19 @@
 
   function pdfDatoFicha(pdf, dato, x, y, ancho, escala) {
     pdfIconoFicha(pdf, dato.etiqueta, x, y, escala);
-    pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 72, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
-    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, ancho - 12, 20, 1, 'center', 16, COLORES.gris, 'normal', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 48, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 76, ancho - 12, 20, 1, 'center', 16, COLORES.gris, 'normal', escala);
   }
 
   function pdfIconoContacto(pdf, tipo, x, y, escala) {
+    x = x / .7 - 8;
+    y = y / .7;
+    escala *= .7;
     pdf.setDrawColor(COLORES.texto);
     pdf.setLineWidth(4 * escala);
     if (tipo === 0) {
       pdf.setFillColor(COLORES.texto);
-      pdf.lines([[8,7],[-4,7],[4,8],[8,5],[7,-5],[7,8],[-5,7],[-8,1],[-12,-7],[-8,-10],[-4,-12],[3,-7]], (x + 2) * escala, (y - 19) * escala, [escala, escala], 'F', true);
+      pdf.lines([[7,-2],[5,1],[4,11],[-1,4],[-5,4],[4,7],[7,5],[5,-5],[4,-1],[10,5],[1,5],[-3,6],[-6,2],[-10,-3],[-10,-6],[-8,-9],[-5,-10],[-2,-8],[3,-6]], (x - 7) * escala, (y - 18) * escala, [escala, escala], 'F', true);
     } else if (tipo === 1) {
       pdf.rect((x - 11) * escala, (y - 14) * escala, 38 * escala, 28 * escala, 'S');
       pdf.line((x - 10) * escala, (y - 12) * escala, (x + 8) * escala, (y + 2) * escala);
@@ -870,7 +884,7 @@
 
     pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], 24 + fotoIndice * 522, 1246, 510, 301, false, escala);
+      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1600 / 3), 1230, 1600 / 3, 335, false, escala);
     }
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
@@ -931,10 +945,10 @@
       });
 
     pdf.setFillColor(COLORES.rojo);
-    pdf.rect(1088 * escala, 1635 * escala, 3 * escala, 200 * escala, 'F');
+    pdf.rect(1140 * escala, 1625 * escala, 3 * escala, 230 * escala, 'F');
     var posicionesDatos = [
-      { x: 1260, y: 1650 }, { x: 1490, y: 1650 },
-      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+      { x: 1280, y: 1648 }, { x: 1470, y: 1648 },
+      { x: 1280, y: 1785 }, { x: 1470, y: 1785 }
     ];
     modelo.features.slice(0, 4).forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
