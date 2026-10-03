@@ -13,12 +13,21 @@ async function main() {
   const secret = process.env.KW_SYNC_SECRET;
   if (!base || !key || !secret) throw new Error('Falta la configuración de miniaturas');
   async function llamar(body) {
-    const response = await fetch(base+'/functions/v1/miniaturas-propiedades',{
-      method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'x-sync-secret':secret,'Content-Type':'application/json'},
-      body:JSON.stringify(body),signal:AbortSignal.timeout(90000)
-    });
-    if (!response.ok) throw new Error('Servicio de miniaturas: HTTP '+response.status);
-    return response.json();
+    for(let intento=0;intento<5;intento++) {
+      let response;
+      try {
+        response = await fetch(base+'/functions/v1/miniaturas-propiedades',{
+          method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'x-sync-secret':secret,'Content-Type':'application/json'},
+          body:JSON.stringify(body),signal:AbortSignal.timeout(90000)
+        });
+      } catch {
+        if(intento===4) throw new Error('Servicio de miniaturas no disponible');
+      }
+      if(response?.ok) return response.json();
+      if(response && response.status!==429 && response.status<500) throw new Error('Servicio de miniaturas: HTTP '+response.status);
+      if(intento===4) throw new Error('Servicio de miniaturas: HTTP '+response?.status);
+      await new Promise(resolve=>setTimeout(resolve,Math.min(30000,2000*2**intento)));
+    }
   }
   let total=0;
   for(let batch=0;batch<250;batch++) {
