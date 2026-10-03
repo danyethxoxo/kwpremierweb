@@ -856,7 +856,7 @@
         var usuario = sesion.data && sesion.data.session && sesion.data.session.user;
         if (!usuario) throw new Error('Inicia sesión para abrir propiedades con tu sitio.');
         sitioAsesorUsuario = usuario.id;
-        var respuesta = await sb.from('profiles').select('sitio_web').eq('id', usuario.id).single();
+        var respuesta = await sb.from('profiles').select('nombre,apellido,email,foto_url,whatsapp,sitio_web').eq('id', usuario.id).single();
         if (respuesta.error) throw respuesta.error;
         sitioAsesorPerfil = respuesta.data || null;
         sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
@@ -877,6 +877,14 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  window.addEventListener('kw-marca-actualizada', function (evento) {
+    if (!evento.detail || evento.detail.id !== sitioAsesorUsuario) return;
+    sitioAsesorPerfil = Object.assign({}, evento.detail.perfil);
+    sitioAsesor = window.kwSitioAsesor.normalizar(sitioAsesorPerfil.sitio_web);
+    reflejarSitioGuardado();
+    actualizarEnlacesSitio();
+  });
 
   function alternarTituloPropiedad(evento, boton) {
     evento.preventDefault();
@@ -1054,23 +1062,6 @@
 
   function cargarAsesorFicha(propiedad) {
     var base = datosAsesorFichaBase(propiedad);
-    if (sitioAsesor) {
-      var sitioFicha = sitioAsesor;
-      var claveSitio = 'sitio:' + sitioFicha;
-      if (asesoresFichaCache[claveSitio]) return asesoresFichaCache[claveSitio];
-      asesoresFichaCache[claveSitio] = sb.functions.invoke('perfil-sitio-kw', {
-        body: { sitio_web: sitioFicha }
-      }).then(function (respuesta) {
-        if (respuesta.error || !respuesta.data || !respuesta.data.perfil) {
-          throw new Error('No se pudo leer el perfil del sitio KW configurado. Intenta nuevamente.');
-        }
-        return respuesta.data.perfil;
-      }).catch(function (error) {
-        delete asesoresFichaCache[claveSitio];
-        throw error;
-      });
-      return asesoresFichaCache[claveSitio];
-    }
     var tienePerfil = sitioAsesorPerfil && (sitioAsesorPerfil.nombre || sitioAsesorPerfil.apellido ||
       sitioAsesorPerfil.email || sitioAsesorPerfil.whatsapp || sitioAsesorPerfil.foto_url);
     if (tienePerfil) return Promise.resolve(base);
@@ -1124,6 +1115,7 @@
       return;
     }
     try {
+      await cargarSitioAsesor();
       var enlace = tarjeta.querySelector('.prop-enlace');
       var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarFotosFicha(propiedad), cargarModuloFichaPropiedad()]);
       datos[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
@@ -2288,7 +2280,7 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/drawer.js?v=20261002a" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261003b" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260923b" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
 </html>

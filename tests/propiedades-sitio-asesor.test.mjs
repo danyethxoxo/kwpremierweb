@@ -63,7 +63,7 @@ test('consulta el sitio del usuario de la sesión y reintenta si falla la lectur
     from: (tabla) => {
       assert.equal(tabla, 'profiles');
       return { select: (campos) => {
-        assert.equal(campos, 'sitio_web');
+        assert.equal(campos, 'nombre,apellido,email,foto_url,whatsapp,sitio_web');
         return { eq: (campo, id) => {
           assert.equal(campo, 'id');
           assert.equal(id, 'asesor-actual');

@@ -1272,6 +1272,16 @@
   // abrir el menú: si se esperara, el nombre aparecería un parpadeo
   // después de que ya se está viendo.
   if (!esPublico) {
+    function cargarPersonalizacion() {
+      if (document.getElementById('kw-marca-script')) return;
+      var script = document.createElement('script');
+      script.id = 'kw-marca-script';
+      script.src = '/assets/js/kw-marca-perfil.js?v=20261003b';
+      document.head.appendChild(script);
+    }
+    if (document.documentElement.classList.contains('kw-auth-ok')) cargarPersonalizacion();
+    else window.addEventListener('kw-auth-ready', cargarPersonalizacion, { once: true });
+    window.addEventListener('kw-marca-actualizada', cargarUsuario);
     if (document.documentElement.classList.contains('kw-auth-ok')) cargarUsuario();
     else window.addEventListener('kw-auth-ready', cargarUsuario, { once: true });
   }
