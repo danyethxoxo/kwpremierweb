@@ -332,6 +332,14 @@
   }
   .resultados-cabecera .conteo { margin-bottom: 0; }
   .resultado-nota { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  #conteo .conteo-cargando {
+    display: inline-flex; position: relative; align-items: center; justify-content: center;
+    width: 32px; height: 30px; min-height: 0; padding: 0; vertical-align: middle;
+  }
+  #conteo .conteo-cargando .circle { border-top-color: var(--red); }
+  #conteo .conteo-cargando .circle.uno { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+  #conteo .conteo-cargando .circle.dos { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+  #conteo .conteo-cargando .circle.tres { width: 30px; height: 30px; margin: -15px 0 0 -15px; }
 
   .prop-pie {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start;
@@ -399,12 +407,12 @@
     overflow: hidden; text-decoration: none; color: inherit;
     display: flex; flex-direction: column;
     align-self: stretch;
-    transition: transform 0.15s, box-shadow 0.18s, border-color 0.18s;
+    transition: border-color 0.18s, outline-color 0.18s;
   }
   .prop-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-    border-color: rgba(138,0,0,0.25);
+    border-color: rgba(138,0,0,0.62);
+    outline: 2px solid rgba(138,0,0,0.22);
+    outline-offset: -2px;
   }
   .prop-foto {
     position: relative; aspect-ratio: 4 / 3; background: #e4e4e4;
@@ -1553,7 +1561,11 @@
     paginaActual = paginaSolicitada;
     lista.classList.add('lista-cargando');
     lista.setAttribute('aria-busy', 'true');
-    if (conteo) conteo.textContent = 'Cargando propiedades…';
+    if (conteo) {
+      conteo.innerHTML = '<span class="conteo-cargando kw-loader" role="status" aria-label="Cargando propiedades">' +
+        '<span class="circle uno"></span><span class="circle dos"></span><span class="circle tres"></span>' +
+        '</span>';
+    }
 
     try {
       await cargarSitioAsesor();
@@ -1673,6 +1685,15 @@
   };
 
   var cajaFiltros = document.getElementById('filtros');
+  var campoBuscar = document.getElementById('f-buscar');
+  if (campoBuscar) {
+    campoBuscar.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Enter') {
+        evento.preventDefault();
+        aplicarFiltros();
+      }
+    });
+  }
   var campoSitio = document.getElementById('mi-sitio-web');
   campoSitio.addEventListener('change', guardarSitioAsesor);
   document.getElementById('mi-sitio-quitar').addEventListener('click', quitarSitioAsesor);
