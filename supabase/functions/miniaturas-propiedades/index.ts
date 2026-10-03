@@ -27,17 +27,20 @@ secureServe({ name: 'miniaturas-propiedades', auth: 'service', methods: ['POST']
     return Response.json({items})
   }
   if (body.accion !== 'confirmar' || !Array.isArray(body.items) || body.items.length > 40) throw new HttpError(400,'Solicitud invalida')
-  let guardadas = 0
   for (const item of body.items) {
     if (!validUuid(item.id) || typeof item.imagen_origen !== 'string') throw new HttpError(400,'Miniatura invalida')
-    const {data:p,error:pError} = await admin.from('propiedades').select('imagenes').eq('id',item.id).single()
-    if (pError || p?.imagenes?.[0] !== item.imagen_origen) continue
+  }
+  if (!body.items.length) return Response.json({guardadas:0})
+  const {data: propiedades,error: consultaError} = await admin.from('propiedades').select('id,imagenes').in('id',body.items.map((item: {id:string}) => item.id))
+  if (consultaError) throw new HttpError(503,'No se pudo verificar el inventario')
+  const actuales = new Map((propiedades || []).map(p => [p.id,p.imagenes?.[0]]))
+  let guardadas = 0
+  const filas = await Promise.all(body.items.map(async (item: {id:string;imagen_origen:string;ok:boolean}) => {
+    if (actuales.get(item.id) !== item.imagen_origen) return null
     if (!item.ok) {
-      const {error} = await admin.from('propiedades_miniaturas').upsert({propiedad_id:item.id,
+      return {propiedad_id:item.id,
         imagen_origen:item.imagen_origen,miniatura_url:null,bytes:null,
-        reintentar_despues:new Date(Date.now()+86400000).toISOString()})
-      if (error) throw new HttpError(503,'No se pudo registrar el reintento')
-      continue
+        reintentar_despues:new Date(Date.now()+86400000).toISOString()}
     }
     const path = await ruta(item.id,item.imagen_origen)
     const nombre = path.split('/')[1]
@@ -45,10 +48,14 @@ secureServe({ name: 'miniaturas-propiedades', auth: 'service', methods: ['POST']
     const objeto = objetos?.find(o => o.name === nombre)
     if (objError || !objeto || objeto.metadata?.mimetype !== 'image/webp' || !objeto.metadata?.size || objeto.metadata.size > 250000) throw new HttpError(400,'La miniatura no se cargo correctamente')
     const {data:publica} = admin.storage.from(BUCKET).getPublicUrl(path)
-    const {error} = await admin.from('propiedades_miniaturas').upsert({propiedad_id:item.id,
-      imagen_origen:item.imagen_origen,miniatura_url:publica.publicUrl,bytes:objeto.metadata.size,reintentar_despues:null})
-    if (error) throw new HttpError(503,'No se pudo guardar la miniatura')
     guardadas++
+    return {propiedad_id:item.id,imagen_origen:item.imagen_origen,
+      miniatura_url:publica.publicUrl,bytes:objeto.metadata.size,reintentar_despues:null}
+  }))
+  const validas = filas.filter(fila => fila !== null)
+  if (validas.length) {
+    const {error} = await admin.from('propiedades_miniaturas').upsert(validas)
+    if (error) throw new HttpError(503,'No se pudieron guardar las miniaturas')
   }
   return Response.json({guardadas})
 })
