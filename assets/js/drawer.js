@@ -58,12 +58,16 @@
   ];
 
   const NAV_HUB = [
+    { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
+    { href: `${BASE}/hub/perfil-comprador.html`, label: 'Perfil comprador', icon: 'prospecto' },
+    { href: `${BASE}/propiedades.html`, label: 'Propiedades', icon: 'llave' },
     { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
     { href: `${BASE}/documentos/documentos.html`, label: 'Acuerdos y Contratos', icon: 'carpeta' },
     { href: `${BASE}/hub/firmas.html`, label: 'Firmas Digitales', icon: 'pluma' },
     { href: `${BASE}/hub/dictamenes.html`, label: 'Dictaminación de Expedientes', icon: 'dictamen' },
     { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
+    { href: `${BASE}/documentos/operatividad.html`, label: 'Operatividad', icon: 'plantilla', roles: ['admin', 'master', 'staff'] },
     { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo' },
     { href: `${BASE}/hub/admin.html?v=20260919f#asesores`, label: 'Panel Máster', icon: 'tablero' },
   ];
@@ -78,7 +82,8 @@
     return items.map((item) => {
       if (item.section) return `<div class="drawer-section-label">${item.section}</div>`;
       const activo = estaActivo(item.href) ? ' activo' : '';
-      return `<a href="${item.href}" class="drawer-link${activo}">${ICONS[item.icon]}<span>${item.label}</span></a>`;
+      const permisos = item.roles ? ` data-drawer-roles="${item.roles.join(' ')}" hidden` : '';
+      return `<a href="${item.href}" class="drawer-link${activo}"${permisos}>${ICONS[item.icon]}<span>${item.label}</span></a>`;
     }).join('');
   }
 
@@ -1050,6 +1055,9 @@
         .eq('id', u.user.id)
         .single();
       if (!perfil) return;
+      document.querySelectorAll('[data-drawer-roles]').forEach((enlace) => {
+        enlace.hidden = !enlace.dataset.drawerRoles.split(' ').includes(perfil.role);
+      });
 
       const nombre = [perfil.nombre, perfil.apellido].filter(Boolean).join(' ').trim();
       if (nombre) document.getElementById('drawer-usuario-nombre').textContent = nombre;
