@@ -287,7 +287,7 @@
     if (inventarioMatches) cacheMatches.set(clave,resultados);
     return resultados;
   }
-  function pintarPropiedad(resultado, padre) {
+  function pintarPropiedad(resultado, padre, cliente) {
     var p = resultado.propiedad, match = resultado.match;
     var card = document.createElement('article'); card.className = 'match-prop';
     var tono = Math.max(0,Math.min(120,(match.porcentaje-50)*2.4));
@@ -314,7 +314,10 @@
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
     agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
     var detalleCriterios = document.createElement('div'); detalleCriterios.className = 'match-criterios'; desglose.append(detalleCriterios);
-    match.criterios.forEach(function (c) { var criterio = agregarTexto(detalleCriterios,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '- ') + c.nombre + ' · ' + c.detalle); criterio.className = c.cumple ? 'criterio-cumple' : c.parcial ? 'criterio-parcial' : 'criterio-falta'; });
+    window.kwCompradorResumen(cliente,p,match.criterios).forEach(function (c) {
+      var grupo = document.createElement('div'); grupo.className = 'criterio-resumen';
+      agregarTexto(grupo,'strong',c.nombre); agregarTexto(grupo,'p',c.detalle); detalleCriterios.append(grupo);
+    });
     var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
     var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
     function girar(atras) {
@@ -337,10 +340,14 @@
       var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
       agregarTexto(identidad, 'h3', p.nombre);
       var estado = agregarTexto(identidad, 'span', p.activo ? 'Activo' : 'Pausado'); estado.className = 'estado';
-      agregarTexto(card, 'p', [p.telefono, p.correo].filter(Boolean).join(' · '));
+      var etiquetasCliente = document.createElement('div'); etiquetasCliente.className = 'cliente-etiquetas'; card.append(etiquetasCliente);
       var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
-      agregarTexto(card, 'p', (p.operacion === 'venta' ? 'Compra' : 'Renta') + ' · ' + p.tipos.join(', ') + ' · ' + (p.precio_min === null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda);
-      agregarTexto(card, 'p', [p.estado, p.municipio, p.colonias].filter(Boolean).join(' · '));
+      [p.telefono,p.correo,p.operacion === 'venta' ? 'Compra' : 'Renta',p.tipos.join(', '),
+        (p.precio_min == null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda,
+        [p.estado,p.municipio,p.colonias].filter(Boolean).join(' · '),
+        p.recamaras_min ? p.recamaras_min + ' recámaras' : '',p.banos_min ? p.banos_min + ' baños' : '',
+        p.estacionamientos_min ? p.estacionamientos_min + ' estacionamientos' : '',p.superficie_min ? p.superficie_min + ' m² mínimo' : '',p.notas]
+        .filter(Boolean).forEach(function (texto) { agregarTexto(etiquetasCliente,'span',texto).className = 'cliente-etiqueta'; });
       var acciones = document.createElement('div'); acciones.className = 'acciones';
       var estadoGuardado = estadosServidor.get(p.id), listo = p.activo && estadoGuardado && (!estadoGuardado.pendiente || (estadoGuardado.calculado_at && estadoGuardado.motivo === 'inventario'));
       var coincidencias = [];
@@ -352,22 +359,28 @@
         if (filaMatches.hidden) abiertos.delete(p.id); else abiertos.add(p.id);
         if (filaMatches.hidden || celdaMatches.childNodes.length) return;
         var cabecera = document.createElement('div'); cabecera.className = 'matches-encabezado'; celdaMatches.append(cabecera);
-        agregarTexto(cabecera,'h3','Propiedades para ' + p.nombre);
-        agregarTexto(cabecera,'p','Ordenadas por compatibilidad. Consulta los criterios de cada propiedad antes de presentarla.');
+
         if (estadoGuardado.pendiente) agregarTexto(cabecera,'p','Actualizando el inventario; puedes consultar las coincidencias anteriores.').className = 'matches-actualizando';
         var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
         var vistaGuardada = vistasMatches.get(p.id) || {}, modulo = Math.max(0,niveles.indexOf(vistaGuardada.nivel)), limite = vistaGuardada.offset || 0;
-        var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); celdaMatches.append(tabs);
+        var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); var toolbar = document.createElement('div'); toolbar.className = 'match-toolbar'; celdaMatches.append(toolbar); toolbar.append(tabs);
         var botones = niveles.map(function (nivel,indice) {
           var boton = agregarTexto(tabs,'button',(nivel === 100 ? '100%' : nivel + ' a ' + (nivel+9) + '%') + ' · ' + estadoGuardado.niveles[nivel]); boton.type = 'button';
           boton.addEventListener('click',function () { modulo = indice; limite = 0; pagina(); }); return boton;
         });
-        var nav = document.createElement('div'); nav.className = 'match-paginacion'; celdaMatches.append(nav);
+        var nav = document.createElement('div'); nav.className = 'match-paginacion'; toolbar.append(nav);
         var estadoPagina = agregarTexto(nav,'p',''); estadoPagina.setAttribute('role','status');
         var controles = document.createElement('div'); controles.className = 'acciones'; nav.append(controles);
-        var anterior = agregarTexto(controles,'button','← Anterior'), siguiente = agregarTexto(controles,'button','Siguiente →'); anterior.type = siguiente.type = 'button';
-        var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
+        var anterior = agregarTexto(controles,'button','‹'), siguiente = agregarTexto(controles,'button','›'); anterior.type = siguiente.type = 'button'; anterior.setAttribute('aria-label','Propiedades anteriores'); siguiente.setAttribute('aria-label','Más propiedades');
+        var grid = document.createElement('div'); grid.className = 'matches-grid'; var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.append(carrusel); carrusel.append(anterior,grid,siguiente);
         var solicitudPagina = 0;
+        function actualizarFlechas() {
+          if (grid.getAttribute('aria-busy') === 'true') return;
+          anterior.disabled = limite === 0 && grid.scrollLeft < 2;
+          siguiente.disabled = limite+4 >= Number(estadoGuardado.niveles[niveles[modulo]] || 0) && grid.scrollLeft+grid.clientWidth >= grid.scrollWidth-2;
+        }
+        grid.addEventListener('scroll',actualizarFlechas,{passive:true});
+        var observador = new ResizeObserver(actualizarFlechas); observador.observe(grid);
         async function pagina() {
           var solicitud = ++solicitudPagina, nivel = niveles[modulo], offset = limite, cantidad = Number(estadoGuardado.niveles[nivel] || 0);
           vistasMatches.set(p.id,{nivel:nivel,offset:offset});
@@ -375,28 +388,27 @@
           grid.replaceChildren();
           if (nivel == null) { agregarTexto(grid,'p','Todavía no hay propiedades que alcancen la compatibilidad mínima. Revisaremos las nuevas propiedades automáticamente.').className = 'kw-vacio'; nav.hidden = tabs.hidden = true; return; }
           estadoPagina.textContent = 'Cargando propiedades…'; anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
-          for(var i=0;i<Math.min(5,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
+          for(var i=0;i<Math.min(4,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
           try {
             var filas = await window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset);
             if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren();
-            filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid); });
+            filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid,p); });
             if (!filas.length) agregarTexto(grid,'p','Estas propiedades ya no están disponibles. Las coincidencias se actualizarán automáticamente.').className = 'kw-vacio';
             estadoPagina.textContent = 'Mostrando ' + (filas.length ? offset+1 : 0) + ' a ' + (offset+filas.length) + ' de ' + cantidad + ' propiedades';
-            anterior.disabled = offset === 0; siguiente.disabled = offset+5 >= cantidad;
-            controles.hidden = cantidad <= 5;
-            if (offset+5 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+5).catch(function () {});
+            actualizarFlechas();
+            if (offset+4 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+4).catch(function () {});
           } catch (error) {
             if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren(); estadoPagina.textContent = 'La carga no se completó.';
             var aviso = document.createElement('div'); aviso.className = 'match-error'; aviso.setAttribute('role','alert'); grid.append(aviso);
             agregarTexto(aviso,'p','No pudimos cargar esta página. Tu cliente y sus preferencias están guardados.');
             var reintentar = agregarTexto(aviso,'button','Volver a intentar'); reintentar.type = 'button'; reintentar.addEventListener('click',pagina);
-            anterior.disabled = offset === 0; siguiente.disabled = offset+5 >= cantidad;
-          } finally { if (solicitud === solicitudPagina) grid.setAttribute('aria-busy','false'); }
+            anterior.disabled = offset === 0; siguiente.disabled = offset+4 >= cantidad;
+          } finally { if (solicitud === solicitudPagina) { grid.setAttribute('aria-busy','false'); actualizarFlechas(); } }
         }
-        anterior.addEventListener('click',function () { limite = Math.max(0,limite-5); pagina(); });
-        siguiente.addEventListener('click',function () { limite += 5; pagina(); }); pagina();
+        anterior.addEventListener('click',function () { if (grid.scrollLeft > 2) grid.scrollBy({left:-grid.clientWidth,behavior:'smooth'}); else { limite = Math.max(0,limite-4); pagina(); } });
+        siguiente.addEventListener('click',function () { if (grid.scrollLeft+grid.clientWidth < grid.scrollWidth-2) grid.scrollBy({left:grid.clientWidth,behavior:'smooth'}); else { limite += 4; pagina(); } }); pagina();
       }
       desplegar.addEventListener('click',alternarMatches);
       if (listo && abiertos.has(p.id)) alternarMatches();
@@ -444,7 +456,6 @@
         finally { pausar.disabled = false; }
       });
       contenedor.append(card,acciones); celda.append(contenedor);
-      agregarTexto(celda,'p',!p.activo ? 'Búsqueda pausada. Reactívala para revisar nuevas propiedades.' : p.avisos_correo ? 'Avisos por correo activos: resumen de nuevas coincidencias a las 9:00 a. m., hora de Ciudad de México.' : 'Avisos por correo desactivados. Puedes activarlos al editar el cliente.').className = 'comprador-avisos';
     });
   }
   async function cargar(adicional) {

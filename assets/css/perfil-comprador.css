@@ -45,3 +45,30 @@
 .clientes-tabla button:focus-visible,.cliente-menu summary:focus-visible { outline:2px solid #800020;outline-offset:3px; }
 @media(max-width:800px) { .clientes-tabla .cliente { flex-wrap:wrap;padding:18px;gap:16px; }.clientes-tabla .cliente-info { flex-basis:100%; }.comprador-coincidencias { padding:18px; } }
 @media(max-width:540px) { .clientes-tabla .cliente-info { grid-template-columns:1fr; }.match-paginacion { flex-wrap:wrap; }.comprador-coincidencias .matches-grid { grid-template-columns:1fr; }.comprador-coincidencias .match-prop { max-width:none; }.match-niveles { gap:6px; } }
+/* Datos compactos y navegación horizontal de cuatro propiedades. */
+.clientes-tabla .cliente-info { display:flex;flex-direction:column;gap:12px;min-width:0; }
+.cliente-etiquetas { display:flex;gap:7px;max-width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin; }
+.cliente-etiqueta { flex:0 0 auto;background:#f5f1f2;color:#65565b;border-radius:20px;padding:5px 10px;font-size:12px;line-height:1.5;white-space:nowrap; }
+.match-toolbar { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px; }
+.match-toolbar .match-niveles { margin:0; }
+.match-toolbar .match-paginacion { margin:0;text-align:right;flex-shrink:0; }
+.match-paginacion .acciones { display:none; }
+.match-carrusel { position:relative;padding:0 24px; }
+.comprador-coincidencias .matches-grid { grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:calc((100% - 36px)/4);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none; }
+.matches-grid::-webkit-scrollbar { display:none; }
+.comprador-coincidencias .match-prop { max-width:none;min-width:0;scroll-snap-align:start; }
+.match-carrusel > button { position:absolute;top:45%;width:32px;height:40px;padding:0;border:1px solid #ddd;border-radius:20px;background:#fff;color:#800020;font-size:26px;z-index:2; }
+.match-carrusel > button:first-child { left:-12px; }
+.match-carrusel > button:last-child { right:-12px; }
+.match-carrusel > button:disabled { opacity:.3; }
+.comprador-coincidencias .match-criterios { overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0;padding-bottom:12px; }
+.criterio-resumen { border-bottom:1px solid var(--border);padding-bottom:10px; }
+.criterio-resumen strong { display:block;font-size:12px;margin-bottom:4px;color:#272125; }
+.criterio-resumen p { color:#655e61;font-size:12px;line-height:1.65; }
+@media(max-width:1100px) { .comprador-coincidencias .matches-grid { grid-auto-columns:calc((100% - 12px)/2); }.match-toolbar { flex-wrap:wrap; }.match-toolbar .match-paginacion { margin-left:auto; } }
+@media(max-width:540px) { .comprador-coincidencias .matches-grid { grid-template-columns:none;grid-auto-columns:100%; }.match-carrusel { padding:0 12px; }.match-toolbar { gap:12px; }.cliente-etiqueta { font-size:11px; } }
+@media(prefers-reduced-motion:reduce) { .matches-grid { scroll-behavior:auto; } }
+.clientes-tabla .cliente-info { align-items:flex-start;text-align:left; }
+.match-toolbar { margin-right:-24px; }
+.comprador-coincidencias .criterio-resumen p { border:0;padding:0; }
+@media(max-width:800px) { .match-toolbar { margin-right:-18px; } }
