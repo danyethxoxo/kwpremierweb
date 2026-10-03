@@ -187,7 +187,7 @@
       fotos: listaFotos(propiedad),
       asesor: {
         nombre: nombreAsesor(asesor, propiedad),
-        puesto: texto(asesor.puesto, 'Asesor inmobiliario'),
+        puesto: 'Asesor Inmobiliario',
         market_center: texto(asesor.market_center, texto(propiedad.market_center, 'KW Premier')),
         whatsapp: texto(asesor.whatsapp, texto(asesor.telefono)),
         email: texto(asesor.email),
@@ -441,15 +441,45 @@
     ctx.textAlign = 'left';
   }
 
-  function dibujarContactoFicha(ctx, valor, x, y) {
-    if (!valor) return;
-    ctx.fillStyle = COLORES.rojo;
+  function dibujarContactoIcono(ctx, tipo, x, y) {
+    ctx.save();
+    ctx.strokeStyle = COLORES.texto;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.arc(x + 8, y - 7, 5, 0, Math.PI * 2);
-    ctx.fill();
+    if (tipo === 0) {
+      ctx.moveTo(x + 4, y - 18);
+      ctx.quadraticCurveTo(x - 8, y - 13, x - 1, y + 2);
+      ctx.quadraticCurveTo(x + 7, y + 17, x + 20, y + 10);
+      ctx.lineTo(x + 27, y + 4);
+      ctx.lineTo(x + 18, y - 7);
+      ctx.lineTo(x + 10, y - 2);
+      ctx.moveTo(x - 1, y + 2);
+      ctx.lineTo(x - 10, y + 10);
+    } else if (tipo === 1) {
+      ctx.rect(x - 11, y - 14, 38, 28);
+      ctx.moveTo(x - 10, y - 12);
+      ctx.lineTo(x + 8, y + 2);
+      ctx.lineTo(x + 25, y - 12);
+    } else {
+      ctx.arc(x + 8, y, 18, 0, Math.PI * 2);
+      ctx.moveTo(x - 10, y);
+      ctx.lineTo(x + 26, y);
+      ctx.moveTo(x + 8, y - 18);
+      ctx.bezierCurveTo(x - 3, y - 10, x - 3, y + 10, x + 8, y + 18);
+      ctx.bezierCurveTo(x + 19, y + 10, x + 19, y - 10, x + 8, y - 18);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function dibujarContactoFicha(ctx, valor, x, y, tipo) {
+    if (!valor) return;
+    dibujarContactoIcono(ctx, tipo, x, y - 8);
     ctx.fillStyle = COLORES.texto;
-    ctx.font = '500 22px Arial, sans-serif';
-    textoEnvuelto(ctx, valor, x + 28, y, 510, 25, 1);
+    ctx.font = '500 27px Arial, sans-serif';
+    textoEnvuelto(ctx, valor, x + 58, y, 650, 29, 1);
   }
 
   function dibujarFotoAsesorFicha(ctx, foto, nombre, x, y, radio) {
@@ -571,35 +601,43 @@
 
     ctx.fillStyle = '#eeeeec';
     ctx.fillRect(0, 1565, ANCHO, 335);
-    ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(70, 1660, 5, 185);
-    dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 157, 1760, 118);
+    dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 183, 1750, 138);
 
     ctx.fillStyle = COLORES.texto;
-    ctx.font = '700 38px Arial, sans-serif';
-    ctx.fillText(modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 330, 1695);
+    var nombreAsesorFicha = modelo.asesor.nombre.toLocaleUpperCase('es-MX');
+    var tamanoNombreAsesor = 47;
+    ctx.font = '700 ' + tamanoNombreAsesor + 'px Arial, sans-serif';
+    while (tamanoNombreAsesor > 29 && ctx.measureText(nombreAsesorFicha).width > 680) {
+      tamanoNombreAsesor--;
+      ctx.font = '700 ' + tamanoNombreAsesor + 'px Arial, sans-serif';
+    }
+    ctx.fillText(nombreAsesorFicha, 370, 1675);
     ctx.fillStyle = COLORES.rojo;
-    ctx.font = '700 20px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 330, 1730, 520, 25, 2);
+    ctx.font = '700 29px Arial, sans-serif';
+    ctx.fillText(modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1725);
     ctx.fillStyle = COLORES.texto;
     var contactos = [
       modelo.asesor.whatsapp,
       modelo.asesor.email,
       modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : ''
     ].filter(Boolean);
-    contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 330, 1792 + i * 34); });
+    contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 370, 1790 + i * 46, i); });
 
     ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(870, 1690, 3, 170);
+    ctx.fillRect(1088, 1645, 3, 235);
     var datos = modelo.features.slice(0, 4);
-    var anchoDato = 165;
+    var posicionesDatos = [
+      { x: 1260, y: 1665 }, { x: 1490, y: 1665 },
+      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+    ];
     datos.forEach(function (dato, i) {
-      dibujarDatoFicha(ctx, dato, 965 + i * anchoDato, 1720);
+      var posicion = posicionesDatos[i];
+      dibujarDatoFicha(ctx, dato, posicion.x, posicion.y, 205);
     });
     if (modelo.extras.length) {
       ctx.fillStyle = COLORES.gris;
-      ctx.font = '500 14px Arial, sans-serif';
-      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 870, 1880, 650, 18, 1);
+      ctx.font = '500 16px Arial, sans-serif';
+      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1370, 505, 20, 2, 'center');
     }
     return canvas;
   }
@@ -656,12 +694,271 @@
     return pdfJsPromesa;
   }
 
-  async function convertirPDF(canvas) {
+  function pdfFuente(pdf, tamano, color, estilo) {
+    pdf.setFont('helvetica', estilo || 'normal');
+    pdf.setFontSize(tamano);
+    pdf.setTextColor(color || COLORES.texto);
+  }
+
+  function pdfTextoEnvuelto(pdf, valor, x, y, maximo, alto, maxLineas, alineacion, tamano, color, estilo, escala) {
+    pdfFuente(pdf, tamano * escala, color, estilo);
+    var lineas = pdf.splitTextToSize(texto(valor), maximo * escala).slice(0, maxLineas || 99);
+    pdf.text(lineas, x * escala, y * escala, {
+      align: alineacion || 'left',
+      lineHeightFactor: alto / tamano
+    });
+    return lineas.length;
+  }
+
+  function pdfTextoAjustado(pdf, valor, x, y, maximo, tamano, minimo, color, estilo, escala) {
+    var actual = tamano;
+    var contenido = texto(valor);
+    pdfFuente(pdf, actual * escala, color, estilo);
+    while (actual > minimo && pdf.getTextWidth(contenido) > maximo * escala) {
+      actual--;
+      pdfFuente(pdf, actual * escala, color, estilo);
+    }
+    pdf.text(contenido, x * escala, y * escala);
+  }
+
+  function rasterizarImagen(imagen, ancho, alto, modo, calidad) {
+    if (!imagen || !imagen.naturalWidth) return null;
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(ancho));
+    canvas.height = Math.max(1, Math.round(alto));
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (modo === 'contain') {
+      var escalaContain = Math.min(canvas.width / imagen.naturalWidth, canvas.height / imagen.naturalHeight);
+      var anchoContain = imagen.naturalWidth * escalaContain;
+      var altoContain = imagen.naturalHeight * escalaContain;
+      ctx.drawImage(imagen, (canvas.width - anchoContain) / 2, (canvas.height - altoContain) / 2, anchoContain, altoContain);
+    } else {
+      var escalaCover = Math.max(canvas.width / imagen.naturalWidth, canvas.height / imagen.naturalHeight);
+      var anchoCover = canvas.width / escalaCover;
+      var altoCover = canvas.height / escalaCover;
+      ctx.drawImage(imagen, (imagen.naturalWidth - anchoCover) / 2, (imagen.naturalHeight - altoCover) / 2,
+        anchoCover, altoCover, 0, 0, canvas.width, canvas.height);
+    }
+    return {
+      data: canvas.toDataURL(modo === 'contain' ? 'image/png' : 'image/jpeg', modo === 'contain' ? undefined : (calidad || 0.9)),
+      formato: modo === 'contain' ? 'PNG' : 'JPEG'
+    };
+  }
+
+  function rasterizarFotoCircular(imagen, lado) {
+    if (!imagen || !imagen.naturalWidth) return null;
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(lado);
+    canvas.height = Math.round(lado);
+    var ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(lado / 2, lado / 2, lado / 2, 0, Math.PI * 2);
+    ctx.clip();
+    var escala = Math.max(lado / imagen.naturalWidth, lado / imagen.naturalHeight);
+    var ancho = lado / escala;
+    var alto = lado / escala;
+    ctx.drawImage(imagen, (imagen.naturalWidth - ancho) / 2, (imagen.naturalHeight - alto) / 2, ancho, alto, 0, 0, lado, lado);
+    return { data: canvas.toDataURL('image/png'), formato: 'PNG' };
+  }
+
+  function pdfImagen(pdf, raster, x, y, ancho, alto, escala) {
+    if (!raster) return false;
+    pdf.addImage(raster.data, raster.formato, x * escala, y * escala, ancho * escala, alto * escala, undefined, 'FAST');
+    return true;
+  }
+
+  function pdfMarcaSinFoto(pdf, x, y, ancho, alto, principal, escala) {
+    pdf.setFillColor(principal ? '#e3dfd9' : '#eceae7');
+    pdf.rect(x * escala, y * escala, ancho * escala, alto * escala, 'F');
+    pdf.setFillColor(principal ? '#d6d2cc' : '#dedbd7');
+    pdf.triangle((x + ancho * .58) * escala, y * escala,
+      (x + ancho) * escala, y * escala, (x + ancho) * escala, (y + alto * .7) * escala, 'F');
+    pdf.setFillColor('#f6f5f3');
+    pdf.triangle((x + ancho * .82) * escala, y * escala,
+      (x + ancho) * escala, y * escala, (x + ancho) * escala, (y + alto * .28) * escala, 'F');
+    if (principal) {
+      pdfFuente(pdf, 150 * escala, '#c6c0b9', 'bold');
+      pdf.text('KW', (x + ancho * .72) * escala, (y + alto * .54) * escala, { align: 'center' });
+      pdfFuente(pdf, 22 * escala, '#a49b93', 'bold');
+      pdf.text('IMAGEN DE LA PROPIEDAD', (x + ancho * .72) * escala, (y + alto * .64) * escala, { align: 'center' });
+    } else {
+      pdf.setFillColor(COLORES.rojo);
+      pdf.rect((x + 34) * escala, (y + 34) * escala, 54 * escala, 5 * escala, 'F');
+    }
+  }
+
+  function pdfImagenCubierta(pdf, imagen, x, y, ancho, alto, principal, escala) {
+    if (!pdfImagen(pdf, rasterizarImagen(imagen, ancho, alto, 'cover', 0.92), x, y, ancho, alto, escala)) {
+      pdfMarcaSinFoto(pdf, x, y, ancho, alto, principal, escala);
+    }
+  }
+
+  function pdfIconoFicha(pdf, etiqueta, x, y, escala) {
+    var nombre = texto(etiqueta).toLowerCase();
+    pdf.setDrawColor(COLORES.rojo);
+    pdf.setLineWidth(3 * escala);
+    if (nombre.indexOf('rec') !== -1 || nombre.indexOf('cama') !== -1) {
+      pdf.rect((x - 30) * escala, (y - 12) * escala, 60 * escala, 22 * escala, 'S');
+      pdf.line((x - 30) * escala, (y - 12) * escala, (x - 30) * escala, (y + 20) * escala);
+      pdf.line((x + 30) * escala, (y - 12) * escala, (x + 30) * escala, (y + 20) * escala);
+      pdf.line((x - 20) * escala, (y - 3) * escala, (x + 20) * escala, (y - 3) * escala);
+    } else if (nombre.indexOf('ba') !== -1) {
+      pdf.line((x - 31) * escala, (y - 2) * escala, (x + 30) * escala, (y - 2) * escala);
+      pdf.ellipse((x - 5) * escala, (y + 7) * escala, 26 * escala, 12 * escala, 'S');
+      pdf.line((x - 21) * escala, (y - 2) * escala, (x - 21) * escala, (y - 20) * escala);
+      pdf.line((x - 21) * escala, (y - 20) * escala, (x - 5) * escala, (y - 20) * escala);
+    } else if (nombre.indexOf('coch') !== -1 || nombre.indexOf('estac') !== -1) {
+      pdf.rect((x - 31) * escala, (y - 10) * escala, 62 * escala, 27 * escala, 'S');
+      pdf.line((x - 22) * escala, (y - 10) * escala, (x - 13) * escala, (y - 26) * escala);
+      pdf.line((x - 13) * escala, (y - 26) * escala, (x + 13) * escala, (y - 26) * escala);
+      pdf.line((x + 13) * escala, (y - 26) * escala, (x + 22) * escala, (y - 10) * escala);
+      pdf.circle((x - 16) * escala, (y + 10) * escala, 3 * escala, 'S');
+      pdf.circle((x + 16) * escala, (y + 10) * escala, 3 * escala, 'S');
+    } else {
+      pdf.rect((x - 23) * escala, (y - 23) * escala, 46 * escala, 46 * escala, 'S');
+      pdf.line((x - 33) * escala, (y - 23) * escala, (x - 33) * escala, (y + 23) * escala);
+      pdf.line((x + 33) * escala, (y - 23) * escala, (x + 33) * escala, (y + 23) * escala);
+      pdf.line((x - 37) * escala, (y - 23) * escala, (x - 29) * escala, (y - 23) * escala);
+      pdf.line((x + 29) * escala, (y + 23) * escala, (x + 37) * escala, (y + 23) * escala);
+    }
+  }
+
+  function pdfDatoFicha(pdf, dato, x, y, ancho, escala) {
+    pdfIconoFicha(pdf, dato.etiqueta, x, y, escala);
+    pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 72, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, ancho - 12, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
+  }
+
+  function pdfIconoContacto(pdf, tipo, x, y, escala) {
+    pdf.setDrawColor(COLORES.texto);
+    pdf.setLineWidth(4 * escala);
+    if (tipo === 0) {
+      pdf.line((x + 4) * escala, (y - 18) * escala, (x - 1) * escala, (y + 2) * escala);
+      pdf.line((x - 1) * escala, (y + 2) * escala, (x + 20) * escala, (y + 10) * escala);
+      pdf.line((x + 20) * escala, (y + 10) * escala, (x + 27) * escala, (y + 4) * escala);
+      pdf.line((x + 27) * escala, (y + 4) * escala, (x + 18) * escala, (y - 7) * escala);
+      pdf.line((x + 18) * escala, (y - 7) * escala, (x + 10) * escala, (y - 2) * escala);
+    } else if (tipo === 1) {
+      pdf.rect((x - 11) * escala, (y - 14) * escala, 38 * escala, 28 * escala, 'S');
+      pdf.line((x - 10) * escala, (y - 12) * escala, (x + 8) * escala, (y + 2) * escala);
+      pdf.line((x + 8) * escala, (y + 2) * escala, (x + 25) * escala, (y - 12) * escala);
+    } else {
+      pdf.circle((x + 8) * escala, y * escala, 18 * escala, 'S');
+      pdf.line((x - 10) * escala, y * escala, (x + 26) * escala, y * escala);
+      pdf.ellipse((x + 8) * escala, y * escala, 9 * escala, 18 * escala, 'S');
+    }
+  }
+
+  function pdfContactoFicha(pdf, valor, x, y, tipo, escala) {
+    if (!valor) return;
+    pdfIconoContacto(pdf, tipo, x + 8, y - 8, escala);
+    pdfTextoEnvuelto(pdf, valor, x + 58, y, 650, 29, 1, 'left', 27, COLORES.texto, 'normal', escala);
+  }
+
+  function pdfFotoAsesorFicha(pdf, foto, nombre, x, y, radio, escala) {
+    var lado = radio * 2;
+    var raster = rasterizarFotoCircular(foto, lado);
+    if (raster) {
+      pdfImagen(pdf, raster, x - radio, y - radio, lado, lado, escala);
+    } else {
+      pdf.setFillColor(COLORES.rojo);
+      pdf.circle(x * escala, y * escala, radio * escala, 'F');
+      pdfFuente(pdf, 64 * escala, COLORES.blanco, 'bold');
+      pdf.text(nombre.split(/\s+/).slice(0, 2).map(function (n) { return n[0]; }).join('').toUpperCase(), x * escala, (y + 22) * escala, { align: 'center' });
+    }
+    pdf.setDrawColor(COLORES.rojo);
+    pdf.setLineWidth(4 * escala);
+    pdf.circle(x * escala, y * escala, radio * escala, 'S');
+  }
+
+  function dibujarPDFVector(pdf, modelo, escala) {
+    var anchoPanel = 680;
+    var altoFotos = 1565;
+    pdf.setFillColor(COLORES.blanco);
+    pdf.rect(0, 0, ANCHO * escala, ALTO * escala, 'F');
+
+    pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
+    pdfImagenCubierta(pdf, modelo._fotos[1], anchoPanel, 1240, 450, 325, false, escala);
+    pdfImagenCubierta(pdf, modelo._fotos[2], 1140, 1240, 460, 325, false, escala);
+    pdf.setFillColor(COLORES.blanco);
+    pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
+
+    var logoAncho = 286;
+    var logoAlto = modelo._logo && modelo._logo.naturalWidth
+      ? logoAncho * modelo._logo.naturalHeight / modelo._logo.naturalWidth : 0;
+    if (logoAlto) {
+      pdfImagen(pdf, rasterizarImagen(modelo._logo, logoAncho, logoAlto, 'contain'), 78, 112, logoAncho, logoAlto, escala);
+    } else {
+      pdfFuente(pdf, 42 * escala, COLORES.rojo, 'bold');
+      pdf.text('kw', 78 * escala, 160 * escala);
+      pdfFuente(pdf, 42 * escala, COLORES.texto, 'bold');
+      pdf.text('PREMIER', 154 * escala, 160 * escala);
+    }
+
+    pdfFuente(pdf, 154 * escala, COLORES.texto, 'normal');
+    pdf.setFont('times', 'normal');
+    pdf.text(modelo.operacion, 58 * escala, 435 * escala);
+    pdfTextoEnvuelto(pdf, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 635, 570, 42, 2, 'center', 36, COLORES.texto, 'normal', escala);
+
+    pdf.setDrawColor(COLORES.rojo);
+    pdf.setLineWidth(3 * escala);
+    pdf.rect(36 * escala, 975 * escala, 590 * escala, 455 * escala, 'S');
+    pdfTextoEnvuelto(pdf, 'DIRECCIÓN:', 331, 1064, 590, 42, 1, 'center', 42, COLORES.rojo, 'normal', escala);
+    pdfTextoEnvuelto(pdf, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 1150, 505, 34, 6, 'center', 27, COLORES.gris, 'normal', escala);
+    if (modelo.extras.length) {
+      pdfTextoEnvuelto(pdf, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1370, 505, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
+    }
+
+    pdf.setFillColor(COLORES.rojo);
+    pdf.rect(40 * escala, 1470 * escala, 590 * escala, 125 * escala, 'F');
+    var precioTexto = modelo.precio || 'PRECIO A CONSULTAR';
+    var moneda = texto(modelo.moneda, 'MXN');
+    var tamanoPrecio = 53;
+    pdfFuente(pdf, tamanoPrecio * escala, COLORES.blanco, 'bold');
+    pdfFuente(pdf, 28 * escala, COLORES.blanco, 'bold');
+    var anchoMoneda = pdf.getTextWidth(moneda);
+    pdfFuente(pdf, tamanoPrecio * escala, COLORES.blanco, 'bold');
+    while (tamanoPrecio > 31 && pdf.getTextWidth(precioTexto) + 26 * escala + anchoMoneda > (600 - 80) * escala) {
+      tamanoPrecio--;
+      pdfFuente(pdf, tamanoPrecio * escala, COLORES.blanco, 'bold');
+    }
+    pdf.text(precioTexto, 80 * escala, 1548 * escala);
+    if (modelo.precio) {
+      pdfFuente(pdf, 28 * escala, COLORES.blanco, 'bold');
+      pdf.text(moneda, 600 * escala, 1548 * escala, { align: 'right' });
+    }
+
+    pdf.setFillColor('#eeeeec');
+    pdf.rect(0, 1565 * escala, ANCHO * escala, 335 * escala, 'F');
+    pdfFotoAsesorFicha(pdf, modelo._asesorFoto, modelo.asesor.nombre, 183, 1750, 138, escala);
+    pdfTextoAjustado(pdf, modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 370, 1675, 680, 47, 29, COLORES.texto, 'bold', escala);
+    pdfTextoAjustado(pdf, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1725, 680, 29, 22, COLORES.rojo, 'bold', escala);
+    [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : '']
+      .filter(Boolean).slice(0, 3).forEach(function (dato, i) {
+        pdfContactoFicha(pdf, dato, 370, 1790 + i * 46, i, escala);
+      });
+
+    pdf.setFillColor(COLORES.rojo);
+    pdf.rect(1088 * escala, 1645 * escala, 3 * escala, 235 * escala, 'F');
+    var posicionesDatos = [
+      { x: 1260, y: 1665 }, { x: 1490, y: 1665 },
+      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+    ];
+    modelo.features.slice(0, 4).forEach(function (dato, i) {
+      var posicion = posicionesDatos[i];
+      pdfDatoFicha(pdf, dato, posicion.x, posicion.y, 205, escala);
+    });
+  }
+
+  async function convertirPDF(modelo) {
     var JsPDF = await cargarJsPDF();
     var anchoPDF = 612;
-    var altoPDF = anchoPDF * canvas.height / canvas.width;
+    var altoPDF = anchoPDF * ALTO / ANCHO;
+    var escala = anchoPDF / ANCHO;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF, undefined, 'NONE');
+    dibujarPDFVector(pdf, modelo, escala);
     return pdf.output('blob');
   }
 
@@ -749,7 +1046,7 @@
     function obtenerPDF() {
       if (pdfBlob) return Promise.resolve(pdfBlob);
       if (!pdfPromesa) {
-        pdfPromesa = convertirPDF(canvas).then(function (resultado) {
+        pdfPromesa = convertirPDF(modelo).then(function (resultado) {
           pdfBlob = resultado;
           return resultado;
         }).catch(function (error) {

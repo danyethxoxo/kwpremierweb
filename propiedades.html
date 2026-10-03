@@ -1019,6 +1019,7 @@
 
   var propiedadesPaginaActual = Object.create(null);
   var asesoresFichaCache = Object.create(null);
+  var fotosFichaCache = Object.create(null);
   var fichaPropiedadModuloPromesa = null;
 
   function cargarModuloFichaPropiedad() {
@@ -1026,7 +1027,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002d';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002e';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1070,6 +1071,30 @@
     return asesoresFichaCache[clave];
   }
 
+  function cargarFotosFicha(propiedad) {
+    var actuales = Array.isArray(propiedad && propiedad.imagenes) ? propiedad.imagenes : [];
+    if (!propiedad || !sb || !sb.functions || typeof sb.functions.invoke !== 'function' ||
+        propiedad.fuente !== 'kwmexico' || !propiedad.fuente_id || actuales.length >= 3) {
+      return Promise.resolve(propiedad);
+    }
+    var clave = String(propiedad.fuente_id);
+    if (fotosFichaCache[clave]) return fotosFichaCache[clave];
+    fotosFichaCache[clave] = sb.functions.invoke('fotos-propiedad', {
+      body: { fuente: 'kwmexico', fuente_id: clave }
+    }).then(function (respuesta) {
+      if (respuesta.error || !respuesta.data || !Array.isArray(respuesta.data.imagenes)) return propiedad;
+      var combinadas = actuales.concat(respuesta.data.imagenes);
+      var vistas = Object.create(null);
+      propiedad.imagenes = combinadas.filter(function (url) {
+        if (!url || vistas[url]) return false;
+        vistas[url] = true;
+        return true;
+      });
+      return propiedad;
+    }).catch(function () { return propiedad; });
+    return fotosFichaCache[clave];
+  }
+
   async function abrirFichaPropiedad(evento, boton) {
     evento.preventDefault();
     evento.stopPropagation();
@@ -1083,8 +1108,8 @@
     }
     try {
       var enlace = tarjeta.querySelector('.prop-enlace');
-      var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarModuloFichaPropiedad()]);
-      datos[1].abrir({ propiedad: propiedad, asesor: datos[0], url: enlace ? enlace.href : window.location.href });
+      var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarFotosFicha(propiedad), cargarModuloFichaPropiedad()]);
+      datos[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
     } catch (error) {
       mostrarAvisoAccionPropiedad(error.message || 'No se pudo preparar la ficha técnica');
     }
