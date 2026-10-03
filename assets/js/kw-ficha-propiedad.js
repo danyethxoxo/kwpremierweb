@@ -14,6 +14,7 @@
   };
   var estilosInstalados = false;
   var jsPdfPromesa = null;
+  var pdfJsPromesa = null;
 
   var ESTILOS = [
     '.kw-ficha-overlay{position:fixed;inset:0;z-index:9500;padding:18px;background:rgba(28,24,24,.56);',
@@ -120,8 +121,30 @@
   }
 
   function listaFotos(propiedad) {
-    var fuente = Array.isArray(propiedad && propiedad.imagenes) ? propiedad.imagenes : [];
-    return fuente.map(urlFoto).filter(Boolean).slice(0, 3);
+    var urls = [];
+    var vistos = Object.create(null);
+    var fuentes = ['imagenes', 'fotos', 'photos', 'galeria', 'gallery'];
+
+    function agregar(valor) {
+      if (Array.isArray(valor)) {
+        valor.forEach(agregar);
+        return;
+      }
+      var url = urlFoto(valor);
+      if (!url) return;
+      var clave = url;
+      try {
+        var parsed = new URL(url, window.location.href);
+        parsed.hash = '';
+        clave = parsed.href;
+      } catch (error) { /* Se conserva la URL para que el cargador decida. */ }
+      if (vistos[clave]) return;
+      vistos[clave] = true;
+      urls.push(url);
+    }
+
+    fuentes.forEach(function (campo) { agregar(propiedad && propiedad[campo]); });
+    return urls.slice(0, 12);
   }
 
   function listaCaracteristicas(propiedad) {
@@ -210,17 +233,41 @@
     return intentar(0);
   }
 
+  function cargarFotosDisponibles(urls) {
+    if (!urls.length) return Promise.resolve([]);
+    var resultados = new Array(urls.length);
+    var siguiente = 0;
+    var exitosas = 0;
+    var trabajadores = Math.min(3, urls.length);
+
+    function trabajador() {
+      if (exitosas >= 3) return Promise.resolve();
+      var indice = siguiente++;
+      if (indice >= urls.length) return Promise.resolve();
+      return cargarImagen(urls[indice]).then(function (imagen) {
+        if (imagen && imagen.naturalWidth) {
+          resultados[indice] = imagen;
+          exitosas++;
+        }
+        return trabajador();
+      });
+    }
+
+    return Promise.all(Array.from({ length: trabajadores }, trabajador))
+      .then(function () {
+        return resultados.filter(function (imagen) { return imagen && imagen.naturalWidth; }).slice(0, 3);
+      });
+  }
+
   function cargarImagenes(modelo) {
     return Promise.all([
       cargarImagen(modelo.logo),
-      cargarImagen(modelo.fotos[0]),
-      cargarImagen(modelo.fotos[1]),
-      cargarImagen(modelo.fotos[2]),
+      cargarFotosDisponibles(modelo.fotos),
       cargarImagen(modelo.asesor.foto)
     ]).then(function (imagenes) {
       modelo._logo = imagenes[0];
-      modelo._fotos = imagenes.slice(1, 4);
-      modelo._asesorFoto = imagenes[4];
+      modelo._fotos = imagenes[1];
+      modelo._asesorFoto = imagenes[2];
       return modelo;
     });
   }
@@ -433,6 +480,36 @@
     ctx.stroke();
   }
 
+  function dibujarPrecioFicha(ctx, modelo) {
+    var x = 80;
+    var y = 1548;
+    var limiteDerecho = 600;
+    var separacion = 26;
+    var moneda = texto(modelo.moneda, 'MXN');
+    var tamano = 53;
+    var anchoMoneda;
+
+    ctx.font = '700 ' + tamano + 'px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLORES.blanco;
+    ctx.font = '700 28px Arial, sans-serif';
+    anchoMoneda = ctx.measureText(moneda).width;
+    ctx.font = '700 ' + tamano + 'px Arial, sans-serif';
+    while (tamano > 31 && ctx.measureText(modelo.precio || 'PRECIO A CONSULTAR').width + separacion + anchoMoneda > limiteDerecho - x) {
+      tamano--;
+      ctx.font = '700 ' + tamano + 'px Arial, sans-serif';
+    }
+
+    var precioTexto = modelo.precio || 'PRECIO A CONSULTAR';
+    ctx.fillText(precioTexto, x, y);
+    if (modelo.precio) {
+      ctx.font = '700 28px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(moneda, limiteDerecho, y);
+    }
+    ctx.textAlign = 'left';
+  }
+
   function dibujarModelo(modelo) {
     var canvas = document.createElement('canvas');
     canvas.width = ANCHO;
@@ -490,14 +567,7 @@
 
     ctx.fillStyle = COLORES.rojo;
     ctx.fillRect(40, 1470, 590, 125);
-    ctx.fillStyle = COLORES.blanco;
-    ctx.font = '700 53px Arial, sans-serif';
-    ctx.fillText(modelo.precio || 'PRECIO A CONSULTAR', 80, 1548);
-    if (modelo.precio) {
-      ctx.font = '700 28px Arial, sans-serif';
-      var anchoPrecio = ctx.measureText(modelo.precio).width;
-      ctx.fillText(texto(modelo.moneda, 'MXN'), Math.min(520, 80 + anchoPrecio + 44), 1548);
-    }
+    dibujarPrecioFicha(ctx, modelo);
 
     ctx.fillStyle = '#eeeeec';
     ctx.fillRect(0, 1565, ANCHO, 335);
@@ -545,14 +615,6 @@
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 1200);
   }
 
-  function convertirPNG(canvas) {
-    return new Promise(function (resolver, rechazar) {
-      canvas.toBlob(function (blob) {
-        blob ? resolver(blob) : rechazar(new Error('No se pudo generar el PNG.'));
-      }, 'image/png');
-    });
-  }
-
   function cargarJsPDF() {
     if (global.jspdf && global.jspdf.jsPDF) return Promise.resolve(global.jspdf.jsPDF);
     if (jsPdfPromesa) return jsPdfPromesa;
@@ -570,13 +632,63 @@
     return jsPdfPromesa;
   }
 
+  function cargarPdfJs() {
+    if (global.pdfjsLib && global.pdfjsLib.getDocument) return Promise.resolve(global.pdfjsLib);
+    if (pdfJsPromesa) return pdfJsPromesa;
+    pdfJsPromesa = new Promise(function (resolver, rechazar) {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.async = true;
+      script.onload = function () {
+        if (!global.pdfjsLib || !global.pdfjsLib.getDocument) {
+          rechazar(new Error('No se pudo cargar el lector PDF.'));
+          return;
+        }
+        global.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolver(global.pdfjsLib);
+      };
+      script.onerror = function () {
+        pdfJsPromesa = null;
+        rechazar(new Error('No se pudo cargar el lector PDF.'));
+      };
+      document.head.appendChild(script);
+    });
+    return pdfJsPromesa;
+  }
+
   async function convertirPDF(canvas) {
     var JsPDF = await cargarJsPDF();
     var anchoPDF = 612;
     var altoPDF = anchoPDF * canvas.height / canvas.width;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, anchoPDF, altoPDF, undefined, 'FAST');
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF, undefined, 'NONE');
     return pdf.output('blob');
+  }
+
+  async function convertirPNGDesdePDF(blob) {
+    var pdfJs = await cargarPdfJs();
+    var bytes = new Uint8Array(await blob.arrayBuffer());
+    var documento = await pdfJs.getDocument({ data: bytes }).promise;
+    try {
+      var pagina = await documento.getPage(1);
+      var base = pagina.getViewport({ scale: 1 });
+      var viewport = pagina.getViewport({ scale: ANCHO / base.width });
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      var contexto = canvas.getContext('2d', { alpha: false });
+      contexto.imageSmoothingEnabled = true;
+      contexto.imageSmoothingQuality = 'high';
+      await pagina.render({ canvasContext: contexto, viewport: viewport }).promise;
+      return await new Promise(function (resolver, rechazar) {
+        canvas.toBlob(function (resultado) {
+          if (resultado) resolver(resultado);
+          else rechazar(new Error('No se pudo convertir el PDF a PNG.'));
+        }, 'image/png');
+      });
+    } finally {
+      if (documento && documento.destroy) await documento.destroy();
+    }
   }
 
   function iconoCerrar() {
@@ -631,12 +743,30 @@
       return;
     }
 
+    var pdfBlob = null;
+    var pdfPromesa = null;
+
+    function obtenerPDF() {
+      if (pdfBlob) return Promise.resolve(pdfBlob);
+      if (!pdfPromesa) {
+        pdfPromesa = convertirPDF(canvas).then(function (resultado) {
+          pdfBlob = resultado;
+          return resultado;
+        }).catch(function (error) {
+          pdfPromesa = null;
+          throw error;
+        });
+      }
+      return pdfPromesa;
+    }
+
     async function descargarFormato(tipo, boton) {
       boton.disabled = true;
       boton.textContent = tipo === 'png' ? 'Generando PNG...' : 'Generando PDF...';
-      estado.textContent = 'Preparando descarga...';
+      estado.textContent = tipo === 'png' ? 'Generando PDF base y convirtiéndolo a PNG...' : 'Preparando PDF en alta calidad...';
       try {
-        var blob = tipo === 'png' ? await convertirPNG(canvas) : await convertirPDF(canvas);
+        var pdf = await obtenerPDF();
+        var blob = tipo === 'png' ? await convertirPNGDesdePDF(pdf) : pdf;
         descargar(blob, 'ficha-' + slug(modelo.titulo) + '.' + tipo);
         estado.textContent = 'Descarga lista.';
       } catch (error) {
