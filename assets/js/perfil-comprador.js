@@ -49,6 +49,7 @@
   var ubicaciones = [], inventarioMatches = null, errorMatches = false, sitioAsesor = '', cacheMatches = new Map();
   var indiceCiudad = new Map(), catalogoIndexado = null;
   var estadosServidor = new Map(), sondeoEstado = null;
+  var abiertos = new Set(), vistasMatches = new Map();
   var estadoCatalogo = document.createElement('p'); estadoCatalogo.className = 'catalogo-estado'; estadoCatalogo.setAttribute('role','status');
   document.querySelector('.encabezado').insertAdjacentElement('afterend',estadoCatalogo);
   function indexarInventario(filas) {
@@ -177,10 +178,9 @@
   }
   async function cargarUbicaciones() {
     try {
-      await window.kwInventarioLocal.cargar(window.kwSupabase,{
-        datos: function (filas) { ubicaciones = filas.filter(function (p) { return p.estado && normalizarBusqueda(p.estado) !== 'antioquia'; }); refrescarUbicacion(); },
-        estado: function (texto) { estadoCatalogo.textContent = texto; }
-      });
+      var respuesta = await window.kwSupabase.rpc('propiedades_inventario_catalogo',{p_campo:'colonia'});
+      if (respuesta.error) throw respuesta.error;
+      ubicaciones = respuesta.data || []; refrescarUbicacion();
     } catch (e) { avisar('No se pudieron cargar las ubicaciones. Recarga para intentar de nuevo.',true); }
   }
   var revisionMatches = 0;
@@ -190,14 +190,16 @@
   async function cargarInventarioMatches() {
     if (esFormulario) return;
     var revision = ++revisionMatches;
-    inventarioMatches = null; errorMatches = false; cacheMatches.clear(); pintar();
+    errorMatches = false;
     if (!perfiles.length) { inventarioMatches = []; pintar(); return; }
     try {
-      var res = await window.kwSupabase.from('comprador_estados').select('perfil_id,total,niveles,pendiente,calculado_at,ultimo_error').in('perfil_id',perfiles.map(function (p) { return p.id; }));
+      var res = await window.kwSupabase.from('comprador_estados').select('perfil_id,total,niveles,pendiente,motivo,calculado_at,ultimo_error').in('perfil_id',perfiles.map(function (p) { return p.id; }));
       if (res.error) throw res.error;
       if (revision !== revisionMatches) return;
+      var anterior = JSON.stringify(Array.from(estadosServidor.values()));
       estadosServidor.clear(); res.data.forEach(function (e) { estadosServidor.set(e.perfil_id,e); });
-      inventarioMatches = []; errorMatches = false; pintar();
+      inventarioMatches = []; errorMatches = false;
+      if (anterior !== JSON.stringify(Array.from(estadosServidor.values()))) pintar();
       var pendientes = res.data.some(function (e) { return e.pendiente; });
       estadoCatalogo.textContent = pendientes ? 'Actualizando las coincidencias guardadas…' : '';
       clearTimeout(sondeoEstado);
@@ -258,7 +260,7 @@
     numeros.forEach(function (key) { var valor = form.elements[key].value.replace(/,/g,''); d[key] = valor === '' ? null : Number(valor); });
     d.tipos = Array.from(form.querySelectorAll('input[name=tipos]:checked')).map(function (input) { return input.value; });
     d.avisos_campana = true;
-    d.avisos_correo = true;
+    d.avisos_correo = form.elements.avisos_correo ? form.elements.avisos_correo.checked : true;
     if (d.operacion === 'renta') d.precio_min = null;
     if (!d.telefono && !d.correo) throw new Error('Registra al menos un teléfono o correo del cliente.');
     if (d.nombre.length < 2 || d.estado.length < 2) throw new Error('Completa el nombre y el estado.');
@@ -295,12 +297,15 @@
     enlace = window.kwSitioAsesor.personalizar(enlace,sitioAsesor);
     var link = document.createElement('a'); link.href = enlace; link.target = '_blank'; link.rel = 'noopener noreferrer';
     link.setAttribute('aria-label', p.titulo || 'Ver propiedad');
-    var urlFoto = p.imagenes && p.imagenes[0];
-    if (urlFoto && /^https:\/\//i.test(urlFoto)) { var img = document.createElement('img'); img.src = urlFoto; img.loading = 'lazy'; img.alt = p.titulo || ''; img.addEventListener('error',function () { img.remove(); }); link.append(img); }
+    var original = p.imagenes && p.imagenes[0], urlFoto = p.miniatura_url || original;
+    if (urlFoto && /^https:\/\//i.test(urlFoto)) { var img = document.createElement('img'); img.src = urlFoto; img.loading = 'lazy'; img.decoding = 'async'; img.alt = p.titulo || ''; img.addEventListener('error',function () { if (original && img.src !== original) img.src = original; else { img.remove(); agregarTexto(link,'span','Foto no disponible'); } }); link.append(img); }
+    else agregarTexto(link,'span','Foto no disponible');
     foto.append(link); var badge = agregarTexto(foto,'span',p.operacion === 'renta' ? 'Renta' : 'Venta'); badge.className = 'match-badge';
+    agregarTexto(foto,'span',match.porcentaje + '% compatible').className = 'match-score';
     var body = document.createElement('div'); body.className = 'match-body';
     var precio = agregarTexto(body,'div',Number(p.precio) > 0 ? new Intl.NumberFormat('es-MX',{style:'currency',currency:p.moneda || 'MXN',maximumFractionDigits:0}).format(p.precio) : 'Precio a consultar'); precio.className = 'match-precio';
     var titulo = agregarTexto(body,'a',p.titulo); titulo.className = 'match-titulo'; titulo.style.display = 'block'; titulo.href = enlace; titulo.target = '_blank'; titulo.rel = 'noopener noreferrer';
+    titulo.title = p.titulo || 'Ver propiedad';
     agregarTexto(body,'div',[p.colonia,p.municipio].filter(Boolean).join(', ')).className = 'match-ubic';
     agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
     var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); agregarTexto(pie,'span',p.asesor_nombre || ''); body.append(pie);
@@ -309,7 +314,7 @@
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
     agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
     var detalleCriterios = document.createElement('div'); detalleCriterios.className = 'match-criterios'; desglose.append(detalleCriterios);
-    match.criterios.forEach(function (c) { agregarTexto(detalleCriterios,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '— ') + c.nombre + ' · ' + c.detalle); });
+    match.criterios.forEach(function (c) { var criterio = agregarTexto(detalleCriterios,'p',(c.cumple ? '✓ ' : c.parcial ? '≈ ' : '- ') + c.nombre + ' · ' + c.detalle); criterio.className = c.cumple ? 'criterio-cumple' : c.parcial ? 'criterio-parcial' : 'criterio-falta'; });
     var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
     var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
     function girar(atras) {
@@ -323,10 +328,10 @@
   function pintar() {
     lista.replaceChildren();
     if (!perfiles.length) agregarTexto(lista, 'p', 'Todavía no tienes perfiles. Crea el primero con el formulario.');
-    var tabla = document.createElement('table'); tabla.className = 'clientes-tabla'; tabla.setAttribute('aria-label','Mis clientes');
-    var tbody = document.createElement('tbody'); tabla.append(tbody); if (perfiles.length) lista.append(tabla);
+    var tabla = document.createElement('div'); tabla.className = 'clientes-tabla'; tabla.setAttribute('aria-label','Mis clientes');
+    var tbody = document.createElement('div'); tabla.append(tbody); if (perfiles.length) lista.append(tabla);
     perfiles.forEach(function (p) {
-      var fila = document.createElement('tr'), celda = document.createElement('td'); fila.append(celda); tbody.append(fila);
+      var fila = document.createElement('article'), celda = document.createElement('div'); fila.className = 'comprador-cliente'; fila.append(celda); tbody.append(fila);
       var contenedor = document.createElement('div'); contenedor.className = 'cliente';
       var card = document.createElement('div'); card.className = 'cliente-info';
       var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
@@ -337,68 +342,75 @@
       agregarTexto(card, 'p', (p.operacion === 'venta' ? 'Compra' : 'Renta') + ' · ' + p.tipos.join(', ') + ' · ' + (p.precio_min === null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda);
       agregarTexto(card, 'p', [p.estado, p.municipio, p.colonias].filter(Boolean).join(' · '));
       var acciones = document.createElement('div'); acciones.className = 'acciones';
-      var estadoGuardado = estadosServidor.get(p.id), listo = estadoGuardado && !estadoGuardado.pendiente;
+      var estadoGuardado = estadosServidor.get(p.id), listo = p.activo && estadoGuardado && (!estadoGuardado.pendiente || (estadoGuardado.calculado_at && estadoGuardado.motivo === 'inventario'));
       var coincidencias = [];
-      var desplegar = agregarTexto(acciones,'button',listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : 'Calculando…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false');
-      var filaMatches = document.createElement('tr'), celdaMatches = document.createElement('td'); filaMatches.hidden = true; filaMatches.append(celdaMatches); tbody.append(filaMatches);
-      desplegar.addEventListener('click',function () {
+      var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : 'Buscando propiedades…'); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false');
+      var filaMatches = document.createElement('section'), celdaMatches = document.createElement('div'); filaMatches.className = 'comprador-coincidencias'; filaMatches.hidden = true; filaMatches.id = 'coincidencias-' + p.id; filaMatches.append(celdaMatches); fila.append(filaMatches); desplegar.setAttribute('aria-controls',filaMatches.id);
+      function alternarMatches() {
         if (errorMatches) { cargarInventarioMatches(); return; }
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
-        if (!filaMatches.hidden && !celdaMatches.childNodes.length) {
-          var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
-          var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.insertBefore(carrusel,grid); carrusel.append(grid);
-          var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
-          var modulo = 0, limite = 0, grupo = [];
-          var tituloModulo = document.createElement('p'); tituloModulo.className = 'match-nivel-titulo'; celdaMatches.insertBefore(tituloModulo,carrusel);
-          var carruselNav = document.createElement('div'); carruselNav.className = 'match-carrusel-nav';
-          var prevProps = agregarTexto(carruselNav,'button','←'); prevProps.type = 'button'; prevProps.setAttribute('aria-label','Página anterior de propiedades');
-          var paginaProps = agregarTexto(carruselNav,'span','');
-          var masProps = agregarTexto(carruselNav,'button','→'); masProps.type = 'button'; masProps.setAttribute('aria-label','Página siguiente de propiedades'); celdaMatches.append(carruselNav);
-          prevProps.className = 'match-flecha match-flecha-prev'; masProps.className = 'match-flecha match-flecha-next'; carrusel.append(prevProps,masProps);
-          var siguienteNivel = agregarTexto(celdaMatches,'button',''); siguienteNivel.type = 'button';
-          var anteriorNivel = agregarTexto(celdaMatches,'button','Volver al nivel anterior'); anteriorNivel.type = 'button';
-          var navegacion = document.createElement('div'); navegacion.className = 'match-navegacion'; navegacion.append(anteriorNivel,siguienteNivel); celdaMatches.append(navegacion);
-          var solicitudPagina = 0;
-          async function pagina() {
-            var solicitud = ++solicitudPagina, nivelActual = niveles[modulo];
+        if (filaMatches.hidden) abiertos.delete(p.id); else abiertos.add(p.id);
+        if (filaMatches.hidden || celdaMatches.childNodes.length) return;
+        var cabecera = document.createElement('div'); cabecera.className = 'matches-encabezado'; celdaMatches.append(cabecera);
+        agregarTexto(cabecera,'h3','Propiedades para ' + p.nombre);
+        agregarTexto(cabecera,'p','Ordenadas por compatibilidad. Consulta los criterios de cada propiedad antes de presentarla.');
+        if (estadoGuardado.pendiente) agregarTexto(cabecera,'p','Actualizando el inventario; puedes consultar las coincidencias anteriores.').className = 'matches-actualizando';
+        var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
+        var vistaGuardada = vistasMatches.get(p.id) || {}, modulo = Math.max(0,niveles.indexOf(vistaGuardada.nivel)), limite = vistaGuardada.offset || 0;
+        var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); celdaMatches.append(tabs);
+        var botones = niveles.map(function (nivel,indice) {
+          var boton = agregarTexto(tabs,'button',(nivel === 100 ? '100%' : nivel + ' a ' + (nivel+9) + '%') + ' · ' + estadoGuardado.niveles[nivel]); boton.type = 'button';
+          boton.addEventListener('click',function () { modulo = indice; limite = 0; pagina(); }); return boton;
+        });
+        var nav = document.createElement('div'); nav.className = 'match-paginacion'; celdaMatches.append(nav);
+        var estadoPagina = agregarTexto(nav,'p',''); estadoPagina.setAttribute('role','status');
+        var controles = document.createElement('div'); controles.className = 'acciones'; nav.append(controles);
+        var anterior = agregarTexto(controles,'button','← Anterior'), siguiente = agregarTexto(controles,'button','Siguiente →'); anterior.type = siguiente.type = 'button';
+        var grid = document.createElement('div'); grid.className = 'matches-grid'; celdaMatches.append(grid);
+        var solicitudPagina = 0;
+        async function pagina() {
+          var solicitud = ++solicitudPagina, nivel = niveles[modulo], offset = limite, cantidad = Number(estadoGuardado.niveles[nivel] || 0);
+          vistasMatches.set(p.id,{nivel:nivel,offset:offset});
+          botones.forEach(function (b,i) { b.classList.toggle('seleccionado',i===modulo); b.setAttribute('aria-pressed',String(i===modulo)); });
+          grid.replaceChildren();
+          if (nivel == null) { agregarTexto(grid,'p','Todavía no hay propiedades que alcancen la compatibilidad mínima. Revisaremos las nuevas propiedades automáticamente.').className = 'kw-vacio'; nav.hidden = tabs.hidden = true; return; }
+          estadoPagina.textContent = 'Cargando propiedades…'; anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
+          for(var i=0;i<Math.min(5,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
+          try {
+            var filas = await window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset);
+            if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren();
-            if (nivelActual == null) { agregarTexto(grid,'p','No hay propiedades que alcancen el porcentaje solicitado.'); carruselNav.hidden = true; prevProps.hidden = masProps.hidden = true; return; }
-            agregarTexto(grid,'p','Cargando propiedades…'); prevProps.disabled = masProps.disabled = true;
-            var respuesta;
-            try { respuesta = await window.kwSupabase.rpc('comprador_matches_pagina',{p_perfil:p.id,p_nivel:nivelActual,p_offset:limite}); }
-            catch (e) { respuesta = {error:e}; }
-            if (solicitud !== solicitudPagina) return;
-            grid.replaceChildren();
-            if (respuesta.error) {
-              agregarTexto(grid,'p','No se pudieron cargar las propiedades.');
-              var reintentar = agregarTexto(grid,'button','Reintentar'); reintentar.type = 'button'; reintentar.addEventListener('click',pagina); return;
-            }
-            respuesta.data.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid); });
-            grid.classList.remove('pagina-entra'); void grid.offsetWidth; grid.classList.add('pagina-entra'); grid.scrollLeft = 0;
-            var cantidad = Number(estadoGuardado.niveles[nivelActual] || 0);
-            prevProps.disabled = limite === 0; masProps.disabled = limite + 5 >= cantidad;
-            carruselNav.hidden = cantidad <= 5;
-            prevProps.hidden = cantidad <= 5; masProps.hidden = cantidad <= 5;
-            paginaProps.textContent = 'Página ' + (Math.floor(limite/5)+1) + ' de ' + Math.ceil(cantidad/5);
-          }
-          function mostrarModulo() {
-            grid.replaceChildren(); limite = 0;
-            var nivel = niveles[modulo];
-            tituloModulo.textContent = niveles.length ? 'Compatibilidad ' + nivel + (nivel < 100 ? '–' + (nivel+9) : '') + '% · ' + estadoGuardado.niveles[nivel] + ' propiedades' : '';
-            tituloModulo.style.setProperty('--nivel-color','hsl(' + Math.max(0,Math.min(120,(nivel-50)*2.4)) + ', 58%, 40%)');
-            siguienteNivel.hidden = modulo >= niveles.length-1; anteriorNivel.hidden = modulo === 0;
-            siguienteNivel.textContent = 'Ver coincidencias al ' + niveles[modulo+1] + '%';
-            anteriorNivel.textContent = 'Ver coincidencias al ' + niveles[modulo-1] + '%';
-            pagina();
-          }
-          masProps.addEventListener('click',function () { limite += 5; pagina(); });
-          prevProps.addEventListener('click',function () { limite = Math.max(0,limite-5); pagina(); });
-          siguienteNivel.addEventListener('click',function () { modulo++; mostrarModulo(); });
-          anteriorNivel.addEventListener('click',function () { modulo--; mostrarModulo(); }); mostrarModulo();
+            filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid); });
+            if (!filas.length) agregarTexto(grid,'p','Estas propiedades ya no están disponibles. Las coincidencias se actualizarán automáticamente.').className = 'kw-vacio';
+            estadoPagina.textContent = 'Mostrando ' + (filas.length ? offset+1 : 0) + ' a ' + (offset+filas.length) + ' de ' + cantidad + ' propiedades';
+            anterior.disabled = offset === 0; siguiente.disabled = offset+5 >= cantidad;
+            controles.hidden = cantidad <= 5;
+            if (offset+5 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+5).catch(function () {});
+          } catch (error) {
+            if (solicitud !== solicitudPagina || !grid.isConnected) return;
+            grid.replaceChildren(); estadoPagina.textContent = 'La carga no se completó.';
+            var aviso = document.createElement('div'); aviso.className = 'match-error'; aviso.setAttribute('role','alert'); grid.append(aviso);
+            agregarTexto(aviso,'p','No pudimos cargar esta página. Tu cliente y sus preferencias están guardados.');
+            var reintentar = agregarTexto(aviso,'button','Volver a intentar'); reintentar.type = 'button'; reintentar.addEventListener('click',pagina);
+            anterior.disabled = offset === 0; siguiente.disabled = offset+5 >= cantidad;
+          } finally { if (solicitud === solicitudPagina) grid.setAttribute('aria-busy','false'); }
         }
-      });
+        anterior.addEventListener('click',function () { limite = Math.max(0,limite-5); pagina(); });
+        siguiente.addEventListener('click',function () { limite += 5; pagina(); }); pagina();
+      }
+      desplegar.addEventListener('click',alternarMatches);
+      if (listo && abiertos.has(p.id)) alternarMatches();
       var menu = document.createElement('details'); menu.className = 'cliente-menu'; agregarTexto(menu,'summary','⋮').setAttribute('aria-label','Acciones de ' + p.nombre);
       var opcionesMenu = document.createElement('div'); menu.append(opcionesMenu); acciones.append(menu);
+      if (p.activo && estadoGuardado && estadoGuardado.ultimo_error) {
+        var recuperar = agregarTexto(opcionesMenu,'button','Reintentar búsqueda'); recuperar.type = 'button';
+        recuperar.addEventListener('click',async function () {
+          recuperar.disabled = true;
+          try { var resultado = await window.kwSupabase.functions.invoke('matches-comprador',{body:{perfil_id:p.id}}); if (resultado.error) throw resultado.error; await cargarInventarioMatches(); }
+          catch (e) { avisar('No se pudo completar la búsqueda. Se reintentará automáticamente.',true); }
+          finally { recuperar.disabled = false; }
+        });
+      }
       var editar = agregarTexto(opcionesMenu, 'button', 'Editar'); editar.type = 'button';
       editar.dataset.editarCliente = p.id;
       editar.addEventListener('click', function () {
@@ -411,6 +423,7 @@
           input.value = key === 'precio_min' || key === 'precio_max' ? formatearPresupuesto(valor) : valor;
         });
         etiquetas = String(p.notas || '').split(/[\n,;]+/).map(function (t) { return t.trim(); }).filter(Boolean); pintarEtiquetas();
+        if (form.elements.avisos_correo) form.elements.avisos_correo.checked = p.avisos_correo;
         form.querySelectorAll('input[name=tipos]').forEach(function (input) { input.checked = p.tipos.includes(input.value); });
         document.getElementById('titulo-formulario').textContent = 'Editar perfil';
         guardar.textContent = 'Guardar cambios'; nuevo.textContent = 'Limpiar';
@@ -431,6 +444,7 @@
         finally { pausar.disabled = false; }
       });
       contenedor.append(card,acciones); celda.append(contenedor);
+      agregarTexto(celda,'p',!p.activo ? 'Búsqueda pausada. Reactívala para revisar nuevas propiedades.' : p.avisos_correo ? 'Avisos por correo activos: resumen de nuevas coincidencias a las 9:00 a. m., hora de Ciudad de México.' : 'Avisos por correo desactivados. Puedes activarlos al editar el cliente.').className = 'comprador-avisos';
     });
   }
   async function cargar(adicional) {
@@ -469,7 +483,7 @@
       if (indice === -1) perfiles.unshift(res.data); else perfiles[indice] = res.data;
       // Guardar el cliente y calcular su búsqueda son operaciones distintas:
       // si el cálculo falla, el worker programado lo reintentará sin duplicar al cliente.
-      try { await window.kwSupabase.functions.invoke('matches-comprador',{body:{perfil_id:res.data.id}}); } catch (e) { console.warn('Cálculo pendiente del worker'); }
+      window.kwSupabase.functions.invoke('matches-comprador',{body:{perfil_id:res.data.id}}).catch(function () { /* El worker programado completa el cálculo. */ });
       location.href = '/hub/perfil-comprador.html';
     } catch (error) { avisar('No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo; tus datos siguen en el formulario.', true); }
     finally {

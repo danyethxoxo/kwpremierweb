@@ -26,7 +26,7 @@ secureServe({name:'matches-comprador',auth:req=>req.headers.has('x-webhook-secre
    if(cliente.activo && !catalogos.has(clave)) {
     const filas:Record<string,unknown>[]=[]
     if(cliente.activo) for(let offset=0;;offset+=1000) {
-     const res=await admin.from('propiedades_inventario').select('*').eq('fuente','kwmexico').eq('estatus','publicada').eq('estado',cliente.estado).eq('operacion',cliente.operacion).order('id').range(offset,offset+999)
+     const res=await admin.from('propiedades_inventario').select('id,estatus,operacion,tipo,tipos_filtro,estado,municipio,colonia,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,titulo,descripcion,caracteristicas').eq('fuente','kwmexico').eq('estatus','publicada').eq('estado',cliente.estado).eq('operacion',cliente.operacion).order('id').range(offset,offset+999)
      if(res.error) throw res.error
      filas.push(...res.data)
      if(res.data.length<1000) break

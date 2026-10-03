@@ -51,3 +51,10 @@ test('no confunde palabras parciales y explica presupuesto cercano',()=>{
   assert.equal(resultado.criterios.find(c=>c.nombre==='Jardín').cumple,false);
   assert.equal(resultado.criterios.find(c=>c.nombre==='Presupuesto').parcial,true);
 });
+
+test('las caracteristicas estructuradas confirman etiquetas sin depender de la descripcion',()=>{
+ const resultado=evaluar({...cliente,notas:'Alberca'},{...propiedad,descripcion:'',caracteristicas:['Alberca']});
+ assert.equal(resultado.criterios.find(c=>c.nombre==='Alberca').cumple,true);
+ const negado=evaluar({...cliente,notas:'Alberca'},{...propiedad,descripcion:'Sin alberca',caracteristicas:[]});
+ assert.equal(negado.criterios.find(c=>c.nombre==='Alberca').cumple,false);
+});

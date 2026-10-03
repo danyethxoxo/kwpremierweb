@@ -28,7 +28,7 @@
       agregar(c[2],5,libre || (valor != null && Number(valor) >= Number(cliente[c[0]])) ? 1 : 0,libre ? 'Sin requisito' : 'Requerido ' + cliente[c[0]] + (c[0] === 'superficie_min' ? ' m²' : '') + ' · tiene ' + (valor == null ? 'sin información' : String(valor) + (c[0] === 'superficie_min' ? ' m²' : '')));
     });
     var etiquetas = String(cliente.notas || '').split(/[\n,;]+/).map(function (t) { return t.trim(); }).filter(Boolean);
-    var descripcion = ' ' + normalizar(propiedad.descripcion) + ' ';
+    var descripcion = ' ' + normalizar([propiedad.titulo,propiedad.descripcion].concat(propiedad.caracteristicas || []).join(' ')) + ' ';
     if (!etiquetas.length) agregar('Características específicas',10,1,'Sin etiquetas solicitadas');
     etiquetas.forEach(function (etiqueta) {
       var termino = normalizar(etiqueta), encontrado = termino && descripcion.includes(' ' + termino + ' ');

@@ -100,6 +100,13 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const notificacionId = typeof fila?.notificacion_id === 'string' && /^[0-9a-f-]{36}$/i.test(fila.notificacion_id) ? fila.notificacion_id : null
+    let correoComprador = false
+    if (notificacionId) {
+      const {data: aviso,error: errorAviso} = await admin.from('notificaciones').select('user_id,tipo,titulo,mensaje,url').eq('id',notificacionId).single()
+      if (errorAviso || !aviso || aviso.user_id !== userId || aviso.titulo !== titulo || (aviso.mensaje || '') !== mensaje || aviso.url !== fila.url) return respond({error:'Aviso inválido'},400)
+      correoComprador = aviso.tipo === 'comprador_matches'
+    }
 
     const { data: perfil, error: errPerfil } = await admin
       .from('profiles')
@@ -141,6 +148,7 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json; charset=utf-8',
+        ...(notificacionId ? {'Idempotency-Key':'notificacion/'+notificacionId} : {}),
       },
       body: JSON.stringify({
         from: EMAIL_FROM,
@@ -153,6 +161,12 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     if (!resendResp.ok) {
       const errText = await resendResp.text()
       return respond({ error: 'Resend rechazó el envío: ' + errText }, 502)
+    }
+
+    const entrega = await resendResp.json()
+    if (correoComprador) {
+      const {error: confirmacionError} = await admin.from('comprador_correo_envios').update({estado:'enviado',enviado_at:new Date().toISOString(),mensaje_id:entrega.id || null}).eq('notificacion_id',notificacionId!)
+      if (confirmacionError) return respond({error:'No se pudo confirmar la entrega; se reintentará sin duplicar el correo.'},503)
     }
 
     return respond({ ok: true, enviado_a: perfil.email })
