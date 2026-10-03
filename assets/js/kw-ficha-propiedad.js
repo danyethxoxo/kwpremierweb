@@ -2,7 +2,7 @@
   'use strict';
 
   var ANCHO = 1600;
-  var ALTO = 2070;
+  var ALTO = 1900;
   var COLORES = {
     rojo: '#cc0000',
     rojoOscuro: '#8a0000',
@@ -82,6 +82,26 @@
     return texto(url).replace(/^https?:\/\//i, '').replace(/\/$/, '');
   }
 
+  var PERFILES_KW_FALLBACK = {
+    'daniguerrero.kw.com': {
+      nombre: 'Daniel Barush',
+      apellido: 'Guerrero',
+      puesto: 'Coordinador de Tecnología',
+      whatsapp: '+52 55 8577 2232',
+      email: 'dani.guerrero@kwmexico.mx',
+      sitio_web: 'https://daniguerrero.kw.com',
+      market_center: 'KW Premier',
+      foto_url: 'https://storage.googleapis.com/attachment-prod-e2ad/2000132866/d9ufqddpq4ac70pfit4g.png'
+    }
+  };
+
+  function perfilKwFallback(sitio) {
+    try {
+      var hostname = new URL(sitio || '', window.location.href).hostname.toLowerCase();
+      return PERFILES_KW_FALLBACK[hostname] || {};
+    } catch (error) { return {}; }
+  }
+
   function slug(valor) {
     return texto(valor, 'propiedad').toLocaleLowerCase('es-MX')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -119,7 +139,7 @@
 
   function crearModelo(opciones) {
     var propiedad = opciones.propiedad || {};
-    var asesor = opciones.asesor || {};
+    var asesor = Object.assign({}, perfilKwFallback(opciones.asesor && opciones.asesor.sitio_web), opciones.asesor || {});
     var direccion = [propiedad.calle, propiedad.colonia, propiedad.municipio,
       propiedad.estado, propiedad.cp].filter(Boolean).join(', ');
     if (!direccion) direccion = 'Ubicación no disponible';
@@ -133,18 +153,19 @@
     if (!features.length && propiedad.tipo) features.push({ valor: texto(propiedad.tipo), etiqueta: 'TIPO DE PROPIEDAD' });
 
     return {
-      operacion: propiedad.operacion === 'renta' ? 'RENTA' : 'VENTA',
+      operacion: String(propiedad.operacion || '').toLowerCase() === 'renta' ? 'RENTA' : 'VENTA',
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: texto(propiedad.tipo),
       direccion: direccion,
       precio: precio(propiedad.precio, propiedad.moneda),
+      moneda: texto(propiedad.moneda, 'MXN').toUpperCase(),
       features: features.slice(0, 4),
       extras: listaCaracteristicas(propiedad),
       fotos: listaFotos(propiedad),
       asesor: {
         nombre: nombreAsesor(asesor, propiedad),
         puesto: texto(asesor.puesto, 'Asesor inmobiliario'),
-        market_center: texto(propiedad.market_center),
+        market_center: texto(asesor.market_center, texto(propiedad.market_center, 'KW Premier')),
         whatsapp: texto(asesor.whatsapp, texto(asesor.telefono)),
         email: texto(asesor.email),
         sitio: limpiarUrl(asesor.sitio_web),
@@ -318,6 +339,100 @@
     textoEnvuelto(ctx, dato.etiqueta, x, y + 88, w - 12, 21, 2);
   }
 
+  function dibujarIconoFicha(ctx, etiqueta, x, y) {
+    var nombre = texto(etiqueta).toLowerCase();
+    ctx.save();
+    ctx.strokeStyle = COLORES.rojo;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (nombre.indexOf('rec') !== -1 || nombre.indexOf('cama') !== -1) {
+      ctx.strokeRect(x - 30, y - 12, 60, 22);
+      ctx.beginPath();
+      ctx.moveTo(x - 30, y - 12); ctx.lineTo(x - 30, y + 20);
+      ctx.moveTo(x + 30, y - 12); ctx.lineTo(x + 30, y + 20);
+      ctx.moveTo(x - 20, y - 3); ctx.lineTo(x + 20, y - 3);
+      ctx.stroke();
+    } else if (nombre.indexOf('ba') !== -1) {
+      ctx.beginPath();
+      ctx.moveTo(x - 31, y - 2); ctx.lineTo(x + 30, y - 2);
+      ctx.quadraticCurveTo(x + 25, y + 19, x + 5, y + 19);
+      ctx.lineTo(x - 17, y + 19);
+      ctx.quadraticCurveTo(x - 29, y + 14, x - 31, y - 2);
+      ctx.moveTo(x - 21, y - 2); ctx.lineTo(x - 21, y - 20);
+      ctx.quadraticCurveTo(x - 21, y - 28, x - 13, y - 28);
+      ctx.lineTo(x - 5, y - 28);
+      ctx.stroke();
+    } else if (nombre.indexOf('coch') !== -1 || nombre.indexOf('estac') !== -1) {
+      ctx.strokeRect(x - 31, y - 10, 62, 27);
+      ctx.beginPath();
+      ctx.moveTo(x - 22, y - 10); ctx.lineTo(x - 13, y - 26); ctx.lineTo(x + 13, y - 26); ctx.lineTo(x + 22, y - 10);
+      ctx.moveTo(x - 24, y + 10); ctx.arc(x - 16, y + 10, 3, 0, Math.PI * 2);
+      ctx.moveTo(x + 24, y + 10); ctx.arc(x + 16, y + 10, 3, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(x - 23, y - 23, 46, 46);
+      ctx.beginPath();
+      ctx.moveTo(x - 33, y - 23); ctx.lineTo(x - 33, y + 23);
+      ctx.moveTo(x + 33, y - 23); ctx.lineTo(x + 33, y + 23);
+      ctx.moveTo(x - 37, y - 23); ctx.lineTo(x - 29, y - 23);
+      ctx.moveTo(x + 29, y + 23); ctx.lineTo(x + 37, y + 23);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function dibujarDatoFicha(ctx, dato, x, y) {
+    dibujarIconoFicha(ctx, dato.etiqueta, x, y);
+    ctx.fillStyle = COLORES.texto;
+    ctx.font = '700 25px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(texto(dato.valor, '-'), x, y + 72);
+    ctx.fillStyle = COLORES.gris;
+    ctx.font = '500 16px Arial, sans-serif';
+    textoEnvuelto(ctx, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 104, 130, 20, 2, 'center');
+    ctx.textAlign = 'left';
+  }
+
+  function dibujarContactoFicha(ctx, valor, x, y) {
+    if (!valor) return;
+    ctx.fillStyle = COLORES.rojo;
+    ctx.beginPath();
+    ctx.arc(x + 8, y - 7, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = COLORES.texto;
+    ctx.font = '500 22px Arial, sans-serif';
+    textoEnvuelto(ctx, valor, x + 28, y, 510, 25, 1);
+  }
+
+  function dibujarFotoAsesorFicha(ctx, foto, nombre, x, y, radio) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radio, 0, Math.PI * 2);
+    ctx.clip();
+    if (foto && foto.naturalWidth) {
+      var lado = radio * 2;
+      var escala = Math.max(lado / foto.naturalWidth, lado / foto.naturalHeight);
+      var ancho = lado / escala;
+      var alto = lado / escala;
+      ctx.drawImage(foto, (foto.naturalWidth - ancho) / 2, (foto.naturalHeight - alto) / 2, ancho, alto, x - radio, y - radio, lado, lado);
+    } else {
+      ctx.fillStyle = COLORES.rojo;
+      ctx.fill();
+      ctx.fillStyle = COLORES.blanco;
+      ctx.font = '700 64px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(nombre.split(/\s+/).slice(0, 2).map(function (n) { return n[0]; }).join('').toUpperCase(), x, y + 22);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    ctx.strokeStyle = COLORES.rojo;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, radio, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   function dibujarModelo(modelo) {
     var canvas = document.createElement('canvas');
     canvas.width = ANCHO;
@@ -328,154 +443,94 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, ANCHO, ALTO);
 
+    var anchoPanel = 680;
+    var altoFotos = 1565;
     var hayFotos = modelo._fotos.some(function (foto) { return foto && foto.naturalWidth; });
     if (hayFotos) {
-      imagenCubierta(ctx, modelo._fotos[0], 575, 0, 1025, 700, 0, true);
-      imagenCubierta(ctx, modelo._fotos[1], 575, 700, 505, 270, 0, false);
-      imagenCubierta(ctx, modelo._fotos[2], 1095, 700, 505, 270, 0, false);
+      imagenCubierta(ctx, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, 0, true);
+      imagenCubierta(ctx, modelo._fotos[1], anchoPanel, 1240, 450, 325, 0, false);
+      imagenCubierta(ctx, modelo._fotos[2], 1140, 1240, 460, 325, 0, false);
     } else {
-      marcaSinFoto(ctx, 575, 0, 1025, 970, true);
+      marcaSinFoto(ctx, anchoPanel, 0, ANCHO - anchoPanel, altoFotos, true);
     }
 
     ctx.fillStyle = COLORES.blanco;
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(835, 0); ctx.lineTo(770, 245);
-    ctx.lineTo(735, 245); ctx.lineTo(785, 460); ctx.lineTo(720, 460);
-    ctx.lineTo(690, 760); ctx.lineTo(620, 760); ctx.lineTo(575, 970);
-    ctx.lineTo(0, 970); ctx.closePath(); ctx.fill();
+    ctx.fillRect(0, 0, anchoPanel, altoFotos);
 
     if (modelo._logo && modelo._logo.naturalWidth) {
-      var logoAncho = 315;
+      var logoAncho = 286;
       var logoAlto = logoAncho * modelo._logo.naturalHeight / modelo._logo.naturalWidth;
-      ctx.drawImage(modelo._logo, 82, 74, logoAncho, logoAlto);
+      ctx.drawImage(modelo._logo, 78, 112, logoAncho, logoAlto);
     } else {
       ctx.fillStyle = COLORES.rojo;
       ctx.font = '700 42px Arial, sans-serif';
-      ctx.fillText('kw', 84, 125);
+      ctx.fillText('kw', 78, 160);
       ctx.fillStyle = COLORES.texto;
-      ctx.fillText('PREMIER', 160, 125);
+      ctx.fillText('PREMIER', 154, 160);
     }
 
     ctx.fillStyle = COLORES.texto;
-    ctx.font = '400 112px Georgia, serif';
-    ctx.fillText(modelo.operacion, 76, 330);
-    ctx.fillStyle = COLORES.rojoOscuro;
-    ctx.font = '700 19px Arial, sans-serif';
-    if (modelo.tipo) ctx.fillText(modelo.tipo.toLocaleUpperCase('es-MX'), 80, 385);
+    ctx.font = '400 154px Georgia, serif';
+    ctx.fillText(modelo.operacion, 58, 435);
     ctx.fillStyle = COLORES.texto;
-    ctx.font = '700 36px Arial, sans-serif';
-    var lineasTitulo = textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 80, 440, 500, 47, 3);
-    if (modelo.precio) {
-      ctx.fillStyle = COLORES.rojo;
-      ctx.font = '700 25px Arial, sans-serif';
-      ctx.fillText(modelo.precio, 80, Math.max(520, 440 + lineasTitulo * 47 + 35));
-    }
+    ctx.font = '500 36px Arial, sans-serif';
+    textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 635, 570, 42, 2, 'center');
 
-    ctx.strokeStyle = COLORES.texto;
+    ctx.strokeStyle = COLORES.rojo;
     ctx.lineWidth = 3;
-    ctx.strokeRect(34, 645, 510, 165);
-    pin(ctx, 88, 686);
-    ctx.fillStyle = COLORES.texto;
-    ctx.font = '500 22px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.direccion.toLocaleUpperCase('es-MX'), 289, 746, 430, 29, 3, 'center');
+    ctx.strokeRect(36, 975, 590, 455);
+    ctx.fillStyle = COLORES.rojo;
+    ctx.font = '400 42px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('DIRECCI\u00d3N:', 331, 1064);
+    ctx.fillStyle = COLORES.gris;
+    ctx.font = '500 27px Arial, sans-serif';
+    textoEnvuelto(ctx, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 1150, 505, 34, 6, 'center');
+    ctx.textAlign = 'left';
 
     ctx.fillStyle = COLORES.rojo;
-    ctx.beginPath();
-    ctx.moveTo(0, 835); ctx.lineTo(555, 835); ctx.lineTo(530, 915); ctx.lineTo(0, 915);
-    ctx.closePath(); ctx.fill();
+    ctx.fillRect(40, 1470, 590, 125);
     ctx.fillStyle = COLORES.blanco;
-    ctx.font = '700 28px Arial, sans-serif';
-    ctx.fillText('CONTACTA AL ASESOR', 75, 885);
+    ctx.font = '700 53px Arial, sans-serif';
+    ctx.fillText(modelo.precio || 'PRECIO A CONSULTAR', 80, 1548);
+    if (modelo.precio) {
+      ctx.font = '700 28px Arial, sans-serif';
+      var anchoPrecio = ctx.measureText(modelo.precio).width;
+      ctx.fillText(texto(modelo.moneda, 'MXN'), Math.min(520, 80 + anchoPrecio + 44), 1548);
+    }
 
-    ctx.fillStyle = COLORES.fondo;
-    ctx.fillRect(0, 970, ANCHO, 355);
-    ctx.fillStyle = COLORES.rojoOscuro;
+    ctx.fillStyle = '#eeeeec';
+    ctx.fillRect(0, 1565, ANCHO, 335);
+    ctx.fillStyle = COLORES.rojo;
+    ctx.fillRect(70, 1660, 5, 185);
+    dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 157, 1760, 118);
+
+    ctx.fillStyle = COLORES.texto;
+    ctx.font = '700 38px Arial, sans-serif';
+    ctx.fillText(modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 330, 1695);
+    ctx.fillStyle = COLORES.rojo;
     ctx.font = '700 20px Arial, sans-serif';
-    ctx.fillText('CARACTER\u00cdSTICAS', 76, 1035);
-    var datosVisibles = modelo.features.slice(0, 4);
-    if (!datosVisibles.length) datosVisibles = [{ valor: '-', etiqueta: 'DATOS NO DISPONIBLES' }];
-    var anchoDato = (ANCHO - 152) / datosVisibles.length;
-    datosVisibles.forEach(function (dato, i) {
-      dibujarCaracteristica(ctx, dato, 76 + i * anchoDato, 1080, anchoDato);
-      if (i) {
-        ctx.fillStyle = COLORES.linea;
-        ctx.fillRect(76 + i * anchoDato - 1, 1080, 2, 120);
-      }
+    textoEnvuelto(ctx, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 330, 1730, 520, 25, 2);
+    ctx.fillStyle = COLORES.texto;
+    var contactos = [
+      modelo.asesor.whatsapp,
+      modelo.asesor.email,
+      modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : ''
+    ].filter(Boolean);
+    contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 330, 1792 + i * 34); });
+
+    ctx.fillStyle = COLORES.rojo;
+    ctx.fillRect(870, 1690, 3, 170);
+    var datos = modelo.features.slice(0, 4);
+    var anchoDato = 165;
+    datos.forEach(function (dato, i) {
+      dibujarDatoFicha(ctx, dato, 965 + i * anchoDato, 1720);
     });
     if (modelo.extras.length) {
       ctx.fillStyle = COLORES.gris;
-      ctx.font = '700 15px Arial, sans-serif';
-      ctx.fillText('DETALLES', 76, 1247);
-      var xEtiqueta = 190;
-      var yEtiqueta = 1218;
-      modelo.extras.slice(0, 4).forEach(function (detalle) {
-        ctx.font = '600 16px Arial, sans-serif';
-        var anchoEtiqueta = Math.min(355, Math.max(120, ctx.measureText(detalle.toLocaleUpperCase('es-MX')).width + 42));
-        if (xEtiqueta + anchoEtiqueta > ANCHO - 76) {
-          xEtiqueta = 190;
-          yEtiqueta += 50;
-        }
-        ctx.strokeStyle = COLORES.rojo;
-        ctx.lineWidth = 2;
-        rutaRedondeada(ctx, xEtiqueta, yEtiqueta - 27, anchoEtiqueta, 36, 18);
-        ctx.stroke();
-        ctx.fillStyle = COLORES.texto;
-        ctx.fillText(detalle.toLocaleUpperCase('es-MX'), xEtiqueta + 21, yEtiqueta - 4);
-        xEtiqueta += anchoEtiqueta + 14;
-      });
+      ctx.font = '500 14px Arial, sans-serif';
+      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 870, 1880, 650, 18, 1);
     }
-
-    ctx.fillStyle = '#e7e7e6';
-    ctx.fillRect(0, 1325, ANCHO, ALTO - 1325);
-    ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(76, 1405, 5, 445);
-    if (modelo._asesorFoto && modelo._asesorFoto.naturalWidth) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(245, 1565, 142, 0, Math.PI * 2);
-      ctx.clip();
-      var foto = modelo._asesorFoto;
-      var escalaFoto = Math.max(284 / foto.naturalWidth, 284 / foto.naturalHeight);
-      var fotoAncho = 284 / escalaFoto;
-      var fotoAlto = 284 / escalaFoto;
-      ctx.drawImage(foto, (foto.naturalWidth - fotoAncho) / 2, (foto.naturalHeight - fotoAlto) / 2, fotoAncho, fotoAlto, 103, 1423, 284, 284);
-      ctx.restore();
-      ctx.strokeStyle = COLORES.rojo;
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(245, 1565, 142, 0, Math.PI * 2); ctx.stroke();
-    } else {
-      ctx.fillStyle = COLORES.rojo;
-      ctx.beginPath(); ctx.arc(245, 1565, 142, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = COLORES.blanco;
-      ctx.font = '700 76px Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(modelo.asesor.nombre.split(/\s+/).slice(0, 2).map(function (n) { return n[0]; }).join('').toUpperCase(), 245, 1592);
-      ctx.textAlign = 'left';
-    }
-
-    ctx.fillStyle = COLORES.texto;
-    ctx.font = '700 39px Arial, sans-serif';
-    ctx.fillText(modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 505, 1485);
-    ctx.fillStyle = COLORES.rojo;
-    ctx.font = '700 22px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 505, 1525, 1000, 28, 2);
-    ctx.fillStyle = COLORES.texto;
-    ctx.font = '500 23px Arial, sans-serif';
-    var contactos = [
-      modelo.asesor.whatsapp ? 'WhatsApp: ' + modelo.asesor.whatsapp : '',
-      modelo.asesor.email ? 'Correo: ' + modelo.asesor.email : '',
-      modelo.asesor.sitio ? modelo.asesor.sitio : '',
-      texto(modelo.asesor.market_center)
-    ].filter(Boolean);
-    contactos.forEach(function (dato, i) { textoEnvuelto(ctx, dato, 505, 1615 + i * 47, 980, 28, 1); });
-    ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(505, 1905, 940, 3);
-    ctx.fillStyle = COLORES.gris;
-    ctx.font = '400 17px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.enlace, 505, 1950, 980, 24, 2);
-    ctx.fillStyle = COLORES.rojoOscuro;
-    ctx.font = '700 16px Arial, sans-serif';
-    ctx.fillText('KW PREMIER | FICHA TÉCNICA', 76, 2015);
     return canvas;
   }
 
@@ -517,8 +572,10 @@
 
   async function convertirPDF(canvas) {
     var JsPDF = await cargarJsPDF();
-    var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, 612, 792, undefined, 'FAST');
+    var anchoPDF = 612;
+    var altoPDF = anchoPDF * canvas.height / canvas.width;
+    var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, anchoPDF, altoPDF, undefined, 'FAST');
     return pdf.output('blob');
   }
 

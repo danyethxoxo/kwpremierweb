@@ -772,6 +772,7 @@
   var catalogoCargando = true;
   var totalCatalogo = 0;
   var sitioAsesor = null;
+  var sitioAsesorPerfil = null;
   var sitioAsesorPromesa = null;
   var sitioAsesorUsuario = null;
   var sitioGuardadoPromesa = Promise.resolve();
@@ -857,6 +858,7 @@
         sitioAsesorUsuario = usuario.id;
         var respuesta = await sb.from('profiles').select('sitio_web').eq('id', usuario.id).single();
         if (respuesta.error) throw respuesta.error;
+        sitioAsesorPerfil = respuesta.data || null;
         sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
         var campo = document.getElementById('mi-sitio-web');
         reflejarSitioGuardado();
@@ -1024,7 +1026,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002b';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002c';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1040,14 +1042,20 @@
   }
 
   function datosAsesorFichaBase(propiedad) {
-    return {
-      nombre: propiedad.asesor_nombre || '',
-      market_center: propiedad.market_center || ''
-    };
+    var perfil = sitioAsesorPerfil ? Object.assign({}, sitioAsesorPerfil) : {};
+    if (sitioAsesor) perfil.sitio_web = sitioAsesor;
+    perfil.market_center = perfil.market_center || 'KW Premier';
+    if (!perfil.nombre && !perfil.apellido && !perfil.email && !perfil.whatsapp && !sitioAsesor) {
+      perfil.nombre = propiedad.asesor_nombre || '';
+    }
+    return perfil;
   }
 
   function cargarAsesorFicha(propiedad) {
     var base = datosAsesorFichaBase(propiedad);
+    var tienePerfil = sitioAsesorPerfil && (sitioAsesorPerfil.nombre || sitioAsesorPerfil.apellido ||
+      sitioAsesorPerfil.email || sitioAsesorPerfil.whatsapp || sitioAsesorPerfil.foto_url);
+    if (tienePerfil || sitioAsesor) return Promise.resolve(base);
     if (!propiedad.asesor_id) return Promise.resolve(base);
     var clave = String(propiedad.asesor_id);
     if (asesoresFichaCache[clave]) return asesoresFichaCache[clave];
