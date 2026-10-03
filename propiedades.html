@@ -431,13 +431,21 @@
   .prop-foto img {
     position: relative; z-index: 1;
     width: 100%; height: 100%; object-fit: cover; display: block;
-    opacity: 1; transition: opacity 0.28s ease;
+    opacity: 1;
   }
   .prop-foto.cargando img { opacity: 0; }
-  @media (prefers-reduced-motion: reduce) {
-    .prop-foto img { transition: none; }
-  }
   .prop-foto .sin-foto { color: #bbb; }
+  /* El título completo flota dentro de la tarjeta sin cambiar el grid. */
+  .prop-tooltip {
+    position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 4;
+    padding: 10px 12px; border-radius: 8px; background: #292323; color: #fff;
+    font-size: 13px; line-height: 1.45; overflow-wrap: anywhere;
+    pointer-events: none; visibility: hidden;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .prop-enlace:hover ~ .prop-tooltip { visibility: visible; }
+  }
+  .prop-enlace:focus-visible ~ .prop-tooltip { visibility: visible; }
   .prop-foto .sin-foto svg { width: 34px; height: 34px; }
   .prop-badge {
     position: absolute; top: 10px; left: 10px;
@@ -879,6 +887,7 @@
         '<div class="prop-datos">' + datos.join('') + '</div>' +
         '<div class="prop-pie">' + pie + '</div>' +
       '</div>' +
+      '<span class="prop-tooltip" role="tooltip">' + escapeHtml(p.titulo || 'Ver propiedad') + '</span>' +
     '</article>';
   }
 
@@ -1080,11 +1089,11 @@
     var lista = document.getElementById(id);
     if (!lista) return;
     var actual = lista.value;
-    lista.innerHTML = '';
+    var opcionesNuevas = document.createDocumentFragment();
     var vacio = document.createElement('option');
     vacio.value = '';
     vacio.textContent = textoVacio || 'Todos';
-    lista.appendChild(vacio);
+    opcionesNuevas.appendChild(vacio);
     valores.sort(function (a, b) {
       function prioridad(valor) {
         var texto = normalizarTexto(valor).trim();
@@ -1102,8 +1111,9 @@
         var o = document.createElement('option');
         o.value = v;
         o.textContent = id === 'f-mc' ? nombreMarketCenter(v) : v;
-        lista.appendChild(o);
+        opcionesNuevas.appendChild(o);
       });
+    lista.replaceChildren(opcionesNuevas);
     if (actual && valores.some(function (v) { return String(v) === actual; })) {
       lista.value = actual;
     }
@@ -1452,25 +1462,28 @@
           fila[campo].forEach(function (tipo) { if (tipo) valores.add(String(tipo)); });
         } else valores.add(String(fila[campo]));
       });
-      if (select) {
-        var anterior = select.value;
-        if (id === 'f-colonia') {
-          var opciones = Array.from(colonias.entries()).sort(function (a, b) { return a[1].colonia.localeCompare(b[1].colonia, 'es'); });
-          select.replaceChildren(new Option(textoVacio, ''));
-          opciones.forEach(function (entrada) {
-            var lugar = entrada[1];
-            select.add(new Option([lugar.colonia, lugar.municipio, lugar.estado].filter(Boolean).join(' · '), entrada[0]));
-          });
-        } else llenarSelect(id, Array.from(valores), textoVacio);
-        // No perder una selección mientras todavía llegan bloques del catálogo.
-        if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) {
-          var lugarAnterior = ubicacionColonia(anterior);
-          select.add(new Option(lugarAnterior ? lugarAnterior.colonia : anterior, anterior));
-        }
-        select.value = anterior;
-      }
       if (lote.length < TAMANO_LOTE_CATALOGO) break;
       desde += lote.length;
+    }
+
+    if (select && version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
+      var anterior = select.value;
+      if (id === 'f-colonia') {
+        var opciones = Array.from(colonias.entries()).sort(function (a, b) { return a[1].colonia.localeCompare(b[1].colonia, 'es'); });
+        var fragmento = document.createDocumentFragment();
+        fragmento.appendChild(new Option(textoVacio, ''));
+        opciones.forEach(function (entrada) {
+          var lugar = entrada[1];
+          fragmento.appendChild(new Option([lugar.colonia, lugar.municipio, lugar.estado].filter(Boolean).join(' · '), entrada[0]));
+        });
+        select.replaceChildren(fragmento);
+      } else llenarSelect(id, Array.from(valores), textoVacio);
+      // No perder una selección mientras todavía llegan bloques del catálogo.
+      if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) {
+        var lugarAnterior = ubicacionColonia(anterior);
+        select.add(new Option(lugarAnterior ? lugarAnterior.colonia : anterior, anterior));
+      }
+      select.value = anterior;
     }
 
     if (select && version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
@@ -1533,67 +1546,43 @@
     }
   }
 
-  var urlsImagenesPrecalentadas = new Set();
-  var precargasImagenesActivas = new Map();
-  var colaPrecalentamientoImagenes = [];
   var revisionPrecalentamientoImagenes = 0;
 
-  function programarPrecalentamientoImagenes(filas) {
-    var urls = [];
-    var repetidas = new Set();
-    // Las primeras cuatro ya tienen prioridad de entrada. Las siguientes
-    // se solicitan poco a poco para que un scroll rapido encuentre la
-    // respuesta en cache y no tenga que abrir la conexion en plena vista.
-    (filas || []).slice(4).forEach(function (fila) {
-      var url = fila && fila.imagenes && fila.imagenes[0];
-      if (!url) return;
-      url = String(url);
-      if (repetidas.has(url) || urlsImagenesPrecalentadas.has(url)) return;
-      repetidas.add(url);
-      urls.push(url);
-    });
-    if (!urls.length) return;
-
+  function programarPrecalentamientoImagenes() {
     var revision = ++revisionPrecalentamientoImagenes;
-    colaPrecalentamientoImagenes = urls;
+    var pendientes = Array.from(document.querySelectorAll('#lista .prop-imagen')).slice(4);
+    var activas = 0;
 
-    var agendarSiguiente = function () {
-      if (revision !== revisionPrecalentamientoImagenes || !colaPrecalentamientoImagenes.length) return;
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(iniciarSiguiente, { timeout: 1600 });
-      } else {
-        window.setTimeout(iniciarSiguiente, 80);
+    // Cargar los elementos reales conserva su imagen decodificada. Dos
+    // solicitudes a la vez evitan competir con todas las fotos de entrada.
+    function iniciar() {
+      if (revision !== revisionPrecalentamientoImagenes) return;
+      while (activas < 2 && pendientes.length) {
+        var imagen = pendientes.shift();
+        if (!imagen.isConnected || imagen.complete) continue;
+        activas++;
+        (function (foto) {
+          var terminada = false;
+          function terminar() {
+            if (terminada) return;
+            terminada = true;
+            foto.removeEventListener('load', terminar);
+            foto.removeEventListener('error', terminar);
+            activas--;
+            agendar();
+          }
+          foto.addEventListener('load', terminar);
+          foto.addEventListener('error', terminar);
+          foto.loading = 'eager';
+        })(imagen);
       }
-    };
-
-    var iniciarSiguiente = function () {
-      if (revision !== revisionPrecalentamientoImagenes || !colaPrecalentamientoImagenes.length) return;
-      var url = colaPrecalentamientoImagenes.shift();
-      if (!url || urlsImagenesPrecalentadas.has(url)) {
-        agendarSiguiente();
-        return;
-      }
-      urlsImagenesPrecalentadas.add(url);
-      var imagen = new Image();
-      imagen.decoding = 'async';
-      imagen.loading = 'eager';
-      if ('fetchPriority' in imagen) imagen.fetchPriority = 'low';
-      precargasImagenesActivas.set(url, imagen);
-      var liberar = function (fallo) {
-        if (fallo) urlsImagenesPrecalentadas.delete(url);
-        precargasImagenesActivas.delete(url);
-      };
-      imagen.onload = function () {
-        if (typeof imagen.decode === 'function') {
-          imagen.decode().catch(function () {}).then(function () { liberar(false); }, function () { liberar(false); });
-        } else liberar(false);
-      };
-      imagen.onerror = function () { liberar(true); };
-      imagen.src = url;
-      agendarSiguiente();
-    };
-
-    agendarSiguiente();
+    }
+    function agendar() {
+      if (revision !== revisionPrecalentamientoImagenes || !pendientes.length) return;
+      if ('requestIdleCallback' in window) window.requestIdleCallback(iniciar, { timeout: 1200 });
+      else window.setTimeout(iniciar, 80);
+    }
+    agendar();
   }
 
   function actualizarConteoServidor(total, pagina, cantidad) {
@@ -1665,7 +1654,7 @@
       return;
     }
     lista.innerHTML = filas.map(tarjeta).join('') + renderPaginacionServidor(totalPaginas);
-    programarPrecalentamientoImagenes(filas);
+    programarPrecalentamientoImagenes();
   }
 
   async function cargarPaginaServidor(numero) {
@@ -1673,6 +1662,7 @@
     var conteo = document.getElementById('conteo');
     var paginaSolicitada = Math.max(1, Number(numero) || 1);
     var solicitud = ++solicitudPaginaServidor;
+    ++revisionPrecalentamientoImagenes;
     paginaActual = paginaSolicitada;
     lista.classList.add('lista-cargando');
     lista.setAttribute('aria-busy', 'true');
@@ -1680,10 +1670,12 @@
     if (conteo) conteo.textContent = '';
 
     try {
-      await cargarSitioAsesor();
+      var cargas = await Promise.all([
+        cargarSitioAsesor(),
+        consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales())
+      ]);
       if (solicitud !== solicitudPaginaServidor) return;
-      var respuesta = await consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales());
-      if (solicitud !== solicitudPaginaServidor) return;
+      var respuesta = cargas[1];
       if (respuesta.error) throw respuesta.error;
       var filas = respuesta.data || [];
       var total = Number(respuesta.count);
@@ -1905,7 +1897,26 @@
       buscar.actualizarCatalogo();
     });
   }
-  new MutationObserver(prepararBusquedasCatalogo).observe(cajaFiltros, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  var actualizarBusquedasPendiente = false;
+  function programarActualizacionBusquedas() {
+    if (actualizarBusquedasPendiente) return;
+    actualizarBusquedasPendiente = true;
+    window.requestAnimationFrame(function () {
+      actualizarBusquedasPendiente = false;
+      prepararBusquedasCatalogo();
+    });
+  }
+  // Ignorar texto, iconos y botones del menú: antes cada mutación volvía
+  // a leer estilos y recorrer los seis catálogos completos.
+  new MutationObserver(function (cambios) {
+    if (cambios.some(function (cambio) {
+      return cambio.target.tagName === 'SELECT' ||
+        (cambio.type === 'attributes' && cambio.target.classList.contains('catalogo-select')) ||
+        Array.from(cambio.addedNodes).some(function (nodo) {
+          return nodo.nodeType === 1 && nodo.classList.contains('kw-select');
+        });
+    })) programarActualizacionBusquedas();
+  }).observe(cajaFiltros, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   prepararBusquedasCatalogo();
   if (cajaFiltros) {
     cajaFiltros.addEventListener('change', repintarDesdeFiltro);
