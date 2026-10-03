@@ -581,7 +581,7 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, anchoPanel, altoFotos);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1230, 528, 335, 0, false);
+      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1238, 528, 319, 0, false);
     }
 
     if (modelo._logo && modelo._logo.naturalWidth) {
@@ -647,8 +647,8 @@
     ctx.fillRect(1140, 1625, 3, 230);
     var datos = modelo.features.slice(0, 4);
     var posicionesDatos = [
-      { x: 1280, y: 1648 }, { x: 1470, y: 1648 },
-      { x: 1280, y: 1785 }, { x: 1470, y: 1785 }
+      { x: 1280, y: 1638 }, { x: 1470, y: 1638 },
+      { x: 1280, y: 1775 }, { x: 1470, y: 1775 }
     ];
     datos.forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
@@ -884,7 +884,7 @@
 
     pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1230, 528, 335, false, escala);
+      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1238, 528, 319, false, escala);
     }
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
@@ -947,8 +947,8 @@
     pdf.setFillColor(COLORES.rojo);
     pdf.rect(1140 * escala, 1625 * escala, 3 * escala, 230 * escala, 'F');
     var posicionesDatos = [
-      { x: 1280, y: 1648 }, { x: 1470, y: 1648 },
-      { x: 1280, y: 1785 }, { x: 1470, y: 1785 }
+      { x: 1280, y: 1638 }, { x: 1470, y: 1638 },
+      { x: 1280, y: 1775 }, { x: 1470, y: 1775 }
     ];
     modelo.features.slice(0, 4).forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
