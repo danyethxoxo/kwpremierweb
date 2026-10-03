@@ -23,9 +23,12 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
     select gen_random_uuid(),'kwmexico','Casa '||n,'venta',case when n<=45 then 'publicada' else 'suspendida' end,'Casa',n*1000,
      case when n%2=0 then 'Jalisco' else 'CDMX' end,'Municipio','[]',now()-n*interval '1 minute' from generate_series(1,50) n;`);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003205838_propiedades_permisos_por_consulta.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261003212106_propiedades_filtros_vacios.sql',import.meta.url),'utf8'));
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
   const first=await page({estatus:'publicada'}),second=await page({estatus:'publicada'},2),last=await page({estatus:'publicada'},3);
+  const vacios=await page({estatus:'publicada',minimo:0,maximo:0,recamaras:0,recamarasMax:0,banos:0,estacionamientos:0,m2Min:0,m2Max:0});
+  assert.equal(vacios.total,45);assert.equal(vacios.data.length,20);
   assert.equal(first.total,45);assert.equal(first.data.length,20);assert.equal(last.data.length,5);
   assert.equal(new Set(first.data.concat(second.data).map(p=>p.id)).size,40);
   const filtered=await page({estatus:'publicada',estado:'CDMX',minimo:10000,maximo:19000,tipo:'Casa',orden:'precio-desc'});
@@ -43,4 +46,12 @@ test('carga de propiedades reintenta fallos transitorios y traduce el total del 
  let calls=0;const sb={rpc:()=>({abortSignal:async()=>++calls===1?{status:503,error:{code:'57014'}}:{data:{data:[{id:'propiedad'}],total:7401}}})};
  const scope=vm.createContext({sb,solicitudPaginaServidor:1,AbortController,setTimeout,clearTimeout});vm.runInContext(source,scope);
  const r=await scope.consultaPaginaServidor(1,{estatus:'publicada'});assert.equal(calls,2);assert.equal(r.count,7401);assert.equal(r.data[0].id,'propiedad');
+});
+
+test('formulario sin números envía filtros nulos al servidor',()=>{
+ const html=readFileSync(new URL('../propiedades.html',import.meta.url),'utf8');
+ const source=html.slice(html.indexOf('  function leerFiltrosServidor()'),html.indexOf('  function filtrosServidorActuales()'));
+ const scope=vm.createContext({val:()=>'',num:()=>0,ubicacionColonia:()=>null});vm.runInContext(source,scope);
+ const filtros=scope.leerFiltrosServidor();
+ for(const campo of ['minimo','maximo','recamaras','recamarasMax','banos','estacionamientos','m2Min','m2Max']) assert.equal(filtros[campo],null);
 });
