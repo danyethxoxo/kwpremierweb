@@ -449,14 +449,18 @@
     ctx.lineJoin = 'round';
     ctx.beginPath();
     if (tipo === 0) {
-      ctx.moveTo(x + 4, y - 18);
-      ctx.quadraticCurveTo(x - 8, y - 13, x - 1, y + 2);
-      ctx.quadraticCurveTo(x + 7, y + 17, x + 20, y + 10);
-      ctx.lineTo(x + 27, y + 4);
-      ctx.lineTo(x + 18, y - 7);
-      ctx.lineTo(x + 10, y - 2);
-      ctx.moveTo(x - 1, y + 2);
-      ctx.lineTo(x - 10, y + 10);
+      ctx.lineWidth = 7;
+      ctx.moveTo(x + 1, y - 14);
+      ctx.quadraticCurveTo(x - 6, y - 8, x - 1, y + 2);
+      ctx.quadraticCurveTo(x + 7, y + 15, x + 19, y + 12);
+      ctx.quadraticCurveTo(x + 28, y + 10, x + 27, y + 3);
+      ctx.stroke();
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x + 1, y - 14);
+      ctx.lineTo(x + 9, y - 8);
+      ctx.moveTo(x + 19, y + 12);
+      ctx.lineTo(x + 27, y + 3);
     } else if (tipo === 1) {
       ctx.rect(x - 11, y - 14, 38, 28);
       ctx.moveTo(x - 10, y - 12);
@@ -601,7 +605,7 @@
 
     ctx.fillStyle = '#eeeeec';
     ctx.fillRect(0, 1565, ANCHO, 335);
-    dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 183, 1750, 138);
+    dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 183, 1735, 138);
 
     ctx.fillStyle = COLORES.texto;
     var nombreAsesorFicha = modelo.asesor.nombre.toLocaleUpperCase('es-MX');
@@ -611,24 +615,24 @@
       tamanoNombreAsesor--;
       ctx.font = '700 ' + tamanoNombreAsesor + 'px Arial, sans-serif';
     }
-    ctx.fillText(nombreAsesorFicha, 370, 1675);
+    ctx.fillText(nombreAsesorFicha, 370, 1645);
     ctx.fillStyle = COLORES.rojo;
     ctx.font = '700 29px Arial, sans-serif';
-    ctx.fillText(modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1725);
+    ctx.fillText(modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1690);
     ctx.fillStyle = COLORES.texto;
     var contactos = [
       modelo.asesor.whatsapp,
       modelo.asesor.email,
       modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : ''
     ].filter(Boolean);
-    contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 370, 1790 + i * 46, i); });
+    contactos.slice(0, 3).forEach(function (dato, i) { dibujarContactoFicha(ctx, dato, 370, 1745 + i * 46, i); });
 
     ctx.fillStyle = COLORES.rojo;
-    ctx.fillRect(1088, 1645, 3, 235);
+    ctx.fillRect(1088, 1635, 3, 200);
     var datos = modelo.features.slice(0, 4);
     var posicionesDatos = [
-      { x: 1260, y: 1665 }, { x: 1490, y: 1665 },
-      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+      { x: 1260, y: 1635 }, { x: 1490, y: 1635 },
+      { x: 1260, y: 1755 }, { x: 1490, y: 1755 }
     ];
     datos.forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
@@ -835,11 +839,16 @@
     pdf.setDrawColor(COLORES.texto);
     pdf.setLineWidth(4 * escala);
     if (tipo === 0) {
-      pdf.line((x + 4) * escala, (y - 18) * escala, (x - 1) * escala, (y + 2) * escala);
-      pdf.line((x - 1) * escala, (y + 2) * escala, (x + 20) * escala, (y + 10) * escala);
-      pdf.line((x + 20) * escala, (y + 10) * escala, (x + 27) * escala, (y + 4) * escala);
-      pdf.line((x + 27) * escala, (y + 4) * escala, (x + 18) * escala, (y - 7) * escala);
-      pdf.line((x + 18) * escala, (y - 7) * escala, (x + 10) * escala, (y - 2) * escala);
+      pdf.setLineWidth(7 * escala);
+      pdf.line((x + 1) * escala, (y - 14) * escala, (x - 4) * escala, (y - 9) * escala);
+      pdf.line((x - 4) * escala, (y - 9) * escala, (x - 1) * escala, (y + 2) * escala);
+      pdf.line((x - 1) * escala, (y + 2) * escala, (x + 5) * escala, (y + 10) * escala);
+      pdf.line((x + 5) * escala, (y + 10) * escala, (x + 14) * escala, (y + 13) * escala);
+      pdf.line((x + 14) * escala, (y + 13) * escala, (x + 21) * escala, (y + 10) * escala);
+      pdf.line((x + 21) * escala, (y + 10) * escala, (x + 27) * escala, (y + 3) * escala);
+      pdf.setLineWidth(5 * escala);
+      pdf.line((x + 1) * escala, (y - 14) * escala, (x + 9) * escala, (y - 8) * escala);
+      pdf.line((x + 19) * escala, (y + 12) * escala, (x + 27) * escala, (y + 3) * escala);
     } else if (tipo === 1) {
       pdf.rect((x - 11) * escala, (y - 14) * escala, 38 * escala, 28 * escala, 'S');
       pdf.line((x - 10) * escala, (y - 12) * escala, (x + 8) * escala, (y + 2) * escala);
@@ -932,19 +941,19 @@
 
     pdf.setFillColor('#eeeeec');
     pdf.rect(0, 1565 * escala, ANCHO * escala, 335 * escala, 'F');
-    pdfFotoAsesorFicha(pdf, modelo._asesorFoto, modelo.asesor.nombre, 183, 1750, 138, escala);
-    pdfTextoAjustado(pdf, modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 370, 1675, 680, 47, 29, COLORES.texto, 'bold', escala);
-    pdfTextoAjustado(pdf, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1725, 680, 29, 22, COLORES.rojo, 'bold', escala);
+    pdfFotoAsesorFicha(pdf, modelo._asesorFoto, modelo.asesor.nombre, 183, 1735, 138, escala);
+    pdfTextoAjustado(pdf, modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 370, 1645, 680, 47, 29, COLORES.texto, 'bold', escala);
+    pdfTextoAjustado(pdf, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1690, 680, 29, 22, COLORES.rojo, 'bold', escala);
     [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : '']
       .filter(Boolean).slice(0, 3).forEach(function (dato, i) {
-        pdfContactoFicha(pdf, dato, 370, 1790 + i * 46, i, escala);
+        pdfContactoFicha(pdf, dato, 370, 1745 + i * 46, i, escala);
       });
 
     pdf.setFillColor(COLORES.rojo);
-    pdf.rect(1088 * escala, 1645 * escala, 3 * escala, 235 * escala, 'F');
+    pdf.rect(1088 * escala, 1635 * escala, 3 * escala, 200 * escala, 'F');
     var posicionesDatos = [
-      { x: 1260, y: 1665 }, { x: 1490, y: 1665 },
-      { x: 1260, y: 1790 }, { x: 1490, y: 1790 }
+      { x: 1260, y: 1635 }, { x: 1490, y: 1635 },
+      { x: 1260, y: 1755 }, { x: 1490, y: 1755 }
     ];
     modelo.features.slice(0, 4).forEach(function (dato, i) {
       var posicion = posicionesDatos[i];
