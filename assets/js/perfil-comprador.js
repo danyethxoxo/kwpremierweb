@@ -339,10 +339,12 @@
       var card = document.createElement('div'); card.className = 'cliente-info';
       var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
       agregarTexto(identidad, 'h3', p.nombre);
-      var estado = agregarTexto(identidad, 'span', p.activo ? 'Activo' : 'Pausado'); estado.className = 'estado';
-      var etiquetasCliente = document.createElement('div'); etiquetasCliente.className = 'cliente-etiquetas'; card.append(etiquetasCliente);
+      var estado = agregarTexto(identidad, 'span', p.activo ? 'Activo' : 'Inactivo'); estado.className = 'estado ' + (p.activo ? 'estado-activo' : 'estado-inactivo');
+      var etiquetasCliente = document.createElement('div'); etiquetasCliente.className = 'cliente-etiquetas';
       var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
-      [p.telefono,p.correo,p.operacion === 'venta' ? 'Compra' : 'Renta',p.tipos.join(', '),
+      [p.telefono,p.correo].filter(Boolean).forEach(function (texto) { agregarTexto(card,'span',texto).className = 'cliente-contacto'; });
+      card.append(etiquetasCliente);
+      [p.operacion === 'venta' ? 'Compra' : 'Renta',p.tipos.join(', '),
         (p.precio_min == null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda,
         [p.estado,p.municipio,p.colonias].filter(Boolean).join(' · '),
         p.recamaras_min ? p.recamaras_min + ' recámaras' : '',p.banos_min ? p.banos_min + ' baños' : '',
@@ -395,7 +397,7 @@
             grid.replaceChildren();
             filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid,p); });
             if (!filas.length) agregarTexto(grid,'p','Estas propiedades ya no están disponibles. Las coincidencias se actualizarán automáticamente.').className = 'kw-vacio';
-            estadoPagina.textContent = 'Mostrando ' + (filas.length ? offset+1 : 0) + ' a ' + (offset+filas.length) + ' de ' + cantidad + ' propiedades';
+            estadoPagina.textContent = cantidad + ' coincidencias';
             actualizarFlechas();
             if (offset+4 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+4).catch(function () {});
           } catch (error) {
