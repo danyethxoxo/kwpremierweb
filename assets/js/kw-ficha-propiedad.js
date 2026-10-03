@@ -93,9 +93,23 @@
     return texto(nombre, texto(propiedad && propiedad.asesor_nombre, 'KW Premier'));
   }
 
+  function urlFoto(valor) {
+    if (typeof valor === 'string') return valor.trim();
+    if (!valor || typeof valor !== 'object') return '';
+    return texto(valor.url || valor.href || valor.src || valor.link || valor.foto || valor.imagen);
+  }
+
+  function listaFotos(propiedad) {
+    var fuente = Array.isArray(propiedad && propiedad.imagenes) ? propiedad.imagenes : [];
+    return fuente.map(urlFoto).filter(Boolean).slice(0, 3);
+  }
+
   function listaCaracteristicas(propiedad) {
-    var fuente = Array.isArray(propiedad && propiedad.caracteristicas)
-      ? propiedad.caracteristicas : [];
+    var fuente = propiedad && propiedad.caracteristicas;
+    if (typeof fuente === 'string') {
+      try { fuente = JSON.parse(fuente); } catch (error) { fuente = [fuente]; }
+    }
+    if (!Array.isArray(fuente)) fuente = [];
     return fuente.map(function (item) {
       if (typeof item === 'string') return item.trim();
       if (item && typeof item === 'object') return texto(item.nombre || item.label || item.valor || item.value);
@@ -126,35 +140,53 @@
       precio: precio(propiedad.precio, propiedad.moneda),
       features: features.slice(0, 4),
       extras: listaCaracteristicas(propiedad),
-      fotos: (Array.isArray(propiedad.imagenes) ? propiedad.imagenes : []).filter(function (u) {
-        return typeof u === 'string' && u.trim();
-      }).slice(0, 3),
+      fotos: listaFotos(propiedad),
       asesor: {
         nombre: nombreAsesor(asesor, propiedad),
-        puesto: texto(asesor.puesto, texto(propiedad.market_center, 'Asesor inmobiliario')),
+        puesto: texto(asesor.puesto, 'Asesor inmobiliario'),
         market_center: texto(propiedad.market_center),
         whatsapp: texto(asesor.whatsapp, texto(asesor.telefono)),
         email: texto(asesor.email),
         sitio: limpiarUrl(asesor.sitio_web),
-        foto: texto(asesor.foto_url)
+        foto: texto(asesor.foto_url),
+        kw_id: texto(propiedad.asesor_kw_id)
       },
       enlace: texto(opciones.url, window.location.href),
       logo: '/assets/img/logo-kw-premier.png'
     };
   }
 
+  function candidatosImagen(url) {
+    var original = texto(url);
+    if (!original) return [];
+    var candidatos = [original];
+    try {
+      var parsed = new URL(original, window.location.href);
+      if (parsed.origin !== window.location.origin && /^https?:$/i.test(parsed.protocol)) {
+        var remoto = parsed.host + parsed.pathname + parsed.search;
+        candidatos.push('https://images.weserv.nl/?url=' + encodeURIComponent(remoto) + '&output=jpg&q=88');
+      }
+    } catch (error) { /* Una URL invalida se descarta en el manejador de error. */ }
+    return candidatos;
+  }
+
   function cargarImagen(url) {
-    if (!url) return Promise.resolve(null);
-    return new Promise(function (resolver) {
-      var imagen = new Image();
-      try {
-        var origen = new URL(url, window.location.href).origin;
-        if (origen !== window.location.origin) imagen.crossOrigin = 'anonymous';
-      } catch (error) { /* URL inválida: el evento de error resuelve con espacio vacío */ }
-      imagen.onload = function () { resolver(imagen); };
-      imagen.onerror = function () { resolver(null); };
-      imagen.src = url;
-    });
+    var candidatos = candidatosImagen(url);
+    function intentar(indice) {
+      if (indice >= candidatos.length) return Promise.resolve(null);
+      return new Promise(function (resolver) {
+        var imagen = new Image();
+        try {
+          var origen = new URL(candidatos[indice], window.location.href).origin;
+          if (origen !== window.location.origin) imagen.crossOrigin = 'anonymous';
+        } catch (error) { /* La imagen se resolvera como vacia si la URL no es valida. */ }
+        imagen.decoding = 'async';
+        imagen.onload = function () { resolver(imagen); };
+        imagen.onerror = function () { resolver(null); };
+        imagen.src = candidatos[indice];
+      }).then(function (imagen) { return imagen || intentar(indice + 1); });
+    }
+    return intentar(0);
   }
 
   function cargarImagenes(modelo) {
@@ -183,13 +215,47 @@
     ctx.closePath();
   }
 
-  function imagenCubierta(ctx, imagen, x, y, w, h, radio) {
+  function marcaSinFoto(ctx, x, y, w, h, principal) {
+    ctx.fillStyle = principal ? '#e3dfd9' : '#eceae7';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = principal ? 'rgba(204,0,0,.08)' : 'rgba(48,44,44,.035)';
+    ctx.beginPath();
+    ctx.moveTo(x + w * .58, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h * .7);
+    ctx.lineTo(x + w * .23, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = principal ? 'rgba(255,255,255,.48)' : 'rgba(255,255,255,.65)';
+    ctx.beginPath();
+    ctx.moveTo(x + w * .82, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h * .28);
+    ctx.closePath();
+    ctx.fill();
+    if (principal) {
+      ctx.fillStyle = '#c6c0b9';
+      ctx.font = '700 150px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('KW', x + w * .72, y + h * .54);
+      ctx.fillStyle = '#a49b93';
+      ctx.font = '700 22px Arial, sans-serif';
+      ctx.fillText('IMAGEN DE LA PROPIEDAD', x + w * .72, y + h * .64);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.fillStyle = COLORES.rojo;
+      ctx.fillRect(x + 34, y + 34, 54, 5);
+    }
+  }
+
+  function imagenCubierta(ctx, imagen, x, y, w, h, radio, principal) {
     ctx.save();
     rutaRedondeada(ctx, x, y, w, h, radio || 0);
     ctx.clip();
-    ctx.fillStyle = '#d9d8d4';
-    ctx.fillRect(x, y, w, h);
     if (imagen && imagen.naturalWidth) {
+      ctx.fillStyle = '#d9d8d4';
+      ctx.fillRect(x, y, w, h);
       var escala = Math.max(w / imagen.naturalWidth, h / imagen.naturalHeight);
       var ancho = w / escala;
       var alto = h / escala;
@@ -197,11 +263,7 @@
       var sy = (imagen.naturalHeight - alto) / 2;
       ctx.drawImage(imagen, sx, sy, ancho, alto, x, y, w, h);
     } else {
-      ctx.fillStyle = '#bcbcb7';
-      ctx.font = '600 21px Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Foto no disponible', x + w / 2, y + h / 2);
-      ctx.textAlign = 'left';
+      marcaSinFoto(ctx, x, y, w, h, !!principal);
     }
     ctx.restore();
   }
@@ -266,9 +328,14 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, ANCHO, ALTO);
 
-    imagenCubierta(ctx, modelo._fotos[0], 575, 0, 1025, 700, 0);
-    imagenCubierta(ctx, modelo._fotos[1], 575, 700, 505, 270, 0);
-    imagenCubierta(ctx, modelo._fotos[2], 1095, 700, 505, 270, 0);
+    var hayFotos = modelo._fotos.some(function (foto) { return foto && foto.naturalWidth; });
+    if (hayFotos) {
+      imagenCubierta(ctx, modelo._fotos[0], 575, 0, 1025, 700, 0, true);
+      imagenCubierta(ctx, modelo._fotos[1], 575, 700, 505, 270, 0, false);
+      imagenCubierta(ctx, modelo._fotos[2], 1095, 700, 505, 270, 0, false);
+    } else {
+      marcaSinFoto(ctx, 575, 0, 1025, 970, true);
+    }
 
     ctx.fillStyle = COLORES.blanco;
     ctx.beginPath();
@@ -324,10 +391,11 @@
     ctx.fillRect(0, 970, ANCHO, 355);
     ctx.fillStyle = COLORES.rojoOscuro;
     ctx.font = '700 20px Arial, sans-serif';
-    ctx.fillText('CARACTERÍSTICAS', 76, 1035);
-    var cantidad = Math.max(modelo.features.length, 1);
-    var anchoDato = (ANCHO - 152) / cantidad;
-    (modelo.features.length ? modelo.features : [{ valor: '-', etiqueta: 'DATOS NO DISPONIBLES' }]).forEach(function (dato, i) {
+    ctx.fillText('CARACTER\u00cdSTICAS', 76, 1035);
+    var datosVisibles = modelo.features.slice(0, 4);
+    if (!datosVisibles.length) datosVisibles = [{ valor: '-', etiqueta: 'DATOS NO DISPONIBLES' }];
+    var anchoDato = (ANCHO - 152) / datosVisibles.length;
+    datosVisibles.forEach(function (dato, i) {
       dibujarCaracteristica(ctx, dato, 76 + i * anchoDato, 1080, anchoDato);
       if (i) {
         ctx.fillStyle = COLORES.linea;
@@ -336,8 +404,25 @@
     });
     if (modelo.extras.length) {
       ctx.fillStyle = COLORES.gris;
-      ctx.font = '500 18px Arial, sans-serif';
-      textoEnvuelto(ctx, modelo.extras.join('  ·  '), 76, 1255, 1440, 25, 2);
+      ctx.font = '700 15px Arial, sans-serif';
+      ctx.fillText('DETALLES', 76, 1247);
+      var xEtiqueta = 190;
+      var yEtiqueta = 1218;
+      modelo.extras.slice(0, 4).forEach(function (detalle) {
+        ctx.font = '600 16px Arial, sans-serif';
+        var anchoEtiqueta = Math.min(355, Math.max(120, ctx.measureText(detalle.toLocaleUpperCase('es-MX')).width + 42));
+        if (xEtiqueta + anchoEtiqueta > ANCHO - 76) {
+          xEtiqueta = 190;
+          yEtiqueta += 50;
+        }
+        ctx.strokeStyle = COLORES.rojo;
+        ctx.lineWidth = 2;
+        rutaRedondeada(ctx, xEtiqueta, yEtiqueta - 27, anchoEtiqueta, 36, 18);
+        ctx.stroke();
+        ctx.fillStyle = COLORES.texto;
+        ctx.fillText(detalle.toLocaleUpperCase('es-MX'), xEtiqueta + 21, yEtiqueta - 4);
+        xEtiqueta += anchoEtiqueta + 14;
+      });
     }
 
     ctx.fillStyle = '#e7e7e6';
