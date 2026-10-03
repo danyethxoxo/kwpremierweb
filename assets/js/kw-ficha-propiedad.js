@@ -598,7 +598,9 @@
 
     ctx.fillStyle = COLORES.texto;
     ctx.font = '400 154px Georgia, serif';
-    ctx.fillText(modelo.operacion, 58, 470);
+    ctx.textAlign = 'center';
+    ctx.fillText(modelo.operacion, anchoPanel / 2, 470);
+    ctx.textAlign = 'left';
     ctx.fillStyle = COLORES.texto;
     ctx.font = '500 36px Arial, sans-serif';
     textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center');
@@ -903,7 +905,7 @@
 
     pdfFuente(pdf, 154 * escala, COLORES.texto, 'normal');
     pdf.setFont('times', 'normal');
-    pdf.text(modelo.operacion, 58 * escala, 470 * escala);
+    pdf.text(modelo.operacion, anchoPanel / 2 * escala, 470 * escala, { align: 'center' });
     pdfTextoEnvuelto(pdf, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center', 36, COLORES.texto, 'normal', escala);
 
     pdf.setDrawColor(COLORES.rojo);
