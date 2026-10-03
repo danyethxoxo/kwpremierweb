@@ -1204,16 +1204,24 @@
     // de vuelta, una y otra vez en unos cuantos cuadros.
     const posPrevia = new WeakMap();
     const marcaVentana = {}; // clave compartida: document/window/documentElement/body son la misma posición
-    document.addEventListener('scroll', (e) => {
+    const reflejarEstadoHeader = (oculto) => {
+      // El listener puede recibir decenas de eventos por frame. Solo toca
+      // el DOM cuando cambia el estado real de la cápsula o de <html>.
+      const yaOculto = kwHeader.classList.contains('kw-header-oculto');
+      const htmlYaMarcado = document.documentElement.classList.contains('kw-header-fuera');
+      if (yaOculto !== oculto) kwHeader.classList.toggle('kw-header-oculto', oculto);
+      if (htmlYaMarcado !== oculto) document.documentElement.classList.toggle('kw-header-fuera', oculto);
+    };
+
+    const actualizarHeaderScroll = (t) => {
       // Con algo abierto encima (las notificaciones), la barra se queda
       // quieta: escuchamos en captura, así que hasta el scroll DENTRO de
       // la lista de avisos llegaba aquí y escondía el header justo
       // mientras se leía. Quien abre pone la marca; ver notif-bell.js.
       if (document.documentElement.classList.contains('kw-header-anclado')) {
-        kwHeader.classList.remove('kw-header-oculto');
+        reflejarEstadoHeader(false);
         return;
       }
-      const t = e.target;
       // Nada de lo que va ENCIMA de la página mueve el header: el menú
       // lateral, cualquier modal (por ejemplo la lista de "Comprobar en
       // Google" del Proceso de Alta), el panel de notificaciones y los
@@ -1230,15 +1238,33 @@
         : (t.scrollTop || 0);
       const clave = esVentana ? marcaVentana : t;
       const lastY = posPrevia.get(clave) || 0;
-      if (y > lastY + 4 && y > 40) kwHeader.classList.add('kw-header-oculto');
-      else if (y < lastY - 4) kwHeader.classList.remove('kw-header-oculto');
-      // La misma marca en el <html>, para que el resto de la página
-      // también se entere. La usa el Calendario: su barra de arriba
-      // reserva el alto del header, y sin esto quedaba ese hueco vacío
-      // cuando el header se iba.
-      document.documentElement.classList.toggle(
-        'kw-header-fuera', kwHeader.classList.contains('kw-header-oculto'));
+      if (y > lastY + 4 && y > 40) reflejarEstadoHeader(true);
+      else if (y < lastY - 4) reflejarEstadoHeader(false);
+      // reflejarEstadoHeader mantiene la misma marca en <html>. La usa el
+      // Calendario para reservar el espacio correcto cuando el header se va.
       posPrevia.set(clave, y);
+    };
+
+    const pedirFrame = window.requestAnimationFrame || function (trabajo) {
+      return window.setTimeout(trabajo, 16);
+    };
+    let destinoScrollPendiente = null;
+    let rafScroll = 0;
+    document.addEventListener('scroll', (e) => {
+      const t = e.target;
+      // Filtrar antes de programar el frame evita que el scroll de un panel
+      // abierto reemplace el evento de la página en la cola pendiente.
+      if (t instanceof Element &&
+          t.closest('.drawer, .modal-overlay, .notif-dropdown, .kw-buscar-resultados-inline')) return;
+      destinoScrollPendiente = t;
+      if (!rafScroll) {
+        rafScroll = pedirFrame(() => {
+          rafScroll = 0;
+          const destino = destinoScrollPendiente;
+          destinoScrollPendiente = null;
+          if (destino) actualizarHeaderScroll(destino);
+        });
+      }
     }, { capture: true, passive: true });
   }
 

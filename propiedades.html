@@ -1533,6 +1533,69 @@
     }
   }
 
+  var urlsImagenesPrecalentadas = new Set();
+  var precargasImagenesActivas = new Map();
+  var colaPrecalentamientoImagenes = [];
+  var revisionPrecalentamientoImagenes = 0;
+
+  function programarPrecalentamientoImagenes(filas) {
+    var urls = [];
+    var repetidas = new Set();
+    // Las primeras cuatro ya tienen prioridad de entrada. Las siguientes
+    // se solicitan poco a poco para que un scroll rapido encuentre la
+    // respuesta en cache y no tenga que abrir la conexion en plena vista.
+    (filas || []).slice(4).forEach(function (fila) {
+      var url = fila && fila.imagenes && fila.imagenes[0];
+      if (!url) return;
+      url = String(url);
+      if (repetidas.has(url) || urlsImagenesPrecalentadas.has(url)) return;
+      repetidas.add(url);
+      urls.push(url);
+    });
+    if (!urls.length) return;
+
+    var revision = ++revisionPrecalentamientoImagenes;
+    colaPrecalentamientoImagenes = urls;
+
+    var agendarSiguiente = function () {
+      if (revision !== revisionPrecalentamientoImagenes || !colaPrecalentamientoImagenes.length) return;
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(iniciarSiguiente, { timeout: 1600 });
+      } else {
+        window.setTimeout(iniciarSiguiente, 80);
+      }
+    };
+
+    var iniciarSiguiente = function () {
+      if (revision !== revisionPrecalentamientoImagenes || !colaPrecalentamientoImagenes.length) return;
+      var url = colaPrecalentamientoImagenes.shift();
+      if (!url || urlsImagenesPrecalentadas.has(url)) {
+        agendarSiguiente();
+        return;
+      }
+      urlsImagenesPrecalentadas.add(url);
+      var imagen = new Image();
+      imagen.decoding = 'async';
+      imagen.loading = 'eager';
+      if ('fetchPriority' in imagen) imagen.fetchPriority = 'low';
+      precargasImagenesActivas.set(url, imagen);
+      var liberar = function (fallo) {
+        if (fallo) urlsImagenesPrecalentadas.delete(url);
+        precargasImagenesActivas.delete(url);
+      };
+      imagen.onload = function () {
+        if (typeof imagen.decode === 'function') {
+          imagen.decode().catch(function () {}).then(function () { liberar(false); }, function () { liberar(false); });
+        } else liberar(false);
+      };
+      imagen.onerror = function () { liberar(true); };
+      imagen.src = url;
+      agendarSiguiente();
+    };
+
+    agendarSiguiente();
+  }
+
   function actualizarConteoServidor(total, pagina, cantidad) {
     var conteo = document.getElementById('conteo');
     if (!conteo) return;
@@ -1602,6 +1665,7 @@
       return;
     }
     lista.innerHTML = filas.map(tarjeta).join('') + renderPaginacionServidor(totalPaginas);
+    programarPrecalentamientoImagenes(filas);
   }
 
   async function cargarPaginaServidor(numero) {
@@ -1852,7 +1916,7 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/drawer.js?v=20260922c" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261002a" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260923b" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
 </html>
