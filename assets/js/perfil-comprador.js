@@ -338,8 +338,8 @@
       var contenedor = document.createElement('div'); contenedor.className = 'cliente';
       var card = document.createElement('div'); card.className = 'cliente-info';
       var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
-      agregarTexto(identidad, 'h3', p.nombre);
-      var estado = agregarTexto(identidad, 'span', p.activo ? 'Activo' : 'Inactivo'); estado.className = 'estado ' + (p.activo ? 'estado-activo' : 'estado-inactivo');
+      var nombreCliente = agregarTexto(identidad,'h3',p.nombre); nombreCliente.className = p.activo ? 'cliente-activo' : 'cliente-inactivo';
+      nombreCliente.setAttribute('aria-label',p.nombre + (p.activo ? ', búsqueda activa' : ', búsqueda inactiva'));
       var etiquetasCliente = document.createElement('div'); etiquetasCliente.className = 'cliente-etiquetas';
       var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
       [p.telefono,p.correo].filter(Boolean).forEach(function (texto) { agregarTexto(card,'span',texto).className = 'cliente-contacto'; });
