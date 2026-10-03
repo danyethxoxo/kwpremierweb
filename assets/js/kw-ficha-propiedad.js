@@ -15,12 +15,13 @@
   var estilosInstalados = false;
   var jsPdfPromesa = null;
   var pdfJsPromesa = null;
+  var cerrarFichaActiva = null;
 
   var ESTILOS = [
     '.kw-ficha-overlay{position:fixed;inset:0;z-index:9500;padding:18px;background:rgba(28,24,24,.56);',
     'display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s ease}',
     '.kw-ficha-overlay.abierto{opacity:1}',
-    '.kw-ficha-dialog{width:min(100%,520px);max-height:calc(100vh - 36px);overflow:auto;',
+    '.kw-ficha-dialog{width:min(100%,520px);max-height:calc(100vh - 36px);overflow:auto;overscroll-behavior:contain;',
     'background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 55px rgba(0,0,0,.28);',
     'transform:translateY(10px) scale(.98);transition:transform .18s ease}',
     '.kw-ficha-overlay.abierto .kw-ficha-dialog{transform:none}',
@@ -36,6 +37,7 @@
     '.kw-ficha-canvas{display:block;width:100%;height:auto;border-radius:7px;box-shadow:0 5px 18px rgba(38,30,30,.18)}',
     '.kw-ficha-cargando{color:#777;font-size:12px;text-align:center;padding:70px 20px}',
     '.kw-ficha-estado{min-height:18px;margin:11px 2px 8px;color:#777;font-size:11.5px;text-align:center}',
+    '.kw-ficha-estado:empty{display:none}.kw-ficha-botones{margin-top:12px}',
     '.kw-ficha-botones{display:grid;grid-template-columns:1fr 1fr;gap:9px}',
     '.kw-ficha-boton{min-height:43px;padding:10px 12px;border-radius:11px;font:600 12.5px Poppins,Arial,sans-serif;',
     'cursor:pointer;transition:filter .15s,transform .12s}',
@@ -980,6 +982,7 @@
 
   async function abrir(opciones) {
     instalarEstilos();
+    if (cerrarFichaActiva) cerrarFichaActiva();
     var anterior = document.querySelector('.kw-ficha-overlay');
     if (anterior) anterior.remove();
     var modelo = crearModelo(opciones || {});
@@ -989,7 +992,7 @@
       '<div class="kw-ficha-top"><div class="kw-ficha-titulo" id="kw-ficha-titulo">Ficha técnica</div>' +
       '<button type="button" class="kw-ficha-cerrar" aria-label="Cerrar">' + iconoCerrar() + '</button></div>' +
       '<div class="kw-ficha-vista"><div class="kw-ficha-cargando">Preparando ficha técnica...</div></div>' +
-      '<div class="kw-ficha-estado" role="status" aria-live="polite">Puedes descargarla como PNG o PDF.</div>' +
+      '<div class="kw-ficha-estado" role="status" aria-live="polite"></div>' +
       '<div class="kw-ficha-botones"><button type="button" class="kw-ficha-boton kw-ficha-boton-png" disabled>Descargar PNG</button>' +
       '<button type="button" class="kw-ficha-boton kw-ficha-boton-pdf" disabled>Descargar PDF</button></div>' +
       '</div>';
@@ -998,12 +1001,32 @@
     var estado = dialog.querySelector('.kw-ficha-estado');
     var botonPNG = dialog.querySelector('.kw-ficha-boton-png');
     var botonPDF = dialog.querySelector('.kw-ficha-boton-pdf');
+    var scrollX = window.scrollX;
+    var scrollY = window.scrollY;
+    var body = document.body;
+    var estilosScroll = {};
+    ['position', 'top', 'left', 'right', 'overflow'].forEach(function (clave) { estilosScroll[clave] = body.style[clave]; });
+    var overflowHtml = document.documentElement.style.overflow;
+    body.style.position = 'fixed';
+    body.style.top = -scrollY + 'px';
+    body.style.left = -scrollX + 'px';
+    body.style.right = '0';
+    body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    var cerrado = false;
     var cerrar = function () {
+      if (cerrado) return;
+      cerrado = true;
+      cerrarFichaActiva = null;
+      Object.keys(estilosScroll).forEach(function (clave) { body.style[clave] = estilosScroll[clave]; });
+      document.documentElement.style.overflow = overflowHtml;
+      window.scrollTo({ left: scrollX, top: scrollY, behavior: 'instant' });
       document.removeEventListener('keydown', teclado);
       overlay.classList.remove('abierto');
       window.setTimeout(function () { if (overlay.parentNode) overlay.remove(); }, 180);
       if (opciones && typeof opciones.alCerrar === 'function') opciones.alCerrar();
     };
+    cerrarFichaActiva = cerrar;
     var teclado = function (evento) { if (evento.key === 'Escape') cerrar(); };
     dialog.querySelector('.kw-ficha-cerrar').addEventListener('click', cerrar);
     overlay.addEventListener('click', function (evento) { if (evento.target === overlay) cerrar(); });
@@ -1014,12 +1037,13 @@
     var canvas;
     try {
       await cargarImagenes(modelo);
+      if (cerrado) return;
       canvas = dibujarModelo(modelo);
       vista.replaceChildren(canvas);
       canvas.className = 'kw-ficha-canvas';
       botonPNG.disabled = false;
       botonPDF.disabled = false;
-      estado.textContent = 'Selecciona el formato que quieres descargar.';
+      estado.textContent = '';
     } catch (error) {
       vista.innerHTML = '<div class="kw-ficha-cargando">No se pudo preparar la ficha técnica.</div>';
       estado.textContent = 'Intenta nuevamente en unos segundos.';

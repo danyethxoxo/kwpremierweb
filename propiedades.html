@@ -886,6 +886,20 @@
     actualizarEnlacesSitio();
   });
 
+  function refrescarSitioDelPerfil() {
+    if (!sitioAsesorUsuario) return;
+    sitioAsesorPromesa = null;
+    cargarSitioAsesor().then(actualizarEnlacesSitio).catch(function () {
+      mostrarEstadoSitio('No se pudo actualizar el sitio de tu perfil. Intenta nuevamente.', true);
+    });
+  }
+  window.addEventListener('pageshow', function (evento) {
+    if (evento.persisted) refrescarSitioDelPerfil();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refrescarSitioDelPerfil();
+  });
+
   function alternarTituloPropiedad(evento, boton) {
     evento.preventDefault();
     evento.stopPropagation();
@@ -1035,7 +1049,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003a';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003c';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
