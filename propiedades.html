@@ -1719,56 +1719,25 @@
     return filtrosAplicados || leerFiltrosServidor();
   }
 
-  function consultaPaginaServidor(pagina, filtros) {
-    var inicio = (pagina - 1) * PROPIEDADES_POR_PAGINA;
-    var consulta = sb.from('propiedades_inventario')
-      .select(CAMPOS, { count: 'exact' })
-      .eq('fuente', 'kwmexico');
-
-    if (filtros.operacion) consulta = consulta.eq('operacion', filtros.operacion);
-    if (filtros.estatus === 'inactiva') consulta = consulta.neq('estatus', 'publicada');
-    else if (filtros.estatus) consulta = consulta.eq('estatus', filtros.estatus);
-    if (filtros.tipo) consulta = consulta.contains('tipos_filtro', [filtros.tipo]);
-    if (filtros.marketCenter) consulta = consulta.eq('market_center', filtros.marketCenter);
-    if (filtros.asesor) consulta = consulta.eq('asesor_nombre', filtros.asesor);
-    if (filtros.estado) consulta = consulta.eq('estado', filtros.estado);
-    if (filtros.municipio) consulta = consulta.eq('municipio', filtros.municipio);
-    if (filtros.colonia) consulta = consulta.eq('colonia', filtros.colonia);
-    if (filtros.minimo) consulta = consulta.gte('precio', filtros.minimo);
-    if (filtros.maximo) consulta = consulta.lte('precio', filtros.maximo);
-    if (filtros.recamaras) consulta = consulta.gte('recamaras', filtros.recamaras);
-    if (filtros.recamarasMax) consulta = consulta.lte('recamaras', filtros.recamarasMax);
-    if (filtros.banos) consulta = consulta.gte('banos', filtros.banos);
-    if (filtros.estacionamientos) consulta = consulta.gte('estacionamientos', filtros.estacionamientos);
-    if (filtros.m2Min) consulta = consulta.gte('m2_construccion', filtros.m2Min);
-    if (filtros.m2Max) consulta = consulta.lte('m2_construccion', filtros.m2Max);
-
-    var texto = escaparLikeServidor(filtros.texto);
-    if (texto) {
-      consulta = consulta.or([
-        'titulo.ilike.%' + texto + '%',
-        'asesor_nombre.ilike.%' + texto + '%',
-        'calle.ilike.%' + texto + '%',
-        'colonia.ilike.%' + texto + '%',
-        'municipio.ilike.%' + texto + '%',
-        'estado.ilike.%' + texto + '%',
-        'tipo.ilike.%' + texto + '%',
-        'market_center.ilike.%' + texto + '%'
-      ].join(','));
+  var controladorCargaServidor = null;
+  async function consultaPaginaServidor(pagina, filtros) {
+    var revision = solicitudPaginaServidor;
+    for (var intento = 0; intento < 3; intento++) {
+      if (revision !== solicitudPaginaServidor) throw new Error('Solicitud sustituida');
+      var controlador = new AbortController(); controladorCargaServidor = controlador;
+      var timer = setTimeout(function () { controlador.abort(); },12000);
+      try {
+        var respuesta = await sb.rpc('propiedades_inventario_pagina',{p_filtros:filtros,p_pagina:pagina}).abortSignal(controlador.signal);
+        if (respuesta.error) {
+          var error = new Error(respuesta.error.message || 'No se pudo cargar el inventario');
+          error.code = respuesta.error.code; error.status = respuesta.status; throw error;
+        }
+        return {data:respuesta.data.data || [],count:respuesta.data.total};
+      } catch (error) {
+        if (revision !== solicitudPaginaServidor || intento === 2 || error.status === 401 || error.status === 403 || error.code === '42501' || error.code === '22P02') throw error;
+        await new Promise(function (resolve) { setTimeout(resolve,400*(intento+1)); });
+      } finally { clearTimeout(timer); }
     }
-
-    if (filtros.orden === 'precio-asc') {
-      consulta = consulta.order('precio', { ascending: true });
-    } else if (filtros.orden === 'precio-desc') {
-      consulta = consulta.order('precio', { ascending: false });
-    } else if (filtros.orden === 'm2-desc') {
-      consulta = consulta.order('m2_construccion', { ascending: false });
-    } else {
-      consulta = consulta.order('updated_at', { ascending: false });
-    }
-
-    return consulta.order('id', { ascending: true })
-      .range(inicio, inicio + PROPIEDADES_POR_PAGINA - 1);
   }
 
   function opcionesCatalogoActualizadas(campo, lote) {
@@ -2035,6 +2004,9 @@
     var lista = document.getElementById('lista');
     var conteo = document.getElementById('conteo');
     var paginaSolicitada = Math.max(1, Number(numero) || 1);
+    var paginaAnterior = paginaActual;
+    var tieneTarjetasAnteriores = !!lista.querySelector('.prop-card');
+    if (controladorCargaServidor) controladorCargaServidor.abort();
     var solicitud = ++solicitudPaginaServidor;
     ++revisionPrecalentamientoImagenes;
     paginaActual = paginaSolicitada;
@@ -2044,12 +2016,11 @@
     if (conteo) conteo.textContent = '';
 
     try {
-      var cargas = await Promise.all([
-        cargarSitioAsesor(),
-        consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales())
-      ]);
+      cargarSitioAsesor().then(actualizarEnlacesSitio).catch(function () {
+        mostrarEstadoSitio('No se pudieron cargar tus datos de contacto. Puedes reintentarlo desde tu perfil.', true);
+      });
+      var respuesta = await consultaPaginaServidor(paginaSolicitada, filtrosServidorActuales());
       if (solicitud !== solicitudPaginaServidor) return;
-      var respuesta = cargas[1];
       if (respuesta.error) throw respuesta.error;
       var filas = respuesta.data || [];
       var total = Number(respuesta.count);
@@ -2065,9 +2036,16 @@
       ocultarCargadorPropiedades();
       lista.classList.remove('lista-cargando');
       lista.removeAttribute('aria-busy');
-      if (conteo) conteo.textContent = 'No se pudieron cargar las propiedades';
-      lista.innerHTML = '<div class="estado-msg">Intenta nuevamente en unos segundos.<br>' +
-        escapeHtml(error.message || '') + '</div>';
+      console.error('No se pudo cargar la página de propiedades:', error.code || error.status || error.message);
+      if (conteo) conteo.textContent = 'La carga no se completó';
+      var conservar = tieneTarjetasAnteriores;
+      if (conservar) paginaActual = paginaAnterior;
+      else lista.replaceChildren();
+      var aviso = document.createElement('div'); aviso.className = 'estado-msg'; aviso.setAttribute('role','alert');
+      var texto = document.createElement('p'); texto.textContent = conservar ? 'No pudimos actualizar la página. Puedes seguir consultando las propiedades anteriores.' : 'No pudimos cargar las propiedades. Vuelve a intentarlo.';
+      var boton = document.createElement('button'); boton.type = 'button'; boton.className = 'kw-btn'; boton.textContent = 'Reintentar carga';
+      boton.addEventListener('click',function () { aviso.remove(); cargarPaginaServidor(paginaSolicitada); });
+      aviso.append(texto,boton); lista.prepend(aviso);
     }
   }
 
