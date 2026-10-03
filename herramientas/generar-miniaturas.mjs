@@ -30,7 +30,10 @@ async function main() {
         const item=items[next++];let ok=false;
         try {
           const source=new URL(item.imagen_origen);
-          if(source.protocol!=='https:' || source.hostname!=='storage.googleapis.com' || !source.pathname.startsWith('/attachment-listing-prod-5af4/')) throw new Error('Origen no permitido');
+          const origenPermitido =
+            (source.hostname==='storage.googleapis.com' && source.pathname.startsWith('/attachment-listing-prod-5af4/')) ||
+            (source.hostname==='repstaticneu.azureedge.net' && source.pathname.startsWith('/images/'));
+          if(source.protocol!=='https:' || !origenPermitido) throw new Error('Origen no permitido');
           const response=await fetch(source,{redirect:'error',signal:AbortSignal.timeout(45000)});
           if(!response.ok || Number(response.headers.get('content-length'))>25000000) throw new Error('Imagen no disponible');
           const data=Buffer.from(await response.arrayBuffer());
