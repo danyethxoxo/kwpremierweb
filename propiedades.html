@@ -1027,7 +1027,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002l';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003a';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1054,9 +1054,26 @@
 
   function cargarAsesorFicha(propiedad) {
     var base = datosAsesorFichaBase(propiedad);
+    if (sitioAsesor) {
+      var sitioFicha = sitioAsesor;
+      var claveSitio = 'sitio:' + sitioFicha;
+      if (asesoresFichaCache[claveSitio]) return asesoresFichaCache[claveSitio];
+      asesoresFichaCache[claveSitio] = sb.functions.invoke('perfil-sitio-kw', {
+        body: { sitio_web: sitioFicha }
+      }).then(function (respuesta) {
+        if (respuesta.error || !respuesta.data || !respuesta.data.perfil) {
+          throw new Error('No se pudo leer el perfil del sitio KW configurado. Intenta nuevamente.');
+        }
+        return respuesta.data.perfil;
+      }).catch(function (error) {
+        delete asesoresFichaCache[claveSitio];
+        throw error;
+      });
+      return asesoresFichaCache[claveSitio];
+    }
     var tienePerfil = sitioAsesorPerfil && (sitioAsesorPerfil.nombre || sitioAsesorPerfil.apellido ||
       sitioAsesorPerfil.email || sitioAsesorPerfil.whatsapp || sitioAsesorPerfil.foto_url);
-    if (tienePerfil || sitioAsesor) return Promise.resolve(base);
+    if (tienePerfil) return Promise.resolve(base);
     if (!propiedad.asesor_id) return Promise.resolve(base);
     var clave = String(propiedad.asesor_id);
     if (asesoresFichaCache[clave]) return asesoresFichaCache[clave];

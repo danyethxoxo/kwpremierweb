@@ -83,26 +83,6 @@
     return texto(url).replace(/^https?:\/\//i, '').replace(/\/$/, '');
   }
 
-  var PERFILES_KW_FALLBACK = {
-    'daniguerrero.kw.com': {
-      nombre: 'Daniel Barush',
-      apellido: 'Guerrero',
-      puesto: 'Coordinador de Tecnología',
-      whatsapp: '+52 55 8577 2232',
-      email: 'dani.guerrero@kwmexico.mx',
-      sitio_web: 'https://daniguerrero.kw.com',
-      market_center: 'KW Premier',
-      foto_url: 'https://storage.googleapis.com/attachment-prod-e2ad/2000132866/d9ufqddpq4ac70pfit4g.png'
-    }
-  };
-
-  function perfilKwFallback(sitio) {
-    try {
-      var hostname = new URL(sitio || '', window.location.href).hostname.toLowerCase();
-      return PERFILES_KW_FALLBACK[hostname] || {};
-    } catch (error) { return {}; }
-  }
-
   function slug(valor) {
     return texto(valor, 'propiedad').toLocaleLowerCase('es-MX')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -162,7 +142,7 @@
 
   function crearModelo(opciones) {
     var propiedad = opciones.propiedad || {};
-    var asesor = Object.assign({}, perfilKwFallback(opciones.asesor && opciones.asesor.sitio_web), opciones.asesor || {});
+    var asesor = Object.assign({}, opciones.asesor || {});
     var direccion = [propiedad.calle, propiedad.colonia, propiedad.municipio,
       propiedad.estado, propiedad.cp].filter(Boolean).join(', ');
     if (!direccion) direccion = 'Ubicación no disponible';
