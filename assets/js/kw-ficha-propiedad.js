@@ -344,6 +344,22 @@
     return lineas.length;
   }
 
+  // El título de la ficha conserva todas las palabras, aunque la tarjeta
+  // del catálogo las oculte. Se ajusta al espacio entre operación y dirección.
+  function ajustarTituloFicha(valor, medirLineas) {
+    var contenido = texto(valor).toLocaleUpperCase('es-MX');
+    var tamano = 36;
+    var lineas;
+    do {
+      lineas = medirLineas(contenido, tamano);
+      if (lineas.length * tamano * 1.18 <= 176) break;
+      tamano--;
+    } while (tamano > 1);
+    var alto = tamano * 1.18;
+    return { lineas: lineas, tamano: tamano, alto: alto,
+      y: 554 + (176 - lineas.length * alto) / 2 + tamano };
+  }
+
   function pin(ctx, x, y) {
     ctx.save();
     ctx.fillStyle = COLORES.rojo;
@@ -584,8 +600,15 @@
     ctx.fillText(modelo.operacion, anchoPanel / 2, 470);
     ctx.textAlign = 'left';
     ctx.fillStyle = COLORES.texto;
-    ctx.font = '500 36px Arial, sans-serif';
-    textoEnvuelto(ctx, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center');
+    var tituloFicha = ajustarTituloFicha(modelo.titulo, function (contenido, tamano) {
+      ctx.font = '500 ' + tamano + 'px Arial, sans-serif';
+      return envolver(ctx, contenido, 570);
+    });
+    ctx.textAlign = 'center';
+    tituloFicha.lineas.forEach(function (linea, indice) {
+      ctx.fillText(linea, 340, tituloFicha.y + indice * tituloFicha.alto);
+    });
+    ctx.textAlign = 'left';
 
     ctx.strokeStyle = COLORES.rojo;
     ctx.lineWidth = 3;
@@ -888,7 +911,13 @@
     pdfFuente(pdf, 154 * escala, COLORES.texto, 'normal');
     pdf.setFont('times', 'normal');
     pdf.text(modelo.operacion, anchoPanel / 2 * escala, 470 * escala, { align: 'center' });
-    pdfTextoEnvuelto(pdf, modelo.titulo.toLocaleUpperCase('es-MX'), 340, 605, 570, 42, 2, 'center', 36, COLORES.texto, 'normal', escala);
+    var tituloFicha = ajustarTituloFicha(modelo.titulo, function (contenido, tamano) {
+      pdfFuente(pdf, tamano * escala, COLORES.texto, 'normal');
+      return pdf.splitTextToSize(contenido, 570 * escala);
+    });
+    pdf.text(tituloFicha.lineas, 340 * escala, tituloFicha.y * escala, {
+      align: 'center', lineHeightFactor: tituloFicha.alto / tituloFicha.tamano
+    });
 
     pdf.setDrawColor(COLORES.rojo);
     pdf.setLineWidth(3 * escala);

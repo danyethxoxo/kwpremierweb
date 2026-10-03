@@ -1,0 +1,29 @@
+name: Miniaturas de propiedades
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Sincronizar inventario KWMexico]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: miniaturas-propiedades
+  cancel-in-progress: false
+jobs:
+  miniaturas:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Generar miniaturas del catálogo
+        env:
+          SUPABASE_URL: ${{ secrets.KW_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.KW_SUPABASE_ANON_KEY }}
+          KW_SYNC_SECRET: ${{ secrets.KW_SYNC_SECRET }}
+        run: node herramientas/generar-miniaturas.mjs

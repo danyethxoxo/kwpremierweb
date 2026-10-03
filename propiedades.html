@@ -1049,7 +1049,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003c';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003i';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1188,7 +1188,7 @@
     var cargaImagen = i < 4 ? 'eager' : 'lazy';
     var prioridadImagen = i < 2 ? 'high' : (i < 4 ? 'auto' : 'low');
     var foto = tieneFoto
-      ? '<img class="prop-imagen" width="800" height="600" src="' + escapeHtml(p.imagenes[0]) + '" alt="' + escapeHtml(p.titulo) + '" loading="' + cargaImagen + '" decoding="async" fetchpriority="' + prioridadImagen + '" onload="this.parentNode.classList.remove(\'cargando\')" onerror="this.parentNode.classList.remove(\'cargando\'); this.parentNode.innerHTML=\'<div class=&quot;sin-foto&quot;>' + ICO.casa.replace(/"/g, '&quot;') + '</div>\'" />'
+      ? '<img class="prop-imagen" width="800" height="600" ' + (i < 4 ? 'src' : 'data-src') + '="' + escapeHtml(p.miniatura_url || p.imagenes[0]) + '" data-original="' + escapeHtml(p.imagenes[0]) + '" alt="' + escapeHtml(p.titulo) + '" loading="' + cargaImagen + '" decoding="async" fetchpriority="' + prioridadImagen + '" onload="mostrarFotoPropiedad(this)" onerror="recuperarFotoPropiedad(this)" />'
       : '<div class="sin-foto">' + ICO.casa + '</div>';
 
     var datos = [];
@@ -1527,7 +1527,7 @@
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, m2_terreno, calle, colonia, municipio, estado, cp, pais, ' +
-               'imagenes, caracteristicas, asesor_id, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
+               'imagenes, miniatura_url, caracteristicas, asesor_id, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');
@@ -1683,7 +1683,6 @@
     'f-municipio': 'municipio',
     'f-colonia': 'colonia'
   };
-  var TAMANO_LOTE_CATALOGO = 1000;
 
   function escaparLikeServidor(valor) {
     return String(valor == null ? '' : valor)
@@ -1793,7 +1792,6 @@
   async function cargarCatalogoServidor(id, campo, version) {
     var revision = (versionesCatalogoRelacionado[id] || 0) + 1;
     versionesCatalogoRelacionado[id] = revision;
-    var desde = 0;
     var select = document.getElementById(id);
     var textoVacio = (id === 'f-estado' || id === 'f-municipio' || id === 'f-colonia') ? 'Todas' : 'Todos';
     var contexto = { mc: val('f-mc'), estado: val('f-estado'), municipio: val('f-municipio') };
@@ -1801,35 +1799,23 @@
     var colonias = new Map();
     if (select) select.setAttribute('aria-busy', 'true');
 
-    while (version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
-      var consulta = sb.from('propiedades_inventario')
-        .select(id === 'f-colonia' ? 'colonia, municipio, estado' : campo)
-        .eq('fuente', 'kwmexico')
-        .not(campo, 'is', null)
-        .order(campo, { ascending: true })
-        .order('id', { ascending: true })
-        .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
-      if (id === 'f-asesor' && contexto.mc) consulta = consulta.eq('market_center', contexto.mc);
-      if ((id === 'f-municipio' || id === 'f-colonia') && contexto.estado) consulta = consulta.eq('estado', contexto.estado);
-      if (id === 'f-colonia' && contexto.municipio) consulta = consulta.eq('municipio', contexto.municipio);
-      var respuesta = await consulta;
-      if (respuesta.error) throw respuesta.error;
-      if (revision !== versionesCatalogoRelacionado[id] || version !== catalogoServidorVersion) return;
-
-      var lote = respuesta.data || [];
-      lote.forEach(function (fila) {
-        if (!fila[campo]) return;
-        if ((id === 'f-estado' || id === 'f-colonia') && normalizarTexto(fila.estado).trim() === 'antioquia') return;
-        if (id === 'f-colonia') {
-          var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
-          colonias.set('ubic:' + JSON.stringify(lugar), lugar);
-        } else if (Array.isArray(fila[campo])) {
-          fila[campo].forEach(function (tipo) { if (tipo) valores.add(String(tipo)); });
-        } else valores.add(String(fila[campo]));
-      });
-      if (lote.length < TAMANO_LOTE_CATALOGO) break;
-      desde += lote.length;
-    }
+    var respuesta = await sb.rpc('propiedades_inventario_catalogo', {
+      p_campo: campo, p_mc: contexto.mc || null,
+      p_estado: contexto.estado || null, p_municipio: contexto.municipio || null
+    });
+    if (respuesta.error) throw respuesta.error;
+    if (revision !== versionesCatalogoRelacionado[id] || version !== catalogoServidorVersion) return;
+    var lote = respuesta.data || [];
+    lote.forEach(function (fila) {
+      if (!fila[campo]) return;
+      if ((id === 'f-estado' || id === 'f-colonia') && normalizarTexto(fila.estado).trim() === 'antioquia') return;
+      if (id === 'f-colonia') {
+        var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
+        colonias.set('ubic:' + JSON.stringify(lugar), lugar);
+      } else if (Array.isArray(fila[campo])) {
+        fila[campo].forEach(function (tipo) { if (tipo) valores.add(String(tipo)); });
+      } else valores.add(String(fila[campo]));
+    });
 
     if (select && version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
       var anterior = select.value;
@@ -1870,17 +1856,14 @@
 
   async function completarCiudadMunicipio(municipio, revision) {
     var estados = new Set();
-    for (var desde = 0; ; desde += TAMANO_LOTE_CATALOGO) {
-      var respuesta = await sb.from('propiedades_inventario').select('estado')
-        .eq('fuente', 'kwmexico').eq('municipio', municipio).order('id')
-        .range(desde, desde + TAMANO_LOTE_CATALOGO - 1);
-      if (respuesta.error) throw respuesta.error;
-      if (revision !== versionUbicacion) return;
-      (respuesta.data || []).forEach(function (fila) {
-        if (fila.estado && normalizarTexto(fila.estado).trim() !== 'antioquia') estados.add(fila.estado);
-      });
-      if ((respuesta.data || []).length < TAMANO_LOTE_CATALOGO) break;
-    }
+    var respuesta = await sb.rpc('propiedades_inventario_catalogo', {
+      p_campo: 'estado', p_municipio: municipio
+    });
+    if (respuesta.error) throw respuesta.error;
+    if (revision !== versionUbicacion) return;
+    (respuesta.data || []).forEach(function (fila) {
+      if (fila.estado) estados.add(fila.estado);
+    });
     if (estados.size === 1 && revision === versionUbicacion) {
       ponerFiltroRelacionado('f-estado', Array.from(estados)[0]);
       refrescarRelacionado('f-municipio');
@@ -1913,41 +1896,65 @@
 
   var revisionPrecalentamientoImagenes = 0;
 
+  var observadorFotosPropiedades = null;
+
+  function recuperarFotoPropiedad(foto) {
+    if (foto.dataset.original && foto.src !== foto.dataset.original && !foto.dataset.reintento) {
+      foto.dataset.reintento = '1';
+      foto.src = foto.dataset.original;
+      return;
+    }
+    foto.parentNode.classList.remove('cargando');
+    foto.parentNode.innerHTML = '<div class="sin-foto">' + ICO.casa + '</div>';
+  }
+
+  function mostrarFotoPropiedad(foto) {
+    var terminar = function () {
+      if (foto.isConnected) foto.parentNode.classList.remove('cargando');
+    };
+    if (foto.decode) foto.decode().then(terminar, terminar);
+    else terminar();
+  }
+
   function programarPrecalentamientoImagenes() {
     var revision = ++revisionPrecalentamientoImagenes;
-    var pendientes = Array.from(document.querySelectorAll('#lista .prop-imagen')).slice(4);
+    if (observadorFotosPropiedades) observadorFotosPropiedades.disconnect();
+    var pendientes = [];
     var activas = 0;
-
-    // Cargar los elementos reales conserva su imagen decodificada. Dos
-    // solicitudes a la vez evitan competir con todas las fotos de entrada.
+    var fotos = Array.from(document.querySelectorAll('#lista .prop-imagen[data-src]'));
     function iniciar() {
       if (revision !== revisionPrecalentamientoImagenes) return;
       while (activas < 2 && pendientes.length) {
-        var imagen = pendientes.shift();
-        if (!imagen.isConnected || imagen.complete) continue;
+        var foto = pendientes.shift();
+        if (!foto.isConnected || !foto.dataset.src) continue;
         activas++;
-        (function (foto) {
-          var terminada = false;
+        (function (imagen) {
           function terminar() {
-            if (terminada) return;
-            terminada = true;
-            foto.removeEventListener('load', terminar);
-            foto.removeEventListener('error', terminar);
+            imagen.removeEventListener('load', terminar);
+            imagen.removeEventListener('error', terminar);
             activas--;
-            agendar();
+            iniciar();
           }
-          foto.addEventListener('load', terminar);
-          foto.addEventListener('error', terminar);
-          foto.loading = 'eager';
-        })(imagen);
+          imagen.addEventListener('load', terminar);
+          imagen.addEventListener('error', terminar);
+          imagen.src = imagen.dataset.src;
+          delete imagen.dataset.src;
+        })(foto);
       }
     }
-    function agendar() {
-      if (revision !== revisionPrecalentamientoImagenes || !pendientes.length) return;
-      if ('requestIdleCallback' in window) window.requestIdleCallback(iniciar, { timeout: 1200 });
-      else window.setTimeout(iniciar, 80);
+    if (!('IntersectionObserver' in window)) {
+      fotos.forEach(function (foto) { foto.src = foto.dataset.src; delete foto.dataset.src; });
+      return;
     }
-    agendar();
+    observadorFotosPropiedades = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        if (!entrada.isIntersecting) return;
+        observadorFotosPropiedades.unobserve(entrada.target);
+        pendientes.push(entrada.target);
+      });
+      iniciar();
+    }, { rootMargin: '600px 0px' });
+    fotos.forEach(function (foto) { observadorFotosPropiedades.observe(foto); });
   }
 
   function actualizarConteoServidor(total, pagina, cantidad) {
