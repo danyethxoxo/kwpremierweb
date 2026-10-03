@@ -476,10 +476,6 @@
   }
   .prop-accion:hover, .prop-accion:focus-visible { background: #fff3f3; color: var(--red); }
   .prop-accion:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
-  .prop-accion:disabled { color: #999; cursor: not-allowed; }
-  .prop-accion:disabled:hover { background: transparent; color: #999; }
-  .prop-accion > span { min-width: 0; }
-  .prop-accion small { margin-left: auto; color: #999; font-size: 10px; white-space: nowrap; }
   .propiedad-aviso-accion {
     position: fixed; left: 50%; bottom: 24px; z-index: 80;
     max-width: calc(100vw - 32px); padding: 10px 15px;
@@ -575,8 +571,6 @@
     .prop-acciones { top: 8px; right: 8px; }
     .prop-acciones-toggle { width: 40px; height: 40px; }
     .prop-acciones-menu { width: 156px; min-width: 0; }
-    .prop-accion-pendiente { display: block; }
-    .prop-accion-pendiente small { display: block; margin: 2px 0 0; }
     /* Dos filtros por renglón fijos. Con `auto-fill` dependía del ancho
        exacto del teléfono: en uno de 480px salían dos y en uno de 412px
        uno solo, y la tarjeta se estiraba a lo largo. */
@@ -1021,6 +1015,73 @@
     }
   }
 
+  var propiedadesPaginaActual = Object.create(null);
+  var asesoresFichaCache = Object.create(null);
+  var fichaPropiedadModuloPromesa = null;
+
+  function cargarModuloFichaPropiedad() {
+    if (window.kwFichaPropiedad) return Promise.resolve(window.kwFichaPropiedad);
+    if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
+    fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
+      var script = document.createElement('script');
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261002a';
+      script.async = true;
+      script.onload = function () {
+        if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
+        else rechazar(new Error('No se pudo cargar la ficha técnica.'));
+      };
+      script.onerror = function () {
+        fichaPropiedadModuloPromesa = null;
+        rechazar(new Error('No se pudo cargar la ficha técnica.'));
+      };
+      document.head.appendChild(script);
+    });
+    return fichaPropiedadModuloPromesa;
+  }
+
+  function datosAsesorFichaBase(propiedad) {
+    return {
+      nombre: propiedad.asesor_nombre || '',
+      market_center: propiedad.market_center || ''
+    };
+  }
+
+  function cargarAsesorFicha(propiedad) {
+    var base = datosAsesorFichaBase(propiedad);
+    if (!propiedad.asesor_id) return Promise.resolve(base);
+    var clave = String(propiedad.asesor_id);
+    if (asesoresFichaCache[clave]) return asesoresFichaCache[clave];
+    asesoresFichaCache[clave] = sb.from('perfiles_publicos')
+      .select('id,nombre,apellido,role,foto_url,puesto,sitio_web,whatsapp,email')
+      .eq('id', propiedad.asesor_id)
+      .maybeSingle()
+      .then(function (respuesta) {
+        return respuesta.error ? base : Object.assign(base, respuesta.data || {});
+      })
+      .catch(function () { return base; });
+    return asesoresFichaCache[clave];
+  }
+
+  async function abrirFichaPropiedad(evento, boton) {
+    evento.preventDefault();
+    evento.stopPropagation();
+    cerrarMenusAccionesPropiedad();
+    var tarjeta = boton.closest('.prop-card');
+    var id = tarjeta && tarjeta.getAttribute('data-propiedad-id');
+    var propiedad = id ? propiedadesPaginaActual[id] : null;
+    if (!propiedad) {
+      mostrarAvisoAccionPropiedad('No se encontró la información de esta propiedad');
+      return;
+    }
+    try {
+      var enlace = tarjeta.querySelector('.prop-enlace');
+      var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarModuloFichaPropiedad()]);
+      datos[1].abrir({ propiedad: propiedad, asesor: datos[0], url: enlace ? enlace.href : window.location.href });
+    } catch (error) {
+      mostrarAvisoAccionPropiedad(error.message || 'No se pudo preparar la ficha técnica');
+    }
+  }
+
   document.addEventListener('click', function (evento) {
     if (!evento.target.closest('.prop-acciones')) cerrarMenusAccionesPropiedad();
   });
@@ -1102,7 +1163,13 @@
     var tituloId = 'prop-titulo-' + i;
     var accionesId = 'prop-acciones-' + i;
     enlacePropiedad = window.kwSitioAsesor.personalizar(enlacePropiedad, sitioAsesor);
-    return '<article class="prop-card">' +
+    if (p && p.id != null) {
+      var mapaFicha = typeof propiedadesPaginaActual !== 'undefined'
+        ? propiedadesPaginaActual
+        : (window.propiedadesPaginaActual || (window.propiedadesPaginaActual = Object.create(null)));
+      mapaFicha[String(p.id)] = p;
+    }
+    return '<article class="prop-card" data-propiedad-id="' + escapeHtml(p.id) + '">' +
       '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(tituloPropiedad) + '"></a>' +
       '<div class="prop-foto' + (tieneFoto ? ' cargando' : '') + '">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
@@ -1114,7 +1181,7 @@
         '<div class="prop-acciones-menu" id="' + accionesId + '" role="menu" hidden>' +
           '<button type="button" class="prop-accion" role="menuitem" onclick="copiarLinkPropiedad(event, this)">Copiar link</button>' +
           '<button type="button" class="prop-accion" role="menuitem" onclick="compartirPropiedad(event, this)">Compartir propiedad</button>' +
-          '<button type="button" class="prop-accion prop-accion-pendiente" role="menuitem" disabled aria-disabled="true"><span>Descargar ficha técnica</span><small>Próximamente</small></button>' +
+          '<button type="button" class="prop-accion prop-accion-ficha" role="menuitem" onclick="abrirFichaPropiedad(event, this)">Descargar ficha técnica</button>' +
         '</div>' +
       '</div>' +
       '<div class="prop-body">' +
@@ -1214,6 +1281,7 @@
     marcarFiltrosEscondidos();
 
     var cont = document.getElementById('lista');
+    propiedadesPaginaActual = Object.create(null);
     var totalPaginas = catalogoCargando
       ? 1
       : Math.max(1, Math.ceil(vis.length / PROPIEDADES_POR_PAGINA));
@@ -1402,8 +1470,8 @@
   }
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
-               'estacionamientos, m2_construccion, calle, colonia, municipio, estado, cp, ' +
-               'imagenes, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
+               'estacionamientos, m2_construccion, m2_terreno, calle, colonia, municipio, estado, cp, pais, ' +
+               'imagenes, caracteristicas, asesor_id, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');
@@ -1885,6 +1953,7 @@
 
   function renderizarPaginaServidor(filas, total) {
     var lista = document.getElementById('lista');
+    propiedadesPaginaActual = Object.create(null);
     var totalPaginas = total ? Math.ceil(total / PROPIEDADES_POR_PAGINA) : 0;
     ocultarCargadorPropiedades();
     actualizarConteoServidor(total, paginaActual, filas.length);
