@@ -332,14 +332,18 @@
   }
   .resultados-cabecera .conteo { margin-bottom: 0; }
   .resultado-nota { color: var(--muted); font-size: 11px; white-space: nowrap; }
-  #conteo .conteo-cargando {
-    display: inline-flex; position: relative; align-items: center; justify-content: center;
-    width: 32px; height: 30px; min-height: 0; padding: 0; vertical-align: middle;
+  .propiedades-cargando {
+    position: fixed; inset: 0 0 0 292px; z-index: 50;
+    display: grid; place-items: center; pointer-events: none;
   }
-  #conteo .conteo-cargando .circle { border-top-color: var(--red); }
-  #conteo .conteo-cargando .circle.uno { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
-  #conteo .conteo-cargando .circle.dos { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
-  #conteo .conteo-cargando .circle.tres { width: 30px; height: 30px; margin: -15px 0 0 -15px; }
+  .propiedades-cargando .kw-loader {
+    width: 56px; height: 56px; min-height: 56px; padding: 0; grid-column: auto;
+  }
+  .propiedades-cargando .kw-loader .circle { border-top-color: var(--red); }
+  .lista-cargando > .kw-loader { visibility: hidden; }
+  @media (max-width: 1023px) {
+    .propiedades-cargando { inset: 0; }
+  }
 
   .prop-pie {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start;
@@ -1507,6 +1511,24 @@
     conteo.textContent = 'Mostrando ' + cantidad + ' de ' + total + ' listados';
   }
 
+  function mostrarCargadorPropiedades() {
+    if (document.getElementById('propiedades-cargando')) return;
+    var cargador = document.createElement('div');
+    cargador.id = 'propiedades-cargando';
+    cargador.className = 'propiedades-cargando';
+    cargador.setAttribute('role', 'status');
+    cargador.setAttribute('aria-label', 'Cargando propiedades');
+    cargador.innerHTML = '<div class="kw-loader" aria-hidden="true">' +
+      '<div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>' +
+      '</div>';
+    document.body.appendChild(cargador);
+  }
+
+  function ocultarCargadorPropiedades() {
+    var cargador = document.getElementById('propiedades-cargando');
+    if (cargador) cargador.remove();
+  }
+
   function renderPaginacionServidor(totalPaginas) {
     if (totalPaginas <= 1) return '';
     var paginas = [];
@@ -1543,6 +1565,7 @@
   function renderizarPaginaServidor(filas, total) {
     var lista = document.getElementById('lista');
     var totalPaginas = total ? Math.ceil(total / PROPIEDADES_POR_PAGINA) : 0;
+    ocultarCargadorPropiedades();
     actualizarConteoServidor(total, paginaActual, filas.length);
     lista.classList.remove('lista-cargando');
     lista.removeAttribute('aria-busy');
@@ -1561,11 +1584,8 @@
     paginaActual = paginaSolicitada;
     lista.classList.add('lista-cargando');
     lista.setAttribute('aria-busy', 'true');
-    if (conteo) {
-      conteo.innerHTML = '<span class="conteo-cargando kw-loader" role="status" aria-label="Cargando propiedades">' +
-        '<span class="circle uno"></span><span class="circle dos"></span><span class="circle tres"></span>' +
-        '</span>';
-    }
+    mostrarCargadorPropiedades();
+    if (conteo) conteo.textContent = '';
 
     try {
       await cargarSitioAsesor();
@@ -1584,6 +1604,7 @@
       renderizarPaginaServidor(filas, total);
     } catch (error) {
       if (solicitud !== solicitudPaginaServidor) return;
+      ocultarCargadorPropiedades();
       lista.classList.remove('lista-cargando');
       lista.removeAttribute('aria-busy');
       if (conteo) conteo.textContent = 'No se pudieron cargar las propiedades';
