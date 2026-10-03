@@ -431,10 +431,10 @@
     ctx.fillStyle = COLORES.texto;
     ctx.font = '700 25px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(texto(dato.valor, '-'), x, y + 48);
+    ctx.fillText(texto(dato.valor, '-'), x, y + 60);
     ctx.fillStyle = COLORES.gris;
     ctx.font = '500 16px Arial, sans-serif';
-    textoEnvuelto(ctx, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 76, 190, 20, 1, 'center');
+    textoEnvuelto(ctx, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 87, 190, 20, 1, 'center');
     ctx.textAlign = 'left';
   }
 
@@ -581,7 +581,7 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, anchoPanel, altoFotos);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1600 / 3), 1230, 1600 / 3, 335, 0, false);
+      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1230, 528, 335, 0, false);
     }
 
     if (modelo._logo && modelo._logo.naturalWidth) {
@@ -830,8 +830,8 @@
 
   function pdfDatoFicha(pdf, dato, x, y, ancho, escala) {
     pdfIconoFicha(pdf, dato.etiqueta, x, y, escala);
-    pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 48, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
-    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 76, ancho - 12, 20, 1, 'center', 16, COLORES.gris, 'normal', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.valor, '-'), x, y + 60, ancho, 25, 1, 'center', 25, COLORES.texto, 'bold', escala);
+    pdfTextoEnvuelto(pdf, texto(dato.etiqueta).toLocaleUpperCase('es-MX'), x, y + 87, ancho - 12, 20, 1, 'center', 16, COLORES.gris, 'normal', escala);
   }
 
   function pdfIconoContacto(pdf, tipo, x, y, escala) {
@@ -884,7 +884,7 @@
 
     pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1600 / 3), 1230, 1600 / 3, 335, false, escala);
+      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1230, 528, 335, false, escala);
     }
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
