@@ -419,7 +419,26 @@
     flex: 0 0 auto; width: 100%; height: auto; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
   }
-  .prop-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .prop-foto.cargando::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: linear-gradient(105deg, #e4e4e4 30%, #f3f3f2 47%, #e4e4e4 64%);
+    background-size: 220% 100%;
+    animation: prop-foto-cargando 1.35s ease-in-out infinite;
+  }
+  .prop-foto img {
+    position: relative; z-index: 1;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    opacity: 1; transition: opacity 0.28s ease;
+  }
+  .prop-foto.cargando img { opacity: 0; }
+  @keyframes prop-foto-cargando {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .prop-foto.cargando::before { animation: none; }
+    .prop-foto img { transition: none; }
+  }
   .prop-foto .sin-foto { color: #bbb; }
   .prop-foto .sin-foto svg { width: 34px; height: 34px; }
   .prop-badge {
@@ -815,8 +834,9 @@
 
   function tarjeta(p, i) {
     var ubic = [p.colonia, p.municipio].filter(Boolean).join(', ');
-    var foto = (p.imagenes && p.imagenes.length)
-      ? '<img width="800" height="600" src="' + escapeHtml(p.imagenes[0]) + '" alt="' + escapeHtml(p.titulo) + '" loading="eager" decoding="async" fetchpriority="' + (i < 4 ? 'high' : 'low') + '" onerror="this.parentNode.innerHTML=\'<div class=&quot;sin-foto&quot;>' + ICO.casa.replace(/"/g, '&quot;') + '</div>\'" />'
+    var tieneFoto = p.imagenes && p.imagenes.length;
+    var foto = tieneFoto
+      ? '<img class="prop-imagen" width="800" height="600" src="' + escapeHtml(p.imagenes[0]) + '" alt="' + escapeHtml(p.titulo) + '" loading="eager" decoding="async" fetchpriority="' + (i < 4 ? 'high' : 'low') + '" onload="this.classList.add(\'cargada\'); this.parentNode.classList.remove(\'cargando\')" onerror="this.parentNode.classList.remove(\'cargando\'); this.parentNode.innerHTML=\'<div class=&quot;sin-foto&quot;>' + ICO.casa.replace(/"/g, '&quot;') + '</div>\'" />'
       : '<div class="sin-foto">' + ICO.casa + '</div>';
 
     var datos = [];
@@ -846,7 +866,7 @@
     enlacePropiedad = window.kwSitioAsesor.personalizar(enlacePropiedad, sitioAsesor);
     return '<article class="prop-card">' +
       '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(p.titulo || 'Ver propiedad') + '"></a>' +
-      '<div class="prop-foto">' + foto +
+      '<div class="prop-foto' + (tieneFoto ? ' cargando' : '') + '">' + foto +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
       '<div class="prop-body">' +
