@@ -4929,7 +4929,9 @@
   // de asesores y la de etiquetas no se podían recorrer.
   window.addEventListener('scroll', (e) => {
     if (flotante && e.target instanceof Node && flotante.contains(e.target)) return;
-    cerrarFlotante();
+    if (flotante && botonAbierto && botonAbierto.isConnected) {
+      colocar(flotante, botonAbierto, parseFloat(flotante.style.width));
+    }
   }, true);
 
   // ── Tres puntos: acciones sobre el envío ──
@@ -4963,9 +4965,10 @@
     if (!caja) return;
 
     caja.querySelectorAll('[data-accion]').forEach((b) => {
-      b.addEventListener('click', async () => {
+      b.addEventListener('click', async (evento) => {
+        evento.stopPropagation();
         const accion = b.dataset.accion;
-        cerrarFlotante();
+        if (accion !== 'regenerar_enlaces') cerrarFlotante();
 
         if (accion === 'reenviar' && !(await window.kwUI.confirm(
           '¿Reenviar el correo a los firmantes que todavía faltan?'))) return;
@@ -4973,6 +4976,7 @@
 
         const config = ACCIONES[accion] || {};
         try {
+          caja.querySelectorAll('[data-accion]').forEach((opcion) => { opcion.disabled = true; });
           b.disabled = true;
           b.textContent = config.trabajando || 'Un momento...';
           const r = await llamarFuncion({ accion, id: String(f.id) });
@@ -4982,8 +4986,14 @@
             await window.kwUI.alert('El correo se volvió a enviar a quienes faltan de firmar.');
           }
           await Promise.all([cargarEnvios(), cargarCupo()]);
+          if (accion === 'regenerar_enlaces') {
+            const indice = visibles.findIndex((envio) => envio.id === f.id);
+            if (indice >= 0) abrirDetalle(indice);
+          }
         } catch (e) {
           await window.kwUI.alert(e.message || 'No se pudo completar la acción.');
+        } finally {
+          if (flotante === caja) cerrarFlotante();
         }
       });
     });
