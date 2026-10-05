@@ -26,6 +26,9 @@ type Historial = {
 
 type Reporte = {
   ultimaCorrida: string
+  periodoDesde: string
+  periodoHasta: string
+  modificadas: Historial[]
   propiedadesLeidas: number
   publicadasActuales: number
   suspendidasActuales: number
@@ -139,6 +142,10 @@ function reporteXlsx(reporte: Reporte): Uint8Array {
   ].map((value) => cell(value, 'header'))
   const rows: XlsxCell[][] = [
     [cell('Reporte diario de propiedades', 'title')],
+    [cell('Fuente: KW México, inventario publicado; no Command')],
+    [cell('Periodo desde:'), cell(fechaExcel(reporte.periodoDesde), 'date')],
+    [cell('Periodo hasta:'), cell(fechaExcel(reporte.periodoHasta), 'date')],
+    [cell('Actualizaciones de datos/fotos:'), cell(reporte.modificadas.length, 'integer')],
     [cell('Última actualización:'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
     [cell('Propiedades nuevas:'), cell(reporte.nuevas.length, 'integer')],
     [cell('Propiedades desactivadas:'), cell(reporte.desactivadas.length, 'integer')],
@@ -157,6 +164,10 @@ function reporteXlsx(reporte: Reporte): Uint8Array {
     [cell(`Reactivadas (${reporte.reactivadas.length})`, 'section')],
     encabezados,
     ...reporte.reactivadas.map(filaPropiedad),
+    [],
+    [cell(`Actualizaciones de datos/fotos (${reporte.modificadas.length})`, 'section')],
+    encabezados,
+    ...reporte.modificadas.map(filaPropiedad),
   ]
 
   const reporteSheet: XlsxSheet = {
@@ -184,16 +195,17 @@ async function contarInventario(admin: ReturnType<typeof createClient<any>>, est
   return count || 0
 }
 
-async function leerHistorial(admin: ReturnType<typeof createClient<any>>, corrida: string): Promise<Historial[]> {
+async function leerHistorial(admin: ReturnType<typeof createClient<any>>, desde: string, hasta: string): Promise<Historial[]> {
   const historial: Historial[] = []
-  for (let desde = 0; ; desde += 1000) {
+  for (let offset = 0; ; offset += 1000) {
     const { data, error } = await admin.from('propiedades_historial')
       .select('id, propiedad_id, fuente, fuente_id, estatus_anterior, estatus_nuevo, registrado_at, tipo, snapshot')
       .eq('fuente', FUENTE)
-      .gte('registrado_at', corrida)
+      .gt('registrado_at', desde)
+      .lte('registrado_at', hasta)
       .order('registrado_at', { ascending: true })
       .order('id', { ascending: true })
-      .range(desde, desde + 999)
+      .range(offset, offset + 999)
     if (error) throw error
     historial.push(...(data || []) as Historial[])
     if (!data || data.length < 1000) break
@@ -210,8 +222,15 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
   if (!sync?.ultima_corrida) throw new Error('No hay una lectura de propiedades disponible.')
   if (sync.ultimo_error) throw new Error('La última lectura de propiedades terminó con error.')
 
+  const periodoHasta = new Date().toISOString()
+  const { data: anterior, error: anteriorError } = await admin.from('propiedades_reportes')
+    .select('periodo_hasta,enviado_at').eq('fuente',FUENTE).eq('destinatario',DESTINATARIO).eq('estado','enviado')
+    .order('enviado_at',{ascending:false}).limit(1).maybeSingle()
+  if (anteriorError) throw anteriorError
+  const periodoDesde = anterior?.periodo_hasta || anterior?.enviado_at || new Date(Date.parse(periodoHasta)-24*60*60*1000).toISOString()
+
   const [historial, totalActual, publicadasActuales, suspendidasActuales] = await Promise.all([
-    leerHistorial(admin, sync.ultima_corrida),
+    leerHistorial(admin, periodoDesde, periodoHasta),
     contarInventario(admin),
     contarInventario(admin, 'publicada'),
     contarInventario(admin, 'suspendida'),
@@ -222,10 +241,12 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
     item.estatus_anterior === 'suspendida' && item.estatus_nuevo === 'publicada')
   const desactivadas = historial.filter((item) =>
     item.estatus_anterior === 'publicada' && item.estatus_nuevo === 'suspendida')
+  const modificadas = [...new Map(historial.filter((item) => item.tipo === 'cambio' && item.estatus_anterior === 'publicada' && item.estatus_nuevo === 'publicada').map((item) => [item.propiedad_id,item])).values()]
   const inventarioAnterior = Math.max(0, publicadasActuales - nuevas.length - reactivadas.length + desactivadas.length)
 
   return {
     ultimaCorrida: sync.ultima_corrida,
+    periodoDesde,periodoHasta,modificadas,
     propiedadesLeidas: Number(sync.propiedades_afectadas || 0),
     publicadasActuales,
     suspendidasActuales,
@@ -250,6 +271,9 @@ async function reclamarReporte(admin: ReturnType<typeof createClient<any>>, repo
   const datos = {
     ...clave,
     estado: 'enviando',
+    periodo_desde: reporte.periodoDesde,
+    periodo_hasta: reporte.periodoHasta,
+    modificadas: reporte.modificadas.length,
     altas_nuevas: reporte.nuevas.length,
     reactivadas: reporte.reactivadas.length,
     desactivadas: reporte.desactivadas.length,
@@ -278,8 +302,8 @@ function armarCorreo(reporte: Reporte) {
   const desactivadas = reporte.desactivadas.length
   const html = plantillaCorreo({
     title: 'Reporte diario de propiedades',
-    intro: `La última actualización terminó el ${fecha}.`,
-    content: `Se encontraron ${altas} propiedades nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. El inventario publicado pasó de ${reporte.inventarioAnterior} a ${reporte.publicadasActuales} propiedades. En total hay ${reporte.totalActual} registros, incluidos ${reporte.suspendidasActuales} suspendidos.`,
+    intro: `Fuente: inventario publicado de KW México, no Command. Última lectura: ${fecha}. Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}.`,
+    content: `Se encontraron ${altas} propiedades nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. También se actualizaron datos o fotos de ${reporte.modificadas.length} propiedades. El inventario publicado pasó de ${reporte.inventarioAnterior} a ${reporte.publicadasActuales} propiedades. En total hay ${reporte.totalActual} registros, incluidos ${reporte.suspendidasActuales} suspendidos.`,
     actionLabel: 'Abrir propiedades',
     actionUrl: SITIO_PROPIEDADES,
     note: 'El detalle de las altas y desactivaciones está en el archivo Excel adjunto.',
@@ -287,6 +311,9 @@ function armarCorreo(reporte: Reporte) {
   })
   const texto = [
     'Reporte diario de propiedades',
+    'Fuente: inventario publicado de KW México, no Command.',
+    `Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}`,
+    `Actualizaciones de datos/fotos: ${reporte.modificadas.length}`,
     `Última actualización: ${fecha}`,
     `Altas nuevas: ${altas}`,
     `Reactivaciones: ${reactivadas}`,
