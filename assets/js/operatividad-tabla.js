@@ -15,7 +15,12 @@
       opciones.forEach(function(v){var op=new Option(v || 'Sin definir',v);control.add(op);});
     } else { control.type=c.tipo==='fecha'?'date':window.esNumerica(c)?'number':'text';if(control.type==='number')control.step='0.01'; }
     control.value=f[c.col]==null?'':f[c.col];control.setAttribute('aria-label',c.titulo);
-    td.replaceChildren(control);activo=control;control.focus();
+    var editor=document.createElement('div');editor.className='operatividad-celda-editor';
+    var confirmar=document.createElement('button');confirmar.type='button';confirmar.className='celda-confirmar';confirmar.setAttribute('aria-label','Confirmar cambio');confirmar.title='Confirmar cambio';confirmar.textContent='✓';
+    var limpiar=document.createElement('button');limpiar.type='button';limpiar.className='celda-limpiar';limpiar.setAttribute('aria-label','Borrar contenido');limpiar.title='Borrar contenido';limpiar.textContent='×';
+    editor.append(control,confirmar,limpiar);td.replaceChildren(editor);activo=control;
+    if(window.kwUI)window.kwUI.iniciar(editor);
+    (editor.querySelector('.kw-select-btn') || control).focus();
     if(control.select && control.type!=='date')control.select();
     var terminado=false;
     function cancelar(){if(terminado)return;terminado=true;activo=null;window.pintar();}
@@ -34,8 +39,13 @@
       finally{activo=null;window.pintar();}
     }
     control.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();cancelar();}if(e.key==='Enter'){e.preventDefault();guardarCelda();}});
-    control.addEventListener('blur',guardarCelda);
-    if(c.tipo==='opciones')control.addEventListener('change',guardarCelda);
+    confirmar.onclick=guardarCelda;
+    editor.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();cancelar();}});
+    limpiar.onclick=function(){control.value='';guardarCelda();};
+    editor.addEventListener('click',function(e){
+      var b=e.target.closest('.kw-select-btn');if(!b)return;
+      requestAnimationFrame(function(){if(b.getAttribute('aria-expanded')!=='true')return;var m=editor.querySelector('.kw-select-menu'),r=b.getBoundingClientRect();m.style.position='fixed';m.style.left=r.left+'px';m.style.right='auto';m.style.width=r.width+'px';m.style.minWidth=r.width+'px';var arriba=innerHeight-r.bottom<240 && r.top>innerHeight-r.bottom;m.style.top=arriba?'auto':r.bottom+4+'px';m.style.bottom=arriba?innerHeight-r.top+4+'px':'auto';m.style.maxHeight=Math.max(60,Math.min(240,arriba?r.top-16:innerHeight-r.bottom-16))+'px';m.style.zIndex='10030';});
+    });
   }
   window.pintar=function(){
     if(activo)return;
@@ -55,7 +65,9 @@
       var caja=document.createElement('div');caja.className='operatividad-acciones-fila';acciones.append(caja);
       ['contrato','dictamen','propiedad'].forEach(function(tipo){
         var tiene=tipo==='contrato'?f.documento_id:tipo==='dictamen'?f.dictamen_id:f.propiedad_id;
-        var b=document.createElement('button');b.type='button';b.className='operatividad-enlazar';b.textContent=(tiene?'Ver ':'Enlazar ')+tipo.charAt(0).toUpperCase()+tipo.slice(1);
+        var b=document.createElement('button');b.type='button';b.className='operatividad-enlazar';var nombre=(tiene?'Ver ':'Enlazar ')+tipo.charAt(0).toUpperCase()+tipo.slice(1);b.title=nombre;b.setAttribute('aria-label',nombre);
+        var trazos=tipo==='contrato'?'<path d="M14 2H6v20h12V6zM14 2v5h5M8 12h6M8 16h6"/>':tipo==='dictamen'?'<path d="M8 4H5v17h14V4h-3M8 2h8v4H8zM8 13l3 3 5-6"/>':'<path d="M3 11l9-8 9 8M5 9v12h14V9M9 21v-7h6v7"/>';
+        b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+trazos+'</svg>';
         b.addEventListener('click',function(){tiene?verOrigen(f,tipo):enlazar(f,tipo);});caja.append(b);
       });
       var menuBoton=document.createElement('button');menuBoton.type='button';menuBoton.className='kw-btn-icono';menuBoton.setAttribute('aria-label','Opciones de captación');menuBoton.setAttribute('aria-haspopup','menu');menuBoton.setAttribute('aria-expanded','false');menuBoton.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';

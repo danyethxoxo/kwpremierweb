@@ -578,6 +578,11 @@
     .resultados-cabecera { align-items: flex-start; }
     .resultado-nota { display: none; }
   }
+  .prop-ficha-preparando { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(255,255,255,.75); z-index: 10040; }
+  .filtro-etiquetas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .filtro-etiqueta { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border-radius: 999px; background: #edf3fb; color: #315782; padding: 4px 8px; font-size: 12px; }
+  .filtro-etiqueta span { min-width: 0; overflow-wrap: anywhere; }
+  .filtro-etiqueta button { border: 0; background: transparent; color: inherit; font-size: 17px; padding: 0 2px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -1049,7 +1054,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261003j';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261004a';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1128,6 +1133,9 @@
       mostrarAvisoAccionPropiedad('No se encontró la información de esta propiedad');
       return;
     }
+    var carga=document.createElement('div');carga.className='prop-ficha-preparando';
+    carga.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando ficha"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+    document.body.append(carga);
     try {
       await cargarSitioAsesor();
       var enlace = tarjeta.querySelector('.prop-enlace');
@@ -1135,6 +1143,8 @@
       datos[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
     } catch (error) {
       mostrarAvisoAccionPropiedad(error.message || 'No se pudo preparar la ficha técnica');
+    } finally {
+      carga.remove();
     }
   }
 
@@ -1158,14 +1168,12 @@
     });
   }
 
-  function fmtPrecio(p, moneda) {
+  function fmtPrecio(p, moneda, operacion) {
     // 0 también es "no lo mandaron": varios CRMs lo usan como plantilla
     // para "precio a consultar" en vez de dejarlo vacío.
     if (p == null || Number(p) <= 0) return 'Precio a consultar';
     try {
-      return new Intl.NumberFormat('es-MX', {
-        style: 'currency', currency: moneda || 'MXN', maximumFractionDigits: 0
-      }).format(p);
+      return (moneda || 'MXN').toUpperCase() + ' $' + new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(p) + (/renta|rent/i.test(operacion || '') ? '/mes' : '');
     } catch (e) { return '$' + Number(p).toLocaleString('es-MX'); }
   }
 
@@ -1241,7 +1249,7 @@
         '</div>' +
       '</div>' +
       '<div class="prop-body">' +
-        '<div class="prop-precio">' + fmtPrecio(p.precio, p.moneda) + sello + '</div>' +
+        '<div class="prop-precio">' + escapeHtml(fmtPrecio(p.precio, p.moneda, p.operacion)) + sello + '</div>' +
         '<div class="prop-titulo-linea">' +
           '<div class="prop-titulo" id="' + tituloId + '">' + escapeHtml(tituloPropiedad) + '</div>' +
           '<button type="button" class="prop-titulo-toggle" aria-expanded="false" aria-controls="' + tituloId + '" aria-label="Mostrar título completo" onclick="alternarTituloPropiedad(event, this)">' +
@@ -1692,17 +1700,31 @@
       .replace(/\s+/g, ' ');
   }
 
+  var seleccionesMultiples = {};
+  var idsMultiples = ['f-operacion','f-tipo','f-mc','f-asesor','f-estado','f-municipio','f-colonia'];
+  var cambiandoMultiple = false;
+  function filtroMultiple(id) {
+    var elegidas=seleccionesMultiples[id] || [];
+    return elegidas.length ? elegidas.map(function(o){return o.valor;}) : val(id);
+  }
+  function pintarEtiquetasFiltro(id) {
+    var select=document.getElementById(id),contenedor=select.closest('.filtro');
+    var tags=contenedor.querySelector('.filtro-etiquetas');
+    if(!tags){tags=document.createElement('div');tags.className='filtro-etiquetas';contenedor.append(tags);}
+    tags.replaceChildren();
+    (seleccionesMultiples[id] || []).forEach(function(o){var tag=document.createElement('span');tag.className='filtro-etiqueta';var texto=document.createElement('span');texto.textContent=o.texto;var quitar=document.createElement('button');quitar.type='button';quitar.textContent='×';quitar.setAttribute('aria-label','Quitar '+o.texto);quitar.onclick=function(){seleccionesMultiples[id]=seleccionesMultiples[id].filter(function(x){return x.valor!==o.valor;});pintarEtiquetasFiltro(id);};tag.append(texto,quitar);tags.append(tag);});
+  }
   function leerFiltrosServidor() {
     return {
       texto: val('f-buscar'),
-      operacion: val('f-operacion'),
+      operacion: filtroMultiple('f-operacion'),
       estatus: val('f-estatus'),
-      tipo: val('f-tipo'),
-      marketCenter: val('f-mc'),
-      asesor: val('f-asesor'),
-      estado: val('f-estado'),
-      municipio: val('f-municipio'),
-      colonia: (ubicacionColonia(val('f-colonia')) || {}).colonia || val('f-colonia'),
+      tipo: filtroMultiple('f-tipo'),
+      marketCenter: filtroMultiple('f-mc'),
+      asesor: filtroMultiple('f-asesor'),
+      estado: filtroMultiple('f-estado'),
+      municipio: filtroMultiple('f-municipio'),
+      colonia: filtroMultiple('f-colonia'),
       minimo: num('f-min') || null,
       maximo: num('f-max') || null,
       recamaras: num('f-recamaras') || null,
@@ -2077,6 +2099,18 @@
     if (evento && evento.target.id === 'mi-sitio-web') return;
     if (actualizandoRelaciones) return;
     var id = evento && evento.target.id;
+    if(cambiandoMultiple)return;
+    if(evento && evento.type==='change' && idsMultiples.includes(id)) {
+      var select=evento.target,valor=select.value;
+      if(valor){
+        var normalizado=id==='f-colonia'?(ubicacionColonia(valor) || {}).colonia || valor:valor;
+        var opciones=seleccionesMultiples[id] || [];
+        if(!opciones.some(function(o){return o.valor===normalizado;}))opciones.push({valor:normalizado,texto:select.selectedOptions[0].textContent});
+        seleccionesMultiples[id]=opciones;pintarEtiquetasFiltro(id);
+        cambiandoMultiple=true;select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));cambiandoMultiple=false;
+      }
+      return;
+    }
     // Los selects nativos disparan input y change; procesar cada elección una sola vez.
     if (evento && evento.type === 'input' && evento.target.tagName === 'SELECT') return;
     if (id === 'f-mc') {
@@ -2107,6 +2141,7 @@
   };
 
   limpiarFiltros = function () {
+    seleccionesMultiples={};idsMultiples.forEach(pintarEtiquetasFiltro);
     document.getElementById('f-recamaras-max').value = '';
     ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
      'f-colonia', 'f-min', 'f-max', 'f-recamaras', 'f-banos', 'f-estacionamientos', 'f-m2-min', 'f-m2-max'

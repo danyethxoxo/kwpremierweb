@@ -24,6 +24,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
      case when n%2=0 then 'Jalisco' else 'CDMX' end,'Municipio','[]',now()-n*interval '1 minute' from generate_series(1,50) n;`);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003205838_propiedades_permisos_por_consulta.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003212106_propiedades_filtros_vacios.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261005050009_propiedades_filtros_multiples.sql',import.meta.url),'utf8'));
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
   const first=await page({estatus:'publicada'}),second=await page({estatus:'publicada'},2),last=await page({estatus:'publicada'},3);
@@ -36,6 +37,9 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   assert(filtered.data.every(p=>p.estado==='CDMX' && p.estatus==='publicada'));
   assert.equal((await page({estatus:'inactiva'})).total,5);
   assert.equal((await page({texto:'Casa 45'})).total,1);
+  assert.equal((await page({estatus:'publicada',estado:['CDMX','Jalisco'],tipo:['Casa','Departamento']})).total,45);
+  assert.equal((await page({estatus:'publicada',estado:['CDMX'],municipio:['Municipio','Otro']})).total,23);
+  assert.equal((await page({estatus:'publicada',estado:[]})).total,45);
   await db.exec('reset role;set role anon');
   await assert.rejects(page({estatus:'publicada'}));
  }finally{await db.close();}
@@ -50,8 +54,10 @@ test('carga de propiedades reintenta fallos transitorios y traduce el total del 
 
 test('formulario sin números envía filtros nulos al servidor',()=>{
  const html=readFileSync(new URL('../propiedades.html',import.meta.url),'utf8');
- const source=html.slice(html.indexOf('  function leerFiltrosServidor()'),html.indexOf('  function filtrosServidorActuales()'));
+ const source=html.slice(html.indexOf('  var seleccionesMultiples ='),html.indexOf('  function filtrosServidorActuales()'));
  const scope=vm.createContext({val:()=>'',num:()=>0,ubicacionColonia:()=>null});vm.runInContext(source,scope);
  const filtros=scope.leerFiltrosServidor();
  for(const campo of ['minimo','maximo','recamaras','recamarasMax','banos','estacionamientos','m2Min','m2Max']) assert.equal(filtros[campo],null);
+ scope.seleccionesMultiples['f-asesor']=[{valor:'Asesor A'},{valor:'Asesor B'}];
+ assert.deepEqual(Array.from(scope.leerFiltrosServidor().asesor),['Asesor A','Asesor B']);
 });
