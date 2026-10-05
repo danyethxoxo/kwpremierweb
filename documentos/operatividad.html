@@ -385,7 +385,7 @@
     #modal-editar { padding: 16px 12px; }
   }
 </style>
-<link rel="stylesheet" href="/assets/css/operatividad.css?v=20261004b">
+<link rel="stylesheet" href="/assets/css/operatividad.css?v=20261004c">
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
 </head>
 <body class="en-operatividad">
@@ -774,10 +774,33 @@ function abrirEditor(id) {
   var modal = document.getElementById('modal-editar');
   modal.style.display = 'block';
   modal.scrollTop = 0;
+  modal.querySelector('.modal-cuerpo').scrollTop = 0;
   // Los desplegables y los campos de fecha se arman después de meter el
   // HTML: kw-ui.js solo recorre lo que ya existe en la página.
   if (window.kwUI) window.kwUI.iniciar(campos);
 }
+
+// Mantener los desplegables sobre la tabla del editor, sin recortar opciones.
+document.getElementById('editar-campos').addEventListener('click', function(e) {
+  var boton=e.target.closest('.kw-select-btn');
+  if (!boton) return;
+  requestAnimationFrame(function() {
+    if (boton.getAttribute('aria-expanded') !== 'true') return;
+    var menu=boton.parentElement.querySelector('.kw-select-menu');
+    var r=boton.getBoundingClientRect();
+    menu.style.position='fixed';menu.style.left=r.left+'px';menu.style.right='auto';
+    menu.style.width=r.width+'px';menu.style.minWidth=r.width+'px';
+    var arriba=window.innerHeight-r.bottom<240 && r.top>window.innerHeight-r.bottom;
+    var espacio=arriba?r.top-16:window.innerHeight-r.bottom-16;
+    menu.style.maxHeight=Math.max(60,Math.min(240,espacio))+'px';
+    menu.style.top=arriba?'auto':(r.bottom+4)+'px';
+    menu.style.bottom=arriba?(window.innerHeight-r.top+4)+'px':'auto';menu.style.zIndex='10001';
+  });
+});
+document.querySelector('#modal-editar .modal-cuerpo').addEventListener('scroll',function() {
+  var abierto=this.querySelector('.kw-select-btn[aria-expanded="true"]');
+  if (abierto) abierto.click();
+});
 
 function cerrarEditor() {
   if (window.kwUI && window.kwUI.cerrarModal) window.kwUI.cerrarModal(document.getElementById('modal-editar'));
