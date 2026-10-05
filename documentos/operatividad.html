@@ -385,6 +385,7 @@
     #modal-editar { padding: 16px 12px; }
   }
 </style>
+<link rel="stylesheet" href="/assets/css/operatividad.css?v=20261004a">
 </head>
 <body class="en-operatividad">
 
@@ -423,6 +424,7 @@
     <div class="kw-page-encabezado con-acciones operatividad-encabezado">
       <h1 class="kw-page-titulo">Operatividad</h1>
       <div class="kw-page-acciones">
+        <div id="notif-bell-slot"></div>
         <div class="kw-menu-ancla">
           <button type="button" class="kw-btn-icono" id="btn-engrane"
             title="Más acciones" aria-label="Más acciones"
@@ -452,7 +454,7 @@
            coja. -->
     </div>
 
-    <div class="tabla-caja" id="caja">
+    <div class="tabla-caja tabla-envios" id="caja">
       <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
     </div>
     </div>
@@ -529,6 +531,9 @@ var SELECT = 'id, documento_id, dictamen_id, asociado_id, campos_manuales, sincr
 // ═════════════════════════════════════════════════════════════
 
 var filas = [];
+var propiedadElegida = null;
+var propiedadesVinculables = null;
+var editorVersion = 0;
 var editando = null;      // la fila abierta en el editor; null = una nueva
 var filtroTipo = '';
 var busqueda = '';
@@ -648,31 +653,24 @@ function pintar() {
     return;
   }
 
-  var encabezado = COLUMNAS.map(function (c) {
-    return '<th class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num' : '') + '"' +
-           ' style="min-width:' + c.ancho + 'px">' + escapeHtml(c.titulo) + '</th>';
+  function enlace(url,texto) {
+    return '<a href="'+escapeAttr(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(texto)+'</a>';
+  }
+  var rutas={acuerdo_renta:'/documentos/contratos/renta.html',contrato_profeco:'/documentos/contratos/profeco.html',contrato_comercial:'/documentos/contratos/comercial.html'};
+  var cuerpo=lista.map(function(f) {
+    var contrato=f.documento_id && rutas[f.documento_tipo] ? enlace(rutas[f.documento_tipo]+'?doc='+encodeURIComponent(f.documento_id),'Contrato') : '<span class="pendiente" title="Todavía no hay contrato vinculado">Contrato pendiente</span>';
+    var dictamen=f.dictamen_id ? enlace('/hub/dictamenes.html?editar='+encodeURIComponent(f.dictamen_id),'Dictamen') : '<span class="pendiente">Dictamen pendiente</span>';
+    var propiedad=f.propiedad ? enlace(f.propiedad.enlace_kw || 'https://www.kwmexico.mx/propiedades/'+encodeURIComponent(f.propiedad.fuente_id),'Propiedad') : '<span class="pendiente">Propiedad pendiente</span>';
+    return '<tr><td><span class="captacion-inmueble">'+escapeHtml(f.direccion || 'Inmueble pendiente')+'</span><span class="captacion-secundario">'+escapeHtml(f.asociado_nombre || 'Asesor pendiente')+'</span></td>'+
+      '<td><span class="'+claseP(f.tipo)+'">'+escapeHtml(f.tipo || '-')+'</span><span class="captacion-secundario">'+escapeHtml(f.exclusividad || '')+'</span></td>'+
+      '<td>'+escapeHtml(pesos(f.precio) || '-')+'<span class="captacion-secundario">'+escapeHtml(f.porcentaje == null ? 'Comisión pendiente' : porciento(f.porcentaje)+' de comisión')+'</span></td>'+
+      '<td><span class="'+claseP(f.estatus_dictamen)+'">'+escapeHtml(f.estatus_dictamen || 'Pendiente')+'</span><span class="captacion-secundario">'+escapeHtml(f.folio || '')+' · '+escapeHtml(fechaCorta(f.fecha_dictamen) || 'Sin fecha')+'</span></td>'+
+      '<td><div class="operatividad-recorrido">'+contrato+'<span class="separador" aria-hidden="true">›</span>'+dictamen+'<span class="separador" aria-hidden="true">›</span>'+propiedad+'</div>'+
+      (f.propiedad ? '<span class="captacion-secundario">'+escapeHtml(f.propiedad.estatus==='publicada' ? 'Propiedad activa en KW México' : 'Propiedad no publicada en KW México')+'</span>' : '')+'</td>'+
+      '<td><button class="kw-btn-icono" type="button" data-editar="'+escapeAttr(f.id)+'" aria-label="Editar seguimiento de '+escapeAttr(f.folio || f.direccion)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 5 5-13 13H3v-5zM14 5l5 5"/></svg></button></td></tr>';
   }).join('');
-
-  var cuerpo = lista.map(function (f) {
-    var celdas = COLUMNAS.map(function (c) {
-      var texto = textoCelda(f, c);
-      var contenido = escapeHtml(texto);
-      if (texto && c.pastilla) {
-        var cls = claseP(texto);
-        if (cls) contenido = '<span class="' + cls + '">' + contenido + '</span>';
-      }
-      return '<td class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num ' : '') +
-             (texto ? '' : 'vacio-celda') + '" style="max-width:' + (c.ancho + 60) + 'px">' +
-             (texto ? contenido : '-') + '</td>';
-    }).join('');
-    return '<tr data-id="' + escapeAttr(f.id) + '">' + celdas + '</tr>';
-  }).join('');
-
-  caja.innerHTML = '<table><thead><tr>' + encabezado + '</tr></thead><tbody>' + cuerpo + '</tbody></table>';
-
-  caja.querySelectorAll('tbody tr').forEach(function (tr) {
-    tr.addEventListener('click', function () { abrirEditor(tr.getAttribute('data-id')); });
-  });
+  caja.innerHTML='<table class="operatividad-tabla"><thead><tr><th>Inmueble / Asesor</th><th>Operación</th><th>Precio / Comisión</th><th>Dictamen</th><th>Contrato › Dictamen › Propiedad</th><th aria-label="Acciones"></th></tr></thead><tbody>'+cuerpo+'</tbody></table>';
+  caja.querySelectorAll('[data-editar]').forEach(function(b){b.addEventListener('click',function(){abrirEditor(b.dataset.editar);});});
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -718,6 +716,8 @@ function abrirEditor(id) {
 
   var campos = document.getElementById('editar-campos');
   var grupoActual = null;
+  propiedadElegida = editando ? editando.propiedad_id : null;
+  var version = ++editorVersion;
   campos.innerHTML = COLUMNAS.map(function (c) {
     var html = '';
     if (c.grupo && c.grupo !== grupoActual) {
@@ -727,16 +727,22 @@ function abrirEditor(id) {
     return html + campoHtml(c, editando);
   }).join('');
 
+  var vinculo=document.createElement('div');vinculo.className='operatividad-vinculo';
+  vinculo.innerHTML='<label for="propiedad-buscar">Vincular propiedad de KW Premier</label><input id="propiedad-buscar" type="search" placeholder="Buscar por título, dirección o asesor" autocomplete="off"><div class="operatividad-resultados" id="propiedad-resultados"></div>';
+  campos.before(vinculo);
+  document.querySelectorAll('.operatividad-vinculo').forEach(function(el){if(el!==vinculo)el.remove();});
+  cargarPropiedadesVinculables(version);
+
   // De dónde salió el renglón, y cómo deshacer las correcciones a mano.
   var origen = document.getElementById('editar-origen');
-  if (editando && editando.documento_id) {
+  if (editando && (editando.documento_id || editando.dictamen_id)) {
     var manuales = (editando.campos_manuales || []).length;
     origen.innerHTML =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
-      '<span>Se llenó solo desde el documento del asociado.' +
+      '<span>Datos sincronizados con el contrato y el dictamen vinculados.' +
       (manuales ? ' Hay ' + manuales + (manuales === 1 ? ' campo corregido' : ' campos corregidos') + ' a mano.' : '') +
       '</span>' +
-      (manuales ? '<button type="button" class="btn-texto" id="btn-resync">Volver a tomarlo del documento</button>' : '');
+      (manuales ? '<button type="button" class="btn-texto" id="btn-resync">Actualizar desde el origen</button>' : '');
     origen.style.display = 'flex';
     var btnSync = document.getElementById('btn-resync');
     if (btnSync) btnSync.addEventListener('click', resincronizar);
@@ -769,7 +775,7 @@ function msgEditor(texto, tipo) {
 }
 
 function valoresDelEditor() {
-  var datos = {};
+  var datos = { propiedad_id: propiedadElegida };
   COLUMNAS.forEach(function (c) {
     var el = document.getElementById('campo-' + c.col);
     var v = el ? el.value.trim() : '';
@@ -875,11 +881,7 @@ function descargar() {
 // ═════════════════════════════════════════════════════════════
 
 async function cargar() {
-  var res = await window.kwSupabase
-    .from('operatividad')
-    .select(SELECT)
-    .order('fecha_contrato', { ascending: false, nullsFirst: true })
-    .order('created_at', { ascending: false });
+  var res = await window.kwSupabase.rpc('operatividad_listar');
 
   if (res.error) {
     document.getElementById('caja').innerHTML =
@@ -907,6 +909,34 @@ async function arrancar() {
   }
 
   await cargar();
+  window.addEventListener('focus',cargar);
+  window.kwSupabase.channel('operatividad-cambios').on('postgres_changes',
+    {event:'*',schema:'public',table:'operatividad'},function(){cargar();}).subscribe();
+}
+
+async function cargarPropiedadesVinculables(version) {
+  var caja=document.getElementById('propiedad-resultados');
+  caja.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+  try {
+    if (!propiedadesVinculables) {
+      var res=await window.kwSupabase.from('propiedades').select('id,titulo,calle,asesor_nombre,precio,estatus').ilike('market_center','KW PREMIER').order('titulo');
+      if(res.error)throw res.error;
+      propiedadesVinculables=res.data || [];
+    }
+    if(version!==editorVersion)return;
+    var input=document.getElementById('propiedad-buscar');
+    function opciones() {
+      caja.replaceChildren();
+      var quitar=document.createElement('button');quitar.type='button';quitar.textContent='Sin propiedad vinculada';quitar.setAttribute('aria-pressed',String(!propiedadElegida));
+      quitar.onclick=function(){propiedadElegida=null;opciones();};caja.append(quitar);
+      var q=input.value.trim().toLocaleLowerCase('es-MX');
+      propiedadesVinculables.filter(function(p){return p.id===propiedadElegida || (q && [p.titulo,p.calle,p.asesor_nombre].join(' ').toLocaleLowerCase('es-MX').includes(q));}).slice(0,20).forEach(function(p){
+        var b=document.createElement('button');b.type='button';b.textContent=p.titulo+' · '+p.asesor_nombre+' · '+pesos(p.precio);b.setAttribute('aria-pressed',String(p.id===propiedadElegida));b.onclick=function(){propiedadElegida=p.id;opciones();};caja.append(b);
+      });
+      if(q && caja.children.length===1){var vacio=document.createElement('span');vacio.textContent='Sin propiedades con esa búsqueda.';caja.append(vacio);}
+    }
+    input.oninput=opciones;opciones();
+  }catch(e){if(version===editorVersion){caja.textContent='No se pudieron obtener las propiedades. Cierra y vuelve a abrir para reintentar.';}}
 }
 
 document.getElementById('buscador-input').addEventListener('input', function () {
