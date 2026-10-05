@@ -58,12 +58,17 @@ test('operatividad: dictamen real, contrato posterior, correcciones y controles 
       alter table dictamenes add column created_at timestamptz default now();
       alter table propiedades add column market_center text, add column asesor_nombre text;`);
     await db.exec(readFileSync(new URL('../supabase/migrations/20261005044140_operatividad_edicion_tabla.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/20261005044836_operatividad_cambiar_dictamen.sql',import.meta.url),'utf8'));
     const doc2=(await db.query(`insert into documentos_guardados(tipo_documento,estado,datos,folio) values('contrato_profeco','finalizado','{}','CON-002') returning id`)).rows[0].id;
     await db.query('select operatividad_sincronizar_documento(g) from documentos_guardados g where id=$1',[doc2]);
     assert.equal((await rows()).length,2);
     await db.query('select operatividad_enlazar($1,\'contrato\',$2)',[o.id,doc2]);
     assert.equal((await rows()).length,1);o=(await rows())[0];assert.equal(o.documento_id,doc2);assert.equal(Number(o.precio),2600000);
     assert.equal((await db.query('select dictamen_id from documentos_guardados where id=$1',[doc])).rows[0].dictamen_id,null);
+    const nuevoDictamen=(await db.query("insert into dictamenes(estado,inmueble,folio) values('condicionada','Otro inmueble','REAL-002') returning id")).rows[0].id;
+    await db.query('select operatividad_enlazar($1,\'dictamen\',$2)',[o.id,nuevoDictamen]);
+    o=(await rows()).find(f=>f.id===o.id);assert.equal(o.dictamen_id,nuevoDictamen);assert.equal(Number(o.precio),2600000);
+    assert.equal((await db.query('select dictamen_id from documentos_guardados where id=$1',[doc2])).rows[0].dictamen_id,nuevoDictamen);
     const prop=(await db.query("insert into propiedades(titulo,market_center) values('Casa real','KW PREMIER') returning id")).rows[0].id;
     await db.query('select operatividad_enlazar($1,\'propiedad\',$2)',[o.id,prop]);assert.equal((await rows())[0].propiedad_id,prop);
     await db.query('update operatividad set archivado_at=now() where id=$1',[o.id]);
