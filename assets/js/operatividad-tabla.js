@@ -8,8 +8,14 @@
   document.getElementById('caja').before(error);
   function avisar(texto) { error.textContent=texto || '';error.hidden=!texto; }
   function editorCelda(td,f,c) {
-    if (activo) { if(td.contains(activo) || activo.disabled)return;cancelarActivo(); }
+    if(td.querySelector('.cerrando'))return;
+    if (activo) { if(td.contains(activo) || activo.disabled)return;cancelarActivo(true); }
     var contenidoAnterior=td.innerHTML;
+    var indice=td.cellIndex,columna=Array.from(td.closest('table').rows).map(function(fila){return fila.cells[indice];}).filter(Boolean);
+    var anchosOriginales=columna.map(function(celda){return {el:celda,min:celda.style.minWidth,max:celda.style.maxWidth,width:celda.style.width};});
+    var anchoBase=td.getBoundingClientRect().width;
+    function anchoColumna(ancho){columna.forEach(function(celda){celda.style.width=ancho+'px';celda.style.minWidth=ancho+'px';celda.style.maxWidth=ancho+'px';});}
+    anchoColumna(anchoBase);requestAnimationFrame(function(){if(!terminado && editor.isConnected)anchoColumna(Math.max(anchoBase+60,232));});
     var control=document.createElement(c.tipo==='opciones'?'select':'input');
     if(c.tipo==='opciones') {
       var opciones=[''].concat(c.opciones || []);
@@ -23,6 +29,7 @@
     confirmar.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>';
     limpiar.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>';
     editor.append(control,confirmar,limpiar);td.replaceChildren(editor);activo=control;
+    editor.addEventListener('click',function(e){e.stopPropagation();});
     var cerrarDesplegable=function(){};
     if(c.tipo==='opciones') {
       control.dataset.kwNo='1';control.hidden=true;
@@ -57,10 +64,15 @@
     requestAnimationFrame(function(){
       if(!editor.isConnected || td.classList.contains('col-fija'))return;
       var marco=document.getElementById('caja'),acciones=td.parentElement.querySelector('.operatividad-acciones-col'),r=editor.getBoundingClientRect(),limite=acciones.getBoundingClientRect().left-12;
-      if(r.right>limite)marco.scrollLeft+=r.right-limite;
+      if(r.right>limite)marco.scrollTo({left:marco.scrollLeft+r.right-limite,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
     });
     var terminado=false;
-    function cancelar(){if(terminado)return;terminado=true;cerrarDesplegable();activo=null;cancelarActivo=null;td.innerHTML=contenidoAnterior;td.removeAttribute('aria-busy');}
+    function cerrarCelda(contenido,repintar,inmediato){
+      cerrarDesplegable();editor.classList.add('cerrando');anchoColumna(anchoBase);activo=null;cancelarActivo=null;
+      function terminar(){if(td.contains(editor))td.innerHTML=contenido;td.removeAttribute('aria-busy');anchosOriginales.forEach(function(o){o.el.style.width=o.width;o.el.style.minWidth=o.min;o.el.style.maxWidth=o.max;});if(repintar && !activo)window.pintar();}
+      if(inmediato)terminar();else setTimeout(terminar,160);
+    }
+    function cancelar(inmediato){if(terminado)return;terminado=true;cerrarCelda(contenidoAnterior,false,inmediato===true);}
     cancelarActivo=cancelar;
     async function guardarCelda(){
       if(terminado)return;
@@ -74,7 +86,11 @@
         if(res.error)throw res.error;if(!res.data || !res.data.length)throw Error('No se guardó el cambio. Revisa tus permisos.');
         f[c.col]=valor;avisar('');
       }catch(e){avisar(e.message || 'No se pudo guardar el campo.');}
-      finally{activo=null;cancelarActivo=null;window.pintar();}
+      finally{
+        var texto=window.textoCelda(f,c),contenido=window.escapeHtml(texto || '-');
+        if(texto && c.pastilla){var clase=window.claseP(texto);if(clase)contenido='<span class="'+clase+'">'+contenido+'</span>';}
+        cerrarCelda(contenido,true);
+      }
     }
     control.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();cancelar();}if(e.key==='Enter'){e.preventDefault();guardarCelda();}});
     confirmar.onclick=guardarCelda;
@@ -100,8 +116,8 @@
       ['contrato','dictamen','propiedad'].forEach(function(tipo){
         var tiene=tipo==='contrato'?f.documento_id:tipo==='dictamen'?f.dictamen_id:f.propiedad_id;
         var b=document.createElement('button');b.type='button';b.className='operatividad-enlazar';var nombre=(tiene?'Ver ':'Enlazar ')+tipo.charAt(0).toUpperCase()+tipo.slice(1);b.title=nombre;b.setAttribute('aria-label',nombre);
-        var trazos=tipo==='contrato'?'<path d="M14 2H6v20h12V6zM14 2v5h5M8 12h6M8 16h6"/>':tipo==='dictamen'?'<path d="M8 4H5v17h14V4h-3M8 2h8v4H8zM8 13l3 3 5-6"/>':'<path d="M3 11l9-8 9 8M5 9v12h14V9M9 21v-7h6v7"/>';
-        b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+trazos+'</svg>';
+        var trazos=tipo==='contrato'?'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M8 12h8M8 16h6"/>':tipo==='dictamen'?'<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m8 14 3 3 5-6"/>':'<path d="m3 10 9-7 9 7M5 9v11h14V9M9 20v-7h6v7"/>';
+        b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+trazos+'</svg>';
         b.addEventListener('click',function(){tiene?verOrigen(f,tipo):enlazar(f,tipo);});caja.append(b);
       });
       var menuBoton=document.createElement('button');menuBoton.type='button';menuBoton.className='kw-btn-icono';menuBoton.setAttribute('aria-label','Opciones de captación');menuBoton.setAttribute('aria-haspopup','menu');menuBoton.setAttribute('aria-expanded','false');menuBoton.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
