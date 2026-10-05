@@ -34,14 +34,18 @@
 .operatividad-enlazar:hover { border-color: var(--red); }
 .operatividad-enlazar { width: 34px; height: 34px; display: grid; place-items: center; padding: 7px; border-radius: 50%; }
 .operatividad-enlazar svg { width: 18px; height: 18px; }
-.operatividad-celda-editor { display: flex; align-items: center; gap: 4px; min-width: 220px; }
-.operatividad-celda-editor > :is(input,.kw-select,.kw-numero,.kw-fecha) { flex: 1; min-width: 120px; }
-.operatividad-tabla .operatividad-celda-editor .kw-select { width: 160px !important; min-width: 160px !important; }
-.operatividad-tabla .operatividad-celda-editor:has(.kw-select) { min-width: 230px; }
-.operatividad-tabla .operatividad-celda-editor :is(input,.kw-select-btn,.kw-fecha-btn) { font: inherit; font-size: 13px; min-height: 36px; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-campo); background: #fff; }
-.operatividad-celda-editor > button { flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: #f4f4f4; font-size: 18px; cursor: pointer; }
-.celda-confirmar { color: #16834c; }
-.celda-limpiar { color: var(--red); }
+.operatividad-tabla td.celda-editable:not(.col-fija) { position: relative; }
+.operatividad-celda-editor { position: absolute; inset: 4px 8px; display: grid; grid-template-columns: minmax(0,1fr) 18px 18px; grid-template-rows: minmax(0,1fr) 18px; gap: 2px 4px; min-width: 0; }
+.operatividad-celda-editor > :is(input,.kw-select,.kw-numero,.kw-fecha) { grid-column: 1 / -1; width: 100% !important; min-width: 0 !important; max-width: 100%; }
+.operatividad-tabla .operatividad-celda-editor .kw-select { width: 100% !important; min-width: 0 !important; }
+.operatividad-tabla .operatividad-celda-editor :is(input,.kw-select-btn,.kw-fecha-btn) { width: 100%; min-width: 0; height: 100%; font: inherit; font-size: 13px; min-height: 24px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 7px; background: #fff; }
+.operatividad-celda-editor .kw-numero-controles { display: none; }
+.operatividad-tabla .operatividad-celda-editor .kw-numero input { padding-right: 7px !important; }
+.operatividad-celda-editor > button { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; color: #fff; cursor: pointer; }
+.operatividad-celda-editor > button svg { width: 12px; height: 12px; }
+.operatividad-celda-editor > .celda-confirmar { grid-column: 2; background: #16834c; }
+.operatividad-celda-editor > .celda-limpiar { grid-column: 3; background: #d40000; }
+.operatividad-celda-editor > button:hover { filter: brightness(.9); }
 .operatividad-select-menu { position: fixed !important; display: block !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important; right: auto; min-width: 0; max-width: calc(100vw - 24px); z-index: 10030; overflow-y: auto; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: var(--sombra-1); }
 .operatividad-select-menu .kw-select-opcion { width: 100%; font-size: 13px; font-weight: 400; padding: 9px 10px; border-radius: 8px; }
 .operatividad-tabla td:has(.operatividad-celda-editor) { overflow: visible; }

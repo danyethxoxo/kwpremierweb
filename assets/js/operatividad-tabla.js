@@ -20,6 +20,8 @@
     var editor=document.createElement('div');editor.className='operatividad-celda-editor';
     var confirmar=document.createElement('button');confirmar.type='button';confirmar.className='celda-confirmar';confirmar.setAttribute('aria-label','Confirmar cambio');confirmar.title='Confirmar cambio';confirmar.textContent='✓';
     var limpiar=document.createElement('button');limpiar.type='button';limpiar.className='celda-limpiar';limpiar.setAttribute('aria-label','Borrar contenido');limpiar.title='Borrar contenido';limpiar.textContent='×';
+    confirmar.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>';
+    limpiar.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>';
     editor.append(control,confirmar,limpiar);td.replaceChildren(editor);activo=control;
     var cerrarDesplegable=function(){};
     if(c.tipo==='opciones') {
