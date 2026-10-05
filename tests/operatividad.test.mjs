@@ -66,3 +66,15 @@ test('operatividad conserva scripts válidos y todos los campos de exportación'
   assert.match(html,/function descargar\(/);assert.match(html,/function valoresDelEditor\(/);
   assert.match(html,/function cargarPropiedadesVinculables\(/);assert.match(html,/operatividad_listar/);
 });
+
+test('el menú reutiliza la campana del encabezado sin crear otra caja vacía',()=>{
+  const js=readFileSync(new URL('../assets/js/drawer.js',import.meta.url),'utf8');
+  const inicio=js.indexOf("if (!document.getElementById('notif-bell-slot')) {");
+  assert.ok(inicio>=0);
+  const bloque=js.slice(inicio,js.indexOf('}',inicio)+1);
+  let caja={id:'notif-bell-slot'},creadas=0;
+  const contexto={document:{getElementById:()=>caja,createElement:()=>({})},header:{appendChild(el){caja=el;creadas++;}}};
+  vm.runInNewContext(bloque,contexto);assert.equal(creadas,0);
+  caja=null;vm.runInNewContext(bloque,contexto);vm.runInNewContext(bloque,contexto);
+  assert.equal(creadas,1);
+});

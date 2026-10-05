@@ -392,7 +392,7 @@
     // es donde ya se arma el header, y así está en las mismas pantallas
     // que tienen menú.
     if (!esPublico) {
-      if (!header.querySelector('#notif-bell-slot')) {
+      if (!document.getElementById('notif-bell-slot')) {
         const hueco = document.createElement('div');
         hueco.id = 'notif-bell-slot';
         header.appendChild(hueco);
