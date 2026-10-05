@@ -1,3 +1,4 @@
+import { plantillaCorreo } from '../_shared/mailer.ts'
 import { clientIp } from '../_shared/security-core.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 import { deviceTrusted, loginExpired, loginExpiresAt, TRUST_DAYS } from './policy.ts'
@@ -180,7 +181,7 @@ export async function handleMfa(req: Request): Promise<Response> {
       const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ from: EMAIL_FROM, to: [destination], subject: purpose === 'activar' ? 'Confirma tu correo de seguridad' : 'Código para un dispositivo nuevo', html: `<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body style="margin:0"><div style="font-family:Arial,sans-serif;color:#1a1a1a;line-height:1.55;max-width:480px"><p>Tu código de seguridad de KW Premier es:</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;color:#8a0000">${code}</p><p>Vence en ${CODE_MINUTES} minutos, funciona una sola vez y fue solicitado desde ${deviceName(req)}.</p><p style="color:#666">Si no fuiste tú, cambia tu contraseña y avisa a administración.</p></div></body></html>` }),
+        body: JSON.stringify({ from: EMAIL_FROM, to: [destination], subject: purpose === 'activar' ? 'Confirma tu correo de seguridad' : 'Código para un dispositivo nuevo', html: plantillaCorreo({ intro: 'Se solicitó una verificación para tu cuenta de KW Premier.', title: 'Tu código de seguridad', content: 'Vence en ' + CODE_MINUTES + ' minutos, funciona una sola vez y fue solicitado desde ' + deviceName(req) + '.', code, note: 'Si no fuiste tú, cambia tu contraseña y avisa a administración.' }) }),
       })
       if (!sent.ok) {
         await admin.from('mfa_correo_codigos').update({ usado: true }).eq('user_id', userId).eq('usado', false)

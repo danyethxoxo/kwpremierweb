@@ -1,3 +1,4 @@
+import { plantillaCorreo } from '../_shared/mailer.ts'
 import { secureServe } from '../_shared/security.ts'
 // Envía al asesor el PDF del dictamen que acaba de finalizarse.
 //
@@ -133,14 +134,7 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
         from: EMAIL_FROM,
         to: destinatarios,
         subject: asunto,
-        html: `<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body style="margin:0">
-          <div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px">
-          <p>Hola ${escapeHtml(asesor)} y equipo KW Premier,</p>
-          <p>Adjuntamos el dictamen de expediente correspondiente a:</p>
-          <p style="font-weight:700;color:#7d0000">${escapeHtml(direccion)}</p>
-          <p>Incluye una versión con los datos y otra con las correcciones.</p>
-          <p>Saludos,<br>KW Premier</p>
-        </div></body></html>`,
+        html: plantillaCorreo({ intro: 'Hola ' + asesor + ' y equipo KW Premier, adjuntamos el dictamen de expediente:', title: 'Dictamen de expediente', content: direccion, note: 'Incluye una versión con los datos y otra con las correcciones.', actionLabel: 'Ver dictámenes', actionUrl: 'https://www.kwpremieroficial.com/hub/dictamenes.html' }),
         attachments: [
           { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
           { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },

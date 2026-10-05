@@ -1,6 +1,5 @@
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
-const LOGO_URL = 'https://www.kwpremieroficial.com/assets/img/logo-kw-premier.png'
 
 export type AdjuntoCorreo = {
   filename: string
@@ -22,36 +21,33 @@ export function plantillaCorreo(params: {
   title: string
   intro: string
   content: string
-  actionLabel: string
-  actionUrl: string
-  note: string
+  actionLabel?: string
+  actionUrl?: string
+  note?: string
   footer?: string
+  code?: string
 }): string {
   return `<!doctype html>
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f4f4f4;color:#1f1f1f;font-family:Arial,Helvetica,sans-serif;">
-  <div style="padding:28px 14px;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e4;border-radius:12px;overflow:hidden;">
-      <tr>
-        <td style="padding:25px 34px 18px;border-bottom:4px solid #df0000;">
-          <img src="${LOGO_URL}" alt="KW Premier" width="172" style="display:block;width:172px;height:auto;border:0;">
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:34px 34px 30px;">
-          <h1 style="margin:0 0 18px;font-size:26px;line-height:1.2;color:#202020;">${escaparHtml(params.title)}</h1>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">${escaparHtml(params.intro)}</p>
-          <p style="margin:0 0 25px;font-size:15px;line-height:1.6;">${escaparHtml(params.content)}</p>
-          <p style="margin:0 0 28px;">
-            <a href="${escaparHtml(params.actionUrl)}" style="display:inline-block;padding:14px 24px;background:#df0000;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:700;">${escaparHtml(params.actionLabel)}</a>
-          </p>
-          <p style="margin:0 0 18px;font-size:13px;line-height:1.6;color:#666666;">${escaparHtml(params.note)}</p>
-          <p style="margin:0;font-size:13px;line-height:1.6;color:#777777;">${escaparHtml(params.footer || 'Te llega porque tienes una cuenta en el portal de KW Premier.')}</p>
-        </td>
-      </tr>
+<body style="margin:0;background:#ffffff;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="padding:24px 16px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;">
+      <tr><td style="padding:0 0 18px;">${escaparHtml(params.intro)}</td></tr>
+      <tr><td style="padding:2px 0 2px 14px;border-left:3px solid #cc0000;">
+        <h1 style="margin:0 0 6px;font-size:18px;line-height:1.4;font-weight:700;color:#1a1a1a;">${escaparHtml(params.title)}</h1>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#555555;white-space:pre-line;overflow-wrap:anywhere;">${escaparHtml(params.content)}</p>
+        ${params.code ? `<p style="margin:14px 0 0;font-size:30px;line-height:1.3;letter-spacing:5px;font-weight:700;color:#8a0000;">${escaparHtml(params.code)}</p>` : ''}
+      </td></tr>
+      ${params.actionUrl && params.actionLabel ? `<tr><td style="padding:24px 0 28px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#cc0000" style="background:#cc0000;border-radius:30px;text-align:center;">
+          <a href="${escaparHtml(params.actionUrl)}" style="display:inline-block;padding:13px 24px;border:1px solid #cc0000;border-radius:30px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:700;color:#ffffff !important;text-decoration:none !important;"><span style="color:#ffffff;">${escaparHtml(params.actionLabel)}</span></a>
+        </td></tr></table>
+      </td></tr>` : '<tr><td style="height:24px;line-height:24px;">&nbsp;</td></tr>'}
+      ${params.note ? `<tr><td style="padding:0 0 18px;font-size:13px;line-height:1.55;color:#666666;">${escaparHtml(params.note)}</td></tr>` : ''}
+      <tr><td style="font-size:12px;line-height:1.55;color:#999999;">${escaparHtml(params.footer || 'Te llega porque tienes cuenta en el portal de KW Premier.')}</td></tr>
     </table>
-  </div>
+  </td></tr></table>
 </body>
 </html>`
 }

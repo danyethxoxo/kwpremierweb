@@ -1,5 +1,6 @@
 import { secureServe } from '../_shared/security.ts'
 import { validEmail } from '../_shared/security-core.ts'
+import { enviarCorreo, plantillaCorreo } from '../_shared/mailer.ts'
 // Edge Function: invitar-usuario
 // Invita por correo a un nuevo usuario y le asigna un rol, sin que
 // ninguna llave privilegiada (SERVICE_ROLE_KEY) toque el navegador.
@@ -68,8 +69,9 @@ secureServe({ name: 'invitar-usuario', userLimit: 10 }, async (req) => {
       return respond({ error: 'Solo el usuario master puede asignar el rol de administrador' }, 403)
     }
 
-    const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: REDIRECT_TO,
+    if (!Deno.env.get('RESEND_API_KEY')) return respond({ error: 'El servicio de correo no está configurado.' }, 503)
+    const { data: inviteData, error: inviteError } = await admin.auth.admin.generateLink({
+      type: 'invite', email, options: { redirectTo: REDIRECT_TO },
     })
     if (inviteError) {
       const mensaje = inviteError.message || 'No se pudo invitar al usuario (' + (inviteError.status || 'sin detalle') + ').'
@@ -78,6 +80,8 @@ secureServe({ name: 'invitar-usuario', userLimit: 10 }, async (req) => {
 
     const newUserId = inviteData?.user?.id
     if (!newUserId) return respond({ error: 'La invitación no devolvió un usuario válido.' }, 500)
+    const enlace = inviteData?.properties?.action_link
+    if (!enlace) return respond({ error: 'No se pudo generar el enlace de invitación.' }, 500)
 
     // Una fila inactiva obliga al invitado a verificar un correo de
     // seguridad antes de que PostgREST le permita acceder a datos. Se crea
@@ -106,6 +110,23 @@ secureServe({ name: 'invitar-usuario', userLimit: 10 }, async (req) => {
       return respond({ error: 'Usuario bloqueado por MFA, pero no se pudo asignar el rol: ' + (updateError.message || 'error desconocido') }, 500)
     }
 
+    try {
+      await enviarCorreo({
+        to: email, subject: 'Confirma tu cuenta en KW Premier',
+        html: plantillaCorreo({
+          intro: 'Te invitamos a formar parte de la plataforma de KW Premier.',
+          title: 'Bienvenido a KW Premier',
+          content: 'Estás a un paso de completar tu registro. Da clic en el botón para aceptar la invitación y configurar tu cuenta.',
+          actionLabel: 'Aceptar invitación', actionUrl: enlace,
+          note: 'El enlace es personal y solo puede utilizarse una vez. Si no esperabas esta invitación, puedes ignorar este correo.',
+          footer: 'Este correo fue enviado porque administración te invitó a KW Premier.',
+        }),
+        text: 'Bienvenido a KW Premier\nAcepta tu invitación y configura tu cuenta:\n' + enlace + '\nSi no esperabas esta invitación, puedes ignorar este correo.',
+      })
+    } catch {
+      // Conservar la cuenta bloqueada permite reenviar la invitacion sin borrar datos.
+      return respond({ error: 'La cuenta quedó preparada, pero no se pudo enviar la invitación. Reintenta el envío.' }, 502)
+    }
     return respond({ ok: true, user_id: newUserId })
   } catch (err) {
     return respond({ error: (err as Error).message || 'Error inesperado' }, 500)

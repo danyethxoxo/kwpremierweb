@@ -644,17 +644,19 @@
   #modal-editar-usuario .field:has(#edit-email),
   #modal-editar-usuario .field:has(#edit-password) { grid-column: 1 / -1; }
   #modal-editar-usuario .editar-acciones {
-    display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;
+    display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px;
   }
   #modal-editar-usuario .editar-acciones button {
-    width: auto; min-width: 92px; height: 36px; padding: 0 15px;
-    margin: 0; border-radius: 10px; font-size: 12.5px;
+    flex: 0 0 auto; width: auto; min-width: 100px; height: 38px; padding: 0 18px;
+    margin: 0; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: none; backdrop-filter: none; transform: none;
   }
+  #modal-editar-usuario .editar-acciones .btn-modal-cancelar { background: #fff; border: 1px solid var(--border); color: var(--text); }
+  #modal-editar-usuario .editar-acciones .btn-modal-confirmar { background: var(--red); border: 1px solid var(--red); color: #fff; }
   #modal-editar-usuario .editar-acciones .kw-confirmar {
     margin: 0 auto 0 0;
   }
   #modal-editar-usuario .editar-acciones .btn-eliminar-usuario {
-    color: #a30000; border: 1px solid #d99; background: transparent;
+    margin-right: auto; color: #a30000; border: 1px solid #d99; background: transparent;
   }
   @media (max-width: 620px), (max-height: 560px) {
     #modal-editar-usuario .modal-box {
@@ -662,6 +664,9 @@
       max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden;
     }
     #modal-editar-usuario .field { grid-column: 1 / -1; }
+    #modal-editar-usuario .editar-acciones { display: grid; grid-template-columns: 1fr 1fr; }
+    #modal-editar-usuario .editar-acciones button { width: 100%; min-width: 0; }
+    #modal-editar-usuario .editar-acciones .btn-eliminar-usuario { grid-column: 1 / -1; justify-self: start; width: auto; min-width: 100px; margin-bottom: 4px; }
   }
   /* Eliminar no es una acción de la misma altura que Guardar: va más
      abajo, más chico y separado por una línea, para que no se pique de
@@ -1534,9 +1539,9 @@
       </div>
       <div class="msg" id="edit-msg"></div>
       <div class="modal-actions editar-acciones">
+        <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" onclick="confirmarEliminarUsuario()">Eliminar</button>
         <button type="button" class="btn-modal-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
         <button type="button" class="btn-modal-confirmar" onclick="guardarEdicionUsuario()">Guardar</button>
-        <button type="button" class="btn-eliminar-usuario" id="btn-eliminar-usuario" data-kw-confirmar="¿Eliminarlo?" onclick="confirmarEliminarUsuario()">Eliminar</button>
       </div>
     </div>
   </div>
@@ -1970,10 +1975,11 @@
     }
   }
 
-  // La pregunta la hace el propio botón al voltearse (data-kw-confirmar),
-  // así que aquí ya se viene con el "Sí" dado.
   async function confirmarEliminarUsuario() {
     if (!usuarioEnEdicion) return;
+    const id = usuarioEnEdicion.id;
+    if (!await window.kwUI.confirm('Esta acción eliminará la cuenta del usuario. ¿Quieres continuar?', { titulo: 'Eliminar usuario', textoConfirmar: 'Eliminar', textoCancelar: 'Cancelar' })) return;
+    if (!usuarioEnEdicion || usuarioEnEdicion.id !== id) return;
     setEditMsg('', '');
     try {
       await llamarFuncion(GESTIONAR_URL, { accion: 'eliminar', user_id: usuarioEnEdicion.id });

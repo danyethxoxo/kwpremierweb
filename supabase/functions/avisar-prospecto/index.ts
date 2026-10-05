@@ -71,13 +71,12 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;">
-<div style="background:#f2f2f1;padding:28px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
-    <div style="background:#CC0000;padding:22px 26px;">
-      <div style="color:#ffffff;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;opacity:0.85;">KW Premier</div>
-      <div style="color:#ffffff;font-size:21px;font-weight:800;margin-top:4px;">Tienes un prospecto nuevo</div>
+<div style="background:#ffffff;padding:24px 16px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:560px;background:#ffffff;">
+    <div style="border-left:3px solid #cc0000;padding:2px 0 2px 14px;">
+      <div style="color:#1a1a1a;font-size:18px;line-height:1.4;font-weight:700;">Tienes un prospecto nuevo</div>
     </div>
-    <div style="padding:26px;">
+    <div style="padding:20px 0 0;">
       <p style="margin:0 0 18px;font-size:15px;color:#444;line-height:1.6;">
         ${escapar(nombreAsesor)}, alguien dejó sus datos en tu perfil público:
       </p>
