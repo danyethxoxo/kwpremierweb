@@ -385,7 +385,7 @@
     #modal-editar { padding: 16px 12px; }
   }
 </style>
-<link rel="stylesheet" href="/assets/css/operatividad.css?v=20261004a">
+<link rel="stylesheet" href="/assets/css/operatividad.css?v=20261004b">
 </head>
 <body class="en-operatividad">
 
@@ -399,7 +399,7 @@
     </a>
   </header>
 
-  <main class="page kw-lateral-shell">
+  <main class="page kw-page kw-lateral-shell">
     <aside class="kw-lateral operatividad-panel" aria-label="Filtros de operatividad">
       <div class="kw-lateral-cabecera">
         <a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">
@@ -424,7 +424,6 @@
     <div class="kw-page-encabezado con-acciones operatividad-encabezado">
       <h1 class="kw-page-titulo">Operatividad</h1>
       <div class="kw-page-acciones">
-        <div id="notif-bell-slot"></div>
         <div class="kw-menu-ancla">
           <button type="button" class="kw-btn-icono" id="btn-engrane"
             title="Más acciones" aria-label="Más acciones"
@@ -438,6 +437,7 @@
             </button>
           </div>
         </div>
+        <div id="notif-bell-slot"></div>
         <a href="/documentos/nueva-captacion.html" class="btn-nueva-captacion btn-nuevo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nueva captación</span>
@@ -653,24 +653,31 @@ function pintar() {
     return;
   }
 
-  function enlace(url,texto) {
-    return '<a href="'+escapeAttr(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(texto)+'</a>';
-  }
-  var rutas={acuerdo_renta:'/documentos/contratos/renta.html',contrato_profeco:'/documentos/contratos/profeco.html',contrato_comercial:'/documentos/contratos/comercial.html'};
-  var cuerpo=lista.map(function(f) {
-    var contrato=f.documento_id && rutas[f.documento_tipo] ? enlace(rutas[f.documento_tipo]+'?doc='+encodeURIComponent(f.documento_id),'Contrato') : '<span class="pendiente" title="Todavía no hay contrato vinculado">Contrato pendiente</span>';
-    var dictamen=f.dictamen_id ? enlace('/hub/dictamenes.html?editar='+encodeURIComponent(f.dictamen_id),'Dictamen') : '<span class="pendiente">Dictamen pendiente</span>';
-    var propiedad=f.propiedad ? enlace(f.propiedad.enlace_kw || 'https://www.kwmexico.mx/propiedades/'+encodeURIComponent(f.propiedad.fuente_id),'Propiedad') : '<span class="pendiente">Propiedad pendiente</span>';
-    return '<tr><td><span class="captacion-inmueble">'+escapeHtml(f.direccion || 'Inmueble pendiente')+'</span><span class="captacion-secundario">'+escapeHtml(f.asociado_nombre || 'Asesor pendiente')+'</span></td>'+
-      '<td><span class="'+claseP(f.tipo)+'">'+escapeHtml(f.tipo || '-')+'</span><span class="captacion-secundario">'+escapeHtml(f.exclusividad || '')+'</span></td>'+
-      '<td>'+escapeHtml(pesos(f.precio) || '-')+'<span class="captacion-secundario">'+escapeHtml(f.porcentaje == null ? 'Comisión pendiente' : porciento(f.porcentaje)+' de comisión')+'</span></td>'+
-      '<td><span class="'+claseP(f.estatus_dictamen)+'">'+escapeHtml(f.estatus_dictamen || 'Pendiente')+'</span><span class="captacion-secundario">'+escapeHtml(f.folio || '')+' · '+escapeHtml(fechaCorta(f.fecha_dictamen) || 'Sin fecha')+'</span></td>'+
-      '<td><div class="operatividad-recorrido">'+contrato+'<span class="separador" aria-hidden="true">›</span>'+dictamen+'<span class="separador" aria-hidden="true">›</span>'+propiedad+'</div>'+
-      (f.propiedad ? '<span class="captacion-secundario">'+escapeHtml(f.propiedad.estatus==='publicada' ? 'Propiedad activa en KW México' : 'Propiedad no publicada en KW México')+'</span>' : '')+'</td>'+
-      '<td><button class="kw-btn-icono" type="button" data-editar="'+escapeAttr(f.id)+'" aria-label="Editar seguimiento de '+escapeAttr(f.folio || f.direccion)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 5 5-13 13H3v-5zM14 5l5 5"/></svg></button></td></tr>';
+  var encabezado = COLUMNAS.map(function (c) {
+    return '<th class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num' : '') + '"' +
+           ' style="min-width:' + c.ancho + 'px">' + escapeHtml(c.titulo) + '</th>';
   }).join('');
-  caja.innerHTML='<table class="operatividad-tabla"><thead><tr><th>Inmueble / Asesor</th><th>Operación</th><th>Precio / Comisión</th><th>Dictamen</th><th>Contrato › Dictamen › Propiedad</th><th aria-label="Acciones"></th></tr></thead><tbody>'+cuerpo+'</tbody></table>';
-  caja.querySelectorAll('[data-editar]').forEach(function(b){b.addEventListener('click',function(){abrirEditor(b.dataset.editar);});});
+
+  var cuerpo = lista.map(function (f) {
+    var celdas = COLUMNAS.map(function (c) {
+      var texto = textoCelda(f, c);
+      var contenido = escapeHtml(texto);
+      if (texto && c.pastilla) {
+        var cls = claseP(texto);
+        if (cls) contenido = '<span class="' + cls + '">' + contenido + '</span>';
+      }
+      return '<td class="' + (c.fija ? 'col-fija ' : '') + (esNumerica(c) ? 'num ' : '') +
+             (texto ? '' : 'vacio-celda') + '" style="max-width:' + (c.ancho + 60) + 'px">' +
+             (texto ? contenido : '-') + '</td>';
+    }).join('');
+    return '<tr data-id="' + escapeAttr(f.id) + '">' + celdas + '</tr>';
+  }).join('');
+
+  caja.innerHTML = '<table class="operatividad-tabla"><thead><tr>' + encabezado + '</tr></thead><tbody>' + cuerpo + '</tbody></table>';
+
+  caja.querySelectorAll('tbody tr').forEach(function (tr) {
+    tr.addEventListener('click', function () { abrirEditor(tr.getAttribute('data-id')); });
+  });
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -714,6 +721,16 @@ function abrirEditor(id) {
     ? (editando.asociado_nombre || 'Sin asociado') + (editando.folio ? ' · folio ' + editando.folio : '')
     : 'Para lo que se firmó fuera del sitio o antes de que existiera.';
 
+  var enlaces=document.getElementById('editar-enlaces');
+  if (!enlaces) { enlaces=document.createElement('div');enlaces.id='editar-enlaces';enlaces.className='operatividad-recorrido';document.getElementById('editar-origen').before(enlaces); }
+  enlaces.replaceChildren();
+  if (editando) {
+    var rutas={acuerdo_renta:'/documentos/contratos/renta.html',contrato_profeco:'/documentos/contratos/profeco.html',contrato_comercial:'/documentos/contratos/comercial.html'};
+    function origen(texto,url) {var el=document.createElement(url?'a':'span');el.textContent=texto;if(url){el.href=url;el.target='_blank';el.rel='noopener noreferrer';}else el.className='pendiente';enlaces.append(el);}
+    origen('Contrato'+(editando.documento_id?'':' pendiente'),editando.documento_id&&rutas[editando.documento_tipo]?rutas[editando.documento_tipo]+'?doc='+encodeURIComponent(editando.documento_id):null);
+    origen('Dictamen'+(editando.dictamen_id?'':' pendiente'),editando.dictamen_id?'/hub/dictamenes.html?editar='+encodeURIComponent(editando.dictamen_id):null);
+    origen('Propiedad'+(editando.propiedad?'':' pendiente'),editando.propiedad?editando.propiedad.enlace_kw || 'https://www.kwmexico.mx/propiedades/'+encodeURIComponent(editando.propiedad.fuente_id):null);
+  }
   var campos = document.getElementById('editar-campos');
   var grupoActual = null;
   propiedadElegida = editando ? editando.propiedad_id : null;
