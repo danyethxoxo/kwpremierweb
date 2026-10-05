@@ -28,32 +28,20 @@ pantalla tiene (el visor del editor de firmas, el ancho de una columna),
 y siempre con un comentario que diga por qué no puede salir de la pieza
 compartida.
 
-### El armazón de una pantalla
+### Página Universal
 
-```html
-<body>
-  <header class="kw-header">…</header>   <!-- lupa y campanita, nada más -->
-  <main class="kw-page">
-    <div class="kw-page-encabezado con-acciones">
-      <h1 class="kw-page-titulo">Nombre de la pantalla</h1>
-      <div class="kw-page-acciones"> … </div>
-    </div>
-    …
-  </main>
-</body>
-```
+Los nuevos apartados y formularios usan la distribución aprobada de Firmas Digitales.
+La referencia es `hub/pagina-universal.html`; las instrucciones completas están en
+`docs/pagina-universal.md` y `AGENTS.md`.
 
-- **El header no es una barra.** Es la lupa de un lado y la campanita del
-  otro, flotando sobre el contenido; los pone `drawer.js`. Ninguna
-  pantalla se arma el suyo, ni le mete título, botones ni un buscador
-  fijo. El menú lateral (el riel) también lo pone `drawer.js`.
-- **El título va siempre en el mismo lugar**, dentro de
-  `.kw-page-encabezado`, a `--tope-pegado` (62px) del tope. Si la
-  pantalla tiene botones arriba, van en `.kw-page-acciones`, a la
-  derecha del mismo renglón.
-- **La búsqueda es la lupa.** Cada pantalla deja su campo de filtrar en
-  el HTML con `.kw-campo-filtro`, y `drawer.js` lo esconde y le pasa lo
-  que se escriba arriba.
+- Reutilizar `assets/css/kw-pagina-universal.css` y `assets/js/kw-pagina-universal.js`.
+- La barra lateral tiene logo, buscador visible y filtros. En escritorio mide 292px.
+- El contenido lleva 18px de margen y el encabezado comparte título y acciones.
+- Usar las mismas piezas para engranaje, campana y botón principal; no recrearlas.
+- Mantener un único `notif-bell-slot`, también cuando se carga `drawer.js`.
+- Las tablas tienen scroll interno; los formularios pasan de dos columnas a una en móvil.
+- Integrar los datos y permisos reales de cada módulo antes de habilitar guardado.
+- Las pantallas anteriores se migran cuando se solicite, sin cambiar sus flujos.
 
 ### Tarjetas y renglones: el color va en el contorno, y se enciende al pasar el mouse
 

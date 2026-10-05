@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <title>Página Universal | KW Premier</title>
+  <link rel="icon" href="/assets/img/favicon.png?v=20260926b">
+  <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+  <script src="/assets/js/kw-session.js?v=20261001"></script>
+  <script src="/assets/js/auth-guard.js?v=20261001"></script>
+  <script src="/assets/js/notif-bell.js?v=20260922"></script>
+  <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261003h">
+  <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
+  <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
+  <link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261004a">
+  <script src="/assets/js/kw-ui.js?v=20260922"></script>
+</head>
+<body class="kw-pagina-universal">
+  <header class="kw-header"></header>
+  <main class="kw-page kw-lateral-shell kw-universal-shell">
+    <aside class="kw-lateral kw-universal-panel" aria-label="Filtros y herramientas">
+      <div class="kw-lateral-cabecera">
+        <a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio"><img src="/assets/img/logo-kw-premier.png" alt="KW Premier"></a>
+        <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar a accesos rápidos" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
+        </button>
+      </div>
+      <label class="kw-lateral-buscador" data-kw-buscador-propio aria-label="Buscar registros">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+        <input type="search" id="buscador-input" placeholder="Buscar" autocomplete="off">
+      </label>
+      <div class="kw-resumen"><div class="kw-conteo"><span class="kw-conteo-num">0</span><span class="kw-conteo-txt">Registros</span></div></div>
+      <div class="kw-campo-filtro"><label for="filtro-estado">Estado</label><select id="filtro-estado"><option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+    </aside>
+    <section class="kw-lateral-principal kw-universal-principal">
+      <div class="kw-page-encabezado con-acciones kw-universal-encabezado kw-acciones-firmas">
+        <h1 class="kw-page-titulo">Página Universal</h1>
+        <div class="kw-page-acciones">
+          <div class="kw-menu-ancla">
+            <button type="button" class="kw-btn-icono" data-kw-menu-universal aria-controls="acciones-pagina" aria-expanded="false" aria-haspopup="true" aria-label="Más acciones">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <div class="kw-menu" id="acciones-pagina" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" data-vista-universal="lista">Ver listado</button>
+              <button type="button" class="kw-menu-op" role="menuitem" data-vista-universal="formulario">Ver formulario</button>
+            </div>
+          </div>
+          <div id="notif-bell-slot"></div>
+          <button type="button" class="btn-nuevo-doc" id="btn-nuevo" data-vista-universal="formulario">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span>Nuevo registro</span>
+          </button>
+        </div>
+      </div>
+      <div class="kw-universal-contenido kw-universal-tabla-marco" id="vista-lista">
+        <table class="kw-universal-tabla"><thead><tr><th scope="col">Nombre</th><th scope="col">Estado</th><th scope="col">Fecha</th><th scope="col">Acciones</th></tr></thead><tbody><tr><td colspan="4"><div class="kw-universal-vacio">Todavía no hay registros.</div></td></tr></tbody></table>
+      </div>
+      <div class="kw-universal-contenido" id="vista-formulario" hidden>
+        <form class="kw-universal-formulario" id="formulario-universal">
+          <fieldset><legend>Datos generales</legend><div class="kw-universal-form-grid">
+            <div class="field"><label for="nombre">Nombre</label><input id="nombre" name="nombre" autocomplete="name" required></div>
+            <div class="field"><label for="correo">Correo electrónico</label><input id="correo" name="correo" type="email" autocomplete="email"></div>
+            <div class="field"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="tel" autocomplete="tel"></div>
+            <div class="field"><label for="estado">Estado</label><select id="estado" name="estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+            <div class="field ancho"><label for="notas">Observaciones</label><textarea id="notas" name="notas" rows="4"></textarea></div>
+          </div></fieldset>
+          <div class="kw-universal-form-acciones"><button type="button" class="btn-modal-cancelar" data-vista-universal="lista">Volver al listado</button></div>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script src="/assets/js/drawer.js?v=20261004g" data-menu="hub"></script>
+  <script src="/assets/js/kw-lateral.js?v=20260923b"></script>
+  <script src="/assets/js/kw-pagina-universal.js?v=20261004a"></script>
+  <script>
+    // Esta referencia muestra ambas distribuciones; no crea datos de prueba.
+    document.querySelectorAll('[data-vista-universal]').forEach(function (boton) {
+      boton.addEventListener('click',function () {
+        var formulario = boton.dataset.vistaUniversal === 'formulario';
+        document.getElementById('vista-lista').hidden = formulario;
+        document.getElementById('vista-formulario').hidden = !formulario;
+        if (formulario) document.getElementById('nombre').focus();
+      });
+    });
+    document.getElementById('formulario-universal').addEventListener('submit',function (e) { e.preventDefault(); });
+  </script>
+</body>
+</html>
