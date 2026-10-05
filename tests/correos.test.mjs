@@ -11,6 +11,7 @@ test('correos: contenido escapado, enlace completo y boton legible sin CSS exter
   const html=render({title:'<script>titulo</script>',intro:'Hola',content:'A & B',actionLabel:'Aceptar invitacion',actionUrl:'https://example.com/verify?token=x&type=invite'});
   assert.ok(!html.includes('<script>'));assert.match(html,/A &amp; B/);
   assert.match(html,/token=x&amp;type=invite/);assert.match(html,/bgcolor="#cc0000"/);assert.match(html,/color:#ffffff !important/);
+  assert.ok(!html.includes('Te llega porque'));
   const code=render({title:'Codigo',intro:'Verifica',content:'Un solo uso',code:'123456'});
   assert.match(code,/123456/);assert.ok(!code.includes('<a href='));
 });

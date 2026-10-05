@@ -45,7 +45,7 @@ export function plantillaCorreo(params: {
         </td></tr></table>
       </td></tr>` : '<tr><td style="height:24px;line-height:24px;">&nbsp;</td></tr>'}
       ${params.note ? `<tr><td style="padding:0 0 18px;font-size:13px;line-height:1.55;color:#666666;">${escaparHtml(params.note)}</td></tr>` : ''}
-      <tr><td style="font-size:12px;line-height:1.55;color:#999999;">${escaparHtml(params.footer || 'Te llega porque tienes cuenta en el portal de KW Premier.')}</td></tr>
+      ${params.footer ? `<tr><td style="font-size:12px;line-height:1.55;color:#999999;">${escaparHtml(params.footer)}</td></tr>` : ''}
     </table>
   </td></tr></table>
 </body>
