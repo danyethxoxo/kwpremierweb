@@ -640,17 +640,15 @@ function pintarResumen(lista) {
   }).join('');
 }
 
+var operatividadCargando = true;
 function pintar() {
   var lista = visibles();
   pintarResumen(lista);
 
   var caja = document.getElementById('caja');
 
-  if (!lista.length) {
-    caja.innerHTML = '<div class="vacio">' + (filas.length
-      ? '<strong>Nada con ese filtro</strong>Prueba con otra búsqueda o quita el filtro de tipo.'
-      : '<strong>Todavía no hay captaciones</strong>En cuanto alguien finalice un acuerdo de renta o un contrato PROFECO, su renglón aparece aquí solo. También puedes capturar uno a mano.') +
-      '</div>';
+  if (operatividadCargando && !filas.length) {
+    caja.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
     return;
   }
 
@@ -922,7 +920,9 @@ function descargar() {
 // ═════════════════════════════════════════════════════════════
 
 async function cargar() {
+  operatividadCargando = true;
   var res = await window.kwSupabase.rpc('operatividad_listar');
+  operatividadCargando = false;
 
   if (res.error) {
     document.getElementById('caja').innerHTML =
