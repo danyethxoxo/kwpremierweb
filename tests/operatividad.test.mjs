@@ -71,10 +71,22 @@ test('operatividad: dictamen real, contrato posterior, correcciones y controles 
     assert.equal((await db.query('select dictamen_id from documentos_guardados where id=$1',[doc2])).rows[0].dictamen_id,nuevoDictamen);
     const prop=(await db.query("insert into propiedades(titulo,market_center) values('Casa real','KW PREMIER') returning id")).rows[0].id;
     await db.query('select operatividad_enlazar($1,\'propiedad\',$2)',[o.id,prop]);assert.equal((await rows())[0].propiedad_id,prop);
+    await db.exec(readFileSync(new URL('../supabase/migrations/20261005055307_operatividad_quitar_enlaces.sql',import.meta.url),'utf8'));
+    for(const [tipo,campo,origen] of [['propiedad','propiedad_id',prop],['contrato','documento_id',doc2],['dictamen','dictamen_id',nuevoDictamen]]) {
+      await db.query('select operatividad_desenlazar($1,$2)',[o.id,tipo]);
+      const actual=(await rows()).find(f=>f.id===o.id);
+      assert.equal(actual[campo],null);assert.equal(Number(actual.precio),2600000);
+      assert.equal((await db.query('select count(*)::int n from documentos_guardados where id=$1',[doc2])).rows[0].n,1);
+      assert.equal((await db.query('select count(*)::int n from dictamenes where id=$1',[nuevoDictamen])).rows[0].n,1);
+      if(tipo!=='propiedad')assert.equal((await db.query('select dictamen_id from documentos_guardados where id=$1',[doc2])).rows[0].dictamen_id,null);
+      await db.query('select operatividad_enlazar($1,$2,$3)',[o.id,tipo,origen]);
+      assert.equal((await rows()).find(f=>f.id===o.id)[campo],origen);
+    }
     await db.query('update operatividad set archivado_at=now() where id=$1',[o.id]);
     await db.query('select operatividad_sincronizar_dictamen($1)',[o.dictamen_id]);assert.ok((await rows())[0].archivado_at);
     await db.exec("set role authenticated;set test.mfa='no'");await assert.rejects(db.query('select operatividad_opciones_enlace(\'propiedad\')'),/Sin permiso/);
     await assert.rejects(db.query('select operatividad_enlazar($1,\'propiedad\',$2)',[o.id,prop]),/Sin permiso/);
+    await assert.rejects(db.query('select operatividad_desenlazar($1,\'propiedad\')',[o.id]),/Sin permiso/);
     await db.exec("reset role;set test.mfa='si'");
     await db.query('update dictamenes set archivado_at=now() where id=$1',[o.dictamen_id]);
     assert.equal((await db.query('select operatividad_listar() r')).rows[0].r.length,0);
