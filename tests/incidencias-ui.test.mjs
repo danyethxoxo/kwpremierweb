@@ -15,6 +15,9 @@ function mock({role,seed}) {
   const uid='11111111-1111-4111-8111-111111111111';
   window.__incMock={role,seed,rows:seed?[{id:'22222222-2222-4222-8222-222222222222',user_id:uid,titulo:'El botón de guardar no responde',descripcion:'Al completar los datos y pulsar Guardar, no ocurre nada. Lo probé desde mi teléfono.',tipo:'problema',pagina:'/propiedades.html',imagenes:[],estatus:'abierto',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),reportante_nombre:'Andrea',reportante_apellido:'García'}]:[],messages:[],inserts:0,uploads:0,failList:false,failAfterCommit:false};
   const s=window.__incMock;
+  const almacenado=sessionStorage.getItem('inc-browser-fixture');
+  if(almacenado)Object.assign(s,JSON.parse(almacenado));
+  window.addEventListener('beforeunload',()=>sessionStorage.setItem('inc-browser-fixture',JSON.stringify(s)));
   function from(table){
     const q={filters:[],action:'select',one:false,payload:null,start:0,end:49};
     const builder={select(){return this;},eq(k,v){q.filters.push([k,v]);return this;},order(){return this;},range(a,b){q.start=a;q.end=b;return this;},limit(){return this;},single(){q.one=true;return this;},maybeSingle(){q.one=true;return this;},insert(p){q.action='insert';q.payload=p;return this;},update(p){q.action='update';q.payload=p;return this;},in(){return this;},then(ok,bad){return (async()=>{
@@ -72,17 +75,28 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       }
       await page.screenshot({path:join(captura,config.name+'-lista.png'),fullPage:true});
       await page.getByRole('button',{name:'Reportar',exact:true}).click();
+      await page.waitForURL('**/hub/nuevo-reporte.html');
+      await page.waitForFunction(()=>!document.getElementById('btn-nuevo').disabled);
       await page.locator('#rep-titulo').fill('Sugerencia: guardar un borrador de la captación');
       await page.locator('#rep-descripcion').fill('Me gustaría retomar los datos de una propiedad sin volver a capturarlos. Sería útil cuando estoy visitando un inmueble.');
       await page.locator('#rep-tipo').selectOption('mejora',{force:true});
       await page.getByRole('button',{name:'Volver al listado'}).click();
+      await page.waitForURL('**/hub/tickets.html');
       await page.getByRole('button',{name:'Reportar',exact:true}).click();
+      await page.waitForURL('**/hub/nuevo-reporte.html');
+      await page.waitForFunction(()=>!document.getElementById('btn-nuevo').disabled);
       assert.match(await page.locator('#rep-titulo').inputValue(),/Sugerencia/);
       await page.reload();
       await page.waitForFunction(()=>!document.getElementById('btn-nuevo').disabled);
-      await page.getByRole('button',{name:'Reportar',exact:true}).click();
       assert.match(await page.locator('#rep-titulo').inputValue(),/Sugerencia/);
       assert.equal(await page.locator('#rep-tipo').inputValue(),'mejora');
+      await page.waitForFunction(()=>getComputedStyle(document.querySelector('.kw-universal-principal')).opacity==='1');
+      assert.equal(await page.locator('#rep-titulo-ayuda,#rep-descripcion-ayuda,#rep-borrador').count(),0);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      await page.getByRole('button',{name:'Más acciones',exact:true}).click();
+      assert.equal(await page.locator('#inc-menu').isVisible(),true);
+      await page.locator('#rep-titulo').click();
+      assert.equal(await page.locator('#inc-menu').isVisible(),false);
       if(config.name==='mobile')assert.ok((await page.locator('#inc-titulo-pagina').boundingBox()).y>=60);
       await page.screenshot({path:join(captura,config.name+'-formulario.png'),fullPage:true});
       await page.locator('#rep-imagenes').setInputFiles({name:'captura.txt',mimeType:'text/plain',buffer:Buffer.from('invalid')});
@@ -92,7 +106,8 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       await page.evaluate(()=>{window.__incMock.failAfterCommit=true;document.getElementById('btn-nuevo').click();document.getElementById('btn-nuevo').click();});
       await page.waitForFunction(()=>document.getElementById('rep-error').hidden===false);
       await page.getByRole('button',{name:'Enviar reporte',exact:true}).click();
-      await page.waitForFunction(()=>document.getElementById('inc-formulario').hidden);
+      await page.waitForURL('**/hub/tickets.html?enviado=*');
+      await page.waitForFunction(()=>!document.querySelector('#inc-filas .inc-carga'));
       assert.equal(await page.evaluate(()=>window.__incMock.inserts),1);
       assert.equal(await page.evaluate(()=>window.__incMock.uploads),1);
       const saved=await page.evaluate(()=>window.__incMock.rows.find(r=>r.titulo.startsWith('Sugerencia')));
@@ -105,6 +120,12 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       if(config.role==='admin')assert.equal(await page.locator('#det-estatus').inputValue(),'en_revision');
       await page.screenshot({path:join(captura,config.name+'-seguimiento.png'),fullPage:true});
       await page.getByRole('button',{name:'Cerrar reporte',exact:true}).click();
+      await page.locator('[data-reporte="'+saved.id+'"]').click();
+      await page.waitForFunction(()=>document.getElementById('det-titulo').textContent.startsWith('Sugerencia'));
+      await page.locator('#det-descripcion').click();
+      assert.equal(await page.locator('#inc-detalle').evaluate(el=>el.open),true);
+      await page.mouse.click(2,2);
+      assert.equal(await page.locator('#inc-detalle').evaluate(el=>el.open),false);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       assert.deepEqual(errors,[]);
       await context.close();

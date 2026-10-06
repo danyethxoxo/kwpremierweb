@@ -9,7 +9,7 @@ texto largo y dispositivos pequeños. No se introducen imágenes decorativas.
 | Decisión | Referencia | Propósito |
 | --- | --- | --- |
 | Barra de búsqueda y filtros, encabezado y botones compartidos | `docs/pagina-universal.md`, `hub/firmas.html` | Mantener la identidad aprobada |
-| Formulario dentro de la página | Página Universal, Impeccable Operate | Dar espacio para redactar y adjuntar capturas |
+| Formulario en `hub/nuevo-reporte.html` | Petición del usuario, Página Universal, Impeccable Operate | Separar creación y seguimiento |
 | Tipos problema, sugerencia y duda | Demo para 10 asesores | Recoger tanto fallos como retroalimentación |
 | Borrador, validación y errores recuperables | Refero Craft Details, Impeccable Harden | Evitar perder trabajo o duplicar envíos |
 | Conversación y enlaces por folio | Flujo reportar, responder, revisar | Mantener el seguimiento en un solo lugar |
@@ -35,6 +35,13 @@ sin subir requieren mantener la página abierta. Los identificadores de envío
 se reutilizan para recuperar una confirmación perdida por fallos de conexión.
 
 ## Verificación
+
+El usuario pidió mantener fuera del formulario los textos de ayuda de título,
+descripción, arrastrar/pegar y aviso de borrador. No reintroducirlos al mejorar
+el módulo. El borrador sigue funcionando sin mostrar esa descripción. Engranaje
+y campana usan el SVG de Firmas Digitales y su CSS/script compartidos. Las
+ventanas de reporte y captura cierran al pulsar el fondo, no al pulsar su
+contenido, y el reporte no se cierra durante un guardado.
 
 La suite de Node pasó con 80 pruebas y una omisión existente de respaldo;
 las 11 pruebas de Edge también pasaron. El navegador automatizado verifica

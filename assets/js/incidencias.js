@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
+  const vistaNuevo = document.body.dataset.incVista === 'nuevo';
   const ESTADOS = { abierto: 'Abierto', en_revision: 'En revisión', resuelto: 'Resuelto' };
   const TIPOS = { problema: 'Problema', mejora: 'Sugerencia', duda: 'Duda' };
   const CAMPOS = ['rep-tipo','rep-pagina','rep-titulo','rep-descripcion'];
@@ -27,8 +28,7 @@
     if (!usuario) return;
     try {
       localStorage.setItem(claveBorrador(),JSON.stringify({ id:borradorId, campos:CAMPOS.map(id=>$(id).value), subidos:subidos.concat(archivos.filter(a=>a.ruta).map(a=>a.ruta)), incierto:envioIncierto }));
-      $('rep-borrador').textContent = 'Borrador guardado en este navegador. Las imágenes se conservan mientras mantengas esta página abierta.';
-    } catch (_) { $('rep-borrador').textContent = 'No se pudo guardar el borrador. Mantén esta página abierta hasta enviar.'; }
+    } catch (_) { aviso('rep-error','No se pudo guardar el borrador. Mantén esta página abierta hasta enviar.'); }
   }
   function restaurarBorrador() {
     borradorId = crypto.randomUUID();
@@ -40,25 +40,26 @@
       ['rep-tipo','rep-pagina'].forEach(id=>$(id).dispatchEvent(new Event('change',{bubbles:true})));
       subidos = Array.isArray(b.subidos) ? b.subidos.filter(p=>typeof p==='string' && p.startsWith(usuario+'/'+borradorId+'/')).slice(0,5) : [];
       envioIncierto = b.incierto === true;
-      if (b.campos[2] || b.campos[3]) aviso('inc-aviso','Tienes un borrador pendiente. Pulsa Reportar para retomarlo.');
     } catch (_) {}
     cambiarTipo();
   }
   function cambiarTipo() {
     const tipo = $('rep-tipo').value;
     const textos = {
-      problema:['¿Qué pasó?','¿Qué estabas haciendo? ¿Qué esperabas que ocurriera y qué ocurrió?','Incluye los pasos para reproducirlo y el mensaje de error, si apareció.'],
-      mejora:['¿Qué mejorarías?','Cuéntanos tu idea y cómo te ayudaría en tu trabajo.','Explica qué cambiarías y para qué te serviría.'],
-      duda:['¿Cuál es tu duda?','¿Qué quieres hacer y en qué paso necesitas ayuda?','Incluye el apartado o los pasos que ya intentaste.']
+      problema:['¿Qué pasó?','¿Qué estabas haciendo? ¿Qué esperabas que ocurriera y qué ocurrió?'],
+      mejora:['¿Qué mejorarías?','Cuéntanos tu idea y cómo te ayudaría en tu trabajo.'],
+      duda:['¿Cuál es tu duda?','¿Qué quieres hacer y en qué paso necesitas ayuda?']
     };
     const t = textos[tipo] || textos.problema;
-    $('rep-descripcion-label').textContent=t[0]; $('rep-descripcion').placeholder=t[1]; $('rep-descripcion-ayuda').textContent=t[2];
+    $('rep-descripcion-label').textContent=t[0]; $('rep-descripcion').placeholder=t[1];
   }
   function mostrarFormulario(abrir) {
     if (enviando) return;
+    if (!vistaNuevo && abrir) { location.href='/hub/nuevo-reporte.html'; return; }
+    if (vistaNuevo && !abrir) { location.href='/hub/tickets.html'; return; }
     formulario=abrir;
     document.body.classList.toggle('inc-redactando',abrir);
-    $('inc-formulario').hidden=!abrir; $('inc-listado').hidden=abrir;
+    $('inc-formulario').hidden=!abrir;
     $('inc-titulo-pagina').textContent=abrir?'Nuevo reporte':'Incidencias y sugerencias';
     $('btn-nuevo').querySelector('span').textContent=abrir?'Enviar reporte':'Reportar';
     $('btn-nuevo').setAttribute('aria-label',abrir?'Enviar reporte':'Reportar');
@@ -68,6 +69,7 @@
     if (!matchMedia('(min-width:1024px)').matches) window.scrollTo({top:0,behavior:'instant'});
   }
   function pintarLista() {
+    if (!$('inc-filas')) return;
     const buscar=$('inc-buscar').value.trim().toLocaleLowerCase('es');
     const seleccion=filas.filter(i=>(!gestion || alcance==='todos' || i.user_id===usuario));
     const visibles=seleccion.filter(i=>(!$('inc-estado').value || i.estatus===$('inc-estado').value)
@@ -83,6 +85,7 @@
     $('inc-filas').innerHTML=visibles.map(i=>'<tr><td><span class="inc-reporte-nombre">'+escapar(i.titulo)+'</span><span class="inc-meta">'+escapar(folio(i.id))+' · '+escapar(TIPOS[i.tipo]||'Problema')+(gestion?' · '+escapar(nombre(i)):'')+'</span></td><td>'+estado(i.estatus)+'</td><td>'+escapar(fecha(i.created_at))+'</td><td><a class="inc-abrir" href="?id='+i.id+'" data-reporte="'+i.id+'" aria-label="Abrir '+escapar(i.titulo)+'">Ver reporte</a></td></tr>').join('');
   }
   async function cargarLista(ampliar=false) {
+    if (!$('inc-filas')) return;
     if (cargando) return;
     cargando=true; $('inc-mas').disabled=true; $('inc-recargar').disabled=true;
     if (!ampliar && !filas.length) $('inc-filas').innerHTML='<tr><td colspan="4">'+carga+'</td></tr>';
@@ -162,11 +165,9 @@
     archivos.forEach(a=>URL.revokeObjectURL(a.url)); archivos=[]; subidos=[]; envioIncierto=false;
     CAMPOS.forEach(id=>{ $(id).value=id==='rep-tipo'?'problema':''; }); cambiarTipo();
     ['rep-tipo','rep-pagina'].forEach(id=>$(id).dispatchEvent(new Event('change',{bubbles:true})));
-    limpiarFiltros();
     try { localStorage.removeItem(claveBorrador()); } catch(_) {}
-    borradorId=crypto.randomUUID(); enviando=false; mostrarFormulario(false);
-    aviso('inc-aviso','Reporte '+folio(enviado)+' enviado. Puedes abrirlo para consultar el seguimiento.');
-    await cargarLista();
+    borradorId=crypto.randomUUID(); enviando=false;
+    location.replace('/hub/tickets.html?enviado='+enviado);
   }
   async function imagenesFirmadas(inc) {
     const origen=new URL(sb.supabaseUrl).origin;
@@ -230,25 +231,36 @@
       usuario=data.user.id;
       const {data:perfil,error:pe}=await sb.from('profiles').select('role').eq('id',usuario).single(); if(pe) throw pe;
       gestion=['admin','master'].includes(perfil.role);
-      $('inc-alcance').hidden=!gestion; $('btn-nuevo').disabled=false;
-      restaurarBorrador();
-      await cargarLista();
-      const id=new URL(location.href).searchParams.get('id'); if(/^[0-9a-f-]{36}$/i.test(id||'')) await cargarDetalle(id);
-    } catch(_) { $('inc-filas').innerHTML='<tr><td colspan="4"><div class="inc-vacio"><h2>No pudimos abrir tus reportes</h2><p>Revisa tu conexión y recarga la página.</p><button class="btn-modal-cancelar" type="button" data-iniciar>Reintentar</button></div></td></tr>'; }
+      $('btn-nuevo').disabled=false;
+      if(vistaNuevo) { restaurarBorrador(); mostrarFormulario(true); }
+      else {
+        $('inc-alcance').hidden=!gestion;
+        await cargarLista();
+        const parametros=new URL(location.href).searchParams, enviado=parametros.get('enviado'), id=parametros.get('id');
+        if(/^[0-9a-f-]{36}$/i.test(enviado||'')) aviso('inc-aviso','Reporte '+folio(enviado)+' enviado. Puedes abrirlo para consultar el seguimiento.');
+        if(/^[0-9a-f-]{36}$/i.test(id||'')) await cargarDetalle(id);
+      }
+    } catch(_) { if(vistaNuevo) aviso('rep-error','No pudimos abrir el formulario. Revisa tu conexión y recarga la página.'); else $('inc-filas').innerHTML='<tr><td colspan="4"><div class="inc-vacio"><h2>No pudimos abrir tus reportes</h2><p>Revisa tu conexión y recarga la página.</p><button class="btn-modal-cancelar" type="button" data-iniciar>Reintentar</button></div></td></tr>'; }
   }
   $('btn-nuevo').addEventListener('click',()=>{ if(formulario) $('rep-form').requestSubmit(); else mostrarFormulario(true); });
+  if(vistaNuevo) {
+  $('rep-volver').addEventListener('click',()=>mostrarFormulario(false));
+  $('inc-recargar').addEventListener('click',()=>{if(!enviando)location.reload();});
+  $('rep-form').addEventListener('submit',enviarReporte);
+  CAMPOS.forEach(id=>{ $(id).addEventListener('input',()=>{ if(enviando) return; $(id).setCustomValidity(''); if(id==='rep-tipo') cambiarTipo(); guardarBorrador(); }); $(id).addEventListener('change',()=>{if(id==='rep-tipo') cambiarTipo(); guardarBorrador();}); });
+  } else {
   const escritorio=matchMedia('(min-width:1024px)');
   $('inc-filtros').open=escritorio.matches;
   escritorio.addEventListener('change',e=>{$('inc-filtros').open=e.matches;});
-  $('rep-volver').addEventListener('click',()=>mostrarFormulario(false));
-  $('rep-form').addEventListener('submit',enviarReporte);
-  CAMPOS.forEach(id=>{ $(id).addEventListener('input',()=>{ if(enviando) return; $(id).setCustomValidity(''); if(id==='rep-tipo') cambiarTipo(); guardarBorrador(); }); $(id).addEventListener('change',()=>{if(id==='rep-tipo') cambiarTipo(); guardarBorrador();}); });
+  }
+  if(vistaNuevo) {
   $('rep-imagenes').addEventListener('change',()=>{ agregarArchivos(Array.from($('rep-imagenes').files||[])); $('rep-imagenes').value=''; });
   $('rep-previews').addEventListener('click',e=>{ const b=e.target.closest('[data-quitar]'); if(!b || enviando || envioIncierto) return; const [a]=archivos.splice(Number(b.dataset.quitar),1); URL.revokeObjectURL(a.url); pintarPreviews(); });
   $('rep-zona').addEventListener('dragover',e=>{e.preventDefault(); $('rep-zona').classList.add('arrastrando');});
   $('rep-zona').addEventListener('dragleave',()=>$('rep-zona').classList.remove('arrastrando'));
   $('rep-zona').addEventListener('drop',e=>{e.preventDefault(); $('rep-zona').classList.remove('arrastrando'); agregarArchivos(Array.from(e.dataTransfer.files||[]));});
   $('rep-form').addEventListener('paste',e=>{ const images=Array.from(e.clipboardData.items||[]).filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(Boolean); if(images.length){e.preventDefault();agregarArchivos(images);} });
+  } else {
   ['inc-buscar','inc-estado','inc-tipo'].forEach(id=>$(id).addEventListener(id==='inc-buscar'?'input':'change',pintarLista));
   $('inc-alcance').addEventListener('click',e=>{const b=e.target.closest('[data-alcance]'); if(!b || cargando)return; alcance=b.dataset.alcance; $('inc-alcance').querySelectorAll('button').forEach(el=>{el.classList.toggle('activo',el===b);el.setAttribute('aria-pressed',String(el===b));});filas=[];cargarLista();});
   $('inc-recargar').addEventListener('click',()=>cargarLista()); $('inc-limpiar').addEventListener('click',limpiarFiltros); $('inc-mas').addEventListener('click',()=>cargarLista(true));
@@ -258,6 +270,13 @@
   document.querySelectorAll('[data-cerrar]').forEach(b=>b.addEventListener('click',()=>{if(guardando && b.dataset.cerrar==='inc-detalle')return;$(b.dataset.cerrar).close();}));
   $('inc-detalle').addEventListener('cancel',e=>{if(guardando)e.preventDefault();});
   $('inc-detalle').addEventListener('close',()=>{detalleRevision++;detalle=null;const u=new URL(location.href);u.searchParams.delete('id');history.replaceState(null,'',u);});
+  ['inc-detalle','inc-imagen'].forEach(id=>{
+    const dialogo=$(id); let inicioFuera=false;
+    const fuera=e=>{const r=dialogo.getBoundingClientRect();return e.target===dialogo && (e.clientX<r.left || e.clientX>r.right || e.clientY<r.top || e.clientY>r.bottom);};
+    dialogo.addEventListener('pointerdown',e=>{inicioFuera=fuera(e);});
+    dialogo.addEventListener('click',e=>{if(inicioFuera && fuera(e) && !(guardando && id==='inc-detalle'))dialogo.close();inicioFuera=false;});
+  });
+  }
   window.addEventListener('beforeunload',e=>{if(enviando || guardando || archivos.length){e.preventDefault();e.returnValue='';}});
   if(document.documentElement.classList.contains('kw-auth-ok')) iniciar(); else window.addEventListener('kw-auth-ready',iniciar,{once:true});
 })();
