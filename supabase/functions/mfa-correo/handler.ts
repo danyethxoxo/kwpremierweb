@@ -118,18 +118,25 @@ export async function handleMfa(req: Request): Promise<Response> {
       if (deviceLookupError) return response(req, { error: 'No se pudo comprobar este dispositivo.' }, 500)
       if (device && deviceTrusted(device, ipHash, now.getTime())) {
         const { error: touchError } = await admin.from('mfa_dispositivos').update({ ultimo_acceso: now.toISOString(), ultimo_ip_hash: ipHash, nombre: deviceName(req) }).eq('id', device.id)
-        const { error: sessionError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil })
+        const { error: sessionError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil, nombre_dispositivo: deviceName(req) })
         if (touchError || sessionError) return response(req, { error: 'No se pudo autorizar este dispositivo.' }, 500)
         trusted = true
       }
     }
-    // La autorización anterior de esta sesión no sustituye al dispositivo/IP.
-    // Al cambiar de red o pasar cinco días sin uso se requiere otro código.
+    // La autorización anterior de esta sesión no sustituye al dispositivo.
+    // Después de tres días sin actividad se requiere otro código.
     if (active && !trusted) {
       const { error: revokeError } = await admin.from('mfa_sesiones').delete().eq('session_id', sessionId).eq('user_id', userId)
       if (revokeError) return response(req, { error: 'No se pudo comprobar la sesion.' }, 500)
     }
     const verified = trusted
+
+    // Registrar también los inicios de cuentas que aún no requieren MFA.
+    // El trigger INSERT notifica una vez por session_id; un upsert no repite el aviso.
+    if (action === 'estado' && !required) {
+      const { error } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil, nombre_dispositivo: deviceName(req) })
+      if (error) return response(req, { error: 'No se pudo registrar el inicio de sesion.' }, 500)
+    }
 
     if (action === 'estado') return response(req, {
       requerido: required,
@@ -145,7 +152,9 @@ export async function handleMfa(req: Request): Promise<Response> {
       let revokeError: unknown = null
       if (action === 'revocar_actual' && deviceHash) ({ error: revokeError } = await admin.from('mfa_dispositivos').update({ revocado_en: now.toISOString() }).eq('user_id', userId).eq('token_hash', deviceHash))
       if (action === 'revocar_todos') ({ error: revokeError } = await admin.from('mfa_dispositivos').update({ revocado_en: now.toISOString() }).eq('user_id', userId).is('revocado_en', null))
-      const { error: deleteSessionsError } = await admin.from('mfa_sesiones').delete().eq('user_id', userId)
+      let sessionsToDelete = admin.from('mfa_sesiones').delete().eq('user_id', userId)
+      if (action === 'revocar_actual') sessionsToDelete = sessionsToDelete.eq('session_id', sessionId)
+      const { error: deleteSessionsError } = await sessionsToDelete
       if (revokeError || deleteSessionsError) return response(req, { error: 'No se pudieron revocar las sesiones.' }, 500)
       return response(req, { ok: true })
     }
@@ -211,7 +220,7 @@ export async function handleMfa(req: Request): Promise<Response> {
         if (revokeOldError) return response(req, { error: 'No se pudieron renovar los dispositivos.' }, 500)
       }
       const { error: deviceError } = await admin.from('mfa_dispositivos').upsert({ user_id: userId, token_hash: deviceHash, nombre: deviceName(req), ultimo_acceso: now.toISOString(), ultimo_ip_hash: ipHash || null, revocado_en: null }, { onConflict: 'user_id,token_hash' })
-      const { error: authorizeError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil })
+      const { error: authorizeError } = await admin.from('mfa_sesiones').upsert({ session_id: sessionId, user_id: userId, verificado_hasta: verifiedUntil, nombre_dispositivo: deviceName(req) })
       if (deviceError || authorizeError) return response(req, { error: 'El codigo fue valido, pero no se pudo autorizar el dispositivo. Solicita uno nuevo.' }, 500)
       return response(req, { ok: true, confiable_hasta: verifiedUntil })
     }

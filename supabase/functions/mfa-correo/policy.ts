@@ -1,4 +1,4 @@
-export const TRUST_DAYS = 5
+export const TRUST_DAYS = 3
 export const LOGIN_HOURS = 24
 
 export function loginExpiresAt(claims: Record<string, unknown>, fallback: string | undefined): number {
@@ -14,8 +14,10 @@ export function loginExpired(claims: Record<string, unknown>, fallback: string |
 }
 
 export function deviceTrusted(device: { ultimo_acceso: string; ultimo_ip_hash: string | null } | null,
-  ipHash: string, now: number): boolean {
-  return !!device && !!ipHash && device.ultimo_ip_hash === ipHash &&
+  _ipHash: string, now: number): boolean {
+  // La red puede cambiar sin que cambie el navegador verificado.
+  return !!device &&
     Number.isFinite(Date.parse(device.ultimo_acceso)) &&
+    now >= Date.parse(device.ultimo_acceso) &&
     now - Date.parse(device.ultimo_acceso) < TRUST_DAYS * 86400000
 }

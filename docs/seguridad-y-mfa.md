@@ -37,10 +37,11 @@ desde Perfil.
   intentos; solo se permiten cinco envios por hora.
 - Copiar el token a otro navegador no autoriza ese segundo `session_id`.
 - Un navegador nuevo solicita codigo; el mismo navegador permanece confiable
-  mientras registre acceso al menos una vez cada cinco dias y conserve la
-  misma huella de IP.
+  mientras registre actividad antes de cumplir tres dias sin uso. Cada
+  dispositivo tiene su propio plazo; cambiar de red no exige otro codigo.
 - La IP se conserva solamente como una huella irreversible para detectar un
-  cambio de red; nunca se guarda la direccion IP en texto claro.
+  cambio de red; nunca se guarda la direccion IP en texto claro. Esta huella
+  no decide si el dispositivo sigue verificado.
 - Borrar el almacenamiento del navegador, usar modo privado, olvidar el
   dispositivo o cambiar/restablecer la contrasena vuelve a exigir codigo.
 - Una consulta REST o RPC antes de verificar devuelve que se requiere el
@@ -50,6 +51,13 @@ desde Perfil.
 - El cliente nunca recibe el correo completo ni errores internos de Resend.
 
 ## Recomendaciones adicionales
+
+La migracion `supabase/migrations/20261006034150_mfa_notificacion_inicio_sesion.sql`
+agrega avisos por sesion nueva, con navegador, sistema y hora. El trigger de
+correo existente entrega el aviso al correo de acceso y la campanita lo muestra
+en los demas dispositivos. Renovar la autorizacion de la misma sesion no repite
+el aviso. La contrasena sigue solicitandose cada 24 horas; si el dispositivo
+conserva su confianza, no se solicita otro codigo.
 
 - Hacer MFA obligatorio para Master y Admin despues del periodo de adopcion.
 - Activar alertas de Supabase y Resend por picos de autenticacion o envio.
