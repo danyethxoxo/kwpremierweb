@@ -18,6 +18,7 @@ texto largo y dispositivos pequeños. No se introducen imágenes decorativas.
 
 Aplicar `supabase/migrations/20261006042944_incidencias_demo_seguimiento.sql`
 y `supabase/migrations/20261006044343_incidencias_mensajes_indice_autor.sql`
+y `supabase/migrations/20261006044424_incidencias_conservar_seguimiento_legacy.sql`
 antes de publicar `hub/tickets.html` y sus dos assets específicos. La migración
 conserva los reportes y respuestas previos. Las notificaciones nuevas usan un
 enlace directo; los avisos anteriores no se modifican.

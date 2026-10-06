@@ -31,8 +31,11 @@ test('incidencias: permisos, conversación, versiones, notificaciones e idempote
     for(const [id,rol] of [[asesor,'asociado'],[otro,'asociado'],[admin,'admin']]){
       await db.query('insert into auth.users values($1)',[id]);await db.query('insert into profiles values($1,\'Nombre\',null,\'prueba@example.com\',$2)',[id,rol]);
     }
-    const sql=readFileSync(new URL('../supabase/migrations/20261006042944_incidencias_demo_seguimiento.sql',import.meta.url),'utf8');
-    await db.exec(sql);await db.exec(sql);
+    await db.query("insert into incidencias(id,user_id,titulo,descripcion) values('77777777-7777-4777-8777-777777777777',$1,'Antes','Breve')",[asesor]);
+    for(const file of ['20261006042944_incidencias_demo_seguimiento.sql','20261006044343_incidencias_mensajes_indice_autor.sql','20261006044424_incidencias_conservar_seguimiento_legacy.sql']){
+      const sql=readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8');
+      await db.exec(sql);await db.exec(sql);
+    }
     await db.exec(`create trigger ticket_nuevo after insert on public.incidencias for each row execute function public.notificar_ticket_nuevo();create trigger ticket_estado after update on public.incidencias for each row execute function public.notificar_ticket_actualizado();`);
     async function usuario(id,rol='asociado') {await db.exec('reset role');await db.query("select set_config('test.uid',$1,false),set_config('test.role',$2,false)",[id,rol]);await db.exec('set role authenticated');}
     await usuario(asesor);
@@ -40,7 +43,7 @@ test('incidencias: permisos, conversación, versiones, notificaciones e idempote
     await db.query('insert into incidencias_mensajes(id,incidencia_id,user_id,mensaje) values($1,$2,$3,$4)',[mensaje,caso,asesor,'Agrego más detalles']);
     await assert.rejects(db.query('insert into incidencias_mensajes(incidencia_id,user_id,mensaje) values($1,$2,$3)',[caso,otro,'Autor falso']),/row-level security/);
     await assert.rejects(db.query("select incidencias_guardar_seguimiento($1,'resuelto','Respuesta',now(),gen_random_uuid())",[caso]),/permiso/);
-    await assert.rejects(db.query("insert into incidencias(user_id,titulo,descripcion) values($1,'a','breve')",[asesor]),/check constraint/);
+    await assert.rejects(db.query("insert into incidencias(user_id,titulo,descripcion) values($1,'a','breve')",[asesor]),/contenido del reporte/);
     await usuario(otro);
     assert.equal((await db.query('select * from incidencias_mensajes')).rows.length,0);
     await assert.rejects(db.query('insert into incidencias_mensajes(incidencia_id,user_id,mensaje) values($1,$2,$3)',[caso,otro,'No debo escribir aquí']),/row-level security/);
@@ -58,6 +61,12 @@ test('incidencias: permisos, conversación, versiones, notificaciones e idempote
     const avisos=(await db.query('select * from notificaciones')).rows;
     assert(avisos.length>=3);assert(avisos.every(n=>n.url==='hub/tickets.html?id='+caso));
     assert(avisos.some(n=>n.user_id===asesor && n.mensaje==='Lo estamos revisando'));
+    await db.exec("select set_config('test.mfa','true',false)");
+    await usuario(admin,'admin');
+    await db.exec("update incidencias set estatus='resuelto' where id='77777777-7777-4777-8777-777777777777'");
+    assert.equal((await db.query("select descripcion from incidencias where id='77777777-7777-4777-8777-777777777777'")).rows[0].descripcion,'Breve');
+    await assert.rejects(db.exec("update incidencias set descripcion='Mal' where id='77777777-7777-4777-8777-777777777777'"),/contenido del reporte/);
+    await db.exec('reset role');
     await db.exec('set role anon');await assert.rejects(db.query('select * from incidencias_mensajes'),/permission denied/);
   } finally {await db.close();}
 });
