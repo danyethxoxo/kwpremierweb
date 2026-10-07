@@ -29,6 +29,7 @@ type Reporte = {
   periodoDesde: string
   periodoHasta: string
   modificadas: Historial[]
+  historial: Historial[]
   propiedadesLeidas: number
   publicadasActuales: number
   suspendidasActuales: number
@@ -175,7 +176,21 @@ function reporteXlsx(reporte: Reporte): Uint8Array {
     widths: [24, 48, 16, 10, 28, 42, 20, 14, 16, 19, 58],
     rows,
   }
-  return buildXlsx([reporteSheet])
+  const cambiosSheet: XlsxSheet = {
+    name: 'Todos los cambios',
+    widths: [20, 18, 18, ...(reporteSheet.widths || [])],
+    rows: [
+      [cell('Historial acumulado del periodo', 'title')],
+      [cell('Periodo desde:'), cell(fechaExcel(reporte.periodoDesde), 'date')],
+      [cell('Periodo hasta:'), cell(fechaExcel(reporte.periodoHasta), 'date')],
+      [cell('Evento', 'header'), cell('Estado anterior', 'header'), cell('Estado nuevo', 'header'), ...encabezados],
+      ...reporte.historial.map(item => [
+        cell(item.tipo === 'alta' ? 'Alta' : item.tipo === 'estado_inicial' ? 'Estado inicial' : 'Cambio'),
+        cell(texto(item.estatus_anterior)), cell(item.estatus_nuevo), ...filaPropiedad(item),
+      ]),
+    ],
+  }
+  return buildXlsx([reporteSheet, cambiosSheet])
 }
 
 function base64(bytes: Uint8Array): string {
@@ -246,7 +261,7 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
 
   return {
     ultimaCorrida: sync.ultima_corrida,
-    periodoDesde,periodoHasta,modificadas,
+    periodoDesde,periodoHasta,modificadas,historial,
     propiedadesLeidas: Number(sync.propiedades_afectadas || 0),
     publicadasActuales,
     suspendidasActuales,
