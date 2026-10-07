@@ -836,30 +836,24 @@
   }
 
   // ── Pantalla de "abriendo…" ────────────────────────────────────
-  // Devuelve la función que la quita. El velo se queda un mínimo de
-  // tiempo aunque lo de atrás ya esté listo: si aparece y desaparece en
-  // 20 ms se ve como un parpadeo, que molesta más que no ponerlo.
-  var MINIMO_VISIBLE = 420;
+  // Las acciones rapidas no muestran un velo ni esperan una animacion.
 
   function cargando(texto) {
     var velo = document.createElement('div');
     velo.className = 'kw-cargando-pantalla';
     velo.setAttribute('role', 'status');
     velo.setAttribute('aria-live', 'polite');
-    velo.innerHTML = '<div class="kw-cargando-aros"><span></span><span></span><span></span></div>' +
-      '<div class="kw-cargando-texto">' + esc(texto || 'Cargando…') + '</div>';
-    document.body.appendChild(velo);
-
-    var desde = Date.now();
+    velo.setAttribute('aria-label', texto || 'Cargando');
+    velo.innerHTML = '<div class="kw-loader" aria-hidden="true"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
     var cerrado = false;
+    var mostrar = setTimeout(function () {
+      if (!cerrado) document.body.appendChild(velo);
+    }, 120);
     return function cerrar() {
       if (cerrado) return;
       cerrado = true;
-      var falta = Math.max(0, MINIMO_VISIBLE - (Date.now() - desde));
-      setTimeout(function () {
-        velo.classList.add('saliendo');
-        setTimeout(function () { if (velo.parentNode) velo.parentNode.removeChild(velo); }, 260);
-      }, falta);
+      clearTimeout(mostrar);
+      if (velo.parentNode) velo.parentNode.removeChild(velo);
     };
   }
 

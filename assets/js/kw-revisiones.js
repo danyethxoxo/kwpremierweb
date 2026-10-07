@@ -53,6 +53,8 @@
     btnHistorial.classList.toggle('activo', historial);
     btnDocumento.setAttribute('aria-selected', historial ? 'false' : 'true');
     btnHistorial.setAttribute('aria-selected', historial ? 'true' : 'false');
+    var acceso = raiz.querySelector('[data-kw-historial-acceso]');
+    if (acceso) acceso.textContent = historial ? 'Volver al documento' : 'Historial';
   }
 
   async function cargarHistorial() {
@@ -320,6 +322,12 @@
     prepararBotonCancelar();
     var terminado = adaptador.estado() === 'finalizado';
     btnHistorial.hidden = !adaptador.id() || !terminado;
+    var acceso = raiz.querySelector('[data-kw-historial-acceso]');
+    if (acceso) acceso.hidden = btnHistorial.hidden;
+    if (global.kwRevisionPendiente && global.kwRevisionPendiente()) {
+      var finalizar = document.getElementById('btn-finalizar');
+      if (finalizar) finalizar.style.display = 'none';
+    }
     if (!terminado && raiz.classList.contains('kw-revision-modo-historial')) activar('documento');
 
     if (btnFirma) btnFirma.style.display = terminado && !viendoHistorica ? 'inline-flex' : 'none';
@@ -386,6 +394,13 @@
       btnFirma = document.getElementById('btn-firma-digital');
     }
 
+    // Solo los contratos se enlazan con expedientes.
+    if (location.pathname.indexOf('/documentos/contratos/') !== 0) {
+      var enlaceAnterior = document.getElementById('btn-enlazar-dictamen');
+      if (enlaceAnterior) enlaceAnterior.remove();
+      btnDictamen = null;
+      return;
+    }
     if (!document.getElementById('btn-enlazar-dictamen')) {
       btnDictamen = document.createElement('button');
       btnDictamen.type = 'button';
@@ -552,6 +567,27 @@
     btnHistorial.addEventListener('click', cargarHistorial);
 
     prepararFormularioFijo();
+    var encabezado = raiz.querySelector('.acuerdos-form-heading');
+    var titulo = raiz.querySelector('.acuerdos-form-title, .form-title');
+    if (!encabezado && titulo) {
+      encabezado = document.createElement('div');
+      encabezado.className = 'acuerdos-form-heading';
+      titulo.before(encabezado);
+      encabezado.appendChild(titulo);
+      titulo.classList.add('acuerdos-form-title');
+      var acceso = document.createElement('button');
+      acceso.type = 'button';
+      acceso.className = 'acuerdos-historial';
+      acceso.setAttribute('data-kw-historial-acceso', '');
+      acceso.textContent = 'Historial';
+      acceso.addEventListener('click', function () {
+        if (raiz.classList.contains('kw-revision-modo-historial')) abrirActual();
+        else cargarHistorial();
+      });
+      encabezado.appendChild(acceso);
+    }
+    var scroll = raiz.querySelector('.kw-form-scroll');
+    if (encabezado && scroll) raiz.insertBefore(encabezado, scroll);
     prepararBotonCambios();
     prepararBotonCancelar();
     refrescar();

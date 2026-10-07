@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="preconnect" href="https://iloetojomzqtadkithtv.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="/assets/js/kw-security.js?v=20260922"></script>
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
@@ -10,7 +12,7 @@
   <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261001"></script>
+<script src="/assets/js/kw-session.js?v=20261007b"></script>
 <script src="/assets/js/auth-guard.js?v=20261001"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261003h">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
@@ -297,8 +299,10 @@
   }
   </style>
   <link rel="stylesheet" href="/assets/css/kw-homogeneo.css?v=20260923a">
+<link rel="stylesheet" href="/assets/css/kw-liderazgo.css?v=20261007b">
+<link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261008a">
 </head>
-<body class="kw-homogeneo">
+<body class="kw-homogeneo kw-indice-documentos" data-kw-universal-adaptar>
 
   <header class="kw-header">
     <span class="kw-header-title">Internos</span>
@@ -319,7 +323,7 @@
     <div id="contenido-interno">
 
     <div class="cabecera-pagina">
-      <h1 class="page-title">Documentos Internos</h1>
+      <h1 class="page-title">Documentos de Liderazgo</h1>
     </div>
 
     <div id="kw-card-filter" class="kw-campo-filtro kw-homogeneo-filtro">
@@ -335,7 +339,7 @@
          para" desde el menú de una tarjeta, la carpeta se actualiza
          sola sin tocar este archivo. -->
     <div id="carpetas" class="grid">
-      <div class="cargando">Cargando carpetas…</div>
+      <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
     </div>
 
     <div class="footer">
@@ -354,7 +358,9 @@
 
   </main>
 
+<script src="/assets/js/doc-menu.js?v=20261007b"></script>
 <script>
+  var perfilInternos = null;
   function escapar(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -386,7 +392,7 @@
     try {
       var r = await Promise.all([
         window.kwSupabase.from('roles_kw').select('id, nombre, descripcion, color').eq('activo', true).order('orden'),
-        window.kwSupabase.from('documentos_internos').select('roles').eq('activo', true),
+        window.kwSupabase.from('documentos_internos').select('id, titulo, descripcion, href, icono, roles').eq('activo', true).order('orden'),
       ]);
       for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
 
@@ -398,16 +404,17 @@
       }
 
       caja.innerHTML = roles.map(function (rol) {
-        var n = docs.filter(function (d) { return (d.roles || []).indexOf(rol.id) >= 0; }).length;
-        return '<a href="rol.html?rol=' + encodeURIComponent(rol.id) + '&v=20260902i" class="hover-card carpeta-hub"' +
-            ' style="--rol-rgb: ' + rgbDeHex(rol.color) + '; --card-color: rgb(' + rgbDeHex(rol.color) + ');">' +
-          '<span class="hover-card-icon card-sigla">' + escapar(rol.id) + '</span>' +
-          '<div class="hover-card-title">' + escapar(rol.nombre) + '</div>' +
-          '<div class="card-meta">' + n + (n === 1 ? ' documento' : ' documentos') + '</div>' +
-          '<div class="hover-card-arrow">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
-          '</div></a>';
+        var documentos = docs.filter(function (d) { return (d.roles || []).indexOf(rol.id) >= 0; });
+        return '<section class="kw-liderazgo-rol" style="--rol-rgb:' + rgbDeHex(rol.color) + '">' +
+          '<h2 class="lista-columna-title">' + escapar(rol.nombre) + '</h2>' +
+          '<div class="kw-lista">' + (documentos.length ? documentos.map(function (d) {
+            var href = window.kwSecurity.safeUrl(new URL(d.href || '', location.href).href, true);
+            return '<a class="card kw-fila" data-doc-id="' + escapar(d.id) + '" href="' + escapar(href) + '">' +
+              '<div class="kw-fila-cabeza"><div class="kw-fila-texto"><div class="kw-fila-titulo">' + escapar(d.titulo) +
+              '</div><div class="kw-fila-sub">' + escapar(d.descripcion || '') + '</div></div></div></a>';
+          }).join('') : '<div class="kw-universal-vacio">Sin documentos para este rol.</div>') + '</div></section>';
       }).join('');
+      await window.kwDocMenu.init(caja, perfilInternos);
     } catch (err) {
       caja.innerHTML = '<div class="vacio-msg">No se pudieron cargar las carpetas: ' + escapar(err.message || err) + '</div>';
     }
@@ -422,6 +429,7 @@
       .eq('id', userData.user.id)
       .single();
     if (error || !perfil) return;
+    perfilInternos = perfil;
     if (perfil.role === 'asociado') {
       document.getElementById('contenido-interno').style.display = 'none';
       document.getElementById('denegado').style.display = '';
@@ -429,13 +437,15 @@
     }
     cargarCarpetas();
   }
+  window.addEventListener('kw-doc-visibilidad', cargarCarpetas);
   if (document.documentElement.classList.contains('kw-auth-ok')) {
     verificarAccesoInternos();
   } else {
     window.addEventListener('kw-auth-ready', verificarAccesoInternos, { once: true });
   }
 </script>
-<script src="/assets/js/drawer.js?v=20261007b" data-menu="hub"></script>
+<script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
+<script src="/assets/js/drawer.js?v=20261007c" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260923b" data-filtros="#kw-card-filter"></script>
 <script src="/assets/js/kw-card-filter.js?v=20260923a" data-target="#carpetas"></script>
 </body>

@@ -291,17 +291,19 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrarMenu(); });
 
-  async function init(raiz) {
+  async function init(raiz, perfilActual) {
     inyectarEstilos();
 
     // Quién puede editar visibilidad. Es solo para decidir si se pinta la
     // opción: el candado de verdad está en las políticas RLS de la tabla,
     // así que aunque alguien fuerce el botón, la escritura se rechaza.
     try {
-      if (window.kwSupabase) {
-        var u = await window.kwSupabase.auth.getUser();
+      if (perfilActual) {
+        puedeEditar = ['master', 'admin', 'staff'].indexOf(perfilActual.role) >= 0;
+      } else if (window.kwSupabase) {
+        var u = await (window.kwSession ? window.kwSession.usuario(window.kwSupabase) : window.kwSupabase.auth.getUser());
         if (u.data && u.data.user) {
-          var p = await window.kwSupabase
+          var p = perfilActual ? { data: perfilActual } : await window.kwSupabase
             .from('profiles').select('role').eq('id', u.data.user.id).single();
           var rol = p.data ? p.data.role : null;
           puedeEditar = ['master', 'admin', 'staff'].indexOf(rol) >= 0;

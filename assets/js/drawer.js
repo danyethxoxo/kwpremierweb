@@ -1047,7 +1047,7 @@
     const caja = document.getElementById('drawer-usuario');
     if (!caja || !window.kwSupabase) return;
     try {
-      const { data: u } = await window.kwSupabase.auth.getUser();
+      const { data: u } = await window.kwSession.usuario(window.kwSupabase);
       if (!u || !u.user) return;
       const { data: perfil } = await window.kwSupabase
         .from('profiles')
@@ -1087,7 +1087,7 @@
     if (!lista || (cargados && !forzar)) return;
     if (!window.kwSupabase) { pintarAccesos([]); return; }
     try {
-      const { data: u } = await window.kwSupabase.auth.getUser();
+      const { data: u } = await window.kwSession.usuario(window.kwSupabase);
       if (!u || !u.user) { pintarAccesos([]); return; }
       const { data, error } = await window.kwSupabase
         .from('accesos_rapidos')
@@ -1142,7 +1142,7 @@
     btn.disabled = true;
     let cuantoDura = 1600;
     try {
-      const { data: u } = await window.kwSupabase.auth.getUser();
+      const { data: u } = await window.kwSession.usuario(window.kwSupabase);
       if (!u || !u.user) throw new Error('sin sesión');
       const url = location.pathname + location.search;
       const { error } = await window.kwSupabase.from('accesos_rapidos').insert({

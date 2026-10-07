@@ -6,7 +6,7 @@ import { buildXlsx, type XlsxCell, type XlsxSheet } from '../_shared/xlsx.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
-const DESTINATARIO = 'dani.guerrero@kwmexico.mx'
+const DESTINATARIO = Deno.env.get('PROPIEDADES_REPORTE_EMAIL') || 'dani.guerrero@kwmexico.mx'
 const FUENTE = 'kwmexico'
 const ZONA_LOCAL = 'America/Mexico_City'
 const SITIO_PROPIEDADES = 'https://www.kwpremieroficial.com/propiedades.html'

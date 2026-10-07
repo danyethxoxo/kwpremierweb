@@ -79,5 +79,15 @@
     throw new Error('No se pudo comprobar la sesión.');
   }
 
-  window.kwSession = Object.freeze({ deviceToken: deviceToken, loginExpired: loginExpired, mfaState: mfaState });
+  // Compartir solo las peticiones en curso. No guardar permisos ni sesiones.
+  var usuariosPendientes = new WeakMap();
+  function usuario(client) {
+    if (!usuariosPendientes.has(client)) {
+      var pendiente = Promise.resolve().then(function () { return client.auth.getUser(); })
+        .finally(function () { usuariosPendientes.delete(client); });
+      usuariosPendientes.set(client, pendiente);
+    }
+    return usuariosPendientes.get(client);
+  }
+  window.kwSession = Object.freeze({ deviceToken: deviceToken, loginExpired: loginExpired, mfaState: mfaState, usuario: usuario });
 })();
