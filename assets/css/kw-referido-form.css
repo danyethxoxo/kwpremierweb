@@ -1,0 +1,21 @@
+/* La captura del referido combina datos breves con direcciones y comentarios. */
+#form-fields { container-type: inline-size; }
+.referido-form-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; }
+.referido-form-grid > .field { grid-column: span 3; min-width: 0; margin: 0; display: flex; flex-direction: column; }
+.referido-form-grid > .referido-ancho { grid-column: 1 / -1; }
+.referido-form-grid > .field > label { flex: 1; }
+.referido-form-grid :is(input, textarea) { min-width: 0; width: 100%; }
+@container (min-width: 480px) {
+  .referido-form-grid > .referido-corto { grid-column: span 2; }
+}
+@container (max-width: 330px) {
+  .referido-form-grid > .field { grid-column: 1 / -1; }
+}
+/* Los enlaces ayudan a capturar, pero el documento conserva su aspecto al imprimir. */
+#referido-preview [data-referido-field] { cursor: pointer; transition: background-color .15s; }
+#referido-preview [data-referido-field]:hover { background-color: var(--pastel-cielo, #edf6ff); }
+#referido-preview [data-referido-field]:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; background-color: var(--pastel-cielo, #edf6ff); }
+.referido-form-grid > .field.referido-campo-activo :is(input, textarea) { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138, 0, 0, .12); }
+@media print {
+  #referido-preview [data-referido-field] { background: transparent !important; outline: none !important; }
+}
