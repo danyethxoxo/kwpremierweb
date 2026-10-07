@@ -5658,24 +5658,16 @@
 
   // ── Arranque ────────────────────────────────────────────────
 
-  // Enseña cuánto le queda del mes y, si ya se acabó, apaga el botón.
-  // El freno de verdad está en la Edge Function; esto es para que nadie
-  // llene el formulario completo para enterarse hasta el final.
+  // Consulta la cuota y controla el envio sin mostrar el aviso.
   async function cargarCupo() {
     const caja = $('cupo');
+    caja.style.display = 'none';
     const { data, error } = await window.kwSupabase.rpc('firmas_disponibles', { p_user: miUserId });
-    if (error || !data || data.sin_tope) { caja.style.display = 'none'; return; }
+    if (error || !data || data.sin_tope) return;
 
-    const quedan = Number(data.restantes);
-    caja.classList.toggle('agotado', quedan <= 0);
-    caja.innerHTML = quedan > 0
-      ? 'Te quedan <strong>' + quedan + '</strong> de ' + data.limite + ' documentos este mes.'
-      : 'Ya usaste tus <strong>' + data.limite + '</strong> documentos de este mes. '
-        + 'Pídele al equipo de liderazgo que te suba el tope si necesitas más.';
-    caja.style.display = 'block';
-
-    $('btn-enviar').disabled = quedan <= 0;
+    $('btn-enviar').disabled = Number(data.restantes) <= 0;
   }
+
 
   // Los que firman casi siempre, de un clic. Se apaga el botón del que
   // ya está puesto en vez de esconderlo, para que se vea que esa persona
