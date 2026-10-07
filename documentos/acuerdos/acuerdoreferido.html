@@ -641,8 +641,8 @@
   .r-val { white-space:pre-wrap; }
   .r-comision { font-size:7.5pt; line-height:1.3; margin:7px 0; }
   .r-firmas { margin-top:10px; }
-  .r-firmas-grid { gap:12px 24px; }
-  .r-firma { break-inside:avoid; padding-top:12px; }
+  .r-firmas-grid { gap:8px 24px; }
+  .r-firma { break-inside:avoid; padding-top:8px; }
   .r-firma-nombre { font-size:8pt; min-height:12px; }
   .r-firma-rol { font-size:7pt; }
   tr { break-inside:avoid; }
@@ -892,50 +892,38 @@ function nombreArchivoDoc() {
 }
 
 function prepararPaginasReferido(doc) {
-  const limite = 930; // Alto imprimible carta con márgenes de 16 mm.
-  if (doc.body.scrollHeight <= limite) return;
-  const bloques = [];
-  Array.from(doc.body.children).forEach(el => {
-    if (el.matches('table.r-tabla')) {
-      Array.from(el.rows).forEach(row => {
-        const table = el.cloneNode(false);
-        const tbody = doc.createElement('tbody');
-        tbody.appendChild(row.cloneNode(true));
-        table.appendChild(tbody);
-        bloques.push(table);
-      });
-    } else if (el.matches('.r-firmas')) {
-      const firmas = Array.from(el.querySelectorAll('.r-firma'));
-      for (let i = 0; i < firmas.length; i += 2) {
-        const grupo = doc.createElement('div');
-        grupo.className = 'r-firmas r-firmas-grid';
-        firmas.slice(i, i + 2).forEach(f => grupo.appendChild(f.cloneNode(true)));
-        bloques.push(grupo);
-      }
-    } else bloques.push(el.cloneNode(true));
+  // Carta: mantener toda la captura, firmas y folio dentro del área imprimible.
+  const limite = 920;
+  const pagina = doc.createElement('div');
+  pagina.className = 'print-page';
+  pagina.style.cssText = 'display:flow-root;width:100%;';
+  while (doc.body.firstChild) pagina.appendChild(doc.body.firstChild);
+  doc.body.appendChild(pagina);
+  const elementos = Array.from(pagina.querySelectorAll('*'));
+  const propiedades = ['fontSize','lineHeight','paddingTop','paddingBottom',
+    'paddingLeft','paddingRight','marginTop','marginBottom','rowGap','minHeight'];
+  // Capturar antes de modificar para que la herencia no reduzca dos veces el texto.
+  const medidas = elementos.map(el => {
+    const estilo = doc.defaultView.getComputedStyle(el);
+    const valores = {};
+    propiedades.forEach(p => {
+      if (/^-?[\d.]+px$/.test(estilo[p])) valores[p] = parseFloat(estilo[p]);
+    });
+    if (el.tagName === 'IMG') valores.height = el.getBoundingClientRect().height;
+    return {el, valores};
   });
-  doc.body.replaceChildren();
-  function nuevaPagina() {
-    const pagina = doc.createElement('div');
-    pagina.className = 'print-page';
-    pagina.style.cssText = 'display:flow-root;width:100%;';
-    doc.body.appendChild(pagina);
-    return pagina;
+  let escala = 1;
+  for (let intento = 0; intento < 12; intento++) {
+    const alto = pagina.getBoundingClientRect().height;
+    if (alto <= limite) break;
+    escala *= Math.min(.97, limite / alto);
+    medidas.forEach(({el, valores}) => {
+      Object.entries(valores).forEach(([p, valor]) => { el.style[p] = (valor * escala) + 'px'; });
+    });
   }
-  let pagina = nuevaPagina();
-  bloques.forEach(bloque => {
-    pagina.appendChild(bloque);
-    if (pagina.getBoundingClientRect().height > limite && pagina.children.length > 1) {
-      bloque.remove();
-      const ultimo = pagina.lastElementChild;
-      // El título de sección debe acompañar su primera fila.
-      const titulo = ultimo && ultimo.matches('.r-seccion') ? ultimo : null;
-      if (titulo) titulo.remove();
-      pagina = nuevaPagina();
-      if (titulo) pagina.appendChild(titulo);
-      pagina.appendChild(bloque);
-    }
-  });
+  if (pagina.getBoundingClientRect().height > limite) {
+    throw new Error('No se pudo ajustar la información a una sola página.');
+  }
 }
 
 function downloadPDF(opciones) {
@@ -987,8 +975,8 @@ function downloadPDF(opciones) {
   .r-val { white-space:pre-wrap; }
   .r-comision { font-size:7.5pt; line-height:1.3; margin:7px 0; }
   .r-firmas { margin-top:10px; }
-  .r-firmas-grid { gap:12px 24px; }
-  .r-firma { break-inside:avoid; padding-top:12px; }
+  .r-firmas-grid { gap:8px 24px; }
+  .r-firma { break-inside:avoid; padding-top:8px; }
   .r-firma-nombre { font-size:8pt; min-height:12px; }
   .r-firma-rol { font-size:7pt; }
   tr { break-inside:avoid; }
