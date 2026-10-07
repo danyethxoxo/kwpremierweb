@@ -647,7 +647,8 @@
   .r-firma-rol { font-size:7pt; }
   tr { break-inside:avoid; }
   .r-seccion { break-after:avoid; }
-</style></head>
+</style><link rel="stylesheet" href="/assets/css/kw-guardar-exito.css?v=20261007a">
+</head>
 <body class="doc-borrador">
 
 <!-- Vista de lista: documentos guardados de este tipo -->
@@ -781,6 +782,19 @@
 </div>
 
 <!-- Modal: nombre del documento al guardar por primera vez -->
+<div id="guardar-exito" class="guardar-exito" aria-hidden="true">
+  <div class="guardar-exito-caja" role="status" aria-live="polite">
+    <div class="guardar-exito-icono" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="guardar-exito-titulo" id="guardar-exito-titulo">Guardado con éxito</div>
+    <div class="guardar-exito-detalle" id="guardar-exito-detalle" hidden></div>
+    <button type="button" class="guardar-exito-ok" onclick="cerrarGuardadoExito()">OK</button>
+  </div>
+</div>
+
 <div id="modal-nombre" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <h3>Nombre del documento</h3>
@@ -1026,11 +1040,44 @@ function folioRevisionActual() {
 
 function setGuardarMsg(text, kind) {
   const el = document.getElementById('guardar-msg');
-  if (!text) { el.style.display = 'none'; return; }
-  el.textContent = text;
-  el.style.display = 'block';
-  el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+  if (el) { el.textContent = ''; el.style.display = 'none'; }
+  if (!text) return;
+  if (kind === 'error') {
+    if (window.kwUI && window.kwUI.alert) window.kwUI.alert(text);
+    else window.alert(text);
+    return;
+  }
+  mostrarGuardadoExito(text);
 }
+
+function cerrarGuardadoExito() {
+  const aviso = document.getElementById('guardar-exito');
+  if (!aviso) return;
+  aviso.classList.remove('visible');
+  aviso.style.display = 'none';
+  aviso.setAttribute('aria-hidden', 'true');
+}
+
+function mostrarGuardadoExito(titulo, detalle) {
+  const aviso = document.getElementById('guardar-exito');
+  const tituloEl = document.getElementById('guardar-exito-titulo');
+  const detalleEl = document.getElementById('guardar-exito-detalle');
+  if (!aviso || !tituloEl || !detalleEl) return;
+
+  cerrarGuardadoExito();
+  tituloEl.textContent = titulo || 'Guardado con éxito';
+  detalleEl.textContent = detalle || '';
+  detalleEl.hidden = !detalle;
+  aviso.setAttribute('aria-hidden', 'false');
+  aviso.style.display = 'flex';
+  aviso.classList.remove('visible');
+  void aviso.offsetWidth;
+  aviso.classList.add('visible');
+  const ok = aviso.querySelector('.guardar-exito-ok');
+  if (ok) setTimeout(() => ok.focus(), 0);
+}
+
+
 
 // Entrar al formulario (nuevo o abrir uno guardado) se marca en el
 // historial del navegador (con pushState, sin cambiar la URL) para que
@@ -1518,7 +1565,7 @@ async function finalizarDocumento() {
     bloquearFormulario(true);
     actualizarVisibilidadBotones();
     cerrarModalFinalizar();
-    setGuardarMsg('Documento finalizado. Folio: ' + folioActual, 'ok');
+    setGuardarMsg('Contrato creado', 'ok');
     cargarListaDocumentos();
   } catch (err) {
     cerrarModalFinalizar();
