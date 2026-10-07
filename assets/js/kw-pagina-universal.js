@@ -19,7 +19,32 @@
       menu.addEventListener('click',function (e) { if (e.target.closest('[role="menuitem"]')) cerrar(); });
     });
   }
+  function adaptar() {
+    if (!document.body.hasAttribute('data-kw-universal-adaptar')) return;
+    const principal = document.querySelector('body > main.page, body > main.kw-page');
+    if (!principal) return;
+    document.body.classList.add('kw-pagina-universal', 'kw-universal-adaptada');
+    principal.classList.add('kw-universal-principal');
+    let encabezado = principal.querySelector('.kw-page-encabezado, .cabecera-pagina');
+    const titulo = principal.querySelector('h1.page-title, h1.kw-page-titulo');
+    if (!encabezado && titulo) {
+      encabezado = document.createElement('div');
+      titulo.before(encabezado);
+      encabezado.appendChild(titulo);
+    }
+    if (encabezado) {
+      encabezado.classList.add('kw-universal-encabezado', 'kw-page-encabezado', 'kw-acciones-firmas');
+      if (titulo) titulo.classList.add('kw-page-titulo');
+      if (!encabezado.querySelector('.kw-page-acciones')) {
+        const acciones = document.createElement('div');
+        acciones.className = 'kw-page-acciones';
+        encabezado.appendChild(acciones);
+      }
+    }
+    iniciar();
+  }
   window.kwPaginaUniversal = Object.freeze({ iniciar: iniciar });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',iniciar,{once:true});
-  else iniciar();
+  function preparar() { adaptar(); iniciar(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',preparar,{once:true});
+  else preparar();
 })();

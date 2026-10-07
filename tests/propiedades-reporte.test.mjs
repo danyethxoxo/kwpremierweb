@@ -20,6 +20,7 @@ test('reporte cubre cambios desde el último corte, incluidos los anteriores a l
  const m=preparar({periodo_hasta:'2026-10-03T15:01:00Z',enviado_at:'2026-10-03T15:02:00Z'}),r=await m.scope.prepararReporte(m.admin);
  assert.equal(m.filtros[0][2],'2026-10-03T15:01:00Z');assert.equal(m.filtros[1][2],r.periodoHasta);
  assert.equal(r.nuevas.length,1);assert.equal(r.desactivadas.length,1);assert.equal(r.reactivadas.length,1);assert.equal(r.modificadas.length,1);assert.equal(r.inventarioAnterior,7400);
+ assert.equal(r.historial.length,5);assert.equal(r.historial.filter(item=>item.propiedad_id==='editada').length,2);
 });
 test('reportes históricos usan fecha de envío; primer reporte cubre 24 horas',async()=>{
  const antiguo=preparar({enviado_at:'2026-10-03T15:02:00Z'});const r=await antiguo.scope.prepararReporte(antiguo.admin);assert.equal(r.periodoDesde,'2026-10-03T15:02:00Z');
