@@ -648,6 +648,13 @@
   tr { break-inside:avoid; }
   .r-seccion { break-after:avoid; }
 </style><link rel="stylesheet" href="/assets/css/kw-guardar-exito.css?v=20261007a">
+<style>
+  /* El pie pertenece a la hoja y se mantiene cerca de su borde inferior. */
+  .page { position:relative; padding-bottom:64px; }
+  .r-page-footer { position:absolute; bottom:24px; left:48px; right:48px; display:grid; grid-template-columns:1fr 1fr 1fr; align-items:center; font-family:Arial,sans-serif; font-size:8pt; line-height:1.2; color:#555; }
+  .r-page-footer span:nth-child(2) { text-align:center; }
+  .r-page-footer span:last-child { text-align:right; }
+</style>
 </head>
 <body class="doc-borrador">
 
@@ -882,7 +889,7 @@ function updatePreview() {
   document.getElementById('referido-preview').innerHTML = '<div class="r-logo"><img src="data:image/png;base64,' + LOGO_B64 + '" alt="KW Premier"></div><div class="r-titulo">ACUERDO DE REFERIDO</div>' +
     sections.map((s,i) => '<div class="r-seccion">SECCIÓN ' + s.title.toUpperCase() + '</div><table class="r-tabla">' + (i === 0 ? '<tr><td><strong>MARKET CENTER QUE RECIBE</strong></td><td><strong>MARKET CENTER QUE ENVÍA</strong></td></tr>' : '') + s.rows.map(r => '<tr>' + cell(r[0],r[1]) + cell(r[2],r[3]) + '</tr>').join('') + '</table>').join('') +
     '<div class="r-comision">ACEPTO ESTE REFERIDO Y, CUANDO LA OPERACIÓN SE CONCRETE, ACEPTO PAGAR 25% DE MI COMISIÓN AL ASESOR DE LA OFICINA QUE REFIRIÓ AL VENDEDOR O COMPRADOR SEGÚN SEA EL CASO, OBLIGÁNDOME A ADJUNTAR LOS DETALLES DEL CIERRE DE LA OPERACIÓN CON EL PAGO.</div>' +
-    '<div class="r-firmas"><div class="r-firmas-grid">' + firma('asesor-recibe','Asesor del Market Center que recibe','fecha-firma-recibe') + firma('asesor-envia','Asesor del Market Center que refiere','fecha-firma-envia') + firma('tl-recibe','Team Leader del Market Center que recibe') + firma('tl-envia','Team Leader del Market Center que refiere') + firma('mca-recibe','MCA del Market Center que recibe') + firma('mca-envia','MCA del Market Center que refiere') + '</div></div><div style="margin-top:10px;text-align:right;font-size:7pt;">' + (folioActual ? folioRevisionActual() : '') + '</div>';
+    '<div class="r-firmas"><div class="r-firmas-grid">' + firma('asesor-recibe','Asesor del Market Center que recibe','fecha-firma-recibe') + firma('asesor-envia','Asesor del Market Center que refiere','fecha-firma-envia') + firma('tl-recibe','Team Leader del Market Center que recibe') + firma('tl-envia','Team Leader del Market Center que refiere') + firma('mca-recibe','MCA del Market Center que recibe') + firma('mca-envia','MCA del Market Center que refiere') + '</div></div><div class="r-page-footer"><span>' + (folioActual ? folioRevisionActual() : 'Folio: __________') + '</span><span>Página 1 de 1</span><span>Fecha: ' + new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric' }) + '</span></div>';
   fitPreviewMobile();
 }
 
@@ -896,10 +903,22 @@ function prepararPaginasReferido(doc) {
   const limite = 920;
   const pagina = doc.createElement('div');
   pagina.className = 'print-page';
-  pagina.style.cssText = 'display:flow-root;width:100%;';
-  while (doc.body.firstChild) pagina.appendChild(doc.body.firstChild);
+  pagina.style.cssText = 'position:relative;width:100%;height:973px;';
+  const pie = doc.body.querySelector('.r-page-footer');
+  if (pie) {
+    pie.remove();
+    pie.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;font-family:Arial,sans-serif;font-size:8pt;line-height:1.2;color:#555;';
+    pie.children[1].style.textAlign = 'center';
+    pie.children[2].style.textAlign = 'right';
+  }
+  const contenido = doc.createElement('div');
+  contenido.className = 'r-print-content';
+  contenido.style.cssText = 'display:flow-root;width:100%;';
+  while (doc.body.firstChild) contenido.appendChild(doc.body.firstChild);
+  pagina.appendChild(contenido);
+  if (pie) pagina.appendChild(pie);
   doc.body.appendChild(pagina);
-  const elementos = Array.from(pagina.querySelectorAll('*'));
+  const elementos = Array.from(contenido.querySelectorAll('*'));
   const propiedades = ['fontSize','lineHeight','paddingTop','paddingBottom',
     'paddingLeft','paddingRight','marginTop','marginBottom','rowGap','minHeight'];
   // Capturar antes de modificar para que la herencia no reduzca dos veces el texto.
@@ -914,14 +933,14 @@ function prepararPaginasReferido(doc) {
   });
   let escala = 1;
   for (let intento = 0; intento < 12; intento++) {
-    const alto = pagina.getBoundingClientRect().height;
+    const alto = contenido.getBoundingClientRect().height;
     if (alto <= limite) break;
     escala *= Math.min(.97, limite / alto);
     medidas.forEach(({el, valores}) => {
       Object.entries(valores).forEach(([p, valor]) => { el.style[p] = (valor * escala) + 'px'; });
     });
   }
-  if (pagina.getBoundingClientRect().height > limite) {
+  if (contenido.getBoundingClientRect().height > limite) {
     throw new Error('No se pudo ajustar la información a una sola página.');
   }
 }
