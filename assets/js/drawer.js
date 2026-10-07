@@ -114,7 +114,6 @@
     { label: 'Cédula de Registro de Cliente', href: `${BASE}/documentos/acuerdos/cedularegistro.html`, cat: 'Acuerdos', alias: 'registro cliente' },
     { label: 'Aviso de Privacidad', href: `${BASE}/documentos/acuerdos/avisodeprivacidad.html`, cat: 'Acuerdos', alias: 'privacidad' },
     { label: 'Acuerdo de Referido', href: `${BASE}/documentos/acuerdos/acuerdoreferido.html`, cat: 'Acuerdos', alias: 'referidos market center vendedor comprador' },
-    { label: 'Formato de Referido', href: `${BASE}/documentos/acuerdos/referido.html`, cat: 'Acuerdos', alias: 'referido' },
 
     { label: 'Acuerdo de Renta', href: `${BASE}/documentos/contratos/renta.html`, cat: 'Contratos', alias: 'renta arrendamiento contrato' },
     { label: 'Contrato de Compraventa PROFECO', href: `${BASE}/documentos/contratos/profeco.html`, cat: 'Contratos', alias: 'profeco compraventa venta residencial' },
