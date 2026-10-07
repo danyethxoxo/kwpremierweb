@@ -2062,6 +2062,8 @@
   var verArchivo = false;
   var borrador = null;
   var contratosDisponibles = [];
+  var contratosCargando = true;
+  var contratosError = false;
   var contratoSeleccionado = null;
 
   var ESTADOS = {
@@ -2297,6 +2299,8 @@
 
   async function cargarContratosOrigen() {
     var r = await window.kwSupabase.rpc('listar_contratos_para_nuevo_dictamen');
+    contratosCargando = false;
+    contratosError = !!r.error;
     if (r.error) {
       contratosDisponibles = [];
       console.warn('No se pudieron cargar contratos para el nuevo dictamen:', r.error.message);
@@ -2332,6 +2336,14 @@
     panel.hidden = !asesor || !!borrador.id;
     if (!asesor || borrador.id) {
       caja.innerHTML = '';
+      return;
+    }
+    if (contratosCargando) {
+      caja.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando contratos"></div>';
+      return;
+    }
+    if (contratosError) {
+      caja.innerHTML = '<div class="dic-contrato-ayuda">No se pudieron consultar los contratos. Puedes continuar capturando el dictamen o recargar para reintentar.</div>';
       return;
     }
     var busca = $('e-contrato-buscar').value.trim().toLowerCase();
@@ -2484,51 +2496,31 @@
   // ── Traer los datos ─────────────────────────────────────────
 
   async function cargar() {
-    var r = await window.kwSupabase
-      .from('dictamenes_con_asesor').select('*')
-      .order('created_at', { ascending: false }).limit(500);
-
+    var resultados = await Promise.all([
+      window.kwSupabase.from('dictamenes_con_asesor').select('*').order('created_at', { ascending: false }).limit(500),
+      window.kwSupabase.from('dictamen_puntos').select('*').order('orden').limit(5000),
+      window.kwSupabase.from('dictamen_clientes').select('*').order('orden').limit(5000),
+      window.kwSupabase.from('dictamen_historial_con_quien').select('*').order('created_at', { ascending: false }).limit(5000),
+      window.kwSupabase.from('documentos_guardados').select('id, dictamen_id, tipo_documento, nombre_archivo, folio, revision, estado, datos, updated_at').not('dictamen_id', 'is', null).limit(1000)
+    ]);
+    var r = resultados[0];
     if (r.error) {
       listaCargando = false;
       $('lista').setAttribute('aria-busy', 'false');
-      $('lista').innerHTML = '<div class="kw-vacio">No se pudieron cargar los dictámenes: '
-        + escapar(r.error.message) + '</div>';
+      $('lista').innerHTML = '<div class="kw-vacio">No se pudieron cargar los dictámenes: ' + escapar(r.error.message) + '</div>';
       return;
     }
     dictamenes = r.data || [];
-
-    // Las observaciones de todos, de una sola vez. La regla de acceso de
-    // la base ya devuelve nada más las que a uno le tocan.
-    var p = await window.kwSupabase
-      .from('dictamen_puntos').select('*').order('orden').limit(5000);
-    puntos = p.data || [];
-
-    // Y los clientes, por lo mismo: se ocupan al abrir cualquier
-    // expediente y traerlos uno por uno sería una vuelta a la base por
-    // cada tarjeta que se abre.
-    var cl = await window.kwSupabase
-      .from('dictamen_clientes').select('*').order('orden').limit(5000);
-    clientes = cl.data || [];
-
-    var hi = await window.kwSupabase
-      .from('dictamen_historial_con_quien').select('*')
-      .order('created_at', { ascending: false }).limit(5000);
-    historial = hi.data || [];
-
-    // Los documentos se leen por referencia: así una revisión nueva se
-    // refleja en el expediente sin copiar ni desincronizar información.
-    var de = await window.kwSupabase
-      .from('documentos_guardados')
-      .select('id, dictamen_id, tipo_documento, nombre_archivo, folio, revision, estado, datos, updated_at')
-      .not('dictamen_id', 'is', null)
-      .limit(1000);
-    documentosEnlazados = de.error ? [] : (de.data || []);
-
+    puntos = resultados[1].data || [];
+    clientes = resultados[2].data || [];
+    historial = resultados[3].data || [];
+    documentosEnlazados = resultados[4].error ? [] : (resultados[4].data || []);
     listaCargando = false;
     pintar();
   }
 
   async function cargarCatalogos() {
+    var tiposPendientes = Promise.resolve(window.kwSupabase.from('dictamen_tipos_inmueble').select('id, nombre').order('nombre'));
     // Liderazgo fuerza una conciliación antes de leer. Si la migración aún
     // no se ha aplicado, se conserva el catálogo anterior y la pantalla
     // sigue funcionando mientras se muestra el error en la consola.
@@ -2542,8 +2534,7 @@
     if (a.error) console.error('No se pudo cargar el catálogo de asesores:', a.error.message);
     asesores = a.data || [];
 
-    var t = await window.kwSupabase
-      .from('dictamen_tipos_inmueble').select('id, nombre').order('nombre');
+    var t = await tiposPendientes;
     tipos = t.data || [];
 
     $('e-tipo').innerHTML = '<option value="">Sin especificar</option>' +
@@ -3210,7 +3201,9 @@
     if (!id) document.body.classList.add('cargando-nuevo');
     var destino = new URL(location.href);
     destino.search = id ? '?editar=' + encodeURIComponent(id) : '?nuevo=1';
-    location.href = destino.href;
+    history.pushState(null, '', destino.href);
+    document.querySelector('.back-btn').href = location.pathname;
+    abrirEditor(id);
   }
 
   document.addEventListener('click', function (e) {
@@ -4351,10 +4344,8 @@
 
   function cerrarEditor() {
     borrador = null;
-    if (location.search) {
-      location.replace(location.pathname);
-      return;
-    }
+    if (location.search) history.replaceState(null, '', location.pathname);
+    document.querySelector('.back-btn').href = '../portal.html';
     $('vista-editor').style.display = 'none';
     $('vista-lista').style.display = '';
     document.body.classList.remove('en-editor');
@@ -5325,20 +5316,29 @@
     puedoDictaminar = yo.puede_dictaminar === true || yo.role === 'master' || yo.role === 'admin';
 
     if (puedoDictaminar) $('btn-nuevo').style.display = '';
+    else document.body.classList.remove('cargando-nuevo');
     // Sincronizar es del equipo de liderazgo, no de quien dictamina nada
     // más: el candado de verdad vive en la Edge Function, esto solo
     // esconde el botón para quien de todos modos no podría usarlo.
     if (veTodo) { $('op-sync').hidden = false; $('op-sync-raya').hidden = false; }
 
+    $('btn-nuevo').disabled = true;
+    var cargaLista = cargar();
+    cargarContratosOrigen().then(function () { if (borrador && !borrador.id) pintarContratosOrigen(); });
     await cargarCatalogos();
-    await cargarContratosOrigen();
     if (window.kwUI) window.kwUI.selects(document);
     pintarAsesoresFiltro();
-    await cargar();
     acomodarFiltros();
+    $('btn-nuevo').disabled = false;
+    var rutaInicial = new URLSearchParams(location.search);
+    if (rutaInicial.has('nuevo') && puedoDictaminar) {
+      document.querySelector('.back-btn').href = location.pathname;
+      abrirEditor(null);
+    }
+    await cargaLista;
 
     var ruta = new URLSearchParams(location.search);
-    if (ruta.has('nuevo')) {
+    if (ruta.has('nuevo') && puedoDictaminar && !borrador) {
       document.querySelector('.back-btn').href = location.pathname;
       abrirEditor(null);
     } else if (ruta.get('editar')) {
@@ -5346,6 +5346,19 @@
       abrirEditor(ruta.get('editar'));
     }
   }
+
+  document.querySelector('.back-btn').addEventListener('click', function (event) {
+    if (!document.body.classList.contains('en-editor')) return;
+    event.preventDefault();
+    cerrarEditor();
+  });
+  window.addEventListener('popstate', function () {
+    if (!yo) return;
+    var ruta = new URLSearchParams(location.search);
+    if (ruta.has('nuevo') && puedoDictaminar) abrirEditor(null);
+    else if (ruta.get('editar')) abrirEditor(ruta.get('editar'));
+    else cerrarEditor();
+  });
 
   // Al escribir se repinta al momento; el "change" es para el calendario,
   // que pone la fecha sin que se teclee nada.
