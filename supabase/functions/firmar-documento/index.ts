@@ -1235,10 +1235,13 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
           const token = await obtenerToken()
           await borrarDocumento(token, fila.weetrust_document_id)
         } catch (e) {
-          // Si allá sigue vivo, su webhook lo volvería a crear aquí en
-          // cuanto alguien firme. Se avisa para que no parezca que el
-          // borrado no sirvió.
-          avisoWeetrust = (e as Error).message
+          const detalle = (e as Error).message
+          const sinPermiso = /\(403\)|not authori[sz]ed/i.test(detalle)
+          return respond({
+            error: sinPermiso
+              ? 'La cuenta de weetrust conectada a KW Premier no tiene permiso para borrar este documento. Debe eliminarlo la cuenta que lo creó. El documento se conserva en KW Premier.'
+              : 'weetrust no pudo borrar el documento. Inténtalo de nuevo más tarde. El documento se conserva en KW Premier.',
+          }, sinPermiso ? 403 : 502)
         }
       }
 
