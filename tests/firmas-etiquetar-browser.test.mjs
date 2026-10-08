@@ -9,6 +9,28 @@ function funcion(nombre) {
   return html.slice(start, html.indexOf('\n  }', start) + 4);
 }
 
+test('menú de tres puntos permanece dentro de los bordes y permite recorrer las opciones', async () => {
+  const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
+  try {
+    const page = await browser.newPage();
+    for (const [width, height] of [[1280, 800], [390, 800], [320, 300]]) {
+      await page.setViewportSize({ width, height });
+      for (const bottom of [true, false]) {
+        await page.setContent(`<style>.env-menu{position:fixed;padding:6px;border:1px solid #ddd;overflow-y:auto;box-sizing:border-box}.env-menu button{display:block;height:40px;width:100%}</style><button id="anchor" style="position:fixed;right:8px;${bottom ? 'bottom' : 'top'}:8px;height:30px">Opciones</button>`);
+        await page.addScriptTag({ content: `var flotante=null,botonAbierto=null,tagAbierta=null,clicked=false;
+          ${['cerrarFlotante', 'colocar', 'abrirFlotante'].map(funcion).join('\n')}
+          document.getElementById('anchor').onclick=()=>{const menu=abrirFlotante(document.getElementById('anchor'),220,Array.from({length:20},(_,i)=>'<button data-row="'+i+'">Acción '+i+'</button>').join(''));menu.querySelector('[data-row="19"]').onclick=()=>clicked=true;};` });
+        await page.locator('#anchor').click();
+        const menu = await page.locator('.env-menu').boundingBox();
+        assert.ok(menu.x >= 8 && menu.x + menu.width <= width - 8);
+        assert.ok(menu.y >= 8 && menu.y + menu.height <= height - 8);
+        await page.locator('[data-row="19"]').click();
+        assert.ok(await page.evaluate(() => clicked));
+      }
+    }
+  } finally { await browser.close(); }
+});
+
 test('etiquetado múltiple abre dentro de la ventana y conserva las otras etiquetas', async () => {
   const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
   try {
