@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { secureServe } from '../_shared/security.ts'
 // Edge Function: notificar-email
@@ -131,12 +132,12 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
         'Content-Type': 'application/json; charset=utf-8',
         ...(notificacionId ? {'Idempotency-Key':'notificacion/'+notificacionId} : {}),
       },
-      body: JSON.stringify({
+      body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
         to: [perfil.email],
         subject: titulo,
         html,
-      }),
+      })),
     })
 
     if (!resendResp.ok) {

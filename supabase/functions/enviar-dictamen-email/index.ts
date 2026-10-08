@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { secureServe } from '../_shared/security.ts'
 // Envía al asesor el PDF del dictamen que acaba de finalizarse.
@@ -25,7 +26,7 @@ function cors(_req: Request) { return {} }
 function response(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...cors(req), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { ...cors(req), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   })
 }
 
@@ -130,7 +131,7 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
     const envio = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
+      body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
         to: destinatarios,
         subject: asunto,
@@ -139,7 +140,7 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
           { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
           { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },
         ],
-      }),
+      })),
     })
     if (!envio.ok) {
       console.error('Resend rechazó el dictamen', envio.status, await envio.text())

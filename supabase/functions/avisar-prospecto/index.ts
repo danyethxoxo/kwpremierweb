@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { secureServe } from '../_shared/security.ts'
 // Edge Function: avisar-prospecto
 //
@@ -161,7 +162,7 @@ secureServe({ name: 'avisar-prospecto', auth: 'service', ipLimit: 60 }, async (r
         'Authorization': 'Bearer ' + RESEND_API_KEY,
         'Content-Type': 'application/json; charset=utf-8',
       },
-      body: JSON.stringify({
+      body: JSON.stringify(prepararCorreoUtf8({
         from: CORREO_REMITENTE,
         to: [asesor.email],
         ...(CORREO_COPIA ? { bcc: [CORREO_COPIA] } : {}),
@@ -169,7 +170,7 @@ secureServe({ name: 'avisar-prospecto', auth: 'service', ipLimit: 60 }, async (r
         subject: 'Nuevo prospecto: ' + String(p.nombre ?? ''),
         html,
         text: texto,
-      }),
+      })),
     })
 
     if (!envio.ok) {

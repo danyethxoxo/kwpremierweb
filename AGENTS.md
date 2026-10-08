@@ -12,3 +12,5 @@ Para cada nuevo apartado, listado, formulario o configuración, usar **Página U
 - La página de referencia no persiste datos: integrar y probar el guardado real antes de presentar un módulo como funcional.
 - No migrar pantallas existentes que no formen parte del trabajo solicitado.
 - No usar el carácter de guion largo en código, comentarios ni contenido.
+- Guardar código, plantillas y SQL en UTF-8. Leer y enviar estos archivos con codificación UTF-8 explícita al desplegar.
+- Los nuevos correos deben usar `supabase/functions/_shared/mailer.ts` (`plantillaCorreo` y `enviarCorreo`). Si un envío necesita llamar a Resend directamente, envolver su payload con `prepararCorreoUtf8` de `_shared/email-utf8.ts`. No agregar la leyenda "Te llega porque tienes cuenta en el portal de KW Premier."

@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { secureServe } from '../_shared/security.ts'
 // Edge Function: notificar-incidencia-email
@@ -101,12 +102,12 @@ secureServe({ name: 'notificar-incidencia-email', userLimit: 10 }, async (req) =
         Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json; charset=utf-8',
       },
-      body: JSON.stringify({
+      body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
         to: destinatarios,
         subject: `Nueva incidencia: ${titulo}`,
         html,
-      }),
+      })),
     })
 
     if (!resendResp.ok) {
