@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {stripTypeScriptTypes} from 'node:module';
 import {readFileSync} from 'node:fs';
+import { prepararCorreoUtf8 } from '../supabase/functions/_shared/email-utf8.ts';
 const record={notificacion_id:'11111111-1111-4111-8111-111111111111',user_id:'asesor',titulo:'Nuevas propiedades',mensaje:'Cliente: 2 coincidencias',url:'/hub/perfil-comprador.html'};
 function preparar(falla=false){
  let handler,updates=[],keys=[],aceptados=new Set();
  const admin={from(tabla){return {select(){return this},eq(){return this},async single(){return{data:tabla==='notificaciones'?{...record,tipo:'comprador_matches'}:{nombre:'Asesor',email:'test@example.com'}}},update(datos){updates.push(datos);return{eq:async()=>({error:null})}}}}};
  let source=readFileSync(new URL('../supabase/functions/notificar-email/index.ts',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import[^\r\n]*\r?\n/gm,'');
  source=stripTypeScriptTypes(source,{mode:'strip'});
- const scope=vm.createContext({Response,console,plantillaCorreo:()=>'<html>Correo de prueba</html>',Deno:{env:{get:()=> 'test'}},createClient:()=>admin,secureServe:(_,h)=>{handler=h},fetch:async(_,req)=>{
+ const scope=vm.createContext({Response,console,prepararCorreoUtf8,plantillaCorreo:()=>'<html>Correo de prueba</html>',Deno:{env:{get:()=> 'test'}},createClient:()=>admin,secureServe:(_,h)=>{handler=h},fetch:async(_,req)=>{
   keys.push(req.headers['Idempotency-Key']);if(falla)return new Response('{}',{status:503});
   aceptados.add(req.headers['Idempotency-Key']);return Response.json({id:'provider-test'});
  }});vm.runInContext(source,scope);

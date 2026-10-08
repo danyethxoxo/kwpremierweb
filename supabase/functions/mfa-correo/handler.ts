@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { clientIp } from '../_shared/security-core.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
@@ -17,7 +18,7 @@ function cors(_req: Request) { return {} }
 function response(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...cors(req), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { ...cors(req), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   })
 }
 
@@ -190,7 +191,7 @@ export async function handleMfa(req: Request): Promise<Response> {
       const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ from: EMAIL_FROM, to: [destination], subject: purpose === 'activar' ? 'Confirma tu correo de seguridad' : 'Código para un dispositivo nuevo', html: plantillaCorreo({ intro: 'Se solicitó una verificación para tu cuenta de KW Premier.', title: 'Tu código de seguridad', content: 'Vence en ' + CODE_MINUTES + ' minutos, funciona una sola vez y fue solicitado desde ' + deviceName(req) + '.', code, note: 'Si no fuiste tú, cambia tu contraseña y avisa a administración.' }) }),
+        body: JSON.stringify(prepararCorreoUtf8({ from: EMAIL_FROM, to: [destination], subject: purpose === 'activar' ? 'Confirma tu correo de seguridad' : 'Código para un dispositivo nuevo', html: plantillaCorreo({ intro: 'Se solicitó una verificación para tu cuenta de KW Premier.', title: 'Tu código de seguridad', content: 'Vence en ' + CODE_MINUTES + ' minutos, funciona una sola vez y fue solicitado desde ' + deviceName(req) + '.', code, note: 'Si no fuiste tú, cambia tu contraseña y avisa a administración.' }) })),
       })
       if (!sent.ok) {
         await admin.from('mfa_correo_codigos').update({ usado: true }).eq('user_id', userId).eq('usado', false)

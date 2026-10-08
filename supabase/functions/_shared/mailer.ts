@@ -1,3 +1,4 @@
+import { prepararCorreoUtf8 } from './email-utf8.ts'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
 
@@ -66,14 +67,14 @@ export async function enviarCorreo(correo: {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json; charset=utf-8',
     },
-    body: JSON.stringify({
+    body: JSON.stringify(prepararCorreoUtf8({
       from: EMAIL_FROM,
       to: [correo.to],
       subject: correo.subject,
       html: correo.html,
       text: correo.text,
       ...(correo.attachments?.length ? { attachments: correo.attachments } : {}),
-    }),
+    })),
   })
   if (!response.ok) {
     console.error('Resend rechazó el correo de KW Premier', response.status)

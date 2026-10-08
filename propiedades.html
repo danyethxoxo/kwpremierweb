@@ -1324,7 +1324,7 @@
       if (tipo && !coincide(p.tipo, tipo)) return false;
       if (mc && !coincide(p.market_center, mc)) return false;
       if (asesor && !coincide(p.asesor_nombre, asesor)) return false;
-      if (estado && !coincide(p.estado, estado)) return false;
+      if (estado && !coincide(estadoCanonico(p.estado), estadoCanonico(estado))) return false;
       if (municipio && !coincide(p.municipio, municipio)) return false;
       if (colonia && !coincide(p.colonia, colonia)) return false;
       if (minPrecio && Number(p.precio || 0) < minPrecio) return false;
@@ -1498,7 +1498,7 @@
     var vistos = {};
     todas.forEach(function (p) {
       if (predicado && !predicado(p)) return;
-      var v = p[campo];
+      var v = campo === 'estado' ? estadoCanonico(p[campo]) : p[campo];
       if (v !== null && v !== undefined && String(v).trim() !== '') vistos[v] = true;
     });
     return Object.keys(vistos);
@@ -1518,10 +1518,10 @@
     var municipio = val('f-municipio');
     llenarSelect('f-estado', distintos('estado'), 'Todas');
     llenarSelect('f-municipio', distintos('municipio', function (p) {
-      return coincide(p.estado, estado);
+      return coincide(estadoCanonico(p.estado), estadoCanonico(estado));
     }), 'Todas');
     llenarSelect('f-colonia', distintos('colonia', function (p) {
-      return coincide(p.estado, estado) && coincide(p.municipio, municipio);
+      return coincide(estadoCanonico(p.estado), estadoCanonico(estado)) && coincide(p.municipio, municipio);
     }), 'Todas');
   }
 
@@ -1694,6 +1694,14 @@
     'f-colonia': 'colonia'
   };
 
+  function estadoCanonico(valor) {
+    var texto = normalizarTexto(valor).trim();
+    if (texto === 'cdmx' || texto === 'ciudad de mexico') {
+      return 'Ciudad de México';
+    }
+    return valor;
+  }
+
   function escaparLikeServidor(valor) {
     return String(valor == null ? '' : valor)
       .trim()
@@ -1803,11 +1811,11 @@
       if (!fila[campo]) return;
       if ((id === 'f-estado' || id === 'f-colonia') && normalizarTexto(fila.estado).trim() === 'antioquia') return;
       if (id === 'f-colonia') {
-        var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: fila.estado || '' };
+        var lugar = { colonia: fila.colonia, municipio: fila.municipio || '', estado: estadoCanonico(fila.estado) || '' };
         colonias.set('ubic:' + JSON.stringify(lugar), lugar);
       } else if (Array.isArray(fila[campo])) {
         fila[campo].forEach(function (tipo) { if (tipo) valores.add(String(tipo)); });
-      } else valores.add(String(fila[campo]));
+      } else valores.add(String(id === 'f-estado' ? estadoCanonico(fila[campo]) : fila[campo]));
     });
 
     if (select && version === catalogoServidorVersion && revision === versionesCatalogoRelacionado[id]) {
@@ -1855,7 +1863,7 @@
     if (respuesta.error) throw respuesta.error;
     if (revision !== versionUbicacion) return;
     (respuesta.data || []).forEach(function (fila) {
-      if (fila.estado) estados.add(fila.estado);
+      if (fila.estado) estados.add(estadoCanonico(fila.estado));
     });
     if (estados.size === 1 && revision === versionUbicacion) {
       ponerFiltroRelacionado('f-estado', Array.from(estados)[0]);
