@@ -831,6 +831,15 @@
   /* Corrección particular de un dato: queda debajo del valor que copió
      Gabriela del contrato y se distingue en rojo de la captura original. */
   .dic-correccion { margin-top: 7px; }
+  .dic-correccion-acciones { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .dic-correccion-quitar {
+    display: none; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px;
+    background: transparent; color: #b02a2a; font-size: 22px; cursor: pointer;
+  }
+  .dic-correccion.abierta .dic-correccion-quitar { display: inline-flex; }
+  .dic-correccion-quitar:hover { background: #fff0f0; }
+  .dic-correccion-quitar:focus-visible { outline: 2px solid #b02a2a; outline-offset: 2px; }
   .dic-correccion-btn {
     border: none; background: none; padding: 2px 0; cursor: pointer;
     color: var(--red); font: 700 12px/1.4 inherit;
@@ -3900,7 +3909,11 @@
       bloque.className = 'dic-correccion';
       bloque.dataset.correccion = llave;
       bloque.innerHTML =
-        '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
+        '<div class="dic-correccion-acciones">' +
+          '<button type="button" class="dic-correccion-btn">+ Corrección</button>' +
+          '<button type="button" class="dic-correccion-quitar" data-correccion-quitar ' +
+            'aria-label="Eliminar corrección" title="Eliminar corrección">&times;</button>' +
+        '</div>' +
         '<div class="dic-correccion-campo">' +
           (esSelect
             ? '<div class="dic-correccion-combo">' +
@@ -3960,6 +3973,18 @@
     if (campoLibre && libre && campoLibre.value !== texto) campoLibre.value = texto;
   }
 
+  function quitarCorreccion(bloque) {
+    if (!borrador || !bloque) return;
+    ponerValorCorreccion(bloque, '', true);
+    delete borrador.correcciones[bloque.dataset.correccion];
+    var texto = bloque.querySelector('[data-correccion-texto]');
+    if (texto) texto.value = '';
+    cerrarCombosCorreccion();
+    bloque.classList.remove('abierta');
+    var boton = bloque.querySelector('.dic-correccion-btn');
+    if (boton) boton.focus();
+  }
+
   function pintarCorrecciones(raiz) {
     (raiz || document).querySelectorAll('[data-correccion]').forEach(function (bloque) {
       var valor = (borrador && borrador.correcciones || {})[bloque.dataset.correccion] || '';
@@ -3984,6 +4009,11 @@
   }
 
   document.addEventListener('click', function (e) {
+    var quitar = e.target.closest('[data-correccion-quitar]');
+    if (quitar) {
+      quitarCorreccion(quitar.closest('[data-correccion]'));
+      return;
+    }
     var botonCorreccion = e.target.closest('.dic-correccion-btn');
     if (botonCorreccion) {
       var bloque = botonCorreccion.closest('[data-correccion]');
