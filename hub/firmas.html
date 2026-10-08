@@ -15,7 +15,7 @@
 <script src="/assets/js/kw-session.js?v=20261007b"></script>
 <script src="/assets/js/auth-guard.js?v=20261001"></script>
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261003h">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261008b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
@@ -4898,6 +4898,15 @@
   // no cabe entero, se desplaza solo por dentro (ya trae su barra).
   function colocar(caja, boton, ancho) {
     const r = boton.getBoundingClientRect();
+    if (boton.closest('.barra-sel')) {
+      // La barra de selección vive al pie de la ventana.
+      caja.style.top = 'auto';
+      caja.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+      caja.style.maxHeight = Math.max(0, r.top - 12) + 'px';
+      caja.style.zIndex = '190';
+      caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
+      return;
+    }
     const top = r.bottom + 4;
     caja.style.top = top + 'px';
     caja.style.maxHeight = Math.max(160, window.innerHeight - top - 8) + 'px';
@@ -5889,7 +5898,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/assets/js/drawer.js?v=20261007c" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261008b" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20260923b"></script>
 
 </body>
