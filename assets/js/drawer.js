@@ -204,7 +204,14 @@
     const q = normalizar(termino).trim();
     if (!q) return [];
     const palabras = q.split(/\s+/);
-    return INDICE_BUSQUEDA.concat(driveItems || [], calendarItems || [])
+    const destinos = new Set(INDICE_BUSQUEDA.map((item) => new URL(item.href, location.origin).pathname));
+    const accesos = NAV_HUB.concat(NAV_PUBLICO).filter((item) => {
+      const ruta = new URL(item.href, location.origin).pathname;
+      if (destinos.has(ruta)) return false;
+      destinos.add(ruta);
+      return true;
+    }).map((item) => ({ ...item, cat: 'Secciones' }));
+    return INDICE_BUSQUEDA.concat(accesos, driveItems || [], calendarItems || [])
       .map((item) => {
         const texto = normalizar(item.label + ' ' + item.cat + ' ' + (item.alias || ''));
         // Todas las palabras escritas tienen que aparecer en algún lado
@@ -298,8 +305,8 @@
       <nav class="drawer-nav">
         ${esPublico ? '' : `
         <div class="drawer-buscar-acceso" id="drawer-buscar">
-          <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en la página">
-            ${ICONS.search}<span>Buscar en la página</span>
+          <button type="button" class="drawer-link drawer-buscar-toggle" id="drawer-buscar-toggle" aria-label="Buscar en el sitio" aria-controls="search-bar" aria-expanded="false">
+            ${ICONS.search}<span>Buscar en el sitio</span>
           </button>
         </div>`}
         ${navHtml}
@@ -364,6 +371,8 @@
   searchBtn.id = 'kw-buscar-toggle';
   searchBtn.className = 'hamburger-btn kw-buscar-btn';
   searchBtn.setAttribute('aria-label', 'Buscar en el sitio');
+  searchBtn.setAttribute('aria-controls', 'search-bar');
+  searchBtn.setAttribute('aria-expanded', 'false');
   searchBtn.innerHTML = ICONS.search;
 
   const header = document.querySelector('header');
@@ -550,44 +559,7 @@
   }
 
   // ── Buscador ──
-  // No abre un panel aparte: la propia cápsula del header se convierte en
-  // el campo. Y si la página YA tiene su buscador (Drive, el ABC Tracker,
-  // la lista de documentos...), esa lupa se vuelve la de esa página: se
-  // esconde el campo propio y lo que se escriba aquí se le pasa tal cual,
-  // para que su filtrado de siempre siga funcionando sin tocarlo.
-  const BUSCADORES_LOCALES = [
-    '#busq',              // Drive, ABC Tracker
-    '#buscador-nombre',   // Alta de asesores
-    '#buscador-input',    // Listas de acuerdos y contratos
-    '#f-buscar',          // Firmas digitales
-    '#bd-buscar',         // Base de asesores
-  ];
-
-  // Se esconde el bloque entero, no nada más el campo: si se quita solo
-  // el <input>, su franja sigue ocupando su renglón y su relleno, y queda
-  // una banda vacía arriba de la tabla.
-  // .kw-campo-filtro va incluido porque en las barras de filtros el
-  // campo viene con su etiqueta arriba: escondiendo solo el campo, la
-  // etiqueta se quedaba sola rotulando un hueco.
-  const CAJAS_LOCALES = '.buscador, .lista-buscador, .tabla-buscar-fila, .kw-campo-filtro';
-
-  const campoLocal = document.querySelector(BUSCADORES_LOCALES.join(','));
-  const contenedorLocal = campoLocal
-    ? campoLocal.closest(CAJAS_LOCALES) || campoLocal.parentElement
-    : null;
-
-  // Una pantalla puede pedir quedarse con su buscador a la vista poniendo
-  // data-kw-buscador-propio en el bloque. La lupa del header le sigue
-  // pasando lo que se escriba, nada más no se lo esconde. Hace falta
-  // cuando en ese bloque vive algo más que el campo: en Dictaminación de
-  // Expedientes lo acompaña el botón de limpiar filtros, y esconder el
-  // bloque entero se llevaba también ese botón.
-  const buscadorPropio = contenedorLocal
-    && contenedorLocal.hasAttribute('data-kw-buscador-propio');
-  if (contenedorLocal && !buscadorPropio) {
-    contenedorLocal.classList.add('kw-buscador-local-oculto');
-  }
-
+  // La busqueda universal conserva los filtros propios de cada pagina.
   const capsula = header
     ? (header.querySelector('.kw-header-capsula') || header)
     : null;
@@ -599,9 +571,9 @@
   buscarInput.id = 'search-bar';
   buscarInput.className = 'kw-buscar-campo-inline';
   buscarInput.autocomplete = 'off';
-  buscarInput.placeholder = campoLocal
-    ? (campoLocal.placeholder || 'Buscar en esta página…')
-    : (esPublico ? 'Buscar en el sitio…' : 'Buscar en el sitio, Drive y calendario…');
+  buscarInput.placeholder = 'Buscar en el sitio…';
+  buscarInput.setAttribute('aria-label', 'Buscar en el sitio');
+  buscarInput.setAttribute('aria-controls', 'kw-buscar-resultados');
 
   const buscarCerrar = document.createElement('button');
   buscarCerrar.type = 'button';
@@ -623,10 +595,22 @@
 
   function colocarBuscador() {
     const destino = buscadorVaEnRiel() ? areaBuscarRiel : capsula;
-    if (!destino) return;
+    if (!destino || buscarInput.parentElement === destino) return;
+    const abierta = busquedaAbierta();
+    const enfocado = document.activeElement === buscarInput;
     destino.appendChild(buscarInput);
     destino.appendChild(buscarCerrar);
     destino.appendChild(buscarResultados);
+    if (abierta) {
+      if (header) header.classList.toggle('kw-buscando', !buscadorVaEnRiel());
+      if (areaBuscarRiel) {
+        const riel = areaBuscarRiel.closest('.drawer');
+        riel.classList.toggle('buscando', buscadorVaEnRiel());
+        if (buscadorVaEnRiel()) riel.classList.add('open');
+        riel.classList.toggle('busqueda-con-resultados', buscadorVaEnRiel() && Boolean(buscarInput.value.trim()));
+      }
+      if (enfocado) requestAnimationFrame(() => buscarInput.focus());
+    }
   }
   colocarBuscador();
   window.addEventListener('resize', colocarBuscador);
@@ -638,8 +622,10 @@
 
   function abrirBuscar() {
     if (!capsula && !areaBuscarRiel) return;
+    [searchBtn, document.getElementById('drawer-buscar-toggle')].filter(Boolean)
+      .forEach((boton) => boton.setAttribute('aria-expanded', 'true'));
     if (buscadorVaEnRiel() || document.body.classList.contains('en-ficha-asesor')) {
-      buscarInput.placeholder = 'Buscar en la página';
+      buscarInput.placeholder = 'Buscar en el sitio';
     }
     if (searchCheck) searchCheck.checked = true;
     if (buscadorVaEnRiel()) {
@@ -661,24 +647,26 @@
   }
   function cerrarBuscar() {
     if (!capsula && !areaBuscarRiel) return;
+    [searchBtn, document.getElementById('drawer-buscar-toggle')].filter(Boolean)
+      .forEach((boton) => boton.setAttribute('aria-expanded', 'false'));
     if (searchCheck) searchCheck.checked = false;
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
       riel.classList.add('busqueda-cerrando');
       window.setTimeout(() => riel.classList.remove('busqueda-cerrando'), 180);
-      if (enRiel(riel)) riel.classList.add('sin-hover');
-      riel.classList.remove('buscando', 'busqueda-con-resultados', 'open');
+      riel.classList.remove('buscando', 'busqueda-con-resultados');
+      if (esRielFijo(riel)) {
+        riel.classList.remove('sin-hover');
+        riel.classList.add('open');
+      } else {
+        if (enRiel(riel)) riel.classList.add('sin-hover');
+        riel.classList.remove('open');
+      }
     }
     buscarInput.blur();
     buscarResultados.hidden = true;
     buscarInput.value = '';
-    // Al cerrar se limpia también el filtro de la página, para no dejarla
-    // filtrada por algo que ya no se ve escrito en ningún lado.
-    if (campoLocal && campoLocal.value) {
-      campoLocal.value = '';
-      campoLocal.dispatchEvent(new Event('input', { bubbles: true }));
-    }
   }
 
   function pintarResultados(termino) {
@@ -713,18 +701,7 @@
   }
 
   function volverAlAccesoBuscar() {
-    buscarInput.value = '';
-    pintarResultados('');
-    buscarInput.blur();
-    if (searchCheck) searchCheck.checked = false;
-    if (header) header.classList.remove('kw-buscando');
-    if (areaBuscarRiel) {
-      const riel = areaBuscarRiel.closest('.drawer');
-      riel.classList.add('busqueda-cerrando');
-      window.setTimeout(() => riel.classList.remove('busqueda-cerrando'), 180);
-      riel.classList.remove('buscando', 'busqueda-con-resultados', 'sin-hover');
-      riel.classList.add('open');
-    }
+    cerrarBuscar();
   }
 
   searchBtn.addEventListener('click', () => {
@@ -740,7 +717,7 @@
   });
   buscarInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { cerrarBuscar(); return; }
-    if (e.key === 'Enter' && !campoLocal) {
+    if (e.key === 'Enter') {
       const primero = buscarResultados.querySelector('.kw-buscar-item');
       if (primero) location.href = primero.getAttribute('href');
     }
