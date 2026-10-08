@@ -4887,30 +4887,30 @@
     tagAbierta = null;
   }
 
-  // Siempre pegado al botón, hacia abajo. Antes "volteaba" hacia arriba
-  // cuando no cabía abajo, pero eso es justo lo que lo hacía salir en un
-  // lugar distinto según el renglón: a veces arriba, a veces abajo, a
-  // veces recortado contra el tope de la pantalla tapando el
-  // encabezado. Así siempre es el mismo comportamiento.
-  //
-  // Para que nunca se salga por abajo, su propio alto se limita al
-  // hueco real que quede hasta el fondo de la pantalla: si el contenido
-  // no cabe entero, se desplaza solo por dentro (ya trae su barra).
+  // El menu elige el lado con espacio y se desplaza por dentro si hace falta.
   function colocar(caja, boton, ancho) {
     const r = boton.getBoundingClientRect();
-    if (boton.closest('.barra-sel')) {
-      // La barra de selección vive al pie de la ventana.
-      caja.style.top = 'auto';
-      caja.style.bottom = (window.innerHeight - r.top + 4) + 'px';
-      caja.style.maxHeight = Math.max(0, r.top - 12) + 'px';
-      caja.style.zIndex = '190';
-      caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
-      return;
-    }
-    const top = r.bottom + 4;
-    caja.style.top = top + 'px';
-    caja.style.maxHeight = Math.max(160, window.innerHeight - top - 8) + 'px';
-    caja.style.left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) + 'px';
+    const viewport = window.visualViewport;
+    const inicioX = viewport ? viewport.offsetLeft : 0;
+    const inicioY = viewport ? viewport.offsetTop : 0;
+    const finY = inicioY + (viewport ? viewport.height : window.innerHeight);
+    const anchoVisible = viewport ? viewport.width : window.innerWidth;
+    const margen = 8, separacion = 4;
+    const anchoMenu = Math.min(ancho, Math.max(0, anchoVisible - margen * 2));
+    caja.style.width = anchoMenu + 'px';
+    caja.style.maxHeight = 'none';
+    const alto = Math.min(caja.scrollHeight + 2, 380);
+    const abajo = Math.max(0, finY - margen - r.bottom - separacion);
+    const arriba = Math.max(0, r.top - separacion - inicioY - margen);
+    const abrirArriba = boton.closest('.barra-sel') || (abajo < alto && arriba > abajo);
+    const espacio = abrirArriba ? arriba : abajo;
+    caja.style.maxHeight = Math.min(380, espacio) + 'px';
+    caja.style.bottom = 'auto';
+    caja.style.zIndex = '190';
+    const altoVisible = caja.getBoundingClientRect().height;
+    const top = abrirArriba ? r.top - separacion - altoVisible : r.bottom + separacion;
+    caja.style.top = Math.max(inicioY + margen, Math.min(top, finY - margen - altoVisible)) + 'px';
+    caja.style.left = Math.max(inicioX + margen, Math.min(r.right - anchoMenu, inicioX + anchoVisible - anchoMenu - margen)) + 'px';
   }
 
   function abrirFlotante(boton, ancho, html) {
@@ -4921,6 +4921,7 @@
     botonAbierto = boton;
     const caja = document.createElement('div');
     caja.className = 'env-menu';
+    caja.dataset.anchoPreferido = ancho;
     caja.style.width = ancho + 'px';
     caja.innerHTML = html;
     document.body.appendChild(caja);
@@ -4941,9 +4942,20 @@
   window.addEventListener('scroll', (e) => {
     if (flotante && e.target instanceof Node && flotante.contains(e.target)) return;
     if (flotante && botonAbierto && botonAbierto.isConnected) {
-      colocar(flotante, botonAbierto, parseFloat(flotante.style.width));
+      colocar(flotante, botonAbierto, Number(flotante.dataset.anchoPreferido));
     }
   }, true);
+
+  function recolocarFlotante() {
+    if (flotante && botonAbierto && botonAbierto.isConnected) {
+      colocar(flotante, botonAbierto, Number(flotante.dataset.anchoPreferido));
+    }
+  }
+  window.addEventListener('resize', recolocarFlotante);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', recolocarFlotante);
+    window.visualViewport.addEventListener('scroll', recolocarFlotante);
+  }
 
   // ── Tres puntos: acciones sobre el envío ──
   function abrirMenu(boton, i) {
