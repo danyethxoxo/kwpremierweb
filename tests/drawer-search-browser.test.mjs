@@ -89,15 +89,19 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
         assert.ok(style.width >= width - 16 && style.width <= width, route);
         assert.equal(style.radius, '0px', route);
         assert.equal(style.background, 'rgb(255, 255, 255)', route);
-        await page.evaluate(() => {
+        const openedAfterSwipe = await page.evaluate(() => {
+          const opened = [];
           for (const direction of [1, -1]) {
             const target = document.body;
             const touch = x => new Touch({ identifier: 1, target, clientX: x, clientY: 300 });
             target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [touch(195)] }));
             target.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [touch(195 + direction * 170)] }));
             target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] }));
+            opened.push(document.querySelectorAll('.drawer.open').length);
           }
+          return opened;
         });
+        assert.deepEqual(openedAfterSwipe, [0, 0], route + ': both swipe directions');
         assert.equal(await page.locator('.drawer.open').count(), 0, route + ': swipe');
         await page.locator('#kw-drawer-toggle').click();
         assert.equal(await page.locator('#drawer.open').count(), 1, route + ': menu button');
