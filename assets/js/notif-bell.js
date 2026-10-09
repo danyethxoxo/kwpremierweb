@@ -144,7 +144,7 @@
       render();
       window.kwSupabase.from('notificaciones').update({ leido: true }).eq('id', id).then(function () {});
     }
-    const destino = window.kwSecurity.safeUrl(url, true);
+    const destino = window.kwSecurity.notificationUrl(url, n && n.tipo);
     if (url && destino) location.href = destino;
   }
 

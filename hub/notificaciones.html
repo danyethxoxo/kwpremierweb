@@ -122,7 +122,8 @@
     Array.from(cont.querySelectorAll('.notif-item')).forEach(function (btn) {
       btn.addEventListener('click', function () {
         const url = btn.dataset.url;
-        const destino = window.kwSecurity.safeUrl(url, true);
+        const n = notificaciones.find(function (item) { return item.id === btn.dataset.id; });
+        const destino = window.kwSecurity.notificationUrl(url, n && n.tipo);
         if (url && destino) location.href = destino;
       });
     });

@@ -30,6 +30,14 @@
         return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
       } catch (e) { return ''; }
     },
+    notificationUrl: function (value, tipo) {
+      const seguro = window.kwSecurity.safeUrl(value, true);
+      if (!seguro) return '';
+      const url = new URL(seguro);
+      if (tipo === 'resena') return location.origin + '/hub/resenas.html';
+      if (url.pathname.startsWith('/kwpremierweb/')) url.pathname = url.pathname.slice('/kwpremierweb'.length);
+      return url.href;
+    },
     validPassword: function (value) {
       return typeof value === 'string' && value.length >= 12 &&
         new TextEncoder().encode(value).length <= 72 && !/[\x00-\x1f\x7f]/.test(value);
