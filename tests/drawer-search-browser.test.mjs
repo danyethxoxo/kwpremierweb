@@ -104,7 +104,11 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
         assert.deepEqual(openedAfterSwipe, [0, 0], route + ': both swipe directions');
         assert.equal(await page.locator('.drawer.open').count(), 0, route + ': swipe');
         await page.locator('#kw-drawer-toggle').click();
-        assert.equal(await page.locator('#drawer.open').count(), 1, route + ': menu button');
+        if (await page.locator('[data-kw-lateral-disparador="#kw-drawer-toggle"]').count()) {
+          assert.equal(await page.locator('.kw-lateral-abierta').count(), 1, route + ': filters button');
+        } else {
+          assert.equal(await page.locator('#drawer.open').count(), 1, route + ': menu button');
+        }
         await page.keyboard.press('Escape');
         if (['/hub/admin.html', '/hub/firmas.html', '/hub/resenas.html'].includes(route)) {
           fs.mkdirSync(path.join(root, 'artifacts/mobile'), { recursive: true });
