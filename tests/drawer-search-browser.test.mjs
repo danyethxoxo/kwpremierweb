@@ -75,7 +75,41 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
         assert.ok(await page.locator('#drawer.open').count(), route);
         assert.ok(await page.locator('#drawer-buscar-toggle span').isVisible(), route);
       }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.keyboard.press('Escape');
+      const header = page.locator('body > header.kw-header');
+      if (await header.isVisible()) {
+        const style = await header.evaluate(el => {
+          const css = getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          return { left: rect.left, width: rect.width, radius: css.borderRadius, background: css.backgroundColor };
+        });
+        const width = await page.evaluate(() => document.documentElement.clientWidth);
+        assert.equal(style.left, 0, route);
+        assert.ok(style.width >= width - 16 && style.width <= width, route);
+        assert.equal(style.radius, '0px', route);
+        assert.equal(style.background, 'rgb(255, 255, 255)', route);
+        await page.evaluate(() => {
+          for (const direction of [1, -1]) {
+            const target = document.body;
+            const touch = x => new Touch({ identifier: 1, target, clientX: x, clientY: 300 });
+            target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [touch(195)] }));
+            target.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [touch(195 + direction * 170)] }));
+            target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] }));
+          }
+        });
+        assert.equal(await page.locator('.drawer.open').count(), 0, route + ': swipe');
+        await page.locator('#kw-drawer-toggle').click();
+        assert.equal(await page.locator('#drawer.open').count(), 1, route + ': menu button');
+        await page.keyboard.press('Escape');
+        if (['/hub/admin.html', '/hub/firmas.html', '/hub/resenas.html'].includes(route)) {
+          fs.mkdirSync(path.join(root, 'artifacts/mobile'), { recursive: true });
+          await page.locator('#kw-drawer-toggle').blur();
+          await page.screenshot({ path: path.join(root, 'artifacts/mobile', path.basename(file, '.html') + '.png'), animations: 'disabled' });
+        }
+      }
     }
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('http://kw.local/hub/dictamenes.html');
     if (await page.locator('[data-kw-menu-principal]:visible').count()) {
       await page.locator('[data-kw-menu-principal]:visible').first().click();

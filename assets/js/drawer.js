@@ -554,6 +554,7 @@
 
   const atras = header && header.querySelector('.back-btn');
   if (atras) {
+    if (!atras.hasAttribute('aria-label')) atras.setAttribute('aria-label', atras.textContent.trim() || 'Volver');
     const caja = header.querySelector('.kw-header-capsula') || header;
     const envoltorio = atras.parentElement;
     caja.appendChild(atras);
@@ -852,119 +853,7 @@
   if (cerrarDer) cerrarDer.addEventListener('click', cerrar);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrar(); });
 
-  // ── Gestos: el panel sigue al dedo ──────────────────────────────
-  // Arrastrar hacia la derecha trae el menú de la izquierda; hacia la
-  // izquierda, el de accesos. No hace falta arrancar pegado a la
-  // orilla: se puede empezar desde donde sea, y el panel va apareciendo
-  // conforme uno arrastra, en vez de saltar de golpe al pasar un
-  // umbral. Al soltar, se va al lado más cercano.
-  const DESVIO = 12;      // cuánto hay que moverse para decidir si es horizontal
-  const PARA_QUEDARSE = 0.4; // qué tanto hay que abrirlo para que se quede
-
-  let toque = null;
-
-  // Un arrastre horizontal encima de algo que se desplaza de lado (una
-  // tabla ancha, un carrusel) es de ESE elemento, no del menú.
-  function hayScrollLateral(el) {
-    for (let n = el; n && n !== document.body; n = n.parentElement) {
-      if (n.scrollWidth > n.clientWidth + 4) {
-        const o = getComputedStyle(n).overflowX;
-        if (o === 'auto' || o === 'scroll') return true;
-      }
-    }
-    return false;
-  }
-
-  function anchoFuera(panel) {
-    // Lo que mide el panel más el aire que le queda a los lados: es lo
-    // que tiene que recorrer para desaparecer del todo.
-    return panel.el.offsetWidth + 16;
-  }
-
-  function pintarArrastre(panel, abiertoPx) {
-    const fuera = anchoFuera(panel);
-    const avance = Math.max(0, Math.min(1, abiertoPx / fuera));
-    panel.el.style.transition = 'none';
-    panel.el.style.transform = 'translateX(' + (panel.signo * (fuera - abiertoPx)) + 'px)';
-    velo.style.transition = 'none';
-    velo.style.opacity = String(avance);
-  }
-
-  function soltarArrastre(panel, avance, deQuedarse) {
-    panel.el.style.transition = '';
-    panel.el.style.transform = '';
-    velo.style.transition = '';
-    velo.style.opacity = '';
-    if (deQuedarse) abrirPanel(panel);
-    else cerrarPaneles();
-  }
-
-  document.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) { toque = null; return; }
-    const t = e.touches[0];
-    // Dentro del propio panel no se arrastra: ahí se hace scroll de la
-    // lista. Para cerrarlo está el velo, la equis o el gesto de fuera.
-    if (t.target instanceof Element && t.target.closest('.drawer')) { toque = null; return; }
-    if (t.target instanceof Element && hayScrollLateral(t.target)) { toque = null; return; }
-    toque = { x0: t.clientX, y0: t.clientY, panel: null, decidido: false };
-  }, { passive: true });
-
-  // Este va sin `passive` a proposito: en cuanto se decide que el
-  // arrastre es del panel hay que frenar el gesto del navegador, que
-  // con una deslizada horizontal se va para atras en el historial. Solo
-  // se frena una vez decidido, asi que el scroll normal ni se entera.
-  document.addEventListener('touchmove', (e) => {
-    if (!toque || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - toque.x0;
-    const dy = t.clientY - toque.y0;
-
-    if (!toque.decidido) {
-      if (Math.abs(dx) < DESVIO && Math.abs(dy) < DESVIO) return;
-      // Más vertical que horizontal: es scroll, no es lo nuestro.
-      if (Math.abs(dx) <= Math.abs(dy)) { toque = null; return; }
-      const yaAbierto = PANELES.find((p) => p.el.classList.contains('open'));
-      if (yaAbierto) {
-        // Arrastrar hacia donde se guarda ese panel lo cierra.
-        toque.panel = (dx * yaAbierto.signo > 0) ? yaAbierto : null;
-        toque.desde = anchoFuera(yaAbierto);
-      } else {
-        toque.panel = PANELES.find((p) => (dx > 0 ? p.signo === -1 : p.signo === 1)) || null;
-        toque.desde = 0;
-      }
-      if (!toque.panel) { toque = null; return; }
-      toque.decidido = true;
-    }
-
-    if (e.cancelable) e.preventDefault();
-
-    // Cuánto del panel se ve, en pixeles, siguiendo al dedo.
-    const abiertoPx = toque.desde + dx * -toque.panel.signo;
-    pintarArrastre(toque.panel, abiertoPx);
-    toque.ultimo = abiertoPx;
-  }, { passive: false });
-
-  // Al levantar el dedo, el navegador manda además un clic donde uno lo
-  // soltó. Sin frenarlo, cerrar el panel deslizando terminaba picándole
-  // a la tarjeta que quedaba debajo y cambiando de página.
-  let tragarClic = false;
-  document.addEventListener('click', (e) => {
-    if (!tragarClic) return;
-    tragarClic = false;
-    e.preventDefault();
-    e.stopPropagation();
-  }, true);
-
-  document.addEventListener('touchend', () => {
-    if (toque && toque.decidido && toque.panel) {
-      const fuera = anchoFuera(toque.panel);
-      const avance = Math.max(0, Math.min(1, (toque.ultimo || 0) / fuera));
-      soltarArrastre(toque.panel, avance, avance >= PARA_QUEDARSE);
-      tragarClic = true;
-      setTimeout(() => { tragarClic = false; }, 400);
-    }
-    toque = null;
-  }, { passive: true });
+  // Los paneles se abren y cierran mediante sus botones.
 
   // ── Accesos guardados (la barra de la derecha) ─────────────────
   // Viven en Supabase, uno por persona (tabla accesos_rapidos, fase 50).
@@ -1170,90 +1059,6 @@
 
   // La ficha del usuario abre la configuración de cuenta. El micrositio
   // público queda pausado hasta retomar esa experiencia visual.
-
-  // La cápsula del header se esconde al bajar y reaparece al subir,
-  // completa: se va con todo y sus botones dentro. Aquí solo se pone o
-  // se quita la marca; que eso pase únicamente en celular lo decide el
-  // CSS (kw-base.css), que mete la regla en un @media. Se escucha en
-  // fase de captura para cubrir también los contenedores con scroll
-  // interno (por ejemplo la agenda del calendario), no solo la ventana.
-  const kwHeader = document.querySelector('header');
-  if (kwHeader) {
-    // La última posición se guarda POR contenedor, no en una sola
-    // variable compartida: con una sola variable, el scrollTop en reposo
-    // de un contenedor (por ejemplo 0) se comparaba contra el último
-    // scroll de otro completamente distinto (por ejemplo 375, de saltar
-    // a "hoy" en el Calendario), y esa mezcla se leía como "subiste
-    // 375px" - eso es lo que hacía temblar el header: el salto
-    // automático a "hoy" lo escondía, y de inmediato un evento de scroll
-    // de otro contenedor sin relación (o de la propia página
-    // acomodándose mientras el hueco de arriba se encoge) lo mostraba
-    // de vuelta, una y otra vez en unos cuantos cuadros.
-    const posPrevia = new WeakMap();
-    const marcaVentana = {}; // clave compartida: document/window/documentElement/body son la misma posición
-    const reflejarEstadoHeader = (oculto) => {
-      // El listener puede recibir decenas de eventos por frame. Solo toca
-      // el DOM cuando cambia el estado real de la cápsula o de <html>.
-      const yaOculto = kwHeader.classList.contains('kw-header-oculto');
-      const htmlYaMarcado = document.documentElement.classList.contains('kw-header-fuera');
-      if (yaOculto !== oculto) kwHeader.classList.toggle('kw-header-oculto', oculto);
-      if (htmlYaMarcado !== oculto) document.documentElement.classList.toggle('kw-header-fuera', oculto);
-    };
-
-    const actualizarHeaderScroll = (t) => {
-      // Con algo abierto encima (las notificaciones), la barra se queda
-      // quieta: escuchamos en captura, así que hasta el scroll DENTRO de
-      // la lista de avisos llegaba aquí y escondía el header justo
-      // mientras se leía. Quien abre pone la marca; ver notif-bell.js.
-      if (document.documentElement.classList.contains('kw-header-anclado')) {
-        reflejarEstadoHeader(false);
-        return;
-      }
-      // Nada de lo que va ENCIMA de la página mueve el header: el menú
-      // lateral, cualquier modal (por ejemplo la lista de "Comprobar en
-      // Google" del Proceso de Alta), el panel de notificaciones y los
-      // resultados del buscador tienen su propio scroll, y ese scroll no
-      // es el de la página. Sin este freno, bajar cualquiera de esas
-      // listas escondía o traía de vuelta la cápsula que quedó detrás.
-      // Se listan los envoltorios completos, no solo la zona con scroll,
-      // para que valga igual si mañana el scroll cambia de elemento.
-      if (t instanceof Element &&
-          t.closest('.drawer, .modal-overlay, .notif-dropdown, .kw-buscar-resultados-inline')) return;
-      const esVentana = (t === document || t === window || t === document.documentElement || t === document.body);
-      const y = esVentana
-        ? (window.scrollY || document.documentElement.scrollTop || 0)
-        : (t.scrollTop || 0);
-      const clave = esVentana ? marcaVentana : t;
-      const lastY = posPrevia.get(clave) || 0;
-      if (y > lastY + 4 && y > 40) reflejarEstadoHeader(true);
-      else if (y < lastY - 4) reflejarEstadoHeader(false);
-      // reflejarEstadoHeader mantiene la misma marca en <html>. La usa el
-      // Calendario para reservar el espacio correcto cuando el header se va.
-      posPrevia.set(clave, y);
-    };
-
-    const pedirFrame = window.requestAnimationFrame || function (trabajo) {
-      return window.setTimeout(trabajo, 16);
-    };
-    let destinoScrollPendiente = null;
-    let rafScroll = 0;
-    document.addEventListener('scroll', (e) => {
-      const t = e.target;
-      // Filtrar antes de programar el frame evita que el scroll de un panel
-      // abierto reemplace el evento de la página en la cola pendiente.
-      if (t instanceof Element &&
-          t.closest('.drawer, .modal-overlay, .notif-dropdown, .kw-buscar-resultados-inline')) return;
-      destinoScrollPendiente = t;
-      if (!rafScroll) {
-        rafScroll = pedirFrame(() => {
-          rafScroll = 0;
-          const destino = destinoScrollPendiente;
-          destinoScrollPendiente = null;
-          if (destino) actualizarHeaderScroll(destino);
-        });
-      }
-    }, { capture: true, passive: true });
-  }
 
   // El bloque de quien tiene la sesión se llena en cuanto la hay, no al
   // abrir el menú: si se esperara, el nombre aparecería un parpadeo
