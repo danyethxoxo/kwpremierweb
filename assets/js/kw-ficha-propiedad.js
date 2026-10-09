@@ -670,11 +670,6 @@
       var posicion = posicionesDatos[i];
       dibujarDatoFicha(ctx, dato, posicion.x, posicion.y, 205);
     });
-    if (modelo.extras.length) {
-      ctx.fillStyle = COLORES.gris;
-      ctx.font = '500 16px Arial, sans-serif';
-      textoEnvuelto(ctx, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1060, 505, 20, 2, 'center');
-    }
     return canvas;
   }
 
@@ -933,9 +928,6 @@
     pdf.rect(36 * escala, 745 * escala, 590 * escala, 345 * escala, 'S');
     pdfTextoEnvuelto(pdf, 'DIRECCIÓN:', 331, 818, 590, 42, 1, 'center', 42, COLORES.rojo, 'normal', escala);
     pdfTextoEnvuelto(pdf, modelo.direccion.toLocaleUpperCase('es-MX'), 331, 900, 505, 34, 6, 'center', 27, COLORES.gris, 'normal', escala);
-    if (modelo.extras.length) {
-      pdfTextoEnvuelto(pdf, modelo.extras.slice(0, 4).join(' / ').toLocaleUpperCase('es-MX'), 331, 1060, 505, 20, 2, 'center', 16, COLORES.gris, 'normal', escala);
-    }
 
     pdf.setFillColor(COLORES.rojo);
     pdf.rect(40 * escala, 1134 * escala, 590 * escala, 96 * escala, 'F');
