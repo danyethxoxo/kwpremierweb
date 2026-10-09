@@ -32,6 +32,15 @@ test('SDK routes only Data API calls through gateway and preserves body, query, 
   assert.equal(await calls[2][0].text(), options.body);
   assert.equal(calls[2][0].headers.get('Authorization'), 'Bearer test-user');
 });
+
+test('review notifications repair legacy routes without allowing external destinations', () => {
+  const { kwSecurity: s } = browser();
+  assert.equal(s.notificationUrl('/kwpremierweb/hub/admin.html', 'resena'), 'https://www.kwpremieroficial.com/hub/resenas.html');
+  assert.equal(s.notificationUrl('/hub/admin.html', 'resena'), 'https://www.kwpremieroficial.com/hub/resenas.html');
+  assert.equal(s.notificationUrl('/kwpremierweb/hub/admin.html#asesores', 'reclutamiento'), 'https://www.kwpremieroficial.com/hub/admin.html#asesores');
+  assert.equal(s.notificationUrl('https://evil.example/', 'resena'), '');
+  assert.equal(s.notificationUrl('javascript:alert(1)', 'resena'), '');
+});
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((item) => item.name.startsWith('.') || item.name === 'node_modules' ? [] : item.isDirectory() ? walk(join(dir, item.name)) : [join(dir, item.name)]);
 }
