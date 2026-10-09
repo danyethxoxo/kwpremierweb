@@ -167,6 +167,22 @@
     cerrar.setAttribute('aria-label', 'Cerrar filtros');
     cerrar.textContent = '\u00d7';
     lateral.querySelector('.kw-lateral-cabecera').appendChild(cerrar);
+    const switchAccesos = document.getElementById('drawer-hamburguesa');
+    const iconoMenu = switchAccesos.innerHTML;
+    function prepararSwitch() {
+      switchAccesos.classList.toggle('kw-lateral-volver', !escritorio.matches);
+      switchAccesos.innerHTML = escritorio.matches ? iconoMenu : iconoSwitch();
+      switchAccesos.setAttribute('aria-label', escritorio.matches ? 'Men\u00fa' : 'Volver a filtros');
+    }
+    prepararSwitch();
+    escritorio.addEventListener('change', prepararSwitch);
+    switchAccesos.addEventListener('click', evento => {
+      if (escritorio.matches || !document.getElementById('drawer').classList.contains('open')) return;
+      evento.preventDefault();
+      evento.stopImmediatePropagation();
+      document.getElementById('drawer-close').click();
+      abrir.click();
+    }, true);
     let overflowPrevio = '';
     function cerrarPanel(devolverFoco = true) {
       if (!lateral.classList.contains('kw-lateral-abierta')) return;

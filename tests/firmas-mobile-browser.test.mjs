@@ -49,6 +49,12 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
     assert.equal(await page.locator('#f-estado').isVisible(), false, await filters.evaluate(el => JSON.stringify({ class: el.className, visibility: getComputedStyle(el).visibility, display: getComputedStyle(el).display })));
     await trigger.click();
     await page.getByRole('dialog', { name: 'Resumen y filtros de firmas' }).waitFor();
+    await page.locator('#firmas-panel-menu').click();
+    await page.locator('#drawer.open').waitFor();
+    assert.equal(await page.locator('#drawer-close').isVisible(), true);
+    await page.getByRole('button', { name: 'Volver a filtros', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Resumen y filtros de firmas' }).waitFor();
+    assert.equal(await page.locator('#drawer.open').count(), 0);
     assert.ok(await filters.evaluate(el => {
       const width = el.getBoundingClientRect().width;
       return Array.from(document.querySelectorAll('.drawer')).every(drawer => Math.abs(drawer.getBoundingClientRect().width - width) < 1);
