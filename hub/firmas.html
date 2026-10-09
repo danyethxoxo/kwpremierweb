@@ -3037,10 +3037,13 @@
       await cargarEtiquetas();
       pintarOpcionesFiltros();
       await cargarEnvios();
-      if (!r.actualizados && !r.importados) {
+      if (!r.actualizados && !r.importados && !r.sinVerificar) {
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
       } else {
         const avisos = [];
+        if (r.sinVerificar) {
+          avisos.push('weetrust no permitió verificar ' + r.sinVerificar + ' documentos. Se conservaron sus datos y se actualizaron los demás.');
+        }
         if (r.importados) {
           avisos.push(r.importados === 1
             ? 'Se trajo 1 documento que solo existía en weetrust.'
@@ -3088,7 +3091,7 @@
   // trabajo de sobra. Se guarda cuándo fue la última vez (por navegador,
   // no por cuenta) y no se repite antes de que pase una hora; el botón
   // "Actualizar" de arriba lo sigue pudiendo forzar en cualquier momento.
-  const SYNC_CLAVE = 'kw_firmas_ultima_sync_v2';
+  const SYNC_CLAVE = 'kw_firmas_ultima_sync_v3';
   const SYNC_CADA_MS = 60 * 60 * 1000;
 
   function debeSincronizarAuto() {
@@ -5336,7 +5339,7 @@
         '</div>' +
       '</div>' +
       (f.error_mensaje ? '<div class="kw-nota">' + escapar(f.error_mensaje) + '</div>' : '') +
-      '<div class="det-firmantes">' + (quienes || '<div class="env-vacio">Este documento no llegó a tener firmantes.</div>') + '</div>' +
+      '<div class="det-firmantes">' + (quienes || '<div class="env-vacio">No hay firmantes registrados en el sitio. Actualiza el documento para consultar weetrust.</div>') + '</div>' +
       (acciones ? '<div class="det-acciones">' + acciones + '</div>' : '');
 
     // La etiqueta del estatus vive fuera del cuerpo, en el renglón del

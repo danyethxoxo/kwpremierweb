@@ -1340,15 +1340,23 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // El listado puede omitir participantes o quedar incompleto. Revisar
       // el documento individual antes de vaciar personas o darlo por borrado.
       const porRevisar = [...new Set([
-        ...(filas || []).filter((fila) => !porId.has(fila.weetrust_document_id!))
+        ...(filas || []).filter((fila) => !porId.has(fila.weetrust_document_id!) &&
+          !['completado', 'cancelado', 'eliminado'].includes(fila.estado))
           .map((fila) => fila.weetrust_document_id!),
         ...[...porId.entries()].filter(([, doc]) => !Array.isArray(doc.signatory) || !doc.signatory.length)
           .map(([id]) => id),
       ])]
+      const eliminacionConfirmada = new Set<string>()
+      let sinVerificar = 0
       for (let i = 0; i < porRevisar.length; i += 10) {
         await Promise.all(porRevisar.slice(i, i + 10).map(async (id) => {
-          const detalle = await pedirDocumento(token, id)
-          if (detalle) porId.set(id, { ...(porId.get(id) || {}), ...detalle })
+          try {
+            const detalle = await pedirDocumento(token, id)
+            if (detalle) porId.set(id, { ...(porId.get(id) || {}), ...detalle })
+            else eliminacionConfirmada.add(id)
+          } catch {
+            sinVerificar++
+          }
         }))
       }
 
@@ -1360,6 +1368,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       for (const fila of filas || []) {
         const doc = porId.get(fila.weetrust_document_id!)
         if (!doc) {
+          if (!eliminacionConfirmada.has(fila.weetrust_document_id!)) continue
           // Ya no está en la lista de weetrust: alguien lo borró desde su
           // panel. La lista de arriba se trajo completa (si hubiera
           // fallado, ya se habría regresado el error antes de llegar
@@ -1507,6 +1516,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         ok: true,
         revisados: (filas || []).length,
         enWeetrust: porId.size,
+        sinVerificar,
         actualizados,
         eliminadosEnWeetrust,
         importados,

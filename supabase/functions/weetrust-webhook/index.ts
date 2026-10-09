@@ -1,4 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
+import { sincronizarFirmantes } from '../firmar-documento/firmantes-sync.ts'
 // Edge Function: weetrust-webhook
 //
 // Recibe los avisos de weetrust cuando alguien firma un documento o
@@ -337,7 +338,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
     for (const fila of filas) {
       // ── Segunda barrera, la de verdad: preguntarle a weetrust ──
       const res = await fetch(
-        `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(fila.weetrust_document_id!)}`,
+        `${WEETRUST_URL}/documents/${encodeURIComponent(fila.weetrust_document_id!)}`,
         { headers: { 'user-id': WEETRUST_USER_ID, token } },
       )
       const json = await res.json().catch(() => null)
@@ -354,22 +355,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
       const suyos = Array.isArray(doc.signatory) ? doc.signatory : []
       const previos = (fila.firmantes || []) as Array<Record<string, unknown>>
 
-      const firmantes = previos.map((f) => {
-        const par = suyos.find((s: Record<string, unknown>) =>
-          String(s?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
-        if (!par) return f
-        // isSigned viene a veces como número y a veces como texto,
-        // según el endpoint; se normaliza aquí.
-        const firmado = Number(par.isSigned) === 1
-        return {
-          ...f,
-          firmado,
-          // La fecha se pone la primera vez que se ve firmado y ya no se
-          // toca: si llegan dos avisos del mismo documento, el segundo
-          // no debe recorrer la fecha del primero.
-          firmado_at: firmado ? (f.firmado_at ?? new Date().toISOString()) : null,
-        }
-      })
+      const firmantes = sincronizarFirmantes(previos, suyos, new Date().toISOString())
 
       const estado = ESTADOS[String(doc.status)] || fila.estado
 
