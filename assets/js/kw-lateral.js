@@ -77,6 +77,7 @@
     const menuDrawer = document.getElementById('drawer-hamburguesa');
     const botones = document.querySelectorAll('[data-kw-menu-principal]');
     if (!lateral || !drawer || !menuDrawer || !botones.length) return;
+    prepararMovil(lateral);
 
     // Las pantallas que tienen una barra propia arrancan con ella visible.
     // drawer.js mantiene el menú global abierto en escritorio; si no se
@@ -147,6 +148,67 @@
       attributeFilter: ['class']
     });
     sincronizar();
+  }
+
+  function prepararMovil(lateral) {
+    if (!lateral.hasAttribute('data-kw-lateral-movil')) return;
+    lateral.classList.add('kw-lateral-movil');
+    const abrir = document.querySelector('[data-kw-lateral-abrir="' + lateral.id + '"]');
+    if (!abrir) return;
+    const velo = document.createElement('div');
+    velo.className = 'kw-lateral-velo';
+    velo.hidden = true;
+    document.body.appendChild(velo);
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'kw-lateral-cerrar';
+    cerrar.setAttribute('aria-label', 'Cerrar filtros');
+    cerrar.textContent = '\u00d7';
+    lateral.querySelector('.kw-lateral-cabecera').appendChild(cerrar);
+    let overflowPrevio = '';
+    function cerrarPanel(devolverFoco = true) {
+      if (!lateral.classList.contains('kw-lateral-abierta')) return;
+      lateral.classList.remove('kw-lateral-abierta');
+      lateral.removeAttribute('role');
+      lateral.removeAttribute('aria-modal');
+      velo.hidden = true;
+      abrir.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = overflowPrevio;
+      if (devolverFoco && !escritorio.matches) abrir.focus();
+    }
+    abrir.addEventListener('click', () => {
+      if (escritorio.matches) return;
+      overflowPrevio = document.body.style.overflow;
+      lateral.classList.add('kw-lateral-abierta');
+      lateral.setAttribute('role', 'dialog');
+      lateral.setAttribute('aria-modal', 'true');
+      velo.hidden = false;
+      abrir.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+      cerrar.focus();
+    });
+    cerrar.addEventListener('click', () => cerrarPanel());
+    velo.addEventListener('click', () => cerrarPanel());
+    lateral.querySelector('[data-kw-menu-principal]').addEventListener('click', () => cerrarPanel(false));
+    escritorio.addEventListener('change', () => cerrarPanel(false));
+    new MutationObserver(() => {
+      if (lateral.closest('[style*="display: none"]')) cerrarPanel(false);
+    }).observe(lateral.parentElement, { attributes: true, attributeFilter: ['style'] });
+    document.addEventListener('keydown', evento => {
+      if (!lateral.classList.contains('kw-lateral-abierta')) return;
+      const calendario = document.querySelector('.kw-calendario');
+      if (evento.key === 'Escape') {
+        if (calendario || lateral.querySelector('.kw-select.abierto')) return;
+        cerrarPanel();
+      }
+      if (evento.key !== 'Tab') return;
+      const controles = Array.from(lateral.querySelectorAll('button, a[href], input, select, [tabindex="0"]'))
+        .concat(calendario ? Array.from(calendario.querySelectorAll('button')) : [])
+        .filter(el => !el.disabled && el.getClientRects().length);
+      const primero = controles[0], ultimo = controles[controles.length - 1];
+      if (evento.shiftKey && document.activeElement === primero) { evento.preventDefault(); ultimo.focus(); }
+      else if (!evento.shiftKey && document.activeElement === ultimo) { evento.preventDefault(); primero.focus(); }
+    }, true);
   }
 
   if (document.readyState === 'loading') {

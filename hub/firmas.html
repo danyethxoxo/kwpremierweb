@@ -17,7 +17,7 @@
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261008sidebar">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20260923b">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008filtros">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
@@ -1763,6 +1763,7 @@
   .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
+<link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261008a">
 </head>
 <body class="en-historial firmas-pagina">
 
@@ -1802,7 +1803,7 @@
       <!-- En escritorio, resumen y filtros se montan aquí como el panel
            propio de la página. Comparte la misma franja con el menú global:
            la hamburguesa intercambia uno por otro sin mover el contenido. -->
-      <aside class="firmas-panel-pagina kw-lateral" id="firmas-panel-pagina" aria-label="Resumen y filtros de firmas">
+      <aside class="firmas-panel-pagina kw-lateral" id="firmas-panel-pagina" data-kw-lateral-movil aria-label="Resumen y filtros de firmas">
         <div class="firmas-panel-cabecera kw-lateral-cabecera">
           <a class="firmas-panel-logo kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/assets/img/logo-kw-premier.png" alt="KW Premier">
@@ -1821,6 +1822,7 @@
       <div class="kw-page-encabezado con-acciones kw-acciones-firmas">
         <h1 class="kw-page-titulo">Firmas Digitales</h1>
         <div class="kw-page-acciones">
+        <button type="button" class="kw-lateral-abrir" data-kw-lateral-abrir="firmas-panel-pagina" aria-controls="firmas-panel-pagina" aria-expanded="false">Filtros</button>
         <!-- Todo lo que se hace cada tanto (bajar la lista, ponerla al
              día, las dos de mantenimiento) se junta en el engrane, el
              mismo de Dictámenes. Eran cuatro botones al hilo y tapaban
@@ -2256,7 +2258,7 @@
 
   // Monta los controles existentes en el panel propio sin duplicarlos:
   // los mismos selects y contadores conservan todos sus manejadores. Si
-  // la ventana pasa a tamaño móvil, vuelven a su orden natural.
+  // En celular, los filtros conservan su lugar en la barra lateral.
   function prepararPanelHistorial() {
     const vista = $('vista-historial');
     const panel = $('firmas-panel-pagina');
@@ -2289,7 +2291,8 @@
         if (acciones && campana) acciones.insertBefore(campana, nuevo || null);
       } else {
         if (piezas.buscarFila && piezas.buscar) piezas.buscarFila.append(piezas.buscar);
-        [piezas.encabezado, piezas.resumen, piezas.filtros, piezas.misPendientes,
+        panel.append(piezas.resumen, piezas.filtros, piezas.misPendientes);
+        [piezas.encabezado,
           piezas.cupo, piezas.tabla, piezas.seleccion].forEach((pieza) => {
           if (pieza) vista.insertBefore(pieza, panel);
         });
@@ -5910,8 +5913,8 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/assets/js/drawer.js?v=20261008mobile" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20260923b"></script>
+<script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
+<script src="/assets/js/kw-lateral.js?v=20261008filtros"></script>
 
 </body>
 </html>
