@@ -91,6 +91,9 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.locator('#f-estado').waitFor({ state: 'visible' });
+    assert.deepEqual(errors, []);
+    assert.equal(await page.locator('#firmas-historial-principal #btn-nuevo').count(), 1);
+    assert.equal(await page.locator('#firmas-historial-principal .tabla-envios').count(), 1);
     assert.equal(await page.locator('#f-estado').inputValue(), 'completado');
     assert.equal(await page.locator('#f-orden').inputValue(), 'fecha-asc');
     assert.equal(await page.locator('#f-desde').inputValue(), date);
@@ -100,5 +103,11 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
     await page.getByRole('button', { name: 'Cerrar filtros' }).click();
     assert.equal(await page.locator('#f-estado').count(), 1);
     assert.equal(await page.locator('#notif-bell-slot').count(), 1);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('http://kw.local/hub/firmas.html');
+    assert.deepEqual(errors, []);
+    assert.equal(await page.locator('#firmas-historial-principal #btn-nuevo').count(), 1);
+    assert.equal(await page.locator('#firmas-historial-principal .tabla-envios').count(), 1);
+    await page.screenshot({ path: path.join(root, 'artifacts/firmas-mobile/desktop.png'), animations: 'disabled' });
   } finally { await browser.close(); }
 });
