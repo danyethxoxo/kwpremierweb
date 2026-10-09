@@ -43,7 +43,7 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
         <span class="fila-botones"><button class="env-menu-btn" aria-label="Editar">✎</button><button class="env-menu-btn" aria-label="Opciones">⋮</button></span></div>`).join('');
     });
     const filters = page.locator('#firmas-panel-pagina');
-    const trigger = page.getByRole('button', { name: 'Filtros', exact: true });
+    const trigger = page.locator('#kw-drawer-toggle');
     assert.equal(await page.locator('#firmas-panel-pagina #f-estado').count(), 1);
     await page.locator('#f-estado').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('#f-estado').isVisible(), false, await filters.evaluate(el => JSON.stringify({ class: el.className, visibility: getComputedStyle(el).visibility, display: getComputedStyle(el).display })));
@@ -78,6 +78,12 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
     for (const width of [320, 610, 901]) {
       await page.setViewportSize({ width, height: 844 });
       assert.ok(await page.locator('.tabla-fila').first().evaluate(el => el.getBoundingClientRect().right <= document.documentElement.clientWidth));
+      assert.equal(await page.locator('#kw-buscar-toggle').isVisible(), false);
+      assert.equal(await page.locator('.back-btn').isVisible(), false);
+      assert.equal(await page.locator('[data-kw-lateral-abrir]').count(), 0);
+      assert.equal(await page.locator('#header-firmas #btn-nuevo').isVisible(), true);
+      assert.equal(await page.locator('#header-firmas #btn-engrane').isVisible(), true);
+      assert.equal(await page.locator('#drawer.open').count(), 0);
       await page.screenshot({ path: path.join(root, `artifacts/firmas-mobile/list-${width}.png`), animations: 'disabled' });
     }
     await page.setViewportSize({ width: 1440, height: 900 });

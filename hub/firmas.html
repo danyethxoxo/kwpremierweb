@@ -1763,7 +1763,7 @@
   .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
-<link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261008a">
+<link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261008b">
 </head>
 <body class="en-historial firmas-pagina">
 
@@ -1803,7 +1803,7 @@
       <!-- En escritorio, resumen y filtros se montan aquí como el panel
            propio de la página. Comparte la misma franja con el menú global:
            la hamburguesa intercambia uno por otro sin mover el contenido. -->
-      <aside class="firmas-panel-pagina kw-lateral" id="firmas-panel-pagina" data-kw-lateral-movil aria-label="Resumen y filtros de firmas">
+      <aside class="firmas-panel-pagina kw-lateral" id="firmas-panel-pagina" data-kw-lateral-movil data-kw-lateral-disparador="#kw-drawer-toggle" aria-label="Resumen y filtros de firmas">
         <div class="firmas-panel-cabecera kw-lateral-cabecera">
           <a class="firmas-panel-logo kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio del Hub">
             <img src="/assets/img/logo-kw-premier.png" alt="KW Premier">
@@ -1822,7 +1822,6 @@
       <div class="kw-page-encabezado con-acciones kw-acciones-firmas">
         <h1 class="kw-page-titulo">Firmas Digitales</h1>
         <div class="kw-page-acciones">
-        <button type="button" class="kw-lateral-abrir" data-kw-lateral-abrir="firmas-panel-pagina" aria-controls="firmas-panel-pagina" aria-expanded="false">Filtros</button>
         <!-- Todo lo que se hace cada tanto (bajar la lista, ponerla al
              día, las dos de mantenimiento) se junta en el engrane, el
              mismo de Dictámenes. Eran cuatro botones al hilo y tapaban
@@ -2277,9 +2276,17 @@
       tabla: vista.querySelector('.tabla-envios'),
     };
     const mq = window.matchMedia('(min-width: 1024px)');
+    const acciones = piezas.encabezado.querySelector('.kw-page-acciones');
+    const nuevo = document.getElementById('btn-nuevo');
+    const engrane = acciones.querySelector('.kw-menu-ancla');
+    nuevo.setAttribute('aria-label', 'Nuevo documento');
+    nuevo.classList.add('firmas-mobile-accion');
+    engrane.classList.add('firmas-mobile-accion');
 
     function acomodar() {
       if (mq.matches) {
+        acciones.append(engrane, nuevo);
+        nuevo.querySelector('span').textContent = 'Nuevo documento';
         panel.append(piezas.resumen, piezas.filtros, piezas.misPendientes);
         if (piezas.buscar && piezas.resumen) panel.insertBefore(piezas.buscar, piezas.resumen);
         principal.append(
@@ -2298,7 +2305,12 @@
         });
         const sueltos = document.querySelector('#header-firmas .kw-header-sueltos');
         const campana = document.getElementById('notif-bell-slot');
-        if (sueltos && campana) sueltos.append(campana);
+        if (sueltos) {
+          sueltos.append(nuevo);
+          if (campana) sueltos.append(campana);
+          sueltos.append(engrane);
+          nuevo.querySelector('span').textContent = 'Nuevo';
+        }
       }
     }
     acomodar();
@@ -5914,7 +5926,7 @@
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
 <script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20261008filtros"></script>
+<script src="/assets/js/kw-lateral.js?v=20261008header"></script>
 
 </body>
 </html>

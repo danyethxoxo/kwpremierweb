@@ -153,8 +153,10 @@
   function prepararMovil(lateral) {
     if (!lateral.hasAttribute('data-kw-lateral-movil')) return;
     lateral.classList.add('kw-lateral-movil');
-    const abrir = document.querySelector('[data-kw-lateral-abrir="' + lateral.id + '"]');
+    const abrir = document.querySelector(lateral.dataset.kwLateralDisparador || '[data-kw-lateral-abrir="' + lateral.id + '"]');
     if (!abrir) return;
+    abrir.setAttribute('aria-controls', lateral.id);
+    abrir.setAttribute('aria-expanded', 'false');
     const velo = document.createElement('div');
     velo.className = 'kw-lateral-velo';
     velo.hidden = true;
@@ -176,8 +178,10 @@
       document.body.style.overflow = overflowPrevio;
       if (devolverFoco && !escritorio.matches) abrir.focus();
     }
-    abrir.addEventListener('click', () => {
-      if (escritorio.matches) return;
+    abrir.addEventListener('click', evento => {
+      if (escritorio.matches || lateral.closest('[style*="display: none"]')) return;
+      evento.preventDefault();
+      evento.stopImmediatePropagation();
       overflowPrevio = document.body.style.overflow;
       lateral.classList.add('kw-lateral-abierta');
       lateral.setAttribute('role', 'dialog');
@@ -186,7 +190,7 @@
       abrir.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
       cerrar.focus();
-    });
+    }, true);
     cerrar.addEventListener('click', () => cerrarPanel());
     velo.addEventListener('click', () => cerrarPanel());
     lateral.querySelector('[data-kw-menu-principal]').addEventListener('click', () => cerrarPanel(false));
