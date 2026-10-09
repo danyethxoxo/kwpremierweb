@@ -147,10 +147,8 @@ header.kw-header .back-btn { margin-left: auto; }
 }
 
 /* ── Header compartido (páginas migradas: <header class="kw-header">) ──
-   Barra fija translúcida con blur; en lugar de un borde duro, un
-   degradado la funde con el contenido. Al hacer scroll hacia abajo,
-   drawer.js le pone .kw-header-oculto: en celular la cápsula entera se
-   va hacia arriba y vuelve al subir; en escritorio se queda fija.
+   La variante de celular al final de esta hoja usa una barra blanca
+   fija. La estructura anterior conserva compatibilidad en escritorio.
    El contenido de cada página debe dejar ~72px libres arriba. */
 header.kw-header {
   position: fixed; top: 10px; left: 12px; right: 12px; z-index: 90;
@@ -260,28 +258,6 @@ header.kw-header .kw-header-sueltos > * .notif-bell-btn:hover {
      la cápsula de al lado se queda con el ancho que necesita. */
   header.kw-header .kw-header-sueltos > * span:not(.notif-bell-badge) { display: none; }
   header.kw-header .kw-header-sueltos > * { padding: 0; width: 52px; }
-}
-
-/* ── Esconderse al bajar: solo en celular ──
-   La cápsula entera se va hacia arriba (con sus botones adentro, no
-   nada más el fondo) y vuelve completa al subir. Se mueve con
-   transform y no con top, porque transform lo resuelve la GPU y no
-   obliga a recalcular el acomodo de la página en cada cuadro.
-
-   En escritorio no se esconde: ahí sobra alto de pantalla y perder el
-   Atrás y el menú mientras se lee estorba más de lo que ayuda. Como el
-   ocultarse vive dentro de este @media, en pantalla grande la clase
-   que pone drawer.js simplemente no hace nada. */
-@media (max-width: 900px) {
-  header.kw-header {
-    transition: transform 0.28s var(--curva-salida), opacity 0.22s var(--curva),
-                background 0.25s, box-shadow 0.25s, border-color 0.25s;
-  }
-  header.kw-header.kw-header-oculto {
-    transform: translateY(-150%);
-    opacity: 0;
-    pointer-events: none;
-  }
 }
 
 .btn-volver {
@@ -2521,4 +2497,51 @@ html.kw-riel .page-title {
   .drawer .drawer-link,
   .drawer .drawer-usuario,
   .drawer .drawer-buscar-toggle { transition: none !important; }
+}
+
+/* En celular, la navegacion usa la misma superficie blanca del Hub. */
+@media (max-width: 1023px) {
+  html:root body > header.kw-header.kw-header-partido,
+  html:root body > header.kw-header:not(.kw-header-partido) {
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    min-height: 60px; padding: 8px 12px !important; gap: 4px;
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+    border: 0 !important; border-bottom: 1px solid var(--border) !important;
+    border-radius: 0 !important; background: #fff !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    transform: none !important; opacity: 1 !important; pointer-events: auto !important;
+    transition: none !important;
+  }
+  header.kw-header .kw-header-capsula {
+    min-height: 44px; padding: 0; gap: 2px;
+    border: 0; border-radius: 0; background: transparent;
+    box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  header.kw-header .kw-header-sueltos { gap: 2px; }
+  header.kw-header .kw-header-sueltos > *:not(#notif-bell-slot) {
+    background: transparent; border: 0; border-radius: 10px;
+    box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  header.kw-header .kw-header-sueltos > * {
+    width: 44px; height: 44px; padding: 0;
+  }
+  header.kw-header .kw-header-sueltos > * span:not(.notif-bell-badge) { display: none; }
+  header.kw-header .kw-header-sueltos > *:hover { box-shadow: none; background: #f7f7f7; }
+  header.kw-header :is(.hamburger-btn, .back-btn, .kw-buscar-cerrar-inline) {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
+  }
+  header.kw-header .back-btn { padding: 0; justify-content: center; gap: 0; }
+  header.kw-header .back-btn span { display: none; }
+  header.kw-header .kw-header-title {
+    flex: 1; min-width: 0; padding-inline: 4px;
+    font-size: 14px; text-align: left;
+  }
+  header.kw-header:not(.kw-buscando) .kw-header-title { display: block; }
+  header.kw-header .kw-buscar-campo-inline { font-size: 16px; }
+  header.kw-header .kw-buscar-resultados-inline {
+    top: 100%; background: #fff; border: 1px solid var(--border);
+    border-radius: 0 0 12px 12px; box-shadow: 0 8px 20px rgba(0,0,0,.1);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
 }
