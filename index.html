@@ -883,43 +883,42 @@
 
   @media (max-width: 760px) {
     .tapa {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: none;
       align-items: center;
       gap: 10px 16px;
       padding: 14px 16px 12px;
     }
     .tapa-centro {
-      display: flex;
-      flex: 1 1 0;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      min-width: 0;
+      display: contents;
     }
-    .tapa-logo { align-self: flex-start; }
+    .tapa-logo { grid-column: 1; grid-row: 1; align-self: center; }
     .tapa-logo img { height: 38px; }
-    .tapa-der { margin-left: 0; flex: 0 0 auto; }
+    .tapa-der { grid-column: 2; grid-row: 1; margin-left: 0; }
     .tapa-nav {
+      grid-column: 1 / -1;
+      grid-row: 2;
       width: 100%;
       min-width: 0;
-      overflow-x: auto;
+      overflow: visible;
+      flex-wrap: wrap;
       justify-content: flex-start;
-      gap: 20px;
-      scrollbar-width: none;
+      gap: 0 18px;
     }
-    .tapa-nav::-webkit-scrollbar { display: none; }
-    .tapa-nav a { padding: 4px 0; font-size: 13px; }
+    .tapa-nav a { flex: 0 0 auto; padding: 10px 0; font-size: 13px; line-height: 1.4; }
     .btn-tapa { min-height: 38px; padding: 9px 15px; font-size: 12.5px; }
     .portada {
-      min-height: 650px;
-      padding: 80px 20px 44px;
+      min-height: clamp(480px, calc(100svh - 150px), 640px);
+      padding: 64px 24px 32px;
       background-image:
         linear-gradient(180deg, rgba(92, 0, 0, 0.14) 8%, rgba(43, 0, 0, 0.78) 100%),
         url('/assets/img/equipo-kw-premier-sm.jpg');
       background-position: center 58%;
     }
-    .portada-titulo { max-width: 9ch; font-size: clamp(52px, 15vw, 76px); }
+    .portada-antes { max-width: 42ch; margin-bottom: 14px; font-size: 11px; line-height: 1.5; letter-spacing: .08em; }
+    .portada-titulo { max-width: 16ch; font-size: clamp(36px, 7.5vw, 56px); line-height: 1.05; }
+    .portada-acciones { margin-top: 24px; }
     .portada-acciones { align-items: stretch; flex-direction: column; width: 100%; }
     .btn-portada { width: 100%; }
     main { padding: 0 18px; }
