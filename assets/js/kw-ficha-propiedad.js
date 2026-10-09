@@ -48,6 +48,14 @@
     '.kw-ficha-boton-png:hover:not(:disabled){background:#faf8f7;border-color:#bdb7b4}',
     '.kw-ficha-boton-pdf{border:0;background:#cc0000;color:#fff;box-shadow:0 3px 10px rgba(204,0,0,.22)}',
     '.kw-ficha-boton-pdf:hover:not(:disabled){filter:brightness(1.06)}',
+    '.kw-ficha-selector{flex-shrink:0;margin-bottom:12px;border:1px solid #dedbd9;border-radius:12px;padding:10px}',
+    '.kw-ficha-selector summary{cursor:pointer;font-size:13px;font-weight:600}.kw-ficha-selector p{font-size:12px;color:#666;margin:10px 0}',
+    '.kw-ficha-fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;max-height:240px;overflow:auto}',
+    '.kw-ficha-fotos-campos{border:0;padding:0;margin:0;min-width:0}',
+    '.kw-ficha-foto{border:1px solid #ddd;border-radius:9px;padding:6px;min-width:0}.kw-ficha-foto.elegida{border-color:#cc0000;background:#fff6f6}',
+    '.kw-ficha-foto label{display:block;cursor:pointer;font-size:12px}.kw-ficha-foto img{width:100%;height:75px;object-fit:cover;border-radius:5px;display:block;margin-bottom:6px}',
+    '.kw-ficha-foto input{accent-color:#cc0000;margin-right:5px}.kw-ficha-portada{width:100%;margin-top:6px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white;color:#302c2c;font:inherit;font-size:11px;cursor:pointer}',
+    '.kw-ficha-portada:disabled{opacity:.6;cursor:default}',
     '@media(max-width:440px){.kw-ficha-overlay{padding:10px}.kw-ficha-dialog{max-height:calc(100vh - 20px);padding:13px}',
     '.kw-ficha-vista{padding:6px}.kw-ficha-boton{font-size:12px}}'
   ].join('');
@@ -127,7 +135,7 @@
     }
 
     fuentes.forEach(function (campo) { agregar(propiedad && propiedad[campo]); });
-    return urls.slice(0, 12);
+    return urls;
   }
 
   function listaCaracteristicas(propiedad) {
@@ -245,7 +253,7 @@
   function cargarImagenes(modelo) {
     return Promise.all([
       cargarImagen(modelo.logo),
-      cargarFotosDisponibles(modelo.fotos),
+      Promise.all(modelo.fotos.map(cargarImagen)),
       cargarImagen(modelo.asesor.foto)
     ]).then(function (imagenes) {
       modelo._logo = imagenes[0];
@@ -580,7 +588,7 @@
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, anchoPanel, altoFotos);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1238, 528, 319, 0, false);
+      imagenCubierta(ctx, modelo._fotos[fotoIndice + 1], fotoIndice * (1608 / 3), 1238, 528, 319, 0, false);
     }
 
     if (modelo._logo && modelo._logo.naturalWidth) {
@@ -892,7 +900,7 @@
 
     pdfImagenCubierta(pdf, modelo._fotos[0], anchoPanel, 0, ANCHO - anchoPanel, 1230, true, escala);
     for (var fotoIndice = 0; fotoIndice < 3; fotoIndice++) {
-      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1] || modelo._fotos[fotoIndice], fotoIndice * (1608 / 3), 1238, 528, 319, false, escala);
+      pdfImagenCubierta(pdf, modelo._fotos[fotoIndice + 1], fotoIndice * (1608 / 3), 1238, 528, 319, false, escala);
     }
     pdf.setFillColor(COLORES.blanco);
     pdf.rect(0, 0, anchoPanel * escala, altoFotos * escala, 'F');
@@ -1016,11 +1024,17 @@
     var anterior = document.querySelector('.kw-ficha-overlay');
     if (anterior) anterior.remove();
     var modelo = crearModelo(opciones || {});
+    var fotosDisponibles = modelo.fotos.slice();
+    var seleccion = fotosDisponibles.slice(0, 4).map(function (_, indice) { return indice; });
+    modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
     var overlay = document.createElement('div');
     overlay.className = 'kw-ficha-overlay';
     overlay.innerHTML = '<div class="kw-ficha-dialog" role="dialog" aria-modal="true" aria-labelledby="kw-ficha-titulo">' +
       '<div class="kw-ficha-top"><div class="kw-ficha-titulo" id="kw-ficha-titulo">Ficha técnica</div>' +
       '<button type="button" class="kw-ficha-cerrar" aria-label="Cerrar">' + iconoCerrar() + '</button></div>' +
+      (fotosDisponibles.length ? '<details class="kw-ficha-selector"><summary>Elegir fotos <span class="kw-ficha-fotos-cuenta"></span></summary>' +
+        '<p>Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.</p>' +
+        '<fieldset class="kw-ficha-fotos-campos" disabled aria-label="Fotos de la ficha"><div class="kw-ficha-fotos"></div></fieldset></details>' : '') +
       '<div class="kw-ficha-vista"><div class="kw-ficha-cargando"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div></div>' +
       '<div class="kw-ficha-estado" role="status" aria-live="polite"></div>' +
       '<div class="kw-ficha-botones"><button type="button" class="kw-ficha-boton kw-ficha-boton-png" disabled>Descargar PNG</button>' +
@@ -1031,6 +1045,91 @@
     var estado = dialog.querySelector('.kw-ficha-estado');
     var botonPNG = dialog.querySelector('.kw-ficha-boton-png');
     var botonPDF = dialog.querySelector('.kw-ficha-boton-pdf');
+    var camposFotos = dialog.querySelector('.kw-ficha-fotos-campos');
+    var galeria = dialog.querySelector('.kw-ficha-fotos');
+    var cuentaFotos = dialog.querySelector('.kw-ficha-fotos-cuenta');
+    var revisionFotos = 0;
+    var pdfBlob = null;
+    var pdfPromesa = null;
+    var cacheFotos = new Map();
+
+    function pintarSeleccion() {
+      if (!galeria) return;
+      cuentaFotos.textContent = '(' + seleccion.length + '/4)';
+      galeria.querySelectorAll('.kw-ficha-foto').forEach(function (tarjeta, indice) {
+        var posicion = seleccion.indexOf(indice);
+        var input = tarjeta.querySelector('input');
+        input.checked = posicion >= 0;
+        input.disabled = posicion < 0 && seleccion.length >= 4;
+        tarjeta.classList.toggle('elegida', posicion >= 0);
+        var portada = tarjeta.querySelector('button');
+        portada.disabled = posicion <= 0;
+        portada.textContent = posicion === 0 ? 'Portada' : posicion > 0 ? 'Usar de portada' : 'Sin seleccionar';
+      });
+    }
+
+    async function actualizarFotos() {
+      var revision = ++revisionFotos;
+      pdfBlob = null;
+      pdfPromesa = null;
+      botonPNG.disabled = true;
+      botonPDF.disabled = true;
+      pintarSeleccion();
+      modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
+      if (!seleccion.length) {
+        modelo._fotos = [];
+        canvas = dibujarModelo(modelo);
+        canvas.className = 'kw-ficha-canvas';
+        vista.replaceChildren(canvas);
+        estado.textContent = 'Selecciona al menos una foto para descargar la ficha.';
+        return;
+      }
+      estado.textContent = '';
+      var imagenes = await Promise.all(modelo.fotos.map(function (url) {
+        if (!cacheFotos.has(url)) cacheFotos.set(url, cargarImagen(url));
+        return cacheFotos.get(url);
+      }));
+      if (cerrado || revision !== revisionFotos) return;
+      modelo._fotos = imagenes;
+      canvas = dibujarModelo(modelo);
+      canvas.className = 'kw-ficha-canvas';
+      vista.replaceChildren(canvas);
+      botonPNG.disabled = false;
+      botonPDF.disabled = false;
+      if (imagenes.some(function (imagen) { return !imagen; })) {
+        estado.textContent = 'Alguna foto no se pudo cargar. Elige otra foto antes de descargar.';
+        botonPNG.disabled = true;
+        botonPDF.disabled = true;
+      }
+    }
+
+    if (galeria) fotosDisponibles.forEach(function (url, indice) {
+      var tarjeta = document.createElement('div');
+      tarjeta.className = 'kw-ficha-foto';
+      var label = document.createElement('label');
+      var imagen = document.createElement('img');
+      imagen.src = url;
+      imagen.alt = 'Foto ' + (indice + 1);
+      imagen.loading = 'lazy';
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.addEventListener('change', function () {
+        if (input.checked && seleccion.length < 4) seleccion.push(indice);
+        else seleccion = seleccion.filter(function (elegida) { return elegida !== indice; });
+        actualizarFotos();
+      });
+      label.append(imagen, input, document.createTextNode('Foto ' + (indice + 1)));
+      var portada = document.createElement('button');
+      portada.type = 'button';
+      portada.className = 'kw-ficha-portada';
+      portada.addEventListener('click', function () {
+        seleccion = [indice].concat(seleccion.filter(function (elegida) { return elegida !== indice; }));
+        actualizarFotos();
+      });
+      tarjeta.append(label, portada);
+      galeria.appendChild(tarjeta);
+    });
+    pintarSeleccion();
     var scrollX = window.scrollX;
     var scrollY = window.scrollY;
     var body = document.body;
@@ -1074,14 +1173,18 @@
       botonPNG.disabled = false;
       botonPDF.disabled = false;
       estado.textContent = '';
+      modelo.fotos.forEach(function (url, indice) { cacheFotos.set(url, Promise.resolve(modelo._fotos[indice])); });
+      if (camposFotos) camposFotos.disabled = false;
+      if (fotosDisponibles.length && modelo._fotos.some(function (imagen) { return !imagen; })) {
+        estado.textContent = 'Alguna foto no se pudo cargar. Elige otra foto antes de descargar.';
+        botonPNG.disabled = true;
+        botonPDF.disabled = true;
+      }
     } catch (error) {
       vista.innerHTML = '<div class="kw-ficha-cargando">No se pudo preparar la ficha técnica.</div>';
       estado.textContent = 'Intenta nuevamente en unos segundos.';
       return;
     }
-
-    var pdfBlob = null;
-    var pdfPromesa = null;
 
     function obtenerPDF() {
       if (pdfBlob) return Promise.resolve(pdfBlob);
@@ -1098,7 +1201,9 @@
     }
 
     async function descargarFormato(tipo, boton) {
-      boton.disabled = true;
+      botonPNG.disabled = true;
+      botonPDF.disabled = true;
+      if (camposFotos) camposFotos.disabled = true;
       boton.setAttribute('aria-busy','true');
       estado.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try {
@@ -1109,7 +1214,10 @@
       } catch (error) {
         estado.textContent = error.message || 'No se pudo generar el archivo.';
       } finally {
-        boton.disabled = false; boton.removeAttribute('aria-busy');
+        botonPNG.disabled = false;
+        botonPDF.disabled = false;
+        if (camposFotos) camposFotos.disabled = false;
+        boton.removeAttribute('aria-busy');
         boton.textContent = tipo === 'png' ? 'Descargar PNG' : 'Descargar PDF';
       }
     }
