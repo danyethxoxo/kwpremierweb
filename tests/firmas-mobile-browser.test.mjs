@@ -82,6 +82,7 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
       assert.equal(await page.locator('.back-btn').isVisible(), false);
       assert.equal(await page.locator('[data-kw-lateral-abrir]').count(), 0);
       assert.equal(await page.locator('#header-firmas #btn-nuevo').isVisible(), true);
+      assert.ok(await page.locator('#header-firmas #btn-nuevo').evaluate(el => el.getBoundingClientRect().right <= document.documentElement.clientWidth));
       assert.equal(await page.locator('#header-firmas #btn-engrane').isVisible(), true);
       await page.locator('#engrane-menu').evaluate(el => { el.hidden = false; });
       assert.notEqual(await page.locator('#engrane-menu span').first().evaluate(el => getComputedStyle(el).display), 'none');
