@@ -2952,6 +2952,8 @@
 
     try {
       const r = await llamarFuncion({ accion: 'importar' });
+      await cargarEtiquetas();
+      pintarOpcionesFiltros();
       let msg = 'Se encontraron ' + r.encontrados + ' documentos en weetrust.\n'
         + r.nuevos + ' nuevos, ' + r.actualizados + ' actualizados.';
       if (r.problemas && r.problemas.length) {
@@ -3032,6 +3034,8 @@
     try {
       const r = await llamarFuncion({ accion: 'actualizar_todos' });
       marcarSincronizado();
+      await cargarEtiquetas();
+      pintarOpcionesFiltros();
       await cargarEnvios();
       if (!r.actualizados && !r.importados) {
         await window.kwUI.alert('Todo estaba al día. No hubo nada que cambiar.');
@@ -3084,7 +3088,7 @@
   // trabajo de sobra. Se guarda cuándo fue la última vez (por navegador,
   // no por cuenta) y no se repite antes de que pase una hora; el botón
   // "Actualizar" de arriba lo sigue pudiendo forzar en cualquier momento.
-  const SYNC_CLAVE = 'kw_firmas_ultima_sync';
+  const SYNC_CLAVE = 'kw_firmas_ultima_sync_v2';
   const SYNC_CADA_MS = 60 * 60 * 1000;
 
   function debeSincronizarAuto() {
@@ -5683,11 +5687,20 @@
     const campos = 'id, titulo, estado, firmantes, observadores, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
       + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre, email)' : '');
 
-    const { data, error } = await window.kwSupabase
-      .from('firmas_documentos')
-      .select(campos)
-      .order('created_at', { ascending: false })
-      .limit(300);
+    const data = [];
+    let error = null;
+    const porPagina = 300;
+    for (let inicio = 0; ; inicio += porPagina) {
+      const pagina = await window.kwSupabase
+        .from('firmas_documentos')
+        .select(campos)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(inicio, inicio + porPagina - 1);
+      if (pagina.error) { error = pagina.error; break; }
+      data.push(...(pagina.data || []));
+      if ((pagina.data || []).length < porPagina) break;
+    }
 
     if (error) {
       $('lista-envios').innerHTML =
@@ -5913,10 +5926,13 @@
     // siquiera se dispara. Si sí corre y trae algo nuevo, la tabla se
     // vuelve a pintar sola.
     if (debeSincronizarAuto()) {
-      actualizarSilencioso().then((r) => {
+      actualizarSilencioso().then(async (r) => {
+        if (!r) return;
         marcarSincronizado();
         if (r && (r.actualizados || r.importados || r.eliminadosEnWeetrust)) {
-          cargarEnvios();
+          await cargarEtiquetas();
+          pintarOpcionesFiltros();
+          await cargarEnvios();
           cargarCupo();
         }
       });

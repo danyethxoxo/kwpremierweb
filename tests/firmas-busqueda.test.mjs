@@ -53,3 +53,20 @@ test('busca el perfil propio y tolera documentos sin personas', () => {
   assert.equal(buscar('sin identificar', { envios: [{ ...envio, user_id: 'otro' }] }), 'uno');
   assert.equal(buscar('maria', { envios: [envio] }), '');
 });
+
+test('carga documentos posteriores a los primeros 300 sin perder selecciones vigentes', async () => {
+  const documentos = Array.from({ length: 301 }, (_, i) => ({ id: String(i), titulo: 'Documento ' + i }));
+  const rangos = [];
+  const contexto = vm.createContext({
+    veTodo: true, envios: [], elegidos: new Set(['300', 'borrado']), pintarEnvios: () => {},
+    window: { kwSupabase: { from: () => ({ select() { return this; }, order() { return this; },
+      range: async (inicio, fin) => { rangos.push([inicio, fin]); return { data: documentos.slice(inicio, fin + 1), error: null }; },
+    }) } },
+  });
+  const inicio = html.indexOf('  async function cargarEnvios()');
+  vm.runInContext(html.slice(inicio, html.indexOf('\n  }', inicio) + 4), contexto);
+  await vm.runInContext('cargarEnvios()', contexto);
+  assert.equal(contexto.envios.length, 301);
+  assert.deepEqual(rangos, [[0, 299], [300, 599]]);
+  assert.deepEqual([...contexto.elegidos], ['300']);
+});

@@ -1,4 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
+import { sincronizarFirmantes, nombresEtiquetasWeetrust } from './firmantes-sync.ts'
 // Edge Function: firmar-documento
 //
 // Manda documentos a firma electrónica con weetrust y consulta cómo van.
@@ -35,7 +36,7 @@ import { secureServe } from '../_shared/security.ts'
 //
 // Ya existen y se reusan: SUPABASE_URL, SERVICE_ROLE_KEY.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -55,6 +56,27 @@ function respond(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+async function etiquetasDeWeetrust(admin: SupabaseClient<any>, documentos: Map<string, Record<string, any>>) {
+  const nombres = [...new Set([...documentos.values()].flatMap(nombresEtiquetasWeetrust))]
+  const resultado = new Map<string, string[]>()
+  if (!nombres.length) return resultado
+  const { data, error } = await admin.from('firmas_etiquetas').select('id, nombre')
+  if (error) throw new Error(`No se pudieron leer las etiquetas: ${error.message}`)
+  const normalizar = (nombre: string) => nombre.trim().toLowerCase()
+  const porNombre = new Map((data || []).map((tag) => [normalizar(tag.nombre), String(tag.id)]))
+  for (const nombre of nombres) {
+    if (porNombre.has(normalizar(nombre))) continue
+    const { data: nueva, error: fallo } = await admin.from('firmas_etiquetas')
+      .insert({ nombre }).select('id').single()
+    if (fallo) throw new Error(`No se pudo recuperar la etiqueta ${nombre}: ${fallo.message}`)
+    porNombre.set(normalizar(nombre), String(nueva.id))
+  }
+  for (const [id, doc] of documentos) {
+    resultado.set(id, nombresEtiquetasWeetrust(doc).map((nombre) => porNombre.get(normalizar(nombre))!))
+  }
+  return resultado
 }
 
 // ── Hablar con weetrust ─────────────────────────────────────
@@ -227,12 +249,15 @@ async function fijarFirmas(
 // sea el que se pidió.
 async function pedirDocumento(token: string, documentID: string) {
   const res = await fetch(
-    `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
+    `${WEETRUST_URL}/documents/${encodeURIComponent(documentID)}`,
     { headers: encabezados(token) },
   )
+  if (res.status === 404) return null
   const datos = await leerRespuesta(res, 'Consultar el documento')
   const lista = Array.isArray(datos) ? datos : (datos ? [datos] : [])
-  return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID) || null
+  const documento = lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID)
+  if (!documento) throw new Error('weetrust no devolvió el documento solicitado; no se marcará como eliminado.')
+  return documento
 }
 
 // Cómo se llama un documento en el panel de weetrust.
@@ -853,19 +878,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // según el endpoint; se normaliza aquí para que la pantalla no
       // tenga que adivinar.
       const suyos = Array.isArray(doc?.signatory) ? doc.signatory : []
-      const firmantes = (fila.firmantes as Array<Record<string, unknown>>).map((f) => {
-        const par = suyos.find((s: Record<string, unknown>) =>
-          String(s?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
-        if (!par) return f
-        return {
-          ...f,
-          firmado: Number(par.isSigned) === 1,
-          // El trazo de la firma. El PDF que entrega weetrust no la trae
-          // dibujada: su pantalla la superpone, y aquí hace falta para
-          // poder hacer lo mismo en la vista previa.
-          imagen: par.imageURL || f.imagen || null,
-        }
-      })
+      const firmantes = sincronizarFirmantes(fila.firmantes || [], suyos, new Date().toISOString())
 
       const estados: Record<string, string> = {
         DRAFT: 'borrador',
@@ -1280,11 +1293,17 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // El asesor pone al día los suyos; el liderazgo, los de todos.
       let q = admin
         .from('firmas_documentos')
-        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo')
+        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo, etiquetas')
         .not('weetrust_document_id', 'is', null)
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
-      const { data: filas } = await q
+      const filas: Array<Record<string, any>> = []
+      for (let inicio = 0; ; inicio += 300) {
+        const { data: pagina, error: errorFilas } = await q.order('id').range(inicio, inicio + 299)
+        if (errorFilas) throw new Error(`No se pudo leer el historial: ${errorFilas.message}`)
+        filas.push(...(pagina || []))
+        if ((pagina || []).length < 300) break
+      }
 
       const token = await obtenerToken()
       const porId = new Map<string, Record<string, any>>()
@@ -1318,6 +1337,22 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         COMPLETED: 'completado',
       }
 
+      // El listado puede omitir participantes o quedar incompleto. Revisar
+      // el documento individual antes de vaciar personas o darlo por borrado.
+      const porRevisar = [...new Set([
+        ...(filas || []).filter((fila) => !porId.has(fila.weetrust_document_id!))
+          .map((fila) => fila.weetrust_document_id!),
+        ...[...porId.entries()].filter(([, doc]) => !Array.isArray(doc.signatory) || !doc.signatory.length)
+          .map(([id]) => id),
+      ])]
+      for (let i = 0; i < porRevisar.length; i += 10) {
+        await Promise.all(porRevisar.slice(i, i + 10).map(async (id) => {
+          const detalle = await pedirDocumento(token, id)
+          if (detalle) porId.set(id, { ...(porId.get(id) || {}), ...detalle })
+        }))
+      }
+
+      const etiquetasRemotas = await etiquetasDeWeetrust(admin, porId)
       const cambios: Array<{ id: string; datos: Record<string, unknown> }> = []
 
       let eliminadosEnWeetrust = 0
@@ -1355,24 +1390,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         const suyos = Array.isArray(doc.signatory) ? doc.signatory : []
         const previos = (fila.firmantes || []) as Array<Record<string, any>>
 
-        const firmantes = previos.map((f) => {
-          const par = suyos.find((sg: Record<string, any>) =>
-            String(sg?.emailID || '').toLowerCase() === String(f.correo).toLowerCase())
-          if (!par) return f
-          const firmado = Number(par.isSigned) === 1
-          return {
-            ...f,
-            firmado,
-            // La fecha se pone la primera vez que se ve firmado y ya no
-            // se toca, para no recorrerla en cada actualización.
-            firmado_at: firmado ? (f.firmado_at ?? new Date().toISOString()) : null,
-            // El trazo. Es lo que faltaba en los documentos de antes de
-            // que se empezara a guardar.
-            imagen: par.imageURL || f.imagen || null,
-            url_firma: par.signing?.url ?? f.url_firma ?? null,
-            url_expira: par.signing?.expiry ?? f.url_expira ?? null,
-          }
-        })
+        const firmantes = sincronizarFirmantes(previos, suyos, new Date().toISOString())
 
         const estado = estados[String(doc.status)] || fila.estado
         const archivo = (doc.documentFileObj ?? {}) as Record<string, unknown>
@@ -1397,6 +1415,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
           datos: {
             estado,
             firmantes,
+            etiquetas: [...new Set([...(fila.etiquetas || []), ...(etiquetasRemotas.get(fila.weetrust_document_id!) || [])])],
             pdf_firmado_url: (archivo.url as string) ?? null,
             ...renombrar,
             ...(estado === 'completado' ? { completado_at: new Date().toISOString() } : {}),
@@ -1411,7 +1430,10 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         const trozo = cambios.slice(i, i + 10)
         const res = await Promise.all(trozo.map((c) =>
           admin.from('firmas_documentos').update(c.datos).eq('id', c.id)))
-        res.forEach((r: { error: unknown }) => { if (!r.error) actualizados++ })
+        res.forEach((r: { error: { message: string } | null }) => {
+          if (r.error) throw new Error(`No se pudo actualizar un documento: ${r.error.message}`)
+          actualizados++
+        })
       }
 
       // ── Los que solo existen en weetrust ──
@@ -1420,10 +1442,11 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // esto se quedaban sin aparecer para siempre, aunque el resto ya
       // estuviera al día. La lista de arriba (porId) ya es la cuenta
       // completa de weetrust, así que no hace falta volver a pedirla.
-      const { data: existentes } = await admin
+      const { data: existentes, error: errorExistentes } = await admin
         .from('firmas_documentos')
         .select('weetrust_document_id')
         .in('weetrust_document_id', [...porId.keys()])
+      if (errorExistentes) throw new Error(`No se pudo comparar el historial: ${errorExistentes.message}`)
 
       const yaEstaban = new Set(
         (existentes || []).map((f: { weetrust_document_id: string }) => f.weetrust_document_id))
@@ -1462,6 +1485,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
             archivo_ruta: null,
             user_id: (asesor as string | null) ?? null,
             creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+            etiquetas: etiquetasRemotas.get(documentID) || [],
             estado: estadoDoc,
             firmantes: suyos,
             ambiente: WEETRUST_AMBIENTE,
@@ -1474,7 +1498,8 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         for (let i = 0; i < nuevasFilas.length; i += 200) {
           const trozo = nuevasFilas.slice(i, i + 200)
           const { error } = await admin.from('firmas_documentos').insert(trozo)
-          if (!error) importados += trozo.length
+          if (error) throw new Error(`No se pudieron importar los documentos: ${error.message}`)
+          importados += trozo.length
         }
       }
 
@@ -1678,6 +1703,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       }
 
       // ── Armar los renglones ──
+      const etiquetasRemotas = await etiquetasDeWeetrust(admin, porId)
       const armados = [...porId.entries()].map(([documentID, doc]) => {
         const firmantes = (Array.isArray(doc?.signatory) ? doc.signatory : [])
           .map((s: Record<string, any>) => ({
@@ -1724,6 +1750,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
             // justo lo que no sirve para nada.
             user_id: null as string | null,
             creado_por: String(doc?.createdBy || doc?.owner || '') || null,
+            etiquetas: etiquetasRemotas.get(documentID) || [],
             estado,
             firmantes,
             ambiente: WEETRUST_AMBIENTE,
@@ -1745,7 +1772,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // acababa el tiempo.
       const { data: existentes, error: errBusca } = await admin
         .from('firmas_documentos')
-        .select('id, weetrust_document_id')
+        .select('id, weetrust_document_id, etiquetas')
         .in('weetrust_document_id', armados.map((a) => a.documentID))
 
       if (errBusca) {
@@ -1756,6 +1783,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         (existentes || []).map((e: { weetrust_document_id: string; id: string }) =>
           [e.weetrust_document_id, e.id] as [string, string]))
       const problemas: string[] = []
+      const etiquetasPrevias = new Map((existentes || []).map((e) => [e.weetrust_document_id, e.etiquetas || []]))
 
       // ── De quién es cada uno ──
       // weetrust no dice quién creó el documento en su listado, así que
@@ -1794,7 +1822,8 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         const trozo = paraActualizar.slice(i, i + 10)
         const results = await Promise.all(trozo.map((a) =>
           admin.from('firmas_documentos')
-            .update({ estado: a.estado, firmantes: a.firmantes, pdf_firmado_url: a.pdfUrl })
+            .update({ estado: a.estado, firmantes: a.firmantes, pdf_firmado_url: a.pdfUrl,
+              etiquetas: [...new Set([...(etiquetasPrevias.get(a.documentID) || []), ...a.fila.etiquetas])] })
             .eq('id', yaEstaban.get(a.documentID)!)))
         results.forEach((r: { error: { message: string } | null }, j: number) => {
           if (r.error) problemas.push(`${trozo[j].fila.titulo}: ${r.error.message}`)
