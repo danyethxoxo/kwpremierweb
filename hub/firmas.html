@@ -5572,7 +5572,7 @@
 
     // La búsqueda es un campo de texto y no un desplegable porque con
     // cien asesores el desplegable no se puede recorrer. Se filtra
-    // mientras se escribe, por asesor o por nombre del documento.
+    // mientras se escribe, por documento, personas o correos.
     $('f-buscar').addEventListener('input', (e) => {
       buscaAsesor = e.target.value.trim().toLowerCase();
       pintarEnvios();
@@ -5599,7 +5599,24 @@
     });
   }
 
+  function normalizarBusquedaFirmas(valor) {
+    return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  function textoBusquedaEnvio(e) {
+    const autor = e.autor || (e.user_id === miUserId ? miPerfil : {});
+    const personas = [...(Array.isArray(e.firmantes) ? e.firmantes : []),
+      ...(Array.isArray(e.observadores) ? e.observadores : [])];
+    return normalizarBusquedaFirmas([
+      nombreDoc(e), e.titulo, e.nombre_archivo,
+      autor.nombre || 'sin identificar', autor.email, autor.correo,
+      ...personas.flatMap((persona) => [persona.nombre, persona.correo, persona.email]),
+      ...etiquetas.filter((tag) => (e.etiquetas || []).includes(tag.id)).map((tag) => tag.nombre),
+    ].filter(Boolean).join(' '));
+  }
+
   function envíosFiltrados() {
+    const palabras = normalizarBusquedaFirmas(buscaAsesor).split(/\s+/).filter(Boolean);
     const lista = envios.filter((e) => {
       if (filtro === 'mis-pendientes') {
         if (!meFaltaFirmar(e)) return false;
@@ -5607,15 +5624,9 @@
         if (!['pendiente', 'completado'].includes(e.estado)) return false;
       } else if (filtro !== 'todos' && e.estado !== filtro) return false;
 
-      if (buscaAsesor) {
-        const nombreAsesor = ((e.autor && e.autor.nombre) || '').toLowerCase();
-        // "sin" encuentra los que no se pudieron atribuir a nadie, que
-        // son justo los que hay que repartir.
-        const coincideAsesor = nombreAsesor
-          ? nombreAsesor.includes(buscaAsesor)
-          : 'sin identificar'.includes(buscaAsesor);
-        const coincideDoc = nombreDoc(e).toLowerCase().includes(buscaAsesor);
-        if (!coincideAsesor && !coincideDoc) return false;
+      if (palabras.length) {
+        const texto = textoBusquedaEnvio(e);
+        if (!palabras.every((palabra) => texto.includes(palabra))) return false;
       }
 
       if (etiqueta && !(e.etiquetas || []).includes(etiqueta)) return false;
@@ -5670,7 +5681,7 @@
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
     const campos = 'id, titulo, estado, firmantes, observadores, posiciones, nombre_archivo, pdf_firmado_url, archivo_ruta, error_mensaje, created_at, enviado_at, weetrust_document_id, user_id, etiquetas'
-      + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre)' : '');
+      + (veTodo ? ', autor:profiles!firmas_documentos_user_id_fkey(nombre, email)' : '');
 
     const { data, error } = await window.kwSupabase
       .from('firmas_documentos')
