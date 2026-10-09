@@ -851,7 +851,9 @@
   document.getElementById('drawer-close').addEventListener('click', cerrar);
   const cerrarDer = document.getElementById('drawer-accesos-close');
   if (cerrarDer) cerrarDer.addEventListener('click', cerrar);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrar(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && PANELES.some(panel => panel.el.classList.contains('open'))) cerrar();
+  });
 
   // Los paneles se abren y cierran mediante sus botones.
 

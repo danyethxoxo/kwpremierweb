@@ -4,6 +4,59 @@
 .kw-lateral,
 .kw-lateral-principal { min-width: 0; }
 
+.kw-lateral-abrir, .kw-lateral-cerrar, .kw-lateral-velo { display: none; }
+@media (max-width: 1023px) {
+  .kw-lateral-abrir {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 8px 14px; margin-right: auto;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: #fff; color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .kw-lateral.kw-lateral-movil {
+    position: fixed !important; inset: 0 auto 0 0; z-index: 205;
+    display: flex !important; flex-direction: column; gap: 12px;
+    width: min(360px, 88vw); height: 100dvh; padding: 0 14px 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    overflow-y: auto; overscroll-behavior: contain;
+    background: #fff; border-right: 1px solid var(--border);
+    visibility: hidden !important; pointer-events: none; transform: translateX(-100%);
+    box-shadow: none; transition: transform 180ms ease, visibility 180ms;
+  }
+  .kw-lateral.kw-lateral-movil.kw-lateral-abierta {
+    visibility: visible !important; pointer-events: auto; transform: translateX(0);
+  }
+  .kw-lateral-movil .kw-lateral-cabecera {
+    display: flex !important; flex: none; margin-bottom: 0;
+    position: sticky; top: 0; z-index: 2; background: #fff;
+    height: auto; min-height: 64px; padding-block: max(10px, env(safe-area-inset-top));
+  }
+  .kw-lateral-cerrar {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 44px; height: 44px; border: 0; border-radius: 10px;
+    background: #f7f7f7; color: var(--muted); font-size: 26px; cursor: pointer;
+  }
+  .kw-lateral-movil .kw-lateral-menu { width: 44px; height: 44px; }
+  .kw-lateral-velo:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 204; background: rgba(0,0,0,.4); }
+  .kw-lateral-movil .kw-resumen { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+  .kw-lateral-movil .kw-conteo {
+    display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px;
+    flex: none; height: auto;
+    width: 100%; min-height: 44px; padding: 8px 12px; box-shadow: none;
+  }
+  .kw-lateral-movil .kw-conteo-num { font-size: 18px; }
+  .kw-lateral-movil .kw-conteo-txt { font-size: 12px; }
+  .kw-lateral-movil .kw-filtros-caja { padding: 0; margin: 0; border: 0; background: none; box-shadow: none; overflow: visible; }
+  .kw-lateral-movil .kw-filtros { display: flex; flex-direction: column; gap: 12px; }
+  .kw-lateral-movil .kw-campo-filtro { flex: none !important; width: 100%; max-width: none; }
+  .kw-lateral-movil .kw-campo-filtro > label {
+    display: block; position: static; width: auto; height: auto; clip: auto;
+    margin: 0 0 6px; overflow: visible; font-size: 11px;
+  }
+  .kw-lateral-movil .kw-rango { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .kw-lateral-movil :is(input, select) { min-width: 0; max-width: 100%; }
+  .kw-lateral-movil .kw-select-menu { width: 100%; min-width: 100%; max-width: 100%; }
+}
+
 .kw-lateral-cabecera {
   height: 58px;
   min-height: 58px;
