@@ -120,6 +120,8 @@
     padding-top: var(--sp-3); overflow-x: auto;
   }
   .accesos.ocultos { display: none; }
+  /* El acceso al sitio es independiente de los permisos de Google. */
+  .acceso-pagina { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; }
   .accesos-titulo {
     display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
     margin: 0; white-space: nowrap;
@@ -1505,6 +1507,24 @@
   </footer>
 
 
+  <!-- Alta desde el directorio: nombre y correo ya vienen en la tarjeta. -->
+  <div id="modal-acceso-pagina" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="acceso-pagina-titulo">
+    <form class="modal-box" id="acceso-pagina-form">
+      <h3 id="acceso-pagina-titulo">Agregar a la página</h3>
+      <p id="acceso-pagina-persona"></p>
+      <p id="acceso-pagina-correo"></p>
+      <div class="field">
+        <label for="acceso-pagina-rol">¿Con qué rol entraría?</label>
+        <select id="acceso-pagina-rol" required></select>
+      </div>
+      <div class="msg" id="acceso-pagina-msg" role="status"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancelar" id="acceso-pagina-cancelar">Cancelar</button>
+        <button type="submit" class="btn-modal-confirmar" id="acceso-pagina-guardar">Agregar</button>
+      </div>
+    </form>
+  </div>
+
   <!-- Modal: editar usuario -->
   <div id="modal-editar-usuario" class="modal-overlay" style="display:none;">
     <div class="modal-box">
@@ -1765,6 +1785,7 @@
         .order('created_at', { ascending: false });
       if (error) throw error;
       usuariosCache = data || [];
+      if (gruposAsesores.length) { armarTabsAsesores(); pintarGrupos(); }
 
       if (!usuariosCache.length) {
         cont.innerHTML = '<div class="kw-vacio"><strong>Todavía no hay usuarios</strong>Agrega al primero con el formulario de arriba.</div>';
@@ -2375,13 +2396,154 @@
 
   function personaPorCorreo(correo) {
     for (const g of gruposAsesores) {
-      const p = g.personas.find(function (x) { return x.correo === correo; });
+      const p = g.personas.find(function (x) { return correoPersona(x.correo) === correoPersona(correo); });
       if (p) return { persona: p, grupo: g };
     }
     return null;
   }
 
   // ── Las pestañas de cada hoja ──
+  function correoPersona(valor) { return String(valor || '').trim().toLowerCase(); }
+
+  function usuarioDePagina(correo) {
+    const clave = correoPersona(correo);
+    return clave ? usuariosCache.find(function (u) { return correoPersona(u.email) === clave; }) || null : null;
+  }
+
+  function actualizarGrupoTodos() {
+    const personas = new Map();
+    const bajas = new Set();
+    gruposAsesores.filter(function (g) { return g.clave !== 'todos' && g.clave !== 'celulas'; }).forEach(function (g) {
+      (g.personas || []).forEach(function (p) {
+        const correo = correoPersona(p.correo);
+        if (esDeBaja(p.grupo || g.clave) || /baja/.test(p.grupo || g.clave)) {
+          if (correo) bajas.add(correo);
+          return;
+        }
+        const clave = correo || 'directorio:' + (p.id || g.clave + ':' + p.nombre);
+        if (!personas.has(clave)) personas.set(clave, { ...p, grupo: p.grupo || g.clave });
+      });
+    });
+    usuariosCache.forEach(function (u) {
+      const correo = correoPersona(u.email);
+      if (correo && bajas.has(correo) && !personas.has(correo)) return;
+      const clave = correo || 'usuario:' + u.id;
+      const anterior = personas.get(clave);
+      const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ');
+      personas.set(clave, anterior
+        ? { ...anterior, usuarioId: u.id, rolPagina: u.role, puesto: anterior.puesto || u.puesto || ROLE_LABELS[u.role] }
+        : { correo: correo, nombre: nombre || correo, usuarioId: u.id, rolPagina: u.role,
+            grupo: u.role === 'staff' ? 'liderazgo' : 'usuarios', puesto: u.puesto || ROLE_LABELS[u.role],
+            fechaIngreso: '', kwid: '', contactos: [] });
+    });
+    const todos = { clave: 'todos', titulo: 'Todos', personas: Array.from(personas.values()).sort(function (a, b) {
+      return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+    }) };
+    gruposAsesores = [todos].concat(gruposAsesores.filter(function (g) { return g.clave !== 'todos'; }));
+  }
+
+  function puedeGestionarPagina(usuario) {
+    return ['master', 'admin'].includes(miRol) && (!usuario ||
+      (usuario.id !== miUserId && (miRol === 'master' || ['staff', 'asociado'].includes(usuario.role))));
+  }
+
+  function accesoPaginaHtml(p) {
+    const usuario = usuarioDePagina(p.correo);
+    const estado = usuario ? 'Usuario de la página: ' + (ROLE_LABELS[usuario.role] || usuario.role) : 'Sin usuario en la página';
+    return '<div class="acceso-pagina">' +
+      '<span>' + escapeHtml(estado) + '</span>' +
+      (p.correo && puedeGestionarPagina(usuario)
+        ? '<button type="button" class="kw-btn-mini" data-acceso-pagina="' + escapeHtml(p.correo) + '">' +
+            (usuario ? 'Cambiar rol' : 'Agregar a la página') + '</button>' : '') +
+    '</div>';
+  }
+
+  let personaAltaPagina = null;
+  let guardandoAltaPagina = false;
+
+  function abrirAltaPagina(correo) {
+    const encontrada = personaPorCorreo(correo);
+    const usuario = usuarioDePagina(correo);
+    if (!encontrada || !puedeGestionarPagina(usuario) || guardandoAltaPagina) return;
+    personaAltaPagina = { ...encontrada.persona, correo: correoPersona(correo), usuarioId: usuario && usuario.id };
+    const roles = miRol === 'master' ? (usuario ? ['master', 'admin', 'staff', 'asociado'] : ['admin', 'staff', 'asociado']) : ['staff', 'asociado'];
+    const select = document.getElementById('acceso-pagina-rol');
+    select.innerHTML = '<option value="">Selecciona el rol</option>' + roles.map(function (rol) {
+      return '<option value="' + rol + '">' + ROLE_LABELS[rol] + '</option>';
+    }).join('');
+    select.value = usuario ? usuario.role : '';
+    document.getElementById('acceso-pagina-persona').textContent = encontrada.persona.nombre || '';
+    document.getElementById('acceso-pagina-correo').textContent = personaAltaPagina.correo;
+    document.getElementById('acceso-pagina-titulo').textContent = usuario ? 'Cambiar rol en la página' : 'Agregar a la página';
+    document.getElementById('acceso-pagina-guardar').textContent = usuario ? 'Guardar' : 'Agregar';
+    document.getElementById('acceso-pagina-msg').style.display = 'none';
+    document.getElementById('modal-acceso-pagina').style.display = 'flex';
+    window.kwUI.selects(document.getElementById('modal-acceso-pagina'));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function cerrarAltaPagina() {
+    if (guardandoAltaPagina) return;
+    document.getElementById('modal-acceso-pagina').style.display = 'none';
+    personaAltaPagina = null;
+  }
+
+  async function guardarAltaPagina(evento) {
+    evento.preventDefault();
+    if (!personaAltaPagina || guardandoAltaPagina) return;
+    const persona = personaAltaPagina;
+    const rol = document.getElementById('acceso-pagina-rol').value;
+    if (!rol) return;
+    guardandoAltaPagina = true;
+    const boton = document.getElementById('acceso-pagina-guardar');
+    const cancelar = document.getElementById('acceso-pagina-cancelar');
+    const mensaje = document.getElementById('acceso-pagina-msg');
+    boton.disabled = cancelar.disabled = true;
+    const texto = boton.textContent;
+    const esAlta = !persona.usuarioId || persona.nombrePendiente;
+    boton.textContent = 'Guardando...';
+    mensaje.style.display = 'none';
+    try {
+      if (persona.usuarioId) {
+        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, role: rol,
+          ...(persona.nombrePendiente ? { nombre: persona.nombre || '', apellido: '' } : {}) });
+      } else {
+        const invitado = await llamarFuncion(INVITAR_URL, { email: persona.correo, rol: rol });
+        if (!invitado.user_id) throw new Error('No se pudo identificar la cuenta creada. Recarga la lista antes de reintentar.');
+        persona.usuarioId = invitado.user_id;
+        persona.nombrePendiente = true;
+        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, nombre: persona.nombre || '', apellido: '' });
+      }
+      persona.nombrePendiente = false;
+      await cargarUsuarios();
+      guardandoAltaPagina = false;
+      cerrarAltaPagina();
+      avisoAsesores(esAlta ? 'Usuario agregado. Se le envió la invitación para completar su registro.' : 'Rol actualizado.', 'ok');
+    } catch (error) {
+      await cargarUsuarios();
+      mensaje.textContent = error.message || 'No se pudo dar acceso a la página.';
+      mensaje.className = 'msg error';
+      mensaje.style.display = 'block';
+    } finally {
+      guardandoAltaPagina = false;
+      boton.disabled = cancelar.disabled = false;
+      boton.textContent = texto;
+    }
+  }
+
+  document.getElementById('acceso-pagina-form').addEventListener('submit', guardarAltaPagina);
+  document.getElementById('acceso-pagina-cancelar').addEventListener('click', cerrarAltaPagina);
+  document.getElementById('modal-acceso-pagina').addEventListener('click', function (e) {
+    if (e.target === this) cerrarAltaPagina();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrarAltaPagina(); });
+  document.addEventListener('click', function (e) {
+    const boton = e.target.closest('[data-acceso-pagina]');
+    if (!boton) return;
+    e.preventDefault(); e.stopPropagation();
+    abrirAltaPagina(boton.dataset.accesoPagina);
+  });
+
   // Se rearman solo cuando cambia el juego de hojas (alguien agregó o
   // renombró una en el libro): rearmarlas en cada recarga dejaría un
   // detector de tamaño colgado por cada vez.
@@ -2432,6 +2594,7 @@
   }
 
   function armarTabsAsesores() {
+    actualizarGrupoTodos();
     const claves = gruposAsesores.map(function (g) { return g.clave; }).join('|');
     if (claves === clavesPintadas) return;
     clavesPintadas = claves;
@@ -2631,13 +2794,14 @@
       '<div class="accesos-fila">' + filas +
         '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled title="Dar accesos seleccionados" aria-label="Dar accesos seleccionados">' + ICONO_SUBIR + '</button>' +
         '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Quitar accesos seleccionados" aria-label="Quitar accesos seleccionados">' + ICONO_BAJAR + '</button>' +
-      '</div>' +
+      '</div>' + accesoPaginaHtml(p) +
     '</div>';
   }
 
   function filaAsesorHtml(p, g, i) {
     const I = window.kwUI.iconos;
-    const esBaja = esDeBaja(g.clave);
+    const grupoPersona = p.grupo || g.clave;
+    const esBaja = esDeBaja(grupoPersona);
     const estado = accesosDe(p.correo);
     const completo = estado && ACCESOS.every(function (a) { return estado[a.clave]; });
     const alguno = estado && ACCESOS.some(function (a) { return estado[a.clave]; });
@@ -2666,8 +2830,8 @@
             (completo ? ICONO_LISTO : '') + 'Accesos</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
     const opcionBaja = !esBaja
-      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(g.clave) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
-      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (g.clave === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
+      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(grupoPersona) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
+      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (grupoPersona === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
 
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
@@ -2757,6 +2921,7 @@
   }
 
   function pintarGrupos() {
+    actualizarGrupoTodos();
     gruposAsesores.forEach(function (g) {
       const cont = document.getElementById('lista-' + g.clave);
       if (!cont) return;

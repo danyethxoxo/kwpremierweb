@@ -827,6 +827,11 @@
      separado para poder corregir una parte sin volver a capturar todo. */
   .dic-fecha-partes { display: grid; grid-template-columns: 82px 1fr 104px; gap: 8px; }
   .dic-fecha-partes select { width: 100%; }
+  /* Dentro de una fila de tres datos, la fecha reparte el ancho entre
+     sus partes para conservar el formulario dentro de la pantalla. */
+  @media (min-width: 701px) {
+    .dic-tres .dic-fecha-partes { grid-template-columns: minmax(0, .75fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 6px; }
+  }
 
   /* Corrección particular de un dato: queda debajo del valor que copió
      Gabriela del contrato y se distingue en rojo de la captura original. */
@@ -1913,7 +1918,7 @@
           </div>
         </div>
 
-        <div class="dic-dos">
+        <div class="dic-tres">
           <div class="dic-campo">
             <label for="e-condominio">Condominio</label>
             <select id="e-condominio">
@@ -1924,7 +1929,7 @@
           </div>
           <!-- La escritura y su fecha solo se piden si dijo que sí:
                preguntarlas cuando no aplica es pedir datos que no existen. -->
-          <div class="dic-dos" id="e-esc-condominio-caja" style="display:none;grid-column:1 / -1;">
+          <div id="e-esc-condominio-caja" style="display:none;">
             <div class="dic-campo">
               <label for="e-esc-condominio">Escritura del condominio</label>
               <textarea id="e-esc-condominio" rows="2"></textarea>
@@ -1955,20 +1960,18 @@
         </div>
 
         <h2 class="dic-subtitulo">CFDI</h2>
-        <div class="dic-dos">
+        <div class="dic-tres">
           <div class="dic-campo">
             <label for="e-cfdi-necesario">¿Es necesario el CFDI?</label>
             <select id="e-cfdi-necesario"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
           </div>
-          <div id="e-cfdi-tiene-caja" style="display:none;">
-            <div class="dic-campo">
-              <label for="e-cfdi-tiene">¿Cuenta con CFDI?</label>
-              <select id="e-cfdi-tiene"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
-            </div>
-            <div class="dic-campo" id="e-cfdi-numero-caja" style="display:none;">
-              <label for="e-cfdi">Número de CFDI</label>
-              <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;" placeholder="Número de CFDI">
-            </div>
+          <div class="dic-campo" id="e-cfdi-tiene-caja" style="display:none;">
+            <label for="e-cfdi-tiene">¿Cuenta con CFDI?</label>
+            <select id="e-cfdi-tiene"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
+          </div>
+          <div class="dic-campo" id="e-cfdi-numero-caja" style="display:none;">
+            <label for="e-cfdi">Número de CFDI</label>
+            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;" placeholder="Número de CFDI">
           </div>
         </div>
 
@@ -4314,7 +4317,7 @@
   // La escritura y su fecha solo se piden si se dijo que sí.
   function acomodarCondominio() {
     var aplica = $('e-condominio').value === 'si';
-    $('e-esc-condominio-caja').style.display = aplica ? '' : 'none';
+    $('e-esc-condominio-caja').style.display = aplica ? 'contents' : 'none';
     if (!aplica) {
       $('e-esc-condominio').value = '';
       $('e-condominio-notario').value = '';
