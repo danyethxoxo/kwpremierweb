@@ -323,7 +323,7 @@
     }
     .dic-cabecera-col {
       width: 175px; flex-shrink: 0;
-      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      font-size: 10.5px; font-weight: 700; text-transform: none;
       letter-spacing: 0.06em; color: var(--muted);
     }
     .dic-cabecera-col:not(:first-child) { padding-left: 16px; margin-left: -4px; }
@@ -695,7 +695,7 @@
   .dic-dato b {
     display: block; margin-bottom: 4px;
     font-size: 9.5px; line-height: 1.25; font-weight: 650;
-    text-transform: uppercase; letter-spacing: .065em; color: #8a7f7f;
+    text-transform: none; letter-spacing: .065em; color: #8a7f7f;
   }
   .dic-dato-valor {
     display: block; color: #211d1d; font-size: 14px; font-weight: 500;
@@ -711,7 +711,7 @@
   }
   .dic-dato-correccion::before {
     content: 'Corrección · '; font-size: 9px; font-weight: 650;
-    text-transform: uppercase; letter-spacing: .055em; opacity: .72;
+    text-transform: none; letter-spacing: .055em; opacity: .72;
   }
   .dic-observaciones-seccion {
     margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -759,7 +759,7 @@
     position: sticky; top: 0; z-index: 1; padding: 9px 10px;
     background: var(--pastel-menta); border-bottom: 1px solid color-mix(in srgb, var(--pastel-menta-txt) 34%, transparent);
     color: var(--pastel-menta-txt); font-size: 10px; font-weight: 700;
-    text-align: left; text-transform: uppercase; letter-spacing: .05em;
+    text-align: left; text-transform: none; letter-spacing: .05em;
   }
   .dic-contrato-tabla td { padding: 10px; border-bottom: 1px solid color-mix(in srgb, var(--pastel-menta-txt) 18%, transparent); vertical-align: middle; }
   .dic-contrato-tabla tr:last-child td { border-bottom: none; }
@@ -786,7 +786,7 @@
     .dic-contrato-tabla td { padding: 3px 0; border: none; }
     .dic-contrato-tabla td::before {
       content: attr(data-label); display: block; margin-bottom: 2px;
-      color: var(--pastel-menta-txt); font-size: 9px; font-weight: 700; text-transform: uppercase;
+      color: var(--pastel-menta-txt); font-size: 9px; font-weight: 700; text-transform: none;
     }
   }
 
@@ -953,7 +953,7 @@
     background: var(--card-degradado, #fff);
   }
   .dic-cliente-num {
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    font-size: 11.5px; font-weight: 700; text-transform: none;
     letter-spacing: 0.05em; color: var(--red); margin-bottom: var(--sp-2);
   }
   .dic-cliente .dic-campo:last-child { margin-bottom: 0; }
@@ -1542,6 +1542,24 @@
       margin-bottom: 12px;
     }
   }
+
+  /* Controles del dictamen: mayor contraste para revisar expedientes largos. */
+  #vista-editor .dic-editor { --border: color-mix(in srgb, var(--text) 32%, white); --placeholder: var(--muted); }
+  #vista-editor .dic-campo > label { color: var(--text); }
+  #vista-editor .kw-input,
+  #vista-editor .kw-select-btn,
+  #vista-editor .dic-campo textarea,
+  #vista-editor .dic-numero-linea {
+    border: 1.5px solid var(--border); background: #fff; color: var(--text);
+  }
+  #vista-editor .kw-input:focus,
+  #vista-editor .kw-select-btn:focus-visible,
+  #vista-editor .kw-select.abierto .kw-select-btn,
+  #vista-editor .dic-campo textarea:focus,
+  #vista-editor .dic-numero-linea:focus {
+    border-color: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 12%, transparent);
+  }
+  #vista-editor .dic-cliente-num { text-transform: none; letter-spacing: normal; }
 </style>
 </head>
 <body class="en-lista">
@@ -1823,6 +1841,7 @@
                   <option value="residencial">Residencial</option>
                   <option value="comercial">Comercial</option>
                   <option value="mixto">Mixto</option>
+              <option value="terreno_ejidal">Terreno ejidal</option>
                 </select>
               </div>
             </div>
@@ -1855,65 +1874,14 @@
 
         <div id="e-clientes"></div>
 
+        <h2 class="dic-subtitulo">Dirección</h2>
+
         <div class="dic-campo">
           <label for="e-inmueble">Dirección del inmueble</label>
           <textarea id="e-inmueble" rows="2"></textarea>
         </div>
 
-        <h2 class="dic-subtitulo">Datos del inmueble</h2>
-
-        <div class="dic-dos">
-          <div class="dic-campo">
-            <label for="e-tipo-contrato">Tipo de contrato</label>
-            <select id="e-tipo-contrato">
-              <option value="">Sin especificar</option>
-              <option value="exclusiva">Exclusiva</option>
-              <option value="abierto">Abierto</option>
-            </select>
-          </div>
-          <div class="dic-campo">
-            <label for="e-tipo">Tipo de inmueble</label>
-            <select id="e-tipo"></select>
-            <!-- Sale solo al elegir "Otro": se escribe una vez y queda en
-                 el catálogo para las siguientes, igual que las etiquetas. -->
-            <input type="text" id="e-tipo-nuevo" class="kw-input" style="display:none;margin-top:8px;" autocomplete="off">
-          </div>
-        </div>
-
-        <div class="dic-dos">
-          <div class="dic-campo">
-            <label for="e-operacion">Operación</label>
-            <select id="e-operacion">
-              <option value="venta">Venta</option>
-              <option value="renta">Renta</option>
-            </select>
-          </div>
-          <div class="dic-campo">
-            <label for="e-uso">Uso</label>
-            <select id="e-uso">
-              <option value="residencial">Residencial</option>
-              <option value="comercial">Comercial</option>
-              <option value="mixto">Mixto</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="dic-dos">
-          <div class="dic-campo">
-            <label for="e-precio">Precio del listado</label>
-            <div class="dic-conunidad">
-              <span class="dic-unidad-izq">$</span>
-              <textarea id="e-precio" rows="1" class="dic-numero-linea" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Precio del listado"></textarea>
-            </div>
-          </div>
-          <div class="dic-campo">
-            <label for="e-comision">Porcentaje de comisión</label>
-            <div class="dic-conunidad">
-              <input type="text" id="e-comision" class="kw-input" inputmode="decimal" autocomplete="off">
-              <span>%</span>
-            </div>
-          </div>
-        </div>
+        <h2 class="dic-subtitulo">Escrituración y datos</h2>
 
         <!-- La escritura, en sus cuatro partes. Antes era un párrafo a
              mano: así escrito, el número no se puede buscar ni el
@@ -1970,23 +1938,92 @@
               </div>
               <input type="hidden" id="e-esc-condominio-fecha">
             </div>
+            <div class="dic-campo">
+              <label for="e-condominio-notario">Nombre del notario del condominio</label>
+              <input type="text" id="e-condominio-notario" class="kw-input" autocomplete="off">
+            </div>
+            <div class="dic-campo">
+              <label for="e-condominio-notaria">Número de notaría del condominio</label>
+              <input type="text" id="e-condominio-notaria" class="kw-input" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
+        <div class="dic-campo">
+          <label for="e-folio-real">Folio real</label>
+          <input type="text" id="e-folio-real" name="dic-folio-real" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+        </div>
+
+        <h2 class="dic-subtitulo">CFDI</h2>
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-cfdi-necesario">¿Es necesario el CFDI?</label>
+            <select id="e-cfdi-necesario"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
+          </div>
+          <div class="dic-campo" id="e-cfdi-tiene-caja" style="display:none;">
+            <label for="e-cfdi-tiene">¿Cuenta con CFDI?</label>
+            <select id="e-cfdi-tiene"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
+            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;margin-top:8px;" placeholder="Número de CFDI">
+          </div>
+        </div>
+
+        <h2 class="dic-subtitulo">Tipo de contrato</h2>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-tipo-contrato">Tipo de contrato</label>
+            <select id="e-tipo-contrato">
+              <option value="">Sin especificar</option>
+              <option value="exclusiva">Exclusiva</option>
+              <option value="abierto">Abierto</option>
+            </select>
+          </div>
+          <div class="dic-campo">
+            <label for="e-tipo">Tipo de inmueble</label>
+            <select id="e-tipo"></select>
+            <!-- Sale solo al elegir "Otro": se escribe una vez y queda en
+                 el catálogo para las siguientes, igual que las etiquetas. -->
+            <input type="text" id="e-tipo-nuevo" class="kw-input" style="display:none;margin-top:8px;" autocomplete="off">
           </div>
         </div>
 
         <div class="dic-dos">
           <div class="dic-campo">
-            <label for="e-cfdi-tiene">¿Tiene CFDI?</label>
-            <select id="e-cfdi-tiene">
-              <option value="no">No</option>
-              <option value="si">Sí</option>
+            <label for="e-operacion">Operación</label>
+            <select id="e-operacion">
+              <option value="venta">Venta</option>
+              <option value="renta">Renta</option>
             </select>
-            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;margin-top:8px;" placeholder="Número de CFDI">
           </div>
           <div class="dic-campo">
-            <label for="e-folio-real">Folio real</label>
-            <input type="text" id="e-folio-real" name="dic-folio-real" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+            <label for="e-uso">Uso de suelo</label>
+            <select id="e-uso">
+              <option value="residencial">Residencial</option>
+              <option value="comercial">Comercial</option>
+              <option value="mixto">Mixto</option>
+              <option value="terreno_ejidal">Terreno ejidal</option>
+            </select>
           </div>
         </div>
+
+        <div class="dic-dos">
+          <div class="dic-campo">
+            <label for="e-precio">Precio del listado</label>
+            <div class="dic-conunidad">
+              <span class="dic-unidad-izq">$</span>
+              <textarea id="e-precio" rows="1" class="dic-numero-linea" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Precio del listado"></textarea>
+            </div>
+          </div>
+          <div class="dic-campo">
+            <label for="e-comision">Porcentaje de comisión</label>
+            <div class="dic-conunidad">
+              <input type="text" id="e-comision" class="kw-input" inputmode="decimal" autocomplete="off">
+              <span>%</span>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="dic-subtitulo">Superficies</h2>
 
         <div class="dic-campo">
           <label for="e-sup-escritura">Superficie escritura</label>
@@ -2084,8 +2121,12 @@
     autorizada:   'Aprobado',
   };
 
+  function nombreTipo(v) { var t = String(v || ''); return t && t === t.toUpperCase() ? t.charAt(0) + t.slice(1).toLocaleLowerCase('es-MX') : t; }
+
+  function respuestaCfdi(v) { return { si: 'Sí', no: 'No', no_aplica: 'No aplica' }[v] || ''; }
+
   var OPERACIONES = { venta: 'Venta', renta: 'Renta' };
-  var USOS = { residencial: 'Residencial', comercial: 'Comercial', mixto: 'Mixto' };
+  var USOS = { residencial: 'Residencial', comercial: 'Comercial', mixto: 'Mixto', terreno_ejidal: 'Terreno ejidal' };
   var CONTRATOS = { exclusiva: 'Exclusiva', abierto: 'Abierto' };
 
   // Un booleano de la base tiene tres respuestas posibles en pantalla: sí,
@@ -2550,7 +2591,7 @@
 
     $('e-tipo').innerHTML = '<option value="">Sin especificar</option>' +
       tipos.map(function (x) {
-        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
+        return '<option value="' + x.id + '">' + escapar(nombreTipo(x.nombre)) + '</option>';
       }).join('') +
       '<option value="__nuevo__">Otro (escribirlo)</option>';
 
@@ -2560,7 +2601,7 @@
 
     $('f-tipo').innerHTML = '<option value="todos">Tipo de inmueble</option>' +
       tipos.map(function (x) {
-        return '<option value="' + x.id + '">' + escapar(x.nombre) + '</option>';
+        return '<option value="' + x.id + '">' + escapar(nombreTipo(x.nombre)) + '</option>';
       }).join('');
     if (window.kwUI) window.kwUI.selects(document);
   }
@@ -3313,6 +3354,10 @@
         correccionDe(d, 'escritura_condominio')) +
       dato('Fecha de escrituración del condominio', fecha(d.escritura_condominio_fecha),
         correccionDe(d, 'escritura_condominio_fecha')) +
+      dato('Nombre del notario del condominio', d.condominio_notario_nombre, correccionDe(d, 'condominio_notario_nombre')) +
+      dato('Número de notaría del condominio', d.condominio_notaria_numero, correccionDe(d, 'condominio_notaria_numero')) +
+      dato('¿Es necesario el CFDI?', respuestaCfdi(d.cfdi_necesario)) +
+      dato('¿Cuenta con CFDI?', respuestaCfdi(d.cfdi_tiene)) +
       dato('CFDI', d.cfdi, correccionDe(d, 'cfdi')) +
       dato('Folio real', d.folio_real, correccionDe(d, 'folio_real'));
 
@@ -3874,6 +3919,10 @@
     ['e-notaria', 'notaria_numero'],
     ['e-esc-condominio', 'escritura_condominio'],
     ['e-esc-condominio-fecha', 'escritura_condominio_fecha'],
+    ['e-condominio-notario', 'condominio_notario_nombre'],
+    ['e-condominio-notaria', 'condominio_notaria_numero'],
+    ['e-cfdi-necesario', 'cfdi_necesario'],
+    ['e-cfdi-tiene', 'cfdi_tiene'],
     ['e-cfdi', 'cfdi'],
     ['e-folio-real', 'folio_real'],
     ['e-sup-escritura', 'superficie_escritura'],
@@ -4264,12 +4313,20 @@
     $('e-esc-condominio-caja').style.display = aplica ? '' : 'none';
     if (!aplica) {
       $('e-esc-condominio').value = '';
+      $('e-condominio-notario').value = '';
+      $('e-condominio-notaria').value = '';
       ponerFechaCondominio('');
     }
   }
 
   function acomodarCfdi() {
-    var tiene = $('e-cfdi-tiene').value === 'si';
+    var necesario = $('e-cfdi-necesario').value === 'si';
+    $('e-cfdi-tiene-caja').style.display = necesario ? '' : 'none';
+    if (!necesario && $('e-cfdi-tiene').value) {
+      $('e-cfdi-tiene').value = '';
+      $('e-cfdi-tiene').dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    var tiene = necesario && $('e-cfdi-tiene').value === 'si';
     $('e-cfdi').style.display = tiene ? '' : 'none';
     if (!tiene) $('e-cfdi').value = '';
     var caja = $('e-cfdi').closest('.dic-campo');
@@ -4308,6 +4365,10 @@
         : [],
     };
     CAMPOS.forEach(function (c) { borrador[c[1]] = (d && d[c[1]]) || ''; });
+    if (borrador.cfdi && !borrador.cfdi_necesario && !borrador.cfdi_tiene) {
+      borrador.cfdi_necesario = 'si';
+      borrador.cfdi_tiene = 'si';
+    }
 
     $('editor-titulo').textContent = d
       ? 'Editar dictamen' + (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : '')
@@ -4317,12 +4378,13 @@
     $('e-tipo').value = borrador.tipo_inmueble_id;
     $('e-tipo-contrato').value = borrador.tipo_contrato;
     $('e-condominio').value = borrador.condominio;
-    $('e-cfdi-tiene').value = borrador.cfdi ? 'si' : 'no';
+    $('e-cfdi-necesario').value = borrador.cfdi_necesario || (borrador.cfdi ? 'si' : '');
+    $('e-cfdi-tiene').value = borrador.cfdi_tiene || (borrador.cfdi ? 'si' : '');
     $('e-tipo-nuevo').style.display = 'none';
     $('e-tipo-nuevo').value = '';
     // El desplegable del sitio pinta su rótulo escuchando "change", y
     // poner el valor desde el código no lo dispara.
-    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio', 'e-cfdi-tiene'].forEach(function (x) {
+    ['e-operacion', 'e-uso', 'e-tipo', 'e-tipo-contrato', 'e-condominio', 'e-cfdi-necesario', 'e-cfdi-tiene'].forEach(function (x) {
       $(x).dispatchEvent(new Event('change', { bubbles: true }));
     });
     CAMPOS.forEach(function (c) { $(c[0]).value = paraCampo(c[1], borrador[c[1]]); });
@@ -4537,8 +4599,11 @@
     if (borrador.condominio !== 'si') {
       fila.escritura_condominio = null;
       fila.escritura_condominio_fecha = null;
+      fila.condominio_notario_nombre = null;
+      fila.condominio_notaria_numero = null;
     }
-    if ($('e-cfdi-tiene').value !== 'si') fila.cfdi = null;
+    if (fila.cfdi_necesario !== 'si') fila.cfdi_tiene = null;
+    if (fila.cfdi_necesario !== 'si' || fila.cfdi_tiene !== 'si') fila.cfdi = null;
 
     var id = borrador.id;
     var eraEdicion = !!id;
@@ -4667,6 +4732,10 @@
     ['Condominio', 'texto', 11, function (d) { return siNo(d.condominio); }],
     ['Escritura del condominio', 'texto', 30, function (d) { return d.escritura_condominio; }],
     ['Fecha de escrituración del condominio', 'fecha', 28, function (d) { return d.escritura_condominio_fecha; }],
+    ['Nombre del notario del condominio', 'texto', 30, function (d) { return d.condominio_notario_nombre; }],
+    ['Número de notaría del condominio', 'texto', 28, function (d) { return d.condominio_notaria_numero; }],
+    ['¿Es necesario el CFDI?', 'texto', 24, function (d) { return respuestaCfdi(d.cfdi_necesario); }],
+    ['¿Cuenta con CFDI?', 'texto', 22, function (d) { return respuestaCfdi(d.cfdi_tiene); }],
     ['CFDI', 'texto', 10, function (d) { return d.cfdi; }],
     ['Folio real', 'texto', 13, function (d) { return d.folio_real; }],
     ['Superficie escritura m2', 'decimal', 18, function (d) { return soloNumero(d.superficie_escritura); }],
@@ -5062,6 +5131,10 @@
     filas.push(hojaFila('Fecha de escrituración del condominio',
       textoPDF(d, fecha(d.escritura_condominio_fecha),
         ['escritura_condominio_fecha'], incluirCorrecciones)));
+    filas.push(hojaFila('Nombre del notario del condominio', textoPDF(d, d.condominio_notario_nombre, ['condominio_notario_nombre'], incluirCorrecciones)));
+    filas.push(hojaFila('Número de notaría del condominio', textoPDF(d, d.condominio_notaria_numero, ['condominio_notaria_numero'], incluirCorrecciones)));
+    filas.push(hojaFila('¿Es necesario el CFDI?', respuestaCfdi(d.cfdi_necesario)));
+    filas.push(hojaFila('¿Cuenta con CFDI?', respuestaCfdi(d.cfdi_tiene)));
     filas.push(hojaFila('CFDI', textoPDF(d, d.cfdi, ['cfdi'], incluirCorrecciones)));
     filas.push(hojaFila('Superficie escritura', textoPDF(d, conUnidad(d.superficie_escritura),
       ['superficie_escritura'], incluirCorrecciones)));
@@ -5142,7 +5215,7 @@
       // rótulo sea de letra más chica: alineados por arriba se veían
       // corridos uno del otro.
       f.rotuloLineas.forEach(function (l, i) {
-        c += escribir(l.toUpperCase(), MARGEN + RELLENO,
+        c += escribir(l, MARGEN + RELLENO,
           y + RELLENO + TAM_DATO + i * (ALTO_LINEA - 2), TAM_ROTULO, true, HOJA_ROJO);
       });
 
@@ -5598,6 +5671,7 @@
   });
 
   $('e-condominio').addEventListener('change', acomodarCondominio);
+  $('e-cfdi-necesario').addEventListener('change', acomodarCfdi);
   $('e-cfdi-tiene').addEventListener('change', acomodarCfdi);
 
   prepararFechaEscritura();
