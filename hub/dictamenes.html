@@ -15,7 +15,7 @@
 <script src="/assets/js/kw-session.js?v=20261007b"></script>
 <script src="/assets/js/auth-guard.js?v=20261001"></script>
 <script src="/assets/js/notif-bell.js?v=20260922"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261008switch">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
@@ -1960,10 +1960,15 @@
             <label for="e-cfdi-necesario">¿Es necesario el CFDI?</label>
             <select id="e-cfdi-necesario"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
           </div>
-          <div class="dic-campo" id="e-cfdi-tiene-caja" style="display:none;">
-            <label for="e-cfdi-tiene">¿Cuenta con CFDI?</label>
-            <select id="e-cfdi-tiene"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
-            <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;margin-top:8px;" placeholder="Número de CFDI">
+          <div id="e-cfdi-tiene-caja" style="display:none;">
+            <div class="dic-campo">
+              <label for="e-cfdi-tiene">¿Cuenta con CFDI?</label>
+              <select id="e-cfdi-tiene"><option value="">Sin especificar</option><option value="si">Sí</option><option value="no">No</option><option value="no_aplica">No aplica</option></select>
+            </div>
+            <div class="dic-campo" id="e-cfdi-numero-caja" style="display:none;">
+              <label for="e-cfdi">Número de CFDI</label>
+              <input type="text" id="e-cfdi" name="dic-cfdi" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off" style="display:none;" placeholder="Número de CFDI">
+            </div>
           </div>
         </div>
 
@@ -2025,15 +2030,14 @@
 
         <h2 class="dic-subtitulo">Superficies</h2>
 
-        <div class="dic-campo">
-          <label for="e-sup-escritura">Superficie escritura</label>
+        <div class="dic-tres">
+          <div class="dic-campo">
+            <label for="e-sup-escritura">Superficie escritura</label>
             <div class="dic-conunidad">
               <input type="text" id="e-sup-escritura" name="dic-sup-escritura" data-lpignore="true" data-1p-ignore class="kw-input" inputmode="decimal" autocomplete="off">
               <span>m²</span>
             </div>
-        </div>
-
-        <div class="dic-dos">
+          </div>
           <div class="dic-campo">
             <label for="e-sup-terreno">Superficie de terreno</label>
             <div class="dic-conunidad">
@@ -4327,6 +4331,7 @@
       $('e-cfdi-tiene').dispatchEvent(new Event('change', { bubbles: true }));
     }
     var tiene = necesario && $('e-cfdi-tiene').value === 'si';
+    $('e-cfdi-numero-caja').style.display = tiene ? '' : 'none';
     $('e-cfdi').style.display = tiene ? '' : 'none';
     if (!tiene) $('e-cfdi').value = '';
     var caja = $('e-cfdi').closest('.dic-campo');

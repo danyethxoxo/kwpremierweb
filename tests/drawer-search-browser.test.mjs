@@ -43,6 +43,21 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
       const route = '/' + path.relative(root, file).replaceAll('\\', '/');
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto('http://kw.local' + route);
+      if (route === '/hub/dictamenes.html') {
+        // El menú de Máster en una ventana baja no debe comprimir el
+        // buscador hasta encimarlo con Inicio del Hub.
+        const drawerClass = await page.locator('#drawer').getAttribute('class');
+        await page.setViewportSize({ width: 1280, height: 600 });
+        await page.locator('#drawer').evaluate(el => el.classList.add('open'));
+        await page.locator('#drawer [data-drawer-roles]').evaluateAll(items => {
+          items.forEach(el => { el.hidden = false; });
+        });
+        const searchBox = await page.locator('#drawer-buscar-toggle').boundingBox();
+        const homeBox = await page.locator('#drawer .drawer-link[href="/portal.html"]').boundingBox();
+        assert.ok(homeBox.y >= searchBox.y + searchBox.height, 'Buscar e Inicio ocupan filas distintas');
+        await page.locator('#drawer').evaluate((el, original) => { el.className = original; }, drawerClass);
+        await page.setViewportSize({ width: 1280, height: 900 });
+      }
       const hub = await page.locator('#drawer-buscar-toggle').count();
       if (await page.locator('[data-kw-menu-principal]:visible').count()) {
         await page.locator('[data-kw-menu-principal]:visible').first().click();
