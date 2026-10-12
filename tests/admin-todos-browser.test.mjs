@@ -18,6 +18,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
       window.qa = {setup(role) {
         miRol = role; miUserId = 'self';
         usuariosCache = window.testUsers;
+        estadoGoogle = {'beto@example.com':{contactos:false,drive:false,calendario:false}};
         bdAsesores = [{id:'a',nombre:'Ana',correo:'ana@example.com',grupo:'asesor_activo'},
           {id:'b',nombre:'Beto López',correo:'beto@example.com',grupo:'back_office_activo'},
           {id:'c',nombre:'Baja',correo:'baja@example.com',grupo:'asesor_baja'}];
@@ -62,7 +63,17 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.ok(!(await list.textContent()).includes('baja@example.com'));
     const beto = list.locator('.kw-fila').filter({hasText:'beto@example.com'});
     await beto.locator('.btn-abrir-accesos').click();
-    await beto.getByRole('button',{name:'Agregar a la página',exact:true}).click();
+    assert.deepEqual(await beto.locator('.acceso-texto').allTextContents(),['Agregar Contacto','Agregar Drive','Agregar Calendario']);
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('#lista-todos .acceso-google-icono')).filter(e=>e.closest('.accesos').dataset.correo==='beto@example.com').every(e=>e.complete&&e.naturalWidth>0));
+    const controls = await beto.locator('.accesos-fila > .acceso, .accesos-fila .acceso-web, .accesos-fila .acceso-rol').evaluateAll(items=>items.map(e=>e.getBoundingClientRect().top));
+    assert.ok(controls.every(top=>top===controls[0]),'Google, Web y Rol comparten una fila');
+    assert.equal(await beto.getByRole('button',{name:'Administrar Rol',exact:true}).isDisabled(),true);
+    await beto.locator('.acceso-check[value="drive"]').check();
+    assert.equal(await beto.locator('.acceso-seleccion-accion.dar').isEnabled(),true);
+    await beto.locator('.acceso-check[value="drive"]').uncheck();
+    assert.equal(await beto.locator('.acceso-seleccion-accion.dar').isDisabled(),true);
+    await page.screenshot({path:path.join(root,'..','admin-access-controls.png'),fullPage:true});
+    await beto.getByRole('button',{name:'Agregar a Web',exact:true}).click();
     assert.equal(await page.locator('#acceso-pagina-persona').textContent(),'Beto López');
     assert.equal(await page.locator('#acceso-pagina-correo').textContent(),'beto@example.com');
     assert.deepEqual(await page.locator('#acceso-pagina-rol option').evaluateAll(opts=>opts.map(o=>o.value)),['','admin','staff','asociado']);
@@ -78,17 +89,18 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.deepEqual(calls[2].body,{accion:'actualizar',user_id:'new',nombre:'Beto López',apellido:''});
     assert.deepEqual(calls[3].body,{accion:'actualizar',user_id:'new',role:'asociado',nombre:'Beto López',apellido:''});
     assert.equal(await list.locator('.kw-fila').count(),5);
-    await beto.getByRole('button',{name:'Cambiar rol',exact:true}).click();
+    assert.equal(await beto.getByRole('button',{name:'Agregar a Web',exact:true}).isDisabled(),true);
+    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
     await page.evaluate(()=>{const s=document.getElementById('acceso-pagina-rol');s.value='staff';s.dispatchEvent(new Event('change',{bubbles:true}));});
     await page.locator('#acceso-pagina-guardar').click();await page.locator('#modal-acceso-pagina').waitFor({state:'hidden'});
     assert.deepEqual(await page.evaluate(()=>window.records.at(-1).body),{accion:'actualizar',user_id:'new',role:'staff'});
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-    await beto.getByRole('button',{name:'Cambiar rol',exact:true}).click();
+    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
     assert.equal(await page.locator('#modal-acceso-pagina').isVisible(),true);
     await page.locator('#acceso-pagina-cancelar').click();
     await page.evaluate(()=>window.qa.setup('admin'));
-    await beto.getByRole('button',{name:'Cambiar rol',exact:true}).click();
+    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
     assert.deepEqual(await page.locator('#acceso-pagina-rol option').evaluateAll(opts=>opts.map(o=>o.value)),['','staff','asociado']);
     await page.locator('#acceso-pagina-cancelar').click();
     await page.evaluate(()=>window.qa.setup('staff'));

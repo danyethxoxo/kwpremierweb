@@ -115,13 +115,25 @@
   .kw-emergencia-titulo { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
   .accesos {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
     margin-top: var(--sp-3); border-top: 1px solid var(--border);
-    padding-top: var(--sp-3); overflow-x: auto;
+    padding-top: var(--sp-3);
   }
   .accesos.ocultos { display: none; }
-  /* El acceso al sitio es independiente de los permisos de Google. */
-  .acceso-pagina { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; }
+  /* Google, Web y Rol comparten la misma geometría dentro de la tarjeta. */
+  .acceso-pagina { display: contents; }
+  .acceso-web, .acceso-rol {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    flex: 1 1 126px; min-height: 44px; padding: 9px 10px;
+    border: 1px solid var(--border); border-radius: 9px; background: #fff;
+    color: var(--text); font-family: inherit; font-size: 11.5px; font-weight: 600;
+    white-space: nowrap; cursor: pointer;
+  }
+  .acceso-web img, .acceso-rol svg { width: 18px; height: 18px; flex: 0 0 18px; }
+  .acceso-web:hover:not(:disabled), .acceso-rol:hover:not(:disabled) { border-color: var(--red); background: #fff8f8; }
+  .acceso-web:disabled, .acceso-rol:disabled { color: var(--muted); cursor: default; background: #fafafa; }
+  .acceso-web.tiene { border-color: rgba(26,122,26,.25); }
+  .acceso-web:focus-visible, .acceso-rol:focus-visible, .acceso-label:has(input:focus-visible) { outline: 2px solid var(--red); outline-offset: 2px; }
   .accesos-titulo {
     display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
     margin: 0; white-space: nowrap;
@@ -150,35 +162,39 @@
     padding: 0; gap: 5px 12px; flex-wrap: nowrap;
     text-transform: none; letter-spacing: normal;
   }
-  /* Tres accesos y las dos acciones caben en un solo renglón. En
-     pantallas angostas el renglón completo se desplaza horizontalmente. */
+  /* La fila se adapta sin desplazar la página en pantallas angostas. */
   .accesos-fila {
-    display: grid; flex: 0 0 auto; min-width: 0;
-    grid-template-columns: repeat(3, 68px) 44px 44px;
-    align-items: stretch; gap: 7px; padding: 1px 1px 4px;
+    display: flex; flex-wrap: wrap; min-width: 0;
+    align-items: stretch; gap: 8px; padding: 1px;
   }
   .acceso-seleccion-accion {
-    width: 44px; min-width: 44px; height: 100%; min-height: 34px;
-    padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; min-height: 44px; padding: 8px 10px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    border: 1px solid var(--border); border-radius: 9px; background: #fff;
+    font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
   }
+  .acceso-seleccion-accion:disabled { opacity: .45; cursor: default; }
   .acceso-seleccion-accion svg {
-    width: 21px; height: 21px; stroke-width: 3.2;
+    width: 15px; height: 15px; stroke-width: 2.2;
   }
   .acceso-seleccion-accion.dar { color: #1a7a1a; }
   .acceso-seleccion-accion.quitar { color: var(--red); }
 
   .acceso {
-    position: relative; min-width: 68px;
+    position: relative; flex: 1 1 160px; min-width: 0;
     border: 1px solid var(--border); border-radius: 9px; background: #fff;
     transition: border-color var(--t-rapido), background var(--t-rapido);
   }
   .acceso:has(.acceso-check:checked) { border-color: rgba(26,115,232,0.55); background: #f3f8ff; }
+  .acceso.si { border-color: rgba(26,122,26,.25); background: #f7fbf7; }
+  .acceso.si .acceso-texto::after { content: ' ✓'; color: #1a7a1a; }
   .acceso-label {
     display: flex; align-items: center; justify-content: center;
-    gap: 5px; min-height: 34px; padding: 5px 6px; cursor: pointer;
+    gap: 7px; min-height: 42px; padding: 9px 10px; cursor: pointer;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
   }
   .acceso-check { width: 14px; height: 14px; flex-shrink: 0; accent-color: #1a73e8; cursor: pointer; }
-  .acceso-icono { flex-shrink: 0; display: flex; }
+  .acceso-icono { flex-shrink: 0; display: none; }
   .acceso-icono svg { width: 13px; height: 13px; }
   .acceso.si .acceso-icono { color: #1a7a1a; }
   .acceso.no .acceso-icono { color: #8d9299; }
@@ -187,6 +203,12 @@
     width: 18px; height: 18px; object-fit: contain; display: block;
   }
   .acceso.esperando .acceso-label { cursor: wait; }
+  @media (max-width: 640px) {
+    .accesos-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .acceso-label { gap: 5px; padding: 9px 6px; font-size: 10.5px; }
+    .acceso-web, .acceso-rol { font-size: 10.5px; }
+    .acceso-seleccion-accion { width: 100%; }
+  }
 
   /* Desglose por cuenta de Contactos: solo lo ve Master, cuando ya hay
      más de una cuenta configurada. Es solo información - el botón de
@@ -2323,9 +2345,9 @@
   const ICONO_BAJAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6 6 6-6"/><path d="M12 20V4"/></svg>';
   const ICONO_DERECHA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
   const ICONOS_GOOGLE = {
-    contactos: 'https://ssl.gstatic.com/images/branding/product/2x/contacts_48dp.png',
-    drive: 'https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png',
-    calendario: 'https://ssl.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png',
+    contactos: '/assets/img/google-contactos.png?v=20261012',
+    drive: '/assets/img/google-drive.png?v=20261012',
+    calendario: '/assets/img/google-calendario.png?v=20261012',
   };
 
   let gruposAsesores = [];
@@ -2449,12 +2471,17 @@
 
   function accesoPaginaHtml(p) {
     const usuario = usuarioDePagina(p.correo);
-    const estado = usuario ? 'Usuario de la página: ' + (ROLE_LABELS[usuario.role] || usuario.role) : 'Sin usuario en la página';
+    const permiso = p.correo && puedeGestionarPagina(usuario);
+    const estado = usuario ? 'Ya tiene usuario en la página' : 'Crear usuario con el nombre y correo de esta tarjeta';
+    const rol = usuario ? 'Rol actual: ' + (ROLE_LABELS[usuario.role] || usuario.role) : 'Primero agrega a esta persona a Web';
     return '<div class="acceso-pagina">' +
-      '<span>' + escapeHtml(estado) + '</span>' +
-      (p.correo && puedeGestionarPagina(usuario)
-        ? '<button type="button" class="kw-btn-mini" data-acceso-pagina="' + escapeHtml(p.correo) + '">' +
-            (usuario ? 'Cambiar rol' : 'Agregar a la página') + '</button>' : '') +
+      '<button type="button" class="acceso-web' + (usuario ? ' tiene' : '') + '" title="' + escapeHtml(estado) + '"' +
+        (!permiso || usuario ? ' disabled' : ' data-acceso-pagina="' + escapeHtml(p.correo) + '"') + '>' +
+        '<img src="/assets/img/favicon.png?v=20260926b" alt="" aria-hidden="true"><span>Agregar a Web</span></button>' +
+      '<button type="button" class="acceso-rol" title="' + escapeHtml(rol) + '"' +
+        (!permiso || !usuario ? ' disabled' : ' data-acceso-pagina="' + escapeHtml(p.correo) + '"') + '>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>' +
+        '<span>Administrar Rol</span></button>' +
     '</div>';
   }
 
@@ -2773,11 +2800,12 @@
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
       return '<div class="acceso ' + clase + '">' +
-        '<label class="acceso-label" title="' + a.nombre + '" aria-label="' + a.nombre + '">' +
+        '<label class="acceso-label" title="' + a.nombre + ': ' + (estado === null ? 'Revisando acceso' : (tiene ? 'Ya tiene acceso' : 'Sin acceso')) + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
             (estado === null || (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
+          '<span class="acceso-texto">' + ({ contactos: 'Agregar Contacto', drive: 'Agregar Drive', calendario: 'Agregar Calendario' })[a.clave] + '</span>' +
         '</label>' +
       '</div>';
     }).join('');
@@ -2788,13 +2816,14 @@
           '<button type="button" class="accesos-toggle" aria-expanded="' + (cuentaVista ? 'true' : 'false') + '">Accesos' + ICONO_DERECHA + '</button>' +
           '<div class="accesos-cuentas-deslizable">' + cuentas + '</div>' +
         '</div>'
-      : '<div class="accesos-titulo"><span class="accesos-toggle">Accesos</span></div>';
+      : '';
     return '<div class="accesos' + (visible ? '' : ' ocultos') + '" data-correo="' + escapeHtml(p.correo) + '">' +
       titulo +
       '<div class="accesos-fila">' + filas +
-        '<button type="button" class="btn btn-mini acceso-seleccion-accion dar" data-hacer="dar" disabled title="Dar accesos seleccionados" aria-label="Dar accesos seleccionados">' + ICONO_SUBIR + '</button>' +
-        '<button type="button" class="btn btn-mini acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Quitar accesos seleccionados" aria-label="Quitar accesos seleccionados">' + ICONO_BAJAR + '</button>' +
-      '</div>' + accesoPaginaHtml(p) +
+        accesoPaginaHtml(p) +
+        '<button type="button" class="acceso-seleccion-accion dar" data-hacer="dar" disabled title="Agregar los accesos seleccionados" aria-label="Agregar los accesos seleccionados">' + ICONO_SUBIR + '<span>Agregar</span></button>' +
+        '<button type="button" class="acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Retirar los accesos seleccionados de Drive y Calendario" aria-label="Retirar los accesos seleccionados de Drive y Calendario">' + ICONO_BAJAR + '<span>Retirar</span></button>' +
+      '</div>' +
     '</div>';
   }
 

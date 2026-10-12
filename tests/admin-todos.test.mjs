@@ -30,8 +30,8 @@ test('Todos reúne el directorio activo y los usuarios de la página por correo,
 });
 test('Acceso a la página respeta permisos, detecta cuentas existentes y no permite cambiar el propio rol',()=>{
   const c=context('admin');c.usuariosCache=[{id:'u',email:'ana@example.com',role:'staff'}];
-  assert.match(c.accesoPaginaHtml({correo:'ANA@example.com'}),/Cambiar rol/);
-  assert.match(c.accesoPaginaHtml({correo:'new@example.com'}),/Agregar a la página/);
+  assert.match(c.accesoPaginaHtml({correo:'ANA@example.com'}),/Administrar Rol/);
+  assert.match(c.accesoPaginaHtml({correo:'new@example.com'}),/Agregar a Web/);
   assert.equal(c.puedeGestionarPagina({id:'other',role:'admin'}),false);
   assert.equal(c.puedeGestionarPagina({id:'self',role:'staff'}),false);
   c.miRol='staff';assert.equal(c.puedeGestionarPagina(null),false);
