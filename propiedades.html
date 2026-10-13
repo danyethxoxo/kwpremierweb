@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
-<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261013pluma">
+<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261013ficha">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
@@ -336,7 +336,7 @@
   .resultados-cabecera .conteo { margin-bottom: 0; }
   .resultado-nota { color: var(--muted); font-size: 11px; white-space: nowrap; }
   .propiedades-cargando {
-    position: fixed; inset: 0 0 0 292px; z-index: 50;
+    position: fixed; inset: 0; z-index: 2000;
     display: grid; place-items: center; pointer-events: none;
   }
   .propiedades-cargando .kw-loader {
@@ -537,7 +537,6 @@
   .prop-dato svg { width: 13px; height: 13px; color: var(--muted); }
 
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 50px 0; grid-column: 1 / -1; }
-  .lista-cargando { opacity: 0.58; transition: opacity 0.15s ease; }
   .paginacion { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 10px 0 28px; }
   .paginacion button { min-width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: #555; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 0 10px; }
   .paginacion button:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
@@ -752,23 +751,20 @@
 
       <section class="propiedades-resultados" aria-live="polite">
         <div class="prop-explorador">
-        <div class="grid" id="lista">
-          <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
-        </div>
+        <div class="grid" id="lista"></div>
         <section id="prop-mapa-panel" class="prop-mapa-panel" aria-label="Buscar propiedades en el mapa" aria-live="off">
+          <div class="prop-mapa-marco">
+            <div id="prop-mapa" aria-label="Mapa de propiedades"></div>
           <div class="prop-mapa-barra">
             <p id="prop-mapa-estado" role="status" aria-live="polite"></p>
             <div class="prop-mapa-acciones">
-            <button type="button" id="prop-mapa-zona" disabled>Buscar en esta zona</button>
-            <button type="button" id="prop-mapa-dibujar" aria-pressed="false" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 3 5 5-12 12H4v-5L16 3Z"/><path d="m13 6 5 5"/></svg> Dibujar zona</button>
-            <button type="button" id="prop-zona-quitar" title="Quitar zona del mapa" hidden>Quitar zona</button>
-            <button type="button" id="prop-mapa-cancelar" hidden>Cancelar dibujo</button>
-            <button type="button" id="prop-mapa-reintentar" hidden>Reintentar</button>
+            <button type="button" id="prop-mapa-zona" title="Buscar en esta zona" aria-label="Buscar en esta zona" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg></button>
+            <button type="button" id="prop-mapa-dibujar" title="Dibujar zona" aria-label="Dibujar zona" aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 3 5 5-12 12H4v-5L16 3Z"/><path d="m13 6 5 5"/></svg></button>
+            <button type="button" id="prop-zona-quitar" title="Quitar zona del mapa" aria-label="Quitar zona del mapa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+            <button type="button" id="prop-mapa-cancelar" title="Cancelar dibujo" aria-label="Cancelar dibujo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 4-6 5 6 5M3 9h12a6 6 0 0 1 0 12"/></svg></button>
+            <button type="button" id="prop-mapa-reintentar" title="Reintentar carga del mapa" aria-label="Reintentar carga del mapa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7a8 8 0 1 0 1 9M20 3v5h-5"/></svg></button>
             </div>
           </div>
-          <div class="prop-mapa-marco">
-            <div id="prop-mapa" aria-label="Mapa de propiedades"></div>
-            <div id="prop-mapa-cargando" class="prop-mapa-cargando" hidden><div class="kw-loader" role="status" aria-label="Cargando mapa"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
           </div>
           <p class="prop-mapa-fuente">Contornos simplificados por KW Premier. Fuente: <a href="https://www.inegi.org.mx/servicios/catalogounico.html" target="_blank" rel="noopener">INEGI, Marco Geoestadístico, diciembre de 2025</a>.</p>
           <p id="prop-mapa-lugar" class="prop-mapa-ayuda" role="status" aria-live="polite"></p>
@@ -981,9 +977,9 @@
   }
 
   function datosCompartirPropiedad(control) {
-    var tarjeta = control.closest('.prop-card');
-    var enlace = tarjeta && tarjeta.querySelector('.prop-enlace');
-    var titulo = tarjeta && tarjeta.querySelector('.prop-titulo');
+    var tarjeta = control.closest('.prop-card, .prop-mapa-ficha');
+    var enlace = tarjeta && tarjeta.querySelector('.prop-enlace, .prop-mapa-enlace');
+    var titulo = tarjeta && tarjeta.querySelector('.prop-titulo, .prop-mapa-titulo');
     return {
       url: enlace && enlace.href ? enlace.href : window.location.href,
       titulo: titulo ? titulo.textContent.trim() : 'Propiedad KW Premier'
@@ -1153,9 +1149,9 @@
     evento.preventDefault();
     evento.stopPropagation();
     cerrarMenusAccionesPropiedad();
-    var tarjeta = boton.closest('.prop-card');
+    var tarjeta = boton.closest('.prop-card, .prop-mapa-ficha');
     var id = tarjeta && tarjeta.getAttribute('data-propiedad-id');
-    var propiedad = id ? propiedadesPaginaActual[id] : null;
+    var propiedad = tarjeta && tarjeta.propiedadMapa || (id ? propiedadesPaginaActual[id] : null);
     if (!propiedad) {
       mostrarAvisoAccionPropiedad('No se encontró la información de esta propiedad');
       return;
@@ -1165,7 +1161,7 @@
     document.body.append(carga);
     try {
       await cargarSitioAsesor();
-      var enlace = tarjeta.querySelector('.prop-enlace');
+      var enlace = tarjeta.querySelector('.prop-enlace, .prop-mapa-enlace');
       var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarFotosFicha(propiedad), cargarModuloFichaPropiedad()]);
       datos[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
     } catch (error) {
@@ -1977,7 +1973,9 @@
     conteo.textContent = 'Mostrando ' + cantidad + ' de ' + total + ' listados';
   }
 
-  function mostrarCargadorPropiedades() {
+  var cargasPropiedades = new Set();
+  function mostrarCargadorPropiedades(origen) {
+    cargasPropiedades.add(origen || 'lista');
     if (document.getElementById('propiedades-cargando')) return;
     var cargador = document.createElement('div');
     cargador.id = 'propiedades-cargando';
@@ -1990,7 +1988,9 @@
     document.body.appendChild(cargador);
   }
 
-  function ocultarCargadorPropiedades() {
+  function ocultarCargadorPropiedades(origen) {
+    cargasPropiedades.delete(origen || 'lista');
+    if (cargasPropiedades.size) return;
     var cargador = document.getElementById('propiedades-cargando');
     if (cargador) cargador.remove();
   }
@@ -2362,9 +2362,9 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/propiedades-geografia.js?v=20261013pluma"></script>
-<script src="/assets/js/propiedades-dibujo.js?v=20261013pluma"></script>
-<script src="/assets/js/propiedades-mapa.js?v=20261013pluma"></script>
+<script src="/assets/js/propiedades-geografia.js?v=20261013ficha"></script>
+<script src="/assets/js/propiedades-dibujo.js?v=20261013ficha"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261013ficha"></script>
 <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>

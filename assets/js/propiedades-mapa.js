@@ -6,7 +6,6 @@
   var btnQuitar = document.getElementById('prop-zona-quitar');
   var btnReintentar = document.getElementById('prop-mapa-reintentar');
   var estado = document.getElementById('prop-mapa-estado');
-  var cargador = document.getElementById('prop-mapa-cargando');
   var mapa, grupos, bibliotecas, zona = null, filtros = null, clave = '', revision = 0, controlador;
   var fichaControlador, fichaRevision = 0;
   var fichas = new Map();
@@ -59,7 +58,7 @@
     }).addTo(mapa);
     capa.on('tileerror', function () { marco.setAttribute('aria-description', 'El fondo del mapa no esta disponible temporalmente. Los pines siguen activos.'); });
     mapa.on('moveend', function () { btnZona.disabled = false; });
-    mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
+    mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); window.ocultarCargadorPropiedades('ficha'); });
     if (window.ResizeObserver) new ResizeObserver(function () { if (!panel.hidden) mapa.invalidateSize({pan: false}); }).observe(marco);
   }
   function texto(etiqueta, contenido, clase) {
@@ -73,12 +72,27 @@
   }
   function pintarFicha(p) {
     var caja = document.createElement('div'); caja.className = 'prop-mapa-ficha';
+    caja.dataset.propiedadId = p.id; caja.propiedadMapa = p;
+    var encabezado = document.createElement('div'); encabezado.className = 'prop-mapa-ficha-cabecera';
+    if (p.operacion) encabezado.appendChild(texto('span', p.operacion === 'renta' ? 'Renta' : 'Venta', 'prop-mapa-operacion'));
+    var acciones = document.createElement('div'); acciones.className = 'prop-acciones';
+    var toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'prop-acciones-toggle';
+    toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-haspopup','menu');toggle.setAttribute('aria-label','Más opciones de esta propiedad');
+    var menuId = 'prop-mapa-menu-' + String(p.id);toggle.setAttribute('aria-controls',menuId);
+    toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+    toggle.onclick = function (e) { window.alternarAccionesPropiedad(e,toggle); };
+    var menu = document.createElement('div');menu.className='prop-acciones-menu';menu.id=menuId;menu.setAttribute('role','menu');menu.hidden=true;
+    [['Copiar link','copiarLinkPropiedad'],['Compartir propiedad','compartirPropiedad'],['Descargar ficha técnica','abrirFichaPropiedad']].forEach(function (opcion) {
+      var btn = texto('button',opcion[0],'prop-accion');btn.type='button';btn.setAttribute('role','menuitem');
+      btn.onclick=function(e){window[opcion[1]](e,btn);};menu.appendChild(btn);
+    });
+    acciones.append(toggle,menu);encabezado.appendChild(acciones);caja.appendChild(encabezado);
     var foto = urlSegura(p.miniatura_url || (p.imagenes || [])[0] || '');
     if (foto) {
       var img = document.createElement('img'); img.src = foto; img.alt = ''; img.decoding = 'async';
       img.addEventListener('error', function () { img.remove(); }, {once: true}); caja.appendChild(img);
     }
-    caja.appendChild(texto('h3', p.titulo || 'Propiedad'));
+    caja.appendChild(texto('h3', p.titulo || 'Propiedad', 'prop-mapa-titulo'));
     caja.appendChild(texto('p', window.fmtPrecio(p.precio, p.moneda, p.operacion), 'prop-mapa-precio'));
     caja.appendChild(texto('p', [p.colonia, p.municipio, p.estado].filter(Boolean).join(', ')));
     var datos = [];
@@ -86,11 +100,23 @@
     if (p.banos) datos.push(p.banos + ' baños');
     if (p.m2_construccion) datos.push(p.m2_construccion + ' m²');
     if (datos.length) caja.appendChild(texto('p', datos.join(' · ')));
+    var pie = document.createElement('div');pie.className='prop-mapa-ficha-pie';
+    if(p.market_center)pie.appendChild(texto('span',window.nombreMarketCenter(p.market_center),'prop-mapa-market-center'));
+    if(p.asesor_nombre){
+      var asesor = texto('span',p.asesor_nombre,'prop-mapa-asesor');
+      if(/^\d+$/.test(p.asesor_kw_id||'')){
+        var slug=p.asesor_nombre.trim().toLocaleLowerCase('es-MX').replace(/\s+/g,'-');
+        var link=texto('a',p.asesor_nombre);link.href='https://kw.com/es-419/agent/'+encodeURIComponent(slug)+'/'+p.asesor_kw_id;
+        link.target='_blank';link.rel='noopener noreferrer';asesor.replaceChildren(link);
+      }
+      pie.appendChild(asesor);
+    }
+    caja.appendChild(pie);
     var enlace = p.enlace_kw || (p.fuente_id ? 'https://www.kwmexico.mx/propiedades/' + encodeURIComponent(p.fuente_id) : location.origin + '/propiedad.html?id=' + encodeURIComponent(p.id));
     enlace = window.kwSitioAsesor.personalizar(enlace, window.sitioAsesor);
     enlace = urlSegura(enlace);
     if (enlace) {
-      var a = texto('a', 'Ver propiedad'); a.href = enlace; a.target = '_blank'; a.rel = 'noopener noreferrer'; caja.appendChild(a);
+      var a = texto('a', 'Ver propiedad', 'prop-mapa-enlace'); a.href = enlace; a.target = '_blank'; a.rel = 'noopener noreferrer'; caja.appendChild(a);
     }
     return caja;
   }
@@ -98,16 +124,16 @@
     if (fichaControlador) fichaControlador.abort();
     var popup = marker.getPopup();
     var r = ++fichaRevision;
-    var inicial = document.createElement('div'); inicial.className = 'kw-loader'; inicial.setAttribute('aria-label', 'Cargando propiedad');
-    inicial.innerHTML = '<div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>';
+    var inicial = document.createElement('div'); inicial.className = 'prop-mapa-ficha-vacia';
     popup.setContent(inicial);
+    window.mostrarCargadorPropiedades('ficha');
     fichaControlador = new AbortController();
     var timer = setTimeout(function () { if (r === fichaRevision) fichaControlador.abort(); }, 12000);
     try {
       var p = fichas.get(id) || (window.propiedadesPaginaActual || {})[id];
       if (!p) {
         var respuesta = await window.kwSupabase.from('propiedades_inventario')
-          .select('id,fuente_id,titulo,precio,moneda,operacion,colonia,municipio,estado,recamaras,banos,m2_construccion,miniatura_url,imagenes,enlace_kw')
+          .select('id,fuente,fuente_id,titulo,operacion,estatus,tipo,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,calle,colonia,municipio,estado,cp,pais,imagenes,miniatura_url,caracteristicas,asesor_id,asesor_nombre,market_center,updated_at,enlace_kw,asesor_kw_id')
           .eq('id', id).abortSignal(fichaControlador.signal).maybeSingle();
         if (respuesta.error || !respuesta.data) throw new Error('No se pudo consultar la propiedad');
         p = respuesta.data;
@@ -120,12 +146,12 @@
       if (r !== fichaRevision || !popup.isOpen()) return;
       var aviso = texto('div', '', 'prop-mapa-ficha');
       aviso.appendChild(texto('p', 'No pudimos cargar esta propiedad.'));
-      var btn = texto('button', 'Reintentar'); btn.type = 'button'; btn.onclick = function () { abrirFicha(marker, id); };
+      var btn = texto('button', 'Reintentar', 'prop-mapa-reintento'); btn.type = 'button'; btn.onclick = function () { abrirFicha(marker, id); };
       aviso.appendChild(btn); popup.setContent(aviso);
-    } finally { clearTimeout(timer); }
+    } finally { clearTimeout(timer); if (r === fichaRevision) window.ocultarCargadorPropiedades('ficha'); }
   }
   function cargando(valor) {
-    cargador.hidden = !valor;
+    if(valor)window.mostrarCargadorPropiedades('mapa');else window.ocultarCargadorPropiedades('mapa');
     panel.setAttribute('aria-busy', String(valor));
   }
   function claveFiltros(valor) {
@@ -182,7 +208,7 @@
         if (r !== revision || panel.hidden) return;
         capa.addLayers(puntos.slice(i, i + 150).map(function (p) {
           var marker = L.marker([p[1], p[2]], {icon: icono, title: 'Ver propiedad', keyboard: true});
-          marker.bindPopup('', {maxWidth: 260, minWidth: 220});
+          marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
           return marker;
         }));

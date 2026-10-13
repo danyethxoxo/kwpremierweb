@@ -11,7 +11,7 @@ const user={id:'11111111-1111-4111-8111-111111111111',email:'qa@example.com',las
 const perfil={...user,role:'admin',nombre:'QA',apellido:'Mapa',sitio_web:'https://qa.kw.com',foto_url:'/assets/img/logo-kw-premier.png',whatsapp:'5512345678'};
 const id=n=>'22222222-2222-4222-8222-'+String(n).padStart(12,'0');
 const propiedades=Array.from({length:20},(_,n)=>({id:id(n),fuente:'kwmexico',fuente_id:String(n),titulo:'Casa de prueba '+n,operacion:'venta',estatus:'publicada',tipo:'Casa',precio:3500000,moneda:'MXN',imagenes:[],colonia:'Del Valle',municipio:'Benito Juárez',estado:'Ciudad de México',enlace_kw:'https://kw.com/es-419/property/casa/123456'}));
-const ficha={...propiedades[0],id:id(1001),titulo:'Casa <img src=x onerror=alert(1)>',miniatura_url:'https://fotos.local/casa.png',recamaras:3,banos:2,m2_construccion:180};
+const ficha={...propiedades[0],id:id(1001),titulo:'Casa <img src=x onerror=alert(1)>',miniatura_url:'https://fotos.local/casa.png',recamaras:3,banos:2,m2_construccion:180,market_center:'KW Grand',asesor_nombre:'María Asesora',asesor_kw_id:'12345',operacion:'renta'};
 const sdk=`
 window.qaRpc=[];window.qaDetalles=0;window.qaErrorMapa=false;window.qaDemoraMapa=0;
 var qaUser=${JSON.stringify(user)},qaPerfil=${JSON.stringify(perfil)},qaProps=${JSON.stringify(propiedades)},qaFicha=${JSON.stringify(ficha)};
@@ -22,7 +22,7 @@ window.supabase={createClient(){return {
    let data=tabla==='profiles'?[qaPerfil]:tabla==='propiedades_inventario'?[qaFicha]:[];
    if(tabla==='propiedades_inventario')window.qaDetalles++;
    if(single)data=data[0]||null;
-   return Promise.resolve({data,error:null,count:Array.isArray(data)?data.length:1}).then(resolve,reject);
+   return new Promise(r=>setTimeout(()=>r({data,error:null,count:Array.isArray(data)?data.length:1}),tabla==='propiedades_inventario'?(window.qaDemoraFicha||0):0)).then(resolve,reject);
  };return ()=>{if(key==='single'||key==='maybeSingle')single=true;return query;};}});return query;},
  rpc(nombre,args){window.qaRpc.push({nombre,args});const ejecutar=async()=>{
    if(nombre==='propiedades_inventario_pagina')return {data:{data:qaProps,total:7431},error:null};
@@ -84,16 +84,40 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     const cajas=await page.evaluate(()=>({lista:document.querySelector('#lista').getBoundingClientRect().toJSON(),mapa:document.querySelector('#prop-mapa-panel').getBoundingClientRect().toJSON()}));
     if(viewport.width>=1024)assert.ok(cajas.lista.right<=cajas.mapa.left,'mapa a la derecha del listado');
     else assert.ok(cajas.mapa.bottom<=cajas.lista.top,'en movil ambos aparecen en la misma pagina');
+    const marco=await page.locator('#prop-mapa').boundingBox(),lupa=await page.locator('#prop-mapa-zona').boundingBox();
+    assert.ok(lupa.x>=marco.x&&lupa.y>=marco.y&&lupa.x+lupa.width<=marco.x+marco.width,'controles dentro del mapa');
+    assert.ok(lupa.width<=30&&lupa.height<=30,'iconos compactos');
+    assert.equal(await page.locator('#prop-mapa-zona').innerText(),'');
+    if(viewport.width>=1024)assert.ok(marco.height>=viewport.height-180,'aprovecha la altura disponible');
+    assert.ok(await page.locator('#prop-mapa-panel').evaluate(el=>el.scrollHeight<=el.clientHeight+1),'sin scroll interno del panel');
     if(!await page.locator('.leaflet-marker-icon:not(.prop-mapa-grupo)').count()){
       await page.locator('.prop-mapa-grupo').first().click();
     }
+    await page.evaluate(()=>{window.qaDemoraFicha=400;});
     await page.locator('.leaflet-marker-icon:not(.prop-mapa-grupo)').first().click();
+    await page.locator('#propiedades-cargando').waitFor({state:'visible'});
+    assert.equal(await page.locator('#propiedades-cargando').count(),1);
+    assert.equal(await page.locator('#lista .kw-loader, #prop-mapa-panel .kw-loader').count(),0,'sin animaciones dentro del listado o mapa');
+    const centro=await page.locator('#propiedades-cargando .kw-loader').boundingBox();
+    const ventana=await page.evaluate(()=>({width:document.documentElement.clientWidth,height:innerHeight}));
+    assert.ok(Math.abs(centro.x+centro.width/2-ventana.width/2)<17&&Math.abs(centro.y+centro.height/2-ventana.height/2)<2,'animacion centrada en toda la pagina');
     await page.locator('.prop-mapa-ficha h3').waitFor();
     assert.equal(await page.locator('.prop-mapa-ficha h3').innerText(),ficha.titulo);
     assert.equal(await page.locator('.prop-mapa-ficha h3 img').count(),0,'titulo no interpreta HTML');
     assert.match(await page.locator('.prop-mapa-ficha .prop-mapa-precio').innerText(),/3,500,000/);
-    assert.match(await page.locator('.prop-mapa-ficha a').getAttribute('href'),/^https:\/\/qa.kw.com\//);
+    assert.match(await page.locator('.prop-mapa-ficha .prop-mapa-enlace').getAttribute('href'),/^https:\/\/qa.kw.com\//);
+    assert.equal((await page.locator('.prop-mapa-operacion').innerText()).toLowerCase(),'renta');
+    assert.match(await page.locator('.prop-mapa-market-center').innerText(),/Grand/);
+    assert.equal(await page.locator('.prop-mapa-asesor').innerText(),'María Asesora');
+    assert.match(await page.locator('.prop-mapa-asesor a').getAttribute('href'),/\/agent\/mar%C3%ADa-asesora\/12345$/);
+    await page.evaluate(()=>{window.copiarTextoPropiedad=async t=>{window.qaCopiado=t;};});
+    await page.locator('.prop-mapa-ficha .prop-acciones-toggle').click();
+    await page.locator('.prop-mapa-ficha [role="menuitem"]').filter({hasText:'Copiar link'}).click();
+    assert.match(await page.evaluate(()=>qaCopiado),/^https:\/\/qa.kw.com\//);
+    assert.equal(await page.locator('.prop-mapa-ficha .prop-acciones-toggle').getAttribute('aria-expanded'),'false');
     assert.equal(await page.evaluate(()=>qaDetalles),1,'ficha se consulta al pulsar');
+    fs.mkdirSync(path.join(root,'artifacts/mapa-qa'),{recursive:true});
+    await page.screenshot({path:path.join(root,`artifacts/mapa-qa/ficha-${viewport.width}.png`)});
     await page.locator('.leaflet-popup-close-button').click();
     await page.locator('#prop-mapa-zona').click();
     await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&Array.isArray(r.args.p_filtros.zona))&&qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length===2&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
@@ -108,6 +132,7 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     await page.evaluate(()=>{qaErrorMapa=false;});
     await page.locator('#prop-mapa-reintentar').click();
     await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('3 propiedades'));
+    await page.locator('#propiedades-cargando').waitFor({state:'detached'});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'sin desbordamiento horizontal');
     fs.mkdirSync(path.join(root,'artifacts/mapa-qa'),{recursive:true});
     await page.evaluate(()=>window.scrollTo(0,0));
