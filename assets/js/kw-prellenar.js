@@ -23,11 +23,11 @@
   async function nombreDeLaSesion() {
     if (!window.kwSupabase) return null;
     try {
-      var u = await window.kwSupabase.auth.getUser();
+      var u = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
       var id = u && u.data && u.data.user && u.data.user.id;
       if (!id) return null;
-      var r = await window.kwSupabase
-        .from('profiles').select('nombre, apellido').eq('id', id).single();
+      var r = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
+        .from('profiles').select('nombre, apellido').eq('id', id).single());
       if (r.error || !r.data) return null;
       return ((r.data.nombre || '') + ' ' + (r.data.apellido || '')).trim() || null;
     } catch (e) {

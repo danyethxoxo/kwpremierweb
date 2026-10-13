@@ -96,8 +96,9 @@ test('protected pages use the same session policy and no four-second login redir
   for (const path of walk(process.cwd()).filter((path) => path.endsWith('.html'))) {
     const html = readFileSync(path, 'utf8');
     if (!html.includes('<script src="/assets/js/auth-guard.js')) continue;
-    assert.ok(html.includes('/assets/js/auth-guard.js?v=20261001'), path);
-    assert.ok(html.indexOf('/assets/js/kw-session.js?v=20261001') < html.indexOf('<script src="/assets/js/auth-guard.js'), path);
+    assert.ok(html.includes('/assets/js/auth-guard.js?v=20261013general'), path);
+    const sessionIndex = html.indexOf('/assets/js/kw-session.js?v=20261013general');
+    assert.ok(sessionIndex >= 0 && sessionIndex < html.indexOf('<script src="/assets/js/auth-guard.js'), path);
     assert.ok(!/setTimeout\([\s\S]{0,400}kw-auth-ok[\s\S]{0,400}4000/.test(html), path);
   }
 });

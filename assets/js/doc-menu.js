@@ -301,10 +301,11 @@
       if (perfilActual) {
         puedeEditar = ['master', 'admin', 'staff'].indexOf(perfilActual.role) >= 0;
       } else if (window.kwSupabase) {
-        var u = await (window.kwSession ? window.kwSession.usuario(window.kwSupabase) : window.kwSupabase.auth.getUser());
+        var u = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
         if (u.data && u.data.user) {
-          var p = perfilActual ? { data: perfilActual } : await window.kwSupabase
-            .from('profiles').select('role').eq('id', u.data.user.id).single();
+          var p = perfilActual ? { data: perfilActual } : await (window.kwSession && window.kwSession.perfilInicial
+            ? window.kwSession.perfilInicial(window.kwSupabase)
+            : window.kwSupabase.from('profiles').select('role').eq('id', u.data.user.id).single());
           var rol = p.data ? p.data.role : null;
           puedeEditar = ['master', 'admin', 'staff'].indexOf(rol) >= 0;
         }

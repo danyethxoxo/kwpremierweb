@@ -163,7 +163,7 @@
     // menú entero, que no tiene nada que ver con las notificaciones.
     if (!window.kwSupabase || !window.kwSupabase.auth) return;
     const usuario = window.kwSession
-      ? window.kwSession.usuario(window.kwSupabase)
+      ? (window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSession.usuario(window.kwSupabase))
       : window.kwSupabase.auth.getUser();
     usuario.then(function (result) {
       const uid = result && result.data && result.data.user && result.data.user.id;

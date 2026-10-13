@@ -12,9 +12,9 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261007b"></script>
-<script src="/assets/js/auth-guard.js?v=20261001"></script>
-<script src="/assets/js/notif-bell.js?v=20261013carga"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+<script src="/assets/js/notif-bell.js?v=20261013general"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
@@ -5683,7 +5683,7 @@
     asesores = data || [];
   }
 
-  async function cargarEnvios() {
+  async function cargarEnvios(catalogosPendientes) {
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
@@ -5710,6 +5710,8 @@
         '<div class="kw-vacio">No se pudieron cargar los envíos: ' + escapar(error.message) + '</div>';
       return;
     }
+    // Descargar en paralelo; los nombres y colores deben estar antes de pintar.
+    if (catalogosPendientes) await catalogosPendientes;
     envios = data || [];
     // Lo que ya no está (se borró, o cambió de estado y el filtro lo
     // esconde) deja de contar como seleccionado.
@@ -5858,12 +5860,12 @@
   }
 
   async function iniciarDeVerdad() {
-    const { data: userData } = await window.kwSession.usuario(window.kwSupabase);
+    const { data: userData } = await (window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSession.usuario(window.kwSupabase));
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
-    const { data: perfil } = await window.kwSupabase
-      .from('profiles').select('nombre, email, role').eq('id', miUserId).single();
+    const { data: perfil } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
+      .from('profiles').select('nombre, email, role').eq('id', miUserId).single());
     miPerfil = {
       nombre: perfil?.nombre || '',
       correo: userData.user.email || perfil?.email || '',
@@ -5903,15 +5905,16 @@
     escucharCambios();
     // Leer los catálogos independientes a la vez. Los filtros necesitan
     // los frecuentes y la tabla necesita las etiquetas y los asesores.
-    await Promise.all([cargarFrecuentes(), cargarEtiquetas(), cargarAsesores()]);
-    armarFiltros();
-    pintarOpcionesFiltros();
+    const catalogos = Promise.all([cargarFrecuentes(), cargarEtiquetas(), cargarAsesores()]).then(() => {
+      armarFiltros();
+      pintarOpcionesFiltros();
+    });
 
     // Se pinta de inmediato con lo que ya hay en la base: la pantalla de
     // carga no tiene por qué esperar a preguntarle a weetrust, que es lo
     // lento. El webhook mantiene la base al día casi siempre, así que la
     // mayoría de las veces esto ya es lo correcto.
-    await Promise.all([cargarCupo(), cargarEnvios()]);
+    await Promise.all([catalogos, cargarCupo(), cargarEnvios(catalogos)]);
     marcarFrecuentesPuestos();
     const importado = await importarDocumentoFinalizado();
     if (!importado) {
@@ -5948,7 +5951,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch"></script>
 
 </body>

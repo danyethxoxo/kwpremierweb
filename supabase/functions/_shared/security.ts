@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
+import { createClient, type User } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 import { allowedOrigins, boundedBody, clientIp, HttpError, validateJson } from './security-core.ts'
 
 type Options = {
@@ -11,7 +11,7 @@ type Options = {
   maxBytes?: number
   json?: boolean
 }
-type Context = { userId?: string; token?: string }
+type Context = { userId?: string; token?: string; user?: User }
 type Handler = (req: Request, context: Context) => Response | Promise<Response>
 const DEFAULT_ORIGINS = 'https://www.kwpremieroficial.com,https://kwpremieroficial.com'
 
@@ -41,8 +41,10 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
   if (!token || !/^Bearer\s+/i.test(req.headers.get('authorization') || '')) throw new HttpError(401, 'No autenticado')
   const { data, error } = await adminClient().auth.getUser(token)
   if (error || !data.user) throw new HttpError(401, 'Sesion invalida')
-  await consumeLimit('user:all', data.user.id, 600)
-  await consumeLimit(`user:${options.name}`, data.user.id, options.userLimit ?? 60)
+  await Promise.all([
+    consumeLimit('user:all', data.user.id, 600),
+    consumeLimit(`user:${options.name}`, data.user.id, options.userLimit ?? 60),
+  ])
   if (options.mfa !== false) {
     const secret = Deno.env.get('DATA_GATEWAY_SECRET')
     if (!secret) throw new HttpError(503, 'Servicio no disponible')
@@ -53,7 +55,7 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
     const { data: approved, error: mfaError } = await caller.rpc('mfa_sesion_autorizada')
     if (mfaError || approved !== true) throw new HttpError(403, 'Se requiere verificacion en dos pasos')
   }
-  return { userId: data.user.id, token }
+  return { userId: data.user.id, token, user: data.user }
 }
 
 export function secureHandler(options: Options, handler: Handler): (req: Request) => Promise<Response> {
@@ -81,8 +83,10 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
           !(Deno.env.get('ALLOW_LOCAL_HTTP') === 'true' &&
           ['localhost', '127.0.0.1', 'kong'].includes(url.hostname))) throw new HttpError(400, 'HTTPS requerido')
       const ip = clientIp(req.headers, Deno.env.get('TRUSTED_IP_HEADER') || 'x-forwarded-for')
-      await consumeLimit('ip:all', ip, 1200)
-      await consumeLimit(`ip:${options.name}`, ip, options.ipLimit ?? 180)
+      await Promise.all([
+        consumeLimit('ip:all', ip, 1200),
+        consumeLimit(`ip:${options.name}`, ip, options.ipLimit ?? 180),
+      ])
       const context = await authenticate(req, { ...options, auth: typeof options.auth === 'function' ? options.auth(req) : options.auth })
       if (options.name === 'api-propiedades' && !context.userId) {
         const key = req.headers.get('x-api-key') || ''

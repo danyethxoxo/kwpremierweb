@@ -83,9 +83,9 @@
 
   async function iniciar() {
     try {
-      const user = await window.kwSupabase.auth.getUser();
+      const user = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
       if (user.error || !user.data.user) throw new Error('Sin sesión');
-      const perfil = await window.kwSupabase.from('profiles').select('role').eq('id', user.data.user.id).single();
+      const perfil = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase.from('profiles').select('role').eq('id', user.data.user.id).single());
       if (perfil.error) throw perfil.error;
       if (!perfil.data || !['master', 'admin', 'staff'].includes(perfil.data.role)) {
         autorizado = false;

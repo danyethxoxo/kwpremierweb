@@ -227,18 +227,19 @@
   async function iniciar() {
     sb=window.kwSupabase;
     try {
-      const {data,error}=await sb.auth.getUser(); if(error || !data.user) throw error;
+      const {data,error}=await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(sb) : sb.auth.getUser()); if(error || !data.user) throw error;
       usuario=data.user.id;
-      const {data:perfil,error:pe}=await sb.from('profiles').select('role').eq('id',usuario).single(); if(pe) throw pe;
+      const {data:perfil,error:pe}=await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(sb) : sb.from('profiles').select('role').eq('id',usuario).single()); if(pe) throw pe;
       gestion=['admin','master'].includes(perfil.role);
       $('btn-nuevo').disabled=false;
       if(vistaNuevo) { restaurarBorrador(); mostrarFormulario(true); }
       else {
         $('inc-alcance').hidden=!gestion;
-        await cargarLista();
+        const listaInicial=cargarLista();
         const parametros=new URL(location.href).searchParams, enviado=parametros.get('enviado'), id=parametros.get('id');
         if(/^[0-9a-f-]{36}$/i.test(enviado||'')) aviso('inc-aviso','Reporte '+folio(enviado)+' enviado. Puedes abrirlo para consultar el seguimiento.');
         if(/^[0-9a-f-]{36}$/i.test(id||'')) await cargarDetalle(id);
+        await listaInicial;
       }
     } catch(_) { if(vistaNuevo) aviso('rep-error','No pudimos abrir el formulario. Revisa tu conexión y recarga la página.'); else $('inc-filas').innerHTML='<tr><td colspan="4"><div class="inc-vacio"><h2>No pudimos abrir tus reportes</h2><p>Revisa tu conexión y recarga la página.</p><button class="btn-modal-cancelar" type="button" data-iniciar>Reintentar</button></div></td></tr>'; }
   }

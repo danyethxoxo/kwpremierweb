@@ -43,7 +43,33 @@
     return JSON.stringify([ESQUEMA,res.data]);
   }
   async function descargar(sb,estado) {
-    var filas = [], desde = 0;
+    var primera = await sb.from('propiedades_inventario').select(CAMPOS,{count:'exact'})
+      .eq('fuente','kwmexico').order('id').range(0,999);
+    if (primera.error) throw primera.error;
+    var filas = primera.data || [], desde = 1000;
+    var total = primera.count;
+    estado('Descargando catálogo: ' + filas.length.toLocaleString('es-MX') + ' propiedades…');
+    if (Number.isInteger(total) && total >= filas.length) {
+      if (filas.length !== Math.min(total,1000)) throw new Error('El catálogo llegó incompleto.');
+      var paginas = [filas], siguiente = 1000, recibidas = filas.length;
+      async function trabajador() {
+        while (siguiente < total) {
+          var inicio = siguiente; siguiente += 1000;
+          var res = await sb.from('propiedades_inventario').select(CAMPOS).eq('fuente','kwmexico')
+            .order('id').range(inicio,Math.min(inicio+999,total-1));
+          if (res.error) throw res.error;
+          if (!res.data || res.data.length !== Math.min(1000,total-inicio)) throw new Error('El catálogo llegó incompleto.');
+          paginas[inicio/1000] = res.data;
+          recibidas += res.data.length;
+          estado('Descargando catálogo: ' + recibidas.toLocaleString('es-MX') + ' propiedades…');
+        }
+      }
+      // Tres conexiones como máximo; conservar el orden del catálogo completo.
+      await Promise.all([trabajador(),trabajador(),trabajador()]);
+      return [].concat.apply([],paginas);
+    }
+    // Compatibilidad con respuestas que no incluyen el conteo exacto.
+    if (filas.length < 1000) return filas;
     while (true) {
       var res = await sb.from('propiedades_inventario').select(CAMPOS).eq('fuente','kwmexico').order('id').range(desde,desde+999);
       if (res.error) throw res.error;

@@ -39,13 +39,21 @@ Deno.test('MFA endpoint renews known devices across networks and rejects inactiv
     .map((byte) => byte.toString(16).padStart(2, '0')).join('')
   const verifiedIp = await hash('ip:192.0.2.7:test-service')
   let age = 1000, ipHash = verifiedIp, deleted = 0, authorized = 0, touched = 0, enrolled = true
+  let profileRole = 'asesor'
+  let identityReads = 0
+  let readGate: Promise<void> | null = null
+  const reads = new Set<string>()
   const knownHash = await hash(`${userId}:device:${'a'.repeat(43)}:test-service`)
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input))
     const method = init?.method || 'GET'
-    if (url.pathname.endsWith('/auth/v1/user')) return Response.json({ id: userId, email: 'test@example.com', last_sign_in_at: new Date(now).toISOString() })
+    if (method === 'GET' && ['/mfa_metodos', '/profiles', '/mfa_dispositivos'].some(path => url.pathname.endsWith(path))) {
+      reads.add(url.pathname)
+      if (readGate) await readGate
+    }
+    if (url.pathname.endsWith('/auth/v1/user')) { identityReads++; return Response.json({ id: userId, email: 'test@example.com', last_sign_in_at: new Date(now).toISOString() }) }
     if (url.pathname.endsWith('/mfa_metodos')) return Response.json(enrolled ? [{ activo: true, destino: 'security@example.com' }] : [])
-    if (url.pathname.endsWith('/profiles')) return Response.json([{ role: 'asesor' }])
+    if (url.pathname.endsWith('/profiles')) return Response.json([{ id: userId, role: profileRole, nombre: 'QA' }])
     if (url.pathname.endsWith('/mfa_dispositivos')) {
       if (method === 'GET') return Response.json(url.searchParams.get('token_hash') === 'eq.' + knownHash
         ? [{ id: 'known-device', ultimo_ip_hash: ipHash, ultimo_acceso: new Date(now - age).toISOString() }] : [])
@@ -74,7 +82,11 @@ Deno.test('MFA endpoint renews known devices across networks and rejects inactiv
         body: JSON.stringify({ accion: 'estado', dispositivo_token: deviceToken })
       })
     }
-    assert.equal((await (await handleMfa(request())).json()).verificado, true)
+    const initial = await (await handleMfa(request())).json()
+    assert.equal(initial.verificado, true)
+    assert.equal(initial.usuario.id, userId)
+    assert.equal(initial.perfil.id, userId)
+    assert.equal(initial.perfil.nombre, 'QA')
     assert.equal(authorized, 1)
     assert.equal(touched, 1)
     ipHash = 'another-network'
@@ -82,7 +94,10 @@ Deno.test('MFA endpoint renews known devices across networks and rejects inactiv
     assert.equal(deleted, 0)
     assert.equal(touched, 2)
     ipHash = verifiedIp; age = 3 * 86400000
-    assert.equal((await (await handleMfa(request())).json()).verificado, false)
+    const inactive = await (await handleMfa(request())).json()
+    assert.equal(inactive.verificado, false)
+    assert.equal(inactive.usuario, undefined)
+    assert.equal(inactive.perfil, undefined)
     assert.equal(deleted, 1)
     assert.equal((await (await handleMfa(request(2 * 86400000))).json()).requiere_login, true)
     assert.equal(deleted, 2)
@@ -95,6 +110,34 @@ Deno.test('MFA endpoint renews known devices across networks and rejects inactiv
     const before = authorized
     assert.equal((await (await handleMfa(request())).json()).verificado, true)
     assert.equal(authorized, before + 1)
+    enrolled = true
+    reads.clear()
+    let releaseReads!: () => void
+    readGate = new Promise(resolve => { releaseReads = resolve })
+    const parallel = handleMfa(request())
+    for (let i = 0; i < 50 && reads.size < 3; i++) await new Promise(resolve => setTimeout(resolve, 1))
+    releaseReads()
+    assert.equal(reads.size, 3, 'las tres lecturas deben empezar antes de recibir cualquiera')
+    assert.equal((await (await parallel).json()).verificado, true)
+    readGate = null
+    enrolled = false
+    profileRole = 'admin'
+    const privileged = await (await handleMfa(request())).json()
+    assert.equal(privileged.verificado, false)
+    assert.equal(privileged.usuario, undefined)
+    assert.equal(privileged.perfil, undefined)
+    enrolled = true
+    profileRole = 'asesor'
+    const verifiedRequest = request()
+    const verifiedUser = { id: userId, email: 'test@example.com', last_sign_in_at: new Date(now).toISOString(),
+      aud: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date(now).toISOString() }
+    const beforeIdentity = identityReads
+    assert.equal((await (await handleMfa(verifiedRequest, {
+      token: verifiedRequest.headers.get('Authorization')!.replace(/^Bearer /, ''), user: verifiedUser,
+    })).json()).verificado, true)
+    assert.equal(identityReads, beforeIdentity, 'no revalidar el token que acaba de validar el middleware')
+    await handleMfa(request(), { token: 'another-token', user: verifiedUser })
+    assert.equal(identityReads, beforeIdentity + 1, 'un contexto de otro token no se reutiliza')
   } finally {
     globalThis.fetch = oldFetch
     names.forEach((name, index) => previous[index] === undefined ? Deno.env.delete(name) : Deno.env.set(name, previous[index]!))

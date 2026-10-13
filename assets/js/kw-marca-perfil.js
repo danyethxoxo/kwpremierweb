@@ -183,7 +183,7 @@
       if (auth.error) throw auth.error;
       if (!session) { activo = false; return; }
       try { if (sessionStorage.getItem(claveSesion(session))) { activo = false; return; } } catch (error) {}
-      var result = await client.from('profiles').select(CAMPOS).eq('id', session.user.id).single();
+      var result = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(client) : client.from('profiles').select(CAMPOS).eq('id', session.user.id).single());
       if (result.error) throw result.error;
       if (!result.data || completo(result.data)) { activo = false; return; }
       mostrar(client, session, result.data);

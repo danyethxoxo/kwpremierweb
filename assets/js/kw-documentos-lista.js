@@ -16,7 +16,8 @@ async function cargarListaDocumentos() {
   contF.innerHTML = '<div class="kw-lista"><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div></div>';
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
-    const { data: userData, error: userError } = await window.kwSession.usuario(window.kwSupabase);
+    const { data: userData, error: userError } = await (window.kwSession.usuarioInicial
+      ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSession.usuario(window.kwSupabase));
     if (userError || !userData || !userData.user) throw new Error('No hay sesión activa.');
 
     const { data, error } = await window.kwSupabase

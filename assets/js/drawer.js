@@ -917,13 +917,13 @@
     const caja = document.getElementById('drawer-usuario');
     if (!caja || !window.kwSupabase) return;
     try {
-      const { data: u } = await window.kwSession.usuario(window.kwSupabase);
+      const { data: u } = await (window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSession.usuario(window.kwSupabase));
       if (!u || !u.user) return;
-      const { data: perfil } = await window.kwSupabase
+      const { data: perfil } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
         .from('profiles')
         .select('nombre, apellido, role, foto_url')
         .eq('id', u.user.id)
-        .single();
+        .single());
       if (!perfil) return;
       document.querySelectorAll('[data-drawer-roles]').forEach((enlace) => {
         enlace.hidden = !enlace.dataset.drawerRoles.split(' ').includes(perfil.role);

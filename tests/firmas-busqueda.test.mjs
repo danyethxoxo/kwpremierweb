@@ -63,7 +63,7 @@ test('carga documentos posteriores a los primeros 300 sin perder selecciones vig
       range: async (inicio, fin) => { rangos.push([inicio, fin]); return { data: documentos.slice(inicio, fin + 1), error: null }; },
     }) } },
   });
-  const inicio = html.indexOf('  async function cargarEnvios()');
+  const inicio = html.indexOf('  async function cargarEnvios(');
   vm.runInContext(html.slice(inicio, html.indexOf('\n  }', inicio) + 4), contexto);
   await vm.runInContext('cargarEnvios()', contexto);
   assert.equal(contexto.envios.length, 301);

@@ -89,5 +89,44 @@
     }
     return usuariosPendientes.get(client);
   }
-  window.kwSession = Object.freeze({ deviceToken: deviceToken, loginExpired: loginExpired, mfaState: mfaState, usuario: usuario });
+  // La respuesta de MFA ya leyó el usuario y su propio perfil en el servidor.
+  // Compartirla solo durante el arranque de este documento, nunca en storage.
+  var inicios = new WeakMap();
+  var perfilesPendientes = new WeakMap();
+  function limpiarInicio(client) { inicios.delete(client); }
+  function prepararInicio(client, estado) {
+    limpiarInicio(client);
+    if (estado.verificado !== true || estado.sin_sesion || estado.requiere_login ||
+        !estado.usuario || !estado.perfil || estado.usuario.id !== estado.perfil.id) return;
+    inicios.set(client, { user: Object.assign({}, estado.usuario),
+      perfil: Object.assign({}, estado.perfil), creado: Date.now() });
+  }
+  function inicio(client) {
+    var valor = inicios.get(client);
+    if (!valor || Date.now() - valor.creado > 15000) { limpiarInicio(client); return null; }
+    return valor;
+  }
+  function usuarioInicial(client) {
+    var valor = inicio(client);
+    return valor ? Promise.resolve({ data: { user: Object.assign({}, valor.user) }, error: null }) : usuario(client);
+  }
+  function perfilInicial(client) {
+    var valor = inicio(client);
+    if (valor) return Promise.resolve({ data: Object.assign({}, valor.perfil), error: null });
+    // Compatibilidad durante el despliegue y lecturas posteriores al arranque.
+    if (!perfilesPendientes.has(client)) {
+      var pendiente = usuario(client).then(function (r) {
+        if (r.error || !r.data || !r.data.user) return { data: null, error: r.error || new Error('Sin sesión.') };
+        return client.from('profiles').select('*').eq('id', r.data.user.id).single();
+      }).finally(function () { perfilesPendientes.delete(client); });
+      perfilesPendientes.set(client, pendiente);
+    }
+    return perfilesPendientes.get(client);
+  }
+  if (window.addEventListener) window.addEventListener('kw-marca-actualizada', function () {
+    if (window.kwSupabase) limpiarInicio(window.kwSupabase);
+  });
+  window.kwSession = Object.freeze({ deviceToken: deviceToken, loginExpired: loginExpired, mfaState: mfaState,
+    usuario: usuario, usuarioInicial: usuarioInicial, perfilInicial: perfilInicial,
+    prepararInicio: prepararInicio, limpiarInicio: limpiarInicio });
 })();

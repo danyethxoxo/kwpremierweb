@@ -120,10 +120,16 @@
   }
 
   window.kwSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: window.kwSecureFetch } });
+  if (window.kwSupabase.auth.onAuthStateChange) window.kwSupabase.auth.onAuthStateChange(function (evento) {
+    if (['SIGNED_OUT', 'SIGNED_IN', 'USER_UPDATED', 'PASSWORD_RECOVERY'].includes(evento) && window.kwSession.limpiarInicio) {
+      window.kwSession.limpiarInicio(window.kwSupabase);
+    }
+  });
 
   // Un problema de conexión conserva la sesión y permite reintentar.
   // El contenido sigue oculto hasta recibir autorización del servidor.
   function mostrarErrorConexion() {
+    if (window.kwSession && window.kwSession.limpiarInicio && window.kwSupabase) window.kwSession.limpiarInicio(window.kwSupabase);
     document.documentElement.classList.remove('kw-auth-ok');
     montarCargando();
     var capa = capaCargando;
@@ -147,6 +153,7 @@
 
   function comprobarSesion() {
     if (comprobacionPendiente) return comprobacionPendiente;
+    if (window.kwSession.limpiarInicio) window.kwSession.limpiarInicio(window.kwSupabase);
     comprobacionPendiente = window.kwSession.mfaState(window.kwSupabase).then(async function (estado) {
       if (estado.sin_sesion) return redirectToLogin();
       if (estado.requiere_login) {
@@ -160,6 +167,7 @@
       }
       if (estado.activo === true && estado.verificado !== true) return redirectToLogin();
       ultimaComprobacion = Date.now();
+      if (window.kwSession.prepararInicio) window.kwSession.prepararInicio(window.kwSupabase, estado);
       continuarConSesion();
     }).catch(mostrarErrorConexion).finally(function () { comprobacionPendiente = null; });
     return comprobacionPendiente;
@@ -201,6 +209,7 @@
   window.addEventListener('online', comprobarSesion);
 
   window.kwLogout = function () {
+    if (window.kwSession.limpiarInicio) window.kwSession.limpiarInicio(window.kwSupabase);
     try { localStorage.removeItem(ACTIVITY_KEY); } catch (e) {}
     montarCargando();
     window.kwSupabase.auth.signOut({ scope: 'local' }).then(function () {

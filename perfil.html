@@ -13,8 +13,8 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261007b"></script>
-<script src="/assets/js/auth-guard.js?v=20261001"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
@@ -470,15 +470,15 @@
   window.addEventListener('kw-marca-actualizada', function () { cargarPerfil(); });
 
   async function cargarPerfil() {
-    const { data: userData } = await window.kwSupabase.auth.getUser();
+    const { data: userData } = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
-    const { data: perfil, error } = await window.kwSupabase
+    const { data: perfil, error } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
       .from('profiles')
       .select('nombre, apellido, email, role, foto_url, portada_url, portada_pos_y, acerca_de, descripcion_corta, titulo_conoceme, sitio_web, whatsapp, instagram, facebook, tiktok, linkedin')
       .eq('id', miUserId)
-      .single();
+      .single());
     if (error || !perfil) return;
 
     document.getElementById('perfil-nombre').value = perfil.nombre || '';
@@ -1067,6 +1067,6 @@
 <script src="/assets/js/kw-qr.js?v=20260829"></script>
 <script src="/assets/js/kw-compartir.js?v=20260922"></script>
 <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-<script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 </body>
 </html>

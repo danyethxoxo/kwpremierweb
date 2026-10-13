@@ -1,7 +1,7 @@
 import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { clientIp } from '../_shared/security-core.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
+import { createClient, type User } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 import { deviceTrusted, loginExpired, loginExpiresAt, TRUST_DAYS } from './policy.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -73,7 +73,7 @@ function deviceName(req: Request) {
   return `${browser}${system ? ` en ${system}` : ''}`
 }
 
-export async function handleMfa(req: Request): Promise<Response> {
+export async function handleMfa(req: Request, context?: { token?: string; user?: User }): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) })
   if (req.method !== 'POST') return response(req, { error: 'Metodo no permitido.' }, 405)
   try {
@@ -81,7 +81,10 @@ export async function handleMfa(req: Request): Promise<Response> {
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
     if (!token) return response(req, { error: 'No autenticado.' }, 401)
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
-    const { data: identity, error: identityError } = await admin.auth.getUser(token)
+    // El contexto solo lo entrega el middleware después de validar este token.
+    const { data: identity, error: identityError } = context?.token === token && context.user
+      ? { data: { user: context.user }, error: null }
+      : await admin.auth.getUser(token)
     if (identityError || !identity?.user) return response(req, { error: 'Sesion invalida.' }, 401)
     const claims = jwtPayload(token)
     const sessionId = String(claims.session_id || '')
@@ -104,9 +107,16 @@ export async function handleMfa(req: Request): Promise<Response> {
     const verifiedUntil = new Date(Math.min(now.getTime() + TRUST_DAYS * 86400000,
       loginExpiresAt(claims, identity.user.last_sign_in_at))).toISOString()
 
-    const { data: method, error: methodLookupError } = await admin.from('mfa_metodos').select('destino,activo').eq('user_id', userId).maybeSingle()
+    const [methodResult, profileResult, deviceResult] = await Promise.all([
+      admin.from('mfa_metodos').select('destino,activo').eq('user_id', userId).maybeSingle(),
+      admin.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      deviceHash ? admin.from('mfa_dispositivos').select('id,ultimo_acceso,ultimo_ip_hash').eq('user_id', userId)
+        .eq('token_hash', deviceHash).is('revocado_en', null).gte('ultimo_acceso', trustLimit).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+    const { data: method, error: methodLookupError } = methodResult
     if (methodLookupError) return response(req, { error: 'No se pudo comprobar la seguridad de la cuenta.' }, 500)
-    const { data: profile, error: profileLookupError } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle()
+    const { data: profile, error: profileLookupError } = profileResult
     if (profileLookupError) return response(req, { error: 'No se pudo comprobar el rol de la cuenta.' }, 500)
     const privileged = profile?.role === 'master' || profile?.role === 'admin'
     const required = privileged || !!method
@@ -114,8 +124,7 @@ export async function handleMfa(req: Request): Promise<Response> {
     const needsEnrollment = required && !active
     let trusted = false
     if (active && deviceHash) {
-      const { data: device, error: deviceLookupError } = await admin.from('mfa_dispositivos').select('id,ultimo_acceso,ultimo_ip_hash').eq('user_id', userId)
-        .eq('token_hash', deviceHash).is('revocado_en', null).gte('ultimo_acceso', trustLimit).maybeSingle()
+      const { data: device, error: deviceLookupError } = deviceResult
       if (deviceLookupError) return response(req, { error: 'No se pudo comprobar este dispositivo.' }, 500)
       if (device && deviceTrusted(device, ipHash, now.getTime())) {
         const { error: touchError } = await admin.from('mfa_dispositivos').update({ ultimo_acceso: now.toISOString(), ultimo_ip_hash: ipHash, nombre: deviceName(req) }).eq('id', device.id)
@@ -147,6 +156,9 @@ export async function handleMfa(req: Request): Promise<Response> {
       requiere_mfa: privileged && needsEnrollment,
       dispositivo_confiable: trusted,
       enviado_a: active ? maskEmail(method.destino) : null,
+      // Reutilizar esta lectura solo después de autorizar la sesión.
+      // Sin verificación no se devuelve información del perfil.
+      ...(!required || (active && verified) ? { usuario: identity.user, perfil: profile } : {}),
     })
 
     if (action === 'revocar_actual' || action === 'revocar_todos') {

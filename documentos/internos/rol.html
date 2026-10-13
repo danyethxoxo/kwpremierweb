@@ -12,8 +12,8 @@
   <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261007b"></script>
-<script src="/assets/js/auth-guard.js?v=20261001"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
@@ -228,7 +228,7 @@
 
   </main>
 
-<script src="/assets/js/doc-menu.js?v=20261007b"></script>
+<script src="/assets/js/doc-menu.js?v=20261013general"></script>
 <script>
 (function () {
   var rolId = new URLSearchParams(location.search).get('rol') || '';
@@ -307,9 +307,9 @@
 
   async function iniciar() {
     try {
-      var u = await window.kwSupabase.auth.getUser();
+      var u = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
       if (!u.data || !u.data.user) return;
-      var p = await window.kwSupabase.from('profiles').select('role').eq('id', u.data.user.id).single();
+      var p = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase.from('profiles').select('role').eq('id', u.data.user.id).single());
       if (p.error || !p.data || p.data.role === 'asociado') {
         document.getElementById('contenido').style.display = 'none';
         document.getElementById('denegado').style.display = '';
@@ -331,8 +331,7 @@
       document.getElementById('sigla').textContent = rol.id;
       document.getElementById('titulo').textContent = rol.nombre;
 
-      await window.kwDocMenu.init(null);
-      await cargarDocs();
+      await Promise.all([window.kwDocMenu.init(null), cargarDocs()]);
     } catch (err) {
       document.getElementById('docs').innerHTML =
         '<div class="aviso"><strong>No se pudo cargar</strong>' + escapar(err.message || err) + '</div>';
@@ -348,7 +347,7 @@
 })();
 </script>
 <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-<script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#kw-card-filter"></script>
 <script src="/assets/js/kw-card-filter.js?v=20260923a" data-target="#docs"></script>
 </body>

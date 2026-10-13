@@ -9,6 +9,34 @@ function runtime(indexedDB) {
   vm.runInContext(script,context);
   return context.window.kwInventarioLocal;
 }
+
+test('la descarga completa inicia tres páginas en paralelo y las reúne en orden sin truncar',async()=>{
+  const filas=Array.from({length:3500},(_,i)=>({id:i})),pendientes=[];
+  const sb={from(){const q={select(){return q;},eq(){return q;},order(){return q;},range(inicio,fin){
+    if(inicio===0)return Promise.resolve({data:filas.slice(0,1000),count:3500});
+    return new Promise(resolve=>pendientes.push({inicio,fin,resolve}));
+  }};return q;}};
+  const start=script.indexOf('  async function descargar(');
+  const context=vm.createContext({CAMPOS:'id',Promise,Number});
+  vm.runInContext(script.slice(start,script.indexOf('\n  }',start)+4),context);
+  const carga=context.descargar(sb,()=>{});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(pendientes.length,3);
+  pendientes.reverse().forEach(p=>p.resolve({data:filas.slice(p.inicio,p.fin+1)}));
+  const resultado=await carga;
+  assert.equal(resultado.length,3500);
+  assert.deepEqual(Array.from(resultado,x=>x.id),filas.map(x=>x.id));
+});
+
+test('un lote truncado no se presenta como catálogo completo',async()=>{
+  const sb={from(){const q={select(){return q;},eq(){return q;},order(){return q;},async range(inicio){
+    return inicio===0?{data:Array(1000).fill({}),count:1500}:{data:Array(499).fill({})};
+  }};return q;}};
+  const start=script.indexOf('  async function descargar(');
+  const context=vm.createContext({CAMPOS:'id',Promise,Number});
+  vm.runInContext(script.slice(start,script.indexOf('\n  }',start)+4),context);
+  await assert.rejects(context.descargar(sb,()=>{}),/incompleto/);
+});
 test('cache vigente muestra datos y solo consulta la versión',async()=>{
   const api = runtime(), filas = [{id:'a'}], estados = [], recibidas = [];
   let descargas = 0;

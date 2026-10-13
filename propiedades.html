@@ -21,8 +21,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261007b"></script>
-<script src="/assets/js/auth-guard.js?v=20261001"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
 <style>
   .sitio-web-campo { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; background: #fff; padding-right: 7px; }
   #filtros .sitio-web-campo input { min-width: 0; width: 100%; border: 0; background: transparent; padding: 10px 8px; }
@@ -863,7 +863,9 @@
         var usuario = sesion.data && sesion.data.session && sesion.data.session.user;
         if (!usuario) throw new Error('Inicia sesión para abrir propiedades con tu sitio.');
         sitioAsesorUsuario = usuario.id;
-        var respuesta = await sb.from('profiles').select('nombre,apellido,email,foto_url,whatsapp,sitio_web').eq('id', usuario.id).single();
+        var respuesta = await (window.kwSession && window.kwSession.perfilInicial
+          ? window.kwSession.perfilInicial(sb)
+          : sb.from('profiles').select('nombre,apellido,email,foto_url,whatsapp,sitio_web').eq('id', usuario.id).single());
         if (respuesta.error) throw respuesta.error;
         sitioAsesorPerfil = respuesta.data || null;
         sitioAsesor = window.kwSitioAsesor.normalizar(respuesta.data.sitio_web);
@@ -2324,7 +2326,7 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/drawer.js?v=20261008filtros" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
 </html>

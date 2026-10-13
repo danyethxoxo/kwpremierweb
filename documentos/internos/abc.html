@@ -15,9 +15,9 @@
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261007b"></script>
-<script src="/assets/js/auth-guard.js?v=20261001"></script>
-<script src="/assets/js/kw-prellenar.js?v=20260829" data-campos="f-asesor"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+<script src="/assets/js/kw-prellenar.js?v=20261013general" data-campos="f-asesor"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -467,13 +467,13 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </div>
 <script>
   async function verificarAccesoAbc() {
-    const { data: userData } = await window.kwSupabase.auth.getUser();
+    const { data: userData } = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
     if (!userData || !userData.user) return;
-    const { data: perfil, error } = await window.kwSupabase
+    const { data: perfil, error } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
       .from('profiles')
       .select('role')
       .eq('id', userData.user.id)
-      .single();
+      .single());
     if (error || !perfil) return;
     if (perfil.role === 'asociado') {
       document.getElementById('contenido-abc').style.display = 'none';

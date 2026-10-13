@@ -520,9 +520,9 @@
   document.addEventListener('click',function (e) { document.querySelectorAll('.cliente-menu[open]').forEach(function (menu) { if (!menu.contains(e.target)) menu.open = false; }); });
   async function cargarSitio() {
     try {
-      var usuario = await window.kwSupabase.auth.getUser();
+      var usuario = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
       if (!usuario.data.user) return;
-      var perfil = await window.kwSupabase.from('profiles').select('sitio_web').eq('id',usuario.data.user.id).single();
+      var perfil = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase.from('profiles').select('sitio_web').eq('id',usuario.data.user.id).single());
       if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
     } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
   }
