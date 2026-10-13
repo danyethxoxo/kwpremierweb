@@ -1663,34 +1663,18 @@
   }
 
   // ── Carga ──
-  // Leer todas las páginas: el límite de respuestas de Supabase truncaba
-  // los avances y hacía desaparecer checks confirmados al volver a entrar.
-  async function cargarAvances() {
-    var datos = [], desde = 0, cantidad = 500;
-    while (true) {
-      var r = await window.kwSupabase.from('abc_avance').select('kwid, tema_id')
-        .eq('completado', true).order('kwid').order('tema_id')
-        .range(desde, desde + cantidad - 1);
-      if (r.error) throw r.error;
-      var pagina = r.data || [];
-      datos = datos.concat(pagina);
-      if (pagina.length < cantidad) return { data: datos };
-      desde += pagina.length;
-    }
-  }
-
   async function cargar() {
-    var r = await Promise.all([
-      window.kwSupabase.from('abc_temas').select('id, orden, sesion, nombre').eq('activo', true).order('orden'),
-      window.kwSupabase.from('abc_asesores').select('kwid, nombre, dt_asignado, activo, fecha_ingreso').order('nombre'),
-      cargarAvances(),
-    ]);
-    for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
-
-    temas = r[0].data || [];
+    // El servidor comprueba el rol y MFA y devuelve una lectura completa.
+    // El JSON evita truncar los checks a 1000 filas o paginarlos en serie.
+    var r = await window.kwSupabase.rpc('abc_carga_completa');
+    if (r.error) throw r.error;
+    if (!r.data || !Array.isArray(r.data.temas) || !Array.isArray(r.data.asesores) || !Array.isArray(r.data.avances)) {
+      throw new Error('No se recibió la lectura completa del ABC.');
+    }
+    temas = r.data.temas;
     avance = new Map();
-    (r[2].data || []).forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
-    actualizarPadron(r[1].data || []);
+    r.data.avances.forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
+    actualizarPadron(r.data.asesores);
   }
 
   function actualizarPadron(datos) {
@@ -1719,24 +1703,17 @@
 
   async function iniciar() {
     try {
-      var { data: userData } = await window.kwSession.usuario(window.kwSupabase);
-      if (!userData || !userData.user) return;
-      var { data: perfil } = await window.kwSupabase
-        .from('profiles').select('role').eq('id', userData.user.id).single();
-      var rol = perfil ? perfil.role : null;
-
-      if (!perfil || ['master', 'admin', 'staff'].indexOf(rol) < 0) {
-        document.getElementById('contenido').style.display = 'none';
-        document.getElementById('denegado').style.display = '';
-        return;
-      }
-      puedeEditar = true;
-
       await cargar();
+      puedeEditar = true;
       pintar();
       // Dar al navegador un cuadro para mostrar los datos antes de leer Excel.
       requestAnimationFrame(function () { sincronizarAlEntrar(); });
     } catch (err) {
+      if (err.code === '42501') {
+        document.getElementById('contenido').style.display = 'none';
+        document.getElementById('denegado').style.display = '';
+        return;
+      }
       document.getElementById('salida').innerHTML =
         '<div class="abc-vacio"><strong>No se pudo cargar</strong>' + esc(err.message || err) + '</div>';
     }

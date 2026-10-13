@@ -9,6 +9,13 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const ruta = '/documentos/internos/dt/abc-tracker.html';
 const guard = `
 window.kwSupabase = {
+  rpc: async nombre => {
+    if(nombre!=='abc_carga_completa') throw new Error('RPC inesperada');
+    window.qaLecturas=(window.qaLecturas||0)+1;
+    return {data:{temas:[{id:1,orden:1,sesion:1,nombre:'Tema QA'}],
+      asesores:[{kwid:'1',nombre:'Asesor QA',dt_asignado:'DT QA',activo:true}],
+      avances:[{kwid:'1',tema_id:1}]}};
+  },
   auth: { getUser: async () => ({data:{user:{id:'qa',email:'qa@example.com'}}}),
     getSession: async () => ({data:{session:{access_token:'qa'}}}) },
   from(tabla) {
@@ -60,6 +67,7 @@ test('ABC permanece usable con Excel lento, sin descargar el exportador, en escr
       await page.locator('.fila').first().waitFor({state:'visible',timeout:5000});
       await page.waitForFunction(() => document.getElementById('btn-sync').disabled);
       assert.equal(exportadores.length, 0);
+      assert.equal(await page.evaluate(() => window.qaLecturas), 1);
       await page.evaluate(() => {
         const input = document.getElementById('busq');
         input.value = 'Asesor QA';

@@ -37,15 +37,35 @@ test('ABC muestra datos antes de comenzar la sincronización externa', async () 
   assert.deepEqual(eventos, ['datos', 'visible', 'excel']);
 });
 
-test('ABC deniega el acceso antes de leer datos o sincronizar', async () => {
-  const ctx = contexto({ window: cliente('asesor'),
-    cargar() { assert.fail('lectura sin permiso'); },
+test('ABC deniega el acceso cuando el servidor rechaza el permiso, sin sincronizar', async () => {
+  const ctx = contexto({
+    async cargar() { throw {code:'42501'}; },
     sincronizarAlEntrar() { assert.fail('sincronización sin permiso'); },
     requestAnimationFrame() { assert.fail('cuadro sin permiso'); } });
   vm.runInContext(funcion('iniciar'), ctx);
   await ctx.iniciar();
   assert.equal(ctx.document.getElementById('contenido').style.display, 'none');
   assert.equal(ctx.document.getElementById('denegado').style.display, '');
+});
+
+test('ABC carga todos los checks con una sola petición y conserva el estado ante errores', async () => {
+  let llamadas = 0, fallar = false;
+  const datos = {temas:[{id:1}],asesores:[{kwid:'1'}],avances:Array.from({length:1888},(_,i)=>({kwid:String(i),tema_id:1}))};
+  const ctx = contexto({temas:[],avance:new Map(),llave:(k,t)=>k+'|'+t,
+    actualizarPadron(asesores) {ctx.asesores=asesores;},
+    window:{kwSupabase:{async rpc(nombre) {
+      assert.equal(nombre,'abc_carga_completa'); llamadas++;
+      return fallar?{error:{message:'sin conexión'}}:{data:datos};
+    }}}});
+  vm.runInContext(funcion('cargar'),ctx);
+  await ctx.cargar();
+  assert.equal(llamadas,1);
+  assert.equal(ctx.avance.size,1888);
+  assert.equal(ctx.avance.get('1887|1'),true);
+  const anterior=ctx.avance;
+  fallar=true;
+  await assert.rejects(ctx.cargar());
+  assert.equal(ctx.avance,anterior);
 });
 
 test('sincronizar refresca solo el padrón sin reemplazar los checks editados', async () => {
