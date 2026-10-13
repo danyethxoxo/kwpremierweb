@@ -44,14 +44,12 @@
   }
   function iniciarMapa() {
     if (mapa) return;
-    // La rueda sigue desplazando la pagina. El zoom se controla con botones,
-    // teclado o gesto de dos dedos en el mapa.
-    mapa = L.map('prop-mapa', {scrollWheelZoom: false, maxZoom: 19, minZoom: 2, zoomSnap:.25, worldCopyJump: true});
+    mapa = L.map('prop-mapa', {scrollWheelZoom: true, maxZoom: 19, minZoom: 2, zoomSnap:.25, worldCopyJump: true});
     mapa.setView([22.8, -102.2], 5);
     dibujo = window.kwCrearDibujoMapa(mapa, function (puntos) {
       var lat = puntos.map(function (p) { return p[1]; }), lng = puntos.map(function (p) { return p[0]; });
       zona = [Math.min.apply(null,lat),Math.min.apply(null,lng),Math.max.apply(null,lat),Math.max.apply(null,lng)];
-      btnQuitar.hidden = false; window.aplicarFiltros();
+      btnQuitar.hidden = false; window.aplicarZonaMapa();
     });
     var marco = document.getElementById('prop-mapa');
     var url = marco.dataset.tiles || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -207,7 +205,7 @@
     if (dibujo) dibujo.borrar();
     if (mapa) mapa.setView([22.8,-102.2],5);
     zona = null; btnQuitar.hidden = true;
-    if (aplicar !== false) window.aplicarFiltros();
+    if (aplicar !== false) window.aplicarZonaMapa();
   }
   btnReintentar.onclick = function () { actualizar(true); };
   btnQuitar.onclick = function () { quitarZona(); };
@@ -219,7 +217,7 @@
     var oeste = Math.max(-180, b.getWest()), este = Math.min(180, b.getEast());
     if (oeste >= este) { mapa.setView([23.6,-102.5],5); return; }
     zona = [Math.max(-85.05112878,b.getSouth()), oeste, Math.min(85.05112878,b.getNorth()), este];
-    btnQuitar.hidden = false; window.aplicarFiltros();
+    btnQuitar.hidden = false; window.aplicarZonaMapa();
   };
   window.addEventListener('kw-propiedades-filtradas', function () {
     requestAnimationFrame(function () { setTimeout(actualizar, 0); });

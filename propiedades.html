@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
-<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=5734fa0">
+<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261013pluma">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
@@ -751,9 +751,6 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
-        <div class="prop-vistas">
-          <button type="button" id="prop-zona-quitar" hidden>Quitar zona del mapa</button>
-        </div>
         <div class="prop-explorador">
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
@@ -761,12 +758,13 @@
         <section id="prop-mapa-panel" class="prop-mapa-panel" aria-label="Buscar propiedades en el mapa" aria-live="off">
           <div class="prop-mapa-barra">
             <p id="prop-mapa-estado" role="status" aria-live="polite"></p>
+            <div class="prop-mapa-acciones">
             <button type="button" id="prop-mapa-zona" disabled>Buscar en esta zona</button>
             <button type="button" id="prop-mapa-dibujar" aria-pressed="false" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 3 5 5-12 12H4v-5L16 3Z"/><path d="m13 6 5 5"/></svg> Dibujar zona</button>
-            <button type="button" id="prop-mapa-terminar" hidden disabled>Buscar dentro</button>
-            <button type="button" id="prop-mapa-deshacer" hidden>Deshacer punto</button>
+            <button type="button" id="prop-zona-quitar" title="Quitar zona del mapa" hidden>Quitar zona</button>
             <button type="button" id="prop-mapa-cancelar" hidden>Cancelar dibujo</button>
             <button type="button" id="prop-mapa-reintentar" hidden>Reintentar</button>
+            </div>
           </div>
           <div class="prop-mapa-marco">
             <div id="prop-mapa" aria-label="Mapa de propiedades"></div>
@@ -1752,7 +1750,7 @@
     var tags=contenedor.querySelector('.filtro-etiquetas');
     if(!tags){tags=document.createElement('div');tags.className='filtro-etiquetas';contenedor.append(tags);}
     tags.replaceChildren();
-    (seleccionesMultiples[id] || []).forEach(function(o){var tag=document.createElement('span');tag.className='filtro-etiqueta';var texto=document.createElement('span');texto.textContent=o.texto;var quitar=document.createElement('button');quitar.type='button';quitar.textContent='×';quitar.setAttribute('aria-label','Quitar '+o.texto);quitar.onclick=function(){seleccionesMultiples[id]=seleccionesMultiples[id].filter(function(x){return x.valor!==o.valor;});pintarEtiquetasFiltro(id);programarFiltrosDinamicos();};tag.append(texto,quitar);tags.append(tag);});
+    (seleccionesMultiples[id] || []).forEach(function(o){var tag=document.createElement('span');tag.className='filtro-etiqueta';var texto=document.createElement('span');texto.textContent=o.texto;var quitar=document.createElement('button');quitar.type='button';quitar.textContent='×';quitar.setAttribute('aria-label','Quitar '+o.texto);quitar.onclick=function(){seleccionesMultiples[id]=seleccionesMultiples[id].filter(function(x){return x.valor!==o.valor;});pintarEtiquetasFiltro(id);};tag.append(texto,quitar);tags.append(tag);});
   }
   function leerFiltrosServidor() {
     return {
@@ -2105,14 +2103,8 @@
     }, 180);
   }
 
-  var temporizadorFiltrosDinamicos;
   var revisionFiltrosAplicados = 0;
-  function programarFiltrosDinamicos() {
-    window.clearTimeout(temporizadorFiltrosDinamicos);
-    temporizadorFiltrosDinamicos = window.setTimeout(aplicarFiltros, 450);
-  }
   aplicarFiltros = async function () {
-    window.clearTimeout(temporizadorFiltrosDinamicos);
     var recibidos = leerFiltrosServidor(), revision = ++revisionFiltrosAplicados;
     if (window.kwGeografiaMapa) recibidos = await window.kwGeografiaMapa.prepararFiltros(recibidos).catch(function () { return recibidos; });
     if (revision !== revisionFiltrosAplicados) return;
@@ -2121,6 +2113,15 @@
     window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));
     programarCargaServidor();
   };
+
+  function aplicarZonaMapa() {
+    ++revisionFiltrosAplicados;
+    filtrosAplicados = Object.assign({}, filtrosServidorActuales(), {
+      zona: window.kwPropiedadesMapa.zona(), poligono: window.kwPropiedadesMapa.poligono()
+    });
+    window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));
+    programarCargaServidor();
+  }
 
   pintar = function () {
     programarCargaServidor();
@@ -2155,7 +2156,6 @@
           seleccionesMultiples['f-asesor']=[];pintarEtiquetasFiltro('f-asesor');ponerFiltroRelacionado('f-asesor','');refrescarRelacionado('f-asesor');
         }
         cambiandoMultiple=true;select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));cambiandoMultiple=false;
-        programarFiltrosDinamicos();
       }
       return;
     }
@@ -2186,7 +2186,6 @@
       }
     }
     marcarFiltrosEscondidos();
-    if (evento && evento.target.matches('#f-buscar, input[type="number"], select')) programarFiltrosDinamicos();
   };
 
   limpiarFiltros = function () {
@@ -2226,10 +2225,9 @@
   };
 
   var cajaFiltros = document.getElementById('filtros');
-  var campoBuscar = document.getElementById('f-buscar');
-  if (campoBuscar) {
-    campoBuscar.addEventListener('keydown', function (evento) {
-      if (evento.key === 'Enter') {
+  if (cajaFiltros) {
+    cajaFiltros.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Enter' && evento.target.matches('#f-buscar, input[type="number"]')) {
         evento.preventDefault();
         aplicarFiltros();
       }
@@ -2364,9 +2362,9 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
-<script src="/assets/js/propiedades-geografia.js?v=5734fa0"></script>
-<script src="/assets/js/propiedades-dibujo.js?v=5734fa0"></script>
-<script src="/assets/js/propiedades-mapa.js?v=5734fa0"></script>
+<script src="/assets/js/propiedades-geografia.js?v=20261013pluma"></script>
+<script src="/assets/js/propiedades-dibujo.js?v=20261013pluma"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261013pluma"></script>
 <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
