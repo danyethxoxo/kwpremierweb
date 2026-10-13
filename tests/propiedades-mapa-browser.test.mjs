@@ -53,7 +53,8 @@ async function pagina(browser,viewport,puntos){
   const file=path.join(root,decodeURIComponent(url.pathname));
   if(!file.startsWith(root)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
   const contentType=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream';
-  const body=file.endsWith('.html')?fs.readFileSync(file,'utf8').replace(/\s+(?:integrity|crossorigin)="[^"]*"/g,''):fs.readFileSync(file);
+  let body=file.endsWith('.html')?fs.readFileSync(file,'utf8').replace(/\s+(?:integrity|crossorigin)="[^"]*"/g,''):fs.readFileSync(file);
+  if(url.pathname==='/assets/vendor/mapa/leaflet.js')body=body.toString()+'\nwindow.qaEncuadres=[];const qaFit=L.Map.prototype.fitBounds;L.Map.prototype.fitBounds=function(bounds,options){window.qaEncuadres.push(bounds);return qaFit.call(this,bounds,options);};';
   return route.fulfill({contentType,body});
  });
  await page.goto('http://kw.local/propiedades.html',{waitUntil:'domcontentloaded'});
@@ -74,14 +75,18 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
       assert.equal(await page.locator('#prop-filtros-contenido').isVisible(),true);
       await page.locator('#prop-filtros-expandir').click();
     }
-    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.leaflet-marker-icon').length===3);
+    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.leaflet-marker-icon').length>0);
+    assert.deepEqual(await page.evaluate(()=>qaEncuadres),[[[14.3,-118.5],[32.9,-86.5]]],'abre Mexico sin reenfocar automaticamente todos los anuncios');
     assert.match(await page.locator('#prop-mapa-estado').innerText(),/3 propiedades.*19 sin coordenadas/);
     assert.equal(await page.locator('#lista').isVisible(),true);
     assert.equal(await page.locator('#prop-vista-mapa, #prop-vista-lista').count(),0);
     const cajas=await page.evaluate(()=>({lista:document.querySelector('#lista').getBoundingClientRect().toJSON(),mapa:document.querySelector('#prop-mapa-panel').getBoundingClientRect().toJSON()}));
     if(viewport.width>=1024)assert.ok(cajas.lista.right<=cajas.mapa.left,'mapa a la derecha del listado');
     else assert.ok(cajas.mapa.bottom<=cajas.lista.top,'en movil ambos aparecen en la misma pagina');
-    await page.locator('.leaflet-marker-icon').first().click();
+    if(!await page.locator('.leaflet-marker-icon:not(.prop-mapa-grupo)').count()){
+      await page.locator('.prop-mapa-grupo').first().click();
+    }
+    await page.locator('.leaflet-marker-icon:not(.prop-mapa-grupo)').first().click();
     await page.locator('.prop-mapa-ficha h3').waitFor();
     assert.equal(await page.locator('.prop-mapa-ficha h3').innerText(),ficha.titulo);
     assert.equal(await page.locator('.prop-mapa-ficha h3 img').count(),0,'titulo no interpreta HTML');

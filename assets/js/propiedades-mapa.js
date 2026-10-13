@@ -46,7 +46,7 @@
     // La rueda sigue desplazando la pagina. El zoom se controla con botones,
     // teclado o gesto de dos dedos en el mapa.
     mapa = L.map('prop-mapa', {scrollWheelZoom: false, maxZoom: 19, minZoom: 2, worldCopyJump: true});
-    mapa.setView([23.6, -102.5], 5);
+    mapa.fitBounds([[14.3, -118.5], [32.9, -86.5]], {padding: [12,12], animate: false});
     var marco = document.getElementById('prop-mapa');
     var url = marco.dataset.tiles || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     var capa = L.tileLayer(url, {
@@ -148,10 +148,11 @@
       if (respuesta.error) throw respuesta.error;
       var datos = respuesta.data;
       if (!datos || !Array.isArray(datos.puntos)) throw new Error('Respuesta de mapa incompleta');
+      var primeraVista = !mapa;
       iniciarMapa(); mapa.invalidateSize({pan: false});
       var puntos = datos.puntos.filter(function (p) { return Array.isArray(p) && typeof p[0] === 'string' && Number.isFinite(p[1]) && Number.isFinite(p[2]) && Math.abs(p[1]) <= 85.05112878 && Math.abs(p[2]) <= 180; });
       var limites = puntos.map(function (p) { return [p[1], p[2]]; });
-      if (limites.length) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
+      if (limites.length && !primeraVista) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
       var capa = L.markerClusterGroup({
         maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) { return L.divIcon({html: String(grupo.getChildCount()), className: 'prop-mapa-grupo', iconSize: [42,42]}); }
