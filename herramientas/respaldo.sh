@@ -48,8 +48,8 @@
 #     Mac:    brew install libpq && brew link --force libpq
 #     Ubuntu: sudo apt install postgresql-client
 #
-# Si no se define SUPABASE_DB_URL, el script respalda nada más el
-# código y avisa que faltó la parte importante.
+# Si no se define SUPABASE_DB_URL, el respaldo completo se detiene:
+# terminar con solo el código daría una falsa sensación de recuperación.
 
 set -uo pipefail
 umask 077
@@ -94,11 +94,9 @@ echo
 echo "[2/2] Base de datos..."
 
 if [ -z "${SUPABASE_DB_URL:-}" ]; then
-  echo "      SALTADO: no se definió SUPABASE_DB_URL."
-  echo
-  echo "      Ojo: esta era la parte importante. El código ya estaba"
-  echo "      a salvo en GitHub; los contratos no. Lee el encabezado"
-  echo "      de este archivo para ver cómo configurarlo."
+  echo "      ERROR: define SUPABASE_DB_URL para crear un respaldo completo."
+  echo "      No se considera válido un respaldo que solo contiene el código."
+  exit 1
 elif ! command -v pg_dump >/dev/null 2>&1; then
   echo "      SALTADO: no está instalado pg_dump."
   echo "      Mac: brew install libpq && brew link --force libpq"

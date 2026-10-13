@@ -7,19 +7,38 @@
 // de usuarios y otras viendo firmas. Todo al mismo tiempo, no uno
 // tras otro.
 //
-// Corre EXCLUSIVAMENTE contra el proyecto de pruebas
-// (fuqhibgktfktnhefsbzz), nunca contra el real. Aun así, escribe
-// documentos de verdad ahí (por eso hicimos el proyecto aparte).
+// Corre EXCLUSIVAMENTE contra el proyecto de pruebas. La URL y la llave
+// se reciben por variables de entorno para no dejar un proyecto fijo en el
+// repositorio y para evitar que un clon antiguo apunte a un destino equivocado.
 //
 // Cómo se corre:
 //     $env:KW_TEST_USERS_JSON='[{"email":"...","password":"..."}]'
 //     $env:KW_TEST_MASTER_JSON='{"email":"...","password":"..."}'
+//     $env:KW_LOAD_TEST_URL='https://proyecto-de-pruebas.supabase.co'
+//     $env:KW_LOAD_TEST_KEY='sb_publishable_...'
+//     $env:KW_LOAD_TEST_CONFIRM='SOLO_PROYECTO_PRUEBAS'
 //     node herramientas/prueba-carga-mixta.mjs
 //
 // ─────────────────────────────────────────────────────────────
 
-const URL_BASE = 'https://fuqhibgktfktnhefsbzz.supabase.co';
-const LLAVE = 'sb_publishable_iWCdkZkvF_mMGp8D1_VjFQ_DyoxlpYL';
+import { readFileSync } from 'node:fs';
+
+const URL_BASE = String(process.env.KW_LOAD_TEST_URL || '').replace(/\/$/, '');
+const LLAVE = String(process.env.KW_LOAD_TEST_KEY || '');
+if (!/^https:\/\/[^/]+\.supabase\.co$/i.test(URL_BASE) || /kwpremieroficial\.com/i.test(URL_BASE)) {
+  throw new Error('KW_LOAD_TEST_URL debe ser el proyecto Supabase de pruebas y usar HTTPS. No se permite el dominio de produccion.');
+}
+const productionUrl = readFileSync(new URL('../assets/js/kw-security.js', import.meta.url), 'utf8')
+  .match(/API_ORIGIN\s*=\s*['"]([^'"]+)/)?.[1];
+if (URL_BASE.toLowerCase() === String(productionUrl || '').replace(/\/$/, '').toLowerCase()) {
+  throw new Error('La prueba de carga mixta esta bloqueada contra el proyecto Supabase de produccion.');
+}
+if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(LLAVE)) {
+  throw new Error('Falta KW_LOAD_TEST_KEY o no tiene formato de llave publica Supabase.');
+}
+if (process.env.KW_LOAD_TEST_CONFIRM !== 'SOLO_PROYECTO_PRUEBAS') {
+  throw new Error('Define KW_LOAD_TEST_CONFIRM=SOLO_PROYECTO_PRUEBAS para confirmar que el destino es desechable.');
+}
 
 function leerCuentaEnv(nombre, esperaArreglo) {
   const valor = process.env[nombre];

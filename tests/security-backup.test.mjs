@@ -36,6 +36,10 @@ test('backup refuses missing encryption configuration and never promotes a faile
     return { result, destination, files: existsSync(destination) ? readdirSync(destination, { recursive: true }).map(String) : [] };
   }
   try {
+    const noDatabase = run('no-database', { SUPABASE_DB_URL: '' });
+    assert.equal(noDatabase.result.status, 1, noDatabase.result.stderr);
+    assert(!noDatabase.files.some((name) => name.includes('dump-called')));
+
     const missing = run('missing', { BACKUP_AGE_RECIPIENT: '' });
     assert.equal(missing.result.status, 1, missing.result.stderr);
     assert(!existsSync(join(missing.destination, 'dump-called')));

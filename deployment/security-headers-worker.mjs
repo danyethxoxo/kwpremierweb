@@ -15,6 +15,8 @@ export default {
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+    response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
     response.headers.set('Content-Security-Policy', "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests");
     // CORS on static pages is unnecessary. API CORS is set by the Edge wrapper.
     response.headers.delete('Access-Control-Allow-Origin');

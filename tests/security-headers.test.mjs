@@ -12,6 +12,8 @@ test('HTTPS proxy redirects HTTP and attaches security headers without changing 
     assert.equal(await page.text(), '<h1>KW</h1>');
     assert.equal(page.headers.get('X-Content-Type-Options'), 'nosniff');
     assert.equal(page.headers.get('Strict-Transport-Security'), 'max-age=31536000');
+    assert.equal(page.headers.get('X-Permitted-Cross-Domain-Policies'), 'none');
+    assert.equal(page.headers.get('Cross-Origin-Resource-Policy'), 'same-origin');
     assert(page.headers.get('Content-Security-Policy').includes("frame-ancestors 'self'"));
     assert.equal(page.headers.get('Access-Control-Allow-Origin'), null);
   } finally { globalThis.fetch = original; }

@@ -1,8 +1,10 @@
 # Endurecimiento de seguridad, 22 septiembre 2026
 
-Estado: implementado y probado en el repositorio local. No desplegado ni
-ejecutado contra la base de produccion. Se requiere un despliegue coordinado;
-subir solamente los HTML dejaria al sitio buscando una funcion inexistente.
+Estado del repositorio: implementado y probado en `origin/main`. El estado de
+produccion se considera no certificado hasta ejecutar `npm run production:check`
+y completar el [estado de salida](estado-produccion.md). Subir solamente los
+HTML deja al sitio buscando una funcion inexistente, por lo que el frontend y
+las Edge Functions se deben publicar como una sola version.
 
 ## Hallazgos y cambios
 
