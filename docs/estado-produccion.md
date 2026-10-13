@@ -26,6 +26,11 @@ Se agrego:
   rutas `kwpremieroficial.com/*` y `www.kwpremieroficial.com/*`, se activo
   `Full (strict)` y se pusieron en proxy solo los cinco registros web. Los
   registros de correo y validacion permanecen `DNS only`.
+- En Supabase se corrigio `public.dictamenes_con_asesor` para que use RLS como
+  `security_invoker`, se activo el bloqueo de contrasenas filtradas y se retiro
+  el listado publico del bucket `perfiles` sin quitar sus URLs publicas. Los
+  helpers de rol anonimos se conservaron porque las politicas publicas los
+  necesitan para devolver `false` sin sesion.
 
 ## Regla de salida
 
@@ -46,15 +51,18 @@ que el codigo local no puede garantizar.
 Estos puntos no se pueden certificar desde GitHub ni desde una PC sin acceso al
 proyecto y a las cuentas operativas:
 
-1. **Estado de Supabase.** Confirmar que las migraciones de seguridad y las
-   funciones desplegadas corresponden al commit que se va a publicar. Las
-   carpetas `supabase/sql/` y `supabase/migrations/` no deben ejecutarse como
-   una sola lista improvisada: hay prefijos repetidos y el repositorio conserva
-   el historial manual. Antes de agregar migraciones nuevas se debe comparar el
-   historial real del proyecto hospedado y dejar una sola secuencia registrada.
-2. **Auth.** Verificar registro publico desactivado, contrasena minima de 12,
-   confirmacion de correo, cambio seguro, limites de Auth, proteccion contra
-   contrasenas filtradas si esta disponible y MFA obligatorio para Master/Admin.
+1. **Estado de Supabase.** La vista sensible ya no reporta errores en Security
+   Advisor y el smoke test del gateway quedo en 18 correctas y 0 pendientes.
+   Aun quedan advertencias intencionales de funciones publicas y varias
+   advertencias de funciones privilegiadas que deben revisarse por modulo; no
+   se revocaron masivamente porque eso romperia prospectos, MFA o acciones de
+   usuarios autenticados. Las carpetas `supabase/sql/` y
+   `supabase/migrations/` no deben ejecutarse como una sola lista improvisada:
+   hay prefijos repetidos y el repositorio conserva el historial manual.
+2. **Auth.** Registro publico desactivado, confirmacion de correo, cambios
+   seguros, limites de Auth, proteccion contra contrasenas filtradas y MFA
+   TOTP estan configurados. Falta completar la prueba funcional con cuentas
+   reales de cada rol.
 3. **Secretos.** Rotar los secretos que alguna vez aparecieron en el historial
    Git, revocar sesiones de las cuentas de prueba antiguas y confirmar que
    `WEBHOOK_SECRET`, `SYNC_SECRET`, `DATA_GATEWAY_SECRET`, Resend y Weetrust

@@ -13,12 +13,8 @@ grant execute on function public.abc_registrar_avance_historial() to authenticat
 revoke execute on function public.abc_preparar_comentario() from public;
 grant execute on function public.abc_preparar_comentario() to authenticated;
 
--- Estos wrappers no se usan desde políticas públicas; sus implementaciones
--- privadas son las que deben proteger las comprobaciones de rol.
-revoke execute on function public.is_admin() from anon;
-revoke execute on function public.is_master() from anon;
-revoke execute on function public.is_admin_or_master() from anon;
-revoke execute on function public.is_staff_or_above() from anon;
+-- Los helpers de rol se conservan para anon porque las políticas públicas los
+-- invocan; con auth.uid() nulo devuelven false y no conceden acceso.
 
 commit;
 
