@@ -1165,10 +1165,13 @@
   });
 
   function actualizarControlesTitulo() {
-    document.querySelectorAll('.prop-titulo-toggle').forEach(function (boton) {
+    var controles = Array.from(document.querySelectorAll('.prop-titulo-toggle')).map(function (boton) {
       var titulo = document.getElementById(boton.getAttribute('aria-controls'));
       var puedeExpandirse = titulo && titulo.scrollHeight > titulo.clientHeight + 1;
-      boton.hidden = !puedeExpandirse;
+      return { boton: boton, oculto: !puedeExpandirse };
+    });
+    controles.forEach(function (control) {
+      control.boton.hidden = control.oculto;
     });
   }
 
@@ -1912,38 +1915,21 @@
   }
 
   function mostrarFotoPropiedad(foto) {
-    var terminar = function () {
-      if (foto.isConnected) foto.parentNode.classList.remove('cargando');
-    };
-    if (foto.decode) foto.decode().then(terminar, terminar);
-    else terminar();
+    if (foto.isConnected) foto.parentNode.classList.remove('cargando');
   }
 
   function programarPrecalentamientoImagenes() {
     var revision = ++revisionPrecalentamientoImagenes;
     if (observadorFotosPropiedades) observadorFotosPropiedades.disconnect();
-    var pendientes = [];
-    var activas = 0;
     var fotos = Array.from(document.querySelectorAll('#lista .prop-imagen[data-src]'));
-    function iniciar() {
-      if (revision !== revisionPrecalentamientoImagenes) return;
-      while (activas < 2 && pendientes.length) {
-        var foto = pendientes.shift();
-        if (!foto.isConnected || !foto.dataset.src) continue;
-        activas++;
-        (function (imagen) {
-          function terminar() {
-            imagen.removeEventListener('load', terminar);
-            imagen.removeEventListener('error', terminar);
-            activas--;
-            iniciar();
-          }
-          imagen.addEventListener('load', terminar);
-          imagen.addEventListener('error', terminar);
-          imagen.src = imagen.dataset.src;
-          delete imagen.dataset.src;
-        })(foto);
-      }
+    function iniciar(foto) {
+      if (revision !== revisionPrecalentamientoImagenes || !foto.isConnected || !foto.dataset.src) return;
+      // El observador ya limita la carga a las fotos cercanas. No encadenar
+      // descargas: una imagen lenta fuera de vista no debe bloquear las visibles.
+      foto.loading = 'eager';
+      foto.fetchPriority = 'auto';
+      foto.src = foto.dataset.src;
+      delete foto.dataset.src;
     }
     if (!('IntersectionObserver' in window)) {
       fotos.forEach(function (foto) { foto.src = foto.dataset.src; delete foto.dataset.src; });
@@ -1953,10 +1939,9 @@
       entradas.forEach(function (entrada) {
         if (!entrada.isIntersecting) return;
         observadorFotosPropiedades.unobserve(entrada.target);
-        pendientes.push(entrada.target);
+        iniciar(entrada.target);
       });
-      iniciar();
-    }, { rootMargin: '600px 0px' });
+    }, { rootMargin: '400px 0px' });
     fotos.forEach(function (foto) { observadorFotosPropiedades.observe(foto); });
   }
 
