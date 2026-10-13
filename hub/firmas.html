@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261007b"></script>
 <script src="/assets/js/auth-guard.js?v=20261001"></script>
-<script src="/assets/js/notif-bell.js?v=20260922"></script>
+<script src="/assets/js/notif-bell.js?v=20261013carga"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
@@ -5858,7 +5858,7 @@
   }
 
   async function iniciarDeVerdad() {
-    const { data: userData } = await window.kwSupabase.auth.getUser();
+    const { data: userData } = await window.kwSession.usuario(window.kwSupabase);
     if (!userData || !userData.user) return;
     miUserId = userData.user.id;
 
@@ -5901,15 +5901,10 @@
     });
 
     escucharCambios();
-    // Los frecuentes primero: los botones de "falta la firma de" se
-    // arman con ellos, así que pintar los filtros antes los dejaría sin
-    // esa mitad.
-    await cargarFrecuentes();
+    // Leer los catálogos independientes a la vez. Los filtros necesitan
+    // los frecuentes y la tabla necesita las etiquetas y los asesores.
+    await Promise.all([cargarFrecuentes(), cargarEtiquetas(), cargarAsesores()]);
     armarFiltros();
-    // Las etiquetas y los asesores antes de pintar la tabla: los
-    // renglones enseñan los nombres y colores de las etiquetas, y sin el
-    // catálogo saldrían en blanco hasta la siguiente recarga.
-    await Promise.all([cargarEtiquetas(), cargarAsesores()]);
     pintarOpcionesFiltros();
 
     // Se pinta de inmediato con lo que ya hay en la base: la pantalla de

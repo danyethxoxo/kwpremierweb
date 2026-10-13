@@ -6,6 +6,24 @@ import { join } from 'node:path';
 import { webcrypto } from 'node:crypto';
 
 const day = 86400000;
+test('concurrent user reads share a request and later reads validate again', async () => {
+  const context = vm.createContext({window:{},WeakMap,Promise});
+  vm.runInContext(readFileSync(new URL('../assets/js/kw-session.js', import.meta.url), 'utf8'), context);
+  let calls = 0, release;
+  const client = {auth:{getUser() {calls++; return new Promise(resolve => {release=resolve;});}}};
+  const first = context.window.kwSession.usuario(client);
+  assert.equal(context.window.kwSession.usuario(client), first);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  release({data:{user:{id:'u'}}});
+  await first;
+  const next = context.window.kwSession.usuario(client);
+  assert.notEqual(next, first);
+  await Promise.resolve();
+  assert.equal(calls, 2);
+  release({data:{user:{id:'u'}}});
+  await next;
+});
 function session(started, extra = []) {
   const payload = Buffer.from(JSON.stringify({ amr: [{ method: 'password', timestamp: started / 1000 }, ...extra] })).toString('base64url');
   return { access_token: 'header.' + payload + '.signature', user: { last_sign_in_at: new Date(started).toISOString() } };

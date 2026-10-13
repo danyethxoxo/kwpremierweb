@@ -162,7 +162,10 @@
     // esta guarda, un fallo aquí reventaba hacia allá y se llevaba el
     // menú entero, que no tiene nada que ver con las notificaciones.
     if (!window.kwSupabase || !window.kwSupabase.auth) return;
-    window.kwSupabase.auth.getUser().then(function (result) {
+    const usuario = window.kwSession
+      ? window.kwSession.usuario(window.kwSupabase)
+      : window.kwSupabase.auth.getUser();
+    usuario.then(function (result) {
       const uid = result && result.data && result.data.user && result.data.user.id;
       if (!uid) return;
 

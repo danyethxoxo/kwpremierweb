@@ -14,8 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261007b"></script>
 <script src="/assets/js/auth-guard.js?v=20261001"></script>
-<script src="/assets/js/notif-bell.js?v=20260922"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="/assets/js/notif-bell.js?v=20261013carga"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <!-- El tema claro va al final: es el que cambia el material y el fondo, y
      para eso tiene que ganarle a lo que traiga kw-base.css. Antes aquí
@@ -1519,8 +1518,31 @@
     document.body.classList.remove('abc-modal-abierto');
   }
 
-  function exportarExcel() {
-    if (!window.XLSX) { avisar('No se pudo cargar el exportador de Excel.', 'error'); return; }
+  var exportadorPendiente = null;
+  function cargarExportador() {
+    if (window.XLSX) return Promise.resolve();
+    if (!exportadorPendiente) {
+      exportadorPendiente = new Promise(function (resolve, reject) {
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        script.onload = function () {
+          if (window.XLSX) resolve();
+          else { script.remove(); reject(new Error('Exportador no disponible.')); }
+        };
+        script.onerror = function () { script.remove(); reject(new Error('No se pudo descargar el exportador.')); };
+        document.head.appendChild(script);
+      }).catch(function (error) { exportadorPendiente = null; throw error; });
+    }
+    return exportadorPendiente;
+  }
+
+  var exportando = false;
+  async function exportarExcel() {
+    if (exportando) return;
+    exportando = true;
+    try { await cargarExportador(); }
+    catch (error) { avisar('No se pudo cargar el exportador de Excel. Vuelve a intentar.', 'error'); return; }
+    finally { exportando = false; }
     var datos = filtrados().map(function (a) {
       return { Nombre:a.nombre||'', KWID:a.kwid||'', DT:a.dt_asignado||'Sin DT asignado', Estado:a.activo?'Activo':'Inactivo', 'Avance ABC':pctDe(a.kwid)+'%' };
     });
@@ -1609,6 +1631,8 @@
   // anormal de bajas se deja para revisión manual porque suele indicar
   // que la hoja o su rango se leyó incompleto.
   async function sincronizarAlEntrar() {
+    var btn = document.getElementById('btn-sync');
+    btn.disabled = true;
     try {
       var previa = await llamarSync(false);
       var cambios = previa.nuevos.length + previa.reactivados.length + previa.bajas.length;
@@ -1622,11 +1646,19 @@
       }
 
       await llamarSync(true);
+      // Refrescar solo el padrón: los checks pueden estar siendo editados.
+      var r = await window.kwSupabase.from('abc_asesores')
+        .select('kwid, nombre, dt_asignado, activo, fecha_ingreso').order('nombre');
+      if (r.error) throw r.error;
+      actualizarPadron(r.data || []);
+      pintar();
       if ((previa.omitidos || []).length) {
         avisar('El padrón se actualizó. ' + previa.omitidos.length + ' persona(s) del Excel no tienen KW ID y no pudieron agregarse.', 'error');
       }
     } catch (err) {
       avisar('No se pudo actualizar el padrón desde Excel; se muestra la última lectura guardada. ' + (err.message || err), 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -1656,9 +1688,13 @@
     for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
 
     temas = r[0].data || [];
-    asesores = (r[1].data || []).map(function (a) { return Object.assign({}, a, { kwid: String(a.kwid) }); });
     avance = new Map();
     (r[2].data || []).forEach(function (v) { avance.set(llave(String(v.kwid), v.tema_id), true); });
+    actualizarPadron(r[1].data || []);
+  }
+
+  function actualizarPadron(datos) {
+    asesores = datos.map(function (a) { return Object.assign({}, a, { kwid: String(a.kwid) }); });
 
     // Los nombres fijados apuntan a los objetos "asesor" de antes de
     // recargar; se refrescan contra el padrón nuevo (y si alguno ya no
@@ -1683,7 +1719,7 @@
 
   async function iniciar() {
     try {
-      var { data: userData } = await window.kwSupabase.auth.getUser();
+      var { data: userData } = await window.kwSession.usuario(window.kwSupabase);
       if (!userData || !userData.user) return;
       var { data: perfil } = await window.kwSupabase
         .from('profiles').select('role').eq('id', userData.user.id).single();
@@ -1696,9 +1732,10 @@
       }
       puedeEditar = true;
 
-      await sincronizarAlEntrar();
       await cargar();
       pintar();
+      // Dar al navegador un cuadro para mostrar los datos antes de leer Excel.
+      requestAnimationFrame(function () { sincronizarAlEntrar(); });
     } catch (err) {
       document.getElementById('salida').innerHTML =
         '<div class="abc-vacio"><strong>No se pudo cargar</strong>' + esc(err.message || err) + '</div>';
