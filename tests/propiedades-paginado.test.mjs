@@ -28,6 +28,8 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   const mapaSql=readFileSync(new URL('../supabase/migrations/20261013220814_propiedades_mapa.sql',import.meta.url),'utf8');
   await db.exec(mapaSql);
   await db.exec(mapaSql);
+  const poligonoSql=readFileSync(new URL('../supabase/migrations/20261013224502_propiedades_poligono.sql',import.meta.url),'utf8');
+  await db.exec(poligonoSql);await db.exec(poligonoSql);
   await db.exec("update propiedades set lat=19+replace(titulo,'Casa ','')::numeric*.001,lng=-99;update propiedades set lat=null where titulo='Casa 45';update propiedades set lng=-190 where titulo='Casa 44'");
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
@@ -52,6 +54,14 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   assert.equal((await page(zona)).total,10);assert.equal((await mapa(zona)).puntos.length,10);
   for(const filtros of [{texto:'Casa 45'},{estado:['CDMX']},{minimo:10000,maximo:19000},{estatus:'inactiva'},{operacion:['renta']},{tipo:['Casa'],estado:['Jalisco']}]) {
     assert.equal((await page(filtros)).total,(await mapa(filtros)).total,'filtros compartidos con el mapa');
+  }
+  await db.exec("reset role;update propiedades set estado='Michoacán de Ocampo' where titulo='Casa 1';update propiedades set lat=19.8,lng=-98.2 where titulo='Casa 2';set role authenticated");
+  assert.equal((await page({texto:'michoacan'})).total,1,'busqueda sin acentos');
+  const trazo={estatus:'publicada',zona:[19,-100,20,-98],poligono:[[-100,19],[-98,19],[-100,20]]};
+  assert.equal((await page(trazo)).total,42,'el triangulo excluye puntos dentro de su rectangulo pero fuera del dibujo');
+  assert.equal((await mapa(trazo)).total,42);
+  for(const invalido of [[],[[1,2],[2,3]],[[0,0],[1,1],[2,2]],[[0,0],[181,2],[3,2]],'texto',Array.from({length:201},()=>[0,0])]){
+    await assert.rejects(db.query('select propiedad_poligono($1)',[JSON.stringify(invalido)]));
   }
   await db.exec('reset role;create policy restriccion_mfa on propiedades as restrictive for select to authenticated using(false);set role authenticated');
   assert.equal((await mapa({})).total,0,'el mapa respeta las restricciones RLS');

@@ -10,6 +10,7 @@
   var mapa, grupos, bibliotecas, zona = null, filtros = null, clave = '', revision = 0, controlador;
   var fichaControlador, fichaRevision = 0;
   var fichas = new Map();
+  var dibujo, contorno, clavePendiente = '';
   var btnFiltros = document.getElementById('prop-filtros-expandir');
   function expandirFiltros(abierto) {
     document.getElementById('filtros').classList.toggle('prop-filtros-abiertos', abierto);
@@ -45,8 +46,13 @@
     if (mapa) return;
     // La rueda sigue desplazando la pagina. El zoom se controla con botones,
     // teclado o gesto de dos dedos en el mapa.
-    mapa = L.map('prop-mapa', {scrollWheelZoom: false, maxZoom: 19, minZoom: 2, worldCopyJump: true});
-    mapa.fitBounds([[14.3, -118.5], [32.9, -86.5]], {padding: [12,12], animate: false});
+    mapa = L.map('prop-mapa', {scrollWheelZoom: false, maxZoom: 19, minZoom: 2, zoomSnap:.25, worldCopyJump: true});
+    mapa.setView([22.8, -102.2], 5);
+    dibujo = window.kwCrearDibujoMapa(mapa, function (puntos) {
+      var lat = puntos.map(function (p) { return p[1]; }), lng = puntos.map(function (p) { return p[0]; });
+      zona = [Math.min.apply(null,lat),Math.min.apply(null,lng),Math.max.apply(null,lat),Math.max.apply(null,lng)];
+      btnQuitar.hidden = false; window.aplicarFiltros();
+    });
     var marco = document.getElementById('prop-mapa');
     var url = marco.dataset.tiles || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     var capa = L.tileLayer(url, {
@@ -133,6 +139,8 @@
     filtros = window.filtrosServidorActuales();
     var nuevaClave = claveFiltros(filtros);
     if (!forzar && clave === nuevaClave) { if (mapa) mapa.invalidateSize({pan: false}); return; }
+    if (!forzar && clavePendiente === nuevaClave) return;
+    clavePendiente = nuevaClave;
     var r = ++revision;
     if (controlador) controlador.abort();
     if (grupos && mapa) { mapa.removeLayer(grupos); grupos = null; }
@@ -142,7 +150,8 @@
     var timer = setTimeout(function () { if (r === revision) controlador.abort(); }, 15000);
     try {
       var consulta = window.kwSupabase.rpc('propiedades_inventario_mapa', {p_filtros: filtros}).abortSignal(controlador.signal);
-      var resultados = await Promise.all([cargarBibliotecas(), consulta]);
+      var geografia = window.kwGeografiaMapa.resolver(filtros).catch(function () { return {features:[],nombres:[],error:true}; });
+      var resultados = await Promise.all([cargarBibliotecas(), consulta, geografia]);
       if (r !== revision || panel.hidden) return;
       var respuesta = resultados[1];
       if (respuesta.error) throw respuesta.error;
@@ -152,10 +161,21 @@
       iniciarMapa(); mapa.invalidateSize({pan: false});
       var puntos = datos.puntos.filter(function (p) { return Array.isArray(p) && typeof p[0] === 'string' && Number.isFinite(p[1]) && Number.isFinite(p[2]) && Math.abs(p[1]) <= 85.05112878 && Math.abs(p[2]) <= 180; });
       var limites = puntos.map(function (p) { return [p[1], p[2]]; });
-      if (limites.length && !primeraVista) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
+      var lugar = resultados[2], etiqueta = document.getElementById('prop-mapa-lugar');
+      var teniaContorno = !!contorno;
+      if (contorno) { mapa.removeLayer(contorno); contorno = null; }
+      if (lugar.features.length) {
+        contorno = L.geoJSON({type:'FeatureCollection',features:lugar.features}, {style:{color:'#8a0000',weight:2,fillOpacity:.06},interactive:false}).addTo(mapa);
+      }
+      etiqueta.textContent = dibujo.poligono() ? 'Zona dibujada: los filtros se aplican dentro del contorno.' : lugar.nombres.length ? lugar.nombres.join(' · ') + ' · Contorno INEGI simplificado' : lugar.ambiguo ? 'Hay municipios con el mismo nombre. Elige el estado para mostrar su contorno.' : lugar.error ? 'El contorno no está disponible temporalmente; los resultados siguen activos.' : '';
+      if (dibujo.poligono()) mapa.fitBounds(dibujo.poligono().map(function (p) { return [p[1],p[0]]; }), {padding:[20,20],maxZoom:16,animate:false});
+      else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
+      else if (zona) mapa.fitBounds([[zona[0],zona[1]],[zona[2],zona[3]]],{animate:false});
+      else if (limites.length && !primeraVista && (filtros.texto || filtros.colonia || filtros.municipio || filtros.estado)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
+      else if (teniaContorno) mapa.setView([22.8,-102.2],5);
       var capa = L.markerClusterGroup({
         maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
-        iconCreateFunction: function (grupo) { return L.divIcon({html: String(grupo.getChildCount()), className: 'prop-mapa-grupo', iconSize: [42,42]}); }
+        iconCreateFunction: function (grupo) { return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo', iconSize: [42,42]}); }
       });
       grupos = capa; mapa.addLayer(capa);
       var icono = L.divIcon({className: '', html: '<div class="prop-mapa-pin"></div>', iconSize: [24,28], iconAnchor: [12,28], popupAnchor: [0,-26]});
@@ -173,7 +193,7 @@
       if (r !== revision || panel.hidden) return;
       clave = nuevaClave;
       var sinUbicacion = Math.max(0, Number(datos.total) - Number(datos.ubicadas));
-      estado.textContent = puntos.length.toLocaleString('es-MX') + ' propiedades en el mapa' + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en el listado' : '');
+      estado.textContent = puntos.length.toLocaleString('es-MX') + (puntos.length===1 ? ' propiedad en el mapa' : ' propiedades en el mapa') + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en el listado' : '');
       if (Number(datos.ubicadas) > puntos.length) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
       if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar el listado o quitar la zona.';
       btnZona.disabled = false;
@@ -181,9 +201,11 @@
       if (r !== revision || panel.hidden) return;
       clave = ''; estado.textContent = 'No pudimos cargar el mapa. Puedes reintentar o seguir consultando el listado.';
       btnReintentar.hidden = false;
-    } finally { clearTimeout(timer); if (r === revision) cargando(false); }
+    } finally { clearTimeout(timer); if (r === revision) { clavePendiente = ''; cargando(false); } }
   }
   function quitarZona(aplicar) {
+    if (dibujo) dibujo.borrar();
+    if (mapa) mapa.setView([22.8,-102.2],5);
     zona = null; btnQuitar.hidden = true;
     if (aplicar !== false) window.aplicarFiltros();
   }
@@ -191,6 +213,7 @@
   btnQuitar.onclick = function () { quitarZona(); };
   btnZona.onclick = function () {
     if (!mapa) return;
+    if (dibujo) dibujo.borrar();
     var b = mapa.getBounds();
     // Normalizar el desplazamiento horizontal del mapa al dominio geografico.
     var oeste = Math.max(-180, b.getWest()), este = Math.min(180, b.getEast());
@@ -199,9 +222,8 @@
     btnQuitar.hidden = false; window.aplicarFiltros();
   };
   window.addEventListener('kw-propiedades-filtradas', function () {
-    if (window.matchMedia('(max-width: 1023px)').matches) expandirFiltros(false);
     requestAnimationFrame(function () { setTimeout(actualizar, 0); });
   });
-  window.kwPropiedadesMapa = Object.freeze({zona: function () { return zona ? zona.slice() : null; }, quitarZona: quitarZona});
+  window.kwPropiedadesMapa = Object.freeze({zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
   if (document.querySelector('#lista .prop-card, #lista .estado-msg')) actualizar();
 })();

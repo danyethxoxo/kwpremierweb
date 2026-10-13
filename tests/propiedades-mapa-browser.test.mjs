@@ -27,7 +27,7 @@ window.supabase={createClient(){return {
  rpc(nombre,args){window.qaRpc.push({nombre,args});const ejecutar=async()=>{
    if(nombre==='propiedades_inventario_pagina')return {data:{data:qaProps,total:7431},error:null};
    if(nombre==='propiedades_inventario_mapa'){
-     const puntos=window.qaPuntos;
+     const puntos=Array.isArray(args.p_filtros.operacion)&&args.p_filtros.operacion.includes('renta')&&window.qaRenta?window.qaRenta:window.qaPuntos;
      if(window.qaDemoraMapa)await new Promise(r=>setTimeout(r,window.qaDemoraMapa));
      if(window.qaErrorMapa)return {error:{message:'Error simulado'}};
      return {data:{total:puntos.length+19,ubicadas:puntos.length,puntos:puntos,limite:12000},error:null};
@@ -39,7 +39,7 @@ window.supabase={createClient(){return {
 `;
 
 async function pagina(browser,viewport,puntos){
- const page=await browser.newPage({viewport});
+ const page=await browser.newPage({viewport,hasTouch:viewport.width<640});
  const errores=[];page.on('pageerror',error=>errores.push(error.message));
  const pedidos=[];
  const png=await sharp({create:{width:256,height:256,channels:3,background:'#e8e7df'}}).png().toBuffer();
@@ -54,7 +54,7 @@ async function pagina(browser,viewport,puntos){
   if(!file.startsWith(root)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
   const contentType=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream';
   let body=file.endsWith('.html')?fs.readFileSync(file,'utf8').replace(/\s+(?:integrity|crossorigin)="[^"]*"/g,''):fs.readFileSync(file);
-  if(url.pathname==='/assets/vendor/mapa/leaflet.js')body=body.toString()+'\nwindow.qaEncuadres=[];const qaFit=L.Map.prototype.fitBounds;L.Map.prototype.fitBounds=function(bounds,options){window.qaEncuadres.push(bounds);return qaFit.call(this,bounds,options);};';
+  if(url.pathname==='/assets/vendor/mapa/leaflet.js')body=body.toString()+'\nwindow.qaEncuadres=[];const qaFit=L.Map.prototype.fitBounds;L.Map.prototype.fitBounds=function(bounds,options){window.qaEncuadres.push(bounds);return qaFit.call(this,bounds,options);};const qaSetView=L.Map.prototype.setView;L.Map.prototype.setView=function(c,z,o){window.qaMapa=this;return qaSetView.call(this,c,z,o);};';
   return route.fulfill({contentType,body});
  });
  await page.goto('http://kw.local/propiedades.html',{waitUntil:'domcontentloaded'});
@@ -76,7 +76,8 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
       await page.locator('#prop-filtros-expandir').click();
     }
     await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.leaflet-marker-icon').length>0);
-    assert.deepEqual(await page.evaluate(()=>qaEncuadres),[[[14.3,-118.5],[32.9,-86.5]]],'abre Mexico sin reenfocar automaticamente todos los anuncios');
+    const vista=await page.evaluate(()=>({lat:qaMapa.getCenter().lat,lng:qaMapa.getCenter().lng,zoom:qaMapa.getZoom()}));
+    assert.ok(Math.abs(vista.lat-22.8)<.05&&Math.abs(vista.lng+102.2)<.05&&vista.zoom===5,'Mexico mas cercano al abrir');
     assert.match(await page.locator('#prop-mapa-estado').innerText(),/3 propiedades.*19 sin coordenadas/);
     assert.equal(await page.locator('#lista').isVisible(),true);
     assert.equal(await page.locator('#prop-vista-mapa, #prop-vista-lista').count(),0);
@@ -117,6 +118,50 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
  } finally {await browser.close();}
 });
 
+test('busqueda automatica delimita estado y alcaldia; renta y poligono actualizan mapa y listado',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  for(const viewport of [{width:1280,height:1000},{width:390,height:844}]){
+  const {page,errores}=await pagina(browser,viewport,[[id(1001),19.43,-99.13],[id(1002),19.7,-101.1]]);
+  try{
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.locator('#f-buscar').fill('michoacan');
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-lugar').textContent.includes('Michoacán'));
+   const estados=await page.evaluate(()=>Object.values(qaMapa._layers).filter(l=>l instanceof L.GeoJSON).flatMap(l=>l.toGeoJSON().features.map(f=>f.properties.cvegeo)));
+   assert.deepEqual(estados,['16']);
+   fs.mkdirSync(path.join(root,'artifacts/mapa-qa'),{recursive:true});
+   await page.screenshot({path:path.join(root,`artifacts/mapa-qa/michoacan-${viewport.width}.png`)});
+   await page.locator('#f-buscar').fill('');
+   await page.evaluate(()=>{ponerFiltroRelacionado('f-estado','Ciudad de México');document.querySelector('#f-estado').dispatchEvent(new Event('change',{bubbles:true}));ponerFiltroRelacionado('f-municipio','Benito Juárez');document.querySelector('#f-municipio').dispatchEvent(new Event('change',{bubbles:true}));});
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-lugar').textContent.includes('Benito Juárez'));
+   assert.deepEqual(await page.evaluate(()=>Object.values(qaMapa._layers).filter(l=>l instanceof L.GeoJSON).flatMap(l=>l.toGeoJSON().features.map(f=>f.properties.cvegeo))),['09014']);
+   await page.evaluate(p=>{qaRenta=[p];},[id(1001),19.43,-99.13]);
+   await page.selectOption('#f-operacion','renta',{force:true});
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('1 propiedad'));
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.operacion.includes('renta')));
+   assert.ok(await page.evaluate(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.operacion.includes('renta'))));
+   await page.locator('#prop-mapa-dibujar').click();
+   await page.locator('#prop-mapa').scrollIntoViewIfNeeded();
+   const caja=await page.locator('#prop-mapa').boundingBox();
+   for(const [x,y]of [[.3,.3],[.7,.3],[.5,.65]]){
+     if(viewport.width<640)await page.touchscreen.tap(caja.x+caja.width*x,caja.y+caja.height*y);
+     else await page.mouse.click(caja.x+caja.width*x,caja.y+caja.height*y);
+   }
+   await page.locator('#prop-mapa-terminar').click();
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.poligono?.length===3)&&qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa'&&r.args.p_filtros.poligono?.length===3));
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-lugar').textContent.includes('Zona dibujada'));
+   assert.equal(await page.locator('#prop-zona-quitar').isVisible(),true);
+   await page.screenshot({path:path.join(root,`artifacts/mapa-qa/zona-${viewport.width}.png`)});
+   await page.locator('#prop-zona-quitar').click();
+   assert.equal(await page.evaluate(()=>kwPropiedadesMapa.poligono()),null);
+   await page.locator('#prop-mapa-dibujar').click();await page.keyboard.press('Escape');
+   assert.equal(await page.locator('#prop-mapa-dibujar').getAttribute('aria-pressed'),'false');
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+  }
+ }finally{await browser.close();}
+});
+
 test('miles de pines no bloquean el listado y una respuesta anterior no reemplaza los filtros actuales',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  const puntos=Array.from({length:8000},(_,n)=>[id(n),19.2+(n%100)*.005,-99.4+Math.floor(n/100)*.005]);
@@ -126,13 +171,15 @@ test('miles de pines no bloquean el listado y una respuesta anterior no reemplaz
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('8,000 propiedades'),null,{timeout:20000});
    const iconos=await page.locator('.leaflet-marker-icon').count();
    assert.ok(iconos>0&&iconos<500,'solo dibuja grupos visibles');
+   const centro=await page.locator('.prop-mapa-grupo').first().evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return {x:Math.abs((a.left+a.right-b.left-b.right)/2),y:Math.abs((a.top+a.bottom-b.top-b.bottom)/2)};});
+   assert.ok(centro.x<2&&centro.y<2,'numero centrado dentro del circulo');
    assert.equal(await page.locator('#lista .prop-card').count(),20);
    await page.evaluate(()=>{qaDemoraMapa=600;document.querySelector('#f-buscar').value='Anterior';aplicarFiltros();});
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa'&&r.args.p_filtros.texto==='Anterior'));
    await page.evaluate(p=>{qaDemoraMapa=0;qaPuntos=[p];document.querySelector('#f-buscar').value='Actual';aplicarFiltros();},[id(9002),19.43,-99.13]);
-   await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('1 propiedades'));
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('1 propiedad'));
    await page.waitForTimeout(650);
-   assert.match(await page.locator('#prop-mapa-estado').innerText(),/^1 propiedades/);
+   assert.match(await page.locator('#prop-mapa-estado').innerText(),/^1 propiedad/);
    assert.equal(await page.locator('#lista').isVisible(),true);
    await page.evaluate(()=>window.scrollTo(0,600));
    const arriba=await page.locator('#prop-mapa-panel').boundingBox();
