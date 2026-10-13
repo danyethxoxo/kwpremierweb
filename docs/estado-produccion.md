@@ -22,6 +22,10 @@ Se agrego:
 - Encabezados adicionales en el Worker de seguridad, sin cambiar HTML ni CSS.
 - El script de carga mixta ya no contiene un proyecto Supabase fijo y exige
   variables de entorno de pruebas. Tambien bloquea el dominio de produccion.
+- En Cloudflare ya se desplego `kwpremier-security-headers`, se crearon las
+  rutas `kwpremieroficial.com/*` y `www.kwpremieroficial.com/*`, se activo
+  `Full (strict)` y se pusieron en proxy solo los cinco registros web. Los
+  registros de correo y validacion permanecen `DNS only`.
 
 ## Regla de salida
 
@@ -58,9 +62,12 @@ proyecto y a las cuentas operativas:
 4. **Respaldos.** Ejecutar `herramientas/respaldo.sh` con `pg_dump`, TLS
    verificado, `age` y un destinatario fuera de la computadora. Respaldar por
    separado los archivos de Storage y hacer una restauracion de prueba.
-5. **Dominio.** Poner `deployment/security-headers-worker.mjs` delante de
-   GitHub Pages, con TLS Full (strict), y repetir `npm run production:check`.
-   GitHub Pages por si solo no permite controlar todos esos encabezados.
+5. **Dominio.** **Completado.** Cloudflare ejecuta
+   `deployment/security-headers-worker.mjs` delante de GitHub Pages con TLS
+   `Full (strict)`. Las dos rutas web y los cinco registros proxied quedaron
+   comprobados; `npm run production:check` termino con 18 correctas y 0
+   pendientes. GitHub Pages por si solo no permite controlar todos esos
+   encabezados.
 6. **Observabilidad.** Activar alertas de Supabase para errores, Auth, Storage,
    limites y capacidad; alertas del correo; y un responsable que revise los
    errores cada dia durante la primera semana.
