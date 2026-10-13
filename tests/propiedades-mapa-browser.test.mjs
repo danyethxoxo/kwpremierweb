@@ -27,9 +27,10 @@ window.supabase={createClient(){return {
  rpc(nombre,args){window.qaRpc.push({nombre,args});const ejecutar=async()=>{
    if(nombre==='propiedades_inventario_pagina')return {data:{data:qaProps,total:7431},error:null};
    if(nombre==='propiedades_inventario_mapa'){
+     const puntos=window.qaPuntos;
      if(window.qaDemoraMapa)await new Promise(r=>setTimeout(r,window.qaDemoraMapa));
      if(window.qaErrorMapa)return {error:{message:'Error simulado'}};
-     return {data:{total:window.qaPuntos.length+19,ubicadas:window.qaPuntos.length,puntos:window.qaPuntos,limite:12000},error:null};
+     return {data:{total:puntos.length+19,ubicadas:puntos.length,puntos:puntos,limite:12000},error:null};
    }
    return {data:[],error:null};
  };return {abortSignal:()=>ejecutar(),then:(resolve,reject)=>ejecutar().then(resolve,reject)};},
@@ -61,24 +62,25 @@ async function pagina(browser,viewport,puntos){
  return {page,errores,pedidos};
 }
 
-test('mapa de Propiedades: carga bajo demanda, pines, ficha segura, zona, lista y reintento en escritorio y móvil',async()=>{
+test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reintento en escritorio y móvil',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
-  for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
-   const {page,errores,pedidos}=await pagina(browser,viewport,[[id(1001),19.43,-99.13],[id(1002),20.67,-103.35],[id(1003),25.68,-100.31]]);
+  for(const viewport of [{width:1920,height:1080},{width:1280,height:900},{width:390,height:844}]){
+   const {page,errores}=await pagina(browser,viewport,[[id(1001),19.43,-99.13],[id(1002),20.67,-103.35],[id(1003),25.68,-100.31]]);
    try {
-    assert.equal(pedidos.some(p=>p.includes('/vendor/mapa/')),false,'lista no descarga las bibliotecas');
-    assert.equal(await page.evaluate(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')),false);
     if(viewport.width<1024){
       assert.equal(await page.locator('#prop-filtros-contenido').isVisible(),false);
       await page.locator('#prop-filtros-expandir').click();
       assert.equal(await page.locator('#prop-filtros-contenido').isVisible(),true);
       await page.locator('#prop-filtros-expandir').click();
     }
-    await page.locator('#prop-vista-mapa').click();
     await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.leaflet-marker-icon').length===3);
     assert.match(await page.locator('#prop-mapa-estado').innerText(),/3 propiedades.*19 sin coordenadas/);
-    assert.equal(await page.locator('#lista').isVisible(),false);
+    assert.equal(await page.locator('#lista').isVisible(),true);
+    assert.equal(await page.locator('#prop-vista-mapa, #prop-vista-lista').count(),0);
+    const cajas=await page.evaluate(()=>({lista:document.querySelector('#lista').getBoundingClientRect().toJSON(),mapa:document.querySelector('#prop-mapa-panel').getBoundingClientRect().toJSON()}));
+    if(viewport.width>=1024)assert.ok(cajas.lista.right<=cajas.mapa.left,'mapa a la derecha del listado');
+    else assert.ok(cajas.mapa.bottom<=cajas.lista.top,'en movil ambos aparecen en la misma pagina');
     await page.locator('.leaflet-marker-icon').first().click();
     await page.locator('.prop-mapa-ficha h3').waitFor();
     assert.equal(await page.locator('.prop-mapa-ficha h3').innerText(),ficha.titulo);
@@ -90,21 +92,19 @@ test('mapa de Propiedades: carga bajo demanda, pines, ficha segura, zona, lista 
     await page.locator('#prop-mapa-zona').click();
     await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&Array.isArray(r.args.p_filtros.zona))&&qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length===2&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
     assert.equal(await page.locator('#prop-zona-quitar').isVisible(),true);
-    await page.locator('#prop-vista-lista').click();
     assert.equal(await page.locator('#lista .prop-card').count(),20);
-    assert.equal(await page.locator('#prop-mapa-panel').isVisible(),false);
+    assert.equal(await page.locator('#prop-mapa-panel').isVisible(),true);
     await page.locator('#prop-zona-quitar').click();
     await page.waitForFunction(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').length>=3);
     assert.equal(await page.evaluate(()=>kwPropiedadesMapa.zona()),null);
-    await page.evaluate(()=>{qaErrorMapa=true;});
-    await page.locator('#prop-vista-mapa').click();
+    await page.evaluate(()=>{qaErrorMapa=true;document.querySelector('#f-buscar').value='Error';aplicarFiltros();});
     await page.locator('#prop-mapa-reintentar').waitFor({state:'visible'});
     await page.evaluate(()=>{qaErrorMapa=false;});
     await page.locator('#prop-mapa-reintentar').click();
     await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('3 propiedades'));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'sin desbordamiento horizontal');
     fs.mkdirSync(path.join(root,'artifacts/mapa-qa'),{recursive:true});
-    await page.locator('#prop-vista-mapa').scrollIntoViewIfNeeded();
+    await page.evaluate(()=>window.scrollTo(0,0));
     await page.screenshot({path:path.join(root,`artifacts/mapa-qa/${viewport.width}.png`)});
     assert.deepEqual(errores,[]);
    } finally {await page.close();}
@@ -112,25 +112,26 @@ test('mapa de Propiedades: carga bajo demanda, pines, ficha segura, zona, lista 
  } finally {await browser.close();}
 });
 
-test('miles de pines se agrupan y una carga abandonada no reaparece sobre la lista',async()=>{
+test('miles de pines no bloquean el listado y una respuesta anterior no reemplaza los filtros actuales',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  const puntos=Array.from({length:8000},(_,n)=>[id(n),19.2+(n%100)*.005,-99.4+Math.floor(n/100)*.005]);
  try {
   const {page,errores}=await pagina(browser,{width:1280,height:900},puntos);
   try {
-   await page.locator('#prop-vista-mapa').click();
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('8,000 propiedades'),null,{timeout:20000});
    const iconos=await page.locator('.leaflet-marker-icon').count();
    assert.ok(iconos>0&&iconos<500,'solo dibuja grupos visibles');
-   await page.evaluate(()=>{qaDemoraMapa=300;filtrosAplicados.texto='Otra consulta';});
-   await page.locator('#prop-vista-lista').click();
-   await page.locator('#prop-vista-mapa').click();
-   await page.locator('#prop-vista-lista').click();
-   await page.waitForTimeout(450);
+   assert.equal(await page.locator('#lista .prop-card').count(),20);
+   await page.evaluate(()=>{qaDemoraMapa=600;document.querySelector('#f-buscar').value='Anterior';aplicarFiltros();});
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa'&&r.args.p_filtros.texto==='Anterior'));
+   await page.evaluate(p=>{qaDemoraMapa=0;qaPuntos=[p];document.querySelector('#f-buscar').value='Actual';aplicarFiltros();},[id(9002),19.43,-99.13]);
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('1 propiedades'));
+   await page.waitForTimeout(650);
+   assert.match(await page.locator('#prop-mapa-estado').innerText(),/^1 propiedades/);
    assert.equal(await page.locator('#lista').isVisible(),true);
-   assert.equal(await page.locator('#prop-mapa-panel').isVisible(),false);
-   await page.locator('#prop-vista-mapa').click();
-   await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('8,000 propiedades'),null,{timeout:20000});
+   await page.evaluate(()=>window.scrollTo(0,600));
+   const arriba=await page.locator('#prop-mapa-panel').boundingBox();
+   assert.ok(arriba.y>=0&&arriba.y<100,'mapa permanece visible al bajar por las tarjetas');
    assert.deepEqual(errores,[]);
   } finally {await page.close();}
  } finally {await browser.close();}

@@ -2,9 +2,6 @@
   'use strict';
   var panel = document.getElementById('prop-mapa-panel');
   if (!panel) return;
-  var lista = document.getElementById('lista');
-  var btnMapa = document.getElementById('prop-vista-mapa');
-  var btnLista = document.getElementById('prop-vista-lista');
   var btnZona = document.getElementById('prop-mapa-zona');
   var btnQuitar = document.getElementById('prop-zona-quitar');
   var btnReintentar = document.getElementById('prop-mapa-reintentar');
@@ -175,28 +172,20 @@
       if (r !== revision || panel.hidden) return;
       clave = nuevaClave;
       var sinUbicacion = Math.max(0, Number(datos.total) - Number(datos.ubicadas));
-      estado.textContent = puntos.length.toLocaleString('es-MX') + ' propiedades en el mapa' + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en Lista' : '');
+      estado.textContent = puntos.length.toLocaleString('es-MX') + ' propiedades en el mapa' + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en el listado' : '');
       if (Number(datos.ubicadas) > puntos.length) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
-      if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar la Lista o quitar la zona.';
+      if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar el listado o quitar la zona.';
       btnZona.disabled = false;
     } catch (error) {
       if (r !== revision || panel.hidden) return;
-      clave = ''; estado.textContent = 'No pudimos cargar el mapa. Puedes reintentar o seguir consultando la Lista.';
+      clave = ''; estado.textContent = 'No pudimos cargar el mapa. Puedes reintentar o seguir consultando el listado.';
       btnReintentar.hidden = false;
     } finally { clearTimeout(timer); if (r === revision) cargando(false); }
-  }
-  function elegirVista(verMapa) {
-    panel.hidden = !verMapa; lista.hidden = verMapa;
-    btnMapa.setAttribute('aria-pressed', String(verMapa)); btnLista.setAttribute('aria-pressed', String(!verMapa));
-    if (verMapa) actualizar();
-    else { ++revision; if (controlador) controlador.abort(); cargando(false); }
   }
   function quitarZona(aplicar) {
     zona = null; btnQuitar.hidden = true;
     if (aplicar !== false) window.aplicarFiltros();
   }
-  btnLista.onclick = function () { elegirVista(false); };
-  btnMapa.onclick = function () { elegirVista(true); };
   btnReintentar.onclick = function () { actualizar(true); };
   btnQuitar.onclick = function () { quitarZona(); };
   btnZona.onclick = function () {
@@ -210,7 +199,8 @@
   };
   window.addEventListener('kw-propiedades-filtradas', function () {
     if (window.matchMedia('(max-width: 1023px)').matches) expandirFiltros(false);
-    actualizar();
+    requestAnimationFrame(function () { setTimeout(actualizar, 0); });
   });
   window.kwPropiedadesMapa = Object.freeze({zona: function () { return zona ? zona.slice() : null; }, quitarZona: quitarZona});
+  if (document.querySelector('#lista .prop-card, #lista .estado-msg')) actualizar();
 })();

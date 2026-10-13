@@ -1,6 +1,6 @@
 # Mapa de Propiedades
 
-Dependencias locales, descargadas solo al abrir la vista Mapa:
+Dependencias locales, descargadas después de mostrar las primeras tarjetas:
 
 - Leaflet 1.9.4: https://github.com/Leaflet/Leaflet/tree/v1.9.4 (BSD-2-Clause, `leaflet-LICENSE`).
 - Leaflet.markercluster 1.5.3: https://github.com/Leaflet/Leaflet.markercluster/tree/v1.5.3 (MIT, `markercluster-LICENSE`).
