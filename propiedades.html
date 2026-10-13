@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
+<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261013mapa">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
@@ -616,7 +617,8 @@
           <input type="text" id="f-buscar" aria-label="Buscar" placeholder="Buscar" autocomplete="off" />
         </label>
 
-        <div class="filtros-sidebar">
+        <button type="button" id="prop-filtros-expandir" class="prop-filtros-expandir" aria-expanded="false" aria-controls="prop-filtros-contenido">Mostrar filtros</button>
+        <div class="filtros-sidebar" id="prop-filtros-contenido">
           <section class="filtro-seccion">
             <div class="filtro">
               <label for="mi-sitio-web">Mi Sitio Web</label>
@@ -749,6 +751,23 @@
       </aside>
 
       <section class="propiedades-resultados" aria-live="polite">
+        <div class="prop-vistas" role="group" aria-label="Vista de propiedades">
+          <button type="button" id="prop-vista-lista" aria-pressed="true" aria-controls="lista">Lista</button>
+          <button type="button" id="prop-vista-mapa" aria-pressed="false" aria-controls="prop-mapa-panel">Mapa</button>
+          <button type="button" id="prop-zona-quitar" hidden>Quitar zona del mapa</button>
+        </div>
+        <section id="prop-mapa-panel" class="prop-mapa-panel" aria-label="Buscar propiedades en el mapa" aria-live="off" hidden>
+          <div class="prop-mapa-barra">
+            <p id="prop-mapa-estado" role="status" aria-live="polite"></p>
+            <button type="button" id="prop-mapa-zona" disabled>Buscar en esta zona</button>
+            <button type="button" id="prop-mapa-reintentar" hidden>Reintentar</button>
+          </div>
+          <div class="prop-mapa-marco">
+            <div id="prop-mapa" aria-label="Mapa de propiedades"></div>
+            <div id="prop-mapa-cargando" class="prop-mapa-cargando" hidden><div class="kw-loader" role="status" aria-label="Cargando mapa"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
+          </div>
+          <p class="prop-mapa-ayuda">Acerca el mapa o pulsa un grupo para ver sus propiedades. La ubicación es la proporcionada por el anuncio.</p>
+        </section>
         <div class="grid" id="lista">
           <div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>
         </div>
@@ -1731,6 +1750,7 @@
   }
   function leerFiltrosServidor() {
     return {
+      zona: window.kwPropiedadesMapa ? window.kwPropiedadesMapa.zona() : null,
       texto: val('f-buscar'),
       operacion: filtroMultiple('f-operacion'),
       estatus: val('f-estatus'),
@@ -2010,6 +2030,7 @@
     actualizarConteoServidor(total, paginaActual, filas.length);
     lista.classList.remove('lista-cargando');
     lista.removeAttribute('aria-busy');
+    window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas', { detail: { filtros: filtrosServidorActuales() } }));
     if (!filas.length) {
       lista.innerHTML = '<div class="estado-msg">No encontramos propiedades con esos filtros.</div>';
       return;
@@ -2138,6 +2159,7 @@
   };
 
   limpiarFiltros = function () {
+    if (window.kwPropiedadesMapa) window.kwPropiedadesMapa.quitarZona(false);
     seleccionesMultiples={};idsMultiples.forEach(pintarEtiquetasFiltro);
     document.getElementById('f-recamaras-max').value = '';
     ['f-buscar', 'f-operacion', 'f-tipo', 'f-mc', 'f-asesor', 'f-estado', 'f-municipio',
@@ -2311,6 +2333,7 @@
   else window.addEventListener('kw-auth-ready', cargar, { once: true });
 </script>
 
+<script src="/assets/js/propiedades-mapa.js?v=20261013mapa"></script>
 <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>

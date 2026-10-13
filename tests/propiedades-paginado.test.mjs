@@ -11,7 +11,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
    create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;
    create table propiedades(id uuid primary key,fuente text,fuente_id text,titulo text,operacion text,estatus text,tipo text,precio numeric,moneda text,
     recamaras int,banos numeric,estacionamientos int,m2_construccion numeric,m2_terreno numeric,calle text,colonia text,municipio text,estado text,cp text,pais text,
-    imagenes jsonb,miniatura_url text,caracteristicas jsonb,asesor_id uuid,asesor_nombre text,market_center text,updated_at timestamptz,enlace_kw text,asesor_kw_id text);
+    imagenes jsonb,miniatura_url text,caracteristicas jsonb,asesor_id uuid,asesor_nombre text,market_center text,updated_at timestamptz,enlace_kw text,asesor_kw_id text,lat numeric,lng numeric);
    alter table propiedades enable row level security;
    create policy select_publicadas on propiedades for select to authenticated using(true);
    create policy inventario on propiedades for select to authenticated using(position('propiedades_inventario' in current_setting('request.path',true))>0);
@@ -25,6 +25,10 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003205838_propiedades_permisos_por_consulta.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003212106_propiedades_filtros_vacios.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261005050009_propiedades_filtros_multiples.sql',import.meta.url),'utf8'));
+  const mapaSql=readFileSync(new URL('../supabase/migrations/20261013220814_propiedades_mapa.sql',import.meta.url),'utf8');
+  await db.exec(mapaSql);
+  await db.exec(mapaSql);
+  await db.exec("update propiedades set lat=19+replace(titulo,'Casa ','')::numeric*.001,lng=-99;update propiedades set lat=null where titulo='Casa 45';update propiedades set lng=-190 where titulo='Casa 44'");
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
   const first=await page({estatus:'publicada'}),second=await page({estatus:'publicada'},2),last=await page({estatus:'publicada'},3);
@@ -40,8 +44,22 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   assert.equal((await page({estatus:'publicada',estado:['CDMX','Jalisco'],tipo:['Casa','Departamento']})).total,45);
   assert.equal((await page({estatus:'publicada',estado:['CDMX'],municipio:['Municipio','Otro']})).total,23);
   assert.equal((await page({estatus:'publicada',estado:[]})).total,45);
+  const mapa=async(filters={})=>(await db.query('select propiedades_inventario_mapa($1) r',[JSON.stringify(filters)])).rows[0].r;
+  const todos=await mapa({estatus:'publicada'});
+  assert.equal(todos.total,45);assert.equal(todos.ubicadas,43);assert.equal(todos.puntos.length,43);
+  assert(todos.puntos.every(p=>p.length===3),'indice compacto sin fotos ni datos de contacto');
+  const zona={estatus:'publicada',zona:[19,-100,19.010,-98]};
+  assert.equal((await page(zona)).total,10);assert.equal((await mapa(zona)).puntos.length,10);
+  for(const filtros of [{texto:'Casa 45'},{estado:['CDMX']},{minimo:10000,maximo:19000},{estatus:'inactiva'},{operacion:['renta']},{tipo:['Casa'],estado:['Jalisco']}]) {
+    assert.equal((await page(filtros)).total,(await mapa(filtros)).total,'filtros compartidos con el mapa');
+  }
+  await db.exec('reset role;create policy restriccion_mfa on propiedades as restrictive for select to authenticated using(false);set role authenticated');
+  assert.equal((await mapa({})).total,0,'el mapa respeta las restricciones RLS');
+  assert.equal((await page({})).total,0);
+  await db.exec('reset role;drop policy restriccion_mfa on propiedades;set role authenticated');
   await db.exec('reset role;set role anon');
   await assert.rejects(page({estatus:'publicada'}));
+  await assert.rejects(mapa({}));
  }finally{await db.close();}
 });
 test('carga de propiedades reintenta fallos transitorios y traduce el total del RPC',async()=>{
@@ -55,7 +73,7 @@ test('carga de propiedades reintenta fallos transitorios y traduce el total del 
 test('formulario sin números envía filtros nulos al servidor',()=>{
  const html=readFileSync(new URL('../propiedades.html',import.meta.url),'utf8');
  const source=html.slice(html.indexOf('  var seleccionesMultiples ='),html.indexOf('  function filtrosServidorActuales()'));
- const scope=vm.createContext({val:()=>'',num:()=>0,ubicacionColonia:()=>null});vm.runInContext(source,scope);
+ const scope=vm.createContext({window:{},val:()=>'',num:()=>0,ubicacionColonia:()=>null});vm.runInContext(source,scope);
  const filtros=scope.leerFiltrosServidor();
  for(const campo of ['minimo','maximo','recamaras','recamarasMax','banos','estacionamientos','m2Min','m2Max']) assert.equal(filtros[campo],null);
  scope.seleccionesMultiples['f-asesor']=[{valor:'Asesor A'},{valor:'Asesor B'}];
