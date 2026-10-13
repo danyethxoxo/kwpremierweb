@@ -200,15 +200,23 @@
       else if (teniaContorno) mapa.setView([22.8,-102.2],5);
       var capa = L.markerClusterGroup({
         maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
-        iconCreateFunction: function (grupo) { return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo', iconSize: [42,42]}); }
+        iconCreateFunction: function (grupo) {
+          var operaciones = new Set(grupo.getAllChildMarkers().map(function (pin) { return pin.options.operacion; }));
+          var tipo = operaciones.has('sin-operacion') ? 'sin-operacion' : operaciones.size > 1 ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
+          return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [42,42]});
+        }
       });
       grupos = capa; mapa.addLayer(capa);
-      var icono = L.divIcon({className: '', html: '<div class="prop-mapa-pin"></div>', iconSize: [24,28], iconAnchor: [12,28], popupAnchor: [0,-26]});
+      var iconos = {};
+      ['venta','renta','sin-operacion'].forEach(function (tipo) {
+        iconos[tipo] = L.divIcon({className: '', html: '<div class="prop-mapa-pin prop-mapa-pin-' + tipo + '"></div>', iconSize: [24,28], iconAnchor: [12,28], popupAnchor: [0,-26]});
+      });
       // Repartir el trabajo entre cuadros para mantener la interfaz utilizable.
       for (var i = 0; i < puntos.length; i += 150) {
         if (r !== revision || panel.hidden) return;
         capa.addLayers(puntos.slice(i, i + 150).map(function (p) {
-          var marker = L.marker([p[1], p[2]], {icon: icono, title: 'Ver propiedad', keyboard: true});
+          var tipo = p[3] === 'renta' ? 'renta' : p[3] === 'venta' ? 'venta' : 'sin-operacion';
+          var marker = L.marker([p[1], p[2]], {icon: iconos[tipo], operacion: tipo, title: tipo === 'renta' ? 'Ver propiedad en renta' : tipo === 'venta' ? 'Ver propiedad en venta' : 'Ver propiedad', keyboard: true});
           marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
           pines.set(p[0], marker);
