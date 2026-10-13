@@ -95,12 +95,8 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     }
     await page.evaluate(()=>{window.qaDemoraFicha=400;});
     await page.locator('.leaflet-marker-icon:not(.prop-mapa-grupo)').first().click();
-    await page.locator('#propiedades-cargando').waitFor({state:'visible'});
-    assert.equal(await page.locator('#propiedades-cargando').count(),1);
-    assert.equal(await page.locator('#lista .kw-loader, #prop-mapa-panel .kw-loader').count(),0,'sin animaciones dentro del listado o mapa');
-    const centro=await page.locator('#propiedades-cargando .kw-loader').boundingBox();
-    const ventana=await page.evaluate(()=>({width:document.documentElement.clientWidth,height:innerHeight}));
-    assert.ok(Math.abs(centro.x+centro.width/2-ventana.width/2)<17&&Math.abs(centro.y+centro.height/2-ventana.height/2)<2,'animacion centrada en toda la pagina');
+    await page.locator('.prop-mapa-ficha-vacia').waitFor();
+    assert.equal(await page.locator('#propiedades-cargando, .prop-mapa-ficha .kw-loader').count(),0,'abrir un pin no muestra animacion');
     await page.locator('.prop-mapa-ficha h3').waitFor();
     assert.equal(await page.locator('.prop-mapa-ficha h3').innerText(),ficha.titulo);
     assert.equal(await page.locator('.prop-mapa-ficha h3 img').count(),0,'titulo no interpreta HTML');
@@ -119,7 +115,18 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     fs.mkdirSync(path.join(root,'artifacts/mapa-qa'),{recursive:true});
     await page.screenshot({path:path.join(root,`artifacts/mapa-qa/ficha-${viewport.width}.png`)});
     await page.locator('.leaflet-popup-close-button').click();
+    await page.evaluate(()=>{window.qaDemoraMapa=600;});
     await page.locator('#prop-mapa-zona').click();
+    await page.locator('#propiedades-cargando').waitFor({state:'visible'});
+    assert.equal(await page.locator('#propiedades-cargando').count(),1);
+    assert.equal(await page.locator('#lista .kw-loader, #prop-mapa-panel .kw-loader').count(),0,'sin animaciones dentro del listado o mapa');
+    const centro=await page.locator('#propiedades-cargando .kw-loader').boundingBox();
+    const ventana=await page.evaluate(()=>({width:document.documentElement.clientWidth,height:innerHeight}));
+    assert.ok(Math.abs(centro.x+centro.width/2-ventana.width/2)<17&&Math.abs(centro.y+centro.height/2-ventana.height/2)<2,'animacion centrada en toda la pagina');
+    const velo=await page.locator('#propiedades-cargando').evaluate(el=>({color:getComputedStyle(el).backgroundColor,x:el.getBoundingClientRect().x,y:el.getBoundingClientRect().y,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+    assert.equal(velo.color,'rgba(255, 255, 255, 0.75)');
+    assert.equal(velo.x,0); assert.equal(velo.y,0);
+    assert.ok(Math.abs(velo.width-ventana.width)<17&&Math.abs(velo.height-ventana.height)<2,'velo cubre toda la pagina');
     await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&Array.isArray(r.args.p_filtros.zona))&&qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length===2&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
     assert.equal(await page.locator('#prop-zona-quitar').isVisible(),true);
     assert.equal(await page.locator('#lista .prop-card').count(),20);

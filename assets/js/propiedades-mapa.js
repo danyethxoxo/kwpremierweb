@@ -58,7 +58,7 @@
     }).addTo(mapa);
     capa.on('tileerror', function () { marco.setAttribute('aria-description', 'El fondo del mapa no esta disponible temporalmente. Los pines siguen activos.'); });
     mapa.on('moveend', function () { btnZona.disabled = false; });
-    mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); window.ocultarCargadorPropiedades('ficha'); });
+    mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
     if (window.ResizeObserver) new ResizeObserver(function () { if (!panel.hidden) mapa.invalidateSize({pan: false}); }).observe(marco);
   }
   function texto(etiqueta, contenido, clase) {
@@ -126,7 +126,6 @@
     var r = ++fichaRevision;
     var inicial = document.createElement('div'); inicial.className = 'prop-mapa-ficha-vacia';
     popup.setContent(inicial);
-    window.mostrarCargadorPropiedades('ficha');
     fichaControlador = new AbortController();
     var timer = setTimeout(function () { if (r === fichaRevision) fichaControlador.abort(); }, 12000);
     try {
@@ -148,7 +147,7 @@
       aviso.appendChild(texto('p', 'No pudimos cargar esta propiedad.'));
       var btn = texto('button', 'Reintentar', 'prop-mapa-reintento'); btn.type = 'button'; btn.onclick = function () { abrirFicha(marker, id); };
       aviso.appendChild(btn); popup.setContent(aviso);
-    } finally { clearTimeout(timer); if (r === fichaRevision) window.ocultarCargadorPropiedades('ficha'); }
+    } finally { clearTimeout(timer); }
   }
   function cargando(valor) {
     if(valor)window.mostrarCargadorPropiedades('mapa');else window.ocultarCargadorPropiedades('mapa');
