@@ -251,3 +251,37 @@ test('miles de pines no bloquean el listado y una respuesta anterior no reemplaz
   } finally {await page.close();}
  } finally {await browser.close();}
 });
+
+
+test('foto ubica el pin agrupado; precio, titulo y direccion abren la propiedad',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {
+  for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+   const {page,errores}=await pagina(browser,viewport,[[id(0),19.43,-99.13],[id(1),19.4301,-99.1301]]);
+   try {
+    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+    await page.context().route('https://qa.kw.com/**',route=>route.fulfill({contentType:'text/html',body:'<title>Propiedad</title>'}));
+    const card=page.locator('#lista .prop-card').first();
+    await card.locator('.prop-foto-mapa').click();
+    await page.locator('.prop-mapa-ficha h3').waitFor();
+    assert.equal(await page.locator('.prop-mapa-ficha h3').innerText(),propiedades[0].titulo);
+    assert.ok(await page.evaluate(()=>qaMapa.getZoom()>=16&&qaMapa.getBounds().contains([19.43,-99.13])));
+    assert.equal(await page.locator('#propiedades-cargando').count(),0);
+    assert.equal(await page.evaluate(()=>qaDetalles),0,'usa la ficha disponible sin nueva consulta');
+    await page.locator('.leaflet-popup-close-button').click();
+    for(const selector of ['.prop-precio','.prop-titulo','.prop-ubic']){
+     await card.scrollIntoViewIfNeeded();
+     const box=await card.locator(selector).boundingBox();
+     const destino=await card.locator('.prop-enlace').getAttribute('href');
+     const nueva=page.waitForEvent('popup');
+     await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
+     const popup=await nueva;await popup.waitForLoadState();
+     assert.equal(popup.url(),destino);await popup.close();
+    }
+    await page.locator('#lista .prop-card').nth(2).locator('.prop-foto-mapa').click();
+    assert.match(await page.locator('#prop-mapa-estado').innerText(),/no est.*disponible/);
+    assert.deepEqual(errores,[]);
+   } finally {await page.close();}
+  }
+ } finally {await browser.close();}
+});

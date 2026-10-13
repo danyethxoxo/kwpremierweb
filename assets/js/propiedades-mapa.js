@@ -9,6 +9,7 @@
   var mapa, grupos, bibliotecas, zona = null, filtros = null, clave = '', revision = 0, controlador;
   var fichaControlador, fichaRevision = 0;
   var fichas = new Map();
+  var pines = new Map(), propiedadPendiente = null;
   var dibujo, contorno, clavePendiente = '';
   var btnFiltros = document.getElementById('prop-filtros-expandir');
   function expandirFiltros(abierto) {
@@ -167,6 +168,7 @@
     var r = ++revision;
     if (controlador) controlador.abort();
     if (grupos && mapa) { mapa.removeLayer(grupos); grupos = null; }
+    pines.clear();
     cargando(true); btnReintentar.hidden = true; btnZona.disabled = true;
     estado.textContent = '';
     controlador = new AbortController();
@@ -209,6 +211,7 @@
           var marker = L.marker([p[1], p[2]], {icon: icono, title: 'Ver propiedad', keyboard: true});
           marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
+          pines.set(p[0], marker);
           return marker;
         }));
         await new Promise(function (resolve) { requestAnimationFrame(resolve); });
@@ -220,6 +223,7 @@
       if (Number(datos.ubicadas) > puntos.length) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
       if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar el listado o quitar la zona.';
       btnZona.disabled = false;
+      if (propiedadPendiente) ubicar(propiedadPendiente);
     } catch (error) {
       if (r !== revision || panel.hidden) return;
       clave = ''; estado.textContent = 'No pudimos cargar el mapa. Puedes reintentar o seguir consultando el listado.';
@@ -231,6 +235,21 @@
     if (mapa) mapa.setView([22.8,-102.2],5);
     zona = null; btnQuitar.hidden = true;
     if (aplicar !== false) window.aplicarZonaMapa();
+  }
+  function ubicar(id) {
+    propiedadPendiente = String(id);
+    if (clavePendiente && panel.getAttribute('aria-busy') === 'true' && !pines.has(propiedadPendiente)) return;
+    var marker = pines.get(propiedadPendiente);
+    propiedadPendiente = null;
+    panel.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    if (!marker || !grupos) {
+      estado.textContent = 'La ubicación de esta propiedad no está disponible en el mapa actual.';
+      return;
+    }
+    grupos.zoomToShowLayer(marker, function () {
+      mapa.setView(marker.getLatLng(), Math.max(mapa.getZoom(), 16), {animate: false});
+      marker.openPopup();
+    });
   }
   btnReintentar.onclick = function () { actualizar(true); };
   btnQuitar.onclick = function () { quitarZona(); };
@@ -247,6 +266,6 @@
   window.addEventListener('kw-propiedades-filtradas', function () {
     requestAnimationFrame(function () { setTimeout(actualizar, 0); });
   });
-  window.kwPropiedadesMapa = Object.freeze({zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
+  window.kwPropiedadesMapa = Object.freeze({ubicar: ubicar, zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
   if (document.querySelector('#lista .prop-card, #lista .estado-msg')) actualizar();
 })();

@@ -361,10 +361,11 @@
   .prop-asesor a { position: relative; z-index: 4; color: inherit; text-decoration: none; }
   .prop-asesor a:hover { color: var(--red); text-decoration: underline; }
   .prop-card { position: relative; }
-  /* El enlace cubre la tarjeta completa, incluida la foto. Va por encima
-     de la imagen para que el clic no se lo quede su propio z-index. */
+  /* La foto tiene su propia acción sobre el enlace de la tarjeta. */
   .prop-enlace { display: block; position: absolute; inset: 0; z-index: 3; border-radius: inherit; }
   .prop-enlace:focus-visible { outline: 2px solid var(--red); outline-offset: -3px; }
+  .prop-foto-mapa { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: pointer; }
+  .prop-foto-mapa:focus-visible { outline: 2px solid var(--red); outline-offset: -3px; }
 
   .conteo {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -1263,6 +1264,7 @@
     return '<article class="prop-card" data-propiedad-id="' + escapeHtml(p.id) + '">' +
       '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(tituloPropiedad) + '"></a>' +
       '<div class="prop-foto' + (tieneFoto ? ' cargando' : '') + '">' + foto +
+        '<button type="button" class="prop-foto-mapa" aria-label="Ubicar en el mapa: ' + escapeHtml(tituloPropiedad) + '" title="Ver ubicación en el mapa" onclick="kwPropiedadesMapa.ubicar(this.closest(\'.prop-card\').dataset.propiedadId)"></button>' +
         (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
       '</div>' +
       '<div class="prop-acciones">' +
@@ -2365,7 +2367,7 @@
 
 <script src="/assets/js/propiedades-geografia.js?v=20261013ficha"></script>
 <script src="/assets/js/propiedades-dibujo.js?v=20261013ficha"></script>
-<script src="/assets/js/propiedades-mapa.js?v=20261013velo"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261013ubicar"></script>
 <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
