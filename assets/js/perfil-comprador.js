@@ -19,7 +19,7 @@
   ubicarCampana();
   var perfiles = [], editando = null, ocupado = false, cargando = false;
   var tipos = ['Casa','Departamento','Terreno','Oficina','Local comercial','Bodega','Duplex','Nave industrial','Edificio','Rancho'];
-  var textos = ['nombre','telefono','correo','operacion','moneda','estado','municipio','colonias','notas'];
+  var textos = ['nombre','telefono','correo','operacion','moneda','estado','notas'];
   var numeros = ['precio_min','precio_max','recamaras_min','banos_min','estacionamientos_min','superficie_min','umbral_match'];
   function formatearPresupuesto(valor) {
     var partes = String(valor).replace(/,/g,'').replace(/[^0-9.]/g,'').split('.');
@@ -50,8 +50,8 @@
   var indiceCiudad = new Map(), catalogoIndexado = null;
   var estadosServidor = new Map(), sondeoEstado = null;
   var abiertos = new Set(), vistasMatches = new Map();
-  var estadoCatalogo = document.createElement('p'); estadoCatalogo.className = 'catalogo-estado'; estadoCatalogo.setAttribute('role','status');
-  document.querySelector('.encabezado').insertAdjacentElement('afterend',estadoCatalogo);
+  var municipiosElegidos = [], coloniasElegidas = [];
+  var categorias = [{nivel:80,clave:'fuertes',titulo:'Compatibles · 80% o más'},{nivel:-1,clave:'otras_zonas',titulo:'Similares en otras zonas'},{nivel:-2,clave:'otras_caracteristicas',titulo:'Mismo presupuesto, otras características'},{nivel:-3,clave:'otro_presupuesto',titulo:'Cerca del presupuesto'}];
   function indexarInventario(filas) {
     if (catalogoIndexado === filas) return;
     catalogoIndexado = filas; indiceCiudad.clear(); cacheMatches.clear();
@@ -106,6 +106,7 @@
       }
       buscar.actualizarCatalogo = function () {
         var abierto = caja.classList.contains('abierto');
+        if (caja.classList.contains('deshabilitado') !== select.disabled) caja.classList.toggle('deshabilitado',select.disabled);
         buscar.setAttribute('aria-expanded',String(abierto)); buscar.disabled = select.disabled; limpiar.disabled = select.disabled;
         var opcion = select.options[select.selectedIndex]; buscar.placeholder = opcion ? opcion.textContent : 'Seleccionar';
         if (!abierto) buscar.value = '';
@@ -149,32 +150,56 @@
     select.dispatchEvent(new Event('change', { bubbles: false }));
   }
   var actualizandoUbicacion = false;
-  function opcionesLugar(campo, filas, columna, estado, municipio) {
-    var select = form.elements[campo], anterior = select.value, mapa = new Map();
-    select.replaceChildren(new Option('Todas',''));
+  function pintarZonas() {
+    ['municipio','colonias'].forEach(function (campo) {
+      var select = form.elements[campo], caja = document.getElementById('zonas-' + campo);
+      if (!caja) { caja = document.createElement('div'); caja.id = 'zonas-' + campo; caja.className = 'comprador-zonas'; select.closest('.campo').append(caja); }
+      caja.replaceChildren();
+      var valores = campo === 'municipio' ? municipiosElegidos : coloniasElegidas;
+      valores.forEach(function (valor,indice) {
+        var texto = campo === 'municipio' ? valor : valor.colonia + ' · ' + valor.municipio;
+        var chip = document.createElement('span'); chip.className = 'etiqueta'; chip.append(document.createTextNode(texto));
+        var quitar = document.createElement('button'); quitar.type = 'button'; quitar.textContent = '×'; quitar.setAttribute('aria-label','Quitar ' + texto);
+        quitar.addEventListener('click',function () {
+          if (ocupado) return;
+          valores.splice(indice,1);
+          if (campo === 'municipio') coloniasElegidas = coloniasElegidas.filter(function(c) { return municipiosElegidos.includes(c.municipio); });
+          refrescarUbicacion();
+        });
+        chip.append(quitar); caja.append(chip);
+      });
+    });
+  }
+  function opcionesLugar(campo, filas, columna) {
+    var select = form.elements[campo], mapa = new Map();
+    select.replaceChildren(new Option(campo === 'municipio' ? 'Agregar alcaldía / municipio' : 'Agregar colonia',''));
     filas.forEach(function (p) {
       if (!p[columna]) return;
-      var clave = JSON.stringify([p.estado,p.municipio,columna === 'colonia' ? p.colonia : '']);
+      var clave = columna === 'colonia' ? JSON.stringify({estado:p.estado,municipio:p.municipio,colonia:p.colonia}) : p.municipio;
       mapa.set(clave,p);
     });
-    Array.from(mapa.values()).sort(function (a,b) { return a[columna].localeCompare(b[columna],'es'); }).forEach(function (p) {
-      var texto = [p[columna], columna === 'colonia' && !municipio ? p.municipio : '', !estado ? p.estado : ''].filter(Boolean).join(' · ');
-      var option = new Option(texto,p[columna]); option.dataset.estado = p.estado; option.dataset.municipio = p.municipio;
-      select.add(option);
+    Array.from(mapa.entries()).sort(function (a,b) { return a[1][columna].localeCompare(b[1][columna],'es'); }).forEach(function (par) {
+      var clave = par[0], p = par[1];
+      var elegida = campo === 'municipio' ? municipiosElegidos.includes(clave) : coloniasElegidas.some(function(c) { return c.estado === p.estado && c.municipio === p.municipio && c.colonia === p.colonia; });
+      if (elegida) return;
+      var texto = [p[columna],columna === 'colonia' ? p.municipio : ''].filter(Boolean).join(' · ');
+      var option = new Option(texto,clave); option.dataset.estado = p.estado; option.dataset.municipio = p.municipio; select.add(option);
     });
-    if (anterior && !Array.from(select.options).some(function (o) { return o.value === anterior; })) select.add(new Option(anterior,anterior));
-    select.value = anterior; select.dispatchEvent(new Event('change'));
+    select.value = ''; select.dispatchEvent(new Event('change'));
   }
   function refrescarUbicacion() {
     if (actualizandoUbicacion) return;
     actualizandoUbicacion = true;
-    var estado = form.elements.estado.value, municipio = form.elements.municipio.value;
-    opciones('estado', ubicaciones.map(function (p) { return p.estado; }), 'Seleccionar ciudad');
-    opcionesLugar('municipio', ubicaciones.filter(function (p) { return !estado || p.estado === estado; }), 'municipio',estado,municipio);
-    opcionesLugar('colonias', ubicaciones.filter(function (p) { return (!estado || p.estado === estado) && (!municipio || p.municipio === municipio); }), 'colonia',estado,municipio);
+    var estado = form.elements.estado.value;
+    opciones('estado',ubicaciones.map(function(p) { return p.estado; }),'Seleccionar ciudad');
+    var filas = ubicaciones.filter(function(p) { return p.estado === estado; });
+    opcionesLugar('municipio',filas,'municipio');
+    opcionesLugar('colonias',filas.filter(function(p) { return !municipiosElegidos.length || municipiosElegidos.includes(p.municipio); }),'colonia');
+    form.elements.municipio.disabled = form.elements.colonias.disabled = !estado;
+    form.elements.municipio.dispatchEvent(new Event('change'));
+    form.elements.colonias.dispatchEvent(new Event('change'));
     actualizandoUbicacion = false;
-    window.kwUI.selects();
-    prepararBusquedaUbicacion();
+    window.kwUI.selects(); prepararBusquedaUbicacion(); pintarZonas();
   }
   async function cargarUbicaciones() {
     try {
@@ -206,34 +231,29 @@
       inventarioMatches = []; errorMatches = false;
       if (anterior !== JSON.stringify(Array.from(estadosServidor.values()))) pintar();
       var pendientes = res.data.some(function (e) { return e.pendiente; });
-      estadoCatalogo.replaceChildren(); if (pendientes) animacionCarga(estadoCatalogo,true);
       res.data.filter(function(e) { return e.calculado_at && (!e.pendiente || e.motivo === 'inventario'); }).slice(0,2).forEach(function(e) {
-        var nivel = Math.max.apply(null,Object.keys(e.niveles || {}).map(Number));
-        if (isFinite(nivel)) window.kwCompradorCargas.pagina(window.kwSupabase,e.perfil_id,e.calculado_at,nivel,0).catch(function() {});
+        var nivel = categorias.map(function(c) { return c.nivel; }).find(function(n) { return e.niveles[n] > 0; });
+        if (nivel != null) window.kwCompradorCargas.pagina(window.kwSupabase,e.perfil_id,e.calculado_at,nivel,0).catch(function() {});
       });
       clearTimeout(sondeoEstado);
       if (pendientes) sondeoEstado = setTimeout(function () { if (!document.hidden) cargarInventarioMatches(); },5000);
     } catch (e) { if (revision !== revisionMatches) return; console.error('Error al cargar coincidencias:',e); errorMatches = true; pintar(); }
   }
-  form.elements.estado.addEventListener('change', function () {
+  form.elements.estado.addEventListener('change',function () {
     if (actualizandoUbicacion) return;
-    form.elements.municipio.value = ''; form.elements.colonias.value = ''; refrescarUbicacion();
+    municipiosElegidos = []; coloniasElegidas = []; refrescarUbicacion();
   });
-  form.elements.municipio.addEventListener('change', function () {
-    if (actualizandoUbicacion) return;
-    var opcion = form.elements.municipio.selectedOptions[0];
-    if (opcion && opcion.dataset.estado) form.elements.estado.value = opcion.dataset.estado;
-    form.elements.colonias.value = ''; refrescarUbicacion();
+  form.elements.municipio.addEventListener('change',function () {
+    if (actualizandoUbicacion || !this.value) return;
+    if (!municipiosElegidos.includes(this.value)) municipiosElegidos.push(this.value);
+    coloniasElegidas = coloniasElegidas.filter(function(c) { return municipiosElegidos.includes(c.municipio); });
+    refrescarUbicacion();
   });
-  form.elements.colonias.addEventListener('change', function () {
-    if (actualizandoUbicacion) return;
-    var opcion = form.elements.colonias.selectedOptions[0];
-    if (opcion && opcion.dataset.estado) {
-      form.elements.estado.value = opcion.dataset.estado;
-      var municipio = opcion.dataset.municipio;
-      if (!Array.from(form.elements.municipio.options).some(function (o) { return o.value === municipio; })) form.elements.municipio.add(new Option(municipio,municipio));
-      form.elements.municipio.value = municipio; refrescarUbicacion();
-    }
+  form.elements.colonias.addEventListener('change',function () {
+    if (actualizandoUbicacion || !this.value) return;
+    var colonia = JSON.parse(this.value);
+    if (!coloniasElegidas.some(function(c) { return c.estado === colonia.estado && c.municipio === colonia.municipio && c.colonia === colonia.colonia; })) coloniasElegidas.push(colonia);
+    refrescarUbicacion();
   });
   form.elements.operacion.addEventListener('change', actualizarPrecios);
   ['recamaras_min','banos_min','estacionamientos_min','superficie_min'].forEach(function (key) {
@@ -254,7 +274,7 @@
   });
   function avisar(texto, error) { mensaje.textContent = texto; mensaje.classList.toggle('error', Boolean(error)); }
   function resetear() {
-    form.reset(); editando = null;
+    form.reset(); editando = null; municipiosElegidos = []; coloniasElegidas = [];
     etiquetas = []; entradaEtiqueta.value = ''; pintarEtiquetas();
     document.getElementById('titulo-formulario').textContent = 'Nuevo perfil';
     guardar.textContent = 'Guardar perfil'; nuevo.textContent = 'Limpiar';
@@ -268,34 +288,22 @@
     textos.forEach(function (key) { d[key] = form.elements[key].value.trim(); });
     numeros.forEach(function (key) { var valor = form.elements[key].value.replace(/,/g,''); d[key] = valor === '' ? null : Number(valor); });
     d.tipos = Array.from(form.querySelectorAll('input[name=tipos]:checked')).map(function (input) { return input.value; });
+    d.municipios = municipiosElegidos.slice(); d.colonias_seleccionadas = coloniasElegidas.slice();
+    d.municipio = municipiosElegidos[0] || ''; d.colonias = coloniasElegidas.length === 1 ? coloniasElegidas[0].colonia : '';
+    d.umbral_match = Math.max(80,d.umbral_match || 80);
     d.avisos_campana = true;
     d.avisos_correo = form.elements.avisos_correo ? form.elements.avisos_correo.checked : true;
     if (d.operacion === 'renta') d.precio_min = null;
     if (!d.telefono && !d.correo) throw new Error('Registra al menos un teléfono o correo del cliente.');
     if (d.nombre.length < 2 || d.estado.length < 2) throw new Error('Completa el nombre y el estado.');
     if (!d.tipos.length) throw new Error('Selecciona al menos un tipo de inmueble.');
+    if (d.municipios.length > 50 || d.colonias_seleccionadas.length > 200) throw new Error('Selecciona hasta 50 municipios y 200 colonias por perfil.');
     if (!Number.isFinite(d.precio_max) || d.precio_max <= 0 || d.precio_max > 100000000000) throw new Error('Ingresa un presupuesto máximo válido, mayor que cero.');
     if (d.precio_min !== null && (!Number.isFinite(d.precio_min) || d.precio_min < 0 || d.precio_min > 100000000000)) throw new Error('Ingresa un presupuesto mínimo válido.');
     if (d.precio_min !== null && d.precio_min > d.precio_max) throw new Error('El presupuesto mínimo no puede superar al máximo.');
     return d;
   }
   function agregarTexto(padre, tag, texto) { var el = document.createElement(tag); el.textContent = texto; padre.append(el); return el; }
-  function matchesCliente(cliente) {
-    var clave = JSON.stringify(cliente);
-    if (cacheMatches.has(clave)) return cacheMatches.get(clave);
-    var candidatos = indiceCiudad.get(cliente.operacion + '|' + normalizarBusqueda(cliente.estado).trim()) || [];
-    var resultados = candidatos.filter(function (p) {
-      if (p.moneda && p.moneda !== cliente.moneda) return false;
-      var precio = Number(p.precio), maximo = Number(cliente.precio_max);
-      var precioPuntos = p.moneda === cliente.moneda && precio > 0 ? Math.max(0,40 - 250 * Math.max(0,precio/maximo-1)) : 0;
-      if (Math.round(60 + precioPuntos) < cliente.umbral_match) return false;
-      return cliente.tipos.some(function (tipo) { return (p.tipos_filtro || [p.tipo]).includes(tipo); });
-    }).map(function (propiedad) { return { propiedad: propiedad, match: window.kwCompradorMatches.evaluar(cliente,propiedad) }; })
-      .filter(function (r) { return r.match && r.match.porcentaje >= cliente.umbral_match; })
-      .sort(function (a,b) { return b.match.porcentaje - a.match.porcentaje; });
-    if (inventarioMatches) cacheMatches.set(clave,resultados);
-    return resultados;
-  }
   function pintarPropiedad(resultado, padre, cliente) {
     var p = resultado.propiedad, match = resultado.match;
     var card = document.createElement('article'); card.className = 'match-prop';
@@ -310,7 +318,7 @@
     if (urlFoto && /^https:\/\//i.test(urlFoto)) { var img = document.createElement('img'); img.src = urlFoto; img.loading = 'lazy'; img.decoding = 'async'; img.alt = p.titulo || ''; img.addEventListener('error',function () { if (original && img.src !== original) img.src = original; else { img.remove(); agregarTexto(link,'span','Foto no disponible'); } }); link.append(img); }
     else agregarTexto(link,'span','Foto no disponible');
     foto.append(link); window.kwCompradorAcciones.agregar(foto,p,function() { return window.kwSitioAsesor.personalizar(p.enlace_kw || enlace,sitioAsesor); }); var badge = agregarTexto(foto,'span',p.operacion === 'renta' ? 'Renta' : 'Venta'); badge.className = 'match-badge';
-    agregarTexto(foto,'span',match.porcentaje + '% compatible').className = 'match-score';
+    agregarTexto(foto,'span',match.categoria === 'fuertes' ? match.porcentaje + '% compatible' : 'Alternativa').className = 'match-score';
     var body = document.createElement('div'); body.className = 'match-body';
     var precio = agregarTexto(body,'div',Number(p.precio) > 0 ? new Intl.NumberFormat('es-MX',{style:'currency',currency:p.moneda || 'MXN',maximumFractionDigits:0}).format(p.precio) : 'Precio a consultar'); precio.className = 'match-precio';
     var titulo = agregarTexto(body,'a',p.titulo); titulo.className = 'match-titulo'; titulo.style.display = 'block'; titulo.href = enlace; titulo.target = '_blank'; titulo.rel = 'noopener noreferrer';
@@ -322,7 +330,7 @@
     var interior = document.createElement('div'); interior.className = 'match-giro';
     var frente = document.createElement('div'); frente.className = 'match-frente';
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
-    agregarTexto(desglose,'h3',match.porcentaje + '% de compatibilidad');
+    agregarTexto(desglose,'h3',match.categoria === 'fuertes' ? match.porcentaje + '% de compatibilidad' : 'Qué cambia respecto al perfil');
     var detalleCriterios = document.createElement('div'); detalleCriterios.className = 'match-criterios'; desglose.append(detalleCriterios);
     window.kwCompradorResumen(cliente,p,match.criterios).forEach(function (c) {
       var grupo = document.createElement('div'); grupo.className = 'criterio-resumen';
@@ -356,14 +364,16 @@
       card.append(etiquetasCliente);
       [p.operacion === 'venta' ? 'Compra' : 'Renta',p.tipos.join(', '),
         (p.precio_min == null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda,
-        [p.estado,p.municipio,p.colonias].filter(Boolean).join(' · '),
+        [p.estado,window.kwCompradorMatches.zonas(p).municipios.join(', '),window.kwCompradorMatches.zonas(p).colonias.map(function(c) { return c.colonia + (c.municipio ? ' (' + c.municipio + ')' : ''); }).join(', ')].filter(Boolean).join(' · '),
         p.recamaras_min ? p.recamaras_min + ' recámaras' : '',p.banos_min ? p.banos_min + ' baños' : '',
         p.estacionamientos_min ? p.estacionamientos_min + ' estacionamientos' : '',p.superficie_min ? p.superficie_min + ' m² mínimo' : '',p.notas]
         .filter(Boolean).forEach(function (texto) { agregarTexto(etiquetasCliente,'span',texto).className = 'cliente-etiqueta'; });
       var acciones = document.createElement('div'); acciones.className = 'acciones';
       var estadoGuardado = estadosServidor.get(p.id), listo = p.activo && estadoGuardado && (!estadoGuardado.pendiente || (estadoGuardado.calculado_at && estadoGuardado.motivo === 'inventario'));
       var coincidencias = [];
-      var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? estadoGuardado.total + ' coincidencias' : errorMatches ? 'Reintentar' : ''); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false'); if (!listo && !errorMatches && p.activo) animacionCarga(desplegar,true);
+      var fuertes = listo ? Number(estadoGuardado.niveles[80] || 0) : 0;
+      var alternativas = listo ? Math.max(0,estadoGuardado.total - fuertes) : 0;
+      var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? fuertes + ' compatibles' + (alternativas ? ' · ' + alternativas + ' alternativas' : '') : errorMatches ? 'Reintentar' : ''); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false'); if (!listo && !errorMatches && p.activo) animacionCarga(desplegar,true);
       var filaMatches = document.createElement('section'), celdaMatches = document.createElement('div'); filaMatches.className = 'comprador-coincidencias'; filaMatches.hidden = true; filaMatches.id = 'coincidencias-' + p.id; filaMatches.append(celdaMatches); fila.append(filaMatches); desplegar.setAttribute('aria-controls',filaMatches.id);
       function alternarMatches() {
         if (errorMatches) { cargarInventarioMatches(); return; }
@@ -372,11 +382,12 @@
         if (filaMatches.hidden || celdaMatches.childNodes.length) return;
         var cabecera = document.createElement('div'); cabecera.className = 'matches-encabezado'; celdaMatches.append(cabecera);
 
-        var niveles = Object.keys(estadoGuardado.niveles || {}).map(Number).sort(function (a,b) { return b-a; });
+        var niveles = categorias.map(function(c) { return c.nivel; });
+        agregarTexto(cabecera,'p','Las coincidencias de 80% o más respetan tipo, operación, zonas y presupuesto. Solo estas generan avisos por correo.').className = 'nota';
         var vistaGuardada = vistasMatches.get(p.id) || {}, modulo = Math.max(0,niveles.indexOf(vistaGuardada.nivel)), limite = vistaGuardada.offset || 0;
         var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); var toolbar = document.createElement('div'); toolbar.className = 'match-toolbar'; celdaMatches.append(toolbar); toolbar.append(tabs);
         var botones = niveles.map(function (nivel,indice) {
-          var boton = agregarTexto(tabs,'button',(nivel === 100 ? '100%' : nivel + ' a ' + (nivel+9) + '%') + ' · ' + estadoGuardado.niveles[nivel]); boton.type = 'button';
+          var boton = agregarTexto(tabs,'button',categorias[indice].titulo + ' · ' + (estadoGuardado.niveles[nivel] || 0)); boton.type = 'button';
           boton.addEventListener('click',function () { modulo = indice; limite = 0; pagina(); }); return boton;
         });
         var nav = document.createElement('div'); nav.className = 'match-paginacion'; toolbar.append(nav);
@@ -397,16 +408,16 @@
           vistasMatches.set(p.id,{nivel:nivel,offset:offset});
           botones.forEach(function (b,i) { b.classList.toggle('seleccionado',i===modulo); b.setAttribute('aria-pressed',String(i===modulo)); });
           grid.replaceChildren();
-          if (nivel == null) { agregarTexto(grid,'p','Todavía no hay propiedades que alcancen la compatibilidad mínima. Revisaremos las nuevas propiedades automáticamente.').className = 'kw-vacio'; nav.hidden = tabs.hidden = true; return; }
+          if (!cantidad) { grid.setAttribute('aria-busy','false'); agregarTexto(grid,'p',nivel === 80 ? 'No hay coincidencias de 80% o más que respeten tus requisitos. Puedes explorar las alternativas.' : 'No hay alternativas en este grupo.').className = 'kw-vacio'; estadoPagina.textContent = '0 propiedades'; anterior.disabled = siguiente.disabled = true; return; }
           animacionCarga(estadoPagina,true); anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
           for(var i=0;i<Math.min(4,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
           try {
             var filas = await window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset);
             if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren();
-            filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios}},grid,p); });
+            filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios,categoria:r.categoria || categorias[modulo].clave}},grid,p); });
             if (!filas.length) agregarTexto(grid,'p','Estas propiedades ya no están disponibles. Las coincidencias se actualizarán automáticamente.').className = 'kw-vacio';
-            estadoPagina.textContent = cantidad + ' coincidencias';
+            estadoPagina.textContent = cantidad + (cantidad === 1 ? ' propiedad' : ' propiedades');
             actualizarFlechas();
             if (offset+4 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+4).catch(function () {});
           } catch (error) {
@@ -445,6 +456,8 @@
           if (input.tagName === 'SELECT' && valor && !Array.from(input.options).some(function (o) { return o.value === valor; })) input.add(new Option(valor,valor));
           input.value = key === 'precio_min' || key === 'precio_max' ? formatearPresupuesto(valor) : valor;
         });
+        var zonasPerfil = window.kwCompradorMatches.zonas(p); municipiosElegidos = zonasPerfil.municipios.slice(); coloniasElegidas = zonasPerfil.colonias.slice();
+        form.elements.umbral_match.value = Math.max(80,Number(p.umbral_match) || 80);
         etiquetas = String(p.notas || '').split(/[\n,;]+/).map(function (t) { return t.trim(); }).filter(Boolean); pintarEtiquetas();
         if (form.elements.avisos_correo) form.elements.avisos_correo.checked = p.avisos_correo;
         form.querySelectorAll('input[name=tipos]').forEach(function (input) { input.checked = p.tipos.includes(input.value); });

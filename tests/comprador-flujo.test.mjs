@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
+import '../assets/js/comprador-matches.js';
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
 test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',async()=>{
  const db=new PGlite();
@@ -25,24 +26,68 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
    create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;`);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003210800_comprador_carrusel_cuatro.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003215055_comprador_catalogo_directo_y_tarjetas.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014221951_comprador_zonas_estrictas.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
-  const {rows:[p]}=await db.query(`insert into propiedades(id,titulo,estatus,imagenes) values(gen_random_uuid(),'Propiedad completa','publicada','["https://foto.example/a.jpg"]') returning id`);
+  const {rows:[p]}=await db.query(`insert into propiedades(id,titulo,estatus,imagenes,tipo,operacion,estado,precio,moneda,fuente) values(gen_random_uuid(),'Propiedad completa','publicada','["https://foto.example/a.jpg"]','Casa','venta','CDMX',2800000,'MXN','kwmexico') returning id`);
   const {rows:[e]}=await db.query('select revision from comprador_estados where perfil_id=$1',[cliente.id]);
-  const resultados=JSON.stringify([{propiedad_id:p.id,porcentaje:100,criterios:[]}]);
+  const resultados=JSON.stringify([{propiedad_id:p.id,porcentaje:100,categoria:'fuertes',criterios:[]}]);
   await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,e.revision,resultados]);
   assert.equal((await db.query('select notificado_at from comprador_resultados')).rows[0].notificado_at,null);
   await db.exec(`set role authenticated;set test.uid='${a}'`);
   await assert.rejects(db.query("select * from comprador_catalogo_calculo('CDMX','venta',0)"));
-  assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,1);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,80,0)',[cliente.id])).rows.length,1);
   await db.exec(`set test.uid='${b}'`);
-  assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,0);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,80,0)',[cliente.id])).rows.length,0);
   await db.exec(`reset role;update comprador_estados set pendiente=true,motivo='inventario';set role authenticated;set test.uid='${a}'`);
-  assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,1);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,80,0)',[cliente.id])).rows.length,1);
   await db.query('update perfiles_comprador set activo=false where id=$1',[cliente.id]);
-  assert.equal((await db.query('select * from comprador_matches_pagina($1,100,0)',[cliente.id])).rows.length,0);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,80,0)',[cliente.id])).rows.length,0);
   await db.exec('reset role');
   assert.equal((await db.query('select comprador_guardar_resultados($1,$2,$3) ok',[cliente.id,e.revision,resultados])).rows[0].ok,false);
+  // Guardado real de varias zonas, alternativas y exclusiones con el motor compartido.
+  const colonias=[{estado:'CDMX',municipio:'Benito Juárez',colonia:'Del Valle'},{estado:'CDMX',municipio:'Coyoacán',colonia:'Del Carmen'}];
+  await db.query(`update perfiles_comprador set activo=true,municipios=array['Benito Juárez','Coyoacán'],colonias_seleccionadas=$2,recamaras_min=3 where id=$1`,[cliente.id,JSON.stringify(colonias)]);
+  await db.query(`update propiedades set municipio='Benito Juárez',colonia='Del Valle',recamaras=3 where id=$1`,[p.id]);
+  const propiedades=[
+   ['Otra zona','Casa','Cuauhtémoc','Roma Norte',2800000,3],
+   ['Otra característica','Casa','Coyoacán','Del Carmen',2800000,1],
+   ['Otro presupuesto','Casa','Coyoacán','Del Carmen',3100000,3],
+   ['Oficina en casa','Oficina','Benito Juárez','Del Valle',2800000,3],
+   ['Fuera de ciudad','Casa','Benito Juárez','Del Valle',2800000,3]
+  ];
+  const filas=[];
+  for(const [titulo,tipo,municipio,colonia,precio,recamaras] of propiedades) {
+   const {rows:[fila]}=await db.query(`insert into propiedades(id,titulo,tipo,municipio,colonia,precio,recamaras,estado,moneda,operacion,estatus,fuente) values(gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7,'MXN','venta','publicada','kwmexico') returning *`,[titulo,tipo,municipio,colonia,precio,recamaras,titulo==='Fuera de ciudad'?'Jalisco':'CDMX']);filas.push(fila);
+  }
+  const c=(await db.query('select * from perfiles_comprador where id=$1',[cliente.id])).rows[0];
+  const todas=(await db.query('select * from propiedades')).rows;
+  const calculados=todas.flatMap(p=>{const m=globalThis.kwCompradorMatches.evaluar(c,p);return m?[{propiedad_id:p.id,...m}]:[];});
+  // Un resultado de oficina manipulado tampoco se acepta en la base de datos.
+  calculados.push({propiedad_id:filas[3].id,porcentaje:100,categoria:'fuertes',criterios:[]});
+  const revision=(await db.query('select revision from comprador_estados where perfil_id=$1',[cliente.id])).rows[0].revision;
+  await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,revision,JSON.stringify(calculados)]);
+  assert.deepEqual((await db.query('select niveles from comprador_estados where perfil_id=$1',[cliente.id])).rows[0].niveles,{'80':1,'-1':1,'-2':1,'-3':1});
+  assert.equal((await db.query('select count(*)::int n from comprador_resultados where vigente')).rows[0].n,4);
+  assert.equal((await db.query("select count(*)::int n from comprador_catalogo_candidatos('CDMX','venta',array['Casa'],'MXN',0,3000000,0)")).rows[0].n,4);
+  await db.exec(`set role authenticated;set test.uid='${a}'`);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,-1,0)',[cliente.id])).rows.length,1);
+  await assert.rejects(db.query("select * from comprador_catalogo_candidatos('CDMX','venta',array['Casa'],'MXN',0,3000000,0)"));
+  await db.exec(`set test.uid='${b}'`);
+  assert.equal((await db.query('select * from comprador_matches_pagina($1,-1,0)',[cliente.id])).rows.length,0);
+  await db.exec('reset role');
+  const resumen=(await db.query("select pg_get_functiondef('private.comprador_enviar_resumenes()'::regprocedure) def")).rows[0].def;
+  await db.exec(resumen.replace("if extract(hour from now() at time zone 'America/Mexico_City')<>9 then return 0; end if;",'if false then return 0; end if;'));
+  assert.equal((await db.query('select private.comprador_enviar_resumenes() n')).rows[0].n,1);
+  const avisos=(await db.query('select mensaje from notificaciones')).rows;
+  assert.equal(avisos.length,1);assert.match(avisos[0].mensaje,/1 nuevas coincidencias/);
+  assert.equal((await db.query("select count(*)::int n from comprador_resultados where categoria<>'fuertes' and notificado_at is not null")).rows[0].n,0);
+  assert.equal((await db.query('select private.comprador_enviar_resumenes() n')).rows[0].n,0);
+  await db.query('update perfiles_comprador set municipios=$2,colonias_seleccionadas=$3 where id=$1',[cliente.id,['Cuauhtémoc'],JSON.stringify([{estado:'CDMX',municipio:'Cuauhtémoc',colonia:'Roma Norte'}])]);
+  const rev2=(await db.query('select revision from comprador_estados where perfil_id=$1',[cliente.id])).rows[0].revision;
+  await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,rev2,JSON.stringify([{propiedad_id:filas[0].id,porcentaje:100,categoria:'fuertes',criterios:[]}])]);
+  assert.equal((await db.query('select notificado_at from comprador_resultados where propiedad_id=$1',[filas[0].id])).rows[0].notificado_at,null);
+  assert.equal((await db.query('select private.comprador_enviar_resumenes() n')).rows[0].n,1);
  } finally {await db.close();}
 });

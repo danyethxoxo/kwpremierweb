@@ -3,7 +3,7 @@ import { secureServe } from '../_shared/security.ts'
 import '../../../assets/js/colonias-cdmx.js'
 import '../../../assets/js/comprador-matches.js'
 
-const motor = (globalThis as unknown as {kwCompradorMatches:{evaluar:(c:Record<string,unknown>,p:Record<string,unknown>)=>{porcentaje:number,criterios:unknown[]}|null}}).kwCompradorMatches
+const motor = (globalThis as unknown as {kwCompradorMatches:{evaluar:(c:Record<string,unknown>,p:Record<string,unknown>)=>{porcentaje:number,categoria:string,criterios:unknown[]}|null}}).kwCompradorMatches
 const secret = Deno.env.get('WEBHOOK_SECRET')
 secureServe({name:'matches-comprador',auth:req=>req.headers.has('x-webhook-secret')?'service':'user',maxBytes:16384},async(req,context)=>{
  const service=req.headers.has('x-webhook-secret')
@@ -22,11 +22,11 @@ secureServe({name:'matches-comprador',auth:req=>req.headers.has('x-webhook-secre
  for(const estado of pendientes || []) {
   const cliente=estado.perfiles_comprador as unknown as Record<string,unknown>
   try {
-   const clave=JSON.stringify([cliente.estado,cliente.operacion])
+   const clave=JSON.stringify([cliente.estado,cliente.operacion,cliente.tipos,cliente.moneda,cliente.precio_min,cliente.precio_max])
    if(cliente.activo && !catalogos.has(clave)) {
     const filas:Record<string,unknown>[]=[]
     if(cliente.activo) for(let offset=0;;offset+=1000) {
-     const res=await admin.rpc('comprador_catalogo_calculo',{p_estado:cliente.estado,p_operacion:cliente.operacion,p_offset:offset})
+     const res=await admin.rpc('comprador_catalogo_candidatos',{p_estado:cliente.estado,p_operacion:cliente.operacion,p_tipos:cliente.tipos,p_moneda:cliente.moneda,p_minimo:cliente.precio_min || 0,p_maximo:cliente.precio_max,p_offset:offset})
      if(res.error) throw res.error
      filas.push(...res.data)
      if(res.data.length<1000) break
@@ -35,7 +35,7 @@ secureServe({name:'matches-comprador',auth:req=>req.headers.has('x-webhook-secre
    }
    const resultados=cliente.activo ? catalogos.get(clave)!.flatMap(p=>{
     const m=motor.evaluar(cliente,p)
-    return m && m.porcentaje>=Number(cliente.umbral_match) ? [{propiedad_id:p.id,porcentaje:m.porcentaje,criterios:m.criterios}] : []
+    return m && (m.categoria!=='fuertes' || m.porcentaje>=Math.max(80,Number(cliente.umbral_match))) ? [{propiedad_id:p.id,porcentaje:m.porcentaje,categoria:m.categoria,criterios:m.criterios}] : []
    }) : []
    const guardado=await admin.rpc('comprador_guardar_resultados',{p_perfil:estado.perfil_id,p_revision:estado.revision,p_resultados:resultados})
    if(guardado.error) throw guardado.error

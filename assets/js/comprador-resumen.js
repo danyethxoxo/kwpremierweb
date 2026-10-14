@@ -6,8 +6,8 @@
     var diferencia = precio-presupuesto;
     var dinero = new Intl.NumberFormat('es-MX',{style:'currency',currency:moneda,maximumFractionDigits:0});
     grupos.push({nombre:'Presupuesto',detalle:!precio || p.moneda !== moneda ? 'Precio en la moneda solicitada no confirmado' : diferencia === 0 ? 'Coincide con el presupuesto' : dinero.format(Math.abs(diferencia)) + ' ' + moneda + ' por ' + (diferencia > 0 ? 'encima' : 'debajo') + ' del presupuesto'});
-    var municipio = !c.municipio || normal(c.municipio) === normal(p.municipio);
-    var colonia = !c.colonias || normal(c.colonias) === normal(p.colonia);
+    var lugar = g.kwCompradorMatches ? g.kwCompradorMatches.ubicacion(c,p) : {municipio:!c.municipio || normal(c.municipio) === normal(p.municipio),colonia:!c.colonias || normal(c.colonias) === normal(p.colonia)};
+    var municipio = lugar.municipio, colonia = lugar.colonia;
     var cerca = (criterios || []).some(function(x) { return x.nombre === 'Colonia' && x.parcial; });
     grupos.push({nombre:'Zona',detalle:municipio && colonia ? 'En la zona deseada' : cerca ? 'Cerca de la zona deseada' : municipio ? 'En el municipio deseado; colonia diferente' : 'Fuera de la zona deseada'});
     var detalles = [['recamaras_min','recamaras','recámara','recámaras'],['banos_min','banos','baño','baños'],['estacionamientos_min','estacionamientos','lugar de estacionamiento','lugares de estacionamiento']].map(function(a) {

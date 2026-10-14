@@ -8,10 +8,11 @@ vm.runInContext(readFileSync(new URL('../assets/js/comprador-matches.js',import.
 const evaluar = context.window.kwCompradorMatches.evaluar;
 const cliente = {operacion:'venta',tipos:['Casa'],estado:'Ciudad de México',municipio:'Benito Juárez',precio_max:7000000,moneda:'MXN',recamaras_min:3,notas:'Roof garden\nJardín'};
 const propiedad = {estatus:'publicada',operacion:'venta',tipos_filtro:['Casa'],tipo:'Casa',estado:'Ciudad de México',municipio:'Benito Juárez',precio:6500000,moneda:'MXN',recamaras:3,descripcion:'Amplio ROOF GARDEN y jardín privado.'};
-test('cercanía entre Del Valle Centro y Nápoles otorga 12 de 20 puntos',()=>{
+test('una colonia cercana sigue siendo alternativa en otra zona',()=>{
   const resultado = evaluar({...cliente,colonias:'Del Valle Centro'},{...propiedad,colonia:'Nápoles'});
-  assert.equal(resultado.criterios.find(c=>c.nombre==='Colonia').aporte,12);
-  assert.equal(resultado.porcentaje,92);
+  assert.equal(resultado.criterios.find(c=>c.nombre==='Colonia').aporte,0);
+  assert.equal(resultado.categoria,'otras_zonas');
+  assert(resultado.porcentaje<80);
 });
 test('colonias lejanas y nombres fuera de CDMX no reciben puntos de cercanía',()=>{
   const resultado = evaluar({...cliente,colonias:'Del Valle Centro'},{...propiedad,colonia:'Roma Norte',municipio:'Cuauhtémoc'});
@@ -19,16 +20,37 @@ test('colonias lejanas y nombres fuera de CDMX no reciben puntos de cercanía',(
   assert.equal(context.window.kwColonias.buscar('Jalisco','Benito Juárez','Del Valle Centro'),null);
   assert.equal(context.window.kwColonias.buscar('Ciudad de México','Coyoacán','Del Valle Centro'),null);
 });
-test('presupuesto ponderado 40 puntos y descuento proporcional hasta el 16%',()=>{
-  for (const [exceso,esperado] of [[0,40],[.01,37.5],[.02,35],[.10,15],[.16,0],[.2,0]]) {
+test('exceso de presupuesto solo aparece como alternativa hasta 10%',()=>{
+  for (const [exceso,esperado] of [[0,40],[.01,37.5],[.02,35],[.10,15]]) {
     const resultado = evaluar(cliente,{...propiedad,precio:cliente.precio_max*(1+exceso)});
     assert.equal(resultado.criterios.find(c=>c.nombre==='Presupuesto').aporte,esperado);
+    assert.equal(resultado.categoria,exceso ? 'otro_presupuesto' : 'fuertes');
   }
+  assert.equal(evaluar(cliente,{...propiedad,precio:cliente.precio_max*1.16}),null);
 });
-test('precio inferior al mínimo no se penaliza y los requisitos libres suman',()=>{
-  const resultado = evaluar({...cliente,precio_min:6000000,recamaras_min:null,municipio:'',notas:''},{...propiedad,precio:5000000,recamaras:null});
+test('se respeta el minimo elegido y los requisitos libres no exigen datos',()=>{
+  assert.equal(evaluar({...cliente,precio_min:6000000},{...propiedad,precio:5000000}),null);
+  const resultado = evaluar({...cliente,precio_min:null,recamaras_min:null,municipio:'',notas:''},{...propiedad,precio:5000000,recamaras:null});
   assert.equal(resultado.porcentaje,100);
   assert.equal(resultado.criterios.reduce((s,c)=>s+c.peso,0),100);
+});
+
+test('tipo real excluye oficinas aunque el filtro inferido contenga Casa',()=>{
+  assert.equal(evaluar(cliente,{...propiedad,tipo:'Oficina',tipos_filtro:['Oficina','Casa'],titulo:'Oficina en casa adaptada'}),null);
+});
+
+test('acepta varias alcaldias y colonias y no confunde colonias homonimas',()=>{
+  const c={...cliente,municipios:['Benito Juárez','Coyoacán'],colonias_seleccionadas:[{estado:cliente.estado,municipio:'Benito Juárez',colonia:'Del Valle'},{estado:cliente.estado,municipio:'Coyoacán',colonia:'Del Carmen'}]};
+  assert.equal(evaluar(c,{...propiedad,colonia:'Del Carmen',municipio:'Coyoacán'}).categoria,'fuertes');
+  assert.equal(evaluar(c,{...propiedad,colonia:'Del Carmen',municipio:'Benito Juárez'}).categoria,'otras_zonas');
+  assert.equal(evaluar(c,{...propiedad,colonia:'Del Valle',municipio:'Cuauhtémoc'}).categoria,'otras_zonas');
+});
+
+test('minimos numericos incumplidos o desconocidos van a otras caracteristicas',()=>{
+  for(const recamaras of [1,null]) {
+    const m=evaluar(cliente,{...propiedad,recamaras});
+    assert.equal(m.categoria,'otras_caracteristicas');assert(m.porcentaje<80);
+  }
 });
 test('ubicación exacta da 10 y 20 puntos; cercanía no se supone sin coordenadas',()=>{
   const c = {...cliente,colonias:'Del Valle Norte'};
