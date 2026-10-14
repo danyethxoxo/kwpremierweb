@@ -9,7 +9,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
    create function auth.uid() returns uuid language sql stable as $$select '11111111-1111-4111-8111-111111111111'::uuid$$;
    create function is_staff_or_above() returns boolean language sql stable as $$select false$$;
    create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;
-   create table propiedades(id uuid primary key,fuente text,fuente_id text,titulo text,operacion text,estatus text,tipo text,precio numeric,moneda text,
+   create table propiedades(id uuid primary key,fuente text,fuente_id text,titulo text,descripcion text,operacion text,estatus text,tipo text,precio numeric,moneda text,
     recamaras int,banos numeric,estacionamientos int,m2_construccion numeric,m2_terreno numeric,calle text,colonia text,municipio text,estado text,cp text,pais text,
     imagenes jsonb,miniatura_url text,caracteristicas jsonb,asesor_id uuid,asesor_nombre text,market_center text,updated_at timestamptz,enlace_kw text,asesor_kw_id text,lat numeric,lng numeric);
    alter table propiedades enable row level security;
@@ -17,7 +17,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
    create policy inventario on propiedades for select to authenticated using(position('propiedades_inventario' in current_setting('request.path',true))>0);
    grant usage on schema auth,public to authenticated;
    grant select on propiedades to authenticated;
-   create view propiedades_inventario with(security_invoker=true) as select * from propiedades;
+   create view propiedades_inventario with(security_invoker=true) as select p.* from propiedades p;
    grant select on propiedades_inventario to authenticated;
    insert into propiedades(id,fuente,titulo,operacion,estatus,tipo,precio,estado,municipio,imagenes,updated_at)
     select gen_random_uuid(),'kwmexico','Casa '||n,'venta',case when n<=45 then 'publicada' else 'suspendida' end,'Casa',n*1000,
@@ -31,6 +31,8 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   const poligonoSql=readFileSync(new URL('../supabase/migrations/20261013224502_propiedades_poligono.sql',import.meta.url),'utf8');
   await db.exec(poligonoSql);await db.exec(poligonoSql);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013235443_propiedades_mapa_operacion.sql',import.meta.url),'utf8'));
+  const operacionSql=readFileSync(new URL('../supabase/migrations/20261014155225_propiedades_operacion_por_texto.sql',import.meta.url),'utf8');
+  await db.exec(operacionSql);await db.exec(operacionSql);
   await db.exec("update propiedades set lat=19+replace(titulo,'Casa ','')::numeric*.001,lng=-99;update propiedades set lat=null where titulo='Casa 45';update propiedades set lng=-190 where titulo='Casa 44'");
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
@@ -64,6 +66,29 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   const trazo={estatus:'publicada',zona:[19,-100,20,-98],poligono:[[-100,19],[-98,19],[-100,20]]};
   assert.equal((await page(trazo)).total,42,'el triangulo excluye puntos dentro de su rectangulo pero fuera del dibujo');
   assert.equal((await mapa(trazo)).total,42);
+  await db.exec(`reset role;
+   update propiedades set operacion=null,titulo='VENTA DE CASA',descripcion='Ideal para generar ingresos por renta' where titulo='Casa 3';
+   update propiedades set operacion=null,titulo='Propiedad sin titulo comercial',descripcion='Departamento en alquiler mensual' where titulo='Casa 4';
+   update propiedades set operacion=null,titulo='Casa en venta o renta' where titulo='Casa 5';
+   update propiedades set operacion=null,titulo='Casa por confirmar',descripcion='Excelente rentabilidad cerca de restaurantes' where titulo='Casa 6';
+   set role authenticated;`);
+  const ventasTexto=await page({texto:'VENTA DE CASA',operacion:['venta']});
+  assert.equal(ventasTexto.total,1);assert.equal(ventasTexto.data[0].operacion,'venta');
+  assert.equal((await mapa({texto:'VENTA DE CASA',operacion:['venta']})).puntos[0][3],'venta');
+  const rentaTexto=await page({texto:'Propiedad sin titulo comercial',operacion:['renta']});
+  assert.equal(rentaTexto.total,1);assert.equal(rentaTexto.data[0].operacion,'renta');
+  assert.equal((await mapa({texto:'Propiedad sin titulo comercial',operacion:['renta']})).puntos[0][3],'renta');
+  for(const op of ['venta','renta']){
+   const conjunta=await page({texto:'Casa en venta o renta',operacion:[op]});
+   assert.equal(conjunta.total,1);assert.deepEqual(conjunta.data[0].operaciones_filtro,['venta','renta']);
+   assert.equal((await mapa({texto:'Casa en venta o renta',operacion:[op]})).puntos[0][3],'mixto');
+  }
+  assert.equal((await page({texto:'Casa por confirmar'})).data[0].operacion,null);
+  assert.equal((await mapa({texto:'Casa por confirmar'})).puntos[0][3],null);
+  for(const op of ['venta','renta']){
+   assert.equal((await page({texto:'Casa por confirmar',operacion:[op]})).total,1);
+   assert.equal((await mapa({texto:'Casa por confirmar',operacion:[op]})).puntos[0][3],null);
+  }
   for(const invalido of [[],[[1,2],[2,3]],[[0,0],[1,1],[2,2]],[[0,0],[181,2],[3,2]],'texto',Array.from({length:201},()=>[0,0])]){
     await assert.rejects(db.query('select propiedad_poligono($1)',[JSON.stringify(invalido)]));
   }

@@ -75,7 +75,7 @@
     var caja = document.createElement('div'); caja.className = 'prop-mapa-ficha';
     caja.dataset.propiedadId = p.id; caja.propiedadMapa = p;
     var encabezado = document.createElement('div'); encabezado.className = 'prop-mapa-ficha-cabecera';
-    if (p.operacion) encabezado.appendChild(texto('span', p.operacion === 'renta' ? 'Renta' : 'Venta', 'prop-mapa-operacion'));
+    encabezado.appendChild(texto('span', window.etiquetaOperacion(p), 'prop-mapa-operacion'));
     var acciones = document.createElement('div'); acciones.className = 'prop-acciones';
     var toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'prop-acciones-toggle';
     toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-haspopup','menu');toggle.setAttribute('aria-label','Más opciones de esta propiedad');
@@ -133,7 +133,7 @@
       var p = fichas.get(id) || (window.propiedadesPaginaActual || {})[id];
       if (!p) {
         var respuesta = await window.kwSupabase.from('propiedades_inventario')
-          .select('id,fuente,fuente_id,titulo,operacion,estatus,tipo,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,calle,colonia,municipio,estado,cp,pais,imagenes,miniatura_url,caracteristicas,asesor_id,asesor_nombre,market_center,updated_at,enlace_kw,asesor_kw_id')
+          .select('id,fuente,fuente_id,titulo,operacion,operaciones_filtro,estatus,tipo,precio,moneda,recamaras,banos,estacionamientos,m2_construccion,m2_terreno,calle,colonia,municipio,estado,cp,pais,imagenes,miniatura_url,caracteristicas,asesor_id,asesor_nombre,market_center,updated_at,enlace_kw,asesor_kw_id')
           .eq('id', id).abortSignal(fichaControlador.signal).maybeSingle();
         if (respuesta.error || !respuesta.data) throw new Error('No se pudo consultar la propiedad');
         p = respuesta.data;
@@ -202,21 +202,22 @@
         maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) {
           var operaciones = new Set(grupo.getAllChildMarkers().map(function (pin) { return pin.options.operacion; }));
-          var tipo = operaciones.has('sin-operacion') ? 'sin-operacion' : operaciones.size > 1 ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
+          var tipo = operaciones.has('sin-operacion') ? 'sin-operacion' : operaciones.size > 1 || operaciones.has('mixto') ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
           return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [42,42]});
         }
       });
       grupos = capa; mapa.addLayer(capa);
       var iconos = {};
-      ['venta','renta','sin-operacion'].forEach(function (tipo) {
+      ['venta','renta','mixto','sin-operacion'].forEach(function (tipo) {
         iconos[tipo] = L.divIcon({className: '', html: '<div class="prop-mapa-pin prop-mapa-pin-' + tipo + '"></div>', iconSize: [24,28], iconAnchor: [12,28], popupAnchor: [0,-26]});
       });
       // Repartir el trabajo entre cuadros para mantener la interfaz utilizable.
       for (var i = 0; i < puntos.length; i += 150) {
         if (r !== revision || panel.hidden) return;
         capa.addLayers(puntos.slice(i, i + 150).map(function (p) {
-          var tipo = p[3] === 'renta' ? 'renta' : p[3] === 'venta' ? 'venta' : 'sin-operacion';
-          var marker = L.marker([p[1], p[2]], {icon: iconos[tipo], operacion: tipo, title: tipo === 'renta' ? 'Ver propiedad en renta' : tipo === 'venta' ? 'Ver propiedad en venta' : 'Ver propiedad', keyboard: true});
+          var tipo = ['venta','renta','mixto'].indexOf(p[3]) !== -1 ? p[3] : 'sin-operacion';
+          var titulo = tipo === 'renta' ? 'Ver propiedad en renta' : tipo === 'venta' ? 'Ver propiedad en venta' : tipo === 'mixto' ? 'Ver propiedad en venta y renta' : 'Ver propiedad: operación por confirmar';
+          var marker = L.marker([p[1], p[2]], {icon: iconos[tipo], operacion: tipo, title: titulo, keyboard: true});
           marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
           pines.set(p[0], marker);
@@ -228,6 +229,8 @@
       clave = nuevaClave;
       var sinUbicacion = Math.max(0, Number(datos.total) - Number(datos.ubicadas));
       estado.textContent = puntos.length.toLocaleString('es-MX') + (puntos.length===1 ? ' propiedad en el mapa' : ' propiedades en el mapa') + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en el listado' : '');
+      var porConfirmar = puntos.filter(function (p) { return !p[3]; }).length;
+      if (porConfirmar) estado.textContent += ' · ' + porConfirmar + ' con operación por confirmar (gris)';
       if (Number(datos.ubicadas) > puntos.length) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
       if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar el listado o quitar la zona.';
       btnZona.disabled = false;

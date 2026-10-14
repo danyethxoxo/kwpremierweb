@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261012menu">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
-<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261013naranja">
+<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261014operacion">
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
@@ -1079,7 +1079,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261009direccion';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261014operacion';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1196,6 +1196,11 @@
     });
   }
 
+  function etiquetaOperacion(p) {
+    if (p.operaciones_filtro && p.operaciones_filtro.length > 1) return 'Venta y renta';
+    return p.operacion === 'renta' ? 'Renta' : p.operacion === 'venta' ? 'Venta' : 'Por confirmar';
+  }
+
   function fmtPrecio(p, moneda, operacion) {
     // 0 también es "no lo mandaron": varios CRMs lo usan como plantilla
     // para "precio a consultar" en vez de dejarlo vacío.
@@ -1265,7 +1270,7 @@
       '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(tituloPropiedad) + '"></a>' +
       '<div class="prop-foto' + (tieneFoto ? ' cargando' : '') + '">' + foto +
         '<button type="button" class="prop-foto-mapa" aria-label="Ubicar en el mapa: ' + escapeHtml(tituloPropiedad) + '" title="Ver ubicación en el mapa" onclick="kwPropiedadesMapa.ubicar(this.closest(\'.prop-card\').dataset.propiedadId)"></button>' +
-        (p.operacion ? '<span class="prop-badge">' + (p.operacion === 'renta' ? 'Renta' : 'Venta') + '</span>' : '') +
+        '<span class="prop-badge">' + etiquetaOperacion(p) + '</span>' +
       '</div>' +
       '<div class="prop-acciones">' +
         '<button type="button" class="prop-acciones-toggle" aria-expanded="false" aria-haspopup="menu" aria-controls="' + accionesId + '" aria-label="Más opciones de ' + escapeHtml(tituloPropiedad) + '" onclick="alternarAccionesPropiedad(event, this)">' +
@@ -1346,7 +1351,8 @@
     var m2Max = num('f-m2-max');
 
     var vis = todas.filter(function (p) {
-      if (op && p.operacion !== op) return false;
+      var operaciones = p.operaciones_filtro || (p.operacion ? [p.operacion] : []);
+      if (op && operaciones.length && operaciones.indexOf(op) === -1) return false;
       if (estatus && p.estatus !== estatus) return false;
       if (tipo && !coincide(p.tipo, tipo)) return false;
       if (mc && !coincide(p.market_center, mc)) return false;
@@ -1562,7 +1568,7 @@
     actualizarListasUbicacion();
   }
 
-  var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, estatus, tipo, precio, moneda, recamaras, banos, ' +
+  var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, operaciones_filtro, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, m2_terreno, calle, colonia, municipio, estado, cp, pais, ' +
                'imagenes, miniatura_url, caracteristicas, asesor_id, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
 
@@ -2367,7 +2373,7 @@
 
 <script src="/assets/js/propiedades-geografia.js?v=20261013ficha"></script>
 <script src="/assets/js/propiedades-dibujo.js?v=20261013ficha"></script>
-<script src="/assets/js/propiedades-mapa.js?v=20261013colores"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261014operacion"></script>
 <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>

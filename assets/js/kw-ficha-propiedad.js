@@ -167,7 +167,7 @@
     if (!features.length && propiedad.tipo) features.push({ valor: texto(propiedad.tipo), etiqueta: 'TIPO DE PROPIEDAD' });
 
     return {
-      operacion: String(propiedad.operacion || '').toLowerCase() === 'renta' ? 'RENTA' : 'VENTA',
+      operacion: propiedad.operaciones_filtro && propiedad.operaciones_filtro.length > 1 ? 'VENTA Y RENTA' : propiedad.operacion === 'renta' ? 'RENTA' : propiedad.operacion === 'venta' ? 'VENTA' : 'POR CONFIRMAR',
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: texto(propiedad.tipo),
       direccion: direccion,
