@@ -26,7 +26,7 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
    create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;`);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003210800_comprador_carrusel_cuatro.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003215055_comprador_catalogo_directo_y_tarjetas.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261014221951_comprador_zonas_estrictas.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014223000_comprador_zonas_estrictas.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
