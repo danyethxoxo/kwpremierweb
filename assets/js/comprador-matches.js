@@ -78,9 +78,10 @@
     var porcentaje = Math.round(100 * puntos / total);
     var enZona = lugar.municipio && lugar.colonia;
     var enPresupuesto = conocido && precio <= maximo && precio >= minimo;
+    var cercana = !enZona && propiedad.distancia_km != null && Number(propiedad.distancia_km) >= 0 && Number(propiedad.distancia_km) <= 2;
     var categoria = enZona && enPresupuesto && especificaciones && porcentaje >= 80 ? 'fuertes' :
       !enZona && enPresupuesto && especificaciones &&
-        100 * (puntos + (lugar.municipio ? 0 : pesoMunicipio) + (lugar.colonia ? 0 : pesoColonia)) / total >= 80 ? 'otras_zonas' :
+        100 * (puntos + (lugar.municipio ? 0 : pesoMunicipio) + (lugar.colonia ? 0 : pesoColonia)) / total >= 80 ? (cercana ? 'zonas_cercanas' : 'otras_zonas') :
       enZona && enPresupuesto ? 'otras_caracteristicas' :
       enZona && conocido && especificaciones && precio >= minimo && excedente > 0 && excedente <= .10000001 && 100 * (puntos - puntosPrecio + 30) / total >= 80 ? 'otro_presupuesto' : null;
     if (!categoria) return null;

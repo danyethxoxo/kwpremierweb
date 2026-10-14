@@ -51,7 +51,7 @@
   var estadosServidor = new Map(), sondeoEstado = null;
   var abiertos = new Set(), vistasMatches = new Map();
   var municipiosElegidos = [], coloniasElegidas = [];
-  var categorias = [{nivel:80,clave:'fuertes',titulo:'Compatibles · 80% o más'},{nivel:-2,clave:'otras_caracteristicas',titulo:'Misma zona y presupuesto, otras características'},{nivel:-3,clave:'otro_presupuesto',titulo:'Misma zona, hasta 10% más'},{nivel:-1,clave:'otras_zonas',titulo:'Similares en otras zonas'}];
+  var categorias = [{nivel:80,clave:'fuertes',titulo:'Compatibles · 80% o más'},{nivel:-2,clave:'otras_caracteristicas',titulo:'Misma zona y presupuesto, otras características'},{nivel:-3,clave:'otro_presupuesto',titulo:'Misma zona, hasta 10% más'},{nivel:-4,clave:'zonas_cercanas',titulo:'Zonas cercanas · hasta 2 km'},{nivel:-1,clave:'otras_zonas',titulo:'Similares en otras zonas'}];
   function indexarInventario(filas) {
     if (catalogoIndexado === filas) return;
     catalogoIndexado = filas; indiceCiudad.clear(); cacheMatches.clear();
@@ -324,6 +324,7 @@
     var titulo = agregarTexto(body,'a',p.titulo); titulo.className = 'match-titulo'; titulo.style.display = 'block'; titulo.href = enlace; titulo.target = '_blank'; titulo.rel = 'noopener noreferrer';
     titulo.title = p.titulo || 'Ver propiedad';
     agregarTexto(body,'div',[p.colonia,p.municipio].filter(Boolean).join(', ')).className = 'match-ubic';
+    if (match.categoria === 'zonas_cercanas' && p.distancia_km != null) agregarTexto(body,'div','Aprox. ' + Number(p.distancia_km).toFixed(1) + ' km de una zona elegida').className = 'match-ubic';
     agregarTexto(body,'div',[p.recamaras != null ? p.recamaras + ' rec.' : '',p.banos != null ? p.banos + ' baños' : '',p.m2_construccion ? p.m2_construccion + ' m²' : p.m2_terreno ? p.m2_terreno + ' m²' : ''].filter(Boolean).join(' · ')).className = 'match-datos';
     var pie = document.createElement('div'); pie.className = 'match-pie'; agregarTexto(pie,'span',p.market_center || ''); var autor = agregarTexto(pie,/^\d+$/.test(p.asesor_kw_id || '') ? 'a' : 'span',p.asesor_nombre || '');
     if (autor.tagName === 'A') { autor.href = 'https://kw.com/es-419/agent/' + encodeURIComponent(String(p.asesor_nombre || '').toLowerCase().replace(/[^a-z0-9]+/g,'-')) + '/' + p.asesor_kw_id; autor.target = '_blank'; autor.rel = 'noopener noreferrer'; } body.append(pie);

@@ -22,11 +22,11 @@ secureServe({name:'matches-comprador',auth:req=>req.headers.has('x-webhook-secre
  for(const estado of pendientes || []) {
   const cliente=estado.perfiles_comprador as unknown as Record<string,unknown>
   try {
-   const clave=JSON.stringify([cliente.estado,cliente.operacion,cliente.tipos,cliente.moneda,cliente.precio_min,cliente.precio_max])
+   const clave=String(cliente.id)
    if(cliente.activo && !catalogos.has(clave)) {
     const filas:Record<string,unknown>[]=[]
     if(cliente.activo) for(let offset=0;;offset+=1000) {
-     const res=await admin.rpc('comprador_catalogo_candidatos',{p_estado:cliente.estado,p_operacion:cliente.operacion,p_tipos:cliente.tipos,p_moneda:cliente.moneda,p_minimo:cliente.precio_min || 0,p_maximo:cliente.precio_max,p_offset:offset})
+     const res=await admin.rpc('comprador_candidatos_perfil',{p_perfil:cliente.id,p_offset:offset})
      if(res.error) throw res.error
      filas.push(...res.data)
      if(res.data.length<1000) break

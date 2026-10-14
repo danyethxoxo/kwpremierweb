@@ -28,6 +28,13 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003215055_comprador_catalogo_directo_y_tarjetas.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014223000_comprador_zonas_estrictas.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014225821_comprador_tipo_validado_y_prioridades.sql',import.meta.url),'utf8'));
+  await db.exec(`alter table propiedades add column lat numeric,add column lng numeric,add column updated_at timestamptz;
+   create function propiedad_poligono(jsonb) returns polygon language sql immutable as $$select null::polygon$$;`);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261005050009_propiedades_filtros_multiples.sql',import.meta.url),'utf8').split('do $$')[0]);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261008160536_correos_utf8_estados_cdmx.sql',import.meta.url),'utf8').split('do $$')[0]);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014155225_propiedades_operacion_por_texto.sql',import.meta.url),'utf8').split('-- Mantener')[0]);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014232939_comprador_busqueda_unificada_y_cercania.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014233223_optimizar_filtro_compartido_comprador.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
@@ -97,5 +104,27 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,rev2,JSON.stringify([{propiedad_id:filas[0].id,porcentaje:100,categoria:'fuertes',criterios:[]}])]);
   assert.equal((await db.query('select notificado_at from comprador_resultados where propiedad_id=$1',[filas[0].id])).rows[0].notificado_at,null);
   assert.equal((await db.query('select private.comprador_enviar_resumenes() n')).rows[0].n,1);
+  // Igualar los cinco resultados del filtro normal, incluyendo alias de ciudad y operación inferida.
+  await db.query(`update perfiles_comprador set municipios=array['Zona prueba'],colonias_seleccionadas='[]',recamaras_min=null,banos_min=null,estacionamientos_min=null,superficie_min=null,precio_min=null where id=$1`,[cliente.id]);
+  for(let i=0;i<5;i++) await db.query(`insert into propiedades(id,titulo,tipo,municipio,colonia,precio,estado,moneda,operacion,estatus,fuente,lat,lng) values(gen_random_uuid(),$1,$2,'Zona prueba','Centro',2500000,'Ciudad de México','MXN',$3,'publicada','kwmexico',19.4,-99.16)`,['Casa en venta prueba '+i,i===0?'Oficina':'Casa',i===4?null:'venta']);
+  for(const [titulo,lat,lng] of [['Casa cercana',19.405,-99.16],['Casa lejana',20.1,-99.16],['Casa sin coordenadas',0,0]]) await db.query(`insert into propiedades(id,titulo,tipo,municipio,colonia,precio,estado,moneda,operacion,estatus,fuente,lat,lng) values(gen_random_uuid(),$1,'Casa','Otra zona','Otra',2500000,'CDMX','MXN','venta','publicada','kwmexico',$2,$3)`,[titulo,lat,lng]);
+  const cp=(await db.query('select * from perfiles_comprador where id=$1',[cliente.id])).rows[0];
+  const filtro=(await db.query('select comprador_filtros(c) f from perfiles_comprador c where id=$1',[cliente.id])).rows[0].f;
+  const directas=(await db.query('select id from propiedades_inventario_filtradas($1)',[JSON.stringify(filtro)])).rows.map(p=>p.id).sort();
+  const candidatos=(await db.query('select * from comprador_candidatos_perfil($1,0)',[cliente.id])).rows;
+  const matches=candidatos.flatMap(p=>{const m=globalThis.kwCompradorMatches.evaluar(cp,p);return m?[{propiedad_id:p.id,...m}]:[];});
+  assert.equal(directas.length,5);
+  assert.deepEqual(matches.filter(m=>m.categoria==='fuertes').map(m=>m.propiedad_id).sort(),directas);
+  const cerca=candidatos.find(p=>p.titulo==='Casa cercana'),lejos=candidatos.find(p=>p.titulo==='Casa lejana'),sin=candidatos.find(p=>p.titulo==='Casa sin coordenadas');
+  assert(Number(cerca.distancia_km)>.5&&Number(cerca.distancia_km)<.6);
+  assert.equal(globalThis.kwCompradorMatches.evaluar(cp,cerca).categoria,'zonas_cercanas');
+  assert.equal(lejos.distancia_km,null);assert.equal(sin.distancia_km,null);
+  assert.equal(globalThis.kwCompradorMatches.evaluar(cp,lejos).categoria,'otras_zonas');
+  const rev3=(await db.query('select revision from comprador_estados where perfil_id=$1',[cliente.id])).rows[0].revision;
+  await db.query('select comprador_guardar_resultados($1,$2,$3)',[cliente.id,rev3,JSON.stringify(matches)]);
+  const cercanas=(await db.query('select * from comprador_matches_pagina($1,-4,0)',[cliente.id])).rows;
+  assert.equal(cercanas.length,1);assert(Number(cercanas[0].propiedad.distancia_km)<2);
+  await db.query('select private.comprador_enviar_resumenes()');
+  assert.equal((await db.query("select count(*)::int n from comprador_resultados where categoria='zonas_cercanas' and notificado_at is not null")).rows[0].n,0);
  } finally {await db.close();}
 });

@@ -313,3 +313,25 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
   } finally {await page.close();}
  } finally {await browser.close();}
 });
+
+
+test('precio agrega comas al escribir y envia numeros al aplicar filtros',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {for(const width of [1440,390]) {
+  const {page,errores}=await pagina(browser,{width,height:900},[]);
+  try {
+   if(width<640)await page.locator('#prop-filtros-expandir').click();
+   await page.locator('#f-min').fill('1000000');
+   await page.locator('#f-max').fill('9000000');
+   assert.equal(await page.locator('#f-min').inputValue(),'1,000,000');
+   assert.equal(await page.locator('#f-max').inputValue(),'9,000,000');
+   const filtros=await page.evaluate(()=>leerFiltrosServidor());
+   assert.equal(filtros.minimo,1000000);assert.equal(filtros.maximo,9000000);
+   await page.locator('#f-max').fill('9,500,000.50');
+   assert.equal(await page.locator('#f-max').inputValue(),'9,500,000.50');
+   assert.equal(await page.evaluate(()=>leerFiltrosServidor().maximo),9500000.5);
+   await page.locator('#f-min').fill('');assert.equal(await page.evaluate(()=>leerFiltrosServidor().minimo),null);
+   assert.deepEqual(errores,[]);
+  } finally {await page.close();}
+ }} finally {await browser.close();}
+});

@@ -10,6 +10,7 @@
     var municipio = lugar.municipio, colonia = lugar.colonia;
     var cerca = (criterios || []).some(function(x) { return x.nombre === 'Colonia' && x.parcial; });
     grupos.push({nombre:'Zona',detalle:municipio && colonia ? 'En la zona deseada' : cerca ? 'Cerca de la zona deseada' : municipio ? 'En el municipio deseado; colonia diferente' : 'Fuera de la zona deseada'});
+    if (p.distancia_km != null) grupos.push({nombre:'Cercanía',detalle:'Aprox. ' + Number(p.distancia_km).toFixed(1) + ' km en línea recta a inmuebles de las zonas elegidas.'});
     var detalles = [['recamaras_min','recamaras','recámara','recámaras'],['banos_min','banos','baño','baños'],['estacionamientos_min','estacionamientos','lugar de estacionamiento','lugares de estacionamiento']].map(function(a) {
       var real = p[a[1]], deseado = Number(c[a[0]] || 0);
       if (real == null) return a[3] + ': sin información';

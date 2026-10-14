@@ -20,10 +20,10 @@ window.kwSupabase={
  auth:{getUser:async()=>({data:{user:{id:'qa'}}}),getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
  rpc(name,args){
   if(name==='propiedades_inventario_catalogo')return Promise.resolve({data:[{estado:'Ciudad de México',municipio:'Benito Juárez',colonia:'Del Valle Centro'},{estado:'Ciudad de México',municipio:'Coyoacán',colonia:'Del Carmen'},{estado:'Ciudad de México',municipio:'Cuauhtémoc',colonia:'Roma Norte'}]});
-  const data=name==='comprador_matches_pagina'?[{porcentaje:args.p_nivel===80?100:79,criterios:[],propiedad:{id:'propiedad',titulo:'Casa de prueba',estatus:'publicada',tipo:'Casa',operacion:'venta',precio:6500000,moneda:'MXN',colonia:'Del Valle Centro',municipio:'Benito Juárez',estado:'Ciudad de México',recamaras:3,banos:2,imagenes:[]}}]:[];
+  const data=name==='comprador_matches_pagina'?[{porcentaje:args.p_nivel===80?100:79,criterios:[],propiedad:{distancia_km:args.p_nivel===-4?0.6:null,id:'propiedad',titulo:'Casa de prueba',estatus:'publicada',tipo:'Casa',operacion:'venta',precio:6500000,moneda:'MXN',colonia:'Del Valle Centro',municipio:'Benito Juárez',estado:'Ciudad de México',recamaras:3,banos:2,imagenes:[]}}]:[];
   return {abortSignal:async()=>({data})};
  },
- from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:4,niveles:{80:1,'-1':1,'-2':1,'-3':1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
+ from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:5,niveles:{'-4':1,80:1,'-1':1,'-2':1,'-3':1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
  const q=new Proxy({}, {get(t,k){if(k==='then')return(ok,bad)=>Promise.resolve({data:payload?{...window.qaPerfil,...payload}:data(),error:null}).then(ok,bad);if(k==='insert'||k==='update')return p=>{payload=p;window.qaRegistrar(p);return q};if(k==='single')return async()=>({data:table==='profiles'?data():payload?{...window.qaPerfil,...payload}:window.qaPerfil,error:null});return()=>q}});return q;}
 };`;
 const results=[];
@@ -56,10 +56,13 @@ try {
   for(const campo of ['recamaras_min','banos_min','estacionamientos_min','superficie_min']) assert.equal(guardados[0][campo],null);
   await page.locator('.btn-coincidencias').click();await page.locator('.match-prop').waitFor();
   assert.match(await page.locator('.match-niveles button').nth(1).innerText(),/Misma zona y presupuesto/);
-  assert.match(await page.locator('.match-niveles button').nth(3).innerText(),/Similares en otras zonas/);
+  assert.match(await page.locator('.match-niveles button').nth(3).innerText(),/Zonas cercanas/);
+  assert.match(await page.locator('.match-niveles button').nth(4).innerText(),/Similares en otras zonas/);
   assert.match(await page.locator('.match-score').innerText(),/100% compatible/);
   await page.getByRole('button',{name:'Similares en otras zonas'}).click();await page.locator('.match-prop').waitFor();
   assert.equal(await page.locator('.match-score').innerText(),'Alternativa');
+  await page.getByRole('button',{name:/Zonas cercanas/}).click();await page.locator('.match-prop').waitFor();
+  assert.match(await page.locator('.match-body').innerText(),/0.6 km/);
   assert.equal(await page.locator('.catalogo-estado').count(),0);
   assert.equal(await page.locator('#notif-bell-slot').count(),1);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow horizontal');
