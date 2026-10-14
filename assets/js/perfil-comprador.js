@@ -380,10 +380,7 @@
         filaMatches.hidden = !filaMatches.hidden; desplegar.setAttribute('aria-expanded',String(!filaMatches.hidden));
         if (filaMatches.hidden) abiertos.delete(p.id); else abiertos.add(p.id);
         if (filaMatches.hidden || celdaMatches.childNodes.length) return;
-        var cabecera = document.createElement('div'); cabecera.className = 'matches-encabezado'; celdaMatches.append(cabecera);
-
         var niveles = categorias.map(function(c) { return c.nivel; });
-        agregarTexto(cabecera,'p','Las coincidencias de 80% o más respetan tipo, operación, zonas y presupuesto. Solo estas generan avisos por correo.').className = 'nota';
         var vistaGuardada = vistasMatches.get(p.id) || {}, modulo = Math.max(0,niveles.indexOf(vistaGuardada.nivel)), limite = vistaGuardada.offset || 0;
         var tabs = document.createElement('div'); tabs.className = 'match-niveles'; tabs.setAttribute('aria-label','Filtrar por compatibilidad'); var toolbar = document.createElement('div'); toolbar.className = 'match-toolbar'; celdaMatches.append(toolbar); toolbar.append(tabs);
         var botones = niveles.map(function (nivel,indice) {
