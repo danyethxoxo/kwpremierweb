@@ -53,7 +53,10 @@ try {
   assert.deepEqual(guardados[0].municipios,['Benito Juárez','Coyoacán']);
   assert.equal(guardados[0].colonias_seleccionadas.length,2);
   assert.equal(guardados[0].umbral_match,80);
+  for(const campo of ['recamaras_min','banos_min','estacionamientos_min','superficie_min']) assert.equal(guardados[0][campo],null);
   await page.locator('.btn-coincidencias').click();await page.locator('.match-prop').waitFor();
+  assert.match(await page.locator('.match-niveles button').nth(1).innerText(),/Misma zona y presupuesto/);
+  assert.match(await page.locator('.match-niveles button').nth(3).innerText(),/Similares en otras zonas/);
   assert.match(await page.locator('.match-score').innerText(),/100% compatible/);
   await page.getByRole('button',{name:'Similares en otras zonas'}).click();await page.locator('.match-prop').waitFor();
   assert.equal(await page.locator('.match-score').innerText(),'Alternativa');

@@ -51,7 +51,7 @@
   var estadosServidor = new Map(), sondeoEstado = null;
   var abiertos = new Set(), vistasMatches = new Map();
   var municipiosElegidos = [], coloniasElegidas = [];
-  var categorias = [{nivel:80,clave:'fuertes',titulo:'Compatibles · 80% o más'},{nivel:-1,clave:'otras_zonas',titulo:'Similares en otras zonas'},{nivel:-2,clave:'otras_caracteristicas',titulo:'Mismo presupuesto, otras características'},{nivel:-3,clave:'otro_presupuesto',titulo:'Cerca del presupuesto'}];
+  var categorias = [{nivel:80,clave:'fuertes',titulo:'Compatibles · 80% o más'},{nivel:-2,clave:'otras_caracteristicas',titulo:'Misma zona y presupuesto, otras características'},{nivel:-3,clave:'otro_presupuesto',titulo:'Misma zona, hasta 10% más'},{nivel:-1,clave:'otras_zonas',titulo:'Similares en otras zonas'}];
   function indexarInventario(filas) {
     if (catalogoIndexado === filas) return;
     catalogoIndexado = filas; indiceCiudad.clear(); cacheMatches.clear();

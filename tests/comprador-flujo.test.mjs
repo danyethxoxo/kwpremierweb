@@ -27,6 +27,7 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003210800_comprador_carrusel_cuatro.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261003215055_comprador_catalogo_directo_y_tarjetas.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014223000_comprador_zonas_estrictas.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014225821_comprador_tipo_validado_y_prioridades.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
@@ -54,7 +55,7 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
    ['Otra zona','Casa','Cuauhtémoc','Roma Norte',2800000,3],
    ['Otra característica','Casa','Coyoacán','Del Carmen',2800000,1],
    ['Otro presupuesto','Casa','Coyoacán','Del Carmen',3100000,3],
-   ['Oficina en casa','Oficina','Benito Juárez','Del Valle',2800000,3],
+   ['Exclusiva Oficina Corporativa en El Wtc Piso 19 con Baño Privado','Casa','Benito Juárez','Del Valle',2800000,3],
    ['Fuera de ciudad','Casa','Benito Juárez','Del Valle',2800000,3]
   ];
   const filas=[];
@@ -62,6 +63,13 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
    const {rows:[fila]}=await db.query(`insert into propiedades(id,titulo,tipo,municipio,colonia,precio,recamaras,estado,moneda,operacion,estatus,fuente) values(gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7,'MXN','venta','publicada','kwmexico') returning *`,[titulo,tipo,municipio,colonia,precio,recamaras,titulo==='Fuera de ciudad'?'Jalisco':'CDMX']);filas.push(fila);
   }
   const c=(await db.query('select * from perfiles_comprador where id=$1',[cliente.id])).rows[0];
+  assert.equal(filas[3].tipo_comprador,'Oficina');
+  for(const [tipo,titulo] of [['Casa','Local comercial en venta'],['Departamento','Casa en venta con jardin'],['Casa','Casa con oficina y cerca de locales'],['Casa','Casa adaptada para oficinas'],['Oficina','En venta en colonia Casa Blanca'],['Casa','Exclusivo PH en Napoles'],['Casa','Terreno para construir casas']]) {
+   assert.equal((await db.query('select comprador_tipo_validado($1,$2) tipo',[tipo,titulo])).rows[0].tipo,globalThis.kwCompradorMatches.tipoValidado(tipo,titulo));
+  }
+  assert.equal((await db.query(`select comprador_categoria_valida(c,p,'otras_caracteristicas',79) ok from perfiles_comprador c,propiedades p where c.id=$1 and p.id=$2`,[cliente.id,filas[0].id])).rows[0].ok,false);
+  assert.equal((await db.query(`select comprador_categoria_valida(c,p,'fuertes',100) ok from perfiles_comprador c,propiedades p where c.id=$1 and p.id=$2`,[cliente.id,filas[0].id])).rows[0].ok,false);
+  assert.equal((await db.query(`select comprador_categoria_valida(c,p,'otras_zonas',79) ok from perfiles_comprador c,propiedades p where c.id=$1 and p.id=$2`,[cliente.id,p.id])).rows[0].ok,false);
   const todas=(await db.query('select * from propiedades')).rows;
   const calculados=todas.flatMap(p=>{const m=globalThis.kwCompradorMatches.evaluar(c,p);return m?[{propiedad_id:p.id,...m}]:[];});
   // Un resultado de oficina manipulado tampoco se acepta en la base de datos.

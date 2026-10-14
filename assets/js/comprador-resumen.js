@@ -18,7 +18,8 @@
       return delta === 0 ? 'Coinciden ' + (a[1] === 'recamaras' ? 'las recámaras' : a[1] === 'banos' ? 'los baños' : 'los estacionamientos') : n(Math.abs(delta)) + ' ' + (Math.abs(delta) === 1 ? a[2] : a[3]) + ' ' + (delta > 0 ? 'más' : 'menos') + ' de lo deseado';
     });
     grupos.push({nombre:'Características',detalle:detalles.join(' · ')});
-    var terreno = c.tipos && c.tipos.length && c.tipos.every(function(t) { return t === 'Terreno'; });
+    var tipo = g.kwCompradorMatches ? g.kwCompradorMatches.tipoValidado(p.tipo,p.titulo) : p.tipo;
+    var terreno = tipo === 'Terreno' || (!tipo && c.tipos && c.tipos.length && c.tipos.every(function(t) { return t === 'Terreno'; }));
     var area = terreno ? p.m2_terreno : p.m2_construccion, requerido = Number(c.superficie_min || 0), delta = Number(area)-requerido;
     grupos.push({nombre:'Tamaño',detalle:area == null ? 'Superficie no confirmada' : !requerido ? n(area) + ' m²; sin mínimo solicitado' : delta === 0 ? 'Coincide con la superficie deseada' : n(Math.abs(delta)) + ' m² ' + (delta > 0 ? 'más' : 'menos') + ' de lo deseado'});
     var particulares = String(c.notas || '').split(/[\n,;]+/).map(function(t) { return t.trim(); }).filter(Boolean);

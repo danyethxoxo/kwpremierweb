@@ -21,7 +21,7 @@ test('colonias lejanas y nombres fuera de CDMX no reciben puntos de cercanía',(
   assert.equal(context.window.kwColonias.buscar('Ciudad de México','Coyoacán','Del Valle Centro'),null);
 });
 test('exceso de presupuesto solo aparece como alternativa hasta 10%',()=>{
-  for (const [exceso,esperado] of [[0,40],[.01,37.5],[.02,35],[.10,15]]) {
+  for (const [exceso,esperado] of [[0,30],[.01,27],[.02,24],[.10,0]]) {
     const resultado = evaluar(cliente,{...propiedad,precio:cliente.precio_max*(1+exceso)});
     assert.equal(resultado.criterios.find(c=>c.nombre==='Presupuesto').aporte,esperado);
     assert.equal(resultado.categoria,exceso ? 'otro_presupuesto' : 'fuertes');
@@ -39,6 +39,37 @@ test('tipo real excluye oficinas aunque el filtro inferido contenga Casa',()=>{
   assert.equal(evaluar(cliente,{...propiedad,tipo:'Oficina',tipos_filtro:['Oficina','Casa'],titulo:'Oficina en casa adaptada'}),null);
 });
 
+test('regresion WTC: una oficina mal etiquetada como Casa nunca entra en una busqueda de casas',()=>{
+  const oficina={...propiedad,tipo:'Casa',titulo:'Exclusiva Oficina Corporativa en El Wtc Piso 19 con Baño Privado'};
+  assert.equal(evaluar(cliente,oficina),null);
+  assert.equal(context.window.kwCompradorMatches.tipoValidado(oficina.tipo,oficina.titulo),'Oficina');
+  assert.equal(evaluar({...cliente,tipos:['Oficina'],recamaras_min:null,notas:''},oficina).categoria,'fuertes');
+});
+
+test('valida el inmueble principal sin confundir usos posibles ni referencias del entorno',()=>{
+  for(const [tipo,titulo,esperado] of [
+    ['Departamento','Casa en venta con jardin','Casa'],
+    ['Casa','Casa con oficina y cerca de locales','Casa'],
+    ['Casa','Casa adaptada para oficinas','Oficina'],
+    ['Casa','Oficina en casa adaptada','Oficina'],
+    ['Casa','Local comercial en venta','Local comercial'],
+    ['Departamento','Departamento cerca de oficinas y escuelas','Departamento'],
+    ['Oficina','En venta en colonia Casa Blanca','Oficina'],
+    ['Casa','Exclusivo PH en Napoles','Departamento'],
+    ['Casa','Terreno para construir casas','Terreno']
+  ]) assert.equal(context.window.kwCompradorMatches.tipoValidado(tipo,titulo),esperado,titulo);
+});
+
+test('campos numericos vacios significan cualquiera, incluso si el inmueble no tiene esos datos',()=>{
+  for(const vacio of [null,undefined,'',0]) {
+    const c={...cliente,notas:'',recamaras_min:vacio,banos_min:vacio,estacionamientos_min:vacio,superficie_min:vacio};
+    const m=evaluar(c,{...propiedad,recamaras:null,banos:null,estacionamientos:null,m2_construccion:null});
+    assert.equal(m.categoria,'fuertes');assert.equal(m.porcentaje,100);
+    for(const criterio of m.criterios.filter(c=>['Recámaras','Baños','Estacionamientos','Superficie'].includes(c.nombre))) {assert.equal(criterio.peso,0);assert.equal(criterio.detalle,'Cualquiera');}
+    assert(m.criterios.find(c=>c.nombre==='Alcaldía / municipio').peso>m.criterios.find(c=>c.nombre==='Presupuesto').peso);
+  }
+});
+
 test('acepta varias alcaldias y colonias y no confunde colonias homonimas',()=>{
   const c={...cliente,municipios:['Benito Juárez','Coyoacán'],colonias_seleccionadas:[{estado:cliente.estado,municipio:'Benito Juárez',colonia:'Del Valle'},{estado:cliente.estado,municipio:'Coyoacán',colonia:'Del Carmen'}]};
   assert.equal(evaluar(c,{...propiedad,colonia:'Del Carmen',municipio:'Coyoacán'}).categoria,'fuertes');
@@ -52,16 +83,17 @@ test('minimos numericos incumplidos o desconocidos van a otras caracteristicas',
     assert.equal(m.categoria,'otras_caracteristicas');assert(m.porcentaje<80);
   }
 });
-test('ubicación exacta da 10 y 20 puntos; cercanía no se supone sin coordenadas',()=>{
+test('la zona pesa mas que el presupuesto y una colonia cercana no es exacta',()=>{
   const c = {...cliente,colonias:'Del Valle Norte'};
   const exacto = evaluar(c,{...propiedad,colonia:'Del Valle Norte'});
-  assert.equal(exacto.criterios.find(r=>r.nombre==='Colonia').aporte,20);
+  assert.equal(exacto.criterios.find(r=>r.nombre==='Colonia').aporte,30);
+  assert.equal(exacto.criterios.find(r=>r.nombre==='Alcaldía / municipio').aporte,20);
   const otra = evaluar(c,{...propiedad,colonia:'Otra colonia'});
   assert.equal(otra.criterios.find(r=>r.nombre==='Colonia').aporte,0);
 });
 test('coincidencia completa y etiquetas ignoran acentos y mayúsculas',()=>assert.equal(evaluar(cliente,propiedad).porcentaje,100));
 test('no ofrece inmuebles suspendidos, de otra operación, tipo, ciudad o moneda',()=>{
-  for (const cambio of [{estatus:'suspendida'},{operacion:'renta'},{tipos_filtro:['Terreno']},{estado:'Jalisco'},{moneda:'USD'}]) assert.equal(evaluar(cliente,{...propiedad,...cambio}),null);
+  for (const cambio of [{estatus:'suspendida'},{operacion:'renta'},{tipo:'Terreno'},{estado:'Jalisco'},{moneda:'USD'}]) assert.equal(evaluar(cliente,{...propiedad,...cambio}),null);
 });
 test('faltantes y negaciones no cuentan como características cumplidas',()=>{
   const resultado = evaluar(cliente,{...propiedad,recamaras:null,descripcion:'Sin jardín. No cuenta con roof garden.'});
