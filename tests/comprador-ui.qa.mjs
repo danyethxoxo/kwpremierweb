@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const root=process.cwd();
 const server=http.createServer((req,res)=>{const file=resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]));if(!file.startsWith(root)||!existsSync(file)){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'application/javascript','.css':'text/css','.png':'image/png'})[extname(file)]||'application/octet-stream');res.end(readFileSync(file));});
 await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
-const base=`http://127.0.0.1:${server.address().port}`;
+const base=process.env.KWP_QA_ORIGIN || `http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 mkdirSync('outputs/comprador',{recursive:true});
 const fixture={id:'11111111-1111-4111-8111-111111111111',nombre:'Cliente prueba',telefono:'5555555555',correo:'',operacion:'venta',moneda:'MXN',tipos:['Casa'],precio_max:7000000,estado:'Ciudad de México',municipio:'Benito Juárez',colonias:'',municipios:['Benito Juárez','Coyoacán'],colonias_seleccionadas:[{estado:'Ciudad de México',municipio:'Benito Juárez',colonia:'Del Valle Centro'},{estado:'Ciudad de México',municipio:'Coyoacán',colonia:'Del Carmen'}],umbral_match:80,activo:true,avisos_correo:true};
@@ -31,19 +31,19 @@ try {
  for(const width of [1440,390]) {
   const context=await browser.newContext({viewport:{width,height:1000}});
   const guardados=[];await context.exposeFunction('qaRegistrar',p=>guardados.push(p));
-  await context.route('https://**/*',r=>r.abort());
+  await context.route('https://**/*',r=>new URL(r.request().url()).origin===new URL(base).origin ? r.continue() : r.abort());
   await context.route('**/auth-guard.js*',r=>r.fulfill({contentType:'application/javascript',body:mock}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log('pageerror',e.message);});page.setDefaultTimeout(12000);
   await page.goto(base+'/hub/cliente-formulario.html',{waitUntil:'load'});
   await page.waitForFunction(()=>document.querySelector('select[name=estado]').options.length>1);
   await page.fill('[name=nombre]','Nuevo comprador');await page.fill('[name=telefono]','5555555555');await page.fill('[name=precio_max]','7000000');await page.check('[name=tipos][value=Casa]');
-  await page.locator('select[name=estado]').evaluate(el=>{el.value='Ciudad de México';el.dispatchEvent(new Event('change',{bubbles:true}));});
   // Usar los controles visibles, incluida su búsqueda, para agregar y quitar zonas.
   async function elegir(campo,texto) {
    const caja=page.locator('select[name='+campo+']').locator('..');
-   await caja.locator('.catalogo-buscar').fill(texto);
+   await caja.locator('.catalogo-buscar').click();
    await caja.locator('.kw-select-opcion:visible').filter({hasText:texto}).first().click();
   }
+  await elegir('estado','Ciudad de México');
   await elegir('municipio','Benito Juárez');await elegir('municipio','Coyoacán');
   await elegir('colonias','Del Valle Centro');await elegir('colonias','Del Carmen');
   assert.equal(await page.locator('#zonas-municipio .etiqueta').count(),2);
