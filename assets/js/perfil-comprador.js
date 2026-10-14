@@ -392,43 +392,57 @@
         var estadoPagina = agregarTexto(nav,'p',''); estadoPagina.setAttribute('role','status');
         var controles = document.createElement('div'); controles.className = 'acciones'; nav.append(controles);
         var anterior = agregarTexto(controles,'button','‹'), siguiente = agregarTexto(controles,'button','›'); anterior.type = siguiente.type = 'button'; anterior.setAttribute('aria-label','Propiedades anteriores'); siguiente.setAttribute('aria-label','Más propiedades');
+        [anterior,siguiente].forEach(function(b,i) {
+          b.replaceChildren();
+          var svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('aria-hidden','true');
+          var path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',i ? 'm9 5 7 7-7 7' : 'm15 5-7 7 7 7');
+          svg.append(path); b.append(svg);
+        });
         var grid = document.createElement('div'); grid.className = 'matches-grid'; var carrusel = document.createElement('div'); carrusel.className = 'match-carrusel'; celdaMatches.append(carrusel); carrusel.append(anterior,grid,siguiente);
-        var solicitudPagina = 0;
+        var solicitudPagina = 0, porPagina = 1;
+        function capacidad() { return Math.max(1,Math.floor((grid.clientWidth+12)/252)); }
         function actualizarFlechas() {
           if (grid.getAttribute('aria-busy') === 'true') return;
           anterior.disabled = limite === 0 && grid.scrollLeft < 2;
-          siguiente.disabled = limite+4 >= Number(estadoGuardado.niveles[niveles[modulo]] || 0) && grid.scrollLeft+grid.clientWidth >= grid.scrollWidth-2;
+          siguiente.disabled = limite+porPagina >= Number(estadoGuardado.niveles[niveles[modulo]] || 0);
         }
         grid.addEventListener('scroll',actualizarFlechas,{passive:true});
-        var observador = new ResizeObserver(actualizarFlechas); observador.observe(grid);
+        var observador = new ResizeObserver(function () {
+          if (!grid.isConnected) { observador.disconnect(); return; }
+          if (!grid.clientWidth) return;
+          var nueva = capacidad();
+          if (nueva !== porPagina) { limite = Math.floor(limite/nueva)*nueva; pagina(); }
+          else actualizarFlechas();
+        }); observador.observe(grid);
         async function pagina() {
           var solicitud = ++solicitudPagina, nivel = niveles[modulo], offset = limite, cantidad = Number(estadoGuardado.niveles[nivel] || 0);
+          porPagina = capacidad(); grid.style.setProperty('--match-columnas',String(porPagina));
           vistasMatches.set(p.id,{nivel:nivel,offset:offset});
           botones.forEach(function (b,i) { b.classList.toggle('seleccionado',i===modulo); b.setAttribute('aria-pressed',String(i===modulo)); });
           grid.replaceChildren();
           if (!cantidad) { grid.setAttribute('aria-busy','false'); agregarTexto(grid,'p',nivel === 80 ? 'No hay coincidencias de 80% o más que respeten tus requisitos. Puedes explorar las alternativas.' : 'No hay alternativas en este grupo.').className = 'kw-vacio'; estadoPagina.textContent = '0 propiedades'; anterior.disabled = siguiente.disabled = true; return; }
           animacionCarga(estadoPagina,true); anterior.disabled = siguiente.disabled = true; grid.setAttribute('aria-busy','true');
-          for(var i=0;i<Math.min(4,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
+          for(var i=0;i<Math.min(porPagina,cantidad-offset);i++) { var skeleton = document.createElement('div'); skeleton.className = 'match-skeleton'; skeleton.setAttribute('aria-hidden','true'); grid.append(skeleton); }
           try {
-            var filas = await window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset);
+            var filas = await window.kwCompradorCargas.grupo(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset,Math.min(porPagina,cantidad-offset));
             if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren();
             filas.forEach(function (r) { pintarPropiedad({propiedad:r.propiedad,match:{porcentaje:r.porcentaje,criterios:r.criterios,categoria:r.categoria || categorias[modulo].clave}},grid,p); });
             if (!filas.length) agregarTexto(grid,'p','Estas propiedades ya no están disponibles. Las coincidencias se actualizarán automáticamente.').className = 'kw-vacio';
-            estadoPagina.textContent = cantidad + (cantidad === 1 ? ' propiedad' : ' propiedades');
+            estadoPagina.textContent = (offset+1) + ' a ' + (offset+filas.length) + ' de ' + cantidad;
             actualizarFlechas();
-            if (offset+4 < cantidad) window.kwCompradorCargas.pagina(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+4).catch(function () {});
+            if (offset+porPagina < cantidad) window.kwCompradorCargas.grupo(window.kwSupabase,p.id,estadoGuardado.calculado_at,nivel,offset+porPagina,Math.min(porPagina,cantidad-offset-porPagina)).catch(function () {});
           } catch (error) {
             if (solicitud !== solicitudPagina || !grid.isConnected) return;
             grid.replaceChildren(); estadoPagina.textContent = 'La carga no se completó.';
             var aviso = document.createElement('div'); aviso.className = 'match-error'; aviso.setAttribute('role','alert'); grid.append(aviso);
             agregarTexto(aviso,'p','No pudimos cargar esta página. Tu cliente y sus preferencias están guardados.');
             var reintentar = agregarTexto(aviso,'button','Volver a intentar'); reintentar.type = 'button'; reintentar.addEventListener('click',pagina);
-            anterior.disabled = offset === 0; siguiente.disabled = offset+4 >= cantidad;
+            anterior.disabled = offset === 0; siguiente.disabled = offset+porPagina >= cantidad;
           } finally { if (solicitud === solicitudPagina) { grid.setAttribute('aria-busy','false'); actualizarFlechas(); } }
         }
-        anterior.addEventListener('click',function () { if (grid.scrollLeft > 2) grid.scrollBy({left:-grid.clientWidth,behavior:'smooth'}); else { limite = Math.max(0,limite-4); pagina(); } });
-        siguiente.addEventListener('click',function () { if (grid.scrollLeft+grid.clientWidth < grid.scrollWidth-2) grid.scrollBy({left:grid.clientWidth,behavior:'smooth'}); else { limite += 4; pagina(); } }); pagina();
+        anterior.addEventListener('click',function () { limite = Math.max(0,limite-porPagina); pagina(); });
+        siguiente.addEventListener('click',function () { limite += porPagina; pagina(); }); pagina();
       }
       desplegar.addEventListener('click',alternarMatches);
       if (listo && abiertos.has(p.id)) alternarMatches();

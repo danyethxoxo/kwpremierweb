@@ -28,5 +28,11 @@
     vuelos.set(clave,tarea);
     try { return await tarea; } finally { vuelos.delete(clave); }
   }
-  global.kwCompradorCargas = {pagina:pagina};
+  async function grupo(sb, perfil, version, nivel, offset, cantidad) {
+    var pedidos = [];
+    for (var desde = 0; desde < cantidad; desde += 4) pedidos.push(pagina(sb,perfil,version,nivel,offset+desde));
+    var paginas = await Promise.all(pedidos);
+    return paginas.reduce(function (filas,pagina) { return filas.concat(pagina); },[]).slice(0,cantidad);
+  }
+  global.kwCompradorCargas = {pagina:pagina,grupo:grupo};
 })(typeof window === 'undefined' ? globalThis : window);

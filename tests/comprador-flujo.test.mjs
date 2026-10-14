@@ -35,6 +35,7 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014155225_propiedades_operacion_por_texto.sql',import.meta.url),'utf8').split('-- Mantener')[0]);
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014232939_comprador_busqueda_unificada_y_cercania.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014233223_optimizar_filtro_compartido_comprador.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261014235127_propiedades_busqueda_palabras.sql',import.meta.url),'utf8'));
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
@@ -70,6 +71,19 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
    const {rows:[fila]}=await db.query(`insert into propiedades(id,titulo,tipo,municipio,colonia,precio,recamaras,estado,moneda,operacion,estatus,fuente) values(gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7,'MXN','venta','publicada','kwmexico') returning *`,[titulo,tipo,municipio,colonia,precio,recamaras,titulo==='Fuera de ciudad'?'Jalisco':'CDMX']);filas.push(fila);
   }
   const c=(await db.query('select * from perfiles_comprador where id=$1',[cliente.id])).rows[0];
+  await db.exec(`set role authenticated;set test.uid='${a}'`);
+  for(const texto of ['wtc','oficina en wtc','oficinas WTC','WTC oficina','oficina en World Trade Center','oficina con baño en wtc']) {
+   const encontrados=(await db.query('select id from propiedades_inventario_filtradas($1)',[JSON.stringify({texto})])).rows;
+   assert.deepEqual(encontrados.map(p=>p.id),[filas[3].id],texto);
+  }
+  for(const texto of ['oficina en wtc inexistente','oficina en polanco']) {
+   assert.equal((await db.query('select id from propiedades_inventario_filtradas($1)',[JSON.stringify({texto})])).rows.length,0,texto);
+  }
+  assert.equal((await db.query('select id from propiedades_inventario_filtradas($1)',[JSON.stringify({texto:'oficina en wtc',tipo:['Casa']})])).rows.length,0);
+  for(const [alias,original] of [['depto','departamento'],['piscina','alberca'],['cochera','estacionamiento']]) {
+   assert.equal((await db.query('select to_tsvector(\'pg_catalog.spanish\',propiedad_palabras_normalizar($1)) @@ propiedad_palabras_consulta($2) ok',[original,alias])).rows[0].ok,true);
+  }
+  await db.exec('reset role');
   assert.equal(filas[3].tipo_comprador,'Oficina');
   for(const [tipo,titulo] of [['Casa','Local comercial en venta'],['Departamento','Casa en venta con jardin'],['Casa','Casa con oficina y cerca de locales'],['Casa','Casa adaptada para oficinas'],['Oficina','En venta en colonia Casa Blanca'],['Casa','Exclusivo PH en Napoles'],['Casa','Terreno para construir casas']]) {
    assert.equal((await db.query('select comprador_tipo_validado($1,$2) tipo',[tipo,titulo])).rows[0].tipo,globalThis.kwCompradorMatches.tipoValidado(tipo,titulo));

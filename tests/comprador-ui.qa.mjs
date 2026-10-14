@@ -20,15 +20,15 @@ window.kwSupabase={
  auth:{getUser:async()=>({data:{user:{id:'qa'}}}),getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
  rpc(name,args){
   if(name==='propiedades_inventario_catalogo')return Promise.resolve({data:[{estado:'Ciudad de México',municipio:'Benito Juárez',colonia:'Del Valle Centro'},{estado:'Ciudad de México',municipio:'Coyoacán',colonia:'Del Carmen'},{estado:'Ciudad de México',municipio:'Cuauhtémoc',colonia:'Roma Norte'}]});
-  const data=name==='comprador_matches_pagina'?[{porcentaje:args.p_nivel===80?100:79,criterios:[],propiedad:{distancia_km:args.p_nivel===-4?0.6:null,id:'propiedad',titulo:'Casa de prueba',estatus:'publicada',tipo:'Casa',operacion:'venta',precio:6500000,moneda:'MXN',colonia:'Del Valle Centro',municipio:'Benito Juárez',estado:'Ciudad de México',recamaras:3,banos:2,imagenes:[]}}]:[];
+  const data=name==='comprador_matches_pagina'?Array.from({length:Math.max(0,Math.min(4,(args.p_nivel===80?12:1)-args.p_offset))},(_,i)=>({porcentaje:args.p_nivel===80?100:79,criterios:[],propiedad:{distancia_km:args.p_nivel===-4?0.6:null,id:'propiedad-'+(args.p_offset+i),titulo:'Casa de prueba '+(args.p_offset+i),estatus:'publicada',tipo:'Casa',operacion:'venta',precio:6500000,moneda:'MXN',colonia:'Del Valle Centro',municipio:'Benito Juárez',estado:'Ciudad de México',recamaras:3,banos:2,imagenes:[]}})):[];
   return {abortSignal:async()=>({data})};
  },
- from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:5,niveles:{'-4':1,80:1,'-1':1,'-2':1,'-3':1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
+ from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:16,niveles:{'-4':1,80:12,'-1':1,'-2':1,'-3':1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
  const q=new Proxy({}, {get(t,k){if(k==='then')return(ok,bad)=>Promise.resolve({data:payload?{...window.qaPerfil,...payload}:data(),error:null}).then(ok,bad);if(k==='insert'||k==='update')return p=>{payload=p;window.qaRegistrar(p);return q};if(k==='single')return async()=>({data:table==='profiles'?data():payload?{...window.qaPerfil,...payload}:window.qaPerfil,error:null});return()=>q}});return q;}
 };`;
 const results=[];
 try {
- for(const width of [1440,390]) {
+ for(const width of [1920,1440,390]) {
   const context=await browser.newContext({viewport:{width,height:1000}});
   const guardados=[];await context.exposeFunction('qaRegistrar',p=>guardados.push(p));
   await context.route('https://**/*',r=>new URL(r.request().url()).origin===new URL(base).origin ? r.continue() : r.abort());
@@ -54,12 +54,28 @@ try {
   assert.equal(guardados[0].colonias_seleccionadas.length,2);
   assert.equal(guardados[0].umbral_match,80);
   for(const campo of ['recamaras_min','banos_min','estacionamientos_min','superficie_min']) assert.equal(guardados[0][campo],null);
-  await page.locator('.btn-coincidencias').click();await page.locator('.match-prop').waitFor();
+  await page.locator('.btn-coincidencias').click();await page.locator('.match-prop').first().waitFor();
+  const capacidad=await page.locator('.matches-grid').evaluate(el=>Number(el.style.getPropertyValue('--match-columnas')));
+  assert.equal(await page.locator('.match-prop').count(),capacidad);
+  if(width===1920)assert(capacidad>4);
+  const hueco=await page.locator('.matches-grid').evaluate(el=>el.getBoundingClientRect().right-el.lastElementChild.getBoundingClientRect().right);
+  assert(Math.abs(hueco)<2,'las tarjetas llenan el ancho');
+  for(const boton of await page.locator('.match-carrusel > button').all()) {
+   const b=await boton.boundingBox(),svg=await boton.locator('svg').boundingBox();
+   assert(Math.abs(b.x+b.width/2-svg.x-svg.width/2)<1);assert(Math.abs(b.y+b.height/2-svg.y-svg.height/2)<1);
+   assert(b.x>=0&&b.x+b.width<=width);
+  }
+  await page.screenshot({path:`outputs/comprador/tarjetas-${width}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Más propiedades',exact:true}).click();
+  await page.waitForFunction(n=>document.querySelector('.match-paginacion p').textContent.startsWith((n+1)+' a '),capacidad);
+  assert.match(await page.locator('.match-titulo').first().innerText(),new RegExp(' '+capacidad+'$'));
+  await page.getByRole('button',{name:'Propiedades anteriores',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.match-paginacion p').textContent.startsWith('1 a '));
   assert.match(await page.locator('.match-niveles button').nth(1).innerText(),/Misma zona y presupuesto/);
   assert.match(await page.locator('.match-niveles button').nth(3).innerText(),/Zonas cercanas/);
   assert.match(await page.locator('.match-niveles button').nth(4).innerText(),/Similares en otras zonas/);
-  assert.match(await page.locator('.match-score').innerText(),/100% compatible/);
-  await page.getByRole('button',{name:'Similares en otras zonas'}).click();await page.locator('.match-prop').waitFor();
+  assert.match(await page.locator('.match-score').first().innerText(),/100% compatible/);
+  await page.getByRole('button',{name:'Similares en otras zonas'}).click();await page.locator('.match-prop').first().waitFor();
   assert.equal(await page.locator('.match-score').innerText(),'Alternativa');
   await page.getByRole('button',{name:/Zonas cercanas/}).click();await page.locator('.match-prop').waitFor();
   assert.match(await page.locator('.match-body').innerText(),/0.6 km/);

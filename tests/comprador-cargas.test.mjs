@@ -19,3 +19,14 @@ test('reintenta una interrupcion temporal pero no errores de autorizacion',async
  const denied={rpc:()=>({abortSignal:async()=>{llamadas++;return{error:{code:'42501'},status:403};}})};
  await assert.rejects(loader.pagina(denied,'a','r1',80,0));assert.equal(llamadas,3);
 });
+
+test('paginas de seis tarjetas conservan orden y no repiten ni saltan propiedades',async()=>{
+ const loader=motor(),offsets=[];
+ const sb={rpc:(_,args)=>({abortSignal:async()=>{offsets.push(args.p_offset);return {data:Array.from({length:Math.min(4,13-args.p_offset)},(_,i)=>({propiedad:{id:args.p_offset+i}}))};}})};
+ const primera=await loader.grupo(sb,'a','r1',80,0,6);
+ const segunda=await loader.grupo(sb,'a','r1',80,6,6);
+ const ultima=await loader.grupo(sb,'a','r1',80,12,1);
+ assert.deepEqual(Array.from(primera.concat(segunda,ultima),p=>p.propiedad.id),Array.from({length:13},(_,i)=>i));
+ assert.deepEqual(offsets,[0,4,6,10,12]);
+ await loader.grupo(sb,'a','r1',80,0,6);assert.equal(offsets.length,5);
+});
