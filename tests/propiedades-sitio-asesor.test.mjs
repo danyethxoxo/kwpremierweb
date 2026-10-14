@@ -38,6 +38,7 @@ test('la tarjeta abre la ficha del asesor en nueva pestaña y mantiene kw.com si
     fmtPrecio: () => 'Precio a consultar'
   });
   const html = readFileSync(new URL('propiedades.html', root), 'utf8');
+  vm.runInContext(html.slice(html.indexOf('  function etiquetaOperacion('), html.indexOf('  function fmtPrecio(')), context);
   vm.runInContext(html.slice(html.indexOf('  function tarjeta('), html.indexOf('  function val(')), context);
   const propiedad = { enlace_kw: general, titulo: 'Casa', estatus: 'publicada', market_center: 'KW Central Qro', asesor_nombre: 'Asesor que listó' };
   let card = context.tarjeta(propiedad, 0);
