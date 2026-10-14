@@ -298,11 +298,13 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
    assert.equal(await page.locator('.prop-mapa-pin-sin-operacion').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(102, 102, 102)');
    assert.match(await page.locator('.prop-mapa-pin-sin-operacion').locator('..').getAttribute('title'),/por confirmar/);
    assert.match(await page.locator('#prop-mapa-estado').innerText(),/1 con operación por confirmar \(gris\)/);
-   for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta']]){
+   for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta'],['venta',null],['renta',null],[null,null],['mixto',null]]){
     await page.evaluate(t=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,t[0]],[qaProps[1].id,19.4301,-99.1301,t[1]]];document.querySelector('#prop-mapa-reintentar').click();},tipos);
-    const tipo=tipos[0]===tipos[1]?tipos[0]:'mixto';
+    const conocidas=tipos.filter(Boolean);
+    const tipo=!conocidas.length?'neutro':conocidas.includes('mixto')||new Set(conocidas).size>1?'mixto':conocidas[0];
     await page.locator('.prop-mapa-grupo-'+tipo).waitFor();
     assert.equal(await page.locator('.prop-mapa-grupo-'+tipo).innerText(),'2');
+    assert.equal(await page.locator('.prop-mapa-grupo-sin-operacion').count(),0);
    }
    await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,'mixto']];document.querySelector('#prop-mapa-reintentar').click();});
    await page.locator('.prop-mapa-pin-mixto').waitFor();

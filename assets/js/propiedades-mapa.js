@@ -202,7 +202,9 @@
         maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) {
           var operaciones = new Set(grupo.getAllChildMarkers().map(function (pin) { return pin.options.operacion; }));
-          var tipo = operaciones.has('sin-operacion') ? 'sin-operacion' : operaciones.size > 1 || operaciones.has('mixto') ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
+          // Los pendientes no cambian el color de todo el grupo.
+          operaciones.delete('sin-operacion');
+          var tipo = !operaciones.size ? 'neutro' : operaciones.size > 1 || operaciones.has('mixto') ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
           return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [42,42]});
         }
       });
