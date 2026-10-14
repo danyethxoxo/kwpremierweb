@@ -3950,6 +3950,7 @@
     } finally {
       clearTimeout(reloj);
     }
+    if (res.ok && (res.headers.get('content-type') || '').includes('application/pdf')) return res.blob();
     const json = await res.json().catch(() => null);
     if (!res.ok) throw new Error((json && json.error) || ('Falló la operación (' + res.status + ')'));
     return json;
@@ -4527,6 +4528,9 @@
         const r = await llamarFuncion({ accion: 'url_documento', id: f.id });
         url = r.url || null;
         conFirmas = !!url;
+        if (Array.isArray(r.firmantes)) f.firmantes = r.firmantes;
+        if (Array.isArray(r.posiciones)) f.posiciones = r.posiciones;
+        if (r.estado) f.estado = r.estado;
       } catch {
         // Se sigue con las otras.
       }
@@ -4681,9 +4685,19 @@
     let hojas;
     try {
       await cargarLibs();
-      const res = await fetch(urlVista);
-      if (!res.ok) throw new Error('no se pudo bajar');
-      const bytes = new Uint8Array(await res.arrayBuffer());
+      let bytes;
+      if (f.weetrust_document_id && urlVista !== urlNuestra) {
+        // La funcion verifica el permiso del documento y descarga su PDF.
+        // Asi los importados tambien se dibujan con sus campos, sin depender
+        // de que el almacenamiento de Weetrust permita CORS en el navegador.
+        const archivo = await llamarFuncion({accion:'archivo_documento',id:f.id});
+        if (!(archivo instanceof Blob)) throw new Error('No se recibio el PDF');
+        bytes = new Uint8Array(await archivo.arrayBuffer());
+      } else {
+        const res = await fetch(urlVista);
+        if (!res.ok) throw new Error('no se pudo bajar');
+        bytes = new Uint8Array(await res.arrayBuffer());
+      }
       hojas = await dibujarEn(bytes, $('doc-paginas'), $('doc-cuerpo'));
       $('doc-cargando')?.remove();
       // Las hojas ya dibujadas entran con un fundido corto, en vez de
@@ -4720,17 +4734,15 @@
     // es el PDF pelón y no se ve si el recuadro quedó sobre la rayita,
     // que es justo lo que uno viene a revisar.
     //
-    // Las que faltan llevan su recuadro de color. Las que ya se firmaron
-    // llevan el mismo recuadro pero en verde, con el nombre y "Firmado"
-    // adentro: weetrust solo entrega el trazo dibujado en el documento
-    // completo (su api regresa vacío el campo de la firma suelta mientras
-    // falte alguien), así que hasta entonces no hay un trazo real que
-    // mostrar y el recuadro verde es lo más honesto.
+    // El PDF completado ya contiene las firmas; no duplicar sus trazos.
+    if (completado && conFirmas) return;
+    // Las firmas parciales usan el campo y la imagen que devolvio Weetrust.
+    // Si falta la imagen, conservar el recuadro verde con el estado firmado.
     (f.posiciones || []).forEach((pz) => {
       const pag = hojas[pz.pagina - 1];
       if (!pag) return;
       const quien = (Array.isArray(f.firmantes) ? f.firmantes : [])
-        .find((x) => String(x.correo).toLowerCase() === String(pz.correo).toLowerCase());
+        .find((x) => correoNormalizado(x.correo) === correoNormalizado(pz.correo));
 
       const el = document.createElement('div');
       el.style.position = 'absolute';
@@ -4739,9 +4751,10 @@
       el.style.width = ((pz.ancho / pz.pagAncho) * 100) + '%';
       el.style.height = ((pz.alto / pz.pagAlto) * 100) + '%';
 
-      if (quien && quien.firmado && quien.imagen) {
+      const imagen = pz.imagen || (quien && quien.imagen);
+      if (quien && quien.firmado && imagen) {
         el.className = 'firma-trazo';
-        el.innerHTML = '<img src="' + escapar(quien.imagen) + '" alt="Firma de ' +
+        el.innerHTML = '<img src="' + escapar(imagen) + '" alt="Firma de ' +
           escapar(quien.nombre || quien.correo) + '">';
       } else if (quien && quien.firmado) {
         // Firmó, pero no tenemos su trazo: el mismo recuadro de siempre,

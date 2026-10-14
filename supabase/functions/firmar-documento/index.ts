@@ -1,5 +1,6 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarFirmantes, nombresEtiquetasWeetrust } from './firmantes-sync.ts'
+import { posicionesDeWeetrust, descargarPdfWeetrust } from './documento-vista.ts'
 // Edge Function: firmar-documento
 //
 // Manda documentos a firma electrónica con weetrust y consulta cómo van.
@@ -1530,13 +1531,13 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
     //
     // La URL se pide al momento y no se guarda: viene firmada y con
     // caducidad, así que una guardada de ayer no sirve hoy.
-    if (accion === 'url_documento') {
+    if (accion === 'url_documento' || accion === 'archivo_documento') {
       const id = String(body.id || '')
       if (!id) return respond({ error: 'Falta el identificador del envío.' }, 400)
 
       const { data: fila } = await admin
         .from('firmas_documentos')
-        .select('id, user_id, weetrust_document_id')
+        .select('id, user_id, weetrust_document_id, firmantes, posiciones')
         .eq('id', id)
         .single()
 
@@ -1553,7 +1554,18 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
       const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
-      return respond({ ok: true, url: (archivo.url as string) ?? null })
+      if (accion === 'archivo_documento') {
+        const bytes = await descargarPdfWeetrust(archivo.url)
+        return new Response(new Uint8Array(bytes).buffer, {headers:{'Content-Type':'application/pdf','Cache-Control':'no-store'}})
+      }
+      if (!doc) return respond({ ok: true, url: null })
+      const firmantes = sincronizarFirmantes(fila.firmantes || [], Array.isArray(doc.signatory) ? doc.signatory : [], new Date().toISOString())
+      const posiciones = posicionesDeWeetrust(doc, fila.posiciones || [])
+      const {error: errorVista} = await admin.from('firmas_documentos')
+        .update({firmantes,posiciones}).eq('id',id)
+      if (errorVista) throw new Error('No se pudieron sincronizar los campos de firma')
+      const estados: Record<string,string> = {DRAFT:'borrador',PENDING:'pendiente',COMPLETED:'completado'}
+      return respond({ ok: true, url: (archivo.url as string) ?? null, firmantes, posiciones, estado: estados[String(doc.status)] || null })
     }
 
     // ── Quitar los renglones fantasma ──
