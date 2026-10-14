@@ -287,14 +287,14 @@ test('foto ubica el pin agrupado; precio, titulo y direccion abren la propiedad'
 });
 
 
-test('pines y grupos distinguen venta roja y renta azul',async()=>{
+test('pines y grupos distinguen venta roja y renta naranja',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.43,-99.13,'venta'],[id(1),25.68,-100.31,'renta'],[id(2),20.67,-103.35,null]]);
   try {
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    assert.equal(await page.locator('.prop-mapa-pin-venta').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(204, 0, 0)');
-   assert.equal(await page.locator('.prop-mapa-pin-renta').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(23, 105, 194)');
+   assert.equal(await page.locator('.prop-mapa-pin-renta').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(232, 117, 20)');
    assert.equal(await page.locator('.prop-mapa-pin-sin-operacion').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(102, 102, 102)');
    for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta']]){
     await page.evaluate(t=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,t[0]],[qaProps[1].id,19.4301,-99.1301,t[1]]];document.querySelector('#prop-mapa-reintentar').click();},tipos);
