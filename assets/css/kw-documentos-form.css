@@ -2,12 +2,14 @@
    Se carga después del estilo local de cada plantilla para que todos
    compartan la lectura, el foco y la densidad del formulario de renta. */
 
-.kw-documento-preview-zoom { display: flex; flex-direction: column; overflow: auto !important; align-items: flex-start !important; justify-content: flex-start !important; }
+.kw-documento-preview-zoom { display: grid; grid-template-columns: minmax(0, 1fr) 56px; grid-template-rows: minmax(0, 1fr); min-height: 0; overflow: hidden !important; padding: 0 !important; align-items: stretch !important; justify-content: stretch !important; }
+.kw-documento-hojas { grid-column: 1; grid-row: 1; min-width: 0; min-height: 0; overflow: auto; padding: 24px 12px; }
 .kw-documento-preview-zoom .page-scale-wrap { flex: 0 0 auto; margin-inline: auto; }
-.kw-documento-zoom { position: sticky; top: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0; flex: 0 0 auto; padding: 8px 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: var(--sombra-1); }
-.kw-documento-zoom input { min-width: 50px; max-width: 140px; flex: 1; accent-color: var(--red); cursor: pointer; }
-.kw-documento-zoom output { width: 44px; font: 600 12px/1.2 'Poppins',sans-serif; text-align: center; }
-.kw-documento-zoom button { height: 32px; min-width: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: #f6f3f3; color: var(--text); font: 600 12px/1 'Poppins',sans-serif; cursor: pointer; }
+.kw-documento-zoom { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 46px; box-sizing: border-box; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(0,0,0,.06); }
+.kw-documento-zoom output { width: 38px; font: 600 10px/24px 'Poppins',sans-serif; text-align: center; color: var(--muted); }
+.kw-documento-zoom button { display: flex; align-items: center; justify-content: center; height: 40px; width: 38px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--text); font: 600 18px/1 'Poppins',sans-serif; cursor: pointer; }
+.kw-documento-zoom button[data-zoom-ajustar] { margin-top: 5px; background: #f6f3f3; }
+.kw-documento-zoom button:disabled { opacity: .35; cursor: default; }
 .kw-documento-zoom button:hover { background: var(--pastel-rojo); color: var(--red); }
 .kw-documento-zoom button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .kw-form-fija > .kw-revision-tabs { display: none !important; }
@@ -16,7 +18,8 @@
 .kw-form-fija .acuerdos-historial { flex: 0 0 auto; border: 0; padding: 0; background: transparent; color: var(--red); font: 600 12px/1.2 'Poppins',sans-serif; cursor: pointer; }
 .kw-form-fija .acuerdos-historial[hidden] { display: none; }
 .kw-form-fija.kw-revision-modo-historial > .acuerdos-form-heading { display: flex !important; }
-@media print { .kw-documento-zoom { display: none !important; } }
+@media (max-width: 900px) { .kw-documento-preview-zoom { height: 78dvh !important; min-height: 420px !important; } }
+@media print { .kw-documento-zoom { display: none !important; } .kw-documento-preview-zoom, .kw-documento-hojas { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; } }
 
 .acuerdos-body,
 .layout {
