@@ -17,9 +17,9 @@
   function leerClientes() { return Array.from({length:numeroClientes},(_,i)=>Object.fromEntries(camposCliente.map(([id])=>[id,valor(idCliente(id,i))]))); }
   let actual = null, usuario = null, registros = [], ocupado = false, sucio = false, frame = 0, nombreDocumento = '';
   const escapar = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const valor = id => $('com-' + id).value.trim();
-  function mensaje(texto, error = false) { $('comercial-mensaje').textContent = texto; $('comercial-mensaje').dataset.error = String(error); }
-  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),clientes:leerClientes(),numero_clientes:numeroClientes,nombre:nombreDocumento}; }
+  const valor = id => id==='precio'?$('com-precio').value.replace(/,/g,'').trim():$('com-' + id).value.trim();
+  function mensaje(texto, error = false) { $('comercial-mensaje').textContent='';if(texto)window.kwUI.alert(texto,{titulo:error?'Revisa el documento':'Documento'}); }
+  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),representante:actual?.datos?.representante||'GUSTAVO SOLARES CAMPOS',mca:actual?.datos?.mca||'MARÍA FERNANDA PACHECO BAÑOS',clientes:leerClientes(),numero_clientes:numeroClientes,nombre:nombreDocumento}; }
   function fecha(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
     return new Date(iso + 'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}).toLocaleUpperCase('es-MX');
@@ -47,9 +47,11 @@
     for (const k of ['comision','pago_promesa','pago_escritura','vigencia','proteccion']) d[k+'_letra'] = letras(d[k]);
     if (d.precio) {
       const centavos = Math.round(Number(d.precio)*100);
-      d.precio_formato = '$'+(centavos/100).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+' M.N.';
-      d.precio_letra = entero(Math.floor(centavos/100)) + (centavos%100000000===0 ? ' DE':'')+' PESOS '+String(centavos%100).padStart(2,'0')+'/100 M.N.';
+      const moneda=window.kwDocumentosCampos.divisas[d.divisa]||window.kwDocumentosCampos.divisas.MXN;
+      d.precio_formato = '$'+(centavos/100).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+d.divisa;
+      d.precio_letra = entero(Math.floor(centavos/100)) + (centavos%100000000===0 ? ' DE':'')+' '+moneda.nombre+' '+String(centavos%100).padStart(2,'0')+'/100 '+moneda.cierre;
     }
+    d.ciudad_notaria=[d.ciudad_notaria,d.pais_notaria].filter(Boolean).join(', ');
     return d;
   }
   function campo(d, id) { return d[id] ? '<span class="comercial-dato">'+escapar(d[id])+'</span>' : '<span class="comercial-faltante">________________</span>'; }
@@ -125,25 +127,43 @@
   function programar() { clearTimeout(frame);frame=setTimeout(()=>{frame=0;paginar();},120); }
   function ampliarCampo(el) { if(el.tagName!=='TEXTAREA')return;el.style.height='0px';el.style.height=Math.max(42,el.scrollHeight+2)+'px'; }
   function pintarCampos() {
-    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes" data-kw-no>'+Array.from({length:6},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
-    pintarClientes();
+    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes">'+Array.from({length:6},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
+    pintarClientes();window.kwUI.selects($('comercial-campos'));
   }
   function pintarCampo([id,label,tipoCampo]) {
       const propiedades=' id="com-'+id+'" name="'+id+'" required maxlength="'+(tipoCampo==='textarea'?1000:250)+'"';
-      const limite=tipoCampo==='number'?' min="'+(['precio','vigencia','renovacion','proteccion'].includes(id)?'1':'0')+'" max="'+(id==='precio'?'999999999999.99':['vigencia','renovacion','proteccion'].includes(id)?'10000':'100')+'" step="'+(['vigencia','renovacion','proteccion'].includes(id)?'1':'0.01')+'"':'';
-      return '<div class="acuerdo-field"><label for="com-'+id+'">'+escapar(label)+'</label>'+(['textarea','text'].includes(tipoCampo)?'<textarea'+propiedades+' rows="1"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>')+'</div>';
+      const limite=tipoCampo==='number'?' min="'+(['vigencia','renovacion','proteccion'].includes(id)?'1':'0')+'" max="'+(['vigencia','renovacion','proteccion'].includes(id)?'10000':'100')+'" step="any" data-kw-paso="5"':'';
+      const opciones=id.startsWith('estado_civil')?window.kwDocumentosCampos.civiles:id==='tipo_inmueble'?window.kwDocumentosCampos.inmuebles:id==='ciudad_notaria'?window.kwDocumentosCampos.estados:['MXN','USD','EUR'];
+      if(tipoCampo==='pais')return '<div class="acuerdo-field"><label for="com-pais-selector">'+escapar(label)+'</label><div><select id="com-pais-selector" aria-label="País"><option value="México">México</option><option value="otro">Otro país</option></select><input type="text"'+propiedades+' aria-label="Nombre del país" placeholder="Escribe el país" hidden></div></div>';
+      const control=tipoCampo==='select'?'<select'+propiedades+'><option value="">Seleccionar</option>'+opciones.map(v=>'<option>'+escapar(v)+'</option>').join('')+'</select>':tipoCampo==='importe'?'<div class="kw-importe"><span aria-hidden="true">$</span><input type="text"'+propiedades+' data-kw-no inputmode="decimal" placeholder="0.00"></div>':['textarea','text'].includes(tipoCampo)?'<textarea'+propiedades+' rows="1"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>';
+      return '<div class="acuerdo-field"><label for="com-'+id+'">'+escapar(label)+'</label>'+control+'</div>';
   }
   function pintarClientes() {
     $('com-num-clientes').value=String(numeroClientes);
+    const etiqueta=$('com-num-clientes').parentElement.querySelector('.kw-select-valor');if(etiqueta)etiqueta.textContent=String(numeroClientes);
     $('comercial-clientes').innerHTML=Array.from({length:numeroClientes},(_,i)=>'<fieldset><legend>Cliente propietario '+(i+1)+'</legend><div class="acuerdo-duo kw-documentos-campos">'+camposCliente.map(([id,label,tipo])=>pintarCampo([idCliente(id,i),label,tipo])).join('')+'</div></fieldset>').join('');
-    for(let i=0;i<numeroClientes;i++)for(const [id]of camposCliente){const el=$('com-'+idCliente(id,i));el.value=clientesEnMemoria[i]?.[id]||'';ampliarCampo(el);}
+    for(let i=0;i<numeroClientes;i++)for(const [id]of camposCliente){const el=$('com-'+idCliente(id,i));asignar(el,clientesEnMemoria[i]?.[id]||'');ampliarCampo(el);}
+    window.kwUI.selects($('comercial-campos'));
+  }
+  function asignar(el,v){if(el.tagName==='SELECT'&&v&&!Array.from(el.options).some(o=>o.value===v))el.add(new Option(v,v));el.value=v;el.dispatchEvent(new Event('change'));}
+  function actualizarEstado(v){
+    const mexico=/^m[eé]xico$/i.test(valor('pais_notaria')),el=$('com-ciudad_notaria');
+    if((el.tagName==='SELECT')===mexico)return;
+    const cont=el.closest('.acuerdo-field');cont.outerHTML=mexico?pintarCampo(['ciudad_notaria','Estado','select']):pintarCampo(['ciudad_notaria','Estado o provincia','text']);
+    asignar($('com-ciudad_notaria'),v??(mexico?'Ciudad de México':''));window.kwUI.selects($('comercial-campos'));botones();
+  }
+  function sincronizarPais(){
+    const mexico=/^m[eé]xico$/i.test(valor('pais_notaria')),selector=$('com-pais-selector');selector.value=mexico?'México':'otro';$('com-pais_notaria').hidden=mexico;
+    const etiqueta=selector.parentElement.querySelector('.kw-select-valor');if(etiqueta)etiqueta.textContent=mexico?'México':'Otro país';
   }
   function botones() {
     const finalizado=actual?.estado==='finalizado';
     document.body.classList.toggle('doc-borrador',!finalizado);
     for(const [id] of camposActivos())$('com-'+id).disabled=finalizado||ocupado;
     $('com-num-clientes').disabled=finalizado||ocupado;
-    $('comercial-guardar').hidden=finalizado;$('comercial-finalizar').hidden=finalizado;
+    $('com-pais-selector').disabled=finalizado||ocupado;
+    $('comercial-guardar').hidden=finalizado;$('comercial-finalizar').hidden=finalizado||!actual?.id;
+    $('comercial-descargar').hidden=!finalizado;
     $('comercial-copiar').hidden=!finalizado;
     for(const id of ['comercial-guardar','comercial-finalizar','comercial-descargar','comercial-copiar','btn-nuevo'])$(id).disabled=ocupado||!usuario;
   }
@@ -153,10 +173,14 @@
     actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
     clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,6):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
     numeroClientes=clientesEnMemoria.length;pintarClientes();
-    for(const [id,,,respaldo] of campos)$('com-'+id).value=row?.datos?.[id] ?? respaldo;
-    for(const [id]of camposCliente)$('com-'+id).value=clientesEnMemoria[0]?.[id]||'';
+    asignar($('com-pais_notaria'),row?.datos?.pais_notaria??'México');actualizarEstado(row?.datos?.ciudad_notaria);
+    for(const [id,,,respaldo] of campos)asignar($('com-'+id),row?.datos?.[id] ?? respaldo);
+    sincronizarPais();
+    window.kwDocumentosCampos.formatear($('com-precio'));
+    for(const [id]of camposCliente)asignar($('com-'+id),clientesEnMemoria[0]?.[id]||'');
     // Los registros comerciales mantienen nombres estables para integraciones existentes.
-    botones();vista(true,marcar);mensaje(row?.estado==='finalizado'?'Contrato finalizado · '+(row.folio || ''):'');
+    botones();vista(true,marcar);mensaje('');
+    if(!row)window.kwDocumentosCampos.prellenar({'com-asesor':'nombre','com-correo_asesor':'email','com-whatsapp_asesor':'whatsapp','com-telefono_asesor':'whatsapp'});
   }
   function pintarLista() {
     const buscar=$('buscador-input').value.trim().toLocaleLowerCase('es-MX');
@@ -178,7 +202,7 @@
     } catch(e){for(const id of ['lista-borradores','lista-finalizados'])$(id).innerHTML='';mensaje(e.message||'No se pudieron cargar los contratos.',true);}
   }
   async function pedirNombre() {const nombre=await window.kwDocumentosShell.pedirNombre(nombreDocumento||'Contrato comercial');if(!nombre)return false;nombreDocumento=nombre;return true;}
-  async function guardar() {
+  async function guardar(silencioso=false) {
     if(!usuario||ocupado||actual?.estado==='finalizado')return false;
     ocupado=true;botones();
     try {
@@ -187,17 +211,18 @@
       let q=window.kwSupabase.from('documentos_guardados');
       q=actual?q.update(payload).eq('id',actual.id).eq('user_id',usuario.id).eq('tipo_documento',tipo).eq('estado','borrador'):q.insert({...payload,user_id:usuario.id,tipo_documento:tipo});
       const r=await q.select('id,nombre_archivo,datos,estado,folio,revision,updated_at').single();if(r.error)throw r.error;
-      actual=r.data;sucio=false;mensaje('Contrato guardado.');await cargarLista();return true;
+      actual=r.data;sucio=false;if(!silencioso)mensaje('Contrato guardado.');await cargarLista();return true;
     }catch(e){mensaje(e.message||'No se pudo guardar el contrato.',true);return false;}finally{ocupado=false;botones();}
   }
   async function finalizar() {
     if(ocupado)return;
     const faltante=camposActivos().find(([id])=>!valor(id));
     if(faltante){mensaje('Completa el campo: '+faltante[1]+'.',true);$('com-'+faltante[0]).focus();return;}
+    if(!Number.isFinite(Number(valor('precio')))||Number(valor('precio'))<=0||Number(valor('precio'))>999999999999.99){mensaje('Escribe un precio de venta válido mayor que cero.',true);return;}
     if(!$('formulario-comercial').reportValidity())return;
     if(Math.abs(Number(valor('pago_promesa'))+Number(valor('pago_escritura'))-100)>.001){mensaje('Los porcentajes de pago deben sumar 100 %. ',true);return;}
     if(!await window.kwUI.confirm('¿Finalizar el contrato? Se asignará su folio y dejará de ser editable.'))return;
-    if(!await guardar())return;
+    if(!await guardar(true))return;
     ocupado=true;botones();
     try {
       const r=await window.kwSupabase.rpc('finalizar_documento',{p_id:actual.id});if(r.error)throw r.error;
@@ -228,7 +253,9 @@
   pintarCampos();botones();
   $('formulario-comercial').noValidate=true;
   $('formulario-comercial').addEventListener('submit',e=>{e.preventDefault();guardar();});
-  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;sucio=true;ampliarCampo(e.target);programar();});
+  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;if(e.target.id==='com-precio')window.kwDocumentosCampos.formatear(e.target);if(e.target.id==='com-pais_notaria')actualizarEstado();sucio=true;ampliarCampo(e.target);programar();});
+  $('formulario-comercial').addEventListener('change',e=>{if(e.target.tagName==='SELECT'){sucio=true;programar();}});
+  $('com-pais-selector').addEventListener('change',()=>{$('com-pais_notaria').value=$('com-pais-selector').value==='México'?'México':'';sincronizarPais();actualizarEstado();sucio=true;programar();if(!$('com-pais_notaria').hidden)$('com-pais_notaria').focus();});
   $('com-num-clientes').addEventListener('change',()=>{
     leerClientes().forEach((cliente,i)=>clientesEnMemoria[i]=cliente);
     numeroClientes=Math.max(1,Math.min(6,Number($('com-num-clientes').value)||1));

@@ -545,7 +545,14 @@
 
     function mover(sube) {
       if (inp.disabled || inp.readOnly) return;
-      try { sube ? inp.stepUp() : inp.stepDown(); }
+      try {
+        if(inp.dataset.kwPaso){
+          var nuevo=(Number(inp.value)||0)+(sube?1:-1)*Number(inp.dataset.kwPaso);
+          if(inp.min!=='')nuevo=Math.max(Number(inp.min),nuevo);
+          if(inp.max!=='')nuevo=Math.min(Number(inp.max),nuevo);
+          inp.value=String(Math.round(nuevo*100)/100);
+        }else sube ? inp.stepUp() : inp.stepDown();
+      }
       catch (e) {
         var paso = Number(inp.step) || 1;
         inp.value = (Number(inp.value) || 0) + (sube ? paso : -paso);
@@ -717,6 +724,7 @@
     return new Promise(function (resolver) {
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
+      overlay.style.display = 'flex';
 
       var caja = document.createElement('div');
       caja.className = 'modal-box';

@@ -5,15 +5,17 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../documentos/contratos/renta.html', import.meta.url), 'utf8');
 
-function preview(names, addresses, amount = 27000) {
+function preview(names, addresses, amount = 27000, currency = 'MXN') {
   const fields = { 'f-num-clientes': names.length, 'f-asesor': 'MAYA GARCIA', 'f-tipo': 'exclusiva',
-    'f-inmueble': 'Calle Prueba 50', 'f-fecha': '2026-10-01', 'f-domicilio': addresses[0] };
+    'f-inmueble': 'Calle Prueba 50', 'f-fecha': '2026-10-01', 'f-domicilio': addresses[0], 'f-divisa':currency };
   names.forEach((name, i) => { fields['f-cliente' + i] = name; fields['f-domicilio-cliente' + i] = addresses[i]; });
   const raw = {};
   const escapeHtml = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const context = vm.createContext({ LOGO_B64: '', escapeHtml, leerMonto: () => amount, renderPaginated() {},
     document: { getElementById: (id) => id === 'contrato-raw' ? raw : { value: fields[id] || '' } },
   });
+  context.window=context;
+  vm.runInContext(readFileSync(new URL('../assets/js/kw-documentos-campos.js',import.meta.url),'utf8'),context);
   vm.runInContext(html.slice(html.indexOf('function numeroALetra('), html.indexOf('function numeroDesdeMonto(')), context);
   vm.runInContext(html.slice(html.indexOf('function formatFechaLarga('), html.indexOf('// ── Generar dinámicamente')), context);
   vm.runInContext(html.slice(html.indexOf('function updatePreview('), html.indexOf('// ── Nombre de archivo sugerido')), context);
@@ -50,4 +52,13 @@ test('new landlord addresses are saved and reopened while legacy first address s
   assert.match(html, /datos\.domiciliosClientes = Array\.from/);
   assert.match(html, /datos\.domiciliosClientes \|\| \[\]/);
   assert.match(html, /i === 0 \? 'f-domicilio' : 'f-domicilio-cliente'/);
+});
+
+test('la renta expresa la misma divisa en el importe y en letra',()=>{
+  for(const [currency,words]of [['MXN','PESOS'],['USD','DÓLARES ESTADOUNIDENSES'],['EUR','EUROS']]){
+    const output=preview(['CLIENTE'],['DOMICILIO'],8000000.5,currency);
+    assert.ok(output.includes('$8,000,000.5 '+currency));
+    assert.ok(output.includes('OCHO MILLONES DE '+words+' 50/100'));
+    if(currency!=='MXN')assert.ok(!output.includes(' PESOS '));
+  }
 });

@@ -33,4 +33,8 @@ El logo se define una sola vez en `kw-documentos-shell.js` (`marca` y `aplicarMa
 
 Comercial admite de uno a seis clientes. `datos.clientes` conserva los datos individuales; las claves históricas del primer cliente se mantienen para compatibilidad. Los borradores anteriores sin ese arreglo abren con un cliente. Las declaraciones y firmas se generan por cliente, y solo se guardan los clientes activos del selector.
 
+`kw-documentos-campos.js` comparte los catálogos de estados civiles, inmuebles comerciales, estados mexicanos y divisas MXN/USD/EUR, el formato de importes y la lectura del perfil de la cuenta. El autocompletado de un nuevo documento solo llena campos vacíos y deja editable lo capturado. La divisa se guarda en el borrador y se refleja en número y letra en el documento. Los importes conservan un valor numérico sin separadores en Comercial.
+
+Comercial mantiene representante y MCA como datos fijos del documento, sin campos editables. Sus acciones siguen el flujo de Renta: Guardar al crear, Finalizar tras guardar, Descargar y Copiar al finalizar. Los mensajes se muestran en ventanas centrales. `data-kw-paso="5"` configura el incremento de los controles numéricos sin impedir la captura manual de decimales.
+
 Verificar escritorio y móvil: listado, formulario, fuentes, pie fijo, regreso al listado, guardado y reapertura, revisiones y PDF. Al modificar un recurso compartido, actualizar su versión en las 12 plantillas.

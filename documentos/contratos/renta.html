@@ -10,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/assets/css/kw-ui.css?v=20260906b">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-  <script src="/assets/js/kw-ui.js?v=20261007c"></script>
+  <script src="/assets/js/kw-ui.js?v=20261015controles"></script>
 <title>Acuerdo de Renta</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
 <style>
@@ -19,7 +19,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
 <script src="/assets/js/auth-guard.js?v=20261013general"></script>
-<script src="/assets/js/kw-prellenar.js?v=20261013general" data-campos="f-asesor"></script>
+<script src="/assets/js/kw-documentos-campos.js?v=20261015controles"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 .kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
@@ -98,7 +98,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
-<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261015filas">
+<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261015controles">
 <style>
 .kw-renta-revision-back { display: inline-flex; align-items: center; gap: 7px; margin: 0px 0px 16px; padding: 8px 12px; border: 0px; border-radius: 10px; background: rgb(255, 250, 250); color: rgb(138, 0, 0); font: 600 12px / 1 Poppins, Arial, sans-serif; cursor: pointer; transition: background 0.16s, border-color 0.16s, transform 0.12s; }
 .kw-renta-revision-back:hover { background: rgb(248, 238, 238); border-color: rgb(185, 121, 121); }
@@ -225,7 +225,11 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
     </div>
     <div class="acuerdo-field">
       <label for="f-monto">Monto mensual de renta</label>
-      <input type="text" id="f-monto" data-kw-no data-formato-miles inputmode="decimal" autocomplete="off" placeholder="0.00" oninput="formatearMonto(this); updateMontoLetra(); updatePreview();" />
+      <div class="kw-importe"><span aria-hidden="true">$</span><input type="text" id="f-monto" data-kw-no data-formato-miles inputmode="decimal" autocomplete="off" placeholder="0.00" oninput="formatearMonto(this); updateMontoLetra(); updatePreview();" /></div>
+    </div>
+    <div class="acuerdo-field">
+      <label for="f-divisa">Divisa</label>
+      <select id="f-divisa" onchange="updatePreview()"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
     </div>
 
     <div class="desktop-btn-row form-actions" style="display:flex;gap:8px;margin-top:14px;">
@@ -422,7 +426,8 @@ function numeroALetra(num) {
     texto = menos1M(entero) || 'CERO';
   }
 
-  texto = texto.trim() + ' PESOS ' + String(cents).padStart(2,'0') + '/100 M.N.';
+  const moneda=window.kwDocumentosCampos.divisas[document.getElementById('f-divisa')?.value]||window.kwDocumentosCampos.divisas.MXN;
+  texto = texto.trim() + ' '+moneda.nombre+' ' + String(cents).padStart(2,'0') + '/100 '+moneda.cierre;
   return texto;
 }
 
@@ -446,20 +451,7 @@ function formatearMontoTexto(valor) {
 
 function formatearMonto(input) {
   if (!input) return;
-  const anterior = input.value || '';
-  const posicion = typeof input.selectionStart === 'number' ? input.selectionStart : anterior.length;
-  const digitosAntes = (anterior.slice(0, posicion).match(/\d/g) || []).length;
-  const nuevoValor = formatearMontoTexto(anterior);
-  input.value = nuevoValor;
-  if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
-    let nuevaPosicion = 0;
-    let contados = 0;
-    while (nuevaPosicion < nuevoValor.length && contados < digitosAntes) {
-      if (/\d/.test(nuevoValor[nuevaPosicion])) contados++;
-      nuevaPosicion++;
-    }
-    input.setSelectionRange(nuevaPosicion, nuevaPosicion);
-  }
+  window.kwDocumentosCampos.formatear(input);
 }
 
 function leerMonto() {
@@ -581,7 +573,7 @@ function updatePreview() {
     return `<div class="doc-p"><strong>ARRENDADOR ${i + 1}:</strong> ${campo(nombre, 'Nombre del arrendador ' + (i + 1))}. Domicilio: ${campo(normalizada, 'Domicilio del arrendador ' + (i + 1))}.</div>`;
   }).join('');
   const montoLetra = montoNum > 0 ? numeroALetra(montoNum) : '';
-  const montoFmt   = montoNum > 0 ? '$' + montoNum.toLocaleString('es-MX') : '';
+  const montoFmt   = montoNum > 0 ? '$' + montoNum.toLocaleString('es-MX')+' '+document.getElementById('f-divisa').value : '';
 
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
@@ -693,7 +685,7 @@ function nombreArchivoDoc() {
 }
 
 // ── Guardar / listar los documentos de este tipo en la cuenta del usuario ──
-const CAMPOS_GUARDABLES = ['f-tipo','f-asesor','f-num-clientes','f-inmueble','f-monto','f-domicilio','f-fecha'];
+const CAMPOS_GUARDABLES = ['f-tipo','f-asesor','f-num-clientes','f-inmueble','f-monto','f-divisa','f-domicilio','f-fecha'];
 const TIPO_DOCUMENTO = 'acuerdo_renta';
 let documentoActualId = null;
 let folioActual = null;
@@ -716,9 +708,9 @@ function setGuardarMsg(text, kind) {
     el.style.display = 'none';
     return;
   }
-  el.textContent = text;
-  el.style.display = 'block';
-  el.style.color = kind === 'error' ? '#a30000' : '#1a7a1a';
+  el.textContent = '';
+  el.style.display = 'none';
+  window.kwUI.alert(text,{titulo:kind==='error'?'Revisa el documento':'Documento'});
 }
 
 function cerrarGuardadoExito() {
@@ -933,10 +925,13 @@ function limpiarFormulario() {
   renderClientesFields();
   document.getElementById('f-inmueble').value = '';
   document.getElementById('f-monto').value = '';
+  document.getElementById('f-divisa').value = 'MXN';
+  document.getElementById('f-divisa').dispatchEvent(new Event('change'));
   document.getElementById('f-domicilio').value = '';
   document.getElementById('f-fecha').value = '';
   updateMontoLetra();
   updatePreview();
+  window.kwDocumentosCampos.prellenar({'f-asesor':'nombre'});
 }
 
 function crearNuevoDocumento() {
@@ -967,6 +962,7 @@ function abrirDocumentoGuardado(row, marcar) {
     estadoActual = row.estado || 'borrador';
     revisionActual = Number(row.revision) || 0;
     const datos = row.datos || {};
+    document.getElementById('f-divisa').value='MXN';
     CAMPOS_GUARDABLES.forEach(id => {
       const el = document.getElementById(id);
       if (el && Object.prototype.hasOwnProperty.call(datos, id)) {
@@ -974,6 +970,7 @@ function abrirDocumentoGuardado(row, marcar) {
         if (id === 'f-monto') formatearMonto(el);
       }
     });
+    document.getElementById('f-divisa').dispatchEvent(new Event('change'));
     renderClientesFields();
     (datos.clientes || []).forEach((val, i) => {
       const el = document.getElementById('f-cliente' + i);

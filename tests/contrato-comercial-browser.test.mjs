@@ -6,6 +6,8 @@ import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('../',import.meta.url));
+async function aviso(page,texto){await page.getByText(texto,{exact:true}).waitFor();await page.locator('.modal-overlay:visible .btn-modal-confirmar').last().click();}
+async function llenar(page,id,v){if(id==='pais_notaria'){await page.locator('#com-pais-selector').selectOption(v==='México'?'México':'otro',{force:true});if(v==='México')return;}const el=page.locator('#com-'+id);if(await el.evaluate(e=>e.tagName==='SELECT'))await el.selectOption(v,{force:true});else await el.fill(v);}
 test('las comisiones decimales conservan los ceros al escribirse en letra',()=>{
  const script=readFileSync(path.join(root,'assets/js/contrato-comercial.js'),'utf8');
  const contexto=vm.createContext({});
@@ -18,7 +20,7 @@ const sdk=`window.qaRows=[];window.qaError=false;window.qaGuardados=0;
 window.kwSupabase={auth:{getUser:async()=>({data:{user:{id:'qa-user'}}}),getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
 from(tabla){let accion='select',payload,filtros=[],single=false;const q=new Proxy({}, {get(_,key){
  if(key==='then')return (resolve,reject)=>Promise.resolve().then(()=>{
-  if(tabla!=='documentos_guardados')return {data:single?{role:'asesor',nombre:'Asesora QA'}:[],error:null};
+  if(tabla!=='documentos_guardados')return {data:single?{role:'asesor',nombre:'Asesora',apellido:'QA',email:'perfil@example.com',whatsapp:'5511223344'}:[],error:null};
   if(window.qaError)return {data:null,error:{message:'Error de guardado simulado'}};
   if(accion==='insert'){window.qaGuardados++;const r={id:'qa-'+window.qaGuardados,estado:'borrador',updated_at:new Date().toISOString(),...payload};window.qaRows.push(r);return {data:{...r},error:null};}
   let filas=window.qaRows.filter(r=>filtros.every(([k,v])=>r[k]===v));
@@ -67,6 +69,20 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
     return {x:(r.x-p.x)/escala,y:(r.y-p.y)/escala,ancho:r.width/escala,alto:r.height/escala};
    });
    for(const [dato,valor]of Object.entries({x:72,y:30,ancho:98,alto:38}))assert.ok(Math.abs(marca[dato]-valor)<1.1,documento+': logo '+dato+'='+marca[dato]);
+   if(documento==='contratos/renta'){
+    await page.evaluate(()=>limpiarFormulario());
+    await page.waitForFunction(()=>document.getElementById('f-asesor').value==='Asesora QA',null,{timeout:10000});
+    await page.locator('#f-asesor').fill('Nombre editable');
+    await page.locator('#f-monto').fill('');await page.locator('#f-monto').pressSequentially('8000.50');assert.equal(await page.locator('#f-monto').inputValue(),'8,000.50');
+    await page.locator('#f-monto').fill('8000000');assert.equal(await page.locator('#f-monto').inputValue(),'8,000,000');
+    await page.locator('#f-divisa').selectOption('USD',{force:true});
+    assert.ok((await page.locator('#contrato-preview').innerText()).includes('DÓLARES ESTADOUNIDENSES'));
+    assert.equal((await page.evaluate(()=>datosActuales()))['f-divisa'],'USD');
+    await page.evaluate(()=>abrirDocumentoGuardado({id:'anterior',estado:'borrador',datos:{'f-asesor':'Asesor guardado','f-monto':'1,234','f-divisa':'EUR'}}));
+    await page.waitForFunction(()=>document.getElementById('f-asesor').value==='Asesor guardado');
+    assert.equal(await page.locator('#f-divisa').inputValue(),'EUR');
+    assert.equal(await page.locator('#f-divisa').locator('..').locator('.kw-select-valor').innerText(),'EUR');
+   }
   }
  }finally{await browser.close();}
 });
@@ -75,7 +91,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   for(const width of [1440,390]){
-   const page=await browser.newPage({viewport:{width,height:1000}}),errores=[];page.on('pageerror',e=>errores.push(e.message));
+   const page=await browser.newPage({viewport:{width,height:1000}}),errores=[];page.setDefaultTimeout(15000);page.on('pageerror',e=>errores.push(e.message));
    await page.route('**/*',async route=>{
     const url=new URL(route.request().url());
     if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk});
@@ -93,11 +109,32 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    });
    await page.goto('http://kw.local/documentos/contratos/comercial.html',{waitUntil:'domcontentloaded'});
    await page.locator('#btn-nuevo').click();
-   const valores={nombre:'Comercial QA',fecha:'2026-10-15',cliente:'CLIENTE DE PRUEBA',estado_civil:'SOLTERO',rfc:'XAXX010101000',domicilio_cliente:'AVENIDA DE PRUEBA 10, CIUDAD DE MÉXICO',correo_cliente:'cliente@example.com',telefono_cliente:'5512345678',tipo_inmueble:'LOCAL COMERCIAL',inmueble:'AVENIDA COMERCIAL 20, CIUDAD DE MÉXICO',escritura:'12345',fecha_escritura:'2020-05-12',notario:'NOTARIO DE PRUEBA',notaria:'123',ciudad_notaria:'CIUDAD DE MÉXICO',asesor:'ASESORA DE PRUEBA',correo_asesor:'asesor@example.com',whatsapp_asesor:'5587654321',telefono_asesor:'5587654321',precio:'12343370'};
+   await page.waitForFunction(()=>document.getElementById('com-asesor').value==='Asesora QA',null,{timeout:10000});
+   assert.equal(await page.locator('#com-correo_asesor').inputValue(),'perfil@example.com');
+   assert.equal(await page.locator('#com-telefono_asesor').inputValue(),'5511223344');
+   assert.equal(await page.locator('#com-representante,#com-mca').count(),0);
+   assert.equal(await page.locator('#com-precio').locator('..').locator('[data-sumar],[data-restar]').count(),0);
+   await page.locator('#com-precio').fill('8000000');assert.equal(await page.locator('#com-precio').inputValue(),'8,000,000');
+   assert.equal(await page.locator('#com-divisa').inputValue(),'MXN');
+   for(const [codigo,palabra]of [['USD','DÓLARES ESTADOUNIDENSES'],['EUR','EUROS'],['MXN','PESOS']]){
+    await page.locator('#com-divisa').selectOption(codigo,{force:true});
+    await page.waitForFunction(p=>document.getElementById('comercial-paginas').innerText.includes(p),palabra);
+   }
+   assert.equal(await page.locator('#comercial-finalizar').isVisible(),false);assert.equal(await page.locator('#comercial-descargar').isVisible(),false);
+   assert.equal(await page.locator('#com-penalidad').inputValue(),'5');
+   await page.locator('#com-penalidad').locator('..').locator('[data-sumar]').click();assert.equal(await page.locator('#com-penalidad').inputValue(),'10');
+   await page.locator('#com-penalidad').locator('..').locator('[data-restar]').click();assert.equal(await page.locator('#com-penalidad').inputValue(),'5');
+   assert.equal(await page.locator('#com-ciudad_notaria option').count(),33);
+   await llenar(page,'pais_notaria','España');await llenar(page,'ciudad_notaria','Madrid');
+   await llenar(page,'pais_notaria','México');assert.equal(await page.locator('#com-ciudad_notaria').inputValue(),'Ciudad de México');
+   await page.locator('#com-tipo_inmueble').locator('..').locator('.kw-select-btn').click();
+   await page.locator('.kw-select-opcion').filter({hasText:/^Oficina$/}).click();
+   assert.equal(await page.locator('#com-tipo_inmueble').inputValue(),'Oficina');
+   const valores={nombre:'Comercial QA',fecha:'2026-10-15',cliente:'CLIENTE DE PRUEBA',estado_civil:'Soltero(a)',rfc:'XAXX010101000',domicilio_cliente:'AVENIDA DE PRUEBA 10, CIUDAD DE MÉXICO',correo_cliente:'cliente@example.com',telefono_cliente:'5512345678',tipo_inmueble:'Local comercial',inmueble:'AVENIDA COMERCIAL 20, CIUDAD DE MÉXICO',escritura:'12345',fecha_escritura:'2020-05-12',notario:'NOTARIO DE PRUEBA',notaria:'123',ciudad_notaria:'Ciudad de México',asesor:'ASESORA DE PRUEBA',correo_asesor:'asesor@example.com',whatsapp_asesor:'5587654321',telefono_asesor:'5587654321',precio:'12343370'};
    for(const [id,v]of Object.entries(valores)){
      if(id==='nombre')continue;
      if(id==='fecha'||id==='fecha_escritura')await page.locator('#com-'+id).evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},v);
-     else await page.locator('#com-'+id).fill(v);
+     else await llenar(page,id,v);
    }
    await page.waitForFunction(()=>document.querySelector('#comercial-paginas').innerText.includes('DOCE MILLONES'));
    const contenido=await page.locator('#comercial-paginas').innerText();
@@ -111,7 +148,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.ok(Math.abs(medidas.direccion-medidas.cliente)<1,'direcciones conservan el mismo ancho de campo');
    assert.ok(medidas.alto>42,'la direccion crece en alto para mostrar el contenido');
    const filas=await page.locator('.kw-documentos-campos').evaluateAll(grupos=>grupos.map(grupo=>Array.from(grupo.children).map(campo=>{
-    const control=campo.querySelector('input,textarea');const rect=control.getBoundingClientRect();return {id:control.id,x:rect.x,y:rect.y,ancho:rect.width};
+    const control=campo.querySelector('.kw-select-btn,input,textarea');const rect=control.getBoundingClientRect();return {id:control.id,x:rect.x,y:rect.y,ancho:rect.width};
    })));
    for(const fila of filas)for(let i=0;i<fila.length;i+=2){
     if(!fila[i+1])continue;
@@ -134,7 +171,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/comercial/ajustes-'+width+'.png')});
    await page.locator('#comercial-guardar').click();
    await page.locator('#modal-nombre-input').fill('Comercial QA');await page.locator('#kw-documento-nombre-form button[type=submit]').click();
-   await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await aviso(page,'Contrato guardado.');
    assert.equal(await page.evaluate(()=>qaRows.length),1);
    await page.locator('#comercial-volver').click();
    await page.locator('[data-abrir]').first().waitFor({state:'visible'});
@@ -143,28 +180,31 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.evaluate(()=>{delete qaRows[0].datos.clientes;delete qaRows[0].datos.numero_clientes;});
    await page.locator('[data-abrir]').first().click();assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
    assert.equal(await page.locator('#com-num-clientes').inputValue(),'1','abre borradores anteriores de un cliente');
-   await page.locator('#com-num-clientes').selectOption('6');
+   await page.locator('#com-num-clientes').selectOption('6',{force:true});
    await page.locator('#comercial-finalizar').click();
-   assert.ok((await page.locator('#comercial-mensaje').innerText()).includes('Cliente 2'),'valida los datos de clientes adicionales');
-   for(let i=2;i<=6;i++)for(const id of ['cliente','estado_civil','rfc','domicilio_cliente','correo_cliente','telefono_cliente'])await page.locator('#com-'+id+'_'+i).fill(id==='cliente'?'CLIENTE ADICIONAL '+i:valores[id]);
-   await page.locator('#com-num-clientes').selectOption('2');await page.locator('#com-num-clientes').selectOption('6');
+   await aviso(page,'Completa el campo: Cliente 2: Nombre completo.');
+   for(let i=2;i<=6;i++)for(const id of ['cliente','estado_civil','rfc','domicilio_cliente','correo_cliente','telefono_cliente'])await llenar(page,id+'_'+i,id==='cliente'?'CLIENTE ADICIONAL '+i:valores[id]);
+   await page.locator('#com-num-clientes').selectOption('2',{force:true});await page.locator('#com-num-clientes').selectOption('6',{force:true});
    assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','cambiar el selector conserva la captura');
-   await page.locator('#comercial-guardar').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
    assert.equal(await page.evaluate(()=>qaRows[0].datos.clientes.length),6);
+   await llenar(page,'pais_notaria','España');await llenar(page,'ciudad_notaria','Madrid');await llenar(page,'divisa','EUR');
+   await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
    await page.locator('#comercial-volver').click();await page.locator('[data-abrir]').first().click();
    assert.equal(await page.locator('#com-num-clientes').inputValue(),'6');assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6');
+   assert.equal(await page.locator('#com-pais_notaria').inputValue(),'España');assert.equal(await page.locator('#com-ciudad_notaria').inputValue(),'Madrid');assert.equal(await page.locator('#com-divisa').inputValue(),'EUR');
    await page.waitForFunction(()=>document.querySelector('#comercial-paginas').innerText.includes('POR EL CLIENTE 6'));
    const multiples=await page.locator('#comercial-paginas').innerText();
    for(let i=2;i<=6;i++)assert.ok(multiples.includes('CLIENTE ADICIONAL '+i),'incluye declaraciones y firma del cliente '+i);
    await page.locator('#com-precio').fill('1500000');await page.evaluate(()=>{qaError=true;});
-   await page.locator('#comercial-guardar').click();await page.getByText('Error de guardado simulado',{exact:true}).waitFor();
-   assert.equal(await page.locator('#com-precio').inputValue(),'1500000');await page.evaluate(()=>{qaError=false;});
-   await page.locator('#comercial-guardar').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await page.locator('#comercial-guardar').click();await aviso(page,'Error de guardado simulado');
+   assert.equal(await page.locator('#com-precio').inputValue(),'1,500,000');await page.evaluate(()=>{qaError=false;});
+   await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
    await page.evaluate(()=>{window.kwUI.confirm=async()=>true;});
    await page.locator('#com-pago_promesa').fill('60');await page.locator('#comercial-finalizar').click();
-   await page.getByText('Los porcentajes de pago deben sumar 100 %. ',{exact:true}).waitFor();
+   await aviso(page,'Los porcentajes de pago deben sumar 100 %. ');
    assert.equal(await page.evaluate(()=>qaRows[0].estado),'borrador');await page.locator('#com-pago_promesa').fill('20');
-   await page.locator('#comercial-finalizar').click();await page.getByText('Contrato finalizado. Folio: COM-QA-001',{exact:true}).waitFor();
+   await page.locator('#comercial-finalizar').click();await aviso(page,'Contrato finalizado. Folio: COM-QA-001');
    assert.equal(await page.locator('#com-cliente').isDisabled(),true);
    assert.equal(await page.locator('#com-cliente_6').isDisabled(),true);assert.equal(await page.locator('#com-num-clientes').isDisabled(),true);
    await page.evaluate(()=>{
@@ -176,7 +216,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    for(const logo of logosPDF)for(let i=0;i<4;i++)assert.ok(Math.abs(logo[i]-[72,30,98,38][i]*25.4/96)<.01,'logo PDF conserva medidas y posicion');
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
-   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await aviso(page,'PDF descargado.');await page.locator('#comercial-copiar').click();await aviso(page,'Copia editable. Guarda para crear un nuevo contrato.');assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await aviso(page,'Contrato guardado.');
    assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','la copia conserva todos los clientes');
    assert.equal(await page.evaluate(()=>qaRows.length),2,'copia crea un documento independiente');
    assert.deepEqual(errores,[]);await page.close();
