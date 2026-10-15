@@ -11,8 +11,8 @@
   barra.className = 'kw-documento-zoom';
   barra.setAttribute('role', 'group');
   barra.setAttribute('aria-label', 'Zoom del documento');
-  barra.innerHTML = '<button type="button" data-zoom-menos aria-label="Alejar" title="Alejar">?</button>' +
-    '<button type="button" data-zoom-mas aria-label="Acercar" title="Acercar">+</button>' +
+  barra.innerHTML = '<button type="button" data-zoom-menos aria-label="Alejar" title="Alejar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>' +
+    '<button type="button" data-zoom-mas aria-label="Acercar" title="Acercar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>' +
     '<output aria-live="polite">100 %</output>' +
     '<button type="button" data-zoom-ajustar>Ajustar al ancho</button>';
   preview.appendChild(barra);
