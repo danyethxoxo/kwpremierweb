@@ -29,4 +29,8 @@ Los documentos anteriores conservan sus IDs y lógica de datos para no romper bo
 
 Mantener el contenido legal y la paginación en archivos específicos del documento. No modificar Firmas Digitales ni el armazón de otras áreas para ajustar un contrato.
 
+El logo se define una sola vez en `kw-documentos-shell.js` (`marca` y `aplicarMarca`): caja de 98 x 38 px, a 72 px del borde izquierdo y 30 px del superior de la hoja. `kw-pdf-vector.js` aplica las mismas coordenadas físicas al exportar. No definir medidas distintas por plantilla.
+
+Comercial admite de uno a seis clientes. `datos.clientes` conserva los datos individuales; las claves históricas del primer cliente se mantienen para compatibilidad. Los borradores anteriores sin ese arreglo abren con un cliente. Las declaraciones y firmas se generan por cliente, y solo se guardan los clientes activos del selector.
+
 Verificar escritorio y móvil: listado, formulario, fuentes, pie fijo, regreso al listado, guardado y reapertura, revisiones y PDF. Al modificar un recurso compartido, actualizar su versión en las 12 plantillas.

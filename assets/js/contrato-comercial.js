@@ -10,11 +10,16 @@
   const $ = id => document.getElementById(id);
   const tipo = 'contrato_comercial';
   const campos = window.kwComercialCampos.flatMap(grupo => grupo[1]);
+  const camposCliente = window.kwComercialCampos[1][1];
+  let numeroClientes = 1, clientesEnMemoria = [];
+  const idCliente = (id,i) => i ? id+'_'+(i+1) : id;
+  function camposActivos() { return campos.concat(Array.from({length:numeroClientes-1},(_,i)=>camposCliente.map(([id,label,tipo,respaldo])=>[idCliente(id,i+1),'Cliente '+(i+2)+': '+label,tipo,respaldo])).flat()); }
+  function leerClientes() { return Array.from({length:numeroClientes},(_,i)=>Object.fromEntries(camposCliente.map(([id])=>[id,valor(idCliente(id,i))]))); }
   let actual = null, usuario = null, registros = [], ocupado = false, sucio = false, frame = 0, nombreDocumento = '';
   const escapar = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const valor = id => $('com-' + id).value.trim();
   function mensaje(texto, error = false) { $('comercial-mensaje').textContent = texto; $('comercial-mensaje').dataset.error = String(error); }
-  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),nombre:nombreDocumento}; }
+  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),clientes:leerClientes(),numero_clientes:numeroClientes,nombre:nombreDocumento}; }
   function fecha(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
     return new Date(iso + 'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}).toLocaleUpperCase('es-MX');
@@ -50,8 +55,14 @@
   function campo(d, id) { return d[id] ? '<span class="comercial-dato">'+escapar(d[id])+'</span>' : '<span class="comercial-faltante">________________</span>'; }
   function bloquesDocumento() {
     const d = valoresDocumento();
-    const bloques = window.kwComercialContenido.map(texto => {
-      let html = escapar(texto).replace(/\{\{([a-z_]+)\}\}/g, (_,id) => campo(d,id));
+    let contenido=window.kwComercialContenido.map(texto=>({texto,datos:d}));
+    if(numeroClientes>1){
+      contenido[0].texto=contenido[0].texto.replace('A QUIEN EN LO SUCESIVO SE LE DENOMINARÁ “EL CLIENTE”','A QUIENES EN LO SUCESIVO SE LES DENOMINARÁ CONJUNTAMENTE “EL CLIENTE”');
+      contenido[0].datos={...d,cliente:d.clientes.map(c=>c.cliente||'________________').join(', ')};
+      contenido.splice(1,6,...d.clientes.flatMap((cliente,i)=>window.kwComercialContenido.slice(1,7).map((texto,j)=>({texto:j===0?'I.DECLARA “EL CLIENTE” '+(i+1)+': {{cliente}} que:':texto,datos:{...d,...cliente}}))));
+    }
+    const bloques = contenido.map(({texto,datos:datosBloque}) => {
+      let html = escapar(texto).replace(/\{\{([a-z_]+)\}\}/g, (_,id) => campo(datosBloque,id));
       html = html.replace(/^(PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA)\./,'<strong>$1.</strong>');
       const cabecera = /^(?:I{1,3}\.DECLARA|IV\. LAS PARTES|CLÁUSULAS$)/.test(texto);
       const el = document.createElement(cabecera ? 'h3':'p'); el.innerHTML = html; return el;
@@ -59,9 +70,11 @@
     const cierre=document.createElement('p');
     cierre.innerHTML='Leído que fue el presente Acuerdo y enteradas las partes de su contenido y alcance legal, lo firman en tres tantos en '+campo(d,'lugar_firma')+', el '+campo(d,'fecha')+'.';
     bloques.push(cierre);
-    const firmas=document.createElement('div');firmas.className='comercial-firmas';
-    firmas.innerHTML=[['POR EL CLIENTE',campo(d,'cliente')],['KW PREMIER','INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.<br>REPRESENTADA EN ESTE ACTO POR<br>'+campo(d,'representante')],['MCA KW PREMIER',campo(d,'mca')],['EL PROFESIONAL',campo(d,'asesor')]].map(([rol,nombre])=>'<div class="comercial-firma"><b>'+rol+'</b>'+nombre+'</div>').join('');
-    bloques.push(firmas);
+    const firmantes=[...d.clientes.map((cliente,i)=>['POR EL CLIENTE'+(numeroClientes>1?' '+(i+1):''),campo(cliente,'cliente')]),['KW PREMIER','INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.<br>REPRESENTADA EN ESTE ACTO POR<br>'+campo(d,'representante')],['MCA KW PREMIER',campo(d,'mca')],['EL PROFESIONAL',campo(d,'asesor')]];
+    for(let i=0;i<firmantes.length;i+=2){
+      const firmas=document.createElement('div');firmas.className='comercial-firmas';
+      firmas.innerHTML=firmantes.slice(i,i+2).map(([rol,nombre])=>'<div class="comercial-firma"><b>'+rol+'</b>'+nombre+'</div>').join('');bloques.push(firmas);
+    }
     const grupos=[];
     for(let i=0;i<bloques.length;i++){
       if(bloques[i].tagName==='H3'&&bloques[i+1]){
@@ -112,31 +125,42 @@
   function programar() { clearTimeout(frame);frame=setTimeout(()=>{frame=0;paginar();},120); }
   function ampliarCampo(el) { if(el.tagName!=='TEXTAREA')return;el.style.height='0px';el.style.height=Math.max(42,el.scrollHeight+2)+'px'; }
   function pintarCampos() {
-    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista])=>'<fieldset><legend>'+escapar(titulo)+'</legend><div class="acuerdo-duo kw-documentos-campos">'+lista.map(([id,label,tipoCampo])=>{
+    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes" data-kw-no>'+Array.from({length:6},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
+    pintarClientes();
+  }
+  function pintarCampo([id,label,tipoCampo]) {
       const propiedades=' id="com-'+id+'" name="'+id+'" required maxlength="'+(tipoCampo==='textarea'?1000:250)+'"';
       const limite=tipoCampo==='number'?' min="'+(['precio','vigencia','renovacion','proteccion'].includes(id)?'1':'0')+'" max="'+(id==='precio'?'999999999999.99':['vigencia','renovacion','proteccion'].includes(id)?'10000':'100')+'" step="'+(['vigencia','renovacion','proteccion'].includes(id)?'1':'0.01')+'"':'';
       return '<div class="acuerdo-field"><label for="com-'+id+'">'+escapar(label)+'</label>'+(['textarea','text'].includes(tipoCampo)?'<textarea'+propiedades+' rows="1"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>')+'</div>';
-    }).join('')+'</div></fieldset>').join('');
+  }
+  function pintarClientes() {
+    $('com-num-clientes').value=String(numeroClientes);
+    $('comercial-clientes').innerHTML=Array.from({length:numeroClientes},(_,i)=>'<fieldset><legend>Cliente propietario '+(i+1)+'</legend><div class="acuerdo-duo kw-documentos-campos">'+camposCliente.map(([id,label,tipo])=>pintarCampo([idCliente(id,i),label,tipo])).join('')+'</div></fieldset>').join('');
+    for(let i=0;i<numeroClientes;i++)for(const [id]of camposCliente){const el=$('com-'+idCliente(id,i));el.value=clientesEnMemoria[i]?.[id]||'';ampliarCampo(el);}
   }
   function botones() {
     const finalizado=actual?.estado==='finalizado';
     document.body.classList.toggle('doc-borrador',!finalizado);
-    for(const [id] of campos)$('com-'+id).disabled=finalizado||ocupado;
+    for(const [id] of camposActivos())$('com-'+id).disabled=finalizado||ocupado;
+    $('com-num-clientes').disabled=finalizado||ocupado;
     $('comercial-guardar').hidden=finalizado;$('comercial-finalizar').hidden=finalizado;
     $('comercial-copiar').hidden=!finalizado;
     for(const id of ['comercial-guardar','comercial-finalizar','comercial-descargar','comercial-copiar','btn-nuevo'])$(id).disabled=ocupado||!usuario;
   }
-  function vista(formulario,marcar=true) {window.kwDocumentosShell.vista(formulario,marcar);if(formulario){campos.forEach(([id])=>ampliarCampo($('com-'+id)));programar();} }
+  function vista(formulario,marcar=true) {window.kwDocumentosShell.vista(formulario,marcar);if(formulario){camposActivos().forEach(([id])=>ampliarCampo($('com-'+id)));programar();} }
   async function abandonar() { return !sucio || await window.kwUI.confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'); }
   function abrir(row,marcar=true) {
     actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
+    clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,6):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
+    numeroClientes=clientesEnMemoria.length;pintarClientes();
     for(const [id,,,respaldo] of campos)$('com-'+id).value=row?.datos?.[id] ?? respaldo;
+    for(const [id]of camposCliente)$('com-'+id).value=clientesEnMemoria[0]?.[id]||'';
     // Los registros comerciales mantienen nombres estables para integraciones existentes.
     botones();vista(true,marcar);mensaje(row?.estado==='finalizado'?'Contrato finalizado · '+(row.folio || ''):'');
   }
   function pintarLista() {
     const buscar=$('buscador-input').value.trim().toLocaleLowerCase('es-MX');
-    const filas=registros.filter(r=>[r.nombre_archivo,r.datos?.cliente,r.folio].some(v=>String(v||'').toLocaleLowerCase('es-MX').includes(buscar)));
+    const filas=registros.filter(r=>[r.nombre_archivo,r.datos?.cliente,...(r.datos?.clientes||[]).map(c=>c.cliente),r.folio].some(v=>String(v||'').toLocaleLowerCase('es-MX').includes(buscar)));
     for(const estado of ['borrador','finalizado']){
       const grupo=filas.filter(r=>r.estado===estado);
       $('lista-'+(estado==='borrador'?'borradores':'finalizados')).innerHTML=grupo.length?'<div class="kw-lista">'+grupo.map(r=>'<button type="button" class="kw-fila lista-item" data-abrir="'+escapar(r.id)+'"><span class="kw-fila-cabeza"><span class="kw-fila-punto '+(estado==='finalizado'?'lavanda':'rojo')+'"></span><span class="kw-fila-texto"><span class="kw-fila-titulo">'+escapar(r.nombre_archivo)+'</span><span class="kw-fila-sub">'+escapar([r.folio,r.datos?.cliente,new Date(r.updated_at).toLocaleDateString('es-MX')].filter(Boolean).join(' · '))+'</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg></span></button>').join('')+'</div>':'<div class="lista-vacio">'+(buscar?'No hay documentos para esta búsqueda.':estado==='borrador'?'Todavía no hay borradores.':'Todavía no hay documentos finalizados.')+'</div>';
@@ -168,7 +192,7 @@
   }
   async function finalizar() {
     if(ocupado)return;
-    const faltante=campos.find(([id])=>!valor(id));
+    const faltante=camposActivos().find(([id])=>!valor(id));
     if(faltante){mensaje('Completa el campo: '+faltante[1]+'.',true);$('com-'+faltante[0]).focus();return;}
     if(!$('formulario-comercial').reportValidity())return;
     if(Math.abs(Number(valor('pago_promesa'))+Number(valor('pago_escritura'))-100)>.001){mensaje('Los porcentajes de pago deben sumar 100 %. ',true);return;}
@@ -205,6 +229,11 @@
   $('formulario-comercial').noValidate=true;
   $('formulario-comercial').addEventListener('submit',e=>{e.preventDefault();guardar();});
   $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;sucio=true;ampliarCampo(e.target);programar();});
+  $('com-num-clientes').addEventListener('change',()=>{
+    leerClientes().forEach((cliente,i)=>clientesEnMemoria[i]=cliente);
+    numeroClientes=Math.max(1,Math.min(6,Number($('com-num-clientes').value)||1));
+    pintarClientes();botones();sucio=true;programar();
+  });
   $('comercial-finalizar').onclick=finalizar;$('comercial-descargar').onclick=descargar;
   $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();mensaje('Copia editable. Guarda para crear un nuevo contrato.');};
   $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar())window.kwDocumentosShell.transicion(()=>abrir(null));};

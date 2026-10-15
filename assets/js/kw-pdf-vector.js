@@ -169,6 +169,11 @@
       var estilo = pagina.ownerDocument.defaultView.getComputedStyle(img);
       if (!visible(img, estilo)) return;
       var r = relativo(img.getBoundingClientRect(), paginaRect, margen);
+      var shell = global.kwDocumentosShell;
+      if (shell && img.matches(shell.selectorMarca)) {
+        var marca = shell.marca;
+        r = { x: marca.x * PX_MM, y: marca.y * PX_MM, w: marca.ancho * PX_MM, h: marca.alto * PX_MM };
+      }
       try {
         var formato = /jpe?g/i.test(img.src) ? 'JPEG' : 'PNG';
         pdf.addImage(img, formato, r.x, r.y, r.w, r.h, undefined, 'FAST');
@@ -182,6 +187,7 @@
     var JsPDF = global.jspdf && global.jspdf.jsPDF;
     if (!JsPDF) throw new Error('El generador vectorial de PDF no terminó de cargar.');
 
+    if (global.kwDocumentosShell) global.kwDocumentosShell.aplicarMarca(documento);
     await esperarImagenes(documento);
     var margen = Object.assign({ top: 8, right: 19, bottom: 2.7, left: 19 }, opciones || {});
     var paginas = Array.prototype.slice.call(documento.querySelectorAll('.print-page'));

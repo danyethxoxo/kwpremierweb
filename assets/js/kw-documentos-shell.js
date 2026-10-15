@@ -1,5 +1,19 @@
 (function (global) {
   'use strict';
+  const selectorMarca='.doc-header img,.r-logo img,.comercial-hoja header img';
+  const marca={x:72,y:30,ancho:98,alto:38};
+  const marcaCSS=`
+    .doc-header,.r-logo,.comercial-hoja header { min-height:46px!important; text-align:left!important; }
+    ${selectorMarca} { display:block!important; width:${marca.ancho}px!important; height:${marca.alto}px!important; max-width:none!important; object-fit:contain!important; margin:0!important; }
+    .page .doc-header img,.page .r-logo img,.page.comercial-hoja header img { position:absolute!important; top:${marca.y}px!important; left:${marca.x}px!important; }
+    .page:has(.r-logo),.page.comercial-hoja { padding-top:${marca.y}px!important; }
+    .comercial-hoja header { justify-content:flex-end; }
+  `;
+  function aplicarMarca(doc) {
+    if(doc.getElementById('kw-documento-marca'))return;
+    const estilo=doc.createElement('style');estilo.id='kw-documento-marca';estilo.textContent=marcaCSS;doc.head.appendChild(estilo);
+  }
+  aplicarMarca(document);
   const esc = v => String(v || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function prepararFormularioFijo(raiz) {
     if(!raiz || raiz.dataset.kwFormularioFijo)return;
@@ -56,5 +70,5 @@
       modal.querySelector('[data-cancelar]').onclick=()=>cerrar(null);document.addEventListener('keydown',escape);input.focus();input.select();
     });
   }
-  global.kwDocumentosShell={montar,prepararFormularioFijo,vista,mobile,transicion,pedirNombre};
+  global.kwDocumentosShell={montar,prepararFormularioFijo,vista,mobile,transicion,pedirNombre,marca,selectorMarca,aplicarMarca};
 })(window);

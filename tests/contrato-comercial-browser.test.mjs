@@ -56,6 +56,17 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
    });
    // Las dimensiones ocultas del formulario no dependen de los campos del contrato.
    if(!referencia)referencia=estilos;else assert.deepEqual(estilos,referencia,documento);
+   if(documento==='contratos/comercial')await page.locator('#btn-nuevo').click();
+   await page.evaluate(()=>{
+    window.updatePreview?.();
+    const form=document.getElementById('vista-formulario');form.hidden=false;form.style.display='block';
+    document.body.classList.remove('en-lista-documentos');document.getElementById('vista-lista').style.display='none';
+   });
+   const marca=await page.locator('.page .doc-header img,.page .r-logo img,.page.comercial-hoja header img').first().evaluate(img=>{
+    const pagina=img.closest('.page'),p=pagina.getBoundingClientRect(),r=img.getBoundingClientRect(),escala=p.width/pagina.offsetWidth;
+    return {x:(r.x-p.x)/escala,y:(r.y-p.y)/escala,ancho:r.width/escala,alto:r.height/escala};
+   });
+   for(const [dato,valor]of Object.entries({x:72,y:30,ancho:98,alto:38}))assert.ok(Math.abs(marca[dato]-valor)<1.1,documento+': logo '+dato+'='+marca[dato]);
   }
  }finally{await browser.close();}
 });
@@ -129,7 +140,22 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.locator('[data-abrir]').first().waitFor({state:'visible'});
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#vista-lista')).opacity==='1');
    await page.screenshot({path:path.join(root,'artifacts/comercial/lista-'+width+'.png')});
+   await page.evaluate(()=>{delete qaRows[0].datos.clientes;delete qaRows[0].datos.numero_clientes;});
    await page.locator('[data-abrir]').first().click();assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
+   assert.equal(await page.locator('#com-num-clientes').inputValue(),'1','abre borradores anteriores de un cliente');
+   await page.locator('#com-num-clientes').selectOption('6');
+   await page.locator('#comercial-finalizar').click();
+   assert.ok((await page.locator('#comercial-mensaje').innerText()).includes('Cliente 2'),'valida los datos de clientes adicionales');
+   for(let i=2;i<=6;i++)for(const id of ['cliente','estado_civil','rfc','domicilio_cliente','correo_cliente','telefono_cliente'])await page.locator('#com-'+id+'_'+i).fill(id==='cliente'?'CLIENTE ADICIONAL '+i:valores[id]);
+   await page.locator('#com-num-clientes').selectOption('2');await page.locator('#com-num-clientes').selectOption('6');
+   assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','cambiar el selector conserva la captura');
+   await page.locator('#comercial-guardar').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   assert.equal(await page.evaluate(()=>qaRows[0].datos.clientes.length),6);
+   await page.locator('#comercial-volver').click();await page.locator('[data-abrir]').first().click();
+   assert.equal(await page.locator('#com-num-clientes').inputValue(),'6');assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6');
+   await page.waitForFunction(()=>document.querySelector('#comercial-paginas').innerText.includes('POR EL CLIENTE 6'));
+   const multiples=await page.locator('#comercial-paginas').innerText();
+   for(let i=2;i<=6;i++)assert.ok(multiples.includes('CLIENTE ADICIONAL '+i),'incluye declaraciones y firma del cliente '+i);
    await page.locator('#com-precio').fill('1500000');await page.evaluate(()=>{qaError=true;});
    await page.locator('#comercial-guardar').click();await page.getByText('Error de guardado simulado',{exact:true}).waitFor();
    assert.equal(await page.locator('#com-precio').inputValue(),'1500000');await page.evaluate(()=>{qaError=false;});
@@ -140,10 +166,18 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.evaluate(()=>qaRows[0].estado),'borrador');await page.locator('#com-pago_promesa').fill('20');
    await page.locator('#comercial-finalizar').click();await page.getByText('Contrato finalizado. Folio: COM-QA-001',{exact:true}).waitFor();
    assert.equal(await page.locator('#com-cliente').isDisabled(),true);
+   assert.equal(await page.locator('#com-cliente_6').isDisabled(),true);assert.equal(await page.locator('#com-num-clientes').isDisabled(),true);
+   await page.evaluate(()=>{
+    window.qaLogos=[];const original=window.jspdf.jsPDF.API.addImage;
+    window.jspdf.jsPDF.API.addImage=function(...args){if(args[0]?.alt==='KW Premier')window.qaLogos.push(args.slice(2,6));return original.apply(this,args);};
+   });
    const pdf=page.waitForEvent('download');await page.locator('#comercial-descargar').click();const download=await pdf;
+   const logosPDF=await page.evaluate(()=>qaLogos);assert.ok(logosPDF.length>0,'el PDF incluye el logo');
+   for(const logo of logosPDF)for(let i=0;i<4;i++)assert.ok(Math.abs(logo[i]-[72,30,98,38][i]*25.4/96)<.01,'logo PDF conserva medidas y posicion');
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
    await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','la copia conserva todos los clientes');
    assert.equal(await page.evaluate(()=>qaRows.length),2,'copia crea un documento independiente');
    assert.deepEqual(errores,[]);await page.close();
   }
