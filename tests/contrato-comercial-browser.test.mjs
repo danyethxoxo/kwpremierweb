@@ -30,6 +30,36 @@ from(tabla){let accion='select',payload,filtros=[],single=false;const q=new Prox
 channel(){return {on(){return this},subscribe(){return this},unsubscribe(){}}},removeChannel(){}};
 setTimeout(()=>{document.documentElement.classList.add('kw-auth-ok');window.dispatchEvent(new Event('kw-auth-ready'));},50);`;
 
+test('los doce documentos usan la base visual compartida de Renta',async()=>{
+ const documentos=['contratos/renta','contratos/profeco','contratos/comercial','acuerdos/aceptacionoferta','acuerdos/acuerdoreferido','acuerdos/avisodeprivacidad','acuerdos/cartaterminacion','acuerdos/cedularegistro','acuerdos/checklist','acuerdos/colaboracion','acuerdos/contrapropuesta','acuerdos/referido'];
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  const errores=[];page.on('pageerror',e=>errores.push(e.message));
+  await page.route('**/*',route=>{
+   const url=new URL(route.request().url());
+   if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk});
+   if(url.pathname.endsWith('/kw-session.js'))return route.fulfill({body:''});
+   if(url.hostname!=='kw.local')return route.abort();
+   const file=path.join(root,decodeURIComponent(url.pathname));
+   return route.fulfill({status:existsSync(file)?200:404,body:existsSync(file)?readFileSync(file):'',contentType:file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream'});
+  });
+  let referencia;
+  for(const documento of documentos){
+   const html=readFileSync(path.join(root,'documentos',documento+'.html'),'utf8');
+   for(const recurso of ['kw-documentos-shell.css','kw-documentos-shell.js','kw-documentos-form.css','kw-revisiones.css'])assert.ok(html.includes(recurso),documento+': '+recurso);
+   await page.goto('http://kw.local/documentos/'+documento+'.html',{waitUntil:'domcontentloaded'});
+   await page.waitForFunction(()=>window.kwDocumentosShell&&document.querySelector('.kw-form-acciones'),null,{timeout:10000}).catch(e=>{throw new Error(documento+': '+errores.join('; ')+': '+e.message);});
+   const estilos=await page.evaluate(()=>{
+    const leer=(selector,props)=>{const s=getComputedStyle(document.querySelector(selector));return Object.fromEntries(props.map(p=>[p,s[p]]));};
+    return {titulo:leer('.vista-lista-title',['fontFamily','fontSize','fontWeight']),columna:leer('.acuerdos-form-col',['fontFamily','width','padding']),pie:leer('.kw-form-acciones',['position','backgroundColor','borderTopWidth'])};
+   });
+   // Las dimensiones ocultas del formulario no dependen de los campos del contrato.
+   if(!referencia)referencia=estilos;else assert.deepEqual(estilos,referencia,documento);
+  }
+ }finally{await browser.close();}
+});
+
 test('comercial: captura, contenido completo, guardado, reapertura, errores, finalizacion y PDF',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
@@ -62,31 +92,30 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    const contenido=await page.locator('#comercial-paginas').innerText();
    for(const texto of ['I.DECLARA','II.DECLARA','III.DECLARA','CLÁUSULAS','NOVENA.','MCA KW PREMIER','CLIENTE DE PRUEBA','DOCE MILLONES TRESCIENTOS CUARENTA Y TRES MIL TRESCIENTOS SETENTA'])assert.ok(contenido.includes(texto),texto);
    assert.ok(!contenido.includes('ARRIOJA')&&!contenido.includes('regalos.topacio'),'no conserva datos del caso original');
-   assert.equal(await page.locator('#notif-bell-slot').count(),1);
+   assert.equal(await page.locator('.acuerdos-form-col').count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no hay scroll de pagina horizontal');
    assert.ok(await page.locator('.comercial-cuerpo').evaluateAll(els=>els.every(el=>el.getBoundingClientRect().bottom-el.closest('.comercial-hoja').getBoundingClientRect().top<=995)),'ningun bloque sale de su hoja');
    assert.equal(await page.locator('#com-nombre').count(),0);
-   const medidas=await page.evaluate(()=>({direccion:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().width,cliente:document.querySelector('#com-cliente').getBoundingClientRect().width,alto:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().height,columnas:getComputedStyle(document.querySelector('.kw-universal-form-grid')).gridTemplateColumns.split(' ').length}));
+   const medidas=await page.evaluate(()=>({direccion:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().width,cliente:document.querySelector('#com-cliente').getBoundingClientRect().width,alto:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().height}));
    assert.ok(Math.abs(medidas.direccion-medidas.cliente)<1,'direcciones conservan el mismo ancho de campo');
    assert.ok(medidas.alto>42,'la direccion crece en alto para mostrar el contenido');
-   if(width>=1280)assert.ok(medidas.columnas>=3,'aprovecha el ancho con tres campos por fila');
    await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop=200);
+   const scrollAntes=await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop);
    const hoja=await page.locator('.comercial-hoja').first().elementHandle();
    await page.locator('#com-cliente').press('End');await page.locator('#com-cliente').pressSequentially(' PRUEBA');
    await page.waitForTimeout(200);
    assert.equal(await hoja.evaluate(el=>el.isConnected),true,'editar conserva las hojas y evita parpadeo');
-   assert.ok(Math.abs(await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop)-200)<1,'editar conserva el desplazamiento del documento');
+   assert.ok(Math.abs(await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop)-scrollAntes)<1,'editar conserva el desplazamiento del documento');
    await page.locator('#com-cliente').fill(valores.cliente);
-   const pie=await page.locator('.comercial-acciones').boundingBox();
-   await page.locator('#comercial-campos').evaluate(el=>el.scrollTop=500);
-   assert.ok(Math.abs((await page.locator('.comercial-acciones').boundingBox()).y-pie.y)<1,'pie fijo al desplazar campos');
+   const pie=await page.locator('.kw-form-acciones').boundingBox();
+   await page.locator('.kw-form-scroll').evaluate(el=>el.scrollTop=500);
+   assert.ok(Math.abs((await page.locator('.kw-form-acciones').boundingBox()).y-pie.y)<1,'pie fijo al desplazar campos');
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/comercial/ajustes-'+width+'.png')});
-   if(width>=1024)assert.ok((await page.locator('#drawer').boundingBox()).width<80,'riel contraido como en el Hub');
    await page.locator('#comercial-guardar').click();
-   await page.locator('#comercial-nombre').fill('Comercial QA');await page.locator('#comercial-nombre-form button[type=submit]').click();
+   await page.locator('#modal-nombre-input').fill('Comercial QA');await page.locator('#kw-documento-nombre-form button[type=submit]').click();
    await page.getByText('Contrato guardado.',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>qaRows.length),1);
-   await page.locator('[data-vista-universal="lista"]').last().click();
+   await page.locator('#comercial-volver').click();
    await page.locator('[data-abrir]').first().waitFor({state:'visible'});
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#vista-lista')).opacity==='1');
    await page.screenshot({path:path.join(root,'artifacts/comercial/lista-'+width+'.png')});
@@ -104,7 +133,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    const pdf=page.waitForEvent('download');await page.locator('#comercial-descargar').click();const download=await pdf;
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
-   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#comercial-nombre-form button[type=submit]').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>qaRows.length),2,'copia crea un documento independiente');
    assert.deepEqual(errores,[]);await page.close();
   }

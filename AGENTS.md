@@ -1,5 +1,12 @@
 # Diseño de KW Premier
 
+## Contratos y acuerdos
+
+Por indicacion del usuario, la referencia unica de contratos y acuerdos es `documentos/contratos/renta.html`.
+Leer `docs/contratos-acuerdos.md`. Usar `kw-documentos-shell.css`, `kw-documentos-shell.js`, `kw-documentos-form.css` y `kw-revisiones.css`.
+Solo cambian los campos, datos y contenido de cada documento. No crear distribuciones, fuentes, botones, pies, cargas ni ventanas propias del documento.
+Esta regla sustituye Pagina Universal para los formularios y listados de contratos y acuerdos.
+
 Para cada nuevo apartado, listado, formulario o configuración, usar **Página Universal**.
 
 - Leer `docs/pagina-universal.md` y comenzar con `hub/pagina-universal.html`.

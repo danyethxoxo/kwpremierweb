@@ -14,650 +14,128 @@
 <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 <title>Acuerdo de Referido</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
-<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<style>
+html:not(.kw-auth-ok) body { visibility: hidden; }
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
 <script src="/assets/js/auth-guard.js?v=20261013general"></script>
 <script src="/assets/js/kw-prellenar.js?v=20261013general" data-campos="f-asesor-envia"></script>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0;
-    height: 100%;
-    font-family: 'Poppins', Arial, sans-serif;
-    letter-spacing: -0.01em;
-    color: var(--text);
-    overflow: hidden;
-  }
-  /* El fondo real (la capa fija de kw-ui.css, o la propia si la pagina no carga kw-base.css) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
-  body { background: transparent; }
-
-  .layout {
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 0;
-    height: 100vh;
-  }
-
-  .form-col {
-    padding: 20px 18px;
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    height: 100%;
-    /* El mismo gris casi blanco que la vista previa: antes el formulario
-       en blanco puro contra la hoja en gris se veian como dos pantallas
-       distintas, en vez de un mismo lugar de trabajo. */
-    background: #e9e9e8;
-  }
-  .form-title { width: 100%; text-align: center; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-  .form-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-
-  fieldset { border: none; padding: 0; margin: 0; }
-  fieldset[disabled] .field input,
-  fieldset[disabled] .field select,
-  fieldset[disabled] .radio-group { opacity: 0.55; pointer-events: none; }
-
-  .section-label {
-    font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
-    color: var(--red); margin: 18px 0 8px; padding-top: 10px; border-top: 1px solid var(--border);
-  }
-  .section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
-
-  .field { margin-bottom: 12px; }
-  /* Solo la etiqueta del campo, no las de los chips que van adentro:
-     con `.field label` a secas, los chips heredaban las mayúsculas y
-     los 10px de la etiqueta y salían apretados y en versalitas. */
-  .field > label {
-    display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
-    text-transform: uppercase; color: #CC0000; margin-bottom: 5px;
-  }
-  .field input, .field select {
-    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
-    border-radius: 10px; font-family: inherit; font-size: 13px;
-    color: var(--text); background: #fff; outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .field input:focus, .field select:focus {
-    border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08);
-  }
-
-  /* Chips de opción. El puntito del navegador se esconde y se dibuja
-     uno propio: el nativo no se deja separar del texto (se veía pegado
-     a la palabra) ni pintar del rojo de la casa. */
-  .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
-  .radio-chip {
-    position: relative;
-    display: inline-flex; align-items: center; gap: 9px;
-    min-height: 38px; padding: 7px 16px 7px 13px;
-    border: 1.5px solid var(--border); border-radius: 999px;
-    font-size: 12.5px; font-weight: 600; color: #555; line-height: 1.3;
-    cursor: pointer; user-select: none; background: #fff;
-    transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
-  }
-  .radio-chip:hover { border-color: rgba(0,0,0,0.2); background: #fafafa; }
-  .radio-chip:active { transform: scale(0.97); }
-  .radio-chip input {
-    position: absolute; opacity: 0; width: 0; height: 0; margin: 0; pointer-events: none;
-  }
-  .radio-chip::before {
-    content: '';
-    width: 16px; height: 16px; flex-shrink: 0;
-    border: 1.8px solid #c7c7c7; border-radius: 50%; background: #fff;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-  }
-  .radio-chip.checked {
-    border-color: var(--red); background: #FFF3F3; color: var(--red); font-weight: 700;
-  }
-  .radio-chip.checked::before {
-    border-color: var(--red); background: var(--red);
-    box-shadow: inset 0 0 0 3.5px #fff;
-  }
-
-  /* El mismo boton de descarga que los demas acuerdos: tarjeta clara con
-     el contorno guinda. El de antes era una pastilla roja rellena. */
-  .btn-dl {
-    background: #f7f7f6;
-    border: 1.5px solid var(--red); color: var(--red);
-    border-radius: 10px;
-    padding: 10px 16px; font-size: 12px; font-weight: 700;
-    font-family: inherit; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.15s, transform 0.12s;
-    margin-top: 22px;
-  }
-  .btn-dl:hover { background: #ececec; }
-  .btn-dl:active { transform: scale(0.96); }
-
-  .preview-col {
-    overflow: auto;
-    height: 100%;
-    /* Gris casi blanco, como el de la previa del creador de formatos:
-       la hoja se ve como hoja y el guinda no le pelea al documento. */
-    background: #e9e9e8;
-    padding: 24px;
-    display: flex; justify-content: center; align-items: flex-start;
-  }
-
-  .page {
-    width: 816px; height: 1056px;
-    padding: 60px 72px;
-    background: #fff;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-    border-radius: 2px;
-    /* La hoja se queda en Arial: es el documento que se imprime. */
-    font-family: Arial, sans-serif;
-    box-sizing: border-box;
-    display: flex; flex-direction: column;
-    flex-shrink: 0;
-    font-size: 9pt;
-    color: #000;
-  }
-
-  .r-logo { margin-bottom: 6px; }
-  .r-logo img { height: 44px; width: auto; }
-  .r-titulo { text-align: center; font-size: 12pt; font-weight: 700; margin: 6px 0 20px; }
-
-  .r-seccion { font-size: 9.5pt; font-weight: 700; margin: 16px 0 8px; }
-  .r-seccion:first-of-type { margin-top: 0; }
-
-  table.r-tabla { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 8.8pt; }
-  table.r-tabla td { border: 1px solid #000; padding: 5px 8px; vertical-align: top; width: 50%; }
-
-  .r-line { font-size: 9pt; line-height: 1.7; margin-bottom: 3px; }
-  .r-line .r-val { font-weight: 600; }
-
-  .r-comision { font-size: 8.8pt; line-height: 1.55; color: #000; }
-  .r-comision ul { margin: 4px 0 4px 18px; padding: 0; }
-  .r-comision li { margin-bottom: 3px; }
-  .r-comision .r-nota { margin-top: 4px; }
-
-  .r-firmas { margin-top: 34px; }
-  .r-firmas-titulo { text-align: center; font-size: 8.5pt; font-weight: 700; margin-bottom: 80px; }
-  .r-firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 40px; }
-  .r-firma { text-align: center; }
-  .r-firma-nombre { font-size: 8.5pt; min-height: 12px; margin-bottom: 2px; }
-  .r-firma-linea { border-top: 1px solid #000; padding-top: 4px; }
-  .r-firma-rol { font-size: 8pt; }
-
-  @media (max-width: 900px) {
-    html, body { height: auto; }
-    html { overflow: auto; }
-    body { overflow: visible; }
-    .layout { grid-template-columns: 1fr; height: auto; }
-    .form-col { height: auto; overflow-y: visible; }
-  }
-
-  .mobile-tabs {
-    display: none;
-    gap: 8px;
-    padding: 10px 16px;
-    background: #fff;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    transition: transform 0.25s;
-  }
-  .mobile-tabs.mobile-tabs-oculto { transform: translateY(-100%); }
-  .mobile-tab {
-    flex: 1;
-    padding: 9px;
-    border-radius: 20px;
-    border: 1.5px solid var(--border);
-    background: #fff;
-    font-size: 12.5px;
-    font-weight: 700;
-    text-align: center;
-    cursor: pointer;
-    font-family: 'Poppins', Arial, sans-serif;
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s, color 0.15s;
-  }
-  .mobile-tab.active { background: var(--red); color: #fff; border-color: var(--red); box-shadow: 0 3px 10px rgba(138,0,0,0.28); }
-  .mobile-tab:active { transform: scale(0.95); }
-  @media (max-width: 900px) {
-    .mobile-tabs { display: flex; }
-    .preview-col { height: auto; min-height: 100vh; overflow: visible; padding: 16px; min-width: 0; }
-  }
-
-  .page-scale-wrap {
-    overflow: hidden;
-    margin: 0 auto 16px;
-  }
-  .page-scale-wrap .page,
-  .page-scale-wrap.single .page {
-    transform-origin: top left;
-  }
-
-  .btn-download {
-    flex: 0 0 130px;
-    background: #f7f7f6;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 8px; font-size: 12px; font-weight: 700;
-    font-family: 'Poppins', Arial, sans-serif; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.15s, border-color 0.15s, transform 0.12s;
-  }
-  .btn-download:hover { background: #ececec; }
-  .btn-download:active { transform: scale(0.96); }
-  .btn-outline-red { border-color: var(--red); color: var(--red); }
-  .btn-outline-green { border-color: #1f6d2e; color: #1f6d2e; }
-  .btn-outline-purple { border-color: var(--red); color: var(--red); }
-  .btn-outline-blue { border-color: var(--red); color: var(--red); }
-
-  .fab-wrap {
-    position: fixed;
-    right: 22px;
-    bottom: 22px;
-    z-index: 50;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: flex-end;
-    gap: 14px;
-    pointer-events: none;
-  }
-  .fab-principal {
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-    transition: transform 0.15s, opacity 0.2s, box-shadow 0.15s, filter 0.15s;
-  }
-  .fab-principal {
-    width: 58px; height: 58px;
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
-  }
-  .fab-principal:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
-  .fab-principal:active { transform: scale(0.92); }
-  .fab-item, .fab-item-principal {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .fab-item-principal { pointer-events: auto; }
-  .fab-item {
-    opacity: 0;
-    transform: translateY(16px) scale(0.9);
-    pointer-events: none;
-    transition: transform 0.2s, opacity 0.2s;
-  }
-  .fab-item-principal .fab-label {
-    opacity: 0;
-    transform: translateX(8px);
-    pointer-events: none;
-    transition: opacity 0.2s, transform 0.2s;
-  }
-  .fab-wrap.abierto .fab-item-principal .fab-label {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  .fab-label {
-    color: #fff;
-    font-size: 12.5px;
-    font-weight: 700;
-    font-family: 'Poppins', Arial, sans-serif;
-    padding: 6px 13px;
-    border-radius: 20px;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  }
-  .fab-label-aviso {
-    white-space: normal;
-    max-width: 168px;
-    text-align: center;
-    line-height: 1.25;
-  }
-  .fab-label-guardar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
-  .fab-label-finalizar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
-  .fab-label-descargar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
-  .fab-secundario {
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #fff;
-    flex-shrink: 0;
-    width: 46px; height: 46px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-    transition: transform 0.15s, filter 0.15s;
-  }
-  .fab-finalizar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
-  .fab-descargar { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
-  .fab-wrap.abierto .fab-item {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-  }
-  .fab-wrap.abierto .fab-item.fab-inactivo {
-    opacity: 0.55;
-    filter: grayscale(0.4);
-  }
-  .fab-secundario:active { transform: scale(0.88); }
-  @media (max-width: 900px) {
-    .fab-wrap { right: 18px; bottom: 18px; }
-  }
-  @media (max-width: 900px) {
-    .desktop-btn-row { display: none !important; }
-  }
-  @media (min-width: 901px) {
-    .fab-wrap { display: none !important; }
-  }
-  .kw-skel {
-    background: linear-gradient(90deg, #ececec 25%, #f6f6f6 37%, #ececec 63%);
-    background-size: 400px 100%;
-    animation: kw-skel-pulso 1.4s ease-in-out infinite;
-    border-radius: 7px;
-    pointer-events: none;
-  }
-  @keyframes kw-skel-pulso {
-    0% { background-position: -200px 0; }
-    100% { background-position: calc(200px + 100%) 0; }
-  }
-  .kw-skel-line { height: 13px; }
-  .kw-skel-line.kw-skel-sm { height: 9px; }
-  .kw-skel-circle { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
-  .kw-skel-w30 { width: 30%; }
-  .kw-skel-w40 { width: 40%; }
-  .kw-skel-w50 { width: 50%; }
-  .kw-skel-w60 { width: 60%; }
-  .kw-skel-w70 { width: 70%; }
-
-  @keyframes kw-aparece {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .kw-aparece { animation: kw-aparece 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-
-  .slide-confirm { margin-top: 4px; user-select: none; }
-  .slide-track {
-    position: relative;
-    height: 40px;
-    background: linear-gradient(180deg, #f5f1fd, #ece3fb);
-    border: 1.5px solid #ddd0f7;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: inset 0 1px 4px rgba(103,65,217,0.14);
-  }
-  .slide-fill {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
-    background: linear-gradient(90deg, #8a63e8, #6741d9);
-  }
-  .slide-label {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: var(--red);
-    pointer-events: none; letter-spacing: 0.01em;
-    transition: opacity 0.1s linear;
-  }
-  .slide-thumb {
-    position: absolute; top: 3px; left: 3px;
-    width: 32px; height: 32px; border-radius: 7px;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(103,65,217,0.3), 0 1px 3px rgba(0,0,0,0.12);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--red); cursor: grab; touch-action: none;
-    transition: box-shadow 0.15s;
-  }
-  .slide-thumb:active { cursor: grabbing; box-shadow: 0 1px 4px rgba(103,65,217,0.35); }
-  .slide-thumb.confirmado { background: var(--red); color: #fff; }
-  @keyframes slide-hint { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
-  .slide-thumb.hint { animation: slide-hint 1.8s ease-in-out infinite; }
-
-  .btn-volver {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #f7f7f6; border: 1.5px solid var(--border); border-radius: 10px;
-    padding: 8px 14px; font-size: 12px; font-weight: 700;
-    font-family: 'Poppins', Arial, sans-serif; color: #555; cursor: pointer;
-    margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.15s, transform 0.12s;
-  }
-  .btn-volver:hover { background: #ececec; }
-  .btn-volver:active { transform: scale(0.96); }
-
-  /* ── Vista de lista de documentos guardados ── */
-  .vista-lista {
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 32px 24px 60px;
-  }
-  .lista-sticky-bar { background: transparent; }
-  .vista-lista-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  .vista-lista-title { font-size: 20px; font-weight: 700; color: var(--text); }
-  .vista-lista-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .btn-nuevo-documento {
-    display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px;
-    border-radius: 999px; border: none; background: var(--red); color: #fff;
-    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 4px 14px rgba(40,12,12,0.2); transition: transform var(--t-medio);
-    white-space: nowrap;
-  }
-  .btn-nuevo-documento:hover { transform: translateY(-1px); }
-  .btn-nuevo-documento:active { transform: translateY(0); }
-
-  /* El selector de Borradores/Finalizados es el mismo control de
-     pestañas del Panel (kw-ui.css): la pastilla se desliza de una a
-     otra en vez de prenderse y apagarse. Solo aplica en celular; en
-     pantalla grande las dos listas se ven lado a lado. */
-  .lista-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .lista-barra .lista-buscador { flex: 1; min-width: 0; margin-bottom: 0; }
-  /* Se deja encoger: en una pantalla muy angosta (o con el navegador
-     muy acercado) un ancho fijo empujaba la fila fuera de la página.
-     Al encogerse, las pestañas se deslizan de lado dentro de su
-     propia pastilla. */
-  /* .kw-tabs (kw-ui.css) vive aqui directo sobre el fondo guinda de
-     .vista-lista, no dentro de una tarjeta. Los colores y el fondo son
-     los que trae .kw-tabs de kw-ui.css, que ya son los del tema claro. */
-  .lista-barra .kw-tabs { display: none; margin-bottom: 0; flex-shrink: 1; min-width: 0; }
-  .lista-barra .kw-tab { color: var(--muted); }
-  .lista-barra .kw-tab:hover { color: var(--text); }
-  .lista-barra .kw-tab.activo, .lista-barra .kw-tab.activo:hover { color: var(--red); }
-  .lista-barra .kw-tab { height: 32px; padding: 0 13px; font-size: 12px; }
-  @media (max-width: 400px) {
-    .lista-barra .kw-tab { padding: 0 10px; font-size: 11.5px; }
-  }
-
-  @media (max-width: 900px) {
-    .vista-lista { padding-top: 14px; }
-    .lista-sticky-bar {
-      position: sticky; top: 0; z-index: 5;
-      margin: 0 -24px; padding: 14px 24px 12px;
-      box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
-    }
-    /* El margen del último renglón se salía de la barra (los márgenes
-       se escapan cuando el contenedor no tiene relleno abajo), y el
-       buscador quedaba pegado a la orilla. El aire ahora lo pone la
-       barra con su propio relleno. */
-    .lista-sticky-bar .lista-barra { margin-bottom: 0; }
-    /* Y las listas arrancan más abajo, para que no se lean como parte
-       de la barra. */
-    .lista-columnas { margin-top: 18px; }
-    .vista-lista-header { margin-bottom: 12px; }
-    .vista-lista-header > div:first-of-type { flex: 1 0 100%; }
-    /* Crear documento pasa a ser el botón flotante de abajo. */
-    .btn-nuevo-documento { display: none; }
-    .lista-barra .kw-tabs { display: flex; }
-  }
-
-  .lista-buscador {
-    position: relative; margin-bottom: 20px;
-  }
-  .lista-buscador svg {
-    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-    color: var(--muted); pointer-events: none;
-  }
-  .lista-buscador input {
-    width: 100%; padding: 11px 14px 11px 38px;
-    border: 1.5px solid var(--border); border-radius: 12px;
-    font-size: 13.5px; font-family: 'Poppins', Arial, sans-serif;
-    color: var(--text); outline: none; background: #fff;
-  }
-  .lista-buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08); }
-
-  .lista-columnas {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
-    align-items: start;
-  }
-  /* Sin esto, la columna se estira a lo que mida la tabla y empuja la
-     página de lado: los hijos de una cuadrícula no se encogen por
-     debajo de su contenido a menos que se les diga. Con min-width:0,
-     la tabla se desliza dentro de su marco. */
-  .lista-columna { min-width: 0; }
-  .lista-columna-title {
-    font-size: 12px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px;
-  }
-  .lista-columna-title-finalizados { color: #a78bfa; }
-  /* En pantalla grande las dos listas conviven; el panel escondido de
-     kw-ui.css solo debe aplicar en celular. */
-  @media (min-width: 901px) {
-    .lista-columnas .kw-tabpanel { display: block; animation: none; }
-  }
-  @media (max-width: 900px) {
-    .lista-columnas { grid-template-columns: 1fr; --panel-min: 0; }
-  }
-
-  /* Botón flotante para crear, en el mismo lugar que el de guardar del
-     formulario: al picarlo sale la etiqueta y al volver a picar, crea. */
-  .fab-nuevo { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); }
-  .fab-label-nuevo { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); }
-
-  .lista-documentos { display: flex; flex-direction: column; gap: 6px; }
-  .lista-loading, .lista-vacio { color: var(--muted); font-size: 13.5px; padding: 20px 4px; }
-  .lista-item { cursor: pointer; overflow: visible; transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s; }
-  .lista-item:has(.lista-item-menu:not([hidden])) { z-index: 20; }
-  .lista-item:hover { box-shadow: 0 5px 14px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.86); transform: scale(1.008); }
-  .lista-item:active { transform: scale(0.997); }
-  .lista-item .kw-fila-cabeza { padding-block: 10px; }
-  .doc-fila { cursor: pointer; }
-  .lista-item-texto { display: flex; align-items: baseline; gap: 8px; }
-  .lista-item-texto .kw-fila-titulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
-  .lista-item-meta { flex-shrink: 0; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-  .lista-item-menu-ancla { position: relative; display: flex; }
-  .lista-item-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
-  .lista-item-menu-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text); }
-  .lista-item-menu { position: fixed; right: auto; left: auto; z-index: 250; }
-  .vista-lista { overflow-x: hidden; }
-  @media (min-width: 901px) {
-    body.en-lista-documentos { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    body.en-lista-documentos #vista-lista { display: flex !important; flex: 1; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 26px 24px 20px; }
-    body.en-lista-documentos .lista-columnas { flex: 1; min-height: 0; align-items: stretch; }
-    body.en-lista-documentos .lista-columna { display: flex; flex-direction: column; min-height: 0; }
-    body.en-lista-documentos .lista-documentos { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 5px 8px 0; }
-  }
-
-  /* ── Modal: nombre del documento ── */
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,0.45);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-  }
-  .modal-box {
-    background: linear-gradient(150deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.86) 100%); border-radius: 14px; padding: 24px;
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    width: 100%; max-width: 380px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-  }
-  .modal-box h3 { font-size: 17px; margin-bottom: 4px; }
-  .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
-  #modal-nombre-input {
-    width: 100%; padding: 10px 12px;
-    border: 1.5px solid var(--border); border-radius: 10px;
-    font-size: 14px; font-family: 'Poppins', Arial, sans-serif;
-    color: var(--text); outline: none;
-  }
-  #modal-nombre-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08); }
-  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-  .btn-modal-cancelar, .btn-modal-confirmar {
-    flex: 1; padding: 10px; border-radius: 30px; font-size: 13.5px; font-weight: 700;
-    font-family: 'Poppins', Arial, sans-serif; cursor: pointer; border: none;
-  }
-  .btn-modal-cancelar { background: #f2f2f2; color: var(--text); }
-  .btn-modal-confirmar {
-    background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
-  }
-
-  @media print {
-    #vista-lista, .mobile-tabs, .form-col, .modal-overlay {
-      display: none !important;
-    }
-    .layout { display: block !important; height: auto !important; }
-    .preview-col { overflow: visible !important; padding: 0 !important; }
-    .page { box-shadow: none !important; margin: 0 auto 0; }
-    body.doc-borrador .page::before {
-      content: 'BORRADOR - DOCUMENTO NO FINALIZADO';
-      position: absolute;
-      top: 45%; left: 50%;
-      transform: translate(-50%, -50%) rotate(-30deg);
-      font-size: 42pt;
-      font-weight: 900;
-      color: rgba(138,0,0,0.24);
-      z-index: 999;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-  }
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 0px; height: 100vh; }
+.form-col { padding: 20px 18px; border-right: 1px solid var(--border); overflow-y: auto; height: 100%; background: rgb(233, 233, 232); }
+.form-title { width: 100%; text-align: center; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.form-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+fieldset { border-width: medium; border-style: none; border-color: currentcolor; border-image: none; padding: 0px; margin: 0px; }
+fieldset[disabled] .field input, fieldset[disabled] .field select, fieldset[disabled] .radio-group { opacity: 0.55; pointer-events: none; }
+.section-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--red); margin: 18px 0px 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.section-label:first-of-type { margin-top: 0px; padding-top: 0px; border-top-width: medium; border-top-style: none; border-top-color: currentcolor; }
+.field { margin-bottom: 12px; }
+.field > label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(204, 0, 0); margin-bottom: 5px; }
+.field input, .field select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; color: var(--text); background: rgb(255, 255, 255); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+.field input:focus, .field select:focus { border-color: var(--red); box-shadow: rgba(138, 0, 0, 0.08) 0px 0px 0px 3px; }
+.radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio-chip { position: relative; display: inline-flex; align-items: center; gap: 9px; min-height: 38px; padding: 7px 16px 7px 13px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 12.5px; font-weight: 600; color: rgb(85, 85, 85); line-height: 1.3; cursor: pointer; user-select: none; background: rgb(255, 255, 255); transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s; }
+.radio-chip:hover { border-color: rgba(0, 0, 0, 0.2); background: rgb(250, 250, 250); }
+.radio-chip:active { transform: scale(0.97); }
+.radio-chip input { position: absolute; opacity: 0; width: 0px; height: 0px; margin: 0px; pointer-events: none; }
+.radio-chip::before { content: ""; width: 16px; height: 16px; flex-shrink: 0; border: 1.8px solid rgb(199, 199, 199); border-radius: 50%; background: rgb(255, 255, 255); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+.radio-chip.checked { border-color: var(--red); background: rgb(255, 243, 243); color: var(--red); font-weight: 700; }
+.radio-chip.checked::before { border-color: var(--red); background: var(--red); box-shadow: rgb(255, 255, 255) 0px 0px 0px 3.5px inset; }
+.btn-dl { background: rgb(247, 247, 246); border: 1.5px solid var(--red); color: var(--red); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: rgba(0, 0, 0, 0.08) 0px 2px 6px; transition: background 0.15s, transform 0.12s; margin-top: 22px; }
+.btn-dl:hover { background: rgb(236, 236, 236); }
+.btn-dl:active { transform: scale(0.96); }
+.preview-col { overflow: auto; height: 100%; background: rgb(233, 233, 232); padding: 24px; display: flex; justify-content: center; align-items: flex-start; }
+.page { width: 816px; height: 1056px; padding: 60px 72px; background: rgb(255, 255, 255); box-shadow: rgba(0, 0, 0, 0.18) 0px 4px 24px; border-radius: 2px; font-family: Arial, sans-serif; box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; font-size: 9pt; color: rgb(0, 0, 0); }
+.r-logo { margin-bottom: 6px; }
+.r-logo img { height: 44px; width: auto; }
+.r-titulo { text-align: center; font-size: 12pt; font-weight: 700; margin: 6px 0px 20px; }
+.r-seccion { font-size: 9.5pt; font-weight: 700; margin: 16px 0px 8px; }
+.r-seccion:first-of-type { margin-top: 0px; }
+table.r-tabla { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 8.8pt; }
+table.r-tabla td { border: 1px solid rgb(0, 0, 0); padding: 5px 8px; vertical-align: top; width: 50%; }
+.r-line { font-size: 9pt; line-height: 1.7; margin-bottom: 3px; }
+.r-line .r-val { font-weight: 600; }
+.r-comision { font-size: 8.8pt; line-height: 1.55; color: rgb(0, 0, 0); }
+.r-comision ul { margin: 4px 0px 4px 18px; padding: 0px; }
+.r-comision li { margin-bottom: 3px; }
+.r-comision .r-nota { margin-top: 4px; }
+.r-firmas { margin-top: 34px; }
+.r-firmas-titulo { text-align: center; font-size: 8.5pt; font-weight: 700; margin-bottom: 80px; }
+.r-firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 40px; }
+.r-firma { text-align: center; }
+.r-firma-nombre { font-size: 8.5pt; min-height: 12px; margin-bottom: 2px; }
+.r-firma-linea { border-top: 1px solid rgb(0, 0, 0); padding-top: 4px; }
+.r-firma-rol { font-size: 8pt; }
+@media (max-width: 900px) {
+.layout { grid-template-columns: 1fr; height: auto; }
+.form-col { height: auto; overflow-y: visible; }
+}
+@media (max-width: 900px) {
+.preview-col { height: auto; min-height: 100vh; overflow: visible; padding: 16px; min-width: 0px; }
+}
+.page-scale-wrap { overflow: hidden; margin: 0px auto 16px; }
+.page-scale-wrap .page, .page-scale-wrap.single .page { transform-origin: left top; }
+.kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
+@keyframes kw-skel-pulso {
+  0% { background-position: -200px 0px; }
+  100% { background-position: calc(100% + 200px) 0px; }
+}
+.kw-skel-line { height: 13px; }
+.kw-skel-line.kw-skel-sm { height: 9px; }
+.kw-skel-circle { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+.kw-skel-w30 { width: 30%; }
+.kw-skel-w40 { width: 40%; }
+.kw-skel-w50 { width: 50%; }
+.kw-skel-w60 { width: 60%; }
+.kw-skel-w70 { width: 70%; }
+@keyframes kw-aparece {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0px); }
+}
+.kw-aparece { animation: 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0s 1 normal both running kw-aparece; }
+.doc-fila { cursor: pointer; }
+@media print {
+  #vista-lista, .mobile-tabs, .form-col, .modal-overlay { display: none !important; }
+  .layout { display: block !important; height: auto !important; }
+  .preview-col { overflow: visible !important; padding: 0px !important; }
+  .page { margin: 0px auto; box-shadow: none !important; }
+  body.doc-borrador .page::before { content: "BORRADOR - DOCUMENTO NO FINALIZADO"; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 42pt; font-weight: 900; color: rgba(138, 0, 0, 0.24); z-index: 999; white-space: nowrap; pointer-events: none; }
+}
 </style>
-<link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20260926b">
-<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261015zoomfirmas">
+<link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
+<link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
+<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261015shell">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261001r"></script>
-<style>  .field textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; color:var(--text); background:var(--input-bg, #fff); resize:vertical; }
-  fieldset[disabled] textarea { opacity:.55; }
-  .page { height:auto; min-height:1056px; padding:42px 48px; }
-  .r-logo { text-align:left; margin-bottom:4px; }
-  .r-logo img { height:38px; }
-  .r-titulo { margin:2px 0 8px; font-size:12pt; }
-  .r-seccion { background:#eee; padding:4px 5px; margin:6px 0 0; font-size:8pt; border:1px solid #333; }
-  table.r-tabla { table-layout:fixed; font-size:7.4pt; margin:0; }
-  table.r-tabla td { padding:2px 5px; line-height:1.22; overflow-wrap:anywhere; }
-  .r-val { white-space:pre-wrap; }
-  .r-comision { font-size:7.5pt; line-height:1.3; margin:7px 0; }
-  .r-firmas { margin-top:10px; }
-  .r-firmas-grid { gap:8px 24px; }
-  .r-firma { break-inside:avoid; padding-top:8px; }
-  .r-firma-nombre { font-size:8pt; min-height:12px; }
-  .r-firma-rol { font-size:7pt; }
-  tr { break-inside:avoid; }
-  .r-seccion { break-after:avoid; }
+<style>
+.field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-language-override: inherit; font-size: 13px; color: var(--text); background: var(--input-bg, #fff); resize: vertical; }
+fieldset[disabled] textarea { opacity: 0.55; }
+.page { height: auto; min-height: 1056px; padding: 42px 48px; }
+.r-logo { text-align: left; margin-bottom: 4px; }
+.r-logo img { height: 38px; }
+.r-titulo { margin: 2px 0px 8px; font-size: 12pt; }
+.r-seccion { background: rgb(238, 238, 238); padding: 4px 5px; margin: 6px 0px 0px; font-size: 8pt; border: 1px solid rgb(51, 51, 51); }
+table.r-tabla { table-layout: fixed; font-size: 7.4pt; margin: 0px; }
+table.r-tabla td { padding: 2px 5px; line-height: 1.22; overflow-wrap: anywhere; }
+.r-val { white-space: pre-wrap; }
+.r-comision { font-size: 7.5pt; line-height: 1.3; margin: 7px 0px; }
+.r-firmas { margin-top: 10px; }
+.r-firmas-grid { gap: 8px 24px; }
+.r-firma { break-inside: avoid; padding-top: 8px; }
+.r-firma-nombre { font-size: 8pt; min-height: 12px; }
+.r-firma-rol { font-size: 7pt; }
+tr { break-inside: avoid; }
+.r-seccion { break-after: avoid; }
 </style><link rel="stylesheet" href="/assets/css/kw-guardar-exito.css?v=20261007a">
 <style>
-  /* El pie pertenece a la hoja y se mantiene cerca de su borde inferior. */
-  .page { position:relative; padding-bottom:64px; }
-  .r-page-footer { position:absolute; bottom:24px; left:48px; right:48px; display:grid; grid-template-columns:1fr 1fr 1fr; align-items:center; font-family:Arial,sans-serif; font-size:8pt; line-height:1.2; color:#555; }
-  .r-page-footer span:nth-child(2) { text-align:center; }
-  .r-page-footer span:last-child { text-align:right; }
+.page { position: relative; padding-bottom: 64px; }
+.r-page-footer { position: absolute; bottom: 24px; left: 48px; right: 48px; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.2; color: rgb(85, 85, 85); }
+.r-page-footer span:nth-child(2) { text-align: center; }
+.r-page-footer span:last-child { text-align: right; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-referido-form.css?v=20261008a">
+<script src="/assets/js/kw-documentos-shell.js?v=20261015renta"></script>
 </head>
 <body class="doc-borrador">
 
@@ -1715,7 +1193,7 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 <script src="/assets/js/kw-documentos-lista.js?v=20261013general"></script>
 <script src="/assets/js/kw-documentos-revision-local.js?v=20261008a"></script>
 <script src="/assets/js/kw-documento-zoom.js?v=20261015zoomfirmas"></script>
-<script src="/assets/js/kw-revisiones.js?v=20261008a"></script>
+<script src="/assets/js/kw-revisiones.js?v=20261015shell"></script>
 <script>
 window.kwRevisiones.iniciar({
   id: function () { return documentoActualId; },

@@ -1,5 +1,7 @@
 # Página Universal
 
+Los contratos y acuerdos usan la base de Renta descrita en [contratos-acuerdos.md](contratos-acuerdos.md), por indicación del usuario. Esta página no sustituye su armazón.
+
 La referencia aprobada es Firmas Digitales. La distribución para nuevas pantallas está en `hub/pagina-universal.html`: tiene vista de listado y vista de formulario. Es una referencia visual autenticada, sin persistencia ni registros ficticios.
 
 ## Crear un apartado

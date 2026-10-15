@@ -507,38 +507,7 @@
   }
 
   function prepararFormularioFijo() {
-    if (!raiz || raiz.dataset.kwFormularioFijo) return;
-    var acciones = raiz.querySelector('.desktop-btn-row');
-    if (!acciones) return;
-
-    var descarga = acciones.querySelector('#btn-pdf');
-    if (descarga) {
-      descarga.setAttribute('aria-label', 'Descargar');
-      descarga.setAttribute('title', 'Descargar');
-      var icono = descarga.querySelector('svg');
-      descarga.innerHTML = (icono ? icono.outerHTML : '') + ' Descargar';
-    }
-    raiz.dataset.kwFormularioFijo = '1';
-    raiz.classList.add('kw-form-fija');
-
-    var mensaje = raiz.querySelector('#guardar-msg');
-    var desplazable = document.createElement('div');
-    desplazable.className = 'kw-form-scroll';
-
-    Array.prototype.slice.call(raiz.children).forEach(function (hijo) {
-      if (hijo.classList.contains('kw-revision-tabs') ||
-          hijo.classList.contains('kw-revision-panel') ||
-          hijo === acciones || hijo === mensaje) return;
-      desplazable.appendChild(hijo);
-    });
-
-    var pie = document.createElement('div');
-    pie.className = 'kw-form-acciones';
-    pie.appendChild(acciones);
-    if (mensaje) pie.appendChild(mensaje);
-
-    raiz.insertBefore(desplazable, panel ? panel.nextSibling : raiz.firstChild);
-    raiz.appendChild(pie);
+    global.kwDocumentosShell.prepararFormularioFijo(raiz);
   }
 
   function iniciar(nuevoAdaptador) {
