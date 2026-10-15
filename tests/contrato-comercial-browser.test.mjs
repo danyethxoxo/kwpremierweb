@@ -99,6 +99,16 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    const medidas=await page.evaluate(()=>({direccion:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().width,cliente:document.querySelector('#com-cliente').getBoundingClientRect().width,alto:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().height}));
    assert.ok(Math.abs(medidas.direccion-medidas.cliente)<1,'direcciones conservan el mismo ancho de campo');
    assert.ok(medidas.alto>42,'la direccion crece en alto para mostrar el contenido');
+   const filas=await page.locator('.kw-documentos-campos').evaluateAll(grupos=>grupos.map(grupo=>Array.from(grupo.children).map(campo=>{
+    const control=campo.querySelector('input,textarea');const rect=control.getBoundingClientRect();return {id:control.id,x:rect.x,y:rect.y,ancho:rect.width};
+   })));
+   for(const fila of filas)for(let i=0;i<fila.length;i+=2){
+    if(!fila[i+1])continue;
+    assert.ok(Math.abs(fila[i].y-fila[i+1].y)<1,'controles alineados: '+fila[i].id+' / '+fila[i+1].id);
+    assert.ok(Math.abs(fila[i].ancho-fila[i+1].ancho)<1,'columnas iguales');
+    assert.ok(fila[i+1].x>fila[i].x,'dos campos ordenados por fila');
+    if(fila[i+2])assert.ok(fila[i+2].y>fila[i].y,'el siguiente par empieza otra fila');
+   }
    await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop=200);
    const scrollAntes=await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop);
    const hoja=await page.locator('.comercial-hoja').first().elementHandle();
