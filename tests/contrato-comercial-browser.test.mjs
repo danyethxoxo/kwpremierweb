@@ -54,6 +54,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.locator('#btn-nuevo').click();
    const valores={nombre:'Comercial QA',fecha:'2026-10-15',cliente:'CLIENTE DE PRUEBA',estado_civil:'SOLTERO',rfc:'XAXX010101000',domicilio_cliente:'AVENIDA DE PRUEBA 10, CIUDAD DE MÉXICO',correo_cliente:'cliente@example.com',telefono_cliente:'5512345678',tipo_inmueble:'LOCAL COMERCIAL',inmueble:'AVENIDA COMERCIAL 20, CIUDAD DE MÉXICO',escritura:'12345',fecha_escritura:'2020-05-12',notario:'NOTARIO DE PRUEBA',notaria:'123',ciudad_notaria:'CIUDAD DE MÉXICO',asesor:'ASESORA DE PRUEBA',correo_asesor:'asesor@example.com',whatsapp_asesor:'5587654321',telefono_asesor:'5587654321',precio:'12343370'};
    for(const [id,v]of Object.entries(valores)){
+     if(id==='nombre')continue;
      if(id==='fecha'||id==='fecha_escritura')await page.locator('#com-'+id).evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},v);
      else await page.locator('#com-'+id).fill(v);
    }
@@ -64,10 +65,32 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.locator('#notif-bell-slot').count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no hay scroll de pagina horizontal');
    assert.ok(await page.locator('.comercial-cuerpo').evaluateAll(els=>els.every(el=>el.getBoundingClientRect().bottom-el.closest('.comercial-hoja').getBoundingClientRect().top<=995)),'ningun bloque sale de su hoja');
-   await page.locator('#comercial-guardar').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   assert.equal(await page.locator('#com-nombre').count(),0);
+   const medidas=await page.evaluate(()=>({direccion:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().width,cliente:document.querySelector('#com-cliente').getBoundingClientRect().width,alto:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().height,columnas:getComputedStyle(document.querySelector('.kw-universal-form-grid')).gridTemplateColumns.split(' ').length}));
+   assert.ok(Math.abs(medidas.direccion-medidas.cliente)<1,'direcciones conservan el mismo ancho de campo');
+   assert.ok(medidas.alto>42,'la direccion crece en alto para mostrar el contenido');
+   if(width>=1280)assert.ok(medidas.columnas>=3,'aprovecha el ancho con tres campos por fila');
+   await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop=200);
+   const hoja=await page.locator('.comercial-hoja').first().elementHandle();
+   await page.locator('#com-cliente').press('End');await page.locator('#com-cliente').pressSequentially(' PRUEBA');
+   await page.waitForTimeout(200);
+   assert.equal(await hoja.evaluate(el=>el.isConnected),true,'editar conserva las hojas y evita parpadeo');
+   assert.ok(Math.abs(await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop)-200)<1,'editar conserva el desplazamiento del documento');
+   await page.locator('#com-cliente').fill(valores.cliente);
+   const pie=await page.locator('.comercial-acciones').boundingBox();
+   await page.locator('#comercial-campos').evaluate(el=>el.scrollTop=500);
+   assert.ok(Math.abs((await page.locator('.comercial-acciones').boundingBox()).y-pie.y)<1,'pie fijo al desplazar campos');
+   mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/comercial/ajustes-'+width+'.png')});
+   if(width>=1024)assert.ok((await page.locator('#drawer').boundingBox()).width<80,'riel contraido como en el Hub');
+   await page.locator('#comercial-guardar').click();
+   await page.locator('#comercial-nombre').fill('Comercial QA');await page.locator('#comercial-nombre-form button[type=submit]').click();
+   await page.getByText('Contrato guardado.',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>qaRows.length),1);
    await page.locator('[data-vista-universal="lista"]').last().click();
-   await page.locator('[data-abrir]').click();assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
+   await page.locator('[data-abrir]').first().waitFor({state:'visible'});
+   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#vista-lista')).opacity==='1');
+   await page.screenshot({path:path.join(root,'artifacts/comercial/lista-'+width+'.png')});
+   await page.locator('[data-abrir]').first().click();assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
    await page.locator('#com-precio').fill('1500000');await page.evaluate(()=>{qaError=true;});
    await page.locator('#comercial-guardar').click();await page.getByText('Error de guardado simulado',{exact:true}).waitFor();
    assert.equal(await page.locator('#com-precio').inputValue(),'1500000');await page.evaluate(()=>{qaError=false;});
@@ -81,7 +104,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    const pdf=page.waitForEvent('download');await page.locator('#comercial-descargar').click();const download=await pdf;
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
-   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
+   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#comercial-nombre-form button[type=submit]').click();await page.getByText('Contrato guardado.',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>qaRows.length),2,'copia crea un documento independiente');
    assert.deepEqual(errores,[]);await page.close();
   }

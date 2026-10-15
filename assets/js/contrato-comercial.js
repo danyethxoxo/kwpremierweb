@@ -3,11 +3,11 @@
   const $ = id => document.getElementById(id);
   const tipo = 'contrato_comercial';
   const campos = window.kwComercialCampos.flatMap(grupo => grupo[1]);
-  let actual = null, usuario = null, registros = [], ocupado = false, sucio = false, frame = 0;
+  let actual = null, usuario = null, registros = [], ocupado = false, sucio = false, frame = 0, nombreDocumento = '';
   const escapar = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const valor = id => $('com-' + id).value.trim();
   function mensaje(texto, error = false) { $('comercial-mensaje').textContent = texto; $('comercial-mensaje').dataset.error = String(error); }
-  function datos() { return Object.fromEntries(campos.map(([id]) => [id, valor(id)])); }
+  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),nombre:nombreDocumento}; }
   function fecha(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
     return new Date(iso + 'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}).toLocaleUpperCase('es-MX');
@@ -79,15 +79,36 @@
       }
     }
     paginas.forEach((p,i)=>p.querySelector('.comercial-numero').textContent='Página '+(i+1)+' de '+paginas.length);
-    const stack=$('comercial-paginas');stack.replaceChildren(...paginas);medidor.remove();
+    const stack=$('comercial-paginas'),existentes=Array.from(stack.querySelectorAll('.comercial-hoja'));
+    paginas.forEach((p,i)=>{
+      if(existentes[i]){
+        actualizarNodo(existentes[i].querySelector('.comercial-cuerpo'),p.querySelector('.comercial-cuerpo'));
+        actualizarNodo(existentes[i].querySelector('footer'),p.querySelector('footer'));
+      }else stack.appendChild(p);
+    });
+    existentes.slice(paginas.length).forEach(p=>{const padre=p.parentElement;(padre.classList.contains('page-scale-wrap')?padre:p).remove();});
+    medidor.remove();
     window.fitPreviewMobile?.();
   }
-  function programar() { if (!frame) frame=requestAnimationFrame(()=>{frame=0;paginar();}); }
+  function actualizarNodo(destino,origen) {
+    if(destino.nodeType===3){if(destino.nodeValue!==origen.nodeValue)destino.nodeValue=origen.nodeValue;return;}
+    for(const atributo of Array.from(destino.attributes))if(!origen.hasAttribute(atributo.name))destino.removeAttribute(atributo.name);
+    for(const atributo of Array.from(origen.attributes))if(destino.getAttribute(atributo.name)!==atributo.value)destino.setAttribute(atributo.name,atributo.value);
+    for(let i=0;i<origen.childNodes.length;i++){
+      const a=destino.childNodes[i],b=origen.childNodes[i];
+      if(!a)destino.appendChild(b.cloneNode(true));
+      else if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)a.replaceWith(b.cloneNode(true));
+      else actualizarNodo(a,b);
+    }
+    while(destino.childNodes.length>origen.childNodes.length)destino.lastChild.remove();
+  }
+  function programar() { clearTimeout(frame);frame=setTimeout(()=>{frame=0;paginar();},120); }
+  function ampliarCampo(el) { if(el.tagName!=='TEXTAREA')return;el.style.height='0px';el.style.height=Math.max(42,el.scrollHeight+2)+'px'; }
   function pintarCampos() {
     $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista])=>'<fieldset><legend>'+escapar(titulo)+'</legend><div class="kw-universal-form-grid">'+lista.map(([id,label,tipoCampo])=>{
       const propiedades=' id="com-'+id+'" name="'+id+'" required maxlength="'+(tipoCampo==='textarea'?1000:250)+'"';
       const limite=tipoCampo==='number'?' min="'+(['precio','vigencia','renovacion','proteccion'].includes(id)?'1':'0')+'" max="'+(id==='precio'?'999999999999.99':['vigencia','renovacion','proteccion'].includes(id)?'10000':'100')+'" step="'+(['vigencia','renovacion','proteccion'].includes(id)?'1':'0.01')+'"':'';
-      return '<div class="field'+(tipoCampo==='textarea'?' ancho':'')+'"><label for="com-'+id+'">'+escapar(label)+'</label>'+(tipoCampo==='textarea'?'<textarea'+propiedades+' rows="3"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>')+'</div>';
+      return '<div class="field"><label for="com-'+id+'">'+escapar(label)+'</label>'+(['textarea','text'].includes(tipoCampo)?'<textarea'+propiedades+' rows="1"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>')+'</div>';
     }).join('')+'</div></fieldset>').join('');
   }
   function botones() {
@@ -97,22 +118,24 @@
     $('comercial-copiar').hidden=!finalizado;
     for(const id of ['comercial-guardar','comercial-finalizar','comercial-descargar','comercial-copiar','btn-nuevo'])$(id).disabled=ocupado||!usuario;
   }
-  function vista(formulario) { $('vista-lista').hidden=formulario;$('vista-formulario').hidden=!formulario;if(formulario)programar(); }
+  function vista(formulario) { $('vista-lista').hidden=formulario;$('vista-formulario').hidden=!formulario;document.body.classList.toggle('comercial-en-formulario',formulario);$('btn-nuevo').hidden=formulario;document.querySelector('main').scrollTop=0;if(formulario){campos.forEach(([id])=>ampliarCampo($('com-'+id)));programar();} }
   async function abandonar() { return !sucio || await window.kwUI.confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'); }
   function abrir(row) {
-    actual=row;sucio=false;
+    actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
     for(const [id,,,respaldo] of campos)$('com-'+id).value=row?.datos?.[id] ?? respaldo;
     // Los registros comerciales mantienen nombres estables para integraciones existentes.
     botones();vista(true);mensaje(row?.estado==='finalizado'?'Contrato finalizado · '+(row.folio || ''):'');
   }
   function pintarLista() {
-    const buscar=$('buscador-input').value.trim().toLocaleLowerCase('es-MX'),estado=$('filtro-estado').value;
-    const filas=registros.filter(r=>(!estado||r.estado===estado)&&[r.nombre_archivo,r.datos?.cliente,r.folio].some(v=>String(v||'').toLocaleLowerCase('es-MX').includes(buscar)));
-    $('comercial-cuenta').textContent=registros.length;
-    $('comercial-lista').innerHTML=filas.length?filas.map(r=>'<tr><td>'+escapar(r.nombre_archivo)+'</td><td>'+escapar(r.datos?.cliente||'Sin capturar')+'</td><td>'+escapar(r.estado==='finalizado'?'Finalizado':'Borrador')+'</td><td>'+escapar(r.folio||'Pendiente')+'</td><td>'+escapar(new Date(r.updated_at).toLocaleDateString('es-MX'))+'</td><td><button type="button" class="kw-btn-icono" data-abrir="'+escapar(r.id)+'" aria-label="Abrir contrato" title="Abrir contrato"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7"/></svg></button></td></tr>').join(''):'<tr><td colspan="6"><div class="kw-universal-vacio">No hay contratos para estos filtros.</div></td></tr>';
+    const buscar=$('buscador-input').value.trim().toLocaleLowerCase('es-MX');
+    const filas=registros.filter(r=>[r.nombre_archivo,r.datos?.cliente,r.folio].some(v=>String(v||'').toLocaleLowerCase('es-MX').includes(buscar)));
+    for(const estado of ['borrador','finalizado']){
+      const grupo=filas.filter(r=>r.estado===estado);
+      $('lista-'+(estado==='borrador'?'borradores':'finalizados')).innerHTML=grupo.length?'<div class="kw-lista">'+grupo.map(r=>'<button type="button" class="kw-fila lista-item" data-abrir="'+escapar(r.id)+'"><span class="kw-fila-cabeza"><span class="kw-fila-punto '+(estado==='finalizado'?'lavanda':'rojo')+'"></span><span class="kw-fila-texto"><span class="kw-fila-titulo">'+escapar(r.nombre_archivo)+'</span><span class="kw-fila-sub">'+escapar([r.folio,r.datos?.cliente,new Date(r.updated_at).toLocaleDateString('es-MX')].filter(Boolean).join(' · '))+'</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg></span></button>').join('')+'</div>':'<div class="lista-vacio">'+(buscar?'No hay documentos para esta búsqueda.':estado==='borrador'?'Todavía no hay borradores.':'Todavía no hay documentos finalizados.')+'</div>';
+    }
   }
   async function cargarLista() {
-    $('comercial-lista').innerHTML='<tr><td colspan="6"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></td></tr>';
+    for(const id of ['lista-borradores','lista-finalizados'])$(id).innerHTML='<div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
     try {
       const filas=[];
       for(let inicio=0;;inicio+=500){
@@ -120,12 +143,23 @@
         if(r.error)throw r.error;filas.push(...r.data);if(r.data.length<500)break;
       }
       registros=filas;pintarLista();
-    } catch(e){$('comercial-lista').innerHTML='';mensaje(e.message||'No se pudieron cargar los contratos.',true);}
+    } catch(e){for(const id of ['lista-borradores','lista-finalizados'])$(id).innerHTML='';mensaje(e.message||'No se pudieron cargar los contratos.',true);}
+  }
+  function pedirNombre() {
+    return new Promise(resolve=>{
+      const modal=$('comercial-nombre-modal'),entrada=$('comercial-nombre');
+      entrada.value=nombreDocumento||'Contrato comercial';
+      let aceptado=false;
+      $('comercial-nombre-form').onsubmit=e=>{e.preventDefault();if(!entrada.value.trim())return;nombreDocumento=entrada.value.trim();aceptado=true;modal.close();};
+      $('comercial-nombre-cancelar').onclick=()=>modal.close();
+      modal.addEventListener('close',()=>resolve(aceptado),{once:true});modal.showModal();entrada.select();
+    });
   }
   async function guardar() {
     if(!usuario||ocupado||actual?.estado==='finalizado')return false;
     ocupado=true;botones();
     try {
+      if(!actual&&!await pedirNombre())return false;
       const d=datos(),payload={datos:d,nombre_archivo:d.nombre||'Contrato comercial'};
       let q=window.kwSupabase.from('documentos_guardados');
       q=actual?q.update(payload).eq('id',actual.id).eq('user_id',usuario.id).eq('tipo_documento',tipo).eq('estado','borrador'):q.insert({...payload,user_id:usuario.id,tipo_documento:tipo});
@@ -156,7 +190,7 @@
       $('comercial-paginas').querySelectorAll('.page').forEach(p=>{const copia=p.cloneNode(true);copia.classList.add('print-page');copia.style.transform='none';doc.body.appendChild(copia);});
       await new Promise(resolve=>{const css=doc.querySelector('link');css.onload=resolve;css.onerror=()=>resolve();if(css.sheet)resolve();});
       const pdf=await window.kwPDFVector.crear(doc,{top:0,left:0,right:0,bottom:0});
-      pdf.save((valor('nombre')||'Contrato comercial').replace(/[<>:"/\\|?*]/g,'-')+'.pdf');mensaje('PDF descargado.');
+      pdf.save((nombreDocumento||'Contrato comercial').replace(/[<>:"/\\|?*]/g,'-')+'.pdf');mensaje('PDF descargado.');
     }catch(e){mensaje(e.message||'No se pudo generar el PDF.',true);}finally{iframe?.remove();ocupado=false;botones();}
   }
   async function iniciar() {
@@ -171,14 +205,14 @@
   pintarCampos();botones();
   $('formulario-comercial').noValidate=true;
   $('formulario-comercial').addEventListener('submit',e=>{e.preventDefault();guardar();});
-  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;sucio=true;programar();});
+  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;sucio=true;ampliarCampo(e.target);programar();});
   $('comercial-finalizar').onclick=finalizar;$('comercial-descargar').onclick=descargar;
   $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();mensaje('Copia editable. Guarda para crear un nuevo contrato.');};
   $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar())abrir(null);};
   document.querySelectorAll('[data-vista-universal="lista"]').forEach(b=>b.onclick=async()=>{if(!ocupado&&await abandonar()){sucio=false;vista(false);mensaje('');cargarLista();}});
   $('comercial-actualizar').onclick=()=>{if(usuario)cargarLista();};
-  $('comercial-lista').onclick=async e=>{const b=e.target.closest('[data-abrir]');if(b&&!ocupado)abrir(registros.find(r=>r.id===b.dataset.abrir));};
-  $('buscador-input').oninput=pintarLista;$('filtro-estado').onchange=pintarLista;
+  $('vista-lista').onclick=e=>{const b=e.target.closest('[data-abrir]');if(b&&!ocupado)abrir(registros.find(r=>r.id===b.dataset.abrir));};
+  $('buscador-input').oninput=pintarLista;
   window.addEventListener('beforeunload',e=>{if(sucio){e.preventDefault();e.returnValue='';}});
   window.addEventListener('kw-auth-ready',iniciar,{once:true});
   if(document.documentElement.classList.contains('kw-auth-ok'))iniciar();

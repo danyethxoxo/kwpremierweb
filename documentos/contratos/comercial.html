@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="kw-riel-inicio">
 <head>
 <link rel="preconnect" href="https://iloetojomzqtadkithtv.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -19,28 +19,14 @@
   <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
   <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
   <link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261015zoomfirmas">
-  <link rel="stylesheet" href="/assets/css/contrato-comercial.css?v=20261015a">
+  <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20260926b">
+  <link rel="stylesheet" href="/assets/css/contrato-comercial.css?v=20261015b">
   <link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261008a">
   <script src="/assets/js/kw-ui.js?v=20261007c"></script>
 </head>
-<body class="kw-pagina-universal">
+<body class="kw-pagina-universal kw-universal-adaptada comercial-pagina firmas-riel-contraido">
   <header class="kw-header"></header>
-  <main class="kw-page kw-lateral-shell kw-universal-shell">
-    <aside class="kw-lateral kw-universal-panel" aria-label="Filtros y herramientas">
-      <div class="kw-lateral-cabecera">
-        <a class="kw-lateral-logo" href="/portal.html" aria-label="Ir al inicio"><img src="/assets/img/logo-kw-premier.png" alt="KW Premier"></a>
-        <button type="button" class="kw-lateral-menu" data-kw-menu-principal aria-label="Cambiar a accesos rápidos" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"/></svg>
-        </button>
-      </div>
-      <label class="kw-lateral-buscador" data-kw-buscador-propio aria-label="Buscar registros">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
-        <input type="search" id="buscador-input" placeholder="Buscar" autocomplete="off">
-      </label>
-      <div class="kw-resumen"><div class="kw-conteo"><span class="kw-conteo-num" id="comercial-cuenta">0</span><span class="kw-conteo-txt">Contratos</span></div></div>
-      <div class="kw-campo-filtro"><label for="filtro-estado">Estado</label><select id="filtro-estado"><option value="">Todos</option><option value="borrador">Borradores</option><option value="finalizado">Finalizados</option></select></div>
-    </aside>
-    <section class="kw-lateral-principal kw-universal-principal">
+  <main class="kw-page kw-universal-principal">
       <div class="kw-page-encabezado con-acciones kw-universal-encabezado kw-acciones-firmas">
         <h1 class="kw-page-titulo">Contrato comercial</h1>
         <div class="kw-page-acciones">
@@ -60,13 +46,19 @@
         </div>
       </div>
       <p class="comercial-estado" id="comercial-mensaje" role="status" aria-live="polite"></p>
-      <div class="kw-universal-contenido kw-universal-tabla-marco" id="vista-lista">
-        <table class="kw-universal-tabla"><thead><tr><th>Nombre</th><th>Cliente</th><th>Estado</th><th>Folio</th><th>Actualizado</th><th>Acciones</th></tr></thead><tbody id="comercial-lista"></tbody></table>
+      <div class="kw-universal-contenido vista-lista" id="vista-lista">
+        <div class="lista-barra"><label class="lista-buscador"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m17 17 4 4"/></svg><input id="buscador-input" type="search" placeholder="Buscar documento…" aria-label="Buscar documento"></label>
+          <div class="kw-tabs" data-kw-tabs="lista-columnas" id="lista-tabs-mobile"><button type="button" class="kw-tab activo" data-tab="borradores">Borradores</button><button type="button" class="kw-tab" data-tab="finalizados">Finalizados</button></div>
+        </div>
+        <div class="lista-columnas kw-tabpanels" id="lista-columnas">
+          <section class="lista-columna kw-tabpanel activo" data-panel="borradores"><h2 class="lista-columna-title">Borradores</h2><div class="lista-documentos" id="lista-borradores"></div></section>
+          <section class="lista-columna kw-tabpanel" data-panel="finalizados"><h2 class="lista-columna-title lista-columna-title-finalizados">Finalizados</h2><div class="lista-documentos" id="lista-finalizados"></div></section>
+        </div>
       </div>
       <div class="kw-universal-contenido comercial-trabajo" id="vista-formulario" hidden>
-        <div class="comercial-captura">
-          <form class="kw-universal-formulario" id="formulario-comercial"><div id="comercial-campos"></div>
-            <div class="comercial-acciones">
+        <div class="comercial-captura kw-form-fija">
+          <form class="kw-universal-formulario" id="formulario-comercial"><div class="kw-form-scroll" id="comercial-campos"></div>
+            <div class="kw-form-acciones comercial-acciones">
               <button type="submit" class="btn-modal-confirmar" id="comercial-guardar">Guardar borrador</button>
               <button type="button" class="btn-modal-cancelar" id="comercial-finalizar">Finalizar</button>
               <button type="button" class="btn-modal-cancelar" id="comercial-descargar">Descargar PDF</button>
@@ -77,14 +69,15 @@
         </div>
         <div class="preview-col comercial-preview" aria-label="Vista previa del contrato comercial"><div class="page-stack" id="comercial-paginas"></div></div>
       </div>
-    </section>
   </main>
+  <dialog id="comercial-nombre-modal" class="comercial-nombre-modal" aria-labelledby="comercial-nombre-titulo">
+    <form id="comercial-nombre-form"><h2 id="comercial-nombre-titulo">Nombre del documento</h2><p>Así lo verás en tu lista de documentos guardados.</p><div class="field"><label for="comercial-nombre">Nombre del documento</label><input id="comercial-nombre" maxlength="180" required autocomplete="off"></div><div class="kw-universal-form-acciones"><button type="button" class="btn-modal-cancelar" id="comercial-nombre-cancelar">Cancelar</button><button type="submit" class="btn-modal-confirmar">Guardar borrador</button></div></form>
+  </dialog>
   <script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
-  <script src="/assets/js/kw-lateral.js?v=20261008switch"></script>
   <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-  <script src="/assets/js/contrato-comercial-campos.js?v=20261015a"></script>
+  <script src="/assets/js/contrato-comercial-campos.js?v=20261015b"></script>
   <script src="/assets/js/contrato-comercial-contenido.js?v=20261015a"></script>
-  <script src="/assets/js/contrato-comercial.js?v=20261015a"></script>
+  <script src="/assets/js/contrato-comercial.js?v=20261015b"></script>
   <script src="/assets/js/kw-documento-zoom.js?v=20261015zoomfirmas"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="/assets/js/kw-pdf-vector.js?v=20261015a"></script>
