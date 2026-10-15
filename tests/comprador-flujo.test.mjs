@@ -36,6 +36,12 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014232939_comprador_busqueda_unificada_y_cercania.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014233223_optimizar_filtro_compartido_comprador.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261014235127_propiedades_busqueda_palabras.sql',import.meta.url),'utf8'));
+  const referencia=(await db.query("select pg_get_functiondef('propiedades_inventario_filtradas(jsonb)'::regprocedure) definicion")).rows[0].definicion;
+  await db.exec(referencia.replace('public.propiedades_inventario_filtradas(', 'public.propiedades_inventario_filtradas_referencia('));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261015000501_propiedades_busqueda_rapida.sql',import.meta.url),'utf8'));
+  await db.exec('create or replace view propiedades_inventario with(security_invoker=true) as select p.*,public.propiedad_operaciones_filtro(p.operacion,p.titulo,p.descripcion) as operaciones_filtro from propiedades p');
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261015000718_propiedades_mapa_y_operacion_rapidos.sql',import.meta.url),'utf8'));
+  assert.doesNotMatch((await db.query("select pg_get_viewdef('propiedades_inventario'::regclass,true) definicion")).rows[0].definicion,/propiedad_operaciones_filtro/);
   await db.exec(`set test.uid='${a}';set role authenticated;`);
   const {rows:[cliente]}=await db.query(`insert into perfiles_comprador(nombre,telefono,operacion,tipos,precio_max,estado) values('Cliente','555','venta',array['Casa'],3000000,'CDMX') returning id`);
   await db.exec('reset role');
@@ -72,6 +78,12 @@ test('coincidencias: primera alerta pendiente, aislamiento, revision y pausa',as
   }
   const c=(await db.query('select * from perfiles_comprador where id=$1',[cliente.id])).rows[0];
   await db.exec(`set role authenticated;set test.uid='${a}'`);
+  for(const filtro of [{},{texto:'oficina en wtc'},{texto:'en de con'},{texto:'  '},{tipo:['Casa'],estado:['Ciudad de México'],municipio:['Benito Juárez'],minimo:2000000,maximo:2900000},
+   {tipo:[],estado:null,municipio:'Coyoacán',colonia:['Del Carmen']},{operacion:['renta']},{operacion:['venta']},{operacion:['venta','renta']},{operacion:['inexistente']},{operacion:['']},{tipo:['']},{moneda:'USD'},{estatus:'publicada',recamaras:3},
+   {estatus:'inactiva'},{marketCenter:['inexistente']},{asesor:['inexistente']},{zona:[19,-100,20,-99]}]) {
+   const ids=async nombre=>(await db.query(`select id from ${nombre}($1) order by id`,[JSON.stringify(filtro)])).rows;
+   assert.deepEqual(await ids('propiedades_inventario_filtradas'),await ids('propiedades_inventario_filtradas_referencia'),JSON.stringify(filtro));
+  }
   for(const texto of ['wtc','oficina en wtc','oficinas WTC','WTC oficina','oficina en World Trade Center','oficina con baño en wtc']) {
    const encontrados=(await db.query('select id from propiedades_inventario_filtradas($1)',[JSON.stringify({texto})])).rows;
    assert.deepEqual(encontrados.map(p=>p.id),[filas[3].id],texto);
