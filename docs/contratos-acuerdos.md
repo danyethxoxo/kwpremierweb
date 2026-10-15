@@ -2,6 +2,8 @@
 
 Renta es la referencia aprobada para todos los contratos y acuerdos. La interfaz se comparte; cada documento aporta sus campos y contenido.
 
+Para el papel, vista previa y PDF de los tres contratos, la referencia aprobada es Comercial. `kw-contrato-documento.css` define el mismo papel Carta, márgenes, tipografía, encabezado y pie. `kw-contrato-documento.js` pagina y actualiza las hojas sin reemplazarlas, y exporta esas mismas hojas a PDF o al puente de firmas. No mantener generadores de impresión ni medidas independientes en Renta o Profeco. Los anexos de Profeco conservan sus saltos explícitos y el contenido de cada contrato se mantiene en su propia plantilla.
+
 - `assets/css/kw-documentos-shell.css`: estructura extraída de Renta, tipografía, listado, columnas, ventanas, estados de carga y navegación móvil. Es la fuente de estos estilos; no copiarlos a las plantillas.
 - `assets/js/kw-documentos-shell.js`: montaje del armazón, pie fijo, transición de vistas, historial del navegador, selector móvil y solicitud de nombre.
 - `assets/css/kw-documentos-form.css`: medidas, etiquetas y controles compartidos del formulario, así como el zoom.

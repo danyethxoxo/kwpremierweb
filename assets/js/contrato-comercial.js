@@ -85,45 +85,8 @@
     }
     return grupos;
   }
-  function paginar() {
-    const medidor=document.createElement('div'); medidor.className='comercial-medidor'; document.body.appendChild(medidor);
-    const paginas=[];
-    function nueva() {
-      const hoja=document.createElement('article'); hoja.className='page comercial-hoja';
-      hoja.innerHTML='<header><img src="/assets/img/logo-kw-premier.png" alt="KW Premier"><span>CONTRATO COMERCIAL</span></header><div class="comercial-cuerpo"></div><footer><span>'+escapar(actual?.folio || 'Borrador')+'</span><span class="comercial-numero"></span></footer>';
-      medidor.appendChild(hoja);paginas.push(hoja);return hoja.querySelector('.comercial-cuerpo');
-    }
-    let cuerpo=nueva();
-    for (const bloque of bloquesDocumento()) {
-      cuerpo.appendChild(bloque);
-      if (cuerpo.getBoundingClientRect().bottom-cuerpo.closest('.comercial-hoja').getBoundingClientRect().top>990 && cuerpo.children.length>1) {
-        bloque.remove();cuerpo=nueva();cuerpo.appendChild(bloque);
-      }
-    }
-    paginas.forEach((p,i)=>p.querySelector('.comercial-numero').textContent='Página '+(i+1)+' de '+paginas.length);
-    const stack=$('comercial-paginas'),existentes=Array.from(stack.querySelectorAll('.comercial-hoja'));
-    paginas.forEach((p,i)=>{
-      if(existentes[i]){
-        actualizarNodo(existentes[i].querySelector('.comercial-cuerpo'),p.querySelector('.comercial-cuerpo'));
-        actualizarNodo(existentes[i].querySelector('footer'),p.querySelector('footer'));
-      }else stack.appendChild(p);
-    });
-    existentes.slice(paginas.length).forEach(p=>{const padre=p.parentElement;(padre.classList.contains('page-scale-wrap')?padre:p).remove();});
-    medidor.remove();
-    window.fitPreviewMobile?.();
-  }
-  function actualizarNodo(destino,origen) {
-    if(destino.nodeType===3){if(destino.nodeValue!==origen.nodeValue)destino.nodeValue=origen.nodeValue;return;}
-    for(const atributo of Array.from(destino.attributes))if(!origen.hasAttribute(atributo.name))destino.removeAttribute(atributo.name);
-    for(const atributo of Array.from(origen.attributes))if(destino.getAttribute(atributo.name)!==atributo.value)destino.setAttribute(atributo.name,atributo.value);
-    for(let i=0;i<origen.childNodes.length;i++){
-      const a=destino.childNodes[i],b=origen.childNodes[i];
-      if(!a)destino.appendChild(b.cloneNode(true));
-      else if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)a.replaceWith(b.cloneNode(true));
-      else actualizarNodo(a,b);
-    }
-    while(destino.childNodes.length>origen.childNodes.length)destino.lastChild.remove();
-  }
+  function configuracionDocumento() {return {stack:'comercial-paginas',titulo:'CONTRATO COMERCIAL',folio:actual?.folio||'Borrador',clase:'comercial-hoja',claseCuerpo:'comercial-cuerpo',bloques:bloquesDocumento};}
+  function paginar() {window.kwContratoDocumento.render(configuracionDocumento());}
   function programar() { clearTimeout(frame);frame=setTimeout(()=>{frame=0;paginar();},120); }
   function ampliarCampo(el) { if(el.tagName!=='TEXTAREA')return;el.style.height='0px';el.style.height=Math.max(42,el.scrollHeight+2)+'px'; }
   function pintarCampos() {
@@ -230,16 +193,10 @@
     }catch(e){mensaje(e.message||'No se pudo finalizar.',true);}finally{ocupado=false;botones();}
   }
   async function descargar() {
-    if(ocupado)return;ocupado=true;botones();let iframe;
+    if(ocupado)return;ocupado=true;botones();
     try {
-      paginar();
-      iframe=document.createElement('iframe');iframe.style.cssText='position:fixed;left:-12000px;top:0;width:816px;height:1056px;border:0;';document.body.appendChild(iframe);
-      const doc=iframe.contentDocument;doc.open();doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/assets/css/contrato-comercial.css?v=20261015a"><style>body{margin:0}.comercial-hoja{box-shadow:none}.comercial-faltante{color:#000!important;border-color:#000!important}.print-page{width:816px;height:1056px;page-break-after:always}</style></head><body></body></html>');doc.close();
-      $('comercial-paginas').querySelectorAll('.page').forEach(p=>{const copia=p.cloneNode(true);copia.classList.add('print-page');copia.style.transform='none';doc.body.appendChild(copia);});
-      await new Promise(resolve=>{const css=doc.querySelector('link');css.onload=resolve;css.onerror=()=>resolve();if(css.sheet)resolve();});
-      const pdf=await window.kwPDFVector.crear(doc,{top:0,left:0,right:0,bottom:0});
-      pdf.save((nombreDocumento||'Contrato comercial').replace(/[<>:"/\\|?*]/g,'-')+'.pdf');mensaje('PDF descargado.');
-    }catch(e){mensaje(e.message||'No se pudo generar el PDF.',true);}finally{iframe?.remove();ocupado=false;botones();}
+      await window.kwContratoDocumento.exportar(configuracionDocumento(),{nombre:nombreDocumento||'Contrato comercial'});mensaje('PDF descargado.');
+    }catch(e){mensaje(e.message||'No se pudo generar el PDF.',true);}finally{ocupado=false;botones();}
   }
   async function iniciar() {
     try {

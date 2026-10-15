@@ -109,6 +109,8 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261015marca"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261015marca"></script>
+<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261015vista">
+<script src="/assets/js/kw-contrato-documento.js?v=20261015vista"></script>
 </head>
 <body class="doc-borrador">
 
@@ -501,55 +503,10 @@ function renderClientesFields() {
 }
 
 // ── Paginación: divide el contenido crudo en hojas tamaño Carta ──
-const PAGE_CONTENT_HEIGHT = 992;
-
-function computePages() {
-  const raw = document.getElementById('contrato-raw');
-  if (!raw) return [''];
-
-  const measurer = document.createElement('div');
-  measurer.style.cssText = 'position:fixed;left:-99999px;top:0;width:664px;font-family:Arial,sans-serif;font-size:10pt;line-height:1.5;';
-  document.body.appendChild(measurer);
-
-  const nodes = Array.from(raw.children);
-  const encabezadoContinuacion = (nodes.find(node => node.classList && node.classList.contains('doc-header')) || {}).outerHTML || '';
-  const pagesHTML = [];
-  let currentHTML = '';
-
-  nodes.forEach(node => {
-    const nodeHTML = node.outerHTML;
-    measurer.innerHTML = currentHTML + nodeHTML;
-    const newHeight = measurer.scrollHeight;
-
-    if (newHeight > PAGE_CONTENT_HEIGHT && currentHTML !== '') {
-      pagesHTML.push(currentHTML);
-      currentHTML = encabezadoContinuacion + nodeHTML;
-    } else {
-      currentHTML += nodeHTML;
-    }
-  });
-  if (currentHTML) pagesHTML.push(currentHTML);
-  if (pagesHTML.length === 0) pagesHTML.push('');
-
-  document.body.removeChild(measurer);
-  return pagesHTML;
+function configuracionDocumento() {
+  return {stack:'contrato-preview',raw:'contrato-raw',titulo:'ACUERDO DE RENTA',folio:folioActual?folioRevisionActual():'Borrador'};
 }
-
-function renderPaginated() {
-  const stack = document.getElementById('contrato-preview');
-  if (!stack) return;
-  const pagesHTML = computePages();
-  stack.innerHTML = pagesHTML.map((html, i) => `
-    <div class="page">
-      ${html}
-      <div class="page-footer">
-        <span>${folioActual ? folioRevisionActual() : ''}</span>
-        <span>Página ${i + 1} de ${pagesHTML.length}</span>
-      </div>
-    </div>
-  `).join('');
-  fitPreviewMobile();
-}
+function renderPaginated() { window.kwContratoDocumento.programar(configuracionDocumento()); }
 
 function updatePreview() {
   const numClientes = parseInt(document.getElementById('f-num-clientes')?.value || '1') || 1;
@@ -1328,112 +1285,11 @@ function initSlideFinalizar() {
   thumb.addEventListener('pointercancel', finishDrag);
 }
 
-function downloadPDF(opciones) {
-  const pages = computePages();
-  const nombreArchivo = nombreArchivoDoc();
-
-  const pagesHTML = pages.map((html, i) => {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = html;
-    wrapper.querySelectorAll('.doc-campo:not(.filled)').forEach(el => {
-      el.style.color = '#000';
-      el.style.borderBottom = '1px solid #000';
-      el.textContent = '_______________________________';
-    });
-    const isLast = i === pages.length - 1;
-    return `<div class="print-page"${isLast ? '' : ' style="page-break-after:always;"'}>
-      ${wrapper.innerHTML}
-      <div class="print-page-footer">
-        <span>${folioActual ? folioRevisionActual() : ''}</span>
-        <span>Página ${i + 1} de ${pages.length}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  const marcoPDF = document.createElement('iframe');
-  marcoPDF.setAttribute('aria-hidden', 'true');
-  marcoPDF.style.cssText = 'position:fixed;left:-10000px;top:0;width:673px;height:1056px;border:0;background:#fff;pointer-events:none;';
-  document.body.appendChild(marcoPDF);
-  const printWin = marcoPDF.contentWindow;
-  printWin.document.write(`<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>${nombreArchivo}</title>
-  <style>
-    @page {
-      size: Letter;
-      margin: 0.8cm 1.9cm 0.27cm 1.9cm;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { background: #fff; }
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 10pt;
-      line-height: 1.5;
-      color: #000;
-      background: #fff;
-      width: 100%;
-      padding: 0;
-    }
-    .print-page { position: relative; width: 100%; height: 1016px; overflow: hidden; }
-    .print-page-footer {
-      position: absolute; left: 0; right: 0; bottom: 30px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 8pt; color: #888;
-    }
-    .doc-header { margin-bottom: 16pt; }
-    .doc-header img { height: 30pt; width: auto; margin-bottom: 6pt; }
-    .doc-titulo {
-      text-align: center; font-weight: 700; font-size: 11pt;
-      letter-spacing: 0.25em; margin: 0 0 10pt;
-      text-decoration: none;
-    }
-    .doc-intro, .doc-p { text-align: justify; margin-bottom: 4pt; font-size: 9.5pt; }
-    .doc-seccion { font-weight: 700; margin: 10pt 0 4pt; text-decoration: underline; font-size: 10pt; }
-    .doc-clausula-titulo { font-weight: 700; font-size: 10pt; }
-    .doc-lista { margin: 2pt 0 4pt 18pt; }
-    .doc-lista li { margin-bottom: 2pt; text-align: justify; font-size: 10pt; }
-    .doc-campo { font-weight: 700; color: #000; border-bottom: 1px solid #000; }
-    .doc-campo.filled { border-bottom: none; }
-    table { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
-    td { border: 1px solid #999; padding: 4pt; }
-    .doc-firmas-wrap { margin-top: 48pt; }
-    .doc-firmas-row { display: flex; gap: 0; margin-bottom: 12pt; }
-    .doc-firma-col { flex: 1; text-align: center; font-size: 8.5pt; line-height: 1.4; padding: 0 8pt; }
-    .doc-firma-linea-top { border-top: 1px solid #000; padding-top: 4pt; margin-top: 22pt; }
-    .doc-firma-bold { font-weight: 700; font-size: 8.5pt; }
-  </style>
-</head>
-<body>
-${pagesHTML}
-</body>
-</html>`);
-  printWin.document.close();
-  printWin.document.title = nombreArchivo;
-  const nombrePDF = /\.pdf$/i.test(nombreArchivo) ? nombreArchivo : nombreArchivo + '.pdf';
-  setTimeout(async () => {
-    try {
-      if (!window.kwPDFVector) throw new Error('El generador vectorial de PDF no terminó de cargar.');
-      const opcionesPDF = {
-        top: 8, right: 19, bottom: 2.7, left: 19
-      };
-      if (opciones && opciones.destino === 'firma') {
-        if (!window.kwFirmaPuente || !window.kwPDFVector.generar) throw new Error('No se pudo abrir el enlace con Firma digital.');
-        const blob = await window.kwPDFVector.generar(printWin.document, opcionesPDF);
-        await window.kwFirmaPuente.guardar(blob, nombrePDF, {
-          documentoId: documentoActualId, revision: revisionActual, folio: folioActual
-        });
-        location.assign('/hub/firmas.html?desde=documento');
-      } else {
-        await window.kwPDFVector.descargar(printWin.document, nombrePDF, opcionesPDF);
-      }
-    } catch (err) {
-      if (window.kwUI && window.kwUI.alert) await window.kwUI.alert(err.message || 'No se pudo descargar el PDF.');
-    } finally {
-      marcoPDF.remove();
-    }
-  }, 120);
+async function downloadPDF(opciones) {
+  try {
+    updatePreview();
+    await window.kwContratoDocumento.exportar(configuracionDocumento(),{...opciones,nombre:nombreArchivoDoc(),meta:{documentoId:documentoActualId,revision:revisionActual,folio:folioActual}});
+  } catch(error) { await window.kwUI.alert(error.message||'No se pudo generar el PDF.'); }
 }
 
 // Inicializar preview al cargar

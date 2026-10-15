@@ -76,13 +76,73 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
     await page.locator('#f-monto').fill('');await page.locator('#f-monto').pressSequentially('8000.50');assert.equal(await page.locator('#f-monto').inputValue(),'8,000.50');
     await page.locator('#f-monto').fill('8000000');assert.equal(await page.locator('#f-monto').inputValue(),'8,000,000');
     await page.locator('#f-divisa').selectOption('USD',{force:true});
-    assert.ok((await page.locator('#contrato-preview').innerText()).includes('DÓLARES ESTADOUNIDENSES'));
+    await page.waitForFunction(()=>document.querySelector('#contrato-preview').innerText.includes('DÓLARES ESTADOUNIDENSES'));
     assert.equal((await page.evaluate(()=>datosActuales()))['f-divisa'],'USD');
     await page.evaluate(()=>abrirDocumentoGuardado({id:'anterior',estado:'borrador',datos:{'f-asesor':'Asesor guardado','f-monto':'1,234','f-divisa':'EUR'}}));
     await page.waitForFunction(()=>document.getElementById('f-asesor').value==='Asesor guardado');
     assert.equal(await page.locator('#f-divisa').inputValue(),'EUR');
     assert.equal(await page.locator('#f-divisa').locator('..').locator('.kw-select-valor').innerText(),'EUR');
    }
+  }
+ }finally{await browser.close();}
+});
+
+test('los tres contratos muestran y exportan las mismas hojas en escritorio y movil',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(15000);
+  await page.route('**/*',route=>{
+   const url=new URL(route.request().url());
+   if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk});
+   if(url.pathname.endsWith('/kw-session.js')||url.hostname==='cdn.jsdelivr.net')return route.fulfill({body:''});
+   if(url.hostname==='cdnjs.cloudflare.com'&&process.env.QA_JSPDF)return route.fulfill({contentType:'application/javascript',body:readFileSync(process.env.QA_JSPDF)});
+   if(url.hostname!=='kw.local')return route.abort();
+   const file=path.join(root,decodeURIComponent(url.pathname));
+   return route.fulfill({status:existsSync(file)?200:404,body:existsSync(file)?readFileSync(file):'',contentType:file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream'});
+  });
+  let referencia;
+  for(const nombre of ['renta','profeco','comercial']){
+   await page.setViewportSize({width:1440,height:1000});
+   await page.goto('http://kw.local/documentos/contratos/'+nombre+'.html?nuevo=1',{waitUntil:'domcontentloaded'});
+   if(nombre==='profeco')await page.locator('.btn-nuevo-documento').click();
+   await page.waitForSelector('.kw-contrato-hoja');
+   if(nombre==='profeco')await page.evaluate(()=>{
+    document.getElementById('f-num-clientes').value='3';renderClientesFields();
+    for(let i=0;i<3;i++){document.getElementById('f-cli'+i+'-nombre').value='CLIENTE DE PRUEBA '+(i+1);}
+    updatePreview();window.kwContratoDocumento.render(configuracionDocumento());
+   });
+   if(nombre==='renta')await page.evaluate(()=>{
+    const p=document.createElement('p');p.className='doc-p';p.innerHTML='<b>INICIO PRUEBA LARGA</b> '+('Contenido largo de prueba. '.repeat(1000))+'<b>FIN PRUEBA LARGA</b>';
+    document.getElementById('contrato-raw').appendChild(p);window.kwContratoDocumento.render(configuracionDocumento());
+   });
+   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(el=>{const s=getComputedStyle(el),c=getComputedStyle(el.querySelector('.kw-contrato-cuerpo'));return [s.width,s.height,s.padding,s.fontFamily,s.fontSize,s.lineHeight,s.borderWidth,c.width];});
+   if(!referencia)referencia=medidas;else assert.deepEqual(medidas,referencia,nombre+': mismo papel y tipografia');
+   const revisar=()=>page.locator('.kw-contrato-cuerpo').evaluateAll(els=>els.every(el=>{const hoja=el.parentElement,r=hoja.getBoundingClientRect(),escala=r.width/hoja.offsetWidth;return (el.getBoundingClientRect().bottom-r.top)/escala<=991;}));
+   assert.ok(await revisar(),nombre+': contenido dentro del papel');
+   if(nombre==='renta')assert.ok((await page.locator('#contrato-preview').innerText()).includes('FIN PRUEBA LARGA'));
+   if(nombre!=='comercial'){
+    await page.evaluate(()=>{window.qaPaginasPDF=[];const crear=kwPDFVector.crear;kwPDFVector.crear=async(doc,op)=>{window.qaPaginasPDF=Array.from(doc.querySelectorAll('.print-page'),p=>({texto:p.textContent,width:p.offsetWidth,height:p.offsetHeight,logo:p.querySelector('img').complete&&p.querySelector('img').naturalWidth>0}));return crear(doc,op);};});
+    const descarga=page.waitForEvent('download');
+    await page.evaluate(()=>downloadPDF());const archivo=await descarga;
+    mkdirSync(path.join(root,'artifacts/contratos'),{recursive:true});await archivo.saveAs(path.join(root,'artifacts/contratos/'+nombre+'.pdf'));
+    const preview=await page.locator('.kw-contrato-hoja').allTextContents(),pdf=await page.evaluate(()=>qaPaginasPDF);
+    assert.deepEqual(pdf.map(p=>p.texto),preview,nombre+': PDF conserva texto y saltos');
+    assert.ok(pdf.every(p=>p.width===816&&p.height===1056));
+    assert.ok(pdf.every(p=>p.logo),nombre+': el logo esta listo en todas las hojas antes de exportar');
+    assert.equal((readFileSync(path.join(root,'artifacts/contratos/'+nombre+'.pdf'),'latin1').match(/\/Type \/Page\b/g)||[]).length,preview.length);
+   }
+   const primera=await page.locator('.kw-contrato-hoja').first().elementHandle();
+   await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop=150);
+   const scroll=await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop);
+   const campo=page.locator(nombre==='comercial'?'#com-cliente':nombre==='renta'?'#f-asesor':'#f-cli0-nombre');await campo.fill('CAMBIO SIN PARPADEO');
+   await page.waitForTimeout(200);assert.ok(await primera.evaluate(el=>el.isConnected),nombre+': mantiene el nodo de la hoja');
+   assert.ok(Math.abs((await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop))-scroll)<1);
+   mkdirSync(path.join(root,'artifacts/contratos'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/contratos/'+nombre+'-1440.png')});
+   await page.setViewportSize({width:390,height:1000});
+   if(nombre==='comercial')await page.locator('[data-kw-mobile="preview"]').click();else await page.evaluate(()=>showMobileTab('preview'));
+   await page.waitForTimeout(100);assert.ok(await revisar(),nombre+': movil sin cortes');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.screenshot({path:path.join(root,'artifacts/contratos/'+nombre+'-390.png')});
   }
  }finally{await browser.close();}
 });
@@ -142,7 +202,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.ok(!contenido.includes('ARRIOJA')&&!contenido.includes('regalos.topacio'),'no conserva datos del caso original');
    assert.equal(await page.locator('.acuerdos-form-col').count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no hay scroll de pagina horizontal');
-   assert.ok(await page.locator('.comercial-cuerpo').evaluateAll(els=>els.every(el=>el.getBoundingClientRect().bottom-el.closest('.comercial-hoja').getBoundingClientRect().top<=995)),'ningun bloque sale de su hoja');
+   assert.ok(await page.locator('.comercial-cuerpo').evaluateAll(els=>els.every(el=>{const hoja=el.closest('.comercial-hoja'),rect=hoja.getBoundingClientRect(),escala=rect.width/hoja.offsetWidth;if(!rect.width)return true;return (el.getBoundingClientRect().bottom-rect.top)/escala<=995;})),'ningun bloque sale de su hoja');
    assert.equal(await page.locator('#com-nombre').count(),0);
    const medidas=await page.evaluate(()=>({direccion:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().width,cliente:document.querySelector('#com-cliente').getBoundingClientRect().width,alto:document.querySelector('#com-domicilio_cliente').getBoundingClientRect().height}));
    assert.ok(Math.abs(medidas.direccion-medidas.cliente)<1,'direcciones conservan el mismo ancho de campo');

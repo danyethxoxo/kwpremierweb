@@ -5,6 +5,7 @@
 Por indicacion del usuario, la referencia unica de contratos y acuerdos es `documentos/contratos/renta.html`.
 Leer `docs/contratos-acuerdos.md`. Usar `kw-documentos-shell.css`, `kw-documentos-shell.js`, `kw-documentos-form.css` y `kw-revisiones.css`.
 Solo cambian los campos, datos y contenido de cada documento. No crear distribuciones, fuentes, botones, pies, cargas ni ventanas propias del documento.
+La vista previa y el PDF de los tres contratos toman Comercial como referencia, usando `kw-contrato-documento.css` y `kw-contrato-documento.js`; el formulario mantiene Renta como base.
 Esta regla sustituye Pagina Universal para los formularios y listados de contratos y acuerdos.
 
 Para cada nuevo apartado, listado, formulario o configuración, usar **Página Universal**.
