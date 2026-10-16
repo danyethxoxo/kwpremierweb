@@ -183,9 +183,29 @@
     });
   }
 
+  var cargaJsPDF = null;
+  function cargarJsPDF() {
+    if (global.jspdf && global.jspdf.jsPDF) return Promise.resolve(global.jspdf.jsPDF);
+    if (!cargaJsPDF) {
+      cargaJsPDF = new Promise(function (resolve, reject) {
+        var script = document.createElement('script');
+        script.src = '/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js?v=20261016auditoria';
+        script.onload = function () {
+          if (global.jspdf && global.jspdf.jsPDF) resolve(global.jspdf.jsPDF);
+          else { script.remove(); reject(new Error('No se pudo iniciar el generador de PDF.')); }
+        };
+        script.onerror = function () {
+          script.remove();
+          reject(new Error('No se pudo cargar el generador de PDF. Intenta de nuevo.'));
+        };
+        document.head.appendChild(script);
+      }).catch(function (error) { cargaJsPDF = null; throw error; });
+    }
+    return cargaJsPDF;
+  }
+
   async function crear(documento, opciones) {
-    var JsPDF = global.jspdf && global.jspdf.jsPDF;
-    if (!JsPDF) throw new Error('El generador vectorial de PDF no terminó de cargar.');
+    var JsPDF = await cargarJsPDF();
 
     if (global.kwDocumentosShell) global.kwDocumentosShell.aplicarMarca(documento);
     await esperarImagenes(documento);

@@ -60,6 +60,13 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     await page.evaluate(() => {window.qa.setup('master');document.documentElement.classList.add('kw-auth-ok');});
     const list = page.locator('#lista-todos');
     assert.equal(await list.locator('.kw-fila').count(), 5);
+    assert.equal(await list.locator('.asesor-menu-btn').count(), 5);
+    const usuarioWeb = list.locator('.kw-fila').filter({hasText:'lider@example.com'});
+    await usuarioWeb.locator('.asesor-menu-btn').click();
+    await usuarioWeb.locator('[data-menu-usuario]').click();
+    await page.locator('#modal-editar-usuario').waitFor({state:'visible'});
+    assert.equal(await page.locator('#edit-email').inputValue(),'lider@example.com');
+    await page.evaluate(()=>cerrarModalEditar());
     assert.ok(!(await list.textContent()).includes('baja@example.com'));
     const beto = list.locator('.kw-fila').filter({hasText:'beto@example.com'});
     await beto.locator('.btn-abrir-accesos').click();

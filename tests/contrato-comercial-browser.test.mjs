@@ -61,9 +61,9 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
    if(!referencia)referencia=estilos;else assert.deepEqual(estilos,referencia,documento);
    if(documento==='contratos/comercial'){await page.locator('#btn-nuevo').click();await page.waitForURL(/\?nuevo=1$/);await page.waitForSelector('#com-asesor');}
    await page.evaluate(()=>{
-    window.updatePreview?.();
     const form=document.getElementById('vista-formulario');form.hidden=false;form.style.display='block';
     document.body.classList.remove('en-lista-documentos');document.getElementById('vista-lista').style.display='none';
+    window.updatePreview?.();
    });
    const marca=await page.locator('.page .doc-header img,.page .r-logo img,.page.comercial-hoja header img').first().evaluate(img=>{
     const pagina=img.closest('.page'),p=pagina.getBoundingClientRect(),r=img.getBoundingClientRect(),escala=p.width/pagina.offsetWidth;
@@ -310,6 +310,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.locator('#comercial-finalizar').click();await aviso(page,'Contrato finalizado. Folio: COM-QA-001');
    assert.equal(await page.locator('#com-cliente').isDisabled(),true);
    assert.equal(await page.locator('#com-cliente_6').isDisabled(),true);assert.equal(await page.locator('#com-num-clientes').isDisabled(),true);
+   await page.addScriptTag({path:path.join(root,'assets/vendor/jspdf/jspdf-4.2.1.umd.min.js')});
    await page.evaluate(()=>{
     window.qaLogos=[];const original=window.jspdf.jsPDF.API.addImage;
     window.jspdf.jsPDF.API.addImage=function(...args){if(args[0]?.alt==='KW Premier')window.qaLogos.push(args.slice(2,6));return original.apply(this,args);};

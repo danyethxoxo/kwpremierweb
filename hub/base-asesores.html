@@ -2081,7 +2081,20 @@
       // Se puede llegar directo a capturar a alguien (el botón del
       // Panel) o a la ficha de una persona.
       const params = new URLSearchParams(location.search);
-      if (params.get('nuevo')) abrirFicha(null);
+      if (params.get('nuevo')) {
+        const existente = asesores.find(function (a) {
+          return (params.get('correo') && String(a.correo || '').toLowerCase() === params.get('correo').toLowerCase())
+            || (params.get('kwid') && String(a.kwid || '') === params.get('kwid'));
+        });
+        abrirFicha(existente ? existente.id : null);
+        if (!existente) ['nombre', 'correo', 'kwid', 'telefono', 'grupo'].forEach(function (campo) {
+          const par = CAMPOS.find(function (c) { return c[1] === campo; });
+          if (par && params.get(campo)) {
+            $(par[0]).value = params.get(campo);
+            $(par[0]).dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      }
       else if (params.get('id')) abrirFicha(params.get('id'));
     } catch (err) {
       $('denegado').style.display = '';

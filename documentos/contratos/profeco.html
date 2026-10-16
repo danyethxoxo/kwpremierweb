@@ -96,8 +96,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
 <link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261016auditoria">
-<script defer src="/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js?v=20261016auditoria"></script>
-<script defer src="/assets/js/kw-pdf-vector.js?v=20261016alineado"></script>
+<script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
 <link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261015vista">
 <script src="/assets/js/kw-contrato-documento.js?v=20261015logo"></script>
@@ -1183,7 +1182,12 @@ function datosCliente(i) {
 function configuracionDocumento() {
   return {stack:'contrato-preview',raw:'contrato-raw',titulo:'CONTRATO PROFECO',folio:folioActual?folioRevisionActual():'Borrador'};
 }
-function renderPaginated() { window.kwContratoDocumento.programar(configuracionDocumento()); }
+let previewPendiente = false;
+function renderPaginated() {
+  const formulario = document.getElementById('vista-formulario');
+  previewPendiente = !!formulario && (formulario.hidden || formulario.style.display === 'none');
+  if (!previewPendiente) window.kwContratoDocumento.programar(configuracionDocumento());
+}
 
 function updatePreview() {
   if (suspenderPreview) return;
@@ -1614,7 +1618,10 @@ function mostrarVista(vista, marcar) {
   document.body.classList.toggle('en-lista-documentos', vista === 'lista');
   document.getElementById('vista-lista').style.display = vista === 'lista' ? '' : 'none';
   document.getElementById('vista-formulario').style.display = vista === 'formulario' ? '' : 'none';
-  if (vista === 'formulario') requestAnimationFrame(fitPreviewMobile);
+  if (vista === 'formulario') {
+    if (previewPendiente) renderPaginated();
+    requestAnimationFrame(fitPreviewMobile);
+  }
   // La lista no agrega historial. Solo entrar al formulario crea un paso,
   // para que Atrás y Adelante no puedan formar un ciclo entre vistas.
   if (vista === 'formulario' && marcar !== false) {

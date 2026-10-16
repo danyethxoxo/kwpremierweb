@@ -242,10 +242,13 @@
   }
   /* El menú sale de la tarjeta; mientras está abierto la fila no debe
      recortarlo ni quedar debajo de la siguiente. */
-  .kw-fila:has(.asesor-menu.abierto) {
+  .kw-fila:has(.asesor-menu.abierto), .celula-persona:has(.asesor-menu.abierto) {
     overflow: visible;
     z-index: 70;
   }
+  .celula-persona { position: relative; gap: 8px; }
+  .celula-persona-nombre { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .celula-persona .asesor-menu { margin-right: 0; }
   .asesor-menu-btn {
     width: 34px; height: 34px; border: 1px solid rgba(0,0,0,0.08); border-radius: 50%;
     display: inline-flex; align-items: center; justify-content: center;
@@ -1693,7 +1696,13 @@
     catch (e) { return ''; }
   }
 
+  const panelesCargados = new Set();
   function cambiarTabPanel(tab) {
+    if (!panelesCargados.has(tab)) {
+      panelesCargados.add(tab);
+      if (tab === 'documentos') cargarDocumentosPanel();
+      if (tab === 'asesores' && !gruposAsesores.length) cargarAsesores();
+    }
     window.kwUI.activarTab(tab, document.getElementById('panel-tabs'));
     sincronizarPanelLateral(tab);
     // Las listas largas ruedan por dentro; sus cabeceras no se pierden al
@@ -2827,6 +2836,32 @@
     '</div>';
   }
 
+  function menuAsesorHtml(p, g) {
+    const grupoPersona = p.grupo || g.clave;
+    const esBaja = esDeBaja(grupoPersona);
+    const opcionBaja = !esBaja
+      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(grupoPersona) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
+      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (grupoPersona === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
+
+    if (!p.id && p.usuarioId) {
+      const usuario = usuariosCache.find(function (u) { return u.id === p.usuarioId; });
+      const accion = usuario && puedeGestionarPagina(usuario)
+        ? '<button type="button" class="asesor-menu-opcion" data-menu-usuario="' + escapeHtml(usuario.id) + '">' + ICONO_LAPIZ + 'Editar</button>'
+        : '<a class="asesor-menu-opcion" href="../micrositio.html?id=' + encodeURIComponent(p.usuarioId) + '">Ver perfil</a>';
+      return '<div class="asesor-menu"><button type="button" class="asesor-menu-btn" aria-label="Acciones de ' + escapeHtml(p.nombre || 'usuario') + '" aria-expanded="false">&#8942;</button><div class="asesor-menu-lista">' + accion + '</div></div>';
+    }
+    const params = new URLSearchParams(p.id ? { id: p.id } : {
+      nuevo: '1', nombre: p.nombre || '', correo: p.correo || '',
+      kwid: p.kwid || '', telefono: p.telefono || '', grupo: p.grupo || estatusDe({ grupo: g.clave, hoja: g.hoja })
+    });
+    return '<div class="asesor-menu">' +
+      '<button type="button" class="asesor-menu-btn" aria-label="Acciones de ' + escapeHtml(p.nombre || 'asesor') + '" aria-expanded="false">⋮</button>' +
+      '<div class="asesor-menu-lista">' +
+        '<a class="asesor-menu-opcion" href="base-asesores.html?' + escapeHtml(params.toString()) + '">' + ICONO_LAPIZ + (p.id ? 'Editar' : 'Completar ficha') + '</a>' +
+        (p.id ? opcionBaja : '') +
+      '</div></div>';
+  }
+
   function filaAsesorHtml(p, g, i) {
     const I = window.kwUI.iconos;
     const grupoPersona = p.grupo || g.clave;
@@ -2858,10 +2893,6 @@
             ' data-correo="' + escapeHtml(p.correo) + '">' +
             (completo ? ICONO_LISTO : '') + 'Accesos</span>'
         : '<span class="estado-alta baja">' + ICONO_RELOJ + 'Falta su correo</span>');
-    const opcionBaja = !esBaja
-      ? '<button type="button" class="asesor-menu-opcion peligro" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + grupoBajaDe(grupoPersona) + '">' + ICONO_BAJAR + 'Pasar a asesores de baja</button>'
-      : '<button type="button" class="asesor-menu-opcion" data-baja-asesor="' + escapeHtml(p.id) + '" data-baja-grupo="' + (grupoPersona === 'back_office_baja' ? 'back_office_activo' : 'asesor_activo') + '">' + ICONO_LISTO + 'Pasar a asesores de alta</button>';
-
     return '<div class="kw-fila kw-aparece-fila' + (esBaja ? ' apagada' : '') + '"' +
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
       '<div class="kw-fila-barra">' +
@@ -2877,15 +2908,7 @@
           '<span class="kw-extra">' + boton + '</span>' +
         '</span>' +
       '</button>' +
-      (p.id
-        ? '<div class="asesor-menu">' +
-            '<button type="button" class="asesor-menu-btn" aria-label="Abrir menú" aria-expanded="false">⋮</button>' +
-            '<div class="asesor-menu-lista">' +
-              '<a class="asesor-menu-opcion" href="base-asesores.html?id=' + encodeURIComponent(p.id) + '">' + ICONO_LAPIZ + 'Editar</a>' +
-              opcionBaja +
-            '</div>' +
-          '</div>'
-        : '') +
+      menuAsesorHtml(p, g) +
       '</div>' +
       '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
         '<div class="kw-datos en-columnas">' +
@@ -2943,7 +2966,7 @@
         '<div class="celula-titulo"><span class="celula-punto color-' + color + '"></span>' +
           escapeHtml(nombreCelula) + '<span class="celula-cuenta">' + personas.length + '</span></div>' +
         '<div class="celula-tarjetas">' + personas.map(function (p) {
-          return '<div class="celula-persona">' + escapeHtml(p.nombre || 'Sin nombre') + '</div>';
+          return '<div class="celula-persona"><span class="celula-persona-nombre">' + escapeHtml(p.nombre || 'Sin nombre') + '</span>' + menuAsesorHtml(p, g) + '</div>';
         }).join('') + '</div>' +
       '</div>';
     }).join('');
@@ -3110,6 +3133,16 @@
   // Contiene Editar y el cambio de estatus a baja; se cierra al picar en
   // cualquier otro lugar.
   document.addEventListener('click', function (e) {
+    const editarUsuario = e.target.closest('[data-menu-usuario]');
+    if (editarUsuario) {
+      e.preventDefault(); e.stopPropagation();
+      const usuario = usuariosCache.find(function (u) { return u.id === editarUsuario.dataset.menuUsuario; });
+      const menu = editarUsuario.closest('.asesor-menu');
+      menu.classList.remove('abierto');
+      menu.querySelector('.asesor-menu-btn').setAttribute('aria-expanded', 'false');
+      if (usuario && puedeGestionarPagina(usuario)) abrirModalEditar(usuario);
+      return;
+    }
     const botonBaja = e.target.closest('[data-baja-asesor]');
     if (botonBaja) {
       e.preventDefault();
@@ -3955,8 +3988,6 @@
       if (inicial) cambiarTabPanel(inicial.dataset.tab);
 
       document.getElementById('contenido-panel').style.display = '';
-      cargarDocumentosPanel();
-      if (puedeAltas) cargarAsesores();
     } catch (err) {
       document.getElementById('denegado').style.display = '';
     }

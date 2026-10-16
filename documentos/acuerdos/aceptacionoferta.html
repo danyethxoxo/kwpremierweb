@@ -71,8 +71,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
 <link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261016auditoria">
-<script defer src="/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js?v=20261016auditoria"></script>
-<script defer src="/assets/js/kw-pdf-vector.js?v=20261016alineado"></script>
+<script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
 </head>
 <body class="doc-borrador">
@@ -382,12 +381,13 @@ function computePages() {
 
   nodes.forEach(node => {
     const nodeHTML = node.outerHTML;
-    measurer.innerHTML = currentHTML + nodeHTML;
+    measurer.appendChild(node.cloneNode(true));
     const newHeight = measurer.scrollHeight;
 
     if (newHeight > PAGE_CONTENT_HEIGHT && currentHTML !== '') {
       pagesHTML.push(currentHTML);
       currentHTML = encabezadoContinuacion + nodeHTML;
+      measurer.innerHTML = currentHTML;
     } else {
       currentHTML += nodeHTML;
     }
