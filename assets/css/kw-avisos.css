@@ -1,4 +1,29 @@
 /* Regla universal: la accion principal de un aviso es guinda solido. */
+body :is(.modal-overlay,.guardar-exito) {
+  background:rgba(0,0,0,.45)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+body .modal-overlay:not(.cerrando), body .guardar-exito.visible { animation:kw-aviso-entrada .15s ease both!important; }
+body :is(.modal-box,.guardar-exito-caja) {
+  background:#fff!important;
+  background-image:none!important;
+  border:1px solid var(--border,#ded8d3)!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  animation:none!important;
+}
+body .guardar-exito-caja { box-sizing:border-box; width:min(380px,calc(100vw - 40px)); padding:24px; text-align:left; }
+body .guardar-exito-icono { display:none; }
+body .guardar-exito-titulo { color:var(--text,#332c29); font-size:18px; line-height:1.3; }
+body .guardar-exito-detalle { margin-top:12px; color:var(--text,#332c29); line-height:1.5; }
+body .guardar-exito-ok { display:block; margin:20px 0 0 auto; }
+@keyframes kw-aviso-entrada { from { opacity:0; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) {
+  body .modal-overlay:not(.cerrando), body .guardar-exito.visible { animation:none!important; }
+}
 body .modal-overlay .modal-box {
   box-sizing:border-box;
   padding:24px!important;
@@ -31,6 +56,7 @@ body .modal-actions > :is(button,a), body .guardar-exito-ok {
 body #kw-borrador-incompleto .kw-campos-pendientes { margin:0; padding:0 0 0 20px; }
 body #kw-borrador-incompleto .kw-campos-pendientes li + li { margin-top:4px; }
 @media(max-width:640px) {
+  body .guardar-exito-caja { padding:20px; }
   body .modal-overlay .modal-box { padding:20px!important; }
   body .modal-actions > :is(button,a), body .guardar-exito-ok { min-height:40px!important; }
 }

@@ -6,6 +6,8 @@ Regla universal de avisos y ventanas: toda acción principal de confirmación (G
 
 Los avisos usan botones compactos, de ancho ajustado al texto, no expandido: 36 px de alto mínimo en escritorio, 40 px en móvil y separación de 8 px entre acciones. Unificar márgenes internos: 24 px en escritorio, 20 px en móvil, 12 px entre título y contenido, 20 px antes de las acciones. Mantener la jerarquía de título, contenido y botones. En el aviso de campos pendientes la acción se llama únicamente "Guardar".
 
+Todos los avisos, incluidos los de guardado exitoso, usan la misma estética de Guardar borrador: velo negro al 45 %, ventana blanca sólida, borde neutro discreto y esquinas de 14 px. Sin fondo blanco translúcido, blur, sombras decorativas ni estilos de éxito independientes. Compartir la misma transición breve y respetar movimiento reducido.
+
 Por indicación del usuario, mantener la interfaz simple y con el mínimo texto necesario. No agregar descripciones, ayudas permanentes, instrucciones obvias ni mensajes de éxito redundantes. Preferir etiquetas cortas y estados visuales: por ejemplo, un botón "Subir logo" que se sustituye por la miniatura con una acción de eliminar. Mostrar explicaciones solo cuando sean indispensables para completar una acción o resolver un error. Conservar nombres accesibles para controles con íconos.
 
 ## Contratos y acuerdos
