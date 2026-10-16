@@ -18,7 +18,7 @@
   const escapar = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const valor = id => id==='precio'?$('com-precio').value.replace(/,/g,'').trim():$('com-' + id).value.trim();
   function mensaje(texto, error = false) { $('comercial-mensaje').textContent='';if(texto)window.kwUI.alert(texto,{titulo:error?'Revisa el documento':'Documento'}); }
-  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),representante:actual?.datos?.representante||'GUSTAVO SOLARES CAMPOS',mca:actual?.datos?.mca||'MARÍA FERNANDA PACHECO BAÑOS',clientes:leerClientes(),numero_clientes:numeroClientes,nombre:nombreDocumento}; }
+  function datos() { return {...Object.fromEntries(campos.map(([id]) => [id, valor(id)])),logo_empresa:window.kwLogoEmpresa?.obtener()||'',representante:actual?.datos?.representante||'GUSTAVO SOLARES CAMPOS',mca:actual?.datos?.mca||'MARÍA FERNANDA PACHECO BAÑOS',clientes:leerClientes(),numero_clientes:numeroClientes,nombre:nombreDocumento}; }
   function fecha(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
     return new Date(iso + 'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}).toLocaleUpperCase('es-MX');
@@ -120,6 +120,7 @@
   }
   function botones() {
     const finalizado=actual?.estado==='finalizado';
+    window.kwLogoEmpresa?.bloquear(finalizado||ocupado);
     document.body.classList.toggle('doc-borrador',!finalizado);
     for(const [id] of camposActivos())$('com-'+id).disabled=finalizado||ocupado;
     $('com-num-clientes').disabled=finalizado||ocupado;
@@ -134,6 +135,7 @@
   function abrir(row,marcar=true) {
     if(row?.id&&marcar&&new URLSearchParams(location.search).get('doc')!==row.id){location.assign(location.pathname+'?doc='+encodeURIComponent(row.id));return;}
     actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
+    window.kwLogoEmpresa?.cargar(row?.datos,row?.estado==='finalizado',!row);
     clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,6):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
     numeroClientes=clientesEnMemoria.length;pintarClientes();
     asignar($('com-pais_notaria'),row?.datos?.pais_notaria??'México');actualizarEstado(row?.datos?.ciudad_notaria);
@@ -172,6 +174,7 @@
     try {
       if(!silencioso&&!await window.kwContratosUX.confirmar(faltan))return false;
       if(!actual&&!await pedirNombre())return false;
+      if(window.kwLogoEmpresa?.pendiente())throw new Error('Espera a que termine de guardarse el logo.');
       const d=datos(),payload={datos:d,nombre_archivo:d.nombre||'Contrato comercial'};
       let q=window.kwSupabase.from('documentos_guardados');
       q=actual?q.update(payload).eq('id',actual.id).eq('user_id',usuario.id).eq('tipo_documento',tipo).eq('estado','borrador'):q.insert({...payload,user_id:usuario.id,tipo_documento:tipo});
@@ -220,6 +223,7 @@
     numeroClientes=Math.max(1,Math.min(6,Number($('com-num-clientes').value)||1));
     pintarClientes();botones();sucio=true;programar();
   });
+  document.addEventListener('kw-logo-empresa-cambio',()=>{sucio=true;});
   $('comercial-finalizar').onclick=finalizar;$('comercial-descargar').onclick=descargar;
   $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();window.kwContratosUX.ruta('');};
   $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar()){if(window.kwContratosUX.nuevo())return;window.kwDocumentosShell.transicion(()=>abrir(null));}};

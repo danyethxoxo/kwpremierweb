@@ -110,7 +110,8 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261015marca"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261015marca"></script>
 <link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261015vista">
-<script src="/assets/js/kw-contrato-documento.js?v=20261015homogeneo"></script>
+<script src="/assets/js/kw-contrato-documento.js?v=20261015logo"></script>
+<script src="/assets/js/kw-logo-empresa.js?v=20261015logo"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261015derecha">
 </head>
 <body class="doc-borrador">
@@ -869,6 +870,7 @@ function onFabGuardarClick() {
 })();
 
 function bloquearFormulario(bloquear) {
+  window.kwLogoEmpresa?.bloquear(bloquear);
   CAMPOS_GUARDABLES.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = bloquear;
@@ -902,6 +904,7 @@ function crearNuevoDocumento() {
     folioActual = null;
     revisionActual = 0;
     estadoActual = 'borrador';
+    window.kwLogoEmpresa?.cargar(null,false,true);
     limpiarFormulario();
     bloquearFormulario(false);
     actualizarVisibilidadBotones();
@@ -920,6 +923,7 @@ function abrirDocumentoGuardado(row, marcar) {
     estadoActual = row.estado || 'borrador';
     revisionActual = Number(row.revision) || 0;
     const datos = row.datos || {};
+    window.kwLogoEmpresa?.cargar(datos,estadoActual==='finalizado');
     document.getElementById('f-divisa').value='MXN';
     CAMPOS_GUARDABLES.forEach(id => {
       const el = document.getElementById(id);
@@ -1001,7 +1005,8 @@ function cerrarModalNombre() {
 }
 
 function datosActuales() {
-  const datos = {};
+  if(window.kwLogoEmpresa?.pendiente())throw new Error('Espera a que termine de guardarse el logo.');
+  const datos = {logo_empresa:window.kwLogoEmpresa?.obtener()||''};
   CAMPOS_GUARDABLES.forEach(id => { datos[id] = g(id); });
   const n = parseInt(g('f-num-clientes') || '1') || 1;
   datos.clientes = Array.from({ length: n }, (_, i) => g('f-cliente' + i));
@@ -1096,7 +1101,10 @@ async function finalizarDocumento() {
   if (!documentoActualId) return;
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
-    await materializarRevisionLocal(datosActuales());
+    const datos = datosActuales();
+    await materializarRevisionLocal(datos);
+    const guardado = await window.kwSupabase.from('documentos_guardados').update({datos}).eq('id',documentoActualId).eq('estado','borrador');
+    if(guardado.error)throw guardado.error;
     const { data, error } = await window.kwSupabase.rpc('finalizar_documento', { p_id: documentoActualId });
     if (error) throw error;
 

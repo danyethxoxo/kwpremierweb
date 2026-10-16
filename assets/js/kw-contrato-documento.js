@@ -43,7 +43,7 @@
       const cuerpo=document.createElement('div');cuerpo.className='kw-contrato-cuerpo '+(config.claseCuerpo||'');
       const pie=document.createElement('footer');pie.className='kw-contrato-pie';
       const folio=document.createElement('span');folio.textContent=config.folio||'Borrador';pie.append(folio,document.createElement('span'));
-      hoja.append(cabecera,cuerpo,pie);medidor.appendChild(hoja);paginas.push(hoja);return cuerpo;
+      hoja.append(cabecera,cuerpo,pie);global.kwLogoEmpresa?.insertar(hoja);medidor.appendChild(hoja);paginas.push(hoja);return cuerpo;
     }
     let cuerpo=nueva();
     const excede=()=>cuerpo.getBoundingClientRect().bottom-cuerpo.parentElement.getBoundingClientRect().top>990;
@@ -86,6 +86,7 @@
         if(existentes[i]){sincronizar(existentes[i].querySelector('.kw-contrato-cuerpo'),hoja.querySelector('.kw-contrato-cuerpo'));sincronizar(existentes[i].querySelector('.kw-contrato-pie'),hoja.querySelector('.kw-contrato-pie'));}else stack.appendChild(hoja);
       });
       existentes.slice(paginas.length).forEach(p=>{const padre=p.parentElement;(padre.classList.contains('page-scale-wrap')?padre:p).remove();});
+      stack.querySelectorAll('.kw-contrato-hoja').forEach(hoja=>{hoja.querySelector('.kw-logo-empresa-hoja')?.remove();global.kwLogoEmpresa?.insertar(hoja);});
     }finally{medidor.remove();}
     global.fitPreviewMobile?.();
     document.dispatchEvent(new CustomEvent('kw-contrato-render',{detail:{stack:config.stack}}));
@@ -98,6 +99,7 @@
   }
   function programar(config){clearTimeout(pendientes.get(config.stack));pendientes.set(config.stack,setTimeout(()=>render(config),120));}
   async function exportar(config,opciones={}){
+    if(global.kwLogoEmpresa?.pendiente())throw new Error('Espera a que termine de guardarse el logo.');
     render(config);
     const logo=await logoParaPDF();
     const marco=document.createElement('iframe');marco.setAttribute('aria-hidden','true');marco.style.cssText='position:fixed;left:-12000px;top:0;width:816px;height:1056px;border:0;';document.body.appendChild(marco);
