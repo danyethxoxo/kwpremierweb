@@ -65,6 +65,7 @@
   let frame;hojas.addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;resaltar();});},{passive:true});document.addEventListener('kw-contrato-render',actualizar);actualizar();
  }
  function iniciar(){
+  document.querySelectorAll('.kw-contrato-volver,#comercial-volver').forEach(boton=>boton.remove());
   document.body.classList.add('kw-contratos');
   miniaturas();
   document.querySelector('.acuerdos-form-sub')?.remove();secciones();
