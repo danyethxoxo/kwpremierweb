@@ -16,11 +16,11 @@
     document.dispatchEvent(new CustomEvent('kw-contrato-render'));
   }
   function insertar(hoja){if(!logo)return;const img=document.createElement('img');img.className='kw-logo-empresa-hoja';img.src=logo;img.alt='Logo de tu empresa';const margen=global.kwDocumentosShell?.marcaContrato.x||64;img.style.cssText='position:absolute!important;top:30px!important;right:'+margen+'px!important;left:auto!important;width:107.8px!important;height:41.8px!important;object-fit:contain!important;margin:0!important;';hoja.appendChild(img);}
-  async function usuario(){const r=await global.kwSupabase.auth.getUser();if(r.error||!r.data?.user)throw new Error('No se pudo verificar tu cuenta.');return r.data.user;}
+  async function usuario(inicial=false){const r=await(inicial&&global.kwSession?.usuarioInicial?global.kwSession.usuarioInicial(global.kwSupabase):global.kwSupabase.auth.getUser());if(r.error||!r.data?.user)throw new Error('No se pudo verificar tu cuenta.');return r.data.user;}
   async function cargar(datos,soloLectura=false,nuevo=false){
     const turno=++version;bloqueado=soloLectura;logo=valido(datos?.logo_empresa);cargando=nuevo;refrescar();
     if(!nuevo)return;
-    try{const u=await usuario();const url=u.user_metadata?.kw_logo_empresa_url;if(!url)return;
+    try{const u=await usuario(true);const url=u.user_metadata?.kw_logo_empresa_url;if(!url)return;
       const base=global.kwSupabase.storage.from('perfiles').getPublicUrl(u.id+'/').data.publicUrl;
       if(!url.startsWith(base))return;
       const r=await fetch(url);if(!r.ok)throw new Error('No se pudo cargar tu logo guardado.');

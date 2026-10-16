@@ -7,11 +7,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>KW Premier · Bienes Raíces</title>
-<link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
+<link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <meta name="description" content="KW Premier, Market Center de Keller Williams en la Ciudad de México. Compra, venta y renta de propiedades con acompañamiento de un asesor certificado." />
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261016uniforme">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<script src="/assets/js/kw-ui.js?v=20260922"></script>
+<script src="/assets/js/kw-ui.js?v=20261016auditoria"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
@@ -183,7 +183,7 @@
   }
   .editorial-izq p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 18px; }
   .editorial-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 34px; }
-  .editorial-cols h4 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 10px; color: var(--text); }
+  .editorial-cols h3 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 10px; color: var(--text); }
   .editorial-cols p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 12px; }
 
   /* ── Reseñas ──
@@ -679,7 +679,7 @@
     padding-top: 16px;
     border-top: 1px solid var(--landing-line);
   }
-  .editorial-cols h4 {
+  .editorial-cols h3 {
     margin: 0 0 9px;
     color: var(--landing-ink);
     font-size: 27px;
@@ -1028,19 +1028,19 @@
         <h2 class="editorial-grande">Crece con el respaldo de un equipo</h2>
         <div class="editorial-cols">
           <div>
-            <h4>Capacitación continua</h4>
+            <h3>Capacitación continua</h3>
             <p>Formación constante con el modelo probado de Keller Williams, estés empezando o lleves años en el sector.</p>
           </div>
           <div>
-            <h4>Tecnología y herramientas</h4>
+            <h3>Tecnología y herramientas</h3>
             <p>Plataforma propia, inventario compartido y documentos listos para usar desde tu primer día.</p>
           </div>
           <div>
-            <h4>Equipo que te acompaña</h4>
+            <h3>Equipo que te acompaña</h3>
             <p>Un staff dedicado a apoyarte en cada operación, no a dejarte solo.</p>
           </div>
           <div>
-            <h4>Una comunidad</h4>
+            <h3>Una comunidad</h3>
             <p>Asesores que comparten lo que saben, se recomiendan clientes y celebran los cierres de todos.</p>
           </div>
         </div>
@@ -1291,7 +1291,9 @@
 
     // La dirección también va en el pie, que es donde se busca cuando
     // ya se leyó toda la página.
-    document.getElementById('pie-dir').textContent = OFICINA.direccion;
+    var pieDireccion = document.createElement('div');
+    pieDireccion.textContent = OFICINA.direccion;
+    document.getElementById('pie-dir').prepend(pieDireccion);
 
     document.getElementById('seccion-oficina').style.display = '';
   }
@@ -1371,6 +1373,8 @@
     } catch (err) {
       msg.textContent = (err && err.message) || 'No se pudo enviar. Inténtalo de nuevo.';
       msg.className = 'msg error';
+      msg.style.display = 'block';
+      msg.setAttribute('role', 'alert');
       recEstado('inicial');
     }
   }

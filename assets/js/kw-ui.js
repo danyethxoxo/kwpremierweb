@@ -92,6 +92,7 @@
   }
 
   function elegir(caja, select, i) {
+    if (select.matches(':disabled')) return;
     if (i < 0 || i >= select.options.length) return;
     if (select.options[i].disabled) return;
     var cambio = select.selectedIndex !== i;
@@ -119,7 +120,7 @@
   }
 
   function abrir(caja, select) {
-    if (caja.classList.contains('deshabilitado')) return;
+    if (select.matches(':disabled')) return;
     cerrarAbierto();
 
     // Si de este lado de la pantalla ya no queda espacio abajo, el menú
@@ -201,7 +202,22 @@
     }
 
     pintarValor(caja, select);
-    caja.classList.toggle('deshabilitado', select.disabled);
+    function sincronizarEstado() {
+      var disabled = select.matches(':disabled');
+      caja.classList.toggle('deshabilitado', disabled);
+      btn.disabled = disabled;
+      if (disabled && abiertoAhora === caja) cerrarAbierto();
+      var etiqueta = select.labels && select.labels[0];
+      var textoEtiqueta = '';
+      if (etiqueta) {
+        var copia = etiqueta.cloneNode(true);
+        copia.querySelectorAll('select,input,textarea,button,.kw-select-menu,.kw-select-valor,svg').forEach(function (el) { el.remove(); });
+        textoEtiqueta = copia.textContent.trim();
+      }
+      var nombre = select.getAttribute('aria-label') || textoEtiqueta || select.title;
+      if (nombre) btn.setAttribute('aria-label', nombre + ': ' + textoDe(select));
+    }
+    sincronizarEstado();
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -251,14 +267,16 @@
     // ese cambio, el desplegable se queda con la lista vieja.
     new MutationObserver(function () {
       pintarValor(caja, select);
+      sincronizarEstado();
       if (caja.classList.contains('abierto')) pintarMenu(caja, select);
     }).observe(select, { childList: true, subtree: true, attributes: true, attributeFilter: ['value', 'disabled'] });
 
     // Y cuando el valor lo cambia el propio código de la página.
-    select.addEventListener('change', function () { pintarValor(caja, select); });
+    select.addEventListener('change', function () { pintarValor(caja, select); sincronizarEstado(); });
   }
 
   function armarSelects(raiz) {
+    asociarEtiquetas(raiz);
     (raiz || document).querySelectorAll('select:not([data-kw-listo]):not([data-kw-no])')
       .forEach(armarSelect);
   }
@@ -384,6 +402,7 @@
   }
 
   function abrirCalendario(inp) {
+    if (inp.disabled || inp.closest('fieldset:disabled')) return;
     if (calendarioInput === inp) return;
     cerrarCalendario(false);
 
@@ -923,7 +942,17 @@
 
   // ═════════════════════════════════════════════════════════════
 
+  function asociarEtiquetas(raiz) {
+    (raiz || document).querySelectorAll('label:not([for])').forEach(function (label) {
+      if (label.querySelector('input,select,textarea')) return;
+      var grupo = label.closest('.field,.acuerdo-field,.campo,.kw-campo-filtro') || label.parentElement;
+      var controles = grupo.querySelectorAll('input[id]:not([type="hidden"]),select[id],textarea[id]');
+      if (controles.length === 1) label.htmlFor = controles[0].id;
+    });
+  }
+
   function iniciar(raiz) {
+    asociarEtiquetas(raiz);
     plegables(raiz);
     armarSelects(raiz);
     armarFechas(raiz);

@@ -7,7 +7,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GPS · Programa Trimestral</title>
-  <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
+  <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261016uniforme">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,8 +62,8 @@
     padding: 22px;
   }
 
-  .datos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-  .campo { display: flex; align-items: center; gap: 10px; }
+  .datos { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+  .campo { display: flex; align-items: center; gap: 10px; min-width:0; }
   .campo label {
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
     color: var(--muted); white-space: nowrap;
@@ -74,7 +74,7 @@
     font-family: inherit; font-size: 13.5px; color: var(--text); background: #fff; outline: none;
   }
   .campo input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,0.08); }
-  @media (max-width: 720px) { .datos { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .datos { grid-template-columns: minmax(0,1fr); } }
 
   .marco { width: 100%; overflow-x: auto; border: 1px solid var(--linea); border-radius: 10px; }
   table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
@@ -148,7 +148,14 @@
   @media (max-width: 640px) {
     .page { padding: 80px 12px 40px; }
     .hoja { padding: 14px; }
-    .encabezado { display: none; }
+    .encabezado { align-items:stretch; }
+    .encabezado > div:first-child { display:none; }
+    .acciones { width:100%; gap:8px; }
+    .acciones .btn { min-height:44px; }
+    .campo { flex-direction:column; align-items:stretch; gap:6px; }
+    .campo input { width:100%; flex:none; font-size:16px; }
+    .col-metrica { min-width:170px; max-width:170px; }
+    .quitar-fila { width:32px; height:40px; }
   }
 </style>
 </head>
@@ -239,7 +246,7 @@
 
   </main>
 
-<script src="/assets/js/kw-ui.js?v=20260922"></script>
+<script src="/assets/js/kw-ui.js?v=20261016auditoria"></script>
 <script>
   var METRICAS_BASE = [
     'Total inscritos en PC Program',
@@ -282,13 +289,13 @@
     cuerpo.innerHTML = metricas.map(function (m, i) {
       var cel = '';
       for (var t = 0; t < TRIMS; t++) {
-        cel += '<td class="inicio-trim"><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
-               '<td><input class="celda" type="number" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
+        cel += '<td class="inicio-trim"><input class="celda" type="number" aria-label="Meta, trimestre ' + (t+1) + ', métrica ' + (i+1) + '" step="any" data-f="' + i + '" data-t="' + t + '" data-c="meta" /></td>' +
+               '<td><input class="celda" type="number" aria-label="Logro, trimestre ' + (t+1) + ', métrica ' + (i+1) + '" step="any" data-f="' + i + '" data-t="' + t + '" data-c="logro" /></td>' +
                '<td class="pct" id="p-' + i + '-' + t + '">·</td>';
       }
       return '<tr>' +
         '<td class="col-metrica"><div class="metrica-fila">' +
-          '<input class="metrica-txt" type="text" data-m="' + i + '" value="' + esc(m) + '" placeholder="Nombre de la métrica" />' +
+          '<input class="metrica-txt" type="text" aria-label="Nombre de la métrica ' + (i+1) + '" data-m="' + i + '" value="' + esc(m) + '" placeholder="Nombre de la métrica" />' +
           '<button type="button" class="quitar-fila" title="Quitar métrica" data-quitar="' + i + '">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
           '</button>' +
@@ -426,6 +433,7 @@
     var dato = function (id) { return esc(document.getElementById(id).value.trim()) || '&nbsp;'; };
 
     var win = window.open('', '_blank', 'width=1100,height=800');
+    if (!win) { decir('Permite las ventanas emergentes para imprimir el GPS.', 'error'); return; }
     win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(titulo) + '</title><style>' +
       '@page { size: Letter landscape; margin: 1cm; }' +
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +

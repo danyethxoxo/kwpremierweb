@@ -44,5 +44,13 @@ test('Coahuila rechaza Guatemala y conserva Matamoros; valida estados y aliases'
       update public.propiedades set estado='Quintana Roo' where id=4;`);
     assert.equal((await db.query('select count(*)::int n from public.propiedades where id in (2,4) and lat is null and lng is null')).rows[0].n,2);
     assert.equal((await db.query("select private.coordenadas_en_estado('Estado de México',19.29,-99.65) as ok")).rows[0].ok,true);
+    await db.exec('grant select,insert,update on public.propiedades to service_role; set role service_role;');
+    await assert.rejects(db.query("select private.coordenadas_en_estado('Coahuila',25.526,-103.228)"), /permission denied for schema private/);
+    await db.exec('reset role;');
+    const permisos=readFileSync(new URL('../supabase/migrations/20261016133529_restore_property_sync_private_schema_usage.sql',import.meta.url),'utf8');
+    await db.exec(permisos); await db.exec(permisos);
+    await db.exec("set role service_role; update public.propiedades set lat=25.526,lng=-103.228 where id=2; reset role;");
+    assert.equal((await db.query('select lat::float8 as lat from public.propiedades where id=2')).rows[0].lat,25.526);
+    assert.equal((await db.query("select has_schema_privilege('anon','private','USAGE') as acceso")).rows[0].acceso,false);
   } finally { await db.close(); }
 });

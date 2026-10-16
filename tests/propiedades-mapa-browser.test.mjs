@@ -191,6 +191,15 @@ test('filtros requieren confirmacion; pluma a mano alzada y rueda funcionan en e
    const camino=Array.from({length:41},(_,i)=>{const a=i*Math.PI*2/40;return {x:caja.x+caja.width*(.5+.25*Math.cos(a)),y:caja.y+caja.height*(.5+.25*Math.sin(a))};});
    if(viewport.width<640){
      const sesion=await page.context().newCDPSession(page);
+     await page.evaluate(()=>document.querySelector('#prop-mapa').addEventListener('pointerdown',e=>{window.qaPuntero=e.pointerId;},{once:true,capture:true}));
+     await sesion.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[camino[0]]});
+     await page.waitForFunction(()=>window.qaPuntero!==undefined);
+     await page.evaluate(()=>document.querySelector('#prop-mapa').releasePointerCapture(qaPuntero));
+     await sesion.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[camino[1]]});
+     await sesion.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     await page.waitForFunction(()=>document.querySelector('#prop-mapa-dibujar').getAttribute('aria-pressed')==='false');
+     assert.ok(await page.evaluate(()=>qaMapa.dragging.enabled()&&qaMapa.touchZoom.enabled()),'perder captura restaura controles táctiles');
+     await page.locator('#prop-mapa-dibujar').click();
      await sesion.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[camino[0]]});
      for(const p of camino.slice(1))await sesion.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[p]});
      await sesion.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sesion.detach();

@@ -78,6 +78,7 @@
     document.addEventListener('pointermove',function(e){if(!activo||puntero!==e.pointerId)return;e.preventDefault();e.stopPropagation();agregar(e);if(!cuadro)cuadro=requestAnimationFrame(dibujar);},{capture:true,passive:false});
     document.addEventListener('pointerup',terminar,{capture:true,passive:false});
     document.addEventListener('pointercancel',function(e){if(puntero===e.pointerId)modo(false);},true);
+    marco.addEventListener('lostpointercapture',function(e){if(puntero===e.pointerId)modo(false);});
     window.addEventListener('blur',function(){if(activo)modo(false);});
     document.addEventListener('keydown',function(e){if(activo&&e.key==='Escape'){e.preventDefault();modo(false);btn.focus();}});
     return {poligono:function(){return guardado?guardado.map(function(p){return p.slice();}):null;},activo:function(){return activo;},borrar:function(){modo(false);guardado=null;if(capa)mapa.removeLayer(capa);capa=null;}};

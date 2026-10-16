@@ -9,7 +9,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Firmas Digitales</title>
-<link rel="icon" type="image/png" href="/assets/img/favicon.png?v=20260926b" />
+<link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261016uniforme">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261008switch">
-<script src="/assets/js/kw-ui.js?v=20261007c"></script>
+<script src="/assets/js/kw-ui.js?v=20261016auditoria"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
 <style>
@@ -1985,7 +1985,7 @@
          es el contrato más sus anexos, y el orden importa. -->
     <div id="vista-archivos" style="display:none;">
       <div class="kw-card" id="paso-archivos">
-          <div id="cupo" class="firma-cupo" style="display:none;"></div>
+          <div id="cupo-archivos" class="firma-cupo" style="display:none;"></div>
 
           <input type="file" id="archivo" class="firma-input-real" multiple
             accept=".pdf,application/pdf">
@@ -2417,7 +2417,7 @@
       s.src = src;
       s.dataset.lib = src;
       s.onload = listo;
-      s.onerror = () => falla(new Error('No se pudo cargar una librería necesaria. Revisa tu conexión.'));
+      s.onerror = () => { s.remove(); falla(new Error('No se pudo cargar una librería necesaria. Revisa tu conexión.')); };
       document.head.appendChild(s);
     });
   }
@@ -2618,7 +2618,7 @@
     // pdf.js se queda con el arreglo que recibe y lo deja inservible
     // para lo que venga después; se le pasa una copia para poder seguir
     // usando el original al subirlo.
-    const doc = await window.pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+    const doc = await window.pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
     cont.innerHTML = '';
     const hojas = [];
 

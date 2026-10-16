@@ -689,7 +689,7 @@
     if (jsPdfPromesa) return jsPdfPromesa;
     jsPdfPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.src = '/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js';
       script.async = true;
       script.onload = function () {
         if (global.jspdf && global.jspdf.jsPDF) resolver(global.jspdf.jsPDF);
@@ -698,6 +698,7 @@
       script.onerror = function () { rechazar(new Error('No se pudo cargar el generador PDF.')); };
       document.head.appendChild(script);
     });
+    jsPdfPromesa = jsPdfPromesa.catch(function (error) { jsPdfPromesa = null; throw error; });
     return jsPdfPromesa;
   }
 
@@ -722,6 +723,7 @@
       };
       document.head.appendChild(script);
     });
+    pdfJsPromesa = pdfJsPromesa.catch(function (error) { pdfJsPromesa = null; throw error; });
     return pdfJsPromesa;
   }
 
@@ -983,7 +985,7 @@
   async function convertirPNGDesdePDF(blob) {
     var pdfJs = await cargarPdfJs();
     var bytes = new Uint8Array(await blob.arrayBuffer());
-    var documento = await pdfJs.getDocument({ data: bytes }).promise;
+    var documento = await pdfJs.getDocument({ data: bytes, isEvalSupported: false }).promise;
     try {
       var pagina = await documento.getPage(1);
       var base = pagina.getViewport({ scale: 1 });

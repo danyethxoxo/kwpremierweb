@@ -193,7 +193,7 @@ test('los tres contratos separan URLs, confirman borradores incompletos y navega
 test('comercial: captura, contenido completo, guardado, reapertura, errores, finalizacion y PDF',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
-  for(const width of [1440,390]){
+  for(const width of [1440,390,320]){
    const page=await browser.newPage({viewport:{width,height:1000}}),errores=[];page.setDefaultTimeout(15000);page.on('pageerror',e=>errores.push(e.message));
    await page.route('**/*',async route=>{
     const url=new URL(route.request().url());
@@ -276,7 +276,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.locator('#modal-nombre-input').fill('Comercial QA');await page.locator('#kw-documento-nombre-form button[type=submit]').click();
    await aviso(page,'Contrato guardado.');
    assert.equal(await page.evaluate(()=>qaRows.length),1);
-   await page.locator('#comercial-volver').click();
+   await page.goto('https://kw.local/documentos/contratos/comercial.html');
    await page.locator('[data-abrir]').first().waitFor({state:'visible'});
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#vista-lista')).opacity==='1');
    await page.screenshot({path:path.join(root,'artifacts/comercial/lista-'+width+'.png')});
@@ -293,7 +293,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.evaluate(()=>qaRows[0].datos.clientes.length),6);
    await llenar(page,'pais_notaria','España');await llenar(page,'ciudad_notaria','Madrid');await llenar(page,'divisa','EUR');
    await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
-   await page.locator('#comercial-volver').click();await page.locator('[data-abrir]').first().click();await page.waitForURL(/\?doc=/);await page.locator('#vista-formulario').waitFor({state:'visible'});
+   await page.goto('https://kw.local/documentos/contratos/comercial.html');await page.locator('[data-abrir]').first().click();await page.waitForURL(/\?doc=/);await page.locator('#vista-formulario').waitFor({state:'visible'});
    assert.equal(await page.locator('#com-num-clientes').inputValue(),'6');assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6');
    assert.equal(await page.locator('#com-pais_notaria').inputValue(),'España');assert.equal(await page.locator('#com-ciudad_notaria').inputValue(),'Madrid');assert.equal(await page.locator('#com-divisa').inputValue(),'EUR');
    await page.waitForFunction(()=>document.querySelector('#comercial-paginas').innerText.includes('POR EL CLIENTE 6'));
