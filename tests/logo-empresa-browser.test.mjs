@@ -45,7 +45,7 @@ test('logo: perfil reutilizable, copia por contrato, bloqueo y encabezado PDF si
    const guardado=await page.evaluate(()=>kwLogoEmpresa.obtener());
    assert.ok(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('marca')).kw_logo_empresa_url.includes('/qa-user/logo-empresa-')));
    await page.waitForTimeout(200);
-   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(hoja=>{const a=hoja.querySelector('.kw-contrato-encabezado img').getBoundingClientRect(),b=hoja.querySelector('.kw-logo-empresa-hoja').getBoundingClientRect();return {ancho:a.width===b.width,alto:a.height===b.height,top:Math.abs(a.top-b.top)<1,derecha:b.left>a.right};});
+   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(hoja=>{const a=hoja.querySelector('.kw-contrato-encabezado img').getBoundingClientRect(),b=hoja.querySelector('.kw-logo-empresa-hoja').getBoundingClientRect();return {ancho:Math.abs(b.width/a.width-1.1)<.01,alto:Math.abs(b.height/a.height-1.1)<.01,top:Math.abs(a.top-b.top)<1,derecha:b.left>a.right};});
    assert.deepEqual(medidas,{ancho:true,alto:true,top:true,derecha:true});
    // Cambiar el perfil no cambia el logo de un documento ya guardado.
    await page.evaluate(async logo=>{sessionStorage.setItem('marca','{}');await kwLogoEmpresa.cargar({logo_empresa:logo},true);},guardado);
@@ -84,7 +84,7 @@ test('logo: perfil reutilizable, copia por contrato, bloqueo y encabezado PDF si
     const p=document.createElement('p');p.textContent='Contrato de prueba';
     await kwContratoDocumento.exportar({stack:document.querySelector('.kw-contrato-hoja').parentElement.closest('.page-stack').id,titulo:'Prueba',bloques:()=>[p]});
    });
-   const pdf=await page.evaluate(()=>logoPDF);assert.ok(pdf.length);assert.ok(pdf.every(img=>img.src===guardado&&img.w===98&&img.h===38&&img.lista));
+   const pdf=await page.evaluate(()=>logoPDF);assert.ok(pdf.length);assert.ok(pdf.every(img=>img.src===guardado&&img.w===108&&img.h===42&&img.lista));
    if(nombre==='renta')assert.equal(await page.evaluate(()=>datosActuales().logo_empresa),guardado);
   }
   assert.deepEqual(errores,[]);

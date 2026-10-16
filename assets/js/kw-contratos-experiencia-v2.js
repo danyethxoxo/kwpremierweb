@@ -23,7 +23,7 @@
   return new Promise(resolve=>{
    const antes=document.activeElement,overlay=document.createElement('div');overlay.className='modal-overlay';overlay.id='kw-borrador-incompleto';
    const caja=document.createElement('div');caja.className='modal-box';caja.setAttribute('role','dialog');caja.setAttribute('aria-modal','true');caja.setAttribute('aria-labelledby','kw-faltantes-titulo');
-   caja.innerHTML='<h3 id="kw-faltantes-titulo">Aún faltan llenar estos campos:</h3><ul class="kw-campos-pendientes"></ul><div class="modal-actions"><button type="button" class="btn-modal-cancelar">Cancelar</button><button type="button" class="btn-modal-confirmar">Guardar de todas formas</button></div>';
+   caja.innerHTML='<h3 id="kw-faltantes-titulo">Aún faltan llenar estos campos:</h3><ul class="kw-campos-pendientes"></ul><div class="modal-actions"><button type="button" class="btn-modal-cancelar">Cancelar</button><button type="button" class="btn-modal-confirmar">Guardar</button></div>';
    for(const nombre of lista){const li=document.createElement('li');li.textContent=nombre;caja.querySelector('ul').appendChild(li);}
    function cerrar(valor){document.removeEventListener('keydown',tecla);overlay.remove();antes?.focus();resolve(valor);}
    function tecla(e){if(e.key==='Escape')cerrar(false);if(e.key==='Tab'){const botones=Array.from(caja.querySelectorAll('button'));if(e.shiftKey&&document.activeElement===botones[0]){e.preventDefault();botones[1].focus();}else if(!e.shiftKey&&document.activeElement===botones[1]){e.preventDefault();botones[0].focus();}}}
