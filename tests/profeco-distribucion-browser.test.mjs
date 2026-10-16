@@ -24,13 +24,19 @@ test('PROFECO preserves paragraphs, separates annexes and groups signatures for 
     document.getElementById('f-num-clientes').value=String(count);renderClientesFields();for(let i=0;i<count;i++)document.getElementById('f-cli'+i+'-nombre').value='CLIENTE DE PRUEBA '+(i+1);updatePreview();kwContratoDocumento.render(configuracionDocumento());
     return [...document.querySelectorAll('#contrato-preview .kw-contrato-hoja')].map(p=>{
      const r=p.getBoundingClientRect(),scale=r.width/816,body=p.querySelector('.kw-contrato-cuerpo');
-     return {sections:[...new Set([...body.querySelectorAll('[data-profeco-seccion]:not(.doc-salto)')].map(e=>e.dataset.profecoSeccion))],signatures:[...body.querySelectorAll('[data-profeco-firmas]')].map(e=>({type:e.dataset.profecoFirmas,count:e.querySelectorAll('.doc-firma-col').length,only:body.children.length===1})),paragraphs:[...body.querySelectorAll('[data-kw-parrafo]')].map(e=>e.dataset.kwParrafo),bottom:(body.getBoundingClientRect().bottom-r.top)/scale,text:body.textContent.trim().slice(0,65)};
+     return {pageNumber:p.querySelector('.kw-contrato-pie').lastChild.textContent,sections:[...new Set([...body.querySelectorAll('[data-profeco-seccion]:not(.doc-salto)')].map(e=>e.dataset.profecoSeccion))],signatures:[...body.querySelectorAll('[data-profeco-firmas]')].map(e=>({type:e.dataset.profecoFirmas,count:e.querySelectorAll('.doc-firma-col').length,only:body.children.length===1})),paragraphs:[...body.querySelectorAll('[data-kw-parrafo]')].map(e=>e.dataset.kwParrafo),bottom:(body.getBoundingClientRect().bottom-r.top)/scale,text:body.textContent.trim().slice(0,65)};
     });
    },count);
 
    assert.ok(stats.every(p=>p.bottom<=990.5),'no text or signatures clipped');
    const firmaContrato=stats.flatMap(p=>p.signatures).find(s=>s.type==='contrato');assert.equal(firmaContrato.count,count+3);assert.ok(firmaContrato.only);
    for(const section of ['a1','a2','b1','b2'])assert.equal(stats.filter(p=>p.sections.includes(section)).length,1,section+' remains on its own sheet');
+   for(const prefix of ['contrato','a','b','c']){
+    const group=stats.filter(p=>p.sections.some(s=>prefix==='contrato'?s===prefix:s!=='contrato'&&s.startsWith(prefix)));
+    assert.deepEqual(group.map(p=>p.pageNumber),group.map((_,i)=>'Página '+(i+1)+' de '+group.length),'independent numbering including signature sheets: '+prefix);
+   }
+   assert.deepEqual(stats.filter(p=>p.sections.some(s=>s.startsWith('a'))).map(p=>p.pageNumber),['Página 1 de 2','Página 2 de 2']);
+   assert.deepEqual(stats.filter(p=>p.sections.some(s=>s.startsWith('b'))).map(p=>p.pageNumber),['Página 1 de 2','Página 2 de 2']);
    const a2=stats.find(p=>p.sections.includes('a2'));assert.ok(a2.text.startsWith('FINALIDAD.'));assert.equal(a2.signatures.find(s=>s.type==='a').count,count);
    assert.equal(stats.find(p=>p.sections.includes('b2')).signatures.find(s=>s.type==='b').count,count);
    const c=stats.filter(p=>p.sections.includes('c'));assert.equal(c.length,count+3>6?2:1);assert.equal(c.flatMap(p=>p.signatures).find(s=>s.type==='c').count,count+3);

@@ -99,7 +99,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
 <link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016profeco">
-<script src="/assets/js/kw-contrato-documento.js?v=20261016comercialhoja"></script>
+<script src="/assets/js/kw-contrato-documento.js?v=20261016numeracion"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261016alineado">
 </head>
 <body class="doc-borrador">
@@ -1200,7 +1200,10 @@ function bloquesDocumentoProfeco() {
   return bloques;
 }
 function configuracionDocumento() {
-  return {stack:'contrato-preview',raw:'contrato-raw',bloques:bloquesDocumentoProfeco,clase:'kw-contrato-profeco',titulo:'CONTRATO PROFECO',folio:folioActual?folioRevisionActual():'Borrador'};
+  return {stack:'contrato-preview',raw:'contrato-raw',bloques:bloquesDocumentoProfeco,clase:'kw-contrato-profeco',titulo:'CONTRATO PROFECO',folio:folioActual?folioRevisionActual():'Borrador',grupoNumeracion:hoja=>{
+    const seccion=hoja.querySelector('.kw-contrato-cuerpo [data-profeco-seccion]')?.dataset.profecoSeccion||'contrato';
+    return seccion==='contrato'?seccion:seccion.charAt(0);
+  }};
 }
 let previewPendiente = false;
 function renderPaginated() {

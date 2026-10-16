@@ -81,8 +81,12 @@
       if(paginas.length>1&&!cuerpo.children.length)paginas.pop().remove();
       const existentes=Array.from(stack.querySelectorAll('.kw-contrato-hoja'));
       if(!existentes.length)stack.replaceChildren();
+      const grupos=paginas.map(hoja=>config.grupoNumeracion?config.grupoNumeracion(hoja):'documento');
+      const totales=new Map(),contadores=new Map();
+      grupos.forEach(grupo=>totales.set(grupo,(totales.get(grupo)||0)+1));
       paginas.forEach((hoja,i)=>{
-        hoja.querySelector('.kw-contrato-pie').lastChild.textContent='Página '+(i+1)+' de '+paginas.length;
+        const grupo=grupos[i],numero=(contadores.get(grupo)||0)+1;contadores.set(grupo,numero);
+        hoja.querySelector('.kw-contrato-pie').lastChild.textContent='Página '+numero+' de '+totales.get(grupo);
         if(existentes[i]){sincronizar(existentes[i].querySelector('.kw-contrato-cuerpo'),hoja.querySelector('.kw-contrato-cuerpo'));sincronizar(existentes[i].querySelector('.kw-contrato-pie'),hoja.querySelector('.kw-contrato-pie'));}else stack.appendChild(hoja);
       });
       existentes.slice(paginas.length).forEach(p=>{const padre=p.parentElement;(padre.classList.contains('page-scale-wrap')?padre:p).remove();});
