@@ -214,6 +214,9 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.locator('#btn-nuevo').click();await page.waitForURL(/\?nuevo=1$/);await page.waitForSelector('#com-asesor');
    await page.waitForFunction(()=>document.getElementById('com-asesor').value==='Asesora QA',null,{timeout:10000});
    assert.equal(await page.locator('#com-correo_asesor').inputValue(),'perfil@example.com');
+   assert.equal(await page.locator('#com-lugar_firma').inputValue(),'Ciudad de México');
+   const lugar=page.getByRole('combobox',{name:'Lugar de firma'});await lugar.fill('yuca');await lugar.press('Enter');
+   assert.equal(await page.locator('#com-lugar_firma').inputValue(),'Yucatán');
    assert.equal(await page.locator('#com-telefono_asesor').inputValue(),'5511223344');
    assert.equal(await page.locator('#com-representante,#com-mca').count(),0);
    assert.equal(await page.locator('#com-precio').locator('..').locator('[data-sumar],[data-restar]').count(),0);
@@ -291,6 +294,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','cambiar el selector conserva la captura');
    await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
    assert.equal(await page.evaluate(()=>qaRows[0].datos.clientes.length),6);
+   assert.equal(await page.evaluate(()=>qaRows[0].datos.lugar_firma),'Yucatán');
    await llenar(page,'pais_notaria','España');await llenar(page,'ciudad_notaria','Madrid');await llenar(page,'divisa','EUR');
    await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
    await page.goto('https://kw.local/documentos/contratos/comercial.html');await page.locator('[data-abrir]').first().click();await page.waitForURL(/\?doc=/);await page.locator('#vista-formulario').waitFor({state:'visible'});
@@ -309,6 +313,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.evaluate(()=>qaRows[0].estado),'borrador');await page.locator('#com-pago_promesa').fill('20');
    await page.locator('#comercial-finalizar').click();await aviso(page,'Contrato finalizado. Folio: COM-QA-001');
    assert.equal(await page.locator('#com-cliente').isDisabled(),true);
+   assert.equal(await page.getByRole('combobox',{name:'Lugar de firma'}).isDisabled(),true);
    assert.equal(await page.locator('#com-cliente_6').isDisabled(),true);assert.equal(await page.locator('#com-num-clientes').isDisabled(),true);
    await page.addScriptTag({path:path.join(root,'assets/vendor/jspdf/jspdf-4.2.1.umd.min.js')});
    await page.evaluate(()=>{

@@ -62,20 +62,29 @@
       contenido[0].datos={...d,cliente:d.clientes.map(c=>c.cliente||'________________').join(', ')};
       contenido.splice(1,6,...d.clientes.flatMap((cliente,i)=>window.kwComercialContenido.slice(1,7).map((texto,j)=>({texto:j===0?'I.DECLARA “EL CLIENTE” '+(i+1)+': {{cliente}} que:':texto,datos:{...d,...cliente}}))));
     }
-    const bloques = contenido.map(({texto,datos:datosBloque}) => {
+    const parrafos = contenido.map(({texto,datos:datosBloque}) => {
       let html = escapar(texto).replace(/\{\{([a-z_]+)\}\}/g, (_,id) => campo(datosBloque,id));
       html = html.replace(/^(PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA)\./,'<strong>$1.</strong>');
       const cabecera = /^(?:I{1,3}\.DECLARA|IV\. LAS PARTES|CLÁUSULAS$)/.test(texto);
       const el = document.createElement(cabecera ? 'h3':'p'); el.innerHTML = html; return el;
     });
+    const bloques=parrafos;
+    let numeroPunto=0;
+    parrafos.forEach((parrafo,i)=>{
+      if(parrafo.tagName!=='H3')parrafo.dataset.kwParrafo=String(i);
+      if(/^\d+\./.test(parrafo.textContent))parrafo.dataset.kwPunto=String(++numeroPunto);
+    });
     const cierre=document.createElement('p');
     cierre.innerHTML='Leído que fue el presente Acuerdo y enteradas las partes de su contenido y alcance legal, lo firman en tres tantos en '+campo(d,'lugar_firma')+', el '+campo(d,'fecha')+'.';
     bloques.push(cierre);
     const firmantes=[...d.clientes.map((cliente,i)=>['POR EL CLIENTE'+(numeroClientes>1?' '+(i+1):''),campo(cliente,'cliente')]),['KW PREMIER','INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.<br>REPRESENTADA EN ESTE ACTO POR<br>'+campo(d,'representante')],['MCA KW PREMIER',campo(d,'mca')],['EL PROFESIONAL',campo(d,'asesor')]];
+    const salto=document.createElement('div');salto.className='doc-salto';bloques.push(salto);
+    const hojaFirmas=document.createElement('div');hojaFirmas.className='kw-hoja-firmas';hojaFirmas.dataset.kwFirmas='hoja';
     for(let i=0;i<firmantes.length;i+=2){
-      const firmas=document.createElement('div');firmas.className='comercial-firmas';
-      firmas.innerHTML=firmantes.slice(i,i+2).map(([rol,nombre])=>'<div class="comercial-firma"><b>'+rol+'</b>'+nombre+'</div>').join('');bloques.push(firmas);
+      const firmas=document.createElement('div');firmas.className='comercial-firmas doc-firmas-row';
+      firmas.innerHTML=firmantes.slice(i,i+2).map(([rol,nombre])=>'<div class="comercial-firma"><b>'+rol+'</b>'+nombre+'</div>').join('');hojaFirmas.appendChild(firmas);
     }
+    bloques.push(hojaFirmas);
     const grupos=[];
     for(let i=0;i<bloques.length;i++){
       if(bloques[i].tagName==='H3'&&bloques[i+1]){
@@ -91,11 +100,12 @@
   function pintarCampos() {
     $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes">'+Array.from({length:6},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
     pintarClientes();window.kwUI.selects($('comercial-campos'));
+    window.kwSelectBusqueda.preparar($('com-lugar_firma'));
   }
   function pintarCampo([id,label,tipoCampo]) {
       const propiedades=' id="com-'+id+'" name="'+id+'" required maxlength="'+(tipoCampo==='textarea'?1000:250)+'"';
       const limite=tipoCampo==='number'?' min="'+(['vigencia','renovacion','proteccion'].includes(id)?'1':'0')+'" max="'+(['vigencia','renovacion','proteccion'].includes(id)?'10000':'100')+'" step="any" data-kw-paso="5"':'';
-      const opciones=id.startsWith('estado_civil')?window.kwDocumentosCampos.civiles:id==='tipo_inmueble'?window.kwDocumentosCampos.inmuebles:id==='ciudad_notaria'?window.kwDocumentosCampos.estados:['MXN','USD','EUR'];
+      const opciones=id.startsWith('estado_civil')?window.kwDocumentosCampos.civiles:id==='tipo_inmueble'?window.kwDocumentosCampos.inmuebles:['ciudad_notaria','lugar_firma'].includes(id)?window.kwDocumentosCampos.estados:['MXN','USD','EUR'];
       if(tipoCampo==='pais')return '<div class="acuerdo-field"><label for="com-pais-selector">'+escapar(label)+'</label><div><select id="com-pais-selector" aria-label="País"><option value="México">México</option><option value="otro">Otro país</option></select><input type="text"'+propiedades+' aria-label="Nombre del país" placeholder="Escribe el país" hidden></div></div>';
       const control=tipoCampo==='select'?'<select'+propiedades+'><option value="">Seleccionar</option>'+opciones.map(v=>'<option>'+escapar(v)+'</option>').join('')+'</select>':tipoCampo==='importe'?'<div class="kw-importe"><span aria-hidden="true">$</span><input type="text"'+propiedades+' data-kw-no inputmode="decimal" placeholder="0.00"></div>':['textarea','text'].includes(tipoCampo)?'<textarea'+propiedades+' rows="1"></textarea>':'<input type="'+tipoCampo+'"'+propiedades+limite+'>';
       return '<div class="acuerdo-field"><label for="com-'+id+'">'+escapar(label)+'</label>'+control+'</div>';

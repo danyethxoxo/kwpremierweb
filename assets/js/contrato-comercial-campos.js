@@ -1,6 +1,6 @@
 window.kwComercialCampos = [
   ['Documento',[
-    ['fecha','Fecha de firma','date',''],['lugar_firma','Lugar de firma','text','Ciudad de México']
+    ['fecha','Fecha de firma','date',''],['lugar_firma','Lugar de firma','select','Ciudad de México']
   ]],
   ['Cliente propietario',[
     ['cliente','Nombre completo','text',''],['estado_civil','Estado civil y régimen matrimonial','select',''],
