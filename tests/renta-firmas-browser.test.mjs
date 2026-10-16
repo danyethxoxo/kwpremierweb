@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const sdk=fs.readFileSync(path.join(root,'tests/contrato-comercial-browser.test.mjs'),'utf8').split('const sdk=`')[1].split('`;')[0];
-test('Renta keeps up to six signatures lower on page two, with matching preview and PDF',async()=>{
+test('Renta ends page one with Second, starts page two with Third and reserves one sheet for every signature',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1100}});
@@ -32,13 +32,19 @@ test('Renta keeps up to six signatures lower on page two, with matching preview 
     updatePreview();kwContratoDocumento.render(configuracionDocumento());
     return [...document.querySelectorAll('.page.kw-contrato-hoja')].map(hoja=>{
      const r=hoja.getBoundingClientRect(),scale=r.width/816,firmas=hoja.querySelector('[data-kw-firmas]');
-     return {text:hoja.textContent,signatures:hoja.querySelectorAll('.doc-firma-linea-top').length,bottom:(hoja.querySelector('.kw-contrato-cuerpo').getBoundingClientRect().bottom-r.top)/scale,gap:firmas?.previousElementSibling?(firmas.getBoundingClientRect().top-firmas.previousElementSibling.getBoundingClientRect().bottom)/scale:null,rows:firmas?[...firmas.children].map(f=>f.children.length):[]};
+     return {text:hoja.textContent,bodyText:hoja.querySelector('.kw-contrato-cuerpo').textContent.trim(),onlySignatures:!!firmas&&firmas.parentElement.children.length===1,signatures:hoja.querySelectorAll('.doc-firma-linea-top').length,bottom:(hoja.querySelector('.kw-contrato-cuerpo').getBoundingClientRect().bottom-r.top)/scale,gap:firmas?.previousElementSibling?(firmas.getBoundingClientRect().top-firmas.previousElementSibling.getBoundingClientRect().bottom)/scale:null,rows:firmas?[...firmas.children].map(f=>f.children.length):[]};
     });
    },count);
    assert.equal(result.reduce((n,p)=>n+p.signatures,0),count+3);
    assert.ok(result.every(p=>p.bottom<=990.1),'no content or signatures cross the footer');
    const groups=result.filter(p=>p.signatures);assert.equal(groups.length,1,'signatures stay together');
-   if(count<=3){assert.equal(result.length,2,'up to three clients fit on two pages');assert.equal(result[1].signatures,count+3);assert.ok(result[1].gap>=55.9);assert.deepEqual(result[1].rows,count===1?[2,2]:count===2?[3,2]:[3,3]);}
+   assert.equal(result.length,3,'two content pages and one dedicated signature page');
+   assert.ok(result[0].bodyText.endsWith('las ofertas que se presenten sobre "EL INMUEBLE".'));
+   assert.ok(result[1].bodyText.startsWith('TERCERA.'));
+   assert.equal(result[0].signatures,0);assert.equal(result[1].signatures,0);
+   assert.equal(result[2].signatures,count+3);assert.equal(result[2].onlySignatures,true);
+   assert.equal(result[2].rows.length,Math.ceil((count+3)/2));
+   assert.ok(result[2].rows.every(n=>n<=2));
   }
   await page.evaluate(()=>{
    const original=kwPDFVector.crear;
@@ -50,11 +56,11 @@ test('Renta keeps up to six signatures lower on page two, with matching preview 
   });
   const event=page.waitForEvent('download');await page.evaluate(()=>downloadPDF());const download=await event;
   const out=path.join(root,'artifacts/renta-firmas');fs.mkdirSync(out,{recursive:true});const pdf=path.join(out,'renta-tres-clientes.pdf');await download.saveAs(pdf);
-  assert.equal((fs.readFileSync(pdf,'latin1').match(/\/Type \/Page\b/g)||[]).length,2);
+  assert.equal((fs.readFileSync(pdf,'latin1').match(/\/Type \/Page\b/g)||[]).length,3);
   const exported=await page.evaluate(()=>({pdf:qaFirmasPDF,preview:qaFirmasVista}));
   assert.deepEqual(exported.pdf.map(p=>p.text),exported.preview.map(p=>p.text));
   exported.pdf.forEach((p,i)=>p.lines.forEach((line,j)=>{assert.ok(Math.abs(line.y-exported.preview[i].lines[j].y)<.2);assert.ok(Math.abs(line.x-exported.preview[i].lines[j].x)<.2);}));
   await page.setViewportSize({width:390,height:1000});await page.evaluate(()=>showMobileTab('preview'));
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('.page.kw-contrato-hoja').count(),2);assert.deepEqual(errors,[]);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('.page.kw-contrato-hoja').count(),3);assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });

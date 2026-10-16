@@ -108,8 +108,8 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
-<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016rentafirmas">
-<script src="/assets/js/kw-contrato-documento.js?v=20261016rentafirmas"></script>
+<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016rentahoja">
+<script src="/assets/js/kw-contrato-documento.js?v=20261016rentahoja"></script>
 <link rel="stylesheet" href="/assets/css/kw-logo-empresa.css?v=20261015simple">
 <script src="/assets/js/kw-logo-empresa-v2.js?v=20261016auditoria"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261016alineado">
@@ -542,7 +542,7 @@ function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
 
-  // ── Construcción de firmas: orden fijo + clientes en dos o tres columnas ──
+  // ── Construcción de firmas: orden fijo + clientes en dos columnas ──
   function firmaCell(nombreHTML, rolHTML) {
     return `<div class="doc-firma-col"><div class="doc-firma-linea-top">${nombreHTML}<br>${rolHTML}</div></div>`;
   }
@@ -562,10 +562,8 @@ function updatePreview() {
     ? nombresClientes.map(nom => firmaCell(`<span class="doc-firma-bold">${escapeHtml(nom)}</span>`, '<span class="doc-firma-bold">"EL CLIENTE"</span>'))
     : [firmaCell('(Nombre y firma)', '<span class="doc-firma-bold">"EL CLIENTE"</span>')];
 
-  const columnasFirmas = clienteCells.length > 1 ? 3 : 2;
-  const firmantes = columnasFirmas === 3
-    ? [cellGustavo, cellFernanda, cellProfesional, ...clienteCells]
-    : [cellGustavo, cellFernanda, cellProfesional, clienteCells[0]];
+  const columnasFirmas = 2;
+  const firmantes = [cellGustavo, cellFernanda, cellProfesional, ...clienteCells];
   const filas = [];
   for (let i = 0; i < firmantes.length; i += columnasFirmas) {
     filas.push(firmantes.slice(i, i + columnasFirmas));
@@ -611,6 +609,7 @@ function updatePreview() {
 
     <div class="doc-p"><span class="doc-clausula-titulo">SEGUNDA.</span> - "EL CLIENTE" señala que es su intención rentar "EL INMUEBLE" en la cantidad de ${campo(montoFmt,'$Monto en número')} (${campo(montoLetra,'MONTO EN LETRA')}), estando obligado "EL PROFESIONAL" a pasar a la consideración de "EL CLIENTE" las ofertas que se presenten sobre "EL INMUEBLE".</div>
 
+    <div class="doc-salto"></div>
     <div class="doc-p"><span class="doc-clausula-titulo">TERCERA.</span> - Por su parte <strong>"EL CLIENTE"</strong> se obliga a:</div>
     <div class="doc-p">1. Entregar oportunamente la documentación relacionada con "EL INMUEBLE", cuando lo solicite "EL PROFESIONAL".</div>
     <div class="doc-p">2. Mantener al corriente los pagos de derechos y servicios contratados para "EL INMUEBLE".</div>
@@ -632,7 +631,8 @@ function updatePreview() {
 
     <div class="doc-p" style="margin-top:16px;">Leído que fue el presente Acuerdo y enteradas las partes de su contenido y alcance legal, lo firman en tres tantos en la Ciudad de México, el día <strong>${formatFechaLarga(fecha)}</strong>.</div>
 
-    <div class="doc-firmas-wrap kw-renta-firmas" data-kw-firmas="pie" style="--firmas-columnas:${columnasFirmas}">
+    <div class="doc-salto"></div>
+    <div class="doc-firmas-wrap kw-renta-firmas" data-kw-firmas="hoja" style="--firmas-columnas:${columnasFirmas}">
       ${firmasHTML}
     </div>
   `;

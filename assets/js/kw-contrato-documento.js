@@ -79,14 +79,6 @@
         agregar(bloque);
       }
       if(paginas.length>1&&!cuerpo.children.length)paginas.pop().remove();
-      for(const hoja of paginas){
-        const firmas=hoja.querySelector('[data-kw-firmas="pie"]');
-        if(firmas?.previousElementSibling){
-          const cuerpo=hoja.querySelector('.kw-contrato-cuerpo');
-          const libre=990-(cuerpo.getBoundingClientRect().bottom-hoja.getBoundingClientRect().top);
-          if(libre>0)firmas.style.marginTop=(parseFloat(getComputedStyle(firmas).marginTop)+libre)+'px';
-        }
-      }
       const existentes=Array.from(stack.querySelectorAll('.kw-contrato-hoja'));
       if(!existentes.length)stack.replaceChildren();
       paginas.forEach((hoja,i)=>{
