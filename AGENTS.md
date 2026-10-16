@@ -2,6 +2,8 @@
 
 ## Textos de interfaz
 
+Regla universal de avisos y ventanas: toda acción principal de confirmación (Guardar, Continuar, Aceptar, Confirmar, Finalizar, OK y equivalentes) usa fondo guinda sólido y texto blanco, incluyendo sus estados de interacción. Usar las piezas compartidas y `assets/css/kw-avisos.css`; no aplicar vidrio, gradientes, transparencias ni colores alternativos a estos botones. Cancelar y cerrar conservan jerarquía secundaria. No depender del texto del botón para reconocer su función: marcarlo con la clase de acción principal correspondiente.
+
 Por indicación del usuario, mantener la interfaz simple y con el mínimo texto necesario. No agregar descripciones, ayudas permanentes, instrucciones obvias ni mensajes de éxito redundantes. Preferir etiquetas cortas y estados visuales: por ejemplo, un botón "Subir logo" que se sustituye por la miniatura con una acción de eliminar. Mostrar explicaciones solo cuando sean indispensables para completar una acción o resolver un error. Conservar nombres accesibles para controles con íconos.
 
 ## Contratos y acuerdos
