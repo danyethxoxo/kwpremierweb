@@ -103,6 +103,15 @@ function kwTexto(value: unknown): string | null {
   return result || null
 }
 
+function kwPais(value: unknown): string {
+  const pais = (kwTexto(value) || 'MX').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+  if (['MX', 'MEX', 'MEXICO'].includes(pais)) return 'MX'
+  if (['CO', 'COL', 'COLOMBIA'].includes(pais)) return 'CO'
+  if (['US', 'USA', 'UNITED STATES', 'ESTADOS UNIDOS'].includes(pais)) return 'US'
+  if (['CA', 'CAN', 'CANADA'].includes(pais)) return 'CA'
+  return pais
+}
+
 function kwNumero(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null
   const result = Number(String(value).replace(/,/g, ''))
@@ -229,7 +238,7 @@ function normalizarKwMexico(
     municipio: kwTexto(propiedad.Geo_Municipio) || kwTexto(propiedad.City),
     estado: kwTexto(propiedad.Geo_Estado) || kwTexto(propiedad.State),
     cp: kwTexto(propiedad.Geo_Codigo_Postal) || kwTexto(propiedad.Postal_Code),
-    pais: 'MX',
+    pais: kwPais(kwTexto(listado.Country) || kwTexto(kwLista(detalle?.data, 'Property_Data')[0]?.Country) || kwTexto(propiedad.Geo_Pais)),
     lat: kwNumero(propiedad.Latitude),
     lng: kwNumero(propiedad.Longitude),
     imagenes: fotos,
