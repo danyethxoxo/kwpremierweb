@@ -10,6 +10,7 @@
     caja.setAttribute('aria-busy',String(ocupado));
     caja.querySelector('input').disabled=bloqueado||ocupado;
     caja.querySelector('[data-logo-subir]').disabled=bloqueado||ocupado;
+    caja.querySelector('[data-logo-editar]').disabled=bloqueado||ocupado||!logo;
     caja.querySelector('[data-logo-quitar]').disabled=bloqueado||ocupado||!logo;
     document.querySelectorAll('.kw-logo-empresa-hoja').forEach(el=>el.remove());
     if(logo)document.querySelectorAll('.kw-contrato-hoja').forEach(hoja=>insertar(hoja));
@@ -38,7 +39,9 @@
   }
   async function cambiar(archivo){
     if(ocupado||bloqueado)return;ocupado=true;cargando=false;const turno=++version;refrescar();aviso('');
-    try{const valor=archivo?await normalizar(archivo):'',u=await usuario();
+    try{const valor=archivo?await global.kwRecortarLogo(archivo):'';
+      if(valor===null||turno!==version||bloqueado)return;
+      const u=await usuario();
       let url=null;if(valor){const blob=await(await fetch(valor)).blob(),ruta=u.id+'/logo-empresa-'+crypto.randomUUID()+'.png';
         const subida=await global.kwSupabase.storage.from('perfiles').upload(ruta,blob,{contentType:'image/png',cacheControl:'31536000'});if(subida.error)throw subida.error;
         url=global.kwSupabase.storage.from('perfiles').getPublicUrl(ruta).data.publicUrl;
@@ -52,8 +55,8 @@
   }
   function montar(){const perfil=document.querySelector('[data-kw-logo-perfil]');const raiz=perfil||document.querySelector('#acuerdos-form-col .kw-form-scroll')||document.getElementById('acuerdos-form-col');if(!raiz)return;
     const caja=document.createElement('div');caja.id='kw-logo-empresa';caja.className='kw-logo-control';caja.setAttribute('role','group');caja.setAttribute('aria-label','Logo de tu empresa');
-    caja.innerHTML='<input id="kw-logo-empresa-archivo" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Elegir logo" hidden><button type="button" data-logo-subir><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></svg>Subir logo</button><div data-logo-miniatura hidden><img alt="Logo de tu empresa" width="98" height="38"><button type="button" data-logo-quitar aria-label="Eliminar logo" title="Eliminar logo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p role="status" aria-live="polite" hidden></p>';
-    raiz.appendChild(caja);caja.querySelector('input').onchange=e=>{const archivo=e.target.files[0];if(archivo)cambiar(archivo);e.target.value='';};caja.querySelector('[data-logo-subir]').onclick=()=>caja.querySelector('input').click();caja.querySelector('[data-logo-quitar]').onclick=()=>cambiar(null);refrescar();
+    caja.innerHTML='<input id="kw-logo-empresa-archivo" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Elegir logo" hidden><button type="button" data-logo-subir><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></svg>Subir logo</button><div data-logo-miniatura hidden><button type="button" data-logo-editar aria-label="Recortar logo" title="Recortar logo"><img alt="Logo de tu empresa" width="98" height="38"></button><button type="button" data-logo-quitar aria-label="Eliminar logo" title="Eliminar logo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p role="status" aria-live="polite" hidden></p>';
+    raiz.appendChild(caja);caja.querySelector('input').onchange=e=>{const archivo=e.target.files[0];if(archivo)cambiar(archivo);e.target.value='';};caja.querySelector('[data-logo-subir]').onclick=()=>caja.querySelector('input').click();caja.querySelector('[data-logo-editar]').onclick=async()=>{if(ocupado||bloqueado)return;const archivo=await(await fetch(logo)).blob();cambiar(archivo);};caja.querySelector('[data-logo-quitar]').onclick=()=>cambiar(null);refrescar();
     if(perfil){if(document.documentElement.classList.contains('kw-auth-ok'))cargar(null,false,true);else window.addEventListener('kw-auth-ready',()=>cargar(null,false,true),{once:true});}
   }
   global.kwLogoEmpresa={cargar,obtener:()=>logo,insertar,pendiente:()=>ocupado||cargando,bloquear:valor=>{bloqueado=valor;refrescar();}};
