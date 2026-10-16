@@ -6,6 +6,7 @@ Por indicacion del usuario, la referencia unica de contratos y acuerdos es `docu
 Leer `docs/contratos-acuerdos.md`. Usar `kw-documentos-shell.css`, `kw-documentos-shell.js`, `kw-documentos-form.css` y `kw-revisiones.css`.
 Solo cambian los campos, datos y contenido de cada documento. No crear distribuciones, fuentes, botones, pies, cargas ni ventanas propias del documento.
 La vista previa y el PDF de los tres contratos toman Comercial como referencia, usando `kw-contrato-documento.css` y `kw-contrato-documento.js`; el formulario mantiene Renta como base.
+Los tres contratos comparten tambi?n `kw-contratos-experiencia.css` y `kw-contratos-experiencia.js`: URLs de lista/nuevo/documento, tablas con scroll interno, miniaturas, pie de acciones y confirmaci?n de campos pendientes al guardar.
 Esta regla sustituye Pagina Universal para los formularios y listados de contratos y acuerdos.
 
 Para cada nuevo apartado, listado, formulario o configuración, usar **Página Universal**.

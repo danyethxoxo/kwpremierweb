@@ -4,7 +4,7 @@
     {id:'comercial-volver',texto:'← Volver',accion:'volver'},
     {id:'comercial-guardar',texto:'Guardar borrador',tipo:'submit',accion:'guardar'},
     {id:'comercial-finalizar',texto:'Finalizar',accion:'finalizar'},
-    {id:'comercial-copiar',texto:'Crear copia editable',accion:'copiar',oculto:true},
+    {id:'comercial-copiar',texto:'Hacer una copia',accion:'copiar',oculto:true},
     {id:'comercial-descargar',texto:'Descargar',accion:'descargar'}
   ]});
   const $ = id => document.getElementById(id);
@@ -130,9 +130,10 @@
     $('comercial-copiar').hidden=!finalizado;
     for(const id of ['comercial-guardar','comercial-finalizar','comercial-descargar','comercial-copiar','btn-nuevo'])$(id).disabled=ocupado||!usuario;
   }
-  function vista(formulario,marcar=true) {window.kwDocumentosShell.vista(formulario,marcar);if(formulario){camposActivos().forEach(([id])=>ampliarCampo($('com-'+id)));programar();} }
+  function vista(formulario,marcar=true) {window.kwDocumentosShell.vista(formulario,formulario&&location.search?false:marcar);if(!formulario&&marcar)window.kwContratosUX?.ruta(null);if(formulario){camposActivos().forEach(([id])=>ampliarCampo($('com-'+id)));programar();} }
   async function abandonar() { return !sucio || await window.kwUI.confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'); }
   function abrir(row,marcar=true) {
+    if(row?.id&&marcar&&new URLSearchParams(location.search).get('doc')!==row.id){location.assign(location.pathname+'?doc='+encodeURIComponent(row.id));return;}
     actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
     clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,6):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
     numeroClientes=clientesEnMemoria.length;pintarClientes();
@@ -167,14 +168,16 @@
   async function pedirNombre() {const nombre=await window.kwDocumentosShell.pedirNombre(nombreDocumento||'Contrato comercial');if(!nombre)return false;nombreDocumento=nombre;return true;}
   async function guardar(silencioso=false) {
     if(!usuario||ocupado||actual?.estado==='finalizado')return false;
+    const faltan=window.kwContratosUX.faltantes();
     ocupado=true;botones();
     try {
+      if(!silencioso&&!await window.kwContratosUX.confirmar(faltan))return false;
       if(!actual&&!await pedirNombre())return false;
       const d=datos(),payload={datos:d,nombre_archivo:d.nombre||'Contrato comercial'};
       let q=window.kwSupabase.from('documentos_guardados');
       q=actual?q.update(payload).eq('id',actual.id).eq('user_id',usuario.id).eq('tipo_documento',tipo).eq('estado','borrador'):q.insert({...payload,user_id:usuario.id,tipo_documento:tipo});
       const r=await q.select('id,nombre_archivo,datos,estado,folio,revision,updated_at').single();if(r.error)throw r.error;
-      actual=r.data;sucio=false;if(!silencioso)mensaje('Contrato guardado.');await cargarLista();return true;
+      actual=r.data;sucio=false;window.kwContratosUX.ruta(actual.id);if(!silencioso)window.kwContratosUX.exito();await cargarLista();return true;
     }catch(e){mensaje(e.message||'No se pudo guardar el contrato.',true);return false;}finally{ocupado=false;botones();}
   }
   async function finalizar() {
@@ -189,13 +192,13 @@
     ocupado=true;botones();
     try {
       const r=await window.kwSupabase.rpc('finalizar_documento',{p_id:actual.id});if(r.error)throw r.error;
-      actual={...actual,estado:'finalizado',folio:r.data};sucio=false;programar();await cargarLista();mensaje('Contrato finalizado. Folio: '+r.data);
+      actual={...actual,estado:'finalizado',folio:r.data};sucio=false;programar();await cargarLista();window.kwContratosUX.exito('Documento finalizado','Folio: '+r.data);
     }catch(e){mensaje(e.message||'No se pudo finalizar.',true);}finally{ocupado=false;botones();}
   }
   async function descargar() {
     if(ocupado)return;ocupado=true;botones();
     try {
-      await window.kwContratoDocumento.exportar(configuracionDocumento(),{nombre:nombreDocumento||'Contrato comercial'});mensaje('PDF descargado.');
+      await window.kwContratoDocumento.exportar(configuracionDocumento(),{nombre:nombreDocumento||'Contrato comercial'});
     }catch(e){mensaje(e.message||'No se pudo generar el PDF.',true);}finally{ocupado=false;botones();}
   }
   async function iniciar() {
@@ -203,14 +206,14 @@
       const r=await window.kwSupabase.auth.getUser();if(r.error||!r.data.user)throw new Error('No hay sesión activa.');usuario=r.data.user;botones();await cargarLista();
       const docId=new URLSearchParams(location.search).get('doc');
       if(docId){
-        const r=await window.kwSupabase.from('documentos_guardados').select('id,nombre_archivo,datos,estado,folio,revision,updated_at').eq('id',docId).eq('user_id',usuario.id).eq('tipo_documento',tipo).single();if(r.error)throw r.error;abrir(r.data);
+        const r=await window.kwSupabase.from('documentos_guardados').select('id,nombre_archivo,datos,estado,folio,revision,updated_at').eq('id',docId).eq('user_id',usuario.id).eq('tipo_documento',tipo).single();if(r.error)throw r.error;if(!r.data)throw new Error('No se encontró el contrato.');abrir(r.data,false);
       }else if(new URLSearchParams(location.search).has('nuevo'))abrir(null);
     }catch(e){mensaje(e.message||'No se pudo iniciar el contrato.',true);}
   }
   pintarCampos();botones();
   $('formulario-comercial').noValidate=true;
   $('formulario-comercial').addEventListener('submit',e=>{e.preventDefault();guardar();});
-  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;if(e.target.id==='com-precio')window.kwDocumentosCampos.formatear(e.target);if(e.target.id==='com-pais_notaria')actualizarEstado();sucio=true;ampliarCampo(e.target);programar();});
+  $('formulario-comercial').addEventListener('input',e=>{if(!e.target.name)return;if(e.target.id==='com-precio')window.kwDocumentosCampos.formatear(e.target);if(e.target.id==='com-pais_notaria')actualizarEstado();if(e.detail?.origen!=='perfil')sucio=true;ampliarCampo(e.target);programar();});
   $('formulario-comercial').addEventListener('change',e=>{if(e.target.tagName==='SELECT'){sucio=true;programar();}});
   $('com-pais-selector').addEventListener('change',()=>{$('com-pais_notaria').value=$('com-pais-selector').value==='México'?'México':'';sincronizarPais();actualizarEstado();sucio=true;programar();if(!$('com-pais_notaria').hidden)$('com-pais_notaria').focus();});
   $('com-num-clientes').addEventListener('change',()=>{
@@ -219,8 +222,8 @@
     pintarClientes();botones();sucio=true;programar();
   });
   $('comercial-finalizar').onclick=finalizar;$('comercial-descargar').onclick=descargar;
-  $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();mensaje('Copia editable. Guarda para crear un nuevo contrato.');};
-  $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar())window.kwDocumentosShell.transicion(()=>abrir(null));};
+  $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();window.kwContratosUX.ruta('');};
+  $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar()){if(window.kwContratosUX.nuevo())return;window.kwDocumentosShell.transicion(()=>abrir(null));}};
   document.querySelectorAll('[data-vista-universal="lista"]').forEach(b=>b.onclick=async()=>{if(!ocupado&&await abandonar()){sucio=false;vista(false);mensaje('');cargarLista();}});
   $('comercial-volver').onclick=async()=>{if(!ocupado&&await abandonar()){sucio=false;vista(false);mensaje('');cargarLista();}};
   $('vista-lista').onclick=e=>{const b=e.target.closest('[data-abrir]');if(b&&!ocupado)window.kwDocumentosShell.transicion(()=>abrir(registros.find(r=>r.id===b.dataset.abrir)));};

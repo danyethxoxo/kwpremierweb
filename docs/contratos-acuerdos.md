@@ -40,3 +40,11 @@ Comercial admite de uno a seis clientes. `datos.clientes` conserva los datos ind
 Comercial mantiene representante y MCA como datos fijos del documento, sin campos editables. Sus acciones siguen el flujo de Renta: Guardar al crear, Finalizar tras guardar, Descargar y Copiar al finalizar. Los mensajes se muestran en ventanas centrales. `data-kw-paso="5"` configura el incremento de los controles numéricos sin impedir la captura manual de decimales.
 
 Verificar escritorio y móvil: listado, formulario, fuentes, pie fijo, regreso al listado, guardado y reapertura, revisiones y PDF. Al modificar un recurso compartido, actualizar su versión en las 12 plantillas.
+
+## Experiencia com?n de los tres contratos
+
+`kw-contratos-experiencia.css` y `kw-contratos-experiencia.js` completan el armaz?n compartido de Renta, Comercial y Profeco. Usar la URL base para la lista, `?nuevo=1` para crear y `?doc=ID` para abrir un documento guardado. Las tablas de borradores y finalizados tienen desplazamiento interno.
+
+El formulario comparte separador, regreso a la lista y pie de acciones. Profeco conserva sus secciones y abre inicialmente solo Generales. La vista previa incluye bordes de hoja y miniaturas navegables; las miniaturas quedan fuera de la exportaci?n PDF y reaccionan al evento `kw-contrato-render`. El encabezado impreso conserva ?nicamente el logo, sin la etiqueta del tipo de contrato.
+
+Antes de guardar manualmente un borrador incompleto, mostrar los campos pendientes y permitir Guardar de todas formas o Cancelar. Cancelar no persiste datos ni borra lo capturado. Usar el aviso central de ?xito de Renta para guardar y finalizar, sin mensajes adicionales al descargar o copiar. El autocompletado del perfil emite `input` con `detail.origen = perfil` para no marcar cambios manuales al abrir Comercial.

@@ -17,7 +17,7 @@
   async function prellenar(mapa){
     const vacios=Object.entries(mapa).filter(([id])=>!document.getElementById(id)?.value.trim());
     const p=await perfil();
-    for(const [id,campo]of vacios){const el=document.getElementById(id);if(el&&!el.value.trim()&&p[campo]){el.value=p[campo];el.dispatchEvent(new Event('input',{bubbles:true}));}}
+    for(const [id,campo]of vacios){const el=document.getElementById(id);if(el&&!el.value.trim()&&p[campo]){el.value=p[campo];el.dispatchEvent(new CustomEvent('input',{bubbles:true,detail:{origen:'perfil'}}));}}
   }
   function formatear(input){
     const anterior=input.value,pos=input.selectionStart??anterior.length,digitos=(anterior.slice(0,pos).match(/\d/g)||[]).length;

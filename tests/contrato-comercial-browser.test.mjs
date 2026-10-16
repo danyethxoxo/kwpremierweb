@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('../',import.meta.url));
-async function aviso(page,texto){await page.getByText(texto,{exact:true}).waitFor();await page.locator('.modal-overlay:visible .btn-modal-confirmar').last().click();}
+async function aviso(page,texto){if(texto==='Contrato guardado.'||texto.startsWith('Contrato finalizado.')){await page.locator('#guardar-exito').waitFor({state:'visible'});await page.locator('#guardar-exito .guardar-exito-ok').click();return;}await page.getByText(texto,{exact:true}).waitFor();await page.locator('.modal-overlay:visible .btn-modal-confirmar').last().click();}
 async function llenar(page,id,v){if(id==='pais_notaria'){await page.locator('#com-pais-selector').selectOption(v==='México'?'México':'otro',{force:true});if(v==='México')return;}const el=page.locator('#com-'+id);if(await el.evaluate(e=>e.tagName==='SELECT'))await el.selectOption(v,{force:true});else await el.fill(v);}
 test('las comisiones decimales conservan los ceros al escribirse en letra',()=>{
  const script=readFileSync(path.join(root,'assets/js/contrato-comercial.js'),'utf8');
@@ -16,7 +16,7 @@ test('las comisiones decimales conservan los ceros al escribirse en letra',()=>{
  assert.equal(contexto.letras('5'),'CINCO');
  assert.equal(contexto.entero(12343370),'DOCE MILLONES TRESCIENTOS CUARENTA Y TRES MIL TRESCIENTOS SETENTA');
 });
-const sdk=`window.qaRows=[];window.qaError=false;window.qaGuardados=0;
+const sdk=`window.qaRows=JSON.parse(sessionStorage.getItem('qaRows')||'[]');window.qaError=false;window.qaGuardados=window.qaRows.length;window.addEventListener('beforeunload',()=>sessionStorage.setItem('qaRows',JSON.stringify(window.qaRows)));
 window.kwSupabase={auth:{getUser:async()=>({data:{user:{id:'qa-user'}}}),getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
 from(tabla){let accion='select',payload,filtros=[],single=false;const q=new Proxy({}, {get(_,key){
  if(key==='then')return (resolve,reject)=>Promise.resolve().then(()=>{
@@ -30,6 +30,7 @@ from(tabla){let accion='select',payload,filtros=[],single=false;const q=new Prox
  return (...args)=>{if(key==='insert'||key==='update'){accion=key;payload=args[0];}if(key==='eq')filtros.push(args);if(key==='single'||key==='maybeSingle')single=true;return q;};
  }});return q;},rpc:async(nombre,args)=>{const r=window.qaRows.find(r=>r.id===args.p_id);r.estado='finalizado';r.folio='COM-QA-001';return {data:r.folio,error:null};},
 channel(){return {on(){return this},subscribe(){return this},unsubscribe(){}}},removeChannel(){}};
+window.kwSession={usuarioInicial:(client=window.kwSupabase)=>client.auth.getUser(),perfilInicial:(client=window.kwSupabase)=>client.from('profiles').select('*').eq('id','qa-user').single()};
 setTimeout(()=>{document.documentElement.classList.add('kw-auth-ok');window.dispatchEvent(new Event('kw-auth-ready'));},50);`;
 
 test('los doce documentos usan la base visual compartida de Renta',async()=>{
@@ -50,7 +51,7 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
   for(const documento of documentos){
    const html=readFileSync(path.join(root,'documentos',documento+'.html'),'utf8');
    for(const recurso of ['kw-documentos-shell.css','kw-documentos-shell.js','kw-documentos-form.css','kw-revisiones.css'])assert.ok(html.includes(recurso),documento+': '+recurso);
-   await page.goto('http://kw.local/documentos/'+documento+'.html',{waitUntil:'domcontentloaded'});
+   await page.goto('https://kw.local/documentos/'+documento+'.html',{waitUntil:'domcontentloaded'});
    await page.waitForFunction(()=>window.kwDocumentosShell&&document.querySelector('.kw-form-acciones'),null,{timeout:10000}).catch(e=>{throw new Error(documento+': '+errores.join('; ')+': '+e.message);});
    const estilos=await page.evaluate(()=>{
     const leer=(selector,props)=>{const s=getComputedStyle(document.querySelector(selector));return Object.fromEntries(props.map(p=>[p,s[p]]));};
@@ -58,7 +59,7 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
    });
    // Las dimensiones ocultas del formulario no dependen de los campos del contrato.
    if(!referencia)referencia=estilos;else assert.deepEqual(estilos,referencia,documento);
-   if(documento==='contratos/comercial')await page.locator('#btn-nuevo').click();
+   if(documento==='contratos/comercial'){await page.locator('#btn-nuevo').click();await page.waitForURL(/\?nuevo=1$/);await page.waitForSelector('#com-asesor');}
    await page.evaluate(()=>{
     window.updatePreview?.();
     const form=document.getElementById('vista-formulario');form.hidden=false;form.style.display='block';
@@ -78,7 +79,7 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
     await page.locator('#f-divisa').selectOption('USD',{force:true});
     await page.waitForFunction(()=>document.querySelector('#contrato-preview').innerText.includes('DÓLARES ESTADOUNIDENSES'));
     assert.equal((await page.evaluate(()=>datosActuales()))['f-divisa'],'USD');
-    await page.evaluate(()=>abrirDocumentoGuardado({id:'anterior',estado:'borrador',datos:{'f-asesor':'Asesor guardado','f-monto':'1,234','f-divisa':'EUR'}}));
+    await page.evaluate(()=>abrirDocumentoGuardado({id:'anterior',estado:'borrador',datos:{'f-asesor':'Asesor guardado','f-monto':'1,234','f-divisa':'EUR'}},false));
     await page.waitForFunction(()=>document.getElementById('f-asesor').value==='Asesor guardado');
     assert.equal(await page.locator('#f-divisa').inputValue(),'EUR');
     assert.equal(await page.locator('#f-divisa').locator('..').locator('.kw-select-valor').innerText(),'EUR');
@@ -103,8 +104,7 @@ test('los tres contratos muestran y exportan las mismas hojas en escritorio y mo
   let referencia;
   for(const nombre of ['renta','profeco','comercial']){
    await page.setViewportSize({width:1440,height:1000});
-   await page.goto('http://kw.local/documentos/contratos/'+nombre+'.html?nuevo=1',{waitUntil:'domcontentloaded'});
-   if(nombre==='profeco')await page.locator('.btn-nuevo-documento').click();
+   await page.goto('https://kw.local/documentos/contratos/'+nombre+'.html?nuevo=1',{waitUntil:'domcontentloaded'});
    await page.waitForSelector('.kw-contrato-hoja');
    if(nombre==='profeco')await page.evaluate(()=>{
     document.getElementById('f-num-clientes').value='3';renderClientesFields();
@@ -115,9 +115,9 @@ test('los tres contratos muestran y exportan las mismas hojas en escritorio y mo
     const p=document.createElement('p');p.className='doc-p';p.innerHTML='<b>INICIO PRUEBA LARGA</b> '+('Contenido largo de prueba. '.repeat(1000))+'<b>FIN PRUEBA LARGA</b>';
     document.getElementById('contrato-raw').appendChild(p);window.kwContratoDocumento.render(configuracionDocumento());
    });
-   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(el=>{const s=getComputedStyle(el),c=getComputedStyle(el.querySelector('.kw-contrato-cuerpo'));return [s.width,s.height,s.padding,s.fontFamily,s.fontSize,s.lineHeight,s.borderWidth,c.width];});
+   const medidas=await page.locator('.page.kw-contrato-hoja').first().evaluate(el=>{const s=getComputedStyle(el),c=getComputedStyle(el.querySelector('.kw-contrato-cuerpo'));return [s.width,s.height,s.padding,s.fontFamily,s.fontSize,s.lineHeight,s.borderWidth,c.width];});
    if(!referencia)referencia=medidas;else assert.deepEqual(medidas,referencia,nombre+': mismo papel y tipografia');
-   const revisar=()=>page.locator('.kw-contrato-cuerpo').evaluateAll(els=>els.every(el=>{const hoja=el.parentElement,r=hoja.getBoundingClientRect(),escala=r.width/hoja.offsetWidth;return (el.getBoundingClientRect().bottom-r.top)/escala<=991;}));
+   const revisar=()=>page.locator('.page .kw-contrato-cuerpo').evaluateAll(els=>els.every(el=>{const hoja=el.parentElement,r=hoja.getBoundingClientRect(),escala=r.width/hoja.offsetWidth;return (el.getBoundingClientRect().bottom-r.top)/escala<=991;}));
    assert.ok(await revisar(),nombre+': contenido dentro del papel');
    if(nombre==='renta')assert.ok((await page.locator('#contrato-preview').innerText()).includes('FIN PRUEBA LARGA'));
    if(nombre!=='comercial'){
@@ -125,16 +125,16 @@ test('los tres contratos muestran y exportan las mismas hojas en escritorio y mo
     const descarga=page.waitForEvent('download');
     await page.evaluate(()=>downloadPDF());const archivo=await descarga;
     mkdirSync(path.join(root,'artifacts/contratos'),{recursive:true});await archivo.saveAs(path.join(root,'artifacts/contratos/'+nombre+'.pdf'));
-    const preview=await page.locator('.kw-contrato-hoja').allTextContents(),pdf=await page.evaluate(()=>qaPaginasPDF);
+    const preview=await page.locator('.page.kw-contrato-hoja').allTextContents(),pdf=await page.evaluate(()=>qaPaginasPDF);
     assert.deepEqual(pdf.map(p=>p.texto),preview,nombre+': PDF conserva texto y saltos');
     assert.ok(pdf.every(p=>p.width===816&&p.height===1056));
     assert.ok(pdf.every(p=>p.logo),nombre+': el logo esta listo en todas las hojas antes de exportar');
     assert.equal((readFileSync(path.join(root,'artifacts/contratos/'+nombre+'.pdf'),'latin1').match(/\/Type \/Page\b/g)||[]).length,preview.length);
    }
-   const primera=await page.locator('.kw-contrato-hoja').first().elementHandle();
+   const primera=await page.locator('.page.kw-contrato-hoja').first().elementHandle();
    await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop=150);
    const scroll=await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop);
-   const campo=page.locator(nombre==='comercial'?'#com-cliente':nombre==='renta'?'#f-asesor':'#f-cli0-nombre');await campo.fill('CAMBIO SIN PARPADEO');
+   const campo=page.locator(nombre==='comercial'?'#com-cliente':nombre==='renta'?'#f-asesor':'#f-cli0-nombre');if(nombre==='profeco')await campo.evaluate(el=>el.closest('details').open=true);await campo.fill('CAMBIO SIN PARPADEO');
    await page.waitForTimeout(200);assert.ok(await primera.evaluate(el=>el.isConnected),nombre+': mantiene el nodo de la hoja');
    assert.ok(Math.abs((await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop))-scroll)<1);
    mkdirSync(path.join(root,'artifacts/contratos'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/contratos/'+nombre+'-1440.png')});
@@ -143,6 +143,49 @@ test('los tres contratos muestran y exportan las mismas hojas en escritorio y mo
    await page.waitForTimeout(100);assert.ok(await revisar(),nombre+': movil sin cortes');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.screenshot({path:path.join(root,'artifacts/contratos/'+nombre+'-390.png')});
+  }
+ }finally{await browser.close();}
+});
+
+test('los tres contratos separan URLs, confirman borradores incompletos y navegan por miniaturas',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  for(const [nombre,tipo]of [['renta','acuerdo_renta'],['profeco','contrato_profeco'],['comercial','contrato_comercial']]){
+   const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(15000);
+   await page.route('**/*',route=>{
+    const url=new URL(route.request().url());
+    if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk});
+    if(url.pathname.endsWith('/kw-session.js'))return route.fulfill({body:''});
+    if(url.hostname!=='kw.local')return route.abort();
+    const file=path.join(root,decodeURIComponent(url.pathname));return route.fulfill({status:existsSync(file)?200:404,body:existsSync(file)?readFileSync(file):'',contentType:file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream'});
+   });
+   await page.goto('https://kw.local/documentos/contratos/'+nombre+'.html');
+   await page.evaluate(tipo=>{
+    window.qaRows=Array.from({length:80},(_,i)=>({id:'seed-'+i,user_id:'qa-user',tipo_documento:tipo,nombre_archivo:'Contrato '+i,estado:i<40?'borrador':'finalizado',datos:{},updated_at:new Date().toISOString()}));sessionStorage.setItem('qaRows',JSON.stringify(qaRows));
+   },tipo);
+   await page.reload();await page.waitForFunction(()=>Array.from(document.querySelectorAll('.lista-documentos')).every(el=>el.querySelectorAll('.kw-fila').length>=40)).catch(async e=>{throw new Error(nombre+': '+await page.locator('#vista-lista').innerText()+'; datos='+await page.evaluate(()=>qaRows.length)+'; '+e.message);});
+   const paneles=await page.locator('.lista-documentos').evaluateAll(els=>els.map(el=>({alto:el.clientHeight,total:el.scrollHeight})));assert.ok(paneles.every(p=>p.total>p.alto&&p.alto>100),nombre+': dos tablas con scroll propio');
+   await page.locator('#lista-borradores').evaluate(el=>el.scrollTop=250);
+   assert.equal(await page.evaluate(()=>scrollY),0);assert.equal(await page.locator('#lista-finalizados').evaluate(el=>el.scrollTop),0);
+   await page.locator('.btn-nuevo-documento').click();await page.waitForURL(/\?nuevo=1$/);await page.locator('#vista-formulario').waitFor({state:'visible'});
+   await page.waitForFunction(()=>window.kwContratosUX&&document.querySelector('.kw-contrato-miniatura'));
+   if(nombre==='profeco'){assert.equal(await page.locator('.acuerdo-grupo[open]').count(),1);assert.equal(await page.locator('.acuerdo-grupo[open] summary').innerText(),'Generales');assert.equal(await page.locator('.acuerdos-form-sub').count(),0);}
+   const paginas=await page.locator('.page.kw-contrato-hoja').count();assert.equal(await page.locator('.kw-contrato-miniatura').count(),paginas);
+   assert.equal(await page.locator('.page .kw-contrato-encabezado span').count(),0);
+   await page.locator('.kw-contrato-miniatura').last().click();await page.waitForTimeout(450);assert.ok((await page.locator('.kw-documento-hojas').evaluate(el=>el.scrollTop))>0);
+   const guardar=page.locator(nombre==='comercial'?'#comercial-guardar':'#btn-guardar');
+   await guardar.click();await page.locator('#kw-borrador-incompleto').waitFor();assert.ok((await page.locator('.kw-campos-pendientes li').count())>0);
+   await page.locator('#kw-borrador-incompleto .btn-modal-cancelar').click();assert.equal(await page.evaluate(()=>qaRows.length),80);assert.equal(await page.locator('#modal-nombre').isVisible(),false);
+   await guardar.click();await page.locator('#kw-borrador-incompleto .btn-modal-confirmar').click();await page.locator('#modal-nombre-input').fill('Borrador incompleto QA');
+   await page.locator('#modal-nombre .btn-modal-confirmar').click();await page.locator('#guardar-exito').waitFor({state:'visible'});await page.locator('#guardar-exito .guardar-exito-ok').click();
+   await page.waitForURL(/\?doc=/);const url=page.url();assert.equal(await page.evaluate(()=>qaRows.length),81);
+   await page.reload();await page.locator('#vista-formulario').waitFor({state:'visible'});assert.equal(page.url(),url);
+   assert.equal(await page.locator(nombre==='comercial'?'#comercial-finalizar':'#btn-finalizar').isVisible(),true);
+   await page.setViewportSize({width:390,height:1000});
+   if(nombre==='comercial')await page.locator('[data-kw-mobile="preview"]').click();else await page.evaluate(()=>showMobileTab('preview'));
+   await page.locator('[data-miniaturas]').click();assert.equal(await page.locator('.kw-contrato-miniaturas').isVisible(),true);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   mkdirSync(path.join(root,'artifacts/contratos'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts/contratos/'+nombre+'-miniaturas.png')});
+   await page.close();
   }
  }finally{await browser.close();}
 });
@@ -167,8 +210,8 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
     if(!file.startsWith(root)||!existsSync(file))return route.fulfill({status:404,body:''});
     return route.fulfill({body:readFileSync(file),contentType:file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/octet-stream'});
    });
-   await page.goto('http://kw.local/documentos/contratos/comercial.html',{waitUntil:'domcontentloaded'});
-   await page.locator('#btn-nuevo').click();
+   await page.goto('https://kw.local/documentos/contratos/comercial.html',{waitUntil:'domcontentloaded'});
+   await page.locator('#btn-nuevo').click();await page.waitForURL(/\?nuevo=1$/);await page.waitForSelector('#com-asesor');
    await page.waitForFunction(()=>document.getElementById('com-asesor').value==='Asesora QA',null,{timeout:10000});
    assert.equal(await page.locator('#com-correo_asesor').inputValue(),'perfil@example.com');
    assert.equal(await page.locator('#com-telefono_asesor').inputValue(),'5511223344');
@@ -238,7 +281,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#vista-lista')).opacity==='1');
    await page.screenshot({path:path.join(root,'artifacts/comercial/lista-'+width+'.png')});
    await page.evaluate(()=>{delete qaRows[0].datos.clientes;delete qaRows[0].datos.numero_clientes;});
-   await page.locator('[data-abrir]').first().click();assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
+   await page.locator('[data-abrir]').first().click();await page.waitForURL(/\?doc=/);await page.locator('#vista-formulario').waitFor({state:'visible'});assert.equal(await page.locator('#com-inmueble').inputValue(),valores.inmueble);
    assert.equal(await page.locator('#com-num-clientes').inputValue(),'1','abre borradores anteriores de un cliente');
    await page.locator('#com-num-clientes').selectOption('6',{force:true});
    await page.locator('#comercial-finalizar').click();
@@ -250,7 +293,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    assert.equal(await page.evaluate(()=>qaRows[0].datos.clientes.length),6);
    await llenar(page,'pais_notaria','España');await llenar(page,'ciudad_notaria','Madrid');await llenar(page,'divisa','EUR');
    await page.locator('#comercial-guardar').click();await aviso(page,'Contrato guardado.');
-   await page.locator('#comercial-volver').click();await page.locator('[data-abrir]').first().click();
+   await page.locator('#comercial-volver').click();await page.locator('[data-abrir]').first().click();await page.waitForURL(/\?doc=/);await page.locator('#vista-formulario').waitFor({state:'visible'});
    assert.equal(await page.locator('#com-num-clientes').inputValue(),'6');assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6');
    assert.equal(await page.locator('#com-pais_notaria').inputValue(),'España');assert.equal(await page.locator('#com-ciudad_notaria').inputValue(),'Madrid');assert.equal(await page.locator('#com-divisa').inputValue(),'EUR');
    await page.waitForFunction(()=>document.querySelector('#comercial-paginas').innerText.includes('POR EL CLIENTE 6'));
@@ -276,7 +319,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    for(const logo of logosPDF)for(let i=0;i<4;i++)assert.ok(Math.abs(logo[i]-[72,30,98,38][i]*25.4/96)<.01,'logo PDF conserva medidas y posicion');
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
-   await aviso(page,'PDF descargado.');await page.locator('#comercial-copiar').click();await aviso(page,'Copia editable. Guarda para crear un nuevo contrato.');assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await aviso(page,'Contrato guardado.');
+   await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await aviso(page,'Contrato guardado.');
    assert.equal(await page.locator('#com-cliente_6').inputValue(),'CLIENTE ADICIONAL 6','la copia conserva todos los clientes');
    assert.equal(await page.evaluate(()=>qaRows.length),2,'copia crea un documento independiente');
    assert.deepEqual(errores,[]);await page.close();

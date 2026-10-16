@@ -39,7 +39,7 @@
       const hoja=document.createElement('article');hoja.className='page kw-contrato-hoja '+(config.clase||'');
       const cabecera=document.createElement('header');cabecera.className='doc-header kw-contrato-encabezado';
       const img=document.createElement('img');img.src='/assets/img/logo-kw-premier.png';img.alt='KW Premier';
-      const titulo=document.createElement('span');titulo.textContent=config.titulo;cabecera.append(img,titulo);
+      cabecera.append(img);
       const cuerpo=document.createElement('div');cuerpo.className='kw-contrato-cuerpo '+(config.claseCuerpo||'');
       const pie=document.createElement('footer');pie.className='kw-contrato-pie';
       const folio=document.createElement('span');folio.textContent=config.folio||'Borrador';pie.append(folio,document.createElement('span'));
@@ -88,6 +88,7 @@
       existentes.slice(paginas.length).forEach(p=>{const padre=p.parentElement;(padre.classList.contains('page-scale-wrap')?padre:p).remove();});
     }finally{medidor.remove();}
     global.fitPreviewMobile?.();
+    document.dispatchEvent(new CustomEvent('kw-contrato-render',{detail:{stack:config.stack}}));
   }
   function porcion(raiz,longitud,quitar=false){
     const rango=document.createRange();rango.selectNodeContents(raiz);
