@@ -24,6 +24,8 @@ test('Comercial searches all states, keeps paragraphs whole and exports signatur
   const artifactDir=path.join(root,'artifacts/comercial-distribucion');fs.mkdirSync(artifactDir,{recursive:true});
   const search=page.getByRole('combobox',{name:'Lugar de firma'});await search.fill('yuca');
   await page.waitForTimeout(200);
+  assert.ok(await search.evaluate(el=>getComputedStyle(el).backgroundColor==='rgba(0, 0, 0, 0)'&&el.getBoundingClientRect().height<=el.parentElement.querySelector('button').getBoundingClientRect().height),'search leaves the full field border visible');
+  assert.ok(await page.locator('#com-lugar_firma-opciones').evaluate(el=>{const r=el.getBoundingClientRect();return getComputedStyle(el).position==='fixed'&&r.left>=0&&r.right<=innerWidth&&el.contains(document.elementFromPoint(r.left+20,r.top+20));}),'dropdown floats above the form without clipping');
   await page.screenshot({path:path.join(artifactDir,'selector-estados.png')});
   assert.deepEqual(await page.locator('#com-lugar_firma-opciones .kw-select-opcion:visible').allTextContents(),['Yucat\u00e1n']);
   await search.press('ArrowDown');await search.press('Enter');assert.equal(await page.locator('#com-lugar_firma').inputValue(),'Yucat\u00e1n');
@@ -62,7 +64,15 @@ test('Comercial searches all states, keeps paragraphs whole and exports signatur
    const i=kwComercialContenido.findIndex(p=>p.startsWith('PRIMERA.'));const previous=kwComercialContenido[i];kwComercialContenido[i]='PRIMERA. '+('CONTENIDOEXTENSO '.repeat(1800));
    try{kwContratoDocumento.render(qaComercialConfig);return [...document.querySelectorAll('.page.kw-contrato-hoja .kw-contrato-cuerpo')].map(p=>p.textContent).join(' ').match(/CONTENIDOEXTENSO/g).length;}finally{kwComercialContenido[i]=previous;kwContratoDocumento.render(qaComercialConfig);}
   });assert.equal(overflow,1800*6,'all repeated client declarations preserve their complete text');
-  await page.setViewportSize({width:390,height:1000});await page.locator('[data-kw-mobile="preview"]').click();
+  await page.setViewportSize({width:390,height:1000});
+  await search.scrollIntoViewIfNeeded();await search.click();
+  const lastOption=page.locator('#com-lugar_firma-opciones .kw-select-opcion').filter({hasText:'Zacatecas'});
+  await lastOption.scrollIntoViewIfNeeded();await lastOption.click();
+  assert.equal(await page.locator('#com-lugar_firma').inputValue(),'Zacatecas');
+  await search.fill('baja');await page.waitForTimeout(200);
+  await page.screenshot({path:path.join(artifactDir,'selector-estados-mobile.png')});
+  assert.equal(await page.locator('#com-lugar_firma-opciones .kw-select-opcion:visible').count(),2);
+  await search.press('Escape');await page.locator('[data-kw-mobile="preview"]').click();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });

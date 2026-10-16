@@ -98,7 +98,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261016auditoria">
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
-<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016comercialhoja">
+<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016profeco">
 <script src="/assets/js/kw-contrato-documento.js?v=20261016comercialhoja"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261016alineado">
 </head>
@@ -1179,8 +1179,28 @@ function datosCliente(i) {
 }
 
 // ── Paginación: divide el contenido crudo en hojas tamaño Carta ──
+function bloquesDocumentoProfeco() {
+  const bloques=[];let seccion='contrato',indice=0;
+  function agregar(original){
+    if(original.matches('.doc-header'))return;
+    if(original.dataset.profecoSeccion)seccion=original.dataset.profecoSeccion;
+    if(original.matches('.doc-bloque')){for(const hijo of original.children)agregar(hijo);return;}
+    if(original.matches('ol,ul')){
+      for(const [i,hijo] of [...original.children].entries()){
+        const lista=original.cloneNode(false);if(lista.tagName==='OL')lista.start=i+1;
+        lista.append(hijo.cloneNode(true));lista.dataset.profecoSeccion=seccion;lista.dataset.kwParrafo=String(++indice);bloques.push(lista);
+      }return;
+    }
+    const bloque=original.cloneNode(true);bloque.dataset.profecoSeccion=seccion;
+    if(bloque.matches('.doc-p,.doc-intro'))bloque.dataset.kwParrafo=String(++indice);
+    bloque.querySelectorAll('.doc-campo:not(.filled)').forEach(el=>{el.textContent='________________';});
+    bloques.push(bloque);
+  }
+  for(const hijo of document.getElementById('contrato-raw').children)agregar(hijo);
+  return bloques;
+}
 function configuracionDocumento() {
-  return {stack:'contrato-preview',raw:'contrato-raw',titulo:'CONTRATO PROFECO',folio:folioActual?folioRevisionActual():'Borrador'};
+  return {stack:'contrato-preview',raw:'contrato-raw',bloques:bloquesDocumentoProfeco,clase:'kw-contrato-profeco',titulo:'CONTRATO PROFECO',folio:folioActual?folioRevisionActual():'Borrador'};
 }
 let previewPendiente = false;
 function renderPaginated() {
@@ -1309,9 +1329,7 @@ function updatePreview() {
   const firmaCell = (nombreHTML, rolHTML) =>
     `<div class="doc-firma-col"><div class="doc-firma-linea-top">${nombreHTML}<br>${rolHTML}</div></div>`;
 
-  const celdasCliente = nombres.length
-    ? nombres.map(nom => firmaCell(`<span class="doc-firma-bold">${nom}</span>`, 'POR EL CLIENTE'))
-    : [firmaCell('(Nombre y firma)', 'POR EL CLIENTE')];
+  const celdasCliente = clientes.map(c => firmaCell(c.nombre ? `<span class="doc-firma-bold">${escapeHtml(c.nombre)}</span>` : '(Nombre y firma)', 'POR EL CLIENTE'));
 
   const cellIntermediario = firmaCell(
     '<span class="doc-firma-bold">INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V.</span>',
@@ -1329,7 +1347,7 @@ function updatePreview() {
   function filasDeFirmas(celdas) {
     const out = [];
     for (let i = 0; i < celdas.length; i += 2) {
-      out.push(`<div class="doc-firmas-row">${celdas[i]}${celdas[i + 1] || '<div class="doc-firma-col"></div>'}</div>`);
+      out.push(`<div class="doc-firmas-row">${celdas[i]}${celdas[i + 1] || ''}</div>`);
     }
     return out.join('');
   }
@@ -1456,11 +1474,11 @@ function updatePreview() {
 
     <div class="doc-p" style="margin-top:10pt;">Leído que fue por las Partes el contenido del presente Contrato y sabedores de su alcance legal, lo aprueban y aceptan las condiciones expresadas, firmándolo por duplicado el día ${campo(fechaFirma, 'Fecha de firma')} en ${campo(ciudadFirma, 'Ciudad donde se firma')}, quedando obligado el Intermediario a entregar un tanto del Contrato y sus anexos originales firmados al Cliente.</div>
 
-    <div class="doc-firmas-wrap">${firmasHTML}</div>
+    <div class="doc-salto"></div><div class="doc-firmas-wrap kw-hoja-firmas" data-kw-firmas="hoja" data-profeco-firmas="contrato">${firmasHTML}</div>
 
     <div class="doc-salto"></div>
     ${encabezado}
-    <div class="doc-anexo-titulo">ANEXO A</div>
+    <div class="doc-anexo-titulo" data-profeco-seccion="a1">ANEXO A</div>
     <div class="doc-anexo-sub">CARTA DE DERECHOS DE LOS CONSUMIDORES</div>
     <ol class="doc-lista">
       <li>Recibir la información y publicidad veraz, clara y actualizada, sin importar el medio por el que se comunique, incluyendo los medios digitales, de forma tal que le permita al consumidor tomar la mejor decisión, conforme a lo dispuesto por la Ley.</li>
@@ -1477,21 +1495,21 @@ function updatePreview() {
 
     <div class="doc-anexo-sub" style="margin-top:12pt;">AVISO DE PRIVACIDAD SIMPLIFICADO</div>
     <div class="doc-p">Inmuebles Valle Premium, S.A.P.I de C.V. es responsable del uso y protección de sus datos personales y al respecto le informa lo siguiente: El siguiente Aviso de Privacidad tiene como finalidad hacer del conocimiento del titular, que sus datos personales, serán recabados y utilizados para los fines establecidos en los términos y condiciones de Aviso de Privacidad simplificado e Integral. Asimismo, los responsables garantizan que los datos que el titular proporcione serán tratados bajo los principios de licitud, consentimiento, información, calidad, finalidad, lealtad, proporcionalidad y responsabilidad, previstos en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento vigente.</div>
-    <div class="doc-p"><strong>FINALIDAD.</strong> Los datos personales que recabamos, los utilizaremos para las siguientes finalidades que son necesarias para proporcionar de forma adecuada y eficiente los servicios de intermediación inmobiliaria.</div>
+    <div class="doc-salto"></div><div class="doc-p" data-profeco-seccion="a2"><strong>FINALIDAD.</strong> Los datos personales que recabamos, los utilizaremos para las siguientes finalidades que son necesarias para proporcionar de forma adecuada y eficiente los servicios de intermediación inmobiliaria.</div>
     <div class="doc-p"><strong>A.</strong> Proveer los servicios y productos inmobiliarios.</div>
     <div class="doc-p"><strong>B.</strong> Verificar y confirmar su identidad como mecanismo de seguridad.</div>
     <div class="doc-p"><strong>C.</strong> Llevar a cabo el registro en nuestro sistema denominado base de datos y con ello poder brindarle un mejor servicio.</div>
     <div class="doc-p"><strong>D.</strong> Gestionar la venta o renta del Inmueble de su propiedad.</div>
     <div class="doc-p"><strong>E.</strong> Crear un expediente Jurídico Administrativo del Inmueble en venta o renta.</div>
     <div class="doc-p"><strong>F.</strong> Gestionar a través de mecanismos de Marketing, páginas web, revistas o cualquier otro mecanismo de Publicidad su inmueble para venta o renta según sea el caso.</div>
-    <div class="doc-p">Los datos personales que los responsables recaben no serán utilizados para ninguna actividad o finalidad distinta a la establecida en el aviso de privacidad. Usted podrá limitar el uso o divulgación de sus datos personales dirigiendo la solicitud correspondiente a nuestro Departamento de Datos Personales. Los requisitos para atender su solicitud serán los mismos que los señalados en el apartado &ldquo;Ejercicio de los Derechos ARCO&rdquo; del Aviso de Privacidad Integral. Para conocer más información sobre los términos, ejercicio de sus derechos ARCO, datos que recabamos, finalidades secundarias, terceros con quienes compartimos su información personal, forma en que podrá ejercer sus derechos ARCO y condiciones en que serán tratados sus datos personales al contratar un servicio puede consultar el Aviso de Privacidad Integral en la oficina del Proveedor.</div>
-    <div class="doc-p" style="margin-top:8pt;">Explicado el alcance del presente ANEXO, se firma el día ${campo(fechaFirma, 'Fecha de firma')} en ${campo(ciudadFirma, 'Ciudad donde se firma')}.</div>
+    <div class="doc-p" style="margin-top:24px;">Los datos personales que los responsables recaben no serán utilizados para ninguna actividad o finalidad distinta a la establecida en el aviso de privacidad. Usted podrá limitar el uso o divulgación de sus datos personales dirigiendo la solicitud correspondiente a nuestro Departamento de Datos Personales. Los requisitos para atender su solicitud serán los mismos que los señalados en el apartado &ldquo;Ejercicio de los Derechos ARCO&rdquo; del Aviso de Privacidad Integral. Para conocer más información sobre los términos, ejercicio de sus derechos ARCO, datos que recabamos, finalidades secundarias, terceros con quienes compartimos su información personal, forma en que podrá ejercer sus derechos ARCO y condiciones en que serán tratados sus datos personales al contratar un servicio puede consultar el Aviso de Privacidad Integral en la oficina del Proveedor.</div>
+    <div class="doc-p" style="margin-top:28px;">Explicado el alcance del presente ANEXO, se firma el día ${campo(fechaFirma, 'Fecha de firma')} en ${campo(ciudadFirma, 'Ciudad donde se firma')}.</div>
     <div class="doc-p" style="text-align:center;margin-top:10pt;"><strong>ENTERADO Y CONFORME</strong></div>
-    <div class="doc-firmas-wrap" style="margin-top:24pt;">${filasDeFirmas(celdasCliente.map(c => c.replace('POR EL CLIENTE', 'POR EL TITULAR')))}</div>
+    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="a">${filasDeFirmas(celdasCliente.map(c => c.replace('POR EL CLIENTE', 'POR EL TITULAR')))}</div>
 
     <div class="doc-salto"></div>
     ${encabezado}
-    <div class="doc-anexo-titulo">ANEXO B</div>
+    <div class="doc-anexo-titulo" data-profeco-seccion="b1">ANEXO B</div>
     <div class="doc-anexo-sub">Inmueble destinado a casa habitación</div>
     <table class="doc-tabla">
       <tr><td>${et('Oficina', 'KW Premier')}</td><td>${et('Asesor inmobiliario', agente)}</td></tr>
@@ -1499,7 +1517,7 @@ function updatePreview() {
     </table>
 
     <div class="doc-bloque">
-    <div class="doc-seccion" style="margin-top:0;">Necesidades del Cliente</div>
+    <div class="doc-seccion" style="margin-top:24px;">Necesidades del Cliente</div>
     <div class="doc-p">${et('¿Hace cuánto tiempo compró la propiedad?', gv('f-nec-tiempo-compra'))}</div>
     <div class="doc-p">${et('¿En qué precio compró?', gv('f-nec-precio-compra') ? dinero(gv('f-nec-precio-compra')) : '')}</div>
     <div class="doc-p">${et('¿Ha remodelado su propiedad?', gv('f-nec-remodelo'))} &nbsp; ${et('¿Cuánto invirtió?', gv('f-nec-inversion') ? dinero(gv('f-nec-inversion')) : '')}</div>
@@ -1512,34 +1530,34 @@ function updatePreview() {
     </div>
 
     <div class="doc-bloque">
-    <div class="doc-seccion" style="margin-top:0;">Características del Inmueble</div>
+    <div class="doc-seccion" style="margin-top:32px;">Características del Inmueble</div>
     ${caracteristicas}
     </div>
 
-    <div class="doc-bloque">
+    <div class="doc-salto"></div><div class="doc-bloque" data-profeco-seccion="b2">
     <div class="doc-seccion" style="margin-top:0;">Situación Jurídica</div>
     ${juridica}
     </div>
 
     <div class="doc-bloque">
-    <div class="doc-seccion" style="margin-top:0;">Documentación Requerida</div>
+    <div class="doc-seccion" style="margin-top:32px;">Documentación Requerida</div>
     <div class="doc-p">${documentacion}</div>
     </div>
 
     <div class="doc-p" style="text-align:center;margin-top:14pt;"><strong>NOMBRE Y FIRMA DEL CLIENTE</strong></div>
-    <div class="doc-firmas-wrap" style="margin-top:16pt;">${filasDeFirmas(celdasCliente)}</div>
+    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="b">${filasDeFirmas(celdasCliente)}</div>
 
     <div class="doc-salto"></div>
     ${encabezado}
-    <div class="doc-p" style="text-align:right;">${campo(ciudadFirma, 'Ciudad donde se firma')} a ${campo(fechaFirma, 'Fecha de firma')}</div>
-    <div class="doc-p" style="margin-top:10pt;">Estimado ${campo(nombresTxt, 'NOMBRE DEL CONSUMIDOR')}:</div>
+    <div class="doc-p" data-profeco-seccion="c" style="text-align:right;">${campo(ciudadFirma, 'Ciudad donde se firma')} a ${campo(fechaFirma, 'Fecha de firma')}</div>
+    <div class="doc-p profeco-c-saludo">Estimado ${campo(nombresTxt, 'NOMBRE DEL CONSUMIDOR')}:</div>
     <div class="doc-p">Por medio de la presente y en agradecimiento por la confianza depositada, le informo que el responsable directo de la comercialización inmobiliaria que usted ha iniciado con Keller Williams Premier (INMUEBLES VALLE PREMIUM S.A.P.I. DE C.V.) es ${campo(agente, 'Nombre del agente')}, quien ha sido asignado para brindarle atención personalizada y acompañamiento integral durante todo el proceso sobre el inmueble ubicado en ${campo(dir, 'Dirección del inmueble')}.</div>
     <div class="doc-p">${campo(agente, 'Nombre del agente')} será su contacto principal y estará encargado de coordinar las gestiones necesarias, resolver cualquier duda que pudiera surgir, y asegurar que la comercialización y operación se lleve a cabo de manera eficiente, transparente y conforme a los términos establecidos bajo el modelo de Keller Williams Premier. Puede localizarlo en el WhatsApp ${campo(agenteWa, 'WhatsApp del agente')} y en el correo ${campo(agenteCorreo, 'Correo del agente')}.</div>
     <div class="doc-p">Asimismo, ${campo(agente, 'Nombre del agente')} asume de manera comprometida la responsabilidad de acompañar, brindar apoyo y atender cualquier eventualidad que pudiera surgir ante cualquier situación, trámite o gestión que derive del proceso inmobiliario, asegurando en todo momento un servicio oportuno y profesional.</div>
     <div class="doc-p">Agradecemos profundamente la confianza depositada en nosotros y reiteramos nuestro compromiso de ofrecerle un servicio profesional, ético y con los más altos estándares de calidad. Para cualquier consulta adicional, puede comunicarse a través de los canales oficiales o directamente con un servidor Gustavo Solares Campos al teléfono 55 8995 4967 y/o en la dirección de calle San Francisco número 25, despacho 201, Colonia Del Valle Norte, Benito Juárez, en esta Ciudad de México.</div>
-    <div class="doc-p">Sin otro particular, le enviamos un cordial saludo.</div>
+    <div class="doc-p profeco-c-despedida">Sin otro particular, le enviamos un cordial saludo.</div>
 
-    <div class="doc-firmas-wrap">${firmasHTML}</div>
+    ${n + 3 > 6 ? '<div class="doc-salto"></div>' : ''}<div class="doc-firmas-wrap ${n + 3 > 6 ? 'kw-hoja-firmas' : 'profeco-firmas-c'}" data-kw-firmas="anexo" data-profeco-firmas="c">${firmasHTML}</div>
   `;
 
   renderPaginated();
