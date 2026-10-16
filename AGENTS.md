@@ -1,5 +1,9 @@
 # Diseño de KW Premier
 
+## Textos de interfaz
+
+Por indicación del usuario, mantener la interfaz simple y con el mínimo texto necesario. No agregar descripciones, ayudas permanentes, instrucciones obvias ni mensajes de éxito redundantes. Preferir etiquetas cortas y estados visuales: por ejemplo, un botón "Subir logo" que se sustituye por la miniatura con una acción de eliminar. Mostrar explicaciones solo cuando sean indispensables para completar una acción o resolver un error. Conservar nombres accesibles para controles con íconos.
+
 ## Contratos y acuerdos
 
 Por indicacion del usuario, la referencia unica de contratos y acuerdos es `documentos/contratos/renta.html`.

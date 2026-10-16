@@ -29,7 +29,17 @@ test('logo: perfil reutilizable, copia por contrato, bloqueo y encabezado PDF si
   const buffer=await sharp({create:{width:300,height:80,channels:4,background:'#226688'}}).png().toBuffer();
   for(const nombre of ['renta','comercial']){
    await page.goto('https://kw.local/documentos/contratos/'+nombre+'.html?nuevo=1');
-   await page.locator('#kw-logo-empresa-archivo').waitFor();await page.waitForFunction(()=>!kwLogoEmpresa.pendiente());
+   await page.locator('#kw-logo-empresa-archivo').waitFor({state:'attached'});await page.waitForFunction(()=>!kwLogoEmpresa.pendiente());
+   assert.equal(await page.locator('#kw-logo-empresa-archivo').isVisible(),false);
+   assert.equal(await page.getByRole('button',{name:'Subir logo',exact:true}).isVisible(),true);
+   await page.locator('#kw-logo-empresa-archivo').setInputFiles({name:'empresa.png',mimeType:'image/png',buffer});
+   await page.waitForFunction(()=>kwLogoEmpresa.obtener()&&!kwLogoEmpresa.pendiente());
+   assert.equal(await page.getByRole('button',{name:'Subir logo',exact:true}).isVisible(),false);
+   assert.equal(await page.getByRole('button',{name:'Eliminar logo',exact:true}).isVisible(),true);
+   assert.equal(await page.locator('#kw-logo-empresa [role="status"]').textContent(),'');
+   await page.getByRole('button',{name:'Eliminar logo',exact:true}).click();
+   await page.waitForFunction(()=>!kwLogoEmpresa.obtener()&&!kwLogoEmpresa.pendiente());
+   assert.equal(await page.getByRole('button',{name:'Subir logo',exact:true}).isVisible(),true);
    await page.locator('#kw-logo-empresa-archivo').setInputFiles({name:'empresa.png',mimeType:'image/png',buffer});
    await page.waitForFunction(()=>kwLogoEmpresa.obtener()&&!kwLogoEmpresa.pendiente());
    const guardado=await page.evaluate(()=>kwLogoEmpresa.obtener());
