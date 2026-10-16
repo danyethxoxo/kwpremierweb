@@ -15,7 +15,7 @@
     if(logo)document.querySelectorAll('.kw-contrato-hoja').forEach(hoja=>insertar(hoja));
     document.dispatchEvent(new CustomEvent('kw-contrato-render'));
   }
-  function insertar(hoja){if(!logo)return;const img=document.createElement('img');img.className='kw-logo-empresa-hoja';img.src=logo;img.alt='Logo de tu empresa';img.style.cssText='position:absolute!important;top:30px!important;right:72px!important;left:auto!important;width:107.8px!important;height:41.8px!important;object-fit:contain!important;margin:0!important;';hoja.appendChild(img);}
+  function insertar(hoja){if(!logo)return;const img=document.createElement('img');img.className='kw-logo-empresa-hoja';img.src=logo;img.alt='Logo de tu empresa';const margen=global.kwDocumentosShell?.marcaContrato.x||64;img.style.cssText='position:absolute!important;top:30px!important;right:'+margen+'px!important;left:auto!important;width:107.8px!important;height:41.8px!important;object-fit:contain!important;margin:0!important;';hoja.appendChild(img);}
   async function usuario(){const r=await global.kwSupabase.auth.getUser();if(r.error||!r.data?.user)throw new Error('No se pudo verificar tu cuenta.');return r.data.user;}
   async function cargar(datos,soloLectura=false,nuevo=false){
     const turno=++version;bloqueado=soloLectura;logo=valido(datos?.logo_empresa);cargando=nuevo;refrescar();

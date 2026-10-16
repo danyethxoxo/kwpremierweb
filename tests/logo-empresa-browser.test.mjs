@@ -45,8 +45,8 @@ test('logo: perfil reutilizable, copia por contrato, bloqueo y encabezado PDF si
    const guardado=await page.evaluate(()=>kwLogoEmpresa.obtener());
    assert.ok(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('marca')).kw_logo_empresa_url.includes('/qa-user/logo-empresa-')));
    await page.waitForTimeout(200);
-   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(hoja=>{const a=hoja.querySelector('.kw-contrato-encabezado img').getBoundingClientRect(),b=hoja.querySelector('.kw-logo-empresa-hoja').getBoundingClientRect();return {ancho:Math.abs(b.width/a.width-1.1)<.01,alto:Math.abs(b.height/a.height-1.1)<.01,top:Math.abs(a.top-b.top)<1,derecha:b.left>a.right};});
-   assert.deepEqual(medidas,{ancho:true,alto:true,top:true,derecha:true});
+   const medidas=await page.locator('.kw-contrato-hoja').first().evaluate(hoja=>{const a=hoja.querySelector('.kw-contrato-encabezado img').getBoundingClientRect(),b=hoja.querySelector('.kw-logo-empresa-hoja').getBoundingClientRect(),texto=hoja.querySelector('.kw-contrato-cuerpo').getBoundingClientRect();return {ancho:Math.abs(b.width/a.width-1.1)<.01,alto:Math.abs(b.height/a.height-1.1)<.01,top:Math.abs(a.top-b.top)<1,derecha:b.left>a.right,inicio:Math.abs(a.left-texto.left)<1,fin:Math.abs(b.right-texto.right)<1};});
+   assert.deepEqual(medidas,{ancho:true,alto:true,top:true,derecha:true,inicio:true,fin:true});
    // Cambiar el perfil no cambia el logo de un documento ya guardado.
    await page.evaluate(async logo=>{sessionStorage.setItem('marca','{}');await kwLogoEmpresa.cargar({logo_empresa:logo},true);},guardado);
    assert.equal(await page.locator('#kw-logo-empresa-archivo').isDisabled(),true);

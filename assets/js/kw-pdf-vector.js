@@ -171,7 +171,7 @@
       var r = relativo(img.getBoundingClientRect(), paginaRect, margen);
       var shell = global.kwDocumentosShell;
       if (shell && img.matches(shell.selectorMarca)) {
-        var marca = shell.marca;
+        var marca = shell.marcaPara ? shell.marcaPara(img) : shell.marca;
         r = { x: marca.x * PX_MM, y: marca.y * PX_MM, w: marca.ancho * PX_MM, h: marca.alto * PX_MM };
       }
       try {

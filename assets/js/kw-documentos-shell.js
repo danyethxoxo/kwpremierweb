@@ -2,10 +2,13 @@
   'use strict';
   const selectorMarca='.doc-header img,.r-logo img,.comercial-hoja header img';
   const marca={x:72,y:30,ancho:98,alto:38};
+  const marcaContrato={...marca,x:64};
+  const marcaPara=img=>img.closest('.kw-contrato-hoja,.kw-miniatura-hoja')?marcaContrato:marca;
   const marcaCSS=`
     .doc-header,.r-logo,.comercial-hoja header { min-height:46px!important; text-align:left!important; }
     ${selectorMarca} { display:block!important; width:${marca.ancho}px!important; height:${marca.alto}px!important; max-width:none!important; object-fit:contain!important; margin:0!important; }
     .page .doc-header img,.page .r-logo img,.page.comercial-hoja header img { position:absolute!important; top:${marca.y}px!important; left:${marca.x}px!important; }
+    .page.kw-contrato-hoja .kw-contrato-encabezado img,.kw-miniatura-hoja .kw-contrato-encabezado img { left:${marcaContrato.x}px!important; }
     .page:has(.r-logo),.page.comercial-hoja { padding-top:${marca.y}px!important; }
     .comercial-hoja header { justify-content:flex-end; }
   `;
@@ -70,5 +73,5 @@
       modal.querySelector('[data-cancelar]').onclick=()=>cerrar(null);document.addEventListener('keydown',escape);input.focus();input.select();
     });
   }
-  global.kwDocumentosShell={montar,prepararFormularioFijo,vista,mobile,transicion,pedirNombre,marca,selectorMarca,aplicarMarca};
+  global.kwDocumentosShell={montar,prepararFormularioFijo,vista,mobile,transicion,pedirNombre,marca,marcaContrato,marcaPara,selectorMarca,aplicarMarca};
 })(window);

@@ -69,7 +69,7 @@ test('los doce documentos usan la base visual compartida de Renta',async()=>{
     const pagina=img.closest('.page'),p=pagina.getBoundingClientRect(),r=img.getBoundingClientRect(),escala=p.width/pagina.offsetWidth;
     return {x:(r.x-p.x)/escala,y:(r.y-p.y)/escala,ancho:r.width/escala,alto:r.height/escala};
    });
-   for(const [dato,valor]of Object.entries({x:72,y:30,ancho:98,alto:38}))assert.ok(Math.abs(marca[dato]-valor)<1.1,documento+': logo '+dato+'='+marca[dato]);
+   for(const [dato,valor]of Object.entries({x:documento.startsWith('contratos/')?64:72,y:30,ancho:98,alto:38}))assert.ok(Math.abs(marca[dato]-valor)<1.1,documento+': logo '+dato+'='+marca[dato]);
    if(documento==='contratos/renta'){
     await page.evaluate(()=>limpiarFormulario());
     await page.waitForFunction(()=>document.getElementById('f-asesor').value==='Asesora QA',null,{timeout:10000});
@@ -316,7 +316,7 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    });
    const pdf=page.waitForEvent('download');await page.locator('#comercial-descargar').click();const download=await pdf;
    const logosPDF=await page.evaluate(()=>qaLogos);assert.ok(logosPDF.length>0,'el PDF incluye el logo');
-   for(const logo of logosPDF)for(let i=0;i<4;i++)assert.ok(Math.abs(logo[i]-[72,30,98,38][i]*25.4/96)<.01,'logo PDF conserva medidas y posicion');
+   for(const logo of logosPDF)for(let i=0;i<4;i++)assert.ok(Math.abs(logo[i]-[64,30,98,38][i]*25.4/96)<.01,'logo PDF conserva medidas y posicion');
    mkdirSync(path.join(root,'artifacts/comercial'),{recursive:true});await download.saveAs(path.join(root,'artifacts/comercial/comercial-'+width+'.pdf'));
    await page.screenshot({path:path.join(root,'artifacts/comercial/comercial-'+width+'.png'),fullPage:true});
    await page.locator('#comercial-copiar').click();assert.equal(await page.locator('#com-cliente').isEnabled(),true);await page.locator('#comercial-guardar').click();await page.locator('#kw-documento-nombre-form button[type=submit]').click();await aviso(page,'Contrato guardado.');
