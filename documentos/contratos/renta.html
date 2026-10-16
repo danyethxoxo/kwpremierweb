@@ -108,8 +108,8 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
-<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261015vista">
-<script src="/assets/js/kw-contrato-documento.js?v=20261015logo"></script>
+<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016rentafirmas">
+<script src="/assets/js/kw-contrato-documento.js?v=20261016rentafirmas"></script>
 <link rel="stylesheet" href="/assets/css/kw-logo-empresa.css?v=20261015simple">
 <script src="/assets/js/kw-logo-empresa-v2.js?v=20261016auditoria"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261016alineado">
@@ -506,7 +506,7 @@ function renderClientesFields() {
 
 // ── Paginación: divide el contenido crudo en hojas tamaño Carta ──
 function configuracionDocumento() {
-  return {stack:'contrato-preview',raw:'contrato-raw',titulo:'ACUERDO DE RENTA',folio:folioActual?folioRevisionActual():'Borrador'};
+  return {stack:'contrato-preview',raw:'contrato-raw',titulo:'ACUERDO DE RENTA',clase:'kw-contrato-renta',folio:folioActual?folioRevisionActual():'Borrador'};
 }
 let previewPendiente = false;
 function renderPaginated() {
@@ -542,7 +542,7 @@ function updatePreview() {
   const raw = document.getElementById('contrato-raw');
   if (!raw) return;
 
-  // ── Construcción de firmas: orden fijo + clientes dinámicos, 2 por fila ──
+  // ── Construcción de firmas: orden fijo + clientes en dos o tres columnas ──
   function firmaCell(nombreHTML, rolHTML) {
     return `<div class="doc-firma-col"><div class="doc-firma-linea-top">${nombreHTML}<br>${rolHTML}</div></div>`;
   }
@@ -562,13 +562,15 @@ function updatePreview() {
     ? nombresClientes.map(nom => firmaCell(`<span class="doc-firma-bold">${escapeHtml(nom)}</span>`, '<span class="doc-firma-bold">"EL CLIENTE"</span>'))
     : [firmaCell('(Nombre y firma)', '<span class="doc-firma-bold">"EL CLIENTE"</span>')];
 
+  const columnasFirmas = clienteCells.length > 1 ? 3 : 2;
+  const firmantes = columnasFirmas === 3
+    ? [cellGustavo, cellFernanda, cellProfesional, ...clienteCells]
+    : [cellGustavo, cellFernanda, cellProfesional, clienteCells[0]];
   const filas = [];
-  filas.push([cellGustavo, cellFernanda]);
-  filas.push([cellProfesional, clienteCells[0]]);
-  for (let i = 1; i < clienteCells.length; i += 2) {
-    filas.push([clienteCells[i], clienteCells[i + 1] || '<div class="doc-firma-col"></div>']);
+  for (let i = 0; i < firmantes.length; i += columnasFirmas) {
+    filas.push(firmantes.slice(i, i + columnasFirmas));
   }
-  const firmasHTML = filas.map(par => `<div class="doc-firmas-row">${par[0]}${par[1]}</div>`).join('');
+  const firmasHTML = filas.map(fila => '<div class="doc-firmas-row">' + fila.join('') + '</div>').join('');
 
   raw.innerHTML = `
     <div class="doc-header">
@@ -630,7 +632,7 @@ function updatePreview() {
 
     <div class="doc-p" style="margin-top:16px;">Leído que fue el presente Acuerdo y enteradas las partes de su contenido y alcance legal, lo firman en tres tantos en la Ciudad de México, el día <strong>${formatFechaLarga(fecha)}</strong>.</div>
 
-    <div class="doc-firmas-wrap">
+    <div class="doc-firmas-wrap kw-renta-firmas" data-kw-firmas="pie" style="--firmas-columnas:${columnasFirmas}">
       ${firmasHTML}
     </div>
   `;

@@ -24,7 +24,7 @@
     const salida=[];
     for(const node of raw.children){
       if(node.matches('.doc-header'))continue;
-      if(node.matches('.doc-firmas-wrap')){for(const fila of node.children)salida.push(fila.cloneNode(true));}
+      if(node.matches('.doc-firmas-wrap:not([data-kw-firmas])')){for(const fila of node.children)salida.push(fila.cloneNode(true));}
       else salida.push(node.cloneNode(true));
     }
     for(const bloque of salida)bloque.querySelectorAll('.doc-campo:not(.filled)').forEach(el=>{el.textContent='________________';});
@@ -79,6 +79,14 @@
         agregar(bloque);
       }
       if(paginas.length>1&&!cuerpo.children.length)paginas.pop().remove();
+      for(const hoja of paginas){
+        const firmas=hoja.querySelector('[data-kw-firmas="pie"]');
+        if(firmas?.previousElementSibling){
+          const cuerpo=hoja.querySelector('.kw-contrato-cuerpo');
+          const libre=990-(cuerpo.getBoundingClientRect().bottom-hoja.getBoundingClientRect().top);
+          if(libre>0)firmas.style.marginTop=(parseFloat(getComputedStyle(firmas).marginTop)+libre)+'px';
+        }
+      }
       const existentes=Array.from(stack.querySelectorAll('.kw-contrato-hoja'));
       if(!existentes.length)stack.replaceChildren();
       paginas.forEach((hoja,i)=>{
