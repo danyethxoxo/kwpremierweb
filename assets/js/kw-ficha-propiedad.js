@@ -689,7 +689,7 @@
     if (jsPdfPromesa) return jsPdfPromesa;
     jsPdfPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js';
+      script.src = '/assets/vendor/jspdf/jspdf-4.2.1.umd.min.js?v=20261016auditoria';
       script.async = true;
       script.onload = function () {
         if (global.jspdf && global.jspdf.jsPDF) resolver(global.jspdf.jsPDF);
