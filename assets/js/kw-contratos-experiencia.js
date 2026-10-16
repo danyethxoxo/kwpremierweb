@@ -69,8 +69,6 @@
   miniaturas();
   document.querySelector('.acuerdos-form-sub')?.remove();secciones();
   const acciones=raiz()?.querySelector('.desktop-btn-row');acciones?.classList.add('form-actions');
-  let volver=document.getElementById('comercial-volver');if(!volver){volver=document.createElement('button');volver.type='button';volver.onclick=()=>global.volverALista();}
-  volver.textContent='← Lista de contratos';volver.className='kw-contrato-volver';raiz().insertBefore(volver,raiz().querySelector('.acuerdos-form-heading'));
   document.querySelectorAll('[data-kw-mobile]').forEach(btn=>{const path=btn.dataset.kwMobile==='form'?'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z':'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0';btn.insertAdjacentHTML('afterbegin','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="'+path+'"/></svg>');});
   const iconos={guardar:'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z M17 21v-8H7v8 M7 3v5h8',finalizar:'M9 12l2 2 4-4 M12 3l8 4v6c0 5-8 8-8 8S4 18 4 13V7Z',descargar:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',copiar:'M9 9h12v12H9z M5 15H3V3h12v2'};
   acciones?.querySelectorAll('[data-kw-accion]').forEach(btn=>{const accion=btn.dataset.kwAccion;if(!iconos[accion])return;const texto={guardar:'Guardar Borrador',finalizar:'Finalizar',descargar:'Descargar',copiar:'Hacer una copia'}[accion];btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="'+iconos[accion]+'"/></svg> '+texto;});
