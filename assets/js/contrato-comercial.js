@@ -1,7 +1,6 @@
 (function () {
   'use strict';
   window.kwDocumentosShell.montar({id:'comercial',titulo:'Contrato comercial',acciones:[
-    {id:'comercial-volver',texto:'← Volver',accion:'volver'},
     {id:'comercial-guardar',texto:'Guardar borrador',tipo:'submit',accion:'guardar'},
     {id:'comercial-finalizar',texto:'Finalizar',accion:'finalizar'},
     {id:'comercial-copiar',texto:'Hacer una copia',accion:'copiar',oculto:true},
@@ -225,7 +224,6 @@
   $('comercial-copiar').onclick=()=>{const d=datos();abrir({datos:d,estado:'borrador'});actual=null;sucio=true;botones();window.kwContratosUX.ruta('');};
   $('btn-nuevo').onclick=async()=>{if(!ocupado&&await abandonar()){if(window.kwContratosUX.nuevo())return;window.kwDocumentosShell.transicion(()=>abrir(null));}};
   document.querySelectorAll('[data-vista-universal="lista"]').forEach(b=>b.onclick=async()=>{if(!ocupado&&await abandonar()){sucio=false;vista(false);mensaje('');cargarLista();}});
-  $('comercial-volver').onclick=async()=>{if(!ocupado&&await abandonar()){sucio=false;vista(false);mensaje('');cargarLista();}};
   $('vista-lista').onclick=e=>{const b=e.target.closest('[data-abrir]');if(b&&!ocupado)window.kwDocumentosShell.transicion(()=>abrir(registros.find(r=>r.id===b.dataset.abrir)));};
   $('buscador-input').oninput=pintarLista;
   window.addEventListener('beforeunload',e=>{if(sucio){e.preventDefault();e.returnValue='';}});
