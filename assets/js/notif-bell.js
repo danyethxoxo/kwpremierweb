@@ -32,6 +32,7 @@
   let iniciado = false;
   let errorMensaje = '';
   let pendientes = new Set();
+  const lecturasConfirmadas = new Set();
   let overflowAnterior = '';
 
   function escapeHtml(value) {
@@ -58,7 +59,6 @@
       <button type="button" role="tab" id="${prefijo}-recientes" aria-controls="${prefijo}-lista" aria-selected="${vista === 'recientes'}" tabindex="${vista === 'recientes' ? 0 : -1}" data-notif-tab="recientes">Recientes${recientes.length ? ` (${recientes.length})` : ''}</button>
       <button type="button" role="tab" id="${prefijo}-todas" aria-controls="${prefijo}-lista" aria-selected="${vista === 'todas'}" tabindex="${vista === 'todas' ? 0 : -1}" data-notif-tab="todas">Todas las notificaciones</button>
     </div>
-    <p class="notif-ayuda">${vista === 'recientes' ? 'No leídas de las últimas 24 horas.' : 'Historial completo, incluidas las leídas y las de más de 24 horas.'}</p>
     ${errorMensaje ? `<p class="notif-error" role="alert">${escapeHtml(errorMensaje)} <button type="button" data-notif-reintentar>Reintentar</button></p>` : ''}
     ${sinLeer.length ? `<div class="notif-acciones-lista"><button type="button" class="notif-marcar-todas" data-notif-todas ${pendientes.size ? 'disabled' : ''}>Marcar todas como leídas</button></div>` : ''}
     <div class="notif-dropdown-list notif-tarjetas" id="${prefijo}-lista" role="tabpanel" aria-labelledby="${prefijo}-${vista}" aria-busy="${cargando}">
@@ -147,17 +147,26 @@
   async function marcarLeidas(ids, contenedor) {
     ids = ids.filter(id => !pendientes.has(id));
     if (!ids.length || !usuarioId) return;
-    ids.forEach(id => pendientes.add(id)); errorMensaje = ''; render();
+    const anteriores = new Map(notificaciones.filter(n => ids.includes(n.id)).map(n => [n.id, n.leido]));
+    ids.forEach(id => pendientes.add(id));
+    notificaciones.forEach(n => { if (pendientes.has(n.id)) n.leido = true; });
+    errorMensaje = ''; render();
+    contenedor?.querySelector('[data-notif-leida], [role="tab"][aria-selected="true"]')?.focus();
+    const guardadas = new Set();
     try {
       const { data, error } = await window.kwSupabase.from('notificaciones').update({ leido: true })
         .eq('user_id', usuarioId).in('id', ids).select('id');
-      if (error || !data || data.length !== ids.length) throw error || new Error('No se guardó la lectura');
-      const guardadas = new Set(data.map(n => n.id));
-      notificaciones.forEach(n => { if (guardadas.has(n.id)) n.leido = true; });
-    } catch (_) { errorMensaje = 'No se pudo marcar como leída. Intenta de nuevo.'; }
+      if (error) throw error;
+      (data || []).forEach(n => { guardadas.add(n.id); lecturasConfirmadas.add(n.id); });
+      if (guardadas.size !== ids.length) throw new Error('No se guardó la lectura');
+    } catch (_) {
+      notificaciones.forEach(n => {
+        if (anteriores.has(n.id) && !guardadas.has(n.id)) n.leido = anteriores.get(n.id);
+      });
+      errorMensaje = 'No se pudo marcar como leída. Intenta de nuevo.';
+    }
     finally { ids.forEach(id => pendientes.delete(id)); render(); }
     if (contenedor) {
-      contenedor.querySelector('[data-notif-leida], [role="tab"][aria-selected="true"]')?.focus();
       const aviso = contenedor.querySelector('.notif-estado');
       if (aviso && !errorMensaje) aviso.textContent = 'Marcada como leída. Puedes consultarla en Todas las notificaciones.';
     }
@@ -171,6 +180,10 @@
       if (!uid) return;
       usuarioId = uid;
       notificaciones = await cargarHistorial(window.kwSupabase, uid);
+      // Una respuesta iniciada antes del clic no debe deshacer la lectura.
+      notificaciones.forEach(n => {
+        if (pendientes.has(n.id) || lecturasConfirmadas.has(n.id)) n.leido = true;
+      });
       if (!iniciado) {
         iniciado = true;
         window.kwSupabase.channel('notificaciones-' + uid)

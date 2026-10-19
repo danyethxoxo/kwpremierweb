@@ -29,9 +29,9 @@ function fixture() {
       const q={filters:[],ids:null,updating:false,from:0,to:99};
       const builder={select(){return this;},eq(k,v){q.filters.push([k,v]);return this;},order(){return this;},
         range(a,b){q.from=a;q.to=b;return this;},update(){q.updating=true;return this;},in(k,ids){q.ids=ids;return this;},
-        then(ok,bad){return Promise.resolve().then(()=>{
+        then(ok,bad){return Promise.resolve().then(async()=>{
           const list=state.rows.filter(n=>q.filters.every(([k,v])=>n[k]===v)&&(!q.ids||q.ids.includes(n.id)));
-          if(q.updating){state.updates++;if(state.failUpdate)return {data:null,error:{message:'Error de prueba'}};list.forEach(n=>n.leido=true);return {data:list.map(({id})=>({id})),error:null};}
+          if(q.updating){state.updates++;if(state.deferUpdate)await new Promise(resolve=>{state.releaseUpdate=resolve;});if(state.failUpdate)return {data:null,error:{message:'Error de prueba'}};list.forEach(n=>n.leido=true);return {data:list.map(({id})=>({id})),error:null};}
           state.pageCount++;return {data:list.slice(q.from,q.to+1).map(n=>({...n})),error:null};
         }).then(ok,bad);}};
       return builder;
@@ -70,16 +70,27 @@ test('notificaciones UI: tarjetas, lectura explícita, historial, 24h y móvil',
       await page.locator('#notif-dropdown.abierto').waitFor();
       assert.equal(await page.evaluate(()=>window.__notifMock.updates),0,'abrir no marca las tarjetas');
       assert.equal(await page.locator('#notif-dropdown .notif-item').count(),2);
+      assert.equal(await page.locator('.notif-ayuda').count(),0);
+      assert.equal(await page.locator('#notif-dropdown .notif-item').first().evaluate(el=>getComputedStyle(el).borderColor),await page.locator('#notif-dropdown').evaluate(el=>getComputedStyle(el).borderLeftColor));
       const style=await page.locator('#notif-dropdown').evaluate(el=>({shadow:getComputedStyle(el).boxShadow,border:getComputedStyle(el).borderLeftWidth,bg:getComputedStyle(el).backgroundColor}));
       assert.deepEqual(style,{shadow:'none',border:'1px',bg:'rgb(255, 255, 255)'});
-      await page.evaluate(()=>{window.__notifMock.failUpdate=true;});
+      await page.evaluate(()=>{window.__notifMock.failUpdate=true;window.__notifMock.deferUpdate=true;});
       await page.locator('#notif-dropdown [data-notif-leida="reciente"]').click();
+      assert.equal(await page.locator('#notif-dropdown [data-notif-id="reciente"]').count(),0,'se mueve antes de recibir la respuesta');
+      await page.waitForFunction(()=>!!window.__notifMock.releaseUpdate);
+      await page.evaluate(()=>window.__notifMock.releaseUpdate());
       await page.locator('#notif-dropdown [role="alert"]').waitFor();
       assert.equal(await page.locator('#notif-dropdown .notif-item').count(),2,'un fallo conserva la tarjeta');
-      await page.evaluate(()=>{window.__notifMock.failUpdate=false;});
+      await page.evaluate(()=>{window.__notifMock.failUpdate=false;window.__notifMock.releaseUpdate=null;});
       await page.locator('#notif-dropdown [data-notif-leida="reciente"]').click();
       await page.waitForFunction(()=>document.querySelectorAll('#notif-dropdown .notif-item').length===1);
       assert.equal(await page.locator('#notif-centro .notif-item').count(),1,'la página comparte el estado');
+      assert.equal(await page.evaluate(()=>window.__notifMock.rows.find(n=>n.id==='reciente').leido),false,'el servidor sigue pendiente');
+      await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+      assert.equal(await page.locator('#notif-dropdown [data-notif-id="reciente"]').count(),0,'una recarga no deshace la lectura pendiente');
+      await page.waitForFunction(()=>!!window.__notifMock.releaseUpdate);
+      await page.evaluate(()=>{window.__notifMock.deferUpdate=false;window.__notifMock.releaseUpdate();});
+      await page.waitForFunction(()=>window.__notifMock.rows.find(n=>n.id==='reciente').leido);
       await page.locator('#notif-dropdown [data-notif-tab="todas"]').click();
       assert.equal(await page.locator('#notif-dropdown .notif-item').count(),125);
       assert.equal(await page.locator('#notif-dropdown [data-notif-id="reciente"] .notif-leida').textContent(),'Leída');
