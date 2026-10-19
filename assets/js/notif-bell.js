@@ -1,238 +1,194 @@
-// Campanita de notificaciones - se incluye después de auth-guard.js en
-// las páginas que quieran mostrarla. Requiere un elemento vacío con
-// id="notif-bell-slot" en el header; este script se encarga de dibujar
-// el ícono, el contador y el desplegable ahí adentro.
-//
-// En cualquier tamaño se abre como panel lateral, igual que el menu de
-// navegacion. Asi conserva el mismo comportamiento sin encimarse en el
-// encabezado.
+// La campana y la página comparten historial, tarjetas y estado de lectura.
 (function () {
-  const BASE = '';
+  const DIA = 24 * 60 * 60 * 1000;
+  function esReciente(n, ahora = Date.now()) {
+    return !n.leido && new Date(n.created_at).getTime() > ahora - DIA;
+  }
+  async function cargarHistorial(client, uid) {
+    const filas = [];
+    // El historial completo no debe desaparecer tras las primeras 20 o 60 filas.
+    const tamano = 100;
+    for (let desde = 0; ; desde += tamano) {
+      const { data, error } = await client.from('notificaciones')
+        .select('id, tipo, titulo, mensaje, url, leido, created_at').eq('user_id', uid)
+        .order('created_at', { ascending: false }).order('id', { ascending: false })
+        .range(desde, desde + tamano - 1);
+      if (error) throw error;
+      filas.push(...(data || []));
+      if (!data || data.length < tamano) return filas;
+    }
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { esReciente, cargarHistorial };
+    return;
+  }
+
   let notificaciones = [];
   let abierta = false;
-  let backdropEl = null;
+  let vistaPanel = 'recientes';
+  let vistaPagina = 'recientes';
+  let usuarioId = null;
+  let cargando = false;
+  let iniciado = false;
+  let errorMensaje = '';
+  let pendientes = new Set();
+  let overflowAnterior = '';
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
   function fmtRelativo(iso) {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const min = Math.floor(diffMs / 60000);
-    if (min < 1) return 'ahora';
-    if (min < 60) return `hace ${min} min`;
-    const h = Math.floor(min / 60);
-    if (h < 24) return `hace ${h} h`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return `hace ${d} d`;
-    try { return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }); }
-    catch (e) { return ''; }
+    const minutos = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (minutos < 1) return 'ahora';
+    if (minutos < 60) return `hace ${minutos} min`;
+    if (minutos < 1440) return `hace ${Math.floor(minutos / 60)} h`;
+    return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
   }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str == null ? '' : str;
-    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  function destino(n) {
+    return n.url && window.kwSecurity ? window.kwSecurity.notificationUrl(n.url, n.tipo) : '';
   }
-
-  // El fondo oscuro/difuminado detrás del desplegable vive suelto en
-  // <body>, no dentro del slot: así no lo recorta ningún contenedor con
-  // overflow, y sobrevive a que render() rehaga el slot por dentro cada
-  // vez que llega una notificación nueva.
-  function getBackdrop() {
-    if (backdropEl) return backdropEl;
-    backdropEl = document.createElement('div');
-    backdropEl.className = 'notif-backdrop';
-    backdropEl.id = 'notif-backdrop';
-    document.body.appendChild(backdropEl);
-    return backdropEl;
+  function contenido(vista, prefijo) {
+    const ahora = Date.now();
+    const recientes = notificaciones.filter(n => esReciente(n, ahora));
+    const filas = vista === 'todas' ? notificaciones : recientes;
+    const sinLeer = filas.filter(n => !n.leido);
+    return `<div class="notif-tabs" role="tablist" aria-label="Filtrar notificaciones">
+      <button type="button" role="tab" id="${prefijo}-recientes" aria-controls="${prefijo}-lista" aria-selected="${vista === 'recientes'}" tabindex="${vista === 'recientes' ? 0 : -1}" data-notif-tab="recientes">Recientes${recientes.length ? ` (${recientes.length})` : ''}</button>
+      <button type="button" role="tab" id="${prefijo}-todas" aria-controls="${prefijo}-lista" aria-selected="${vista === 'todas'}" tabindex="${vista === 'todas' ? 0 : -1}" data-notif-tab="todas">Todas las notificaciones</button>
+    </div>
+    <p class="notif-ayuda">${vista === 'recientes' ? 'No leídas de las últimas 24 horas.' : 'Historial completo, incluidas las leídas y las de más de 24 horas.'}</p>
+    ${errorMensaje ? `<p class="notif-error" role="alert">${escapeHtml(errorMensaje)} <button type="button" data-notif-reintentar>Reintentar</button></p>` : ''}
+    ${sinLeer.length ? `<div class="notif-acciones-lista"><button type="button" class="notif-marcar-todas" data-notif-todas ${pendientes.size ? 'disabled' : ''}>Marcar todas como leídas</button></div>` : ''}
+    <div class="notif-dropdown-list notif-tarjetas" id="${prefijo}-lista" role="tabpanel" aria-labelledby="${prefijo}-${vista}" aria-busy="${cargando}">
+    ${!filas.length ? `<div class="notif-vacio" role="status">${cargando ? 'Cargando notificaciones...' : vista === 'recientes' ? 'No tienes notificaciones recientes pendientes.' : 'No tienes notificaciones.'}</div>` : filas.map(n => {
+      const url = destino(n);
+      return `<article class="notif-item${n.leido ? '' : ' notif-item-nuevo'}" data-notif-id="${escapeHtml(n.id)}">
+        <span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
+        ${n.mensaje ? `<p class="notif-item-msg">${escapeHtml(n.mensaje)}</p>` : ''}
+        <div class="notif-item-meta"><time class="notif-item-fecha" datetime="${escapeHtml(n.created_at)}">${fmtRelativo(n.created_at)}</time>${n.leido ? '<span class="notif-leida">Leída</span>' : ''}</div>
+        <div class="notif-item-acciones">${url ? `<a class="notif-ver" href="${escapeHtml(url)}">Ver notificación</a>` : ''}
+        ${!n.leido ? `<button type="button" class="notif-marcar-leida" data-notif-leida="${escapeHtml(n.id)}" ${pendientes.has(n.id) ? 'disabled' : ''}>${pendientes.has(n.id) ? 'Guardando...' : 'Marcar como leída'}</button>` : ''}</div>
+      </article>`;
+    }).join('')}
+    </div><p class="notif-estado" role="status" aria-live="polite"></p>`;
   }
-
+  function conectar(contenedor, esPagina) {
+    contenedor.querySelectorAll('[data-notif-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (esPagina) vistaPagina = btn.dataset.notifTab;
+        else vistaPanel = btn.dataset.notifTab;
+        render();
+        document.getElementById(`${esPagina ? 'notif-pagina' : 'notif-panel'}-${btn.dataset.notifTab}`)?.focus();
+      });
+      btn.addEventListener('keydown', e => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        e.preventDefault();
+        const vista = e.key === 'Home' ? 'recientes' : e.key === 'End' ? 'todas' : btn.dataset.notifTab === 'recientes' ? 'todas' : 'recientes';
+        contenedor.querySelector(`[data-notif-tab="${vista}"]`).click();
+      });
+    });
+    contenedor.querySelectorAll('[data-notif-leida]').forEach(btn => btn.addEventListener('click', () => marcarLeidas([btn.dataset.notifLeida], contenedor)));
+    contenedor.querySelector('[data-notif-todas]')?.addEventListener('click', () => {
+      const vista = esPagina ? vistaPagina : vistaPanel;
+      const ids = notificaciones.filter(n => !n.leido && (vista === 'todas' || esReciente(n))).map(n => n.id);
+      marcarLeidas(ids, contenedor);
+    });
+    contenedor.querySelector('[data-notif-reintentar]')?.addEventListener('click', cargar);
+  }
   function render() {
     const slot = document.getElementById('notif-bell-slot');
-    if (!slot) return;
-    const noLeidas = notificaciones.filter(n => !n.leido).length;
-    const badge = noLeidas > 0 ? `<span class="notif-bell-badge">${noLeidas > 9 ? '9+' : noLeidas}</span>` : '';
-
-    slot.innerHTML = `
-      <button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="${abierta}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        ${badge}
-      </button>`;
-
-    // El panel cuelga del <body>, no del header. Dentro del header
-    // heredaba su marco (basta con que el header o algún ancestro suyo
-    // traiga backdrop-filter para que un position:fixed de adentro se
-    // mida contra él y no contra la pantalla), y de ahí salían dos
-    // cosas: estacionado fuera de la vista alargaba el ancho de la
-    // página, y no podía pintarse por encima del velo.
-    let panel = document.getElementById('notif-dropdown');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'notif-dropdown';
-      document.body.appendChild(panel);
+    const pagina = document.getElementById('notif-centro');
+    const cantidad = notificaciones.filter(n => esReciente(n)).length;
+    if (slot) {
+      slot.innerHTML = `<button type="button" class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificaciones${cantidad ? `, ${cantidad} recientes sin leer` : ''}" aria-controls="notif-dropdown" aria-expanded="${abierta}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>${cantidad ? `<span class="notif-bell-badge">${cantidad > 9 ? '9+' : cantidad}</span>` : ''}</button>`;
+      let panel = document.getElementById('notif-dropdown');
+      if (!panel) {
+        panel = document.createElement('section'); panel.id = 'notif-dropdown';
+        panel.setAttribute('aria-label', 'Notificaciones');
+        // Al dibujar las tarjetas se reemplaza el botón pulsado: el clic
+        // debe quedarse dentro del panel aunque ese nodo ya no exista.
+        panel.addEventListener('click', e => e.stopPropagation());
+        document.body.appendChild(panel);
+      }
+      panel.className = 'notif-dropdown' + (abierta ? ' abierto' : '');
+      panel.inert = !abierta;
+      panel.setAttribute('aria-hidden', String(!abierta));
+      const scroll = panel.querySelector('.notif-dropdown-list')?.scrollTop || 0;
+      panel.innerHTML = `<div class="notif-dropdown-head"><span>Notificaciones</span><button type="button" class="notif-cerrar" aria-label="Cerrar notificaciones">✕</button></div>${contenido(vistaPanel, 'notif-panel')}`;
+      panel.querySelector('.notif-dropdown-list').scrollTop = scroll;
+      conectar(panel, false);
+      panel.querySelector('.notif-cerrar').addEventListener('click', cerrar);
+      document.getElementById('notif-bell-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if (abierta) return cerrar();
+        abierta = true;
+        overflowAnterior = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.classList.add('kw-header-anclado');
+        render();
+        document.querySelector('#notif-dropdown [aria-selected="true"]')?.focus();
+      });
+      let velo = document.getElementById('notif-backdrop');
+      if (!velo) { velo = document.createElement('div'); velo.id = 'notif-backdrop'; document.body.appendChild(velo); velo.addEventListener('click', cerrar); }
+      velo.className = 'notif-backdrop' + (abierta ? ' abierto' : '');
     }
-    panel.className = 'notif-dropdown' + (abierta ? ' abierto' : '');
-    panel.innerHTML = `
-        <div class="notif-dropdown-head">
-          <span>Notificaciones</span>
-          ${noLeidas > 0 ? `<button type="button" class="notif-marcar-todas" id="notif-marcar-todas">Marcar todas como leídas</button>` : ''}
-          <button type="button" class="notif-cerrar" id="notif-cerrar" aria-label="Cerrar notificaciones">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-          </button>
-        </div>
-        <div class="notif-dropdown-list">
-          ${notificaciones.length === 0
-            ? '<div class="notif-vacio">No tienes notificaciones.</div>'
-            : notificaciones.map(n => `
-              <button type="button" class="notif-item${n.leido ? '' : ' notif-item-nuevo'}" data-id="${n.id}" data-url="${escapeHtml(n.url || '')}">
-                <span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
-                ${n.mensaje ? `<span class="notif-item-msg">${escapeHtml(n.mensaje)}</span>` : ''}
-                <span class="notif-item-fecha">${fmtRelativo(n.created_at)}</span>
-              </button>`).join('')}
-        </div>`;
-
-    document.getElementById('notif-bell-btn').addEventListener('click', function (e) {
-      e.stopPropagation();
-      toggleDropdown();
-    });
-    const btnTodas = document.getElementById('notif-marcar-todas');
-    if (btnTodas) btnTodas.addEventListener('click', marcarTodasLeidas);
-    const btnCerrar = document.getElementById('notif-cerrar');
-    if (btnCerrar) btnCerrar.addEventListener('click', cerrarDropdown);
-    Array.from(panel.querySelectorAll('.notif-item')).forEach(function (btn) {
-      btn.addEventListener('click', function () { abrirNotificacion(btn.dataset.id, btn.dataset.url); });
-    });
-
-    getBackdrop().classList.toggle('abierto', abierta);
+    if (pagina) { pagina.innerHTML = contenido(vistaPagina, 'notif-pagina'); conectar(pagina, true); }
   }
-
-  function toggleDropdown() {
-    abierta = !abierta;
-    if (abierta) {
-      const dd = document.getElementById('notif-dropdown');
-      if (dd) dd.classList.add('abierto');
-      getBackdrop().classList.add('abierto');
-      // Dos candados distintos: el overflow evita que se mueva la página
-      // de atrás, y la marca en <html> le dice a drawer.js que no
-      // esconda el header. Hacen falta los dos: drawer.js escucha el
-      // scroll en fase de captura, así que hasta el de adentro de esta
-      // misma lista llegaba allá y escondía la barra al leer.
-      document.body.style.overflow = 'hidden';
-      document.documentElement.classList.add('kw-header-anclado');
-      // Al abrirla ya se dio por vista: el numerito no debe esperar a
-      // que se pique cada renglón para desaparecer. Se marca un poco
-      // después (no de inmediato) porque marcarTodasLeidas() rehace el
-      // desplegable entero, y hacerlo en el mismo instante del clic
-      // interrumpía la animación de apertura antes de que se alcanzara
-      // a ver.
-      setTimeout(marcarTodasLeidas, 220);
-    } else {
-      cerrarDropdown();
-    }
-  }
-
-  function cerrarDropdown() {
-    abierta = false;
-    const dd = document.getElementById('notif-dropdown');
-    if (dd) dd.classList.remove('abierto');
-    if (backdropEl) backdropEl.classList.remove('abierto');
-    document.body.style.overflow = '';
-    document.documentElement.classList.remove('kw-header-anclado');
-  }
-
-  function abrirNotificacion(id, url) {
-    const n = notificaciones.find(function (x) { return x.id === id; });
-    if (n && !n.leido) {
-      n.leido = true;
-      render();
-      window.kwSupabase.from('notificaciones').update({ leido: true }).eq('id', id).then(function () {});
-    }
-    const destino = window.kwSecurity.notificationUrl(url, n && n.tipo);
-    if (url && destino) location.href = destino;
-  }
-
-  function marcarTodasLeidas() {
-    const idsNoLeidas = notificaciones.filter(function (n) { return !n.leido; }).map(function (n) { return n.id; });
-    if (!idsNoLeidas.length) return;
-    notificaciones.forEach(function (n) { n.leido = true; });
-    render();
-    window.kwSupabase.from('notificaciones').update({ leido: true }).in('id', idsNoLeidas).then(function () {});
-  }
-
-  function cargarNotificaciones() {
-    // Sin la librería no hay nada que traer. Se comprueba porque este
-    // arranque lo puede pedir drawer.js en pleno armado del menú: sin
-    // esta guarda, un fallo aquí reventaba hacia allá y se llevaba el
-    // menú entero, que no tiene nada que ver con las notificaciones.
-    if (!window.kwSupabase || !window.kwSupabase.auth) return;
-    const usuario = window.kwSession
-      ? (window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSession.usuario(window.kwSupabase))
-      : window.kwSupabase.auth.getUser();
-    usuario.then(function (result) {
-      const uid = result && result.data && result.data.user && result.data.user.id;
-      if (!uid) return;
-
-      window.kwSupabase
-        .from('notificaciones')
-        .select('id, tipo, titulo, mensaje, url, leido, created_at')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(20)
-        .then(function (res) {
-          if (!res.error) {
-            notificaciones = res.data || [];
-            render();
-          }
-        });
-
-      window.kwSupabase
-        .channel('notificaciones-' + uid)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: 'user_id=eq.' + uid }, function (payload) {
-          notificaciones.unshift(payload.new);
-          render();
-        })
-        .subscribe();
-    });
-  }
-
-  document.addEventListener('click', function (e) {
+  function cerrar() {
     if (!abierta) return;
-    const slot = document.getElementById('notif-bell-slot');
-    const panel = document.getElementById('notif-dropdown');
-    if ((slot && slot.contains(e.target)) || (panel && panel.contains(e.target))) return;
-    cerrarDropdown();
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && abierta) cerrarDropdown();
-  });
-  window.addEventListener('resize', function () {
-    // Cruzar el punto de quiebre celular/escritorio con el desplegable
-    // abierto lo dejaba en un estado raro (o el fondo oscuro suelto sin
-    // nada que oscurecer). Más simple: se vuelve a dibujar tal cual.
-    cerrarDropdown();
+    abierta = false;
+    document.body.style.overflow = overflowAnterior;
+    document.documentElement.classList.remove('kw-header-anclado');
     render();
-  });
-
-  function init() {
-    render();
-    cargarNotificaciones();
+    document.getElementById('notif-bell-btn')?.focus();
   }
-
-  // Reenganche, para cuando el hueco donde se dibuja aparece DESPUÉS de
-  // que este script ya corrió. Pasa en las pantallas que traen el
-  // <script> en su propio HTML: se ejecuta antes que drawer.js, que es
-  // quien arma el header y crea el hueco, así que render() no encontraba
-  // nada y se salía para siempre. drawer.js llama a esto en cuanto lo
-  // crea; si el hueco ya existía, no hace falta y no se llama.
-  window.kwNotifRefrescar = function () {
+  async function marcarLeidas(ids, contenedor) {
+    ids = ids.filter(id => !pendientes.has(id));
+    if (!ids.length || !usuarioId) return;
+    ids.forEach(id => pendientes.add(id)); errorMensaje = ''; render();
     try {
-      render();
-      if (!notificaciones.length) cargarNotificaciones();
-    } catch (e) {
-      console.error('No se pudo dibujar la campanita:', e);
+      const { data, error } = await window.kwSupabase.from('notificaciones').update({ leido: true })
+        .eq('user_id', usuarioId).in('id', ids).select('id');
+      if (error || !data || data.length !== ids.length) throw error || new Error('No se guardó la lectura');
+      const guardadas = new Set(data.map(n => n.id));
+      notificaciones.forEach(n => { if (guardadas.has(n.id)) n.leido = true; });
+    } catch (_) { errorMensaje = 'No se pudo marcar como leída. Intenta de nuevo.'; }
+    finally { ids.forEach(id => pendientes.delete(id)); render(); }
+    if (contenedor) {
+      contenedor.querySelector('[data-notif-leida], [role="tab"][aria-selected="true"]')?.focus();
+      const aviso = contenedor.querySelector('.notif-estado');
+      if (aviso && !errorMensaje) aviso.textContent = 'Marcada como leída. Puedes consultarla en Todas las notificaciones.';
     }
-  };
-
-  if (document.documentElement.classList.contains('kw-auth-ok')) {
-    init();
-  } else {
-    window.addEventListener('kw-auth-ready', init, { once: true });
   }
+  async function cargar() {
+    if (cargando || !window.kwSupabase?.auth) return;
+    cargando = true; errorMensaje = ''; render();
+    try {
+      const result = await (window.kwSession?.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
+      const uid = result?.data?.user?.id;
+      if (!uid) return;
+      usuarioId = uid;
+      notificaciones = await cargarHistorial(window.kwSupabase, uid);
+      if (!iniciado) {
+        iniciado = true;
+        window.kwSupabase.channel('notificaciones-' + uid)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: 'user_id=eq.' + uid }, () => cargar())
+          .subscribe();
+      }
+    } catch (_) { errorMensaje = 'No se pudieron cargar tus notificaciones.'; }
+    finally { cargando = false; render(); }
+  }
+  document.addEventListener('click', e => {
+    if (abierta && !document.getElementById('notif-bell-slot')?.contains(e.target) && !document.getElementById('notif-dropdown')?.contains(e.target)) cerrar();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) cargar(); });
+  window.addEventListener('resize', cerrar);
+  // Envejecer una notificación cambia su apartado, nunca su estado de lectura.
+  setInterval(() => { if (!document.hidden && (abierta || document.getElementById('notif-centro'))) render(); }, 60000);
+  window.kwNotifRefrescar = () => { render(); if (!iniciado) cargar(); };
+  if (document.documentElement.classList.contains('kw-auth-ok')) { render(); cargar(); }
+  else window.addEventListener('kw-auth-ready', () => { render(); cargar(); }, { once: true });
 })();

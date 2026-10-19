@@ -14,33 +14,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
 <script src="/assets/js/auth-guard.js?v=20261013general"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-paneles-sin-sombra-3">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-notificaciones-tarjetas">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
 <style>
   html, body { min-height: 100%; color: var(--text); }
-  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261016uniforme) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
+  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261019-notificaciones-tarjetas) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .page { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 90px 20px 50px; }
   .page-title { font-size: 24px; font-weight: 700; color: var(--text); }
   .page-desc { font-size: 13.5px; color: var(--muted); margin: 4px 0 18px; }
 
-  .notif-pagina-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-  .notif-pagina-head .notif-marcar-todas { font-size: 12.5px; color: var(--red); }
-
-  .notif-pagina-lista {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%); border: 1px solid rgba(255,255,255,0.82); border-radius: 14px;
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
-    overflow: hidden;
-  }
-  .notif-pagina-lista .notif-item { padding: 14px 16px; }
-  .notif-pagina-lista .notif-item-titulo { font-size: 14px; }
-  .notif-pagina-lista .notif-item-msg { font-size: 13px; word-break: break-word; }
-  .notif-pagina-lista .notif-item-fecha { font-size: 11px; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261019-sin-sombra-filtros">
 </head>
@@ -59,16 +45,7 @@
   <main class="page">
     <h1 class="page-title">Notificaciones</h1>
 
-    <div class="notif-pagina-head">
-      <span></span>
-      <button type="button" class="notif-marcar-todas" id="btn-marcar-todas" style="display:none;">Marcar todas como leídas</button>
-    </div>
-
-    <div class="notif-pagina-lista" id="notif-lista">
-      <div class="notif-item"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:6px;"></div></div>
-      <div class="notif-item"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:6px;"></div></div>
-      <div class="notif-item"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:6px;"></div></div>
-    </div>
+    <section class="notif-pagina-lista" id="notif-centro" aria-label="Tus notificaciones"><p class="notif-vacio">Cargando notificaciones...</p></section>
   </main>
 
   <footer>
@@ -83,95 +60,9 @@
     </a>
   </footer>
 
-<script>
-  let notificaciones = [];
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str == null ? '' : str;
-    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  function fmtRelativo(iso) {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const min = Math.floor(diffMs / 60000);
-    if (min < 1) return 'ahora';
-    if (min < 60) return `hace ${min} min`;
-    const h = Math.floor(min / 60);
-    if (h < 24) return `hace ${h} h`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return `hace ${d} d`;
-    try { return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }); }
-    catch (e) { return ''; }
-  }
-
-  function render() {
-    const cont = document.getElementById('notif-lista');
-    const btnTodas = document.getElementById('btn-marcar-todas');
-    btnTodas.style.display = notificaciones.some(n => !n.leido) ? '' : 'none';
-
-    cont.innerHTML = notificaciones.length === 0
-      ? '<div class="notif-vacio">No tienes notificaciones.</div>'
-      : notificaciones.map(n => `
-        <button type="button" class="notif-item${n.leido ? '' : ' notif-item-nuevo'}" data-id="${n.id}" data-url="${escapeHtml(n.url || '')}">
-          <span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
-          ${n.mensaje ? `<span class="notif-item-msg">${escapeHtml(n.mensaje)}</span>` : ''}
-          <span class="notif-item-fecha">${fmtRelativo(n.created_at)}</span>
-        </button>`).join('');
-
-    Array.from(cont.querySelectorAll('.notif-item')).forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        const url = btn.dataset.url;
-        const n = notificaciones.find(function (item) { return item.id === btn.dataset.id; });
-        const destino = window.kwSecurity.notificationUrl(url, n && n.tipo);
-        if (url && destino) location.href = destino;
-      });
-    });
-  }
-
-  function marcarTodasLeidas() {
-    const idsNoLeidas = notificaciones.filter(n => !n.leido).map(n => n.id);
-    if (!idsNoLeidas.length) return;
-    notificaciones.forEach(n => { n.leido = true; });
-    render();
-    window.kwSupabase.from('notificaciones').update({ leido: true }).in('id', idsNoLeidas).then(function () {});
-  }
-
-  async function cargarNotificaciones() {
-    const { data: userData } = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
-    const uid = userData && userData.user && userData.user.id;
-    if (!uid) return;
-
-    const { data, error } = await window.kwSupabase
-      .from('notificaciones')
-      .select('id, tipo, titulo, mensaje, url, leido, created_at')
-      .eq('user_id', uid)
-      .order('created_at', { ascending: false })
-      .limit(60);
-
-    if (error) {
-      document.getElementById('notif-lista').innerHTML =
-        `<div class="notif-vacio">${escapeHtml(error.message || 'Ocurrió un error al cargar tus notificaciones.')}</div>`;
-      return;
-    }
-
-    notificaciones = data || [];
-    render();
-    // Entrar aquí ya cuenta como haberlas visto - igual que abrir la
-    // campanita en escritorio (ver notif-bell.js).
-    marcarTodasLeidas();
-  }
-
-  document.getElementById('btn-marcar-todas').addEventListener('click', marcarTodasLeidas);
-
-  if (document.documentElement.classList.contains('kw-auth-ok')) {
-    cargarNotificaciones();
-  } else {
-    window.addEventListener('kw-auth-ready', cargarNotificaciones, { once: true });
-  }
-</script>
+<script src="/assets/js/notif-bell.js?v=20261019-notificaciones-tarjetas"></script>
 <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-<script src="/assets/js/drawer.js?v=20261013general" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261019-notificaciones-tarjetas" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch"></script>
 </body>
 </html>
