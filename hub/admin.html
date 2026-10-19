@@ -3511,8 +3511,6 @@
   // trajo a nadie.
   let hojasDelLibro = {};
   let recargaAsesoresEnCurso = false;
-  let ultimaLecturaLibro = 0;
-  let puedeSincronizarLibro = false;
 
   // El camino es: se lee el libro, se guarda en la base, y de la base
   // salen las pestañas. No al revés. Por eso un libro caído (o borrado)
@@ -3548,15 +3546,17 @@
     // mismos asesores ya estaban almacenados aquí.
     if (!recargarLibro) {
       const hayBaseInicial = await leerBaseDatos();
-      if (hayBaseInicial && bdAsesores.length) {
+      if (hayBaseInicial) {
         gruposAsesores = gruposDesdeBase();
         armarTabsAsesores();
         pintarGrupos();
         cargarEstadoGoogle();
+        avisoAsesores('', '');
+        return;
       }
     }
 
-    // La copia local se muestra primero; el libro siempre se sincroniza después.
+    // El libro se consulta a petición del usuario o si la base no responde.
     let gruposLibro = null;
     let fallaLibro = null;
     try {
@@ -3572,7 +3572,6 @@
         hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
       });
       await sincronizarBaseDesdeLibro(gruposLibro);
-      ultimaLecturaLibro = Date.now();
     } catch (err) {
       fallaLibro = err;
     }
@@ -3640,14 +3639,6 @@
     }
   }
 
-  function actualizarLibroAutomaticamente() {
-    if (!puedeSincronizarLibro || document.hidden || recargaAsesoresEnCurso || verificacionOcupada) return;
-    if (Date.now() - ultimaLecturaLibro < 120000) return;
-    cargarAsesores(true);
-  }
-  setInterval(actualizarLibroAutomaticamente, 120000);
-  document.addEventListener('visibilitychange', actualizarLibroAutomaticamente);
-
   function terminarRecarga() {
     const op = document.getElementById('op-recargar');
     op.disabled = false;
@@ -3709,11 +3700,24 @@
       });
       estadoGoogleListo = true;
       ultimaVerificacion = data.personas || [];
-      pintarGrupos();
+      actualizarAccesosGoogleVisibles();
       if (document.getElementById('modal-verificar').style.display === 'flex') pintarVerificacion();
     } catch (err) {
       avisoAsesores('No se pudieron leer los accesos de Google: ' + (err.message || ''), 'error');
     }
+  }
+
+  // Los accesos llegan aparte sin reconstruir ni animar los renglones.
+  function actualizarAccesosGoogleVisibles() {
+    document.querySelectorAll('.accesos[data-correo]').forEach(function (caja) {
+      const encontrado = personaPorCorreo(caja.dataset.correo);
+      if (!encontrado) return;
+      const plantilla = document.createElement('template');
+      plantilla.innerHTML = accesosHtml(encontrado.persona, encontrado.grupo, !caja.classList.contains('ocultos'));
+      const renovada = plantilla.content.firstElementChild;
+      caja.replaceWith(renovada);
+      actualizarAccionesAcceso(renovada);
+    });
   }
 
   // ── Revisar accesos ──
@@ -4029,7 +4033,6 @@
       // Function, que comprueba lo mismo del lado del servidor.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
-      puedeSincronizarLibro = puedeAltas;
       if (!puedeAltas) quitarTabPanel('asesores');
       else document.getElementById('acceso-nuevo-asesor').style.display = '';
 

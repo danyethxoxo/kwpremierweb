@@ -26,7 +26,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
         armarTabsAsesores(); pintarGrupos(); document.body.classList.add('en-asesores');
         document.getElementById('contenido-panel').style.display = '';
         prepararPanelLateral(); cambiarTabPanel('asesores');
-      }, guardarAltaPagina, pintarGrupos};`;
+      }, guardarAltaPagina, pintarGrupos, actualizarAccesosGoogleVisibles};`;
     html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
     await page.route('**/*', route => {
       const url = new URL(route.request().url());
@@ -61,6 +61,11 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     const list = page.locator('#lista-todos');
     assert.equal(await list.locator('.kw-fila').count(), 5);
     assert.equal(await list.locator('.asesor-menu-btn').count(), 5);
+    const primerRenglon = await list.locator('.kw-fila').first().elementHandle();
+    await page.evaluate(()=>window.qa.actualizarAccesosGoogleVisibles());
+    assert.equal(await primerRenglon.evaluate(el=>el.isConnected),true,'Google conserva los renglones sin volver a animarlos');
+    await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+    assert.equal(await primerRenglon.evaluate(el=>el.isConnected),true,'regresar a la pestaña conserva la lista');
     const usuarioWeb = list.locator('.kw-fila').filter({hasText:'lider@example.com'});
     await usuarioWeb.locator('.asesor-menu-btn').click();
     await usuarioWeb.locator('[data-menu-usuario]').click();

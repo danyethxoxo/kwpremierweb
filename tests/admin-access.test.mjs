@@ -32,7 +32,7 @@ test('Excel import uses bounded batches, stops on failures and preserves the rea
   await assert.rejects(() => context.sincronizarBaseDesdeLibro([{ personas }]), /Servicio no disponible/);
 });
 
-test('opening a populated directory still imports Excel; overlapping refreshes are skipped', async () => {
+test('directory opens from the database once; manual Excel refresh skips overlapping requests', async () => {
   const calls = [];
   let release;
   const pending = new Promise((resolve) => { release = resolve; });
@@ -45,8 +45,11 @@ test('opening a populated directory still imports Excel; overlapping refreshes a
     llamarAlta: async () => { calls.push('read'); await pending; return { grupos: [{ clave: 'activos', personas: [{ correo: 'nuevo@example.com' }] }] }; },
     sincronizarBaseDesdeLibro: async (grupos) => { calls.push(grupos[0].personas[0].correo); },
   });
-  vm.runInContext(html.slice(html.indexOf('  async function cargarAsesores('), html.indexOf('  function actualizarLibroAutomaticamente(')), context);
-  const loading = context.cargarAsesores();
+  vm.runInContext(html.slice(html.indexOf('  async function cargarAsesores('), html.indexOf('  function terminarRecarga(')), context);
+  await context.cargarAsesores();
+  assert.deepEqual(calls, []);
+  assert.equal(context.recargaAsesoresEnCurso, false);
+  const loading = context.cargarAsesores(true);
   await new Promise((resolve) => setImmediate(resolve));
   await context.cargarAsesores(true);
   assert.deepEqual(calls, ['read']);
@@ -54,26 +57,13 @@ test('opening a populated directory still imports Excel; overlapping refreshes a
   await loading;
   assert.deepEqual(calls, ['read', 'nuevo@example.com']);
   assert.equal(context.recargaAsesoresEnCurso, false);
-  assert.ok(context.ultimaLecturaLibro > 0);
 });
 
-test('automatic Excel polling waits two minutes and pauses while hidden or editing accesses', () => {
-  let calls = 0;
-  const context = vm.createContext({ puedeSincronizarLibro: true, document: { hidden: false }, recargaAsesoresEnCurso: false,
-    verificacionOcupada: false, ultimaLecturaLibro: Date.now(), Date, cargarAsesores: () => { calls++; } });
-  vm.runInContext(html.slice(html.indexOf('  function actualizarLibroAutomaticamente('), html.indexOf('  setInterval(actualizarLibroAutomaticamente')), context);
-  context.actualizarLibroAutomaticamente();
-  assert.equal(calls, 0);
-  context.ultimaLecturaLibro = 0;
-  context.actualizarLibroAutomaticamente();
-  assert.equal(calls, 1);
-  context.document.hidden = true;
-  context.actualizarLibroAutomaticamente();
-  assert.equal(calls, 1);
-  context.document.hidden = false;
-  context.verificacionOcupada = true;
-  context.actualizarLibroAutomaticamente();
-  assert.equal(calls, 1);
+test('directory has no polling or visibility refresh and Google updates preserve row elements', () => {
+  assert.doesNotMatch(html, /setInterval\(|visibilitychange|actualizarLibroAutomaticamente/);
+  const carga = html.slice(html.indexOf('  async function cargarEstadoGoogle('), html.indexOf('  // Los accesos llegan aparte'));
+  assert.doesNotMatch(carga, /pintarGrupos\(/);
+  assert.match(carga, /actualizarAccesosGoogleVisibles\(/);
 });
 
 test('Excel ranges include new rows beyond the historical 500-row limit', () => {
