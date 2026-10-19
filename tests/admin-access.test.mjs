@@ -196,7 +196,7 @@ test('card status actions synchronize grants or removals before changing the gro
       llamarAlta: async (data) => { calls.push({ kind: 'access', data }); return { ok, estado: [] }; },
       aplicarEstado() {}, mensajeDeResultado: () => 'Error al retirar accesos', leerBaseDatos: async () => true,
       gruposDesdeBase: () => [], armarTabsAsesores() {}, pintarGrupos() {}, avisoAsesores() {}, BD_TITULO: {},
-      grupoActivo: '', gruposAsesores: [], esDeBaja: (grupo) => grupo === 'asesor_baja',
+      grupoActivo: 'todos', gruposAsesores: [], esDeBaja: (grupo) => grupo === 'asesor_baja',
     });
     const start = html.indexOf('  async function pasarAsesorABaja(');
     const end = html.indexOf('  // ── Cargar', start);
@@ -207,6 +207,7 @@ test('card status actions synchronize grants or removals before changing the gro
     assert.equal(calls[0].data.quitar, destino === 'asesor_baja');
     assert.equal(calls[0].data.todasCuentas, true);
     assert.equal(calls.some((call) => call.kind === 'group'), ok);
+    assert.equal(context.grupoActivo, 'todos', 'dar de alta o baja conserva la pestaña actual');
   }
 });
 

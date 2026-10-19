@@ -202,7 +202,32 @@
   .acceso-google-icono {
     width: 18px; height: 18px; object-fit: contain; display: block;
   }
-  .acceso.esperando .acceso-label { cursor: wait; }
+  .acceso.esperando .acceso-label { cursor: pointer; }
+
+  /* Esta ficha de alta combina identidad fija y permisos editables. */
+  #acceso-pagina-form {
+    width: min(480px, 100%); max-width: 480px; display: grid; gap: 22px;
+    padding: 26px; text-align: left;
+  }
+  #acceso-pagina-form h3 { margin: 0 0 8px; font-size: 21px; line-height: 1.35; }
+  #acceso-pagina-descripcion { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .acceso-alta-persona {
+    display: grid; gap: 16px; margin: 0; padding: 16px;
+    border: 1px solid var(--border); border-radius: var(--r-tarjeta);
+    background: #fafafa;
+  }
+  .acceso-alta-persona dt { margin: 0 0 5px; font-size: 11px; color: var(--muted); }
+  .acceso-alta-persona dd { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  #acceso-pagina-form .field { display: grid; gap: 8px; margin: 0; min-width: 0; }
+  #acceso-pagina-form .field > label { margin: 0; font-size: 12px; line-height: 1.5; }
+  #acceso-pagina-form .kw-select { width: 100%; min-width: 0; }
+  #acceso-pagina-form .kw-select-btn { width: 100%; min-height: 44px; }
+  #acceso-pagina-form .modal-actions {
+    margin: 0; padding-top: 18px; border-top: 1px solid var(--border); gap: 10px;
+  }
+  #acceso-pagina-form .msg { margin: 0; }
+  #acceso-pagina-puesto-wrap[hidden] { display: none !important; }
+  @media (max-width: 480px) { #acceso-pagina-form { padding: 20px; gap: 20px; } }
   @media (max-width: 640px) {
     .accesos-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .acceso-label { gap: 5px; padding: 9px 6px; font-size: 10.5px; }
@@ -1533,14 +1558,23 @@
 
 
   <!-- Alta desde el directorio: nombre y correo ya vienen en la tarjeta. -->
-  <div id="modal-acceso-pagina" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="acceso-pagina-titulo">
+  <div id="modal-acceso-pagina" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="acceso-pagina-titulo" aria-describedby="acceso-pagina-descripcion">
     <form class="modal-box" id="acceso-pagina-form">
-      <h3 id="acceso-pagina-titulo">Agregar a la página</h3>
-      <p id="acceso-pagina-persona"></p>
-      <p id="acceso-pagina-correo"></p>
+      <div class="acceso-alta-encabezado">
+        <h3 id="acceso-pagina-titulo">Agregar a la página</h3>
+        <p id="acceso-pagina-descripcion">Elige el rol para enviar la invitación a esta persona.</p>
+      </div>
+      <dl class="acceso-alta-persona">
+        <div><dt>Nombre</dt><dd id="acceso-pagina-persona"></dd></div>
+        <div><dt>Correo</dt><dd id="acceso-pagina-correo"></dd></div>
+      </dl>
       <div class="field">
-        <label for="acceso-pagina-rol">¿Con qué rol entraría?</label>
+        <label for="acceso-pagina-rol">Rol en la plataforma</label>
         <select id="acceso-pagina-rol" required></select>
+      </div>
+      <div class="field" id="acceso-pagina-puesto-wrap" hidden>
+        <label for="acceso-pagina-puesto">Puesto de Liderazgo</label>
+        <select id="acceso-pagina-puesto" disabled></select>
       </div>
       <div class="msg" id="acceso-pagina-msg" role="status"></div>
       <div class="modal-actions">
@@ -2373,6 +2407,8 @@
   // enseña los datos del asesor; los accesos se quedan escondidos hasta
   // que se pica el botón "Dar de alta" a propósito.
   const mostrandoAccesos = new Set();
+  // La lectura de Google puede terminar mientras se eligen los accesos.
+  const seleccionesAcceso = new Map();
   // Cuenta elegida para inspeccionar por persona. Drive y Calendario
   // pertenecen a la cuenta original de Dani; Contactos es el único
   // acceso duplicado entre Dani y KW Premier.
@@ -2501,21 +2537,38 @@
     const encontrada = personaPorCorreo(correo);
     const usuario = usuarioDePagina(correo);
     if (!encontrada || !puedeGestionarPagina(usuario) || guardandoAltaPagina) return;
-    personaAltaPagina = { ...encontrada.persona, correo: correoPersona(correo), usuarioId: usuario && usuario.id };
+    personaAltaPagina = { ...encontrada.persona, correo: correoPersona(correo), usuarioId: usuario && usuario.id,
+      puestoPagina: usuario && usuario.puesto || '' };
     const roles = miRol === 'master' ? (usuario ? ['master', 'admin', 'staff', 'asociado'] : ['admin', 'staff', 'asociado']) : ['staff', 'asociado'];
     const select = document.getElementById('acceso-pagina-rol');
     select.innerHTML = '<option value="">Selecciona el rol</option>' + roles.map(function (rol) {
       return '<option value="' + rol + '">' + ROLE_LABELS[rol] + '</option>';
     }).join('');
     select.value = usuario ? usuario.role : '';
+    const puesto = document.getElementById('acceso-pagina-puesto');
+    puesto.innerHTML = document.getElementById('invite-puesto').innerHTML;
+    puesto.value = usuario && usuario.role === 'staff' ? usuario.puesto || '' : '';
     document.getElementById('acceso-pagina-persona').textContent = encontrada.persona.nombre || '';
     document.getElementById('acceso-pagina-correo').textContent = personaAltaPagina.correo;
     document.getElementById('acceso-pagina-titulo').textContent = usuario ? 'Cambiar rol en la página' : 'Agregar a la página';
+    document.getElementById('acceso-pagina-descripcion').textContent = usuario
+      ? 'Actualiza el rol y, si corresponde, el puesto de esta persona.'
+      : 'Elige el rol para enviar la invitación a esta persona.';
     document.getElementById('acceso-pagina-guardar').textContent = usuario ? 'Guardar' : 'Agregar';
     document.getElementById('acceso-pagina-msg').style.display = 'none';
     document.getElementById('modal-acceso-pagina').style.display = 'flex';
     window.kwUI.selects(document.getElementById('modal-acceso-pagina'));
     select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function actualizarPuestoAltaPagina() {
+    const liderazgo = document.getElementById('acceso-pagina-rol').value === 'staff';
+    const puesto = document.getElementById('acceso-pagina-puesto');
+    document.getElementById('acceso-pagina-puesto-wrap').hidden = !liderazgo;
+    puesto.disabled = !liderazgo;
+    puesto.required = liderazgo;
+    if (!liderazgo) puesto.value = '';
+    puesto.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function cerrarAltaPagina() {
@@ -2530,10 +2583,18 @@
     const persona = personaAltaPagina;
     const rol = document.getElementById('acceso-pagina-rol').value;
     if (!rol) return;
+    const puesto = document.getElementById('acceso-pagina-puesto').value;
+    const mensaje = document.getElementById('acceso-pagina-msg');
+    if (rol === 'staff' && !puesto) {
+      mensaje.textContent = 'Selecciona el puesto de Liderazgo.';
+      mensaje.className = 'msg error';
+      mensaje.style.display = 'block';
+      return;
+    }
+    const datosPuesto = rol === 'staff' ? { puesto: puesto } : persona.puestoPagina ? { puesto: null } : {};
     guardandoAltaPagina = true;
     const boton = document.getElementById('acceso-pagina-guardar');
     const cancelar = document.getElementById('acceso-pagina-cancelar');
-    const mensaje = document.getElementById('acceso-pagina-msg');
     boton.disabled = cancelar.disabled = true;
     const texto = boton.textContent;
     const esAlta = !persona.usuarioId || persona.nombrePendiente;
@@ -2541,14 +2602,14 @@
     mensaje.style.display = 'none';
     try {
       if (persona.usuarioId) {
-        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, role: rol,
+        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, role: rol, ...datosPuesto,
           ...(persona.nombrePendiente ? { nombre: persona.nombre || '', apellido: '' } : {}) });
       } else {
         const invitado = await llamarFuncion(INVITAR_URL, { email: persona.correo, rol: rol });
         if (!invitado.user_id) throw new Error('No se pudo identificar la cuenta creada. Recarga la lista antes de reintentar.');
         persona.usuarioId = invitado.user_id;
         persona.nombrePendiente = true;
-        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, nombre: persona.nombre || '', apellido: '' });
+        await llamarFuncion(GESTIONAR_URL, { accion: 'actualizar', user_id: persona.usuarioId, nombre: persona.nombre || '', apellido: '', ...datosPuesto });
       }
       persona.nombrePendiente = false;
       await cargarUsuarios();
@@ -2568,6 +2629,7 @@
   }
 
   document.getElementById('acceso-pagina-form').addEventListener('submit', guardarAltaPagina);
+  document.getElementById('acceso-pagina-rol').addEventListener('change', actualizarPuestoAltaPagina);
   document.getElementById('acceso-pagina-cancelar').addEventListener('click', cerrarAltaPagina);
   document.getElementById('modal-acceso-pagina').addEventListener('click', function (e) {
     if (e.target === this) cerrarAltaPagina();
@@ -2808,10 +2870,12 @@
       }
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
+      const bloqueado = (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos');
+      const elegido = !bloqueado && seleccionesAcceso.get(correoClave)?.has(a.clave);
       return '<div class="acceso ' + clase + '">' +
-        '<label class="acceso-label" title="' + a.nombre + ': ' + (estado === null ? 'Revisando acceso' : (tiene ? 'Ya tiene acceso' : 'Sin acceso')) + '" aria-label="' + a.nombre + '">' +
+        '<label class="acceso-label" title="' + a.nombre + ': ' + (estado === null ? 'Sin verificar; puedes agregarlo' : (tiene ? 'Ya tiene acceso' : 'Sin acceso')) + '" aria-label="' + a.nombre + '">' +
           '<input type="checkbox" class="acceso-check" value="' + a.clave + '"' +
-            (estado === null || (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos') ? ' disabled' : '') + '>' +
+            (bloqueado ? ' disabled' : '') + (elegido ? ' checked' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
           '<span class="acceso-texto">' + ({ contactos: 'Agregar Contacto', drive: 'Agregar Drive', calendario: 'Agregar Calendario' })[a.clave] + '</span>' +
@@ -3044,6 +3108,7 @@
     });
 
     mostrarGrupoAsesores(grupoActivo);
+    document.querySelectorAll('.accesos').forEach(actualizarAccionesAcceso);
     actualizarBarra();
   }
 
@@ -3054,7 +3119,7 @@
     const seleccionados = Array.from(caja.querySelectorAll('.acceso-check:checked'));
     const hayParaDar = seleccionados.some(function (check) {
       const acceso = check.closest('.acceso');
-      return acceso && acceso.classList.contains('no');
+      return acceso && (acceso.classList.contains('no') || acceso.classList.contains('esperando'));
     });
     const hayParaQuitar = seleccionados.some(function (check) {
       const acceso = check.closest('.acceso');
@@ -3075,7 +3140,11 @@
   document.addEventListener('change', function (e) {
     if (!e.target.matches('.acceso-check')) return;
     const caja = e.target.closest('.accesos');
-    if (caja) actualizarAccionesAcceso(caja);
+    if (caja) {
+      seleccionesAcceso.set(String(caja.dataset.correo).toLowerCase(),
+        new Set(Array.from(caja.querySelectorAll('.acceso-check:checked')).map(check => check.value)));
+      actualizarAccionesAcceso(caja);
+    }
   });
 
   document.addEventListener('click', function (e) {
@@ -3324,6 +3393,7 @@
       });
       if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       aplicarEstado(data.estado);
+      if (data.ok) seleccionesAcceso.delete(String(correo).toLowerCase());
       pintarGrupos();
       data.ok ? avisoAsesores('', '') : avisoAsesores(mensajeDeResultado(data, quitar), 'error');
     } catch (err) {
@@ -3412,7 +3482,6 @@
         return;
       }
 
-      grupoActivo = destino;
       gruposAsesores = gruposDesdeBase();
       armarTabsAsesores();
       pintarGrupos();

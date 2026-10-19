@@ -346,7 +346,9 @@
       if (!userId) throw new Error('Tu sesión de invitación expiró, pide una nueva.');
 
       const { error: passError } = await sb.auth.updateUser({ password });
-      if (passError) throw passError;
+      // Al reintentar el registro, la contraseña puede haberse guardado
+      // antes de fallar el envío del código. En ese caso ya está lista.
+      if (passError && passError.code !== 'same_password') throw passError;
 
       const envio = await llamarMFA({ accion: 'preparar', correo_alternativo: correoSeguridad });
       registroPendiente = { userId, nombre, apellido };
