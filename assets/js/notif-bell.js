@@ -116,7 +116,7 @@
       panel.inert = !abierta;
       panel.setAttribute('aria-hidden', String(!abierta));
       const scroll = panel.querySelector('.notif-dropdown-list')?.scrollTop || 0;
-      panel.innerHTML = `<div class="notif-dropdown-head"><span>Notificaciones</span><button type="button" class="notif-cerrar" aria-label="Cerrar notificaciones">✕</button></div>${contenido(vistaPanel, 'notif-panel')}`;
+      panel.innerHTML = `<div class="notif-dropdown-head"><span>Notificaciones</span><button type="button" class="notif-cerrar" id="notif-cerrar" aria-label="Cerrar notificaciones">✕</button></div>${contenido(vistaPanel, 'notif-panel')}`;
       panel.querySelector('.notif-dropdown-list').scrollTop = scroll;
       conectar(panel, false);
       panel.querySelector('.notif-cerrar').addEventListener('click', cerrar);

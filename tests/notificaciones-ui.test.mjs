@@ -91,7 +91,7 @@ test('notificaciones UI: tarjetas, lectura explícita, historial, 24h y móvil',
       assert.equal(cards[0].border,'1px');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       await page.screenshot({path:join(output,viewport.width+'-todas.png')});
-      await page.keyboard.press('Escape');
+      await page.locator('#notif-cerrar').click();
       assert.equal(await page.locator('#notif-dropdown').getAttribute('aria-hidden'),'true');
       assert.equal(await page.locator('#notif-dropdown').evaluate(el=>el.inert),true);
       // Al cumplirse el día sale de recientes, pero conserva su estado sin leer.
