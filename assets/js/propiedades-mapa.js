@@ -5,6 +5,9 @@
   var btnZona = document.getElementById('prop-mapa-zona');
   var btnQuitar = document.getElementById('prop-zona-quitar');
   var btnReintentar = document.getElementById('prop-mapa-reintentar');
+  var btnUbicacion = document.getElementById('prop-mapa-mi-ubicacion');
+  var errorUbicacion = document.getElementById('prop-mapa-ubicacion-error');
+  var ubicacionPersonal, localizando = false;
   var estado = document.getElementById('prop-mapa-estado');
   var mapa, grupos, bibliotecas, zona = null, filtros = null, clave = '', revision = 0, controlador;
   var fichaControlador, fichaRevision = 0;
@@ -54,6 +57,7 @@
     });
     var marco = document.getElementById('prop-mapa');
     window.kwFondoEntorno(mapa, marco);
+    btnUbicacion.disabled = false;
     mapa.on('moveend', function () { btnZona.disabled = false; });
     mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
     if (window.ResizeObserver) new ResizeObserver(function () { if (!panel.hidden) mapa.invalidateSize({pan: false}); }).observe(marco);
@@ -283,6 +287,46 @@
       });
     });
   }
+  btnUbicacion.onclick = function () {
+    if (!mapa || localizando) return;
+    errorUbicacion.hidden = true;
+    function terminar(mensaje) {
+      localizando = false;
+      btnUbicacion.disabled = false;
+      btnUbicacion.removeAttribute('aria-busy');
+      btnUbicacion.title = 'Mi ubicación';
+      if (mensaje) { errorUbicacion.textContent = mensaje; errorUbicacion.hidden = false; }
+    }
+    if (!navigator.geolocation) { terminar('Tu navegador no permite obtener la ubicación.'); return; }
+    var permisos = document.permissionsPolicy || document.featurePolicy;
+    if (permisos && !permisos.allowsFeature('geolocation')) {
+      terminar('La ubicación está bloqueada por la configuración del sitio.'); return;
+    }
+    localizando = true;
+    btnUbicacion.disabled = true;
+    btnUbicacion.setAttribute('aria-busy', 'true');
+    btnUbicacion.title = 'Obteniendo ubicación';
+    try {
+      navigator.geolocation.getCurrentPosition(function (posicion) {
+        var lat = posicion.coords.latitude, lng = posicion.coords.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 85.05112878 || Math.abs(lng) > 180) {
+          terminar('No pudimos ubicarte en el mapa. Inténtalo de nuevo.'); return;
+        }
+        var precision = Number(posicion.coords.accuracy);
+        if (!Number.isFinite(precision) || precision < 0) precision = 0;
+        if (ubicacionPersonal) mapa.removeLayer(ubicacionPersonal);
+        var circulo = L.circle([lat,lng], {radius:precision, color:'#2672d8',weight:1,opacity:.4,fillOpacity:.08,interactive:false});
+        var pin = L.circleMarker([lat,lng], {radius:8,color:'#fff',weight:3,fillColor:'#2672d8',fillOpacity:1,bubblingMouseEvents:false});
+        pin.bindTooltip('Tu ubicación' + (precision ? ' · Precisión aproximada: ' + Math.ceil(precision).toLocaleString('es-MX') + ' m' : ''), {direction:'top'});
+        ubicacionPersonal = L.layerGroup([circulo,pin]).addTo(mapa);
+        if (precision > 0) mapa.fitBounds(circulo.getBounds(), {padding:[36,36],maxZoom:16,animate:false});
+        else mapa.setView([lat,lng],16,{animate:false});
+        terminar();
+      }, function (error) {
+        terminar(error.code === 1 ? 'Permite el acceso a tu ubicación en el navegador para usar esta opción.' : error.code === 3 ? 'La ubicación tardó demasiado. Inténtalo de nuevo.' : 'No pudimos obtener tu ubicación. Revisa el GPS e inténtalo de nuevo.');
+      }, {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+    } catch (_) { terminar('No pudimos obtener tu ubicación. Revisa los permisos del navegador.'); }
+  };
   btnReintentar.onclick = function () { actualizar(true); };
   btnQuitar.onclick = function () { quitarZona(); };
   btnZona.onclick = function () {

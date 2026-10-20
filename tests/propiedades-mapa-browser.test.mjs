@@ -59,7 +59,7 @@ async function pagina(browser,viewport,puntos,entornoReal=false){
   if(url.pathname==='/assets/vendor/mapa/leaflet.js')body=body.toString()+'\nwindow.qaEncuadres=[];const qaFit=L.Map.prototype.fitBounds;L.Map.prototype.fitBounds=function(bounds,options){window.qaEncuadres.push(bounds);return qaFit.call(this,bounds,options);};const qaSetView=L.Map.prototype.setView;L.Map.prototype.setView=function(c,z,o){window.qaMapa=this;return qaSetView.call(this,c,z,o);};';
   return route.fulfill({contentType,body});
  });
- await page.goto('http://kw.local/propiedades.html',{waitUntil:'domcontentloaded'});
+ await page.goto('https://kw.local/propiedades.html',{waitUntil:'domcontentloaded'});
  try { await page.locator('#lista .prop-card').first().waitFor({timeout:10000}); }
  catch(error) { throw new Error(error.message+'\n'+errores.join('; ')+'\n'+await page.locator('body').innerText()); }
  return {page,errores,pedidos};
@@ -172,6 +172,64 @@ test('precios compactos, moneda, consulta y ficha sin saturar el mapa',async()=>
    assert.deepEqual(errores,[]);
   }finally{await page.close();}
  }}finally{await browser.close();}
+});
+
+test('mi ubicación solo pide permiso al pulsar, centra el mapa y conserva un solo marcador',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {for(const width of [1440,390]){
+  const {page,errores}=await pagina(browser,{width,height:900},[[id(0),19.43,-99.13,'venta',3500000,'MXN']]);
+  try {
+   await page.waitForFunction(()=>!document.getElementById('prop-mapa-mi-ubicacion').disabled);
+   await page.evaluate(()=>{
+    window.qaGeoCalls=0;
+    Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(ok,error,options){qaGeoCalls++;window.qaGeo={ok,error,options};}}});
+   });
+   const calls=await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length);
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   assert.equal(await page.evaluate(()=>qaGeoCalls),1);
+   assert.equal(await page.locator('#prop-mapa-mi-ubicacion').getAttribute('aria-busy'),'true');
+   await page.evaluate(()=>qaGeo.ok({coords:{latitude:19.369,longitude:-99.163,accuracy:25}}));
+   const location=await page.evaluate(()=>({center:qaMapa.getCenter(),zoom:qaMapa.getZoom(),pins:Object.values(qaMapa._layers).filter(l=>l instanceof L.CircleMarker&&!(l instanceof L.Circle)).length,halo:Object.values(qaMapa._layers).filter(l=>l instanceof L.Circle).map(l=>l.getRadius()),calls:qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length}));
+   assert.ok(Math.abs(location.center.lat-19.369)<.001&&Math.abs(location.center.lng+99.163)<.001);
+   assert.equal(location.zoom,16);assert.equal(location.pins,1);assert.deepEqual(location.halo,[25]);
+   assert.equal(location.calls,calls,'centrarse no altera los filtros ni solicita propiedades');
+   fs.mkdirSync(path.join(root,'artifacts/mapa-ubicacion'),{recursive:true});
+   await page.locator('#prop-mapa-panel').screenshot({path:path.join(root,`artifacts/mapa-ubicacion/ubicacion-${width}.png`)});
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   await page.evaluate(()=>qaGeo.ok({coords:{latitude:19.37,longitude:-99.164,accuracy:30}}));
+   assert.equal(await page.evaluate(()=>Object.values(qaMapa._layers).filter(l=>l instanceof L.CircleMarker&&!(l instanceof L.Circle)).length),1);
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   await page.evaluate(()=>qaGeo.error({code:1}));
+   assert.match(await page.locator('#prop-mapa-ubicacion-error').innerText(),/Permite el acceso/);
+   assert.equal(await page.locator('#prop-mapa-mi-ubicacion').isEnabled(),true);
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   await page.evaluate(()=>qaGeo.error({code:3}));
+   assert.match(await page.locator('#prop-mapa-ubicacion-error').innerText(),/tardó demasiado/);
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   await page.evaluate(()=>qaGeo.error({code:2}));
+   assert.match(await page.locator('#prop-mapa-ubicacion-error').innerText(),/Revisa el GPS/);
+   await page.evaluate(()=>Object.defineProperty(navigator,'geolocation',{configurable:true,value:undefined}));
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   assert.match(await page.locator('#prop-mapa-ubicacion-error').innerText(),/no permite/);
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }}finally{await browser.close();}
+});
+
+test('geolocalización nativa con permiso concedido coloca el marcador personal',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {
+  const {page,errores}=await pagina(browser,{width:1280,height:900},[]);
+  try {
+   await page.waitForFunction(()=>!document.getElementById('prop-mapa-mi-ubicacion').disabled);
+   await page.context().grantPermissions(['geolocation'],{origin:new URL(page.url()).origin});
+   await page.context().setGeolocation({latitude:19.369,longitude:-99.163,accuracy:35});
+   await page.locator('#prop-mapa-mi-ubicacion').click();
+   await page.waitForFunction(()=>Object.values(qaMapa._layers).some(l=>l instanceof L.Circle&&l.getRadius()===35));
+   assert.equal(await page.locator('#prop-mapa-ubicacion-error').isVisible(),false);
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }finally{await browser.close();}
 });
 
 test('fondo alternativo conserva precios y navegación si el proveedor vectorial falla',async()=>{
