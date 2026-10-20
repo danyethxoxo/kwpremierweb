@@ -44,6 +44,7 @@
         marco.style.touchAction=previos.touchAction;marco.style.userSelect=previos.userSelect;mapa.getPane('markerPane').style.pointerEvents=previos.pines;
       }
       ayuda.textContent=valor?'Mantén pulsado y arrastra la pluma para rodear la zona. Al soltar se cierra y busca dentro. Escape cancela.':ayudaOriginal;
+      ayuda.hidden=!valor;
     }
     function agregar(evento){
       var p=mapa.mouseEventToContainerPoint(evento),tamano=mapa.getSize();
@@ -62,7 +63,7 @@
       if(reducidos.length>3&&reducidos[0].distanceTo(reducidos[reducidos.length-1])<4)reducidos.pop();
       var puntos=reducidos.map(function(p){var c=mapa.containerPointToLatLng(p);return [Number(c.lng.toFixed(6)),Number(c.lat.toFixed(6))];});
       var correcto=valido(puntos);modo(false);
-      if(!correcto){ayuda.textContent='Traza un contorno con superficie, sin cruzar la línea. Activa la pluma para volver a intentarlo.';return;}
+      if(!correcto){ayuda.textContent='Traza un contorno con superficie, sin cruzar la línea. Activa la pluma para volver a intentarlo.';ayuda.hidden=false;return;}
       guardado=puntos;
       if(capa)mapa.removeLayer(capa);
       capa=L.polygon(guardado.map(function(p){return [p[1],p[0]];}),{color:'#8a0000',weight:3,fillOpacity:.12,interactive:false}).addTo(mapa);

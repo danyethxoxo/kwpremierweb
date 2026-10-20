@@ -57,6 +57,16 @@
     });
     var marco = document.getElementById('prop-mapa');
     window.kwFondoEntorno(mapa, marco);
+    var gps = L.control({position:'topleft'});
+    gps.onAdd = function () {
+      var caja = L.DomUtil.create('div','leaflet-bar prop-mapa-gps');
+      caja.appendChild(btnUbicacion);
+      btnUbicacion.hidden = false;
+      L.DomEvent.disableClickPropagation(caja);
+      L.DomEvent.disableScrollPropagation(caja);
+      return caja;
+    };
+    gps.addTo(mapa);
     btnUbicacion.disabled = false;
     mapa.on('moveend', function () { btnZona.disabled = false; });
     mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
