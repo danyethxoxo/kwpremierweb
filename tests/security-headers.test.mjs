@@ -14,6 +14,9 @@ test('HTTPS proxy redirects HTTP and attaches security headers without changing 
     assert.equal(page.headers.get('Strict-Transport-Security'), 'max-age=31536000');
     assert.equal(page.headers.get('X-Permitted-Cross-Domain-Policies'), 'none');
     assert.equal(page.headers.get('Cross-Origin-Resource-Policy'), 'same-origin');
+    assert.equal(page.headers.get('Permissions-Policy'), 'camera=(), microphone=(), geolocation=()');
+    const mapa = await worker.fetch(new Request('https://www.kwpremieroficial.com/propiedades.html?estado=CDMX'));
+    assert.equal(mapa.headers.get('Permissions-Policy'), 'camera=(), microphone=(), geolocation=(self)');
     assert(page.headers.get('Content-Security-Policy').includes("frame-ancestors 'self'"));
     assert.equal(page.headers.get('Access-Control-Allow-Origin'), null);
   } finally { globalThis.fetch = original; }

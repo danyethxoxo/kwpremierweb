@@ -19,4 +19,8 @@ La pluma permite dibujar a mano alzada con ratón, dedo o lápiz. Mantener pulsa
 
 Editar campos o quitar etiquetas no consulta propiedades: Aplicar filtros o Enter confirman los cambios. Las acciones explícitas del mapa actualizan la zona sobre los filtros ya aplicados, sin incorporar ediciones pendientes del formulario. La rueda hace zoom dentro del mapa; durante un trazo se bloquean el desplazamiento y el zoom para mantener sus coordenadas.
 
-Las pruebas de navegador usan imágenes locales simuladas. La prueba opcional `KW_MAPA_REAL=1` comprueba también el fondo vectorial y lugares reales en escritorio y móvil, solicitando únicamente la vista de Del Valle.
+El botón Mi ubicación llama a la geolocalización nativa únicamente al pulsarlo. Con permiso concedido muestra un punto azul y un círculo de precisión, y centra la vista sin cambiar los filtros. Una nueva consulta reemplaza el marcador anterior. No guarda la posición en la base de datos ni mantiene seguimiento continuo. Permiso rechazado, GPS no disponible y tiempo agotado muestran mensajes breves con posibilidad de reintento.
+
+Requiere HTTPS y permitir `geolocation=(self)` en la cabecera `Permissions-Policy` de `/propiedades.html`. El Worker `deployment/security-headers-worker.mjs` limita esta autorización a dicha página y mantiene cámara y micrófono bloqueados. Publicar el archivo en GitHub Pages no despliega el Worker de Cloudflare: actualizar también su código en el Worker activo o la regla equivalente que establece esa cabecera. Comprobar la cabecera real del dominio tras el despliegue.
+
+Las pruebas de navegador usan imágenes locales simuladas. La prueba opcional `KW_MAPA_REAL=1` comprueba también el fondo vectorial y lugares reales en escritorio y móvil, solicitando únicamente la vista de Del Valle. Las pruebas de geolocalización usan coordenadas de prueba y permisos del contexto aislado del navegador, nunca la ubicación de la persona que ejecuta las pruebas.
