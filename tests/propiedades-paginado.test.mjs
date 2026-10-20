@@ -33,6 +33,8 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013235443_propiedades_mapa_operacion.sql',import.meta.url),'utf8'));
   const operacionSql=readFileSync(new URL('../supabase/migrations/20261014155225_propiedades_operacion_por_texto.sql',import.meta.url),'utf8');
   await db.exec(operacionSql);await db.exec(operacionSql);
+  const preciosSql=readFileSync(new URL('../supabase/migrations/20261020190403_precios_pines_mapa.sql',import.meta.url),'utf8');
+  await db.exec(preciosSql);await db.exec(preciosSql);
   await db.exec("update propiedades set lat=19+replace(titulo,'Casa ','')::numeric*.001,lng=-99;update propiedades set lat=null where titulo='Casa 45';update propiedades set lng=-190 where titulo='Casa 44'");
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
@@ -52,7 +54,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   const mapa=async(filters={})=>(await db.query('select propiedades_inventario_mapa($1) r',[JSON.stringify(filters)])).rows[0].r;
   const todos=await mapa({estatus:'publicada'});
   assert.equal(todos.total,45);assert.equal(todos.ubicadas,43);assert.equal(todos.puntos.length,43);
-  assert(todos.puntos.every(p=>p.length===4&&p[3]==='venta'),'indice compacto sin fotos ni datos de contacto');
+  assert(todos.puntos.every(p=>p.length===6&&p[3]==='venta'&&Number(p[4])>0),'indice compacto con precio y moneda, sin fotos ni datos de contacto');
   await db.exec("reset role;update propiedades set operacion='renta' where titulo='Casa 1';set role authenticated");
   const rentas=await mapa({operacion:['renta']});
   assert.equal(rentas.puntos.length,1);assert.equal(rentas.puntos[0][3],'renta');

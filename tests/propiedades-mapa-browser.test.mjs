@@ -38,7 +38,7 @@ window.supabase={createClient(){return {
 };}};
 `;
 
-async function pagina(browser,viewport,puntos){
+async function pagina(browser,viewport,puntos,entornoReal=false){
  const page=await browser.newPage({viewport,hasTouch:viewport.width<640});
  const errores=[];page.on('pageerror',error=>errores.push(error.message));
  const pedidos=[];
@@ -46,6 +46,7 @@ async function pagina(browser,viewport,puntos){
  await page.addInitScript(p=>{window.qaPuntos=p;},puntos);
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());pedidos.push(url.pathname);
+  if(entornoReal===true&&url.hostname==='tiles.openfreemap.org')return route.continue();
   if(url.pathname.includes('/functions/v1/mfa-correo'))return route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'application/json',body:JSON.stringify({activo:true,verificado:true,requerido:true,usuario:user,perfil})});
   if(url.hostname==='cdn.jsdelivr.net'&&url.pathname.includes('/@supabase/'))return route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'application/javascript',body:sdk});
   if(['tile.openstreetmap.org','fotos.local'].includes(url.hostname))return route.fulfill({contentType:'image/png',body:png});
@@ -54,6 +55,7 @@ async function pagina(browser,viewport,puntos){
   if(!file.startsWith(root)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
   const contentType=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream';
   let body=file.endsWith('.html')?fs.readFileSync(file,'utf8').replace(/\s+(?:integrity|crossorigin)="[^"]*"/g,''):fs.readFileSync(file);
+  if(file.endsWith('.html')&&!entornoReal)body=body.replace('<div id="prop-mapa"','<div data-tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png" id="prop-mapa"');
   if(url.pathname==='/assets/vendor/mapa/leaflet.js')body=body.toString()+'\nwindow.qaEncuadres=[];const qaFit=L.Map.prototype.fitBounds;L.Map.prototype.fitBounds=function(bounds,options){window.qaEncuadres.push(bounds);return qaFit.call(this,bounds,options);};const qaSetView=L.Map.prototype.setView;L.Map.prototype.setView=function(c,z,o){window.qaMapa=this;return qaSetView.call(this,c,z,o);};';
   return route.fulfill({contentType,body});
  });
@@ -148,6 +150,73 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
    } finally {await page.close();}
   }
  } finally {await browser.close();}
+});
+
+test('precios compactos, moneda, consulta y ficha sin saturar el mapa',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {for(const width of [1440,390]){
+  const {page,errores}=await pagina(browser,{width,height:900},[
+   [id(0),19.43,-99.13,'venta',3500000,'MXN'],
+   [id(1),25.68,-100.31,'renta',25000,'MXN'],
+   [id(2),20.67,-103.35,'venta',450000,'USD'],
+   [id(3),21.16,-86.85,null,null,'MXN'],
+  ]);
+  try {
+   await page.locator('.prop-mapa-pin').first().waitFor();
+   assert.deepEqual((await page.locator('.prop-mapa-pin').allTextContents()).sort(),['$3.5M','$25K','USD 450K','Consultar'].sort());
+   const labels=await page.locator('.prop-mapa-pin').evaluateAll(els=>els.map(el=>({width:el.clientWidth,scroll:el.scrollWidth,bg:getComputedStyle(el).backgroundColor})));
+   assert.ok(labels.every(el=>el.scroll<=el.width&&el.bg==='rgb(255, 255, 255)'));
+   assert.match(await page.locator('.prop-mapa-pin').filter({hasText:'USD'}).locator('..').getAttribute('title'),/450,000/);
+   await page.locator('.prop-mapa-pin').filter({hasText:'$3.5M'}).click();
+   await page.locator('.prop-mapa-ficha h3').waitFor();
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }}finally{await browser.close();}
+});
+
+test('fondo alternativo conserva precios y navegación si el proveedor vectorial falla',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {
+  const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.43,-99.13,'venta',3500000,'MXN']],'fallo');
+  try {
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa').dataset.fondo==='alternativo');
+   assert.equal(await page.locator('.prop-mapa-pin').innerText(),'$3.5M');
+   await page.locator('.prop-mapa-pin').click();await page.locator('.prop-mapa-ficha h3').waitFor();
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }finally{await browser.close();}
+});
+
+test('fondo real de entorno y precios en escritorio y móvil',{skip:process.env.KW_MAPA_REAL!=='1'},async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {for(const width of [1440,390]){
+  const {page,errores}=await pagina(browser,{width,height:1000},[
+   [id(0),19.371,-99.168,'venta',6250000,'MXN'],
+   [id(1),19.365,-99.172,'renta',37000,'MXN'],
+   [id(2),19.36,-99.163,'venta',2250000,'MXN'],
+   [id(3),19.379,-99.16,'renta',25000,'MXN'],
+   [id(4),19.371,-99.151,'venta',10380000,'MXN'],
+  ],true);
+  try {
+   const mensajes=[];page.on('console',msg=>{if(msg.type()==='error')mensajes.push(msg.text());});
+   await page.waitForFunction(()=>window.qaMapa);
+   await page.evaluate(()=>qaMapa.setView([19.369,-99.163],15.5,{animate:false}));
+   await page.locator('#prop-mapa').scrollIntoViewIfNeeded();
+   try {await page.waitForFunction(()=>document.querySelector('#prop-mapa').dataset.fondo==='entorno',null,{timeout:25000});}
+   catch(e){throw new Error(e.message+'\n'+mensajes.join('\n'));}
+   await page.waitForTimeout(2500);
+   const features=await page.evaluate(()=>{
+    const gl=Object.values(qaMapa._layers).find(layer=>layer.getMaplibreMap)?.getMaplibreMap();
+    return gl.queryRenderedFeatures().filter(f=>f.layer.id.startsWith('kw-entorno-')).map(f=>({capa:f.layer.id,nombre:f.properties.name}));
+   });
+   assert.ok(features.some(f=>f.capa==='kw-entorno-transporte'),'estaciones reales visibles');
+   assert.ok(features.some(f=>f.capa==='kw-entorno-salud'),'hospitales reales visibles');
+   fs.mkdirSync(path.join(root,'artifacts/mapa-precios'),{recursive:true});
+   await page.locator('#prop-mapa-panel').screenshot({path:path.join(root,`artifacts/mapa-precios/entorno-${width}.png`)});
+   console.log(JSON.stringify({width,puntosInteres:features}));
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }}finally{await browser.close();}
 });
 
 test('filtros requieren confirmacion; pluma a mano alzada y rueda funcionan en escritorio y movil',async()=>{
@@ -302,9 +371,9 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.43,-99.13,'venta'],[id(1),25.68,-100.31,'renta'],[id(2),20.67,-103.35,null]]);
   try {
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
-   assert.equal(await page.locator('.prop-mapa-pin-venta').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(204, 0, 0)');
-   assert.equal(await page.locator('.prop-mapa-pin-renta').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(232, 117, 20)');
-   assert.equal(await page.locator('.prop-mapa-pin-sin-operacion').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(102, 102, 102)');
+   assert.equal(await page.locator('.prop-mapa-pin-venta').evaluate(el=>getComputedStyle(el).borderLeftColor),'rgb(204, 0, 0)');
+   assert.equal(await page.locator('.prop-mapa-pin-renta').evaluate(el=>getComputedStyle(el).borderLeftColor),'rgb(232, 117, 20)');
+   assert.equal(await page.locator('.prop-mapa-pin-sin-operacion').evaluate(el=>getComputedStyle(el).borderLeftColor),'rgb(102, 102, 102)');
    assert.match(await page.locator('.prop-mapa-pin-sin-operacion').locator('..').getAttribute('title'),/por confirmar/);
    assert.match(await page.locator('#prop-mapa-estado').innerText(),/1 con operación por confirmar \(gris\)/);
    for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta'],['venta',null],['renta',null],[null,null],['mixto',null]]){
@@ -317,7 +386,7 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
    }
    await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,'mixto']];document.querySelector('#prop-mapa-reintentar').click();});
    await page.locator('.prop-mapa-pin-mixto').waitFor();
-   assert.match(await page.locator('.prop-mapa-pin-mixto').evaluate(el=>getComputedStyle(el).backgroundImage),/linear-gradient/);
+   assert.equal(await page.locator('.prop-mapa-pin-mixto').evaluate(el=>getComputedStyle(el).borderRightColor),'rgb(232, 117, 20)');
    assert.deepEqual(errores,[]);
   } finally {await page.close();}
  } finally {await browser.close();}

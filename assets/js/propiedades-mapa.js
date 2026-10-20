@@ -34,6 +34,7 @@
       bibliotecas = Promise.all([
         recurso('/assets/vendor/mapa/leaflet.css?v=1.9.4', true),
         recurso('/assets/vendor/mapa/MarkerCluster.css?v=1.5.3', true),
+        recurso('/assets/js/propiedades-entorno.js?v=20261020'),
         (async function () {
           if (!window.L) await recurso('/assets/vendor/mapa/leaflet.js?v=1.9.4');
           if (!window.L.markerClusterGroup) await recurso('/assets/vendor/mapa/leaflet.markercluster.js?v=1.5.3');
@@ -52,12 +53,7 @@
       btnQuitar.hidden = false; window.aplicarZonaMapa();
     });
     var marco = document.getElementById('prop-mapa');
-    var url = marco.dataset.tiles || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    var capa = L.tileLayer(url, {
-      maxZoom: 19, updateWhenIdle: true, keepBuffer: 1,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-    }).addTo(mapa);
-    capa.on('tileerror', function () { marco.setAttribute('aria-description', 'El fondo del mapa no esta disponible temporalmente. Los pines siguen activos.'); });
+    window.kwFondoEntorno(mapa, marco);
     mapa.on('moveend', function () { btnZona.disabled = false; });
     mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
     if (window.ResizeObserver) new ResizeObserver(function () { if (!panel.hidden) mapa.invalidateSize({pan: false}); }).observe(marco);
@@ -158,6 +154,14 @@
     var copia = Object.assign({}, valor); delete copia.orden;
     return JSON.stringify(copia);
   }
+  function precioPin(valor, moneda) {
+    var precio = Number(valor);
+    if (!Number.isFinite(precio) || precio <= 0) return 'Consultar';
+    var escala = precio >= 1000000 ? 1000000 : precio >= 1000 ? 1000 : 1;
+    var cantidad = precio / escala;
+    var numero = cantidad.toLocaleString('es-MX', {maximumFractionDigits: escala === 1 || cantidad >= 100 ? 0 : 2});
+    return (moneda && moneda !== 'MXN' ? moneda + ' ' : '$') + numero + (escala === 1000000 ? 'M' : escala === 1000 ? 'K' : '');
+  }
   async function actualizar(forzar) {
     if (panel.hidden) return;
     filtros = window.filtrosServidorActuales();
@@ -199,7 +203,7 @@
       else if (limites.length && !primeraVista && (filtros.texto || filtros.colonia || filtros.municipio || filtros.estado)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
       else if (teniaContorno) mapa.setView([22.8,-102.2],5);
       var capa = L.markerClusterGroup({
-        maxClusterRadius: 48, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
+        maxClusterRadius: function (zoom) { return zoom >= 15 ? 64 : 70; }, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) {
           var operaciones = new Set(grupo.getAllChildMarkers().map(function (pin) { return pin.options.operacion; }));
           // Los pendientes no cambian el color de todo el grupo.
@@ -210,16 +214,22 @@
       });
       grupos = capa; mapa.addLayer(capa);
       var iconos = {};
-      ['venta','renta','mixto','sin-operacion'].forEach(function (tipo) {
-        iconos[tipo] = L.divIcon({className: '', html: '<div class="prop-mapa-pin prop-mapa-pin-' + tipo + '"></div>', iconSize: [24,28], iconAnchor: [12,28], popupAnchor: [0,-26]});
-      });
       // Repartir el trabajo entre cuadros para mantener la interfaz utilizable.
       for (var i = 0; i < puntos.length; i += 150) {
         if (r !== revision || panel.hidden) return;
         capa.addLayers(puntos.slice(i, i + 150).map(function (p) {
           var tipo = ['venta','renta','mixto'].indexOf(p[3]) !== -1 ? p[3] : 'sin-operacion';
           var titulo = tipo === 'renta' ? 'Ver propiedad en renta' : tipo === 'venta' ? 'Ver propiedad en venta' : tipo === 'mixto' ? 'Ver propiedad en venta y renta' : 'Ver propiedad: operación por confirmar';
-          var marker = L.marker([p[1], p[2]], {icon: iconos[tipo], operacion: tipo, title: titulo, keyboard: true});
+          var moneda = /^[A-Z]{3}$/.test(p[5] || '') ? p[5] : 'MXN';
+          var precio = precioPin(p[4], moneda);
+          var iconoClave = tipo + ':' + precio;
+          if (!iconos[iconoClave]) {
+            var etiqueta = texto('span', precio, 'prop-mapa-pin prop-mapa-pin-' + tipo);
+            var ancho = Math.max(66, precio.length * 7 + 22);
+            iconos[iconoClave] = L.divIcon({className:'prop-mapa-precio-icono', html:etiqueta.outerHTML, iconSize:[ancho,32], iconAnchor:[ancho/2,36], popupAnchor:[0,-36]});
+          }
+          titulo += ': ' + (Number(p[4]) > 0 ? window.fmtPrecio(p[4], moneda, tipo) : 'Precio por confirmar');
+          var marker = L.marker([p[1], p[2]], {icon: iconos[iconoClave], operacion: tipo, title: titulo, keyboard: true, riseOnHover:true});
           marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
           pines.set(p[0], marker);
