@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const raiz=new URL('../',import.meta.url);
+
+test('la ubicación identifica CDMX o su municipio real sin servicios externos ni aproximar el más cercano',async()=>{
+ const lecturas=[];
+ const scope=vm.createContext({window:{},AbortSignal,fetch:async url=>{lecturas.push(url);return {ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('.'+url,raiz),'utf8'))};}});
+ vm.runInContext(fs.readFileSync(new URL('assets/js/propiedades-geografia.js',raiz),'utf8'),scope);
+ const ciudad=scope.window.kwGeografiaMapa.porCoordenadas;
+ assert.equal((await ciudad(19.369,-99.163)).estado[0],'Ciudad de México');
+ assert.equal((await ciudad(19.369,-99.163)).municipio,null,'CDMX incluye sus alcaldías');
+ assert.equal((await ciudad(20.676,-103.35)).municipio[0],'Guadalajara');
+ assert.equal((await ciudad(25.68,-100.31)).municipio[0],'Monterrey');
+ assert.equal(await ciudad(40.4,-3.7),null);
+ assert.equal(await ciudad(NaN,0),null);
+ assert.ok(lecturas.every(url=>url.startsWith('/assets/data/limites-mx/')));
+});
 test('contornos INEGI: reconoce estados, alcaldias y nombres repetidos sin elegir una ubicacion arbitraria',async()=>{
  const lecturas=[];
  const scope=vm.createContext({window:{},AbortSignal,fetch:async url=>{lecturas.push(url);return {ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('.'+url,raiz),'utf8'))};}});
