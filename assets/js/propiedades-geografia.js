@@ -61,5 +61,30 @@
     }
     return filtros;
   }
-  window.kwGeografiaMapa = Object.freeze({resolver: resolver,prepararFiltros:prepararFiltros});
+  function contieneAnillo(punto, anillo) {
+    var dentro=false;
+    for(var i=0,j=anillo.length-1;i<anillo.length;j=i++) {
+      var a=anillo[i],b=anillo[j];
+      if((a[1]>punto[1])!==(b[1]>punto[1])&&punto[0]<(b[0]-a[0])*(punto[1]-a[1])/(b[1]-a[1])+a[0]) dentro=!dentro;
+    }
+    return dentro;
+  }
+  function contiene(punto, feature) {
+    var geometria=feature.geometry;
+    var poligonos=geometria.type==='Polygon'?[geometria.coordinates]:geometria.type==='MultiPolygon'?geometria.coordinates:[];
+    return poligonos.some(function(p){return contieneAnillo(punto,p[0])&&!p.slice(1).some(function(h){return contieneAnillo(punto,h);});});
+  }
+  async function porCoordenadas(lat,lng) {
+    if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
+    var estados=await cargar('estados.geojson'),punto=[lng,lat];
+    var candidatos=estados.features.filter(function(f){return contiene(punto,f);});
+    if(candidatos.length!==1)return null;
+    var entidad=candidatos[0],id=entidad.properties.cvegeo;
+    if(id==='09')return {estado:['Ciudad de México','CDMX','Distrito Federal'],municipio:null};
+    var municipios=await cargar(id+'.geojson');
+    var encontrados=municipios.features.filter(function(f){return contiene(punto,f);});
+    if(encontrados.length!==1)return null;
+    return {estado:[entidad.properties.nomgeo],municipio:[encontrados[0].properties.nomgeo]};
+  }
+  window.kwGeografiaMapa = Object.freeze({resolver: resolver,prepararFiltros:prepararFiltros,porCoordenadas:porCoordenadas});
 })();

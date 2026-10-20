@@ -8,6 +8,7 @@
   var btnUbicacion = document.getElementById('prop-mapa-mi-ubicacion');
   var errorUbicacion = document.getElementById('prop-mapa-ubicacion-error');
   var ubicacionPersonal, localizando = false;
+  var inicioPreparado = false, inicioCancelado = false, inicioPromesa;
   var estado = document.getElementById('prop-mapa-estado');
   var mapa, grupos, bibliotecas, zona = null, filtros = null, clave = '', revision = 0, controlador;
   var fichaControlador, fichaRevision = 0;
@@ -69,6 +70,7 @@
     gps.addTo(mapa);
     btnUbicacion.disabled = false;
     mapa.on('moveend', function () { btnZona.disabled = false; });
+    mapa.on('dragstart', function () { inicioCancelado = true; });
     mapa.on('popupclose', function () { ++fichaRevision; if (fichaControlador) fichaControlador.abort(); });
     if (window.ResizeObserver) new ResizeObserver(function () { if (!panel.hidden) mapa.invalidateSize({pan: false}); }).observe(marco);
   }
@@ -177,8 +179,15 @@
     return (moneda && moneda !== 'MXN' ? moneda + ' ' : '$') + numero + (escala === 1000000 ? 'M' : escala === 1000 ? 'K' : '');
   }
   async function actualizar(forzar) {
-    if (panel.hidden) return;
+    if (panel.hidden || !inicioPreparado) return;
     filtros = window.filtrosServidorActuales();
+    if (!puedeConsultar(filtros)) {
+      if (controlador) controlador.abort();
+      ++revision; clave = ''; clavePendiente = '';
+      if (grupos && mapa) mapa.removeLayer(grupos);
+      grupos = null; pines.clear(); estado.textContent='';cargando(false);
+      return;
+    }
     var nuevaClave = claveFiltros(filtros);
     if (!forzar && clave === nuevaClave) { if (mapa) mapa.invalidateSize({pan: false}); return; }
     if (!forzar && clavePendiente === nuevaClave) return;
@@ -205,17 +214,15 @@
       var puntos = datos.puntos.filter(function (p) { return Array.isArray(p) && typeof p[0] === 'string' && Number.isFinite(p[1]) && Number.isFinite(p[2]) && Math.abs(p[1]) <= 85.05112878 && Math.abs(p[2]) <= 180; });
       var limites = puntos.map(function (p) { return [p[1], p[2]]; });
       var lugar = resultados[2], etiqueta = document.getElementById('prop-mapa-lugar');
-      var teniaContorno = !!contorno;
       if (contorno) { mapa.removeLayer(contorno); contorno = null; }
       if (lugar.features.length) {
         contorno = L.geoJSON({type:'FeatureCollection',features:lugar.features}, {style:{color:'#8a0000',weight:2,fillOpacity:.06},interactive:false}).addTo(mapa);
       }
       etiqueta.textContent = dibujo.poligono() ? 'Zona dibujada: los filtros se aplican dentro del contorno.' : lugar.nombres.length ? lugar.nombres.join(' · ') + ' · Contorno INEGI simplificado' : lugar.ambiguo ? 'Hay municipios con el mismo nombre. Elige el estado para mostrar su contorno.' : lugar.error ? 'El contorno no está disponible temporalmente; los resultados siguen activos.' : '';
       if (dibujo.poligono()) mapa.fitBounds(dibujo.poligono().map(function (p) { return [p[1],p[0]]; }), {padding:[20,20],maxZoom:16,animate:false});
-      else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
       else if (zona) mapa.fitBounds([[zona[0],zona[1]],[zona[2],zona[3]]],{animate:false});
+      else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
       else if (limites.length && !primeraVista && (filtros.texto || filtros.colonia || filtros.municipio || filtros.estado)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
-      else if (teniaContorno) mapa.setView([22.8,-102.2],5);
       var capa = L.markerClusterGroup({
         maxClusterRadius: function (zoom) { return zoom >= 15 ? 64 : 70; }, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) {
@@ -269,7 +276,6 @@
   }
   function quitarZona(aplicar) {
     if (dibujo) dibujo.borrar();
-    if (mapa) mapa.setView([22.8,-102.2],5);
     zona = null; btnQuitar.hidden = true;
     if (aplicar !== false) window.aplicarZonaMapa();
   }
@@ -297,15 +303,20 @@
       });
     });
   }
-  btnUbicacion.onclick = function () {
-    if (!mapa || localizando) return;
+  function localizar(inicial) {
+    if (!mapa || localizando) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+    var finalizado = false, espera;
     errorUbicacion.hidden = true;
-    function terminar(mensaje) {
+    function terminar(mensaje, posicion) {
+      if (finalizado) return;
+      finalizado = true; clearTimeout(espera);
       localizando = false;
       btnUbicacion.disabled = false;
       btnUbicacion.removeAttribute('aria-busy');
       btnUbicacion.title = 'Mi ubicación';
       if (mensaje) { errorUbicacion.textContent = mensaje; errorUbicacion.hidden = false; }
+      resolve(posicion || null);
     }
     if (!navigator.geolocation) { terminar('Tu navegador no permite obtener la ubicación.'); return; }
     var permisos = document.permissionsPolicy || document.featurePolicy;
@@ -316,8 +327,11 @@
     btnUbicacion.disabled = true;
     btnUbicacion.setAttribute('aria-busy', 'true');
     btnUbicacion.title = 'Obteniendo ubicación';
+    espera = setTimeout(function () { terminar('La ubicación tardó demasiado. Inténtalo de nuevo.'); },20000);
     try {
       navigator.geolocation.getCurrentPosition(function (posicion) {
+        if (finalizado) return;
+        if (inicial && inicioCancelado) { terminar(); return; }
         var lat = posicion.coords.latitude, lng = posicion.coords.longitude;
         if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 85.05112878 || Math.abs(lng) > 180) {
           terminar('No pudimos ubicarte en el mapa. Inténtalo de nuevo.'); return;
@@ -329,18 +343,53 @@
         var pin = L.circleMarker([lat,lng], {radius:8,color:'#fff',weight:3,fillColor:'#2672d8',fillOpacity:1,bubblingMouseEvents:false});
         pin.bindTooltip('Tu ubicación' + (precision ? ' · Precisión aproximada: ' + Math.ceil(precision).toLocaleString('es-MX') + ' m' : ''), {direction:'top'});
         ubicacionPersonal = L.layerGroup([circulo,pin]).addTo(mapa);
-        if (precision > 0) mapa.fitBounds(circulo.getBounds(), {padding:[36,36],maxZoom:16,animate:false});
+        if (inicial) mapa.setView([lat,lng],12,{animate:false});
+        else if (precision > 0) mapa.fitBounds(circulo.getBounds(), {padding:[36,36],maxZoom:16,animate:false});
         else mapa.setView([lat,lng],16,{animate:false});
-        terminar();
+        terminar(null,{lat:lat,lng:lng});
       }, function (error) {
         terminar(error.code === 1 ? 'Permite el acceso a tu ubicación en el navegador para usar esta opción.' : error.code === 3 ? 'La ubicación tardó demasiado. Inténtalo de nuevo.' : 'No pudimos obtener tu ubicación. Revisa el GPS e inténtalo de nuevo.');
       }, {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
     } catch (_) { terminar('No pudimos obtener tu ubicación. Revisa los permisos del navegador.'); }
+    });
+  }
+  function puedeConsultar(f) {
+    return !!(f.zona || f.poligono || f.texto || [f.estado,f.municipio,f.colonia].some(function(v){return Array.isArray(v)?v.length:!!v;}));
+  }
+  async function areaDePosicion(p) {
+    var ciudad = await window.kwGeografiaMapa.porCoordenadas(p.lat,p.lng).catch(function(){return null;});
+    if (ciudad) return ciudad;
+    var b=L.latLng([p.lat,p.lng]).toBounds(30000);
+    return {zona:[Math.max(-85.05112878,b.getSouth()),Math.max(-180,b.getWest()),Math.min(85.05112878,b.getNorth()),Math.min(180,b.getEast())]};
+  }
+  function prepararInicio(f) {
+    if (!inicioPromesa) inicioPromesa=(async function(){
+      await cargarBibliotecas();iniciarMapa();
+      if (puedeConsultar(f)) {inicioPreparado=true;return f;}
+      var p=await localizar(true);
+      var area=p&&!inicioCancelado?await areaDePosicion(p):null;
+      inicioPreparado=true;
+      if(area&&area.zona&&!inicioCancelado){zona=area.zona;btnQuitar.hidden=false;}
+      return area&&!inicioCancelado?Object.assign({},f,area):f;
+    })().catch(function(){inicioPreparado=true;btnReintentar.hidden=false;return f;});
+    return inicioPromesa;
+  }
+  btnUbicacion.onclick = function () {
+    localizar(false).then(async function(p){
+      if(p&&!puedeConsultar(window.filtrosServidorActuales())) {
+        var area=await areaDePosicion(p);
+        if(!puedeConsultar(window.filtrosServidorActuales())) {
+          if(area.zona){zona=area.zona;btnQuitar.hidden=false;}
+          window.aplicarCiudadMapa(area);
+        }
+      }
+    });
   };
   btnReintentar.onclick = function () { actualizar(true); };
   btnQuitar.onclick = function () { quitarZona(); };
   btnZona.onclick = function () {
     if (!mapa) return;
+    inicioCancelado = true;
     if (dibujo) dibujo.borrar();
     var b = mapa.getBounds();
     // Normalizar el desplazamiento horizontal del mapa al dominio geografico.
@@ -352,6 +401,6 @@
   window.addEventListener('kw-propiedades-filtradas', function () {
     requestAnimationFrame(function () { setTimeout(actualizar, 0); });
   });
-  window.kwPropiedadesMapa = Object.freeze({ubicar: ubicar, zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
+  window.kwPropiedadesMapa = Object.freeze({prepararInicio:prepararInicio,puedeConsultar:puedeConsultar,cancelarInicio:function(){inicioCancelado=true;inicioPreparado=true;},ubicar: ubicar, zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
   if (document.querySelector('#lista .prop-card, #lista .estado-msg')) actualizar();
 })();

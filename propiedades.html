@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-notif-lista2">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
-<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261020gps">
+<link rel="stylesheet" href="/assets/css/propiedades-mapa.css?v=20261020zona">
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
 <script src="/assets/js/kw-ref-asesor.js?v=20260829"></script>
 <script src="/assets/js/kw-sitio-asesor.js?v=20260930"></script>
@@ -757,11 +757,11 @@
         <section id="prop-mapa-panel" class="prop-mapa-panel" aria-label="Buscar propiedades en el mapa" aria-live="off">
           <div class="prop-mapa-marco">
             <div id="prop-mapa" aria-label="Mapa de propiedades"></div>
+            <button type="button" id="prop-mapa-zona" class="leaflet-control prop-mapa-buscar-zona" title="Buscar en esta zona" aria-label="Buscar en esta zona" disabled>Buscar en esta zona</button>
             <button type="button" id="prop-mapa-mi-ubicacion" title="Mi ubicación" aria-label="Centrar el mapa en mi ubicación" disabled hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg></button>
           <div class="prop-mapa-barra">
             <p id="prop-mapa-estado" role="status" aria-live="polite"></p>
             <div class="prop-mapa-acciones">
-            <button type="button" id="prop-mapa-zona" title="Buscar en esta zona" aria-label="Buscar en esta zona" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg></button>
             <button type="button" id="prop-mapa-dibujar" title="Dibujar zona" aria-label="Dibujar zona" aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 3 5 5-12 12H4v-5L16 3Z"/><path d="m13 6 5 5"/></svg></button>
             <button type="button" id="prop-zona-quitar" title="Quitar zona del mapa" aria-label="Quitar zona del mapa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
             <button type="button" id="prop-mapa-cancelar" title="Cancelar dibujo" aria-label="Cancelar dibujo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 4-6 5 6 5M3 9h12a6 6 0 0 1 0 12"/></svg></button>
@@ -2060,6 +2060,14 @@
   async function cargarPaginaServidor(numero) {
     var lista = document.getElementById('lista');
     var conteo = document.getElementById('conteo');
+    if (window.kwPropiedadesMapa && !window.kwPropiedadesMapa.puedeConsultar(filtrosServidorActuales())) {
+      if (controladorCargaServidor) controladorCargaServidor.abort();
+      ++solicitudPaginaServidor; totalResultados = 0;
+      ocultarCargadorPropiedades(); lista.classList.remove('lista-cargando');lista.removeAttribute('aria-busy');
+      lista.innerHTML = '<div class="estado-msg">Elige una ciudad o usa el GPS para ver propiedades.</div>';
+      if (conteo) conteo.textContent = '';
+      return;
+    }
     var paginaSolicitada = Math.max(1, Number(numero) || 1);
     var paginaAnterior = paginaActual;
     var tieneTarjetasAnteriores = !!lista.querySelector('.prop-card');
@@ -2117,6 +2125,12 @@
   var revisionFiltrosAplicados = 0;
   aplicarFiltros = async function () {
     var recibidos = leerFiltrosServidor(), revision = ++revisionFiltrosAplicados;
+    if (window.kwPropiedadesMapa) window.kwPropiedadesMapa.cancelarInicio();
+    function claveUbicacion(v){return (Array.isArray(v)?v:v?[v]:[]).filter(Boolean).sort().join('|');}
+    var ubicacionCambio = ['texto','estado','municipio','colonia'].some(function(c){return claveUbicacion(recibidos[c])!==claveUbicacion((filtrosAplicados||{})[c]);});
+    if (ubicacionCambio && window.kwPropiedadesMapa) {
+      window.kwPropiedadesMapa.quitarZona(false); recibidos.zona=null;recibidos.poligono=null;
+    }
     if (window.kwGeografiaMapa) recibidos = await window.kwGeografiaMapa.prepararFiltros(recibidos).catch(function () { return recibidos; });
     if (revision !== revisionFiltrosAplicados) return;
     filtrosAplicados = recibidos;
@@ -2127,8 +2141,10 @@
 
   function aplicarZonaMapa() {
     ++revisionFiltrosAplicados;
+    window.kwPropiedadesMapa.cancelarInicio();
+    ['f-estado','f-municipio','f-colonia'].forEach(function(id){seleccionesMultiples[id]=[];ponerFiltroRelacionado(id,'');pintarEtiquetasFiltro(id);});
     filtrosAplicados = Object.assign({}, filtrosServidorActuales(), {
-      zona: window.kwPropiedadesMapa.zona(), poligono: window.kwPropiedadesMapa.poligono()
+      zona: window.kwPropiedadesMapa.zona(), poligono: window.kwPropiedadesMapa.poligono(), estado:null,municipio:null,colonia:null,busquedaLugar:null
     });
     window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));
     programarCargaServidor();
@@ -2225,14 +2241,33 @@
     aplicarFiltros();
   };
 
-  cargar = function () {
+  function reflejarCiudadMapa(area) {
+    if (area.estado) ponerFiltroRelacionado('f-estado',area.estado[0]);
+    if (area.municipio) ponerFiltroRelacionado('f-municipio',area.municipio[0]);
+    if (area.estado || area.municipio) {refrescarRelacionado('f-municipio');refrescarRelacionado('f-colonia');}
+  }
+  function aplicarCiudadMapa(area) {
+    ++revisionFiltrosAplicados;reflejarCiudadMapa(area);
+    filtrosAplicados=Object.assign({},filtrosServidorActuales(),area);
+    window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));programarCargaServidor();
+  }
+  cargar = async function () {
+    var revisionInicio=revisionFiltrosAplicados;
+    if (document.readyState==='loading') await new Promise(function(resolve){document.addEventListener('DOMContentLoaded',resolve,{once:true});});
     var filtroEstatus = document.getElementById('filtro-estatus');
     var estatus = document.getElementById('f-estatus');
     if (filtroEstatus) filtroEstatus.hidden = false;
     if (estatus && !estatus.value) estatus.value = 'publicada';
     filtrosAplicados = leerFiltrosServidor();
+    mostrarCargadorPropiedades();
+    programarCargaCatalogosServidor();
+    if (window.kwPropiedadesMapa) {
+      var inicial=await window.kwPropiedadesMapa.prepararInicio(filtrosAplicados);
+      if(revisionInicio!==revisionFiltrosAplicados)return;
+      filtrosAplicados=inicial;reflejarCiudadMapa(inicial);
+    }
     marcarFiltrosEscondidos();
-    cargarPaginaServidor(1).then(programarCargaCatalogosServidor);
+    cargarPaginaServidor(1);
   };
 
   var cajaFiltros = document.getElementById('filtros');
@@ -2374,9 +2409,9 @@
 </script>
 
 <script src="/assets/js/kw-presupuesto.js?v=20261014precio"></script>
-<script src="/assets/js/propiedades-geografia.js?v=20261013ficha"></script>
+<script src="/assets/js/propiedades-geografia.js?v=20261020zona"></script>
 <script src="/assets/js/propiedades-dibujo.js?v=20261020gps"></script>
-<script src="/assets/js/propiedades-mapa.js?v=20261020gps"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261020zona"></script>
 <script src="/assets/js/drawer.js?v=20261019-notif-lista2" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261008switch" data-filtros="#filtros" data-titulo="Propiedades"></script>
 </body>
