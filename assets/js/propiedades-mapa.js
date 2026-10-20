@@ -269,9 +269,18 @@
       estado.textContent = 'La ubicación de esta propiedad no está disponible en el mapa actual.';
       return;
     }
+    var capaActual = grupos;
     grupos.zoomToShowLayer(marker, function () {
-      mapa.setView(marker.getLatLng(), Math.max(mapa.getZoom(), 16), {animate: false});
-      marker.openPopup();
+      // No recentrar después de desplegar pines coincidentes: el movimiento
+      // desharía su separación y retiraría la ficha que acabamos de abrir.
+      if (mapa.getZoom() < 16) mapa.setView(marker.getLatLng(), 16, {animate: false});
+      // MarkerCluster termina de limpiar zoomend después de este callback.
+      // En el siguiente cuadro se puede separar el grupo y abrir la ficha
+      // sin que esa limpieza retire sus marcadores.
+      requestAnimationFrame(function () {
+        if (grupos !== capaActual || pines.get(String(id)) !== marker) return;
+        capaActual.zoomToShowLayer(marker, function () { marker.openPopup(); });
+      });
     });
   }
   btnReintentar.onclick = function () { actualizar(true); };

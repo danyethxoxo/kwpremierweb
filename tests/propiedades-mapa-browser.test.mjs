@@ -346,6 +346,8 @@ test('foto ubica el pin agrupado; precio, titulo y direccion abren la propiedad'
     assert.ok(await page.evaluate(()=>qaMapa.getZoom()>=16&&qaMapa.getBounds().contains([19.43,-99.13])));
     assert.equal(await page.locator('#propiedades-cargando').count(),0);
     assert.equal(await page.evaluate(()=>qaDetalles),0,'usa la ficha disponible sin nueva consulta');
+    await page.waitForTimeout(350);
+    assert.ok(await page.locator('.prop-mapa-ficha h3').isVisible(),'la ficha sigue abierta al terminar el acercamiento');
     await page.locator('.leaflet-popup-close-button').click();
     for(const selector of ['.prop-precio','.prop-titulo','.prop-ubic']){
      await card.scrollIntoViewIfNeeded();
