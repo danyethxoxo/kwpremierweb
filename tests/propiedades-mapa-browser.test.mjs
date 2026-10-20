@@ -253,6 +253,7 @@ test('mi ubicación solo pide permiso al pulsar, centra el mapa y conserva un so
   const {page,errores}=await pagina(browser,{width,height:900},[[id(0),19.43,-99.13,'venta',3500000,'MXN']]);
   try {
    await page.waitForFunction(()=>!document.getElementById('prop-mapa-mi-ubicacion').disabled);
+   await page.waitForFunction(()=>document.getElementById('prop-mapa-panel').getAttribute('aria-busy')==='false');
    const controles=await page.evaluate(()=>({zoom:document.querySelector('.leaflet-control-zoom').getBoundingClientRect().toJSON(),gps:document.getElementById('prop-mapa-mi-ubicacion').getBoundingClientRect().toJSON(),contador:getComputedStyle(document.getElementById('prop-mapa-estado')).fontSize}));
    assert.ok(controles.gps.top>=controles.zoom.bottom&&Math.abs(controles.gps.left-controles.zoom.left)<3,'GPS debajo de los controles de zoom');
    assert.equal(controles.contador,'8px');
