@@ -2,7 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { esReciente, cargarHistorial } = require('../assets/js/notif-bell.js');
+const { esReciente, cargarHistorial, datosDictamen } = require('../assets/js/notif-bell.js');
+
+test('dictámenes: recuperar asesor, estatus, dirección y folio del historial sin perder puntuación', () => {
+  for (const estatus of ['Devuelto', 'Autorizado condicionado', 'Autorizado para promoción']) {
+    const n = { tipo: 'dictamen', titulo: `${estatus}: Av. Juárez 12: interior 3`, mensaje: 'Expediente de Lic. María López. Folio D-2026-001.' };
+    assert.deepEqual(datosDictamen(n), { asesor: 'Lic. María López', estatus, direccion: 'Av. Juárez 12: interior 3', folio: 'D-2026-001' });
+  }
+  assert.equal(datosDictamen({ tipo: 'ticket', titulo: 'Devuelto: Otro aviso', mensaje: 'Expediente de Ana. Folio 1.' }), null);
+  assert.equal(datosDictamen({ tipo: 'dictamen', titulo: 'Dictamen actualizado', mensaje: 'Revisa los cambios' }), null);
+  assert.equal(datosDictamen({ tipo: 'dictamen' }), null);
+});
 
 test('notificaciones: el límite de 24 horas y la lectura no borran el historial', () => {
   const ahora = Date.parse('2026-10-19T18:00:00Z');

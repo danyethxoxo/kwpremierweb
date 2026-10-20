@@ -1,6 +1,15 @@
-// La campana y la página comparten historial, tarjetas y estado de lectura.
+// La campana y la página comparten historial, filas y estado de lectura.
 (function () {
   const DIA = 24 * 60 * 60 * 1000;
+  // Los avisos guardados ya incluyen estos datos; se ordenan al mostrarlos
+  // para actualizar también el historial sin modificar registros existentes.
+  function datosDictamen(n) {
+    if (n.tipo !== 'dictamen') return null;
+    const titulo = /^(Devuelto|Autorizado condicionado|Autorizado para promoción):\s*([\s\S]+)$/.exec(n.titulo || '');
+    const mensaje = /^Expediente de ([\s\S]+)\. Folio ([\s\S]+)\.$/.exec(n.mensaje || '');
+    if (!titulo || !mensaje) return null;
+    return { asesor: mensaje[1], estatus: titulo[1], direccion: titulo[2], folio: mensaje[2] };
+  }
   function esReciente(n, ahora = Date.now()) {
     return !n.leido && new Date(n.created_at).getTime() > ahora - DIA;
   }
@@ -19,7 +28,7 @@
     }
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { esReciente, cargarHistorial };
+    module.exports = { esReciente, cargarHistorial, datosDictamen };
     return;
   }
 
@@ -64,12 +73,18 @@
     <div class="notif-dropdown-list notif-tarjetas" id="${prefijo}-lista" role="tabpanel" aria-labelledby="${prefijo}-${vista}" aria-busy="${cargando}">
     ${!filas.length ? `<div class="notif-vacio" role="status">${cargando ? 'Cargando notificaciones...' : vista === 'recientes' ? 'No tienes notificaciones recientes pendientes.' : 'No tienes notificaciones.'}</div>` : filas.map(n => {
       const url = destino(n);
+      const dictamen = datosDictamen(n);
+      const detalle = dictamen
+        ? `<span class="notif-item-titulo">Dictamen de expediente de: ${escapeHtml(dictamen.asesor)}</span>
+          <span class="notif-item-estatus">${escapeHtml(dictamen.estatus)}</span>
+          <span class="notif-item-msg">${escapeHtml(dictamen.direccion)}</span>
+          <span class="notif-item-folio">Folio: ${escapeHtml(dictamen.folio)}</span>`
+        : `<span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
+          ${n.mensaje ? `<span class="notif-item-msg">${escapeHtml(n.mensaje)}</span>` : ''}`;
       return `<article class="notif-item${n.leido ? '' : ' notif-item-nuevo'}" data-notif-id="${escapeHtml(n.id)}">
-        <span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
-        ${n.mensaje ? `<p class="notif-item-msg">${escapeHtml(n.mensaje)}</p>` : ''}
+        ${url ? `<a class="notif-item-enlace" href="${escapeHtml(url)}">${detalle}</a>` : `<div class="notif-item-contenido">${detalle}</div>`}
         <div class="notif-item-meta"><time class="notif-item-fecha" datetime="${escapeHtml(n.created_at)}">${fmtRelativo(n.created_at)}</time>${n.leido ? '<span class="notif-leida">Leída</span>' : ''}</div>
-        <div class="notif-item-acciones">${url ? `<a class="notif-ver" href="${escapeHtml(url)}">Ver notificación</a>` : ''}
-        ${!n.leido ? `<button type="button" class="notif-marcar-leida" data-notif-leida="${escapeHtml(n.id)}" ${pendientes.has(n.id) ? 'disabled' : ''}>${pendientes.has(n.id) ? 'Guardando...' : 'Marcar como leída'}</button>` : ''}</div>
+        ${!n.leido ? `<div class="notif-item-acciones"><button type="button" class="notif-marcar-leida" data-notif-leida="${escapeHtml(n.id)}" ${pendientes.has(n.id) ? 'disabled' : ''}>${pendientes.has(n.id) ? 'Guardando...' : 'Marcar como leída'}</button></div>` : ''}
       </article>`;
     }).join('')}
     </div><p class="notif-estado" role="status" aria-live="polite"></p>`;

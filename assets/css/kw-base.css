@@ -5,7 +5,7 @@
    colores, botones, modales, header/footer, campos de formulario,
    insignias de rol. Para usarlo en una página:
 
-     <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-notif-rojo">
+     <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-notif-lista">
 
    Un solo cambio aquí se refleja en toda página que lo enlace - no
    hace falta editar documento por documento.
@@ -18,7 +18,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 /* Con su propia version: sin ella, kw-ui.css?v=20261016uniforme se quedaba en el cache
-   del navegador aunque kw-base.css?v=20261019-notif-rojo se volviera a bajar. */
+   del navegador aunque kw-base.css?v=20261019-notif-lista se volviera a bajar. */
 @import url('kw-ui.css?v=20261016uniforme');
 
 /* Los colores viven aquí; las medidas y los componentes, en kw-ui.css?v=20261016uniforme. */
@@ -1386,7 +1386,7 @@ header > *:last-child { margin-left: auto; }
    cabía bien ahí y ya se sentía encimado con el header. */
 /* Notificaciones: mismo panel blanco y borde fino que los accesos. */
 .notif-backdrop {
-  position: fixed; inset: 0; z-index: 200; background: transparent;
+  position: fixed; inset: 0; z-index: 210; background: rgba(0,0,0,.28);
   opacity: 0; pointer-events: none; transition: opacity 180ms ease;
 }
 .notif-backdrop.abierto { opacity: 1; pointer-events: auto; }
@@ -1395,7 +1395,7 @@ header > *:last-child { margin-left: auto; }
   width: min(380px, 100vw); max-width: 100vw; max-height: none;
   display: flex; flex-direction: column; text-align: left;
   background: #fff; border: 0; border-left: 1px solid var(--red);
-  border-radius: 0; box-shadow: none; z-index: 201;
+  border-radius: 0; box-shadow: none; z-index: 211;
   backdrop-filter: none; -webkit-backdrop-filter: none;
   transform: translateX(100%); visibility: hidden; pointer-events: none;
   transition: transform 240ms ease, visibility 240ms;
@@ -1428,30 +1428,40 @@ header > *:last-child { margin-left: auto; }
   font: inherit; font-size: 12px; cursor: pointer;
 }
 .notif-dropdown-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.notif-tarjetas { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px 18px; }
+.notif-tarjetas { display: flex; flex-direction: column; gap: 0; padding: 0 16px 18px; }
 .notif-item, .notif-item:last-child {
-  flex: none; display: flex; flex-direction: column; align-items: stretch;
-  gap: 9px; width: 100%; padding: 14px; margin: 0;
-  border: 1px solid var(--red); border-radius: var(--r-tarjeta, 12px);
+  position: relative; flex: none; display: flex; flex-direction: column; align-items: stretch;
+  gap: 9px; width: 100%; padding: 18px 0; margin: 0;
+  border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
   background: #fff; color: var(--text); text-align: left; box-shadow: none;
   font-family: inherit; cursor: default; overflow-wrap: anywhere;
 }
-.notif-item-nuevo, .notif-item-nuevo:last-child { border-color: var(--red); }
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:has(.notif-item-enlace):hover { background: #fafafa; }
+.notif-item-enlace, .notif-item-contenido { display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; }
+.notif-item-enlace:hover { color: inherit; text-decoration: none; }
+/* El enlace cubre también los espacios y la fecha; la lectura conserva su acción propia. */
+.notif-item-enlace::after { content: ''; position: absolute; inset: 0; }
+.notif-item-enlace:focus-visible { outline: none; }
+.notif-item:has(.notif-item-enlace:focus-visible) { outline: 2px solid var(--red); outline-offset: -2px; }
 .notif-item-titulo { font-size: 13px; font-weight: 600; line-height: 1.5; }
+.notif-item-estatus { font-size: 12px; color: var(--red); line-height: 1.5; }
 .notif-item-msg { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.55; white-space: pre-line; }
+.notif-item-folio { margin-top: 6px; font-size: 11px; color: var(--muted); line-height: 1.5; }
 .notif-item-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .notif-item-fecha, .notif-leida { font-size: 11px; color: var(--muted); }
 .notif-item-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.notif-ver, .notif-marcar-leida {
+.notif-marcar-leida {
+  position: relative; z-index: 1;
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 36px; padding: 7px 10px; border: 1px solid var(--border);
   border-radius: var(--r-campo, 8px); background: #fff; color: var(--red);
   font: inherit; font-size: 11.5px; line-height: 1.4; text-decoration: none; cursor: pointer;
 }
 .notif-marcar-leida { color: var(--text); }
-.notif-ver:hover, .notif-marcar-leida:hover { background: #f7f7f7; }
+.notif-marcar-leida:hover { background: #f7f7f7; }
 .notif-marcar-leida:disabled, .notif-marcar-todas:disabled { opacity: .55; cursor: wait; }
-.notif-tabs button:focus-visible, .notif-ver:focus-visible, .notif-marcar-leida:focus-visible,
+.notif-tabs button:focus-visible, .notif-marcar-leida:focus-visible,
 .notif-marcar-todas:focus-visible, .notif-cerrar:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .notif-vacio { padding: 24px 12px; text-align: center; color: var(--muted); font-size: 13px; }
 .notif-error { margin: 0; padding: 10px 16px; color: var(--red); font-size: 12px; }
