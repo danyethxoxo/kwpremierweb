@@ -237,8 +237,8 @@ test('precios compactos, moneda, consulta y ficha sin saturar el mapa',async()=>
   try {
    await page.locator('.prop-mapa-pin').first().waitFor();
    assert.deepEqual((await page.locator('.prop-mapa-pin').allTextContents()).sort(),['$3.5M','$25K','USD 450K','Consultar'].sort());
-   const labels=await page.locator('.prop-mapa-pin').evaluateAll(els=>els.map(el=>({width:el.clientWidth,scroll:el.scrollWidth,bg:getComputedStyle(el).backgroundColor})));
-   assert.ok(labels.every(el=>el.scroll<=el.width&&el.bg==='rgb(255, 255, 255)'));
+   const labels=await page.locator('.prop-mapa-pin').evaluateAll(els=>els.map(el=>({width:el.clientWidth,scroll:el.scrollWidth,bg:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color})));
+   assert.ok(labels.every(el=>el.scroll<=el.width&&el.bg!=='rgb(255, 255, 255)'&&el.color==='rgb(255, 255, 255)'));
    assert.match(await page.locator('.prop-mapa-pin').filter({hasText:'USD'}).locator('..').getAttribute('title'),/450,000/);
    await page.locator('.prop-mapa-pin').filter({hasText:'$3.5M'}).click();
    await page.locator('.prop-mapa-ficha h3').waitFor();
@@ -516,11 +516,11 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
    assert.match(await page.locator('.prop-mapa-pin-sin-operacion').locator('..').getAttribute('title'),/por confirmar/);
    assert.match(await page.locator('#prop-mapa-estado').innerText(),/1 con operación por confirmar \(gris\)/);
    for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta'],['venta',null],['renta',null],[null,null],['mixto',null]]){
-    await page.evaluate(t=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,t[0]],[qaProps[1].id,19.4301,-99.1301,t[1]]];document.querySelector('#prop-mapa-reintentar').click();},tipos);
+    await page.evaluate(t=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,t[0],25000,'MXN'],[qaProps[1].id,19.4301,-99.1301,t[1],35000,'MXN']];document.querySelector('#prop-mapa-reintentar').click();},tipos);
     const conocidas=tipos.filter(Boolean);
     const tipo=!conocidas.length?'neutro':conocidas.includes('mixto')||new Set(conocidas).size>1?'mixto':conocidas[0];
     await page.locator('.prop-mapa-grupo-'+tipo).waitFor();
-    assert.equal(await page.locator('.prop-mapa-grupo-'+tipo).innerText(),'2');
+    assert.equal(await page.locator('.prop-mapa-grupo-'+tipo).innerText(),'Desde $25K');
     assert.equal(await page.locator('.prop-mapa-grupo-sin-operacion').count(),0);
    }
    await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,'mixto']];document.querySelector('#prop-mapa-reintentar').click();});

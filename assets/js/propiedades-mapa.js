@@ -226,11 +226,20 @@
       var capa = L.markerClusterGroup({
         maxClusterRadius: function (zoom) { return zoom >= 15 ? 64 : 70; }, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
         iconCreateFunction: function (grupo) {
-          var operaciones = new Set(grupo.getAllChildMarkers().map(function (pin) { return pin.options.operacion; }));
+          var hijos = grupo.getAllChildMarkers();
+          var operaciones = new Set(hijos.map(function (pin) { return pin.options.operacion; }));
           // Los pendientes no cambian el color de todo el grupo.
           operaciones.delete('sin-operacion');
           var tipo = !operaciones.size ? 'neutro' : operaciones.size > 1 || operaciones.has('mixto') ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
-          return L.divIcon({html: '<span>' + grupo.getChildCount() + '</span>', className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [42,42]});
+          var precios = hijos.filter(function (pin) { return Number.isFinite(pin.options.precio) && pin.options.precio > 0; });
+          var monedas = new Set(precios.map(function (pin) { return pin.options.moneda; }));
+          var etiqueta = 'Consultar';
+          if (monedas.size > 1) etiqueta = 'Ver precios';
+          else if (precios.length) etiqueta = 'Desde ' + precioPin(Math.min.apply(null, precios.map(function (pin) { return pin.options.precio; })), precios[0].options.moneda);
+          var ancho = Math.max(80, etiqueta.length * 7 + 22);
+          var contenido = texto('span', etiqueta);
+          contenido.title = hijos.length.toLocaleString('es-MX') + ' propiedades. Acercar para ver precios individuales.';
+          return L.divIcon({html: contenido.outerHTML, className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [ancho,32], iconAnchor:[ancho/2,16]});
         }
       });
       grupos = capa; mapa.addLayer(capa);
@@ -250,7 +259,7 @@
             iconos[iconoClave] = L.divIcon({className:'prop-mapa-precio-icono', html:etiqueta.outerHTML, iconSize:[ancho,32], iconAnchor:[ancho/2,36], popupAnchor:[0,-36]});
           }
           titulo += ': ' + (Number(p[4]) > 0 ? window.fmtPrecio(p[4], moneda, tipo) : 'Precio por confirmar');
-          var marker = L.marker([p[1], p[2]], {icon: iconos[iconoClave], operacion: tipo, title: titulo, keyboard: true, riseOnHover:true});
+          var marker = L.marker([p[1], p[2]], {icon: iconos[iconoClave], operacion: tipo, precio: Number(p[4]), moneda: moneda, title: titulo, keyboard: true, riseOnHover:true});
           marker.bindPopup('', {maxWidth: 260, minWidth: 220, autoPanPaddingTopLeft: [10,75], autoPanPaddingBottomRight: [10,10]});
           marker.on('popupopen', function () { abrirFicha(marker, p[0]); });
           pines.set(p[0], marker);
