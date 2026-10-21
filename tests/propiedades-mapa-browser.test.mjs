@@ -25,6 +25,7 @@ window.supabase={createClient(){return {
    return new Promise(r=>setTimeout(()=>r({data,error:null,count:Array.isArray(data)?data.length:1}),tabla==='propiedades_inventario'?(window.qaDemoraFicha||0):0)).then(resolve,reject);
  };return ()=>{if(key==='single'||key==='maybeSingle')single=true;return query;};}});return query;},
  rpc(nombre,args){window.qaRpc.push({nombre,args});const ejecutar=async()=>{
+   if(nombre==='propiedades_inventario_catalogo'&&args.p_campo==='colonia'&&window.qaCatalogoColonias)return {data:window.qaCatalogoColonias,error:null};
    if(nombre==='propiedades_inventario_pagina')return {data:{data:qaProps,total:7431},error:null};
    if(nombre==='propiedades_inventario_mapa'){
      const puntos=Array.isArray(args.p_filtros.operacion)&&args.p_filtros.operacion.includes('renta')&&window.qaRenta?window.qaRenta:window.qaPuntos;
@@ -578,4 +579,37 @@ test('recientes cargan mientras el GPS sigue pendiente y el zoom revela precios 
    assert.deepEqual(errores,[]);
   } finally {await page.close();}
  } finally {await browser.close();}
+});
+
+
+test('Del Valle todas incluye Norte Centro y Sur en lista y mapa',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {for(const width of [1280,390]) {
+  const {page,errores}=await pagina(browser,{width,height:1000},[[id(0),19.369,-99.163,'venta',3500000,'MXN']]);
+  try {
+   if(width<1024)await page.locator('#prop-filtros-expandir').click();
+   await page.evaluate(async()=>{
+    qaCatalogoColonias=['Del Valle Norte','Del Valle Centro','Del Valle Sur'].map(colonia=>({colonia,estado:'Ciudad de M\u00e9xico',municipio:'Benito Ju\u00e1rez'}));
+    ponerFiltroRelacionado('f-estado','Ciudad de M\u00e9xico');
+    ponerFiltroRelacionado('f-municipio','Benito Ju\u00e1rez');
+    await refrescarRelacionado('f-colonia');
+   });
+   assert.equal(await page.locator('#f-colonia option[value="grupo:del-valle-bj"]').textContent(),'Del Valle (todas)');
+   assert.equal(await page.locator('#f-colonia option').count(),5,'mantiene las tres opciones individuales');
+   await page.selectOption('#f-colonia','grupo:del-valle-bj',{force:true});
+   assert.equal(await page.locator('#f-colonia').locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," filtro ")]').locator('.filtro-etiqueta > span').textContent(),'Del Valle (todas)');
+   await page.evaluate(()=>aplicarFiltros());
+   await page.waitForFunction(()=>['propiedades_inventario_pagina','propiedades_inventario_mapa'].every(n=>qaRpc.filter(r=>r.nombre===n).at(-1)?.args.p_filtros.colonia?.length===3));
+   for(const nombre of ['propiedades_inventario_pagina','propiedades_inventario_mapa']) {
+    const filtros=await page.evaluate(n=>qaRpc.filter(r=>r.nombre===n).at(-1).args.p_filtros,nombre);
+    assert.deepEqual(filtros.colonia.slice().sort(),['Del Valle Centro','Del Valle Norte','Del Valle Sur']);
+    assert.ok(filtros.estado.includes('Ciudad de M\u00e9xico'));assert.ok(filtros.municipio.includes('Benito Ju\u00e1rez'));
+   }
+   await page.locator('#f-colonia').locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," filtro ")]').getByRole('button',{name:'Quitar Del Valle (todas)'}).click({force:true});
+   assert.equal(await page.evaluate(()=>leerFiltrosServidor().colonia),'');
+   await page.evaluate(async()=>{ponerFiltroRelacionado('f-municipio','Coyoac\u00e1n');await refrescarRelacionado('f-colonia');});
+   assert.equal(await page.locator('#f-colonia option[value="grupo:del-valle-bj"]').count(),0,'grupo exclusivo de Benito Juarez CDMX');
+   assert.deepEqual(errores,[]);
+  } finally {await page.close();}
+ }} finally {await browser.close();}
 });
