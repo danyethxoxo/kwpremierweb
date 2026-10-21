@@ -32,11 +32,19 @@
       ]);
       await recurso('/assets/vendor/mapa/leaflet-maplibre-gl.js?v=0.1.4');
       vector = L.maplibreGL({
-        style:'/assets/data/mapa/entorno.json?v=20261020', interactive:false,
+        style:'/assets/data/mapa/entorno.json?v=20261020metro1', interactive:false,
         attributionControl:{customAttribution:'<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'},
       }).addTo(mapa);
       timer = setTimeout(recuperar, 20000);
       var gl = vector.getMaplibreMap();
+      var metro = new Image();
+      metro.onload = function () {
+        var canvas = document.createElement('canvas'); canvas.width = 80; canvas.height = 80;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,80,80); ctx.drawImage(metro,8,8,64,64);
+        if (!gl.hasImage('kw-metro-cdmx')) gl.addImage('kw-metro-cdmx', ctx.getImageData(0,0,80,80), {pixelRatio:4});
+      };
+      gl.once('load', function () { metro.src = '/assets/data/mapa/metro-cdmx.svg'; });
       gl.once('load', function () {
         if (alternativo) return;
         listo = true; clearTimeout(timer);

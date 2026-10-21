@@ -57,7 +57,7 @@ async function pagina(browser,viewport,puntos,entornoReal=false,inicio=null){
   if(url.hostname!=='kw.local')return route.abort();
   const file=path.join(root,decodeURIComponent(url.pathname));
   if(!file.startsWith(root)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
-  const contentType=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'application/octet-stream';
+  const contentType=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
   let body=file.endsWith('.html')?fs.readFileSync(file,'utf8').replace(/\s+(?:integrity|crossorigin)="[^"]*"/g,''):fs.readFileSync(file);
   // Las pruebas generales parten de una búsqueda explícita. Las de inicio
   // automático usan coordenadas o un rechazo controlado del navegador.
@@ -67,7 +67,7 @@ async function pagina(browser,viewport,puntos,entornoReal=false,inicio=null){
   return route.fulfill({contentType,body});
  });
  await page.goto('https://kw.local/propiedades.html',{waitUntil:'domcontentloaded'});
- try { if(!inicio?.noEsperar)await page.locator(inicio?.code?'#lista .estado-msg':'#lista .prop-card').first().waitFor({timeout:15000}); }
+ try { if(!inicio?.noEsperar)await page.locator('#lista .prop-card').first().waitFor({timeout:15000}); }
  catch(error) { throw new Error(error.message+'\n'+errores.join('; ')+'\n'+await page.locator('body').innerText()); }
  if(!inicio)await page.locator('#f-buscar').fill('');
  return {page,errores,pedidos};
@@ -168,7 +168,9 @@ test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zo
   try{
    await page.waitForFunction(()=>document.getElementById('prop-mapa-panel').getAttribute('aria-busy')==='false');
    const inicial=await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)));
-   assert.ok(inicial.length>=2&&inicial.every(r=>r.args.p_filtros.estado.includes('Ciudad de México')),'no consulta inventario nacional al entrar');
+   assert.ok(inicial.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.orden==='reciente'),'lista inmediata');
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+
    assert.equal(await page.evaluate(()=>qaInicioGeo.length),1);
    assert.ok(await page.evaluate(()=>qaMapa.getZoom()>8&&qaMapa.getBounds().contains([19.369,-99.163])));
    const antes=await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length);
@@ -196,16 +198,17 @@ test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zo
  }}finally{await browser.close();}
 });
 
-test('sin permiso no carga todo México y permite elegir ciudad manualmente',async()=>{
+test('sin permiso muestra recientes y permite elegir ciudad manualmente',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),25.68,-100.31,'venta',3500000,'MXN']],false,{code:1});
   try{
-   assert.match(await page.locator('#lista .estado-msg').innerText(),/Elige una ciudad/);
-   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length),0);
+   assert.equal(await page.locator('#lista .prop-card').count(),20);
+   assert.ok(await page.evaluate(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.orden==='reciente')));
+   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
    await page.locator('#f-buscar').fill('Monterrey');await page.locator('#f-buscar').press('Enter');
+   await page.waitForFunction(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').at(-1).args.p_filtros.municipio?.includes('Monterrey'));
    await page.locator('#lista .prop-card').first().waitFor();
-   assert.ok(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').every(r=>r.args.p_filtros.municipio.includes('Monterrey'))));
    assert.deepEqual(errores,[]);
   }finally{await page.close();}
  }finally{await browser.close();}
@@ -219,7 +222,7 @@ test('una ubicación tardía no sustituye la ciudad elegida manualmente',async()
    await page.waitForFunction(()=>window.qaInicioGeo?.length===1);
    await page.locator('#f-buscar').fill('Guadalajara');await page.locator('#f-buscar').press('Enter');
    await page.locator('#lista .prop-card').first().waitFor();await page.waitForTimeout(2200);
-   assert.ok(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').every(r=>r.args.p_filtros.municipio.includes('Guadalajara'))));
+   assert.ok(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').at(-1).args.p_filtros.municipio.includes('Guadalajara')));
    assert.deepEqual(errores,[]);
   }finally{await page.close();}
  }finally{await browser.close();}
@@ -347,6 +350,7 @@ test('fondo real de entorno y precios en escritorio y móvil',{skip:process.env.
     return gl.queryRenderedFeatures().filter(f=>f.layer.id.startsWith('kw-entorno-')).map(f=>({capa:f.layer.id,nombre:f.properties.name}));
    });
    assert.ok(features.some(f=>f.capa==='kw-entorno-transporte'),'estaciones reales visibles');
+   assert.ok(await page.evaluate(()=>Object.values(qaMapa._layers).find(l=>l.getMaplibreMap).getMaplibreMap().hasImage('kw-metro-cdmx')),'logo real cargado');
    assert.ok(features.some(f=>f.capa==='kw-entorno-salud'),'hospitales reales visibles');
    fs.mkdirSync(path.join(root,'artifacts/mapa-precios'),{recursive:true});
    await page.locator('#prop-mapa-panel').screenshot({path:path.join(root,`artifacts/mapa-precios/entorno-${width}.png`)});
@@ -447,10 +451,11 @@ test('miles de pines no bloquean el listado y una respuesta anterior no reemplaz
   const {page,errores}=await pagina(browser,{width:1280,height:900},puntos);
   try {
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-estado').textContent.startsWith('8,000 propiedades'),null,{timeout:20000});
+   await page.evaluate(()=>{filtrosAplicados=Object.assign({},filtrosAplicados,{texto:'',estado:['Ciudad de M\u00e9xico']});document.querySelector('#prop-mapa-reintentar').click();});
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    const iconos=await page.locator('.leaflet-marker-icon').count();
-   assert.ok(iconos>0&&iconos<500,'solo dibuja grupos visibles');
-   const centro=await page.locator('.prop-mapa-grupo').first().evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return {x:Math.abs((a.left+a.right-b.left-b.right)/2),y:Math.abs((a.top+a.bottom-b.top-b.bottom)/2)};});
-   assert.ok(centro.x<2&&centro.y<2,'numero centrado dentro del circulo');
+   assert.ok(iconos>0&&iconos<500,'vista general muestra una seleccion de precios individuales');
+   assert.equal(await page.locator('.prop-mapa-grupo').count(),0,'no hay cantidades ni precios desde');
    assert.equal(await page.locator('#lista .prop-card').count(),20);
    await page.evaluate(()=>{qaDemoraMapa=600;document.querySelector('#f-buscar').value='Anterior';aplicarFiltros();});
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa'&&r.args.p_filtros.texto==='Anterior'));
@@ -468,7 +473,7 @@ test('miles de pines no bloquean el listado y una respuesta anterior no reemplaz
 });
 
 
-test('foto ubica el pin agrupado; precio, titulo y direccion abren la propiedad',async()=>{
+test('foto ubica el pin; precio, titulo y direccion abren la propiedad',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
@@ -504,7 +509,7 @@ test('foto ubica el pin agrupado; precio, titulo y direccion abren la propiedad'
 });
 
 
-test('pines y grupos distinguen venta roja y renta naranja',async()=>{
+test('precios individuales distinguen venta roja y renta naranja',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.43,-99.13,'venta'],[id(1),25.68,-100.31,'renta'],[id(2),20.67,-103.35,null]]);
@@ -515,14 +520,10 @@ test('pines y grupos distinguen venta roja y renta naranja',async()=>{
    assert.equal(await page.locator('.prop-mapa-pin-sin-operacion').evaluate(el=>getComputedStyle(el).borderLeftColor),'rgb(102, 102, 102)');
    assert.match(await page.locator('.prop-mapa-pin-sin-operacion').locator('..').getAttribute('title'),/por confirmar/);
    assert.match(await page.locator('#prop-mapa-estado').innerText(),/1 con operación por confirmar \(gris\)/);
-   for(const tipos of [['renta','renta'],['venta','venta'],['venta','renta'],['venta',null],['renta',null],[null,null],['mixto',null]]){
-    await page.evaluate(t=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,t[0],25000,'MXN'],[qaProps[1].id,19.4301,-99.1301,t[1],35000,'MXN']];document.querySelector('#prop-mapa-reintentar').click();},tipos);
-    const conocidas=tipos.filter(Boolean);
-    const tipo=!conocidas.length?'neutro':conocidas.includes('mixto')||new Set(conocidas).size>1?'mixto':conocidas[0];
-    await page.locator('.prop-mapa-grupo-'+tipo).waitFor();
-    assert.equal(await page.locator('.prop-mapa-grupo-'+tipo).innerText(),'Desde $25K');
-    assert.equal(await page.locator('.prop-mapa-grupo-sin-operacion').count(),0);
-   }
+   await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,'venta',25000,'MXN'],[qaProps[1].id,19.4301,-99.1301,'renta',35000,'MXN']];document.querySelector('#prop-mapa-reintentar').click();});
+   await page.locator('.prop-mapa-pin').filter({hasText:'$35K'}).waitFor();
+   assert.deepEqual((await page.locator('.prop-mapa-pin').allTextContents()).sort(),['$25K','$35K']);
+   assert.equal(await page.locator('.prop-mapa-grupo').count(),0);
    await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,19.43,-99.13,'mixto']];document.querySelector('#prop-mapa-reintentar').click();});
    await page.locator('.prop-mapa-pin-mixto').waitFor();
    assert.equal(await page.locator('.prop-mapa-pin-mixto').evaluate(el=>getComputedStyle(el).borderRightColor),'rgb(232, 117, 20)');
@@ -551,4 +552,30 @@ test('precio agrega comas al escribir y envia numeros al aplicar filtros',async(
    assert.deepEqual(errores,[]);
   } finally {await page.close();}
  }} finally {await browser.close();}
+});
+
+
+test('recientes cargan mientras el GPS sigue pendiente y el zoom revela precios individuales',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try {
+  const lenta=await pagina(browser,{width:1280,height:900},[],false,{demora:30000,coords:{latitude:19.369,longitude:-99.163,accuracy:25},noEsperar:true});
+  try {
+   await lenta.page.locator('#lista .prop-card').first().waitFor({timeout:10000});
+   assert.equal(await lenta.page.locator('#lista .prop-card').count(),20);
+   assert.equal(await lenta.page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
+  } finally {await lenta.page.close();}
+  const puntos=Array.from({length:100},(_,n)=>[id(n),19.36+Math.floor(n/10)*.001,-99.17+(n%10)*.001,'venta',2000000+n*10000,'MXN']);
+  const {page,errores}=await pagina(browser,{width:1280,height:900},puntos,false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
+  try {
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.evaluate(()=>qaMapa.setView([19.365,-99.165],11,{animate:false}));
+   const lejos=await page.locator('.prop-mapa-pin').count();
+   await page.evaluate(()=>qaMapa.setZoom(15,{animate:false}));
+   assert.ok(await page.locator('.prop-mapa-pin').count()>lejos,'acercarse revela mas precios');
+   await page.evaluate(()=>{document.querySelector('#f-buscar').value='Casa';aplicarFiltros();});
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.prop-mapa-pin').length===100);
+   assert.ok((await page.locator('.prop-mapa-pin').allTextContents()).every(p=>/^\$/.test(p)),'solo precios individuales');
+   assert.deepEqual(errores,[]);
+  } finally {await page.close();}
+ } finally {await browser.close();}
 });

@@ -48,6 +48,11 @@ for (const category of categories) {
     'symbol-sort-key':['coalesce',['get','rank'],100],
   });
   Object.assign(layer.paint, {'text-color':category.color,'text-halo-color':'#fff','text-halo-width':1.6});
+  if (category.id === 'transporte') {
+    var metroCDMX = ['all', ['==',['get','class'],'railway'], ['match',['get','subclass'],['subway','station'],true,false], ['within',{type:'Polygon',coordinates:[[[-99.45,19.1],[-98.8,19.1],[-98.8,19.75],[-99.45,19.75],[-99.45,19.1]]]}]];
+    layer.layout['icon-image'] = ['case',metroCDMX,'kw-metro-cdmx',layer.layout['icon-image']];
+    layer.layout['icon-size'] = ['case',metroCDMX,1,0.9];
+  }
   style.layers.push(layer);
 }
 fs.mkdirSync(new URL('../assets/data/mapa/', import.meta.url), {recursive:true});
