@@ -119,7 +119,7 @@
       const nombre=String(opciones.nombre||config.titulo).replace(/[<>:"/\\|?*]/g,'-').replace(/\.pdf$/i,'')+'.pdf';
       if(opciones.destino==='firma'){
         if(!global.kwFirmaPuente)throw new Error('No se pudo abrir el enlace con Firma digital.');
-        await global.kwFirmaPuente.guardar(pdf.output('blob'),nombre,opciones.meta||{});location.assign('/hub/firmas.html?desde=documento');
+        await global.kwFirmaPuente.guardar(pdf.output('blob'),nombre,opciones.meta||{});location.assign('/hub/firmas.html?desde=documento&v=20261021firmantes');
       }else pdf.save(nombre);
     }finally{marco.remove();}
   }

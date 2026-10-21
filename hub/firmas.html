@@ -20,7 +20,8 @@
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
-<script src="/assets/js/kw-firma-puente.js?v=20260907a"></script>
+<script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
+<script src="/assets/js/kw-firmantes-personales.js?v=20261021a"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -209,6 +210,19 @@
   .firmante-nom { flex: 1 1 auto; min-width: 0; }
   .firmante-cola { display: flex; gap: 8px; align-items: center; }
   .firmante-mail { flex: 1 1 auto; min-width: 0; }
+  /* Catálogos propios de la selección de firmantes. */
+  .firmantes-catalogo { margin:12px 0; border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .firmantes-catalogo summary { cursor:pointer; font-size:12px; }
+  .firmantes-catalogo[open] summary { margin-bottom:10px; }
+  .firmante-persona { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
+  .firmante-persona-agregar { flex:1; min-width:0; border:0; background:none; text-align:left; font:inherit; font-size:12px; color:var(--text); cursor:pointer; }
+  .firmante-persona-agregar span,.firmante-persona-agregar small { display:block; overflow-wrap:anywhere; }
+  .firmante-persona-agregar small,.firmante-persona-vacio { font-size:11px; color:var(--muted); }
+  .firmante-persona-agregar:disabled { opacity:.5; cursor:default; }
+  .firmante-favorito { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:32px; height:32px; border:0; border-radius:50%; color:var(--muted); background:none; cursor:pointer; }
+  .firmante-favorito.activo { color:var(--red); }
+  .firmante-favorito.activo svg { fill:currentColor; }
+  #posibles-firmantes-lista,#favoritos-firmantes-lista { max-height:260px; overflow:auto; }
   /* Las dos acciones del editor de firmas comparten una fila,
      también en celular, debajo del correo para conservar su ancho. */
   .firmante-acciones { display: flex; gap: 8px; align-items: stretch; margin-top: 9px; }
@@ -2074,7 +2088,7 @@
                       <div class="firmante-opciones" id="firmante-opciones">
                         <div class="firmo-yo" id="pregunta-firmo">
                           <button type="button" class="firma-opcion" id="firmo-si">
-                            ¿Tú firmas este documento?
+                            Tú
                           </button>
                         </div>
                         <div id="frecuentes" class="firma-frecuentes"></div>
@@ -2085,6 +2099,11 @@
                         Agregar otro firmante
                       </button>
 
+                      <details class="firmantes-catalogo" id="posibles-firmantes"><summary>Posibles firmantes</summary><div id="posibles-firmantes-lista"></div></details>
+                      <details class="firmantes-catalogo"><summary>Firmantes frecuentes</summary>
+                        <input type="search" class="kw-input" id="favoritos-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar firmantes frecuentes">
+                        <div id="favoritos-firmantes-lista"></div>
+                      </details>
                       <label class="firma-en-orden">
                         <input type="checkbox" id="en-orden">
                         <span>Firmar en orden</span>
@@ -2926,6 +2945,9 @@
     } else if (cual === 'archivos' && vistaActual === 'editor') {
       marcas = [];
       rutaSubida = null;
+      origenEnvio = 'subido';
+      documentoGuardadoId = null;
+      window.kwFirmantesPersonales.candidatos([]);
       desarmar();
     }
     mostrarVista(cual, { desdeURL: true });
@@ -3120,6 +3142,7 @@
     rutaSubida = null;
     origenEnvio = 'subido';
     documentoGuardadoId = null;
+    window.kwFirmantesPersonales.candidatos([]);
     pintarArchivos();
     avisoArchivos('', '');
     mostrarVista('archivos');
@@ -3507,6 +3530,7 @@
     fila.innerHTML =
       '<div class="firmante-encabezado">' +
         '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
+        '<button type="button" class="firmante-favorito firmante-favorito-fila" aria-label="Guardar en firmantes frecuentes" aria-pressed="false">' + window.kwFirmantesPersonales.corazon + '</button>' +
         '<button type="button" class="firmante-quitar" aria-label="Quitar firmante" title="Quitar firmante">' +
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<polyline points="3 6 5 6 21 6"/>' +
@@ -3546,6 +3570,7 @@
       // esto el botón del frecuente que se acaba de borrar se quedaba
       // apagado para siempre y ya no se podía volver a agregar.
       marcarFrecuentesPuestos();
+      window.kwFirmantesPersonales.actualizar();
     });
 
     fila.querySelectorAll('.verif-btn').forEach((b) => {
@@ -3609,7 +3634,12 @@
       botonYo.disabled = false;
       botonYo.classList.remove('elegido');
     }
+    responderFirmo(true);
+    FIRMANTES_DESTACADOS.forEach((persona) => {
+      if (!leerFirmantes().some((f) => correoNormalizado(f.correo) === persona.correo)) agregarFirmante(persona.nombre, persona.correo);
+    });
     marcarFrecuentesPuestos();
+    window.kwFirmantesPersonales.actualizar();
   }
 
   function responderFirmo(firmaYo) {
@@ -4098,6 +4128,9 @@
       paginas = [];
       borradorId = null;
       rutaSubida = null;
+      origenEnvio = 'subido';
+      documentoGuardadoId = null;
+      window.kwFirmantesPersonales.candidatos([]);
       desarmar();
       $('paginas').innerHTML = '';
       pintarArchivos();
@@ -4469,6 +4502,7 @@
   async function abrirDocumento(i) {
     const f = visibles[i];
     if (!f) return;
+    if (f.estado === 'eliminado') return window.kwUI.alert('Este documento ya fue eliminado en WeeTrust. Puedes quitarlo del historial desde sus opciones.');
 
     // Un borrador no se mira, se termina: picarle abre el editor donde
     // se quedó, con sus firmantes y sus firmas ya colocadas. Solo los
@@ -4531,6 +4565,11 @@
         if (Array.isArray(r.firmantes)) f.firmantes = r.firmantes;
         if (Array.isArray(r.posiciones)) f.posiciones = r.posiciones;
         if (r.estado) f.estado = r.estado;
+        if (r.estado === 'eliminado') {
+          cerrarDoc();
+          await cargarEnvios();
+          return window.kwUI.alert('Este documento ya fue eliminado en WeeTrust. Se actualizó el historial.');
+        }
       } catch {
         // Se sigue con las otras.
       }
@@ -4784,6 +4823,7 @@
   // Reconstruye el editor tal como se dejó: el PDF que se había subido,
   // los firmantes capturados y los recuadros de firma en su lugar.
   async function retomarBorrador(f) {
+    window.kwFirmantesPersonales.candidatos([]);
     mostrarVista('editor');
     $('editor-cargando').style.display = 'flex';
     $('paginas').innerHTML = '';
@@ -4793,6 +4833,7 @@
     rutaSubida = f.archivo_ruta;
     origenEnvio = f.origen === 'guardado' ? 'guardado' : 'subido';
     documentoGuardadoId = f.documento_guardado_id || null;
+    cargarPosiblesFirmantes(documentoGuardadoId);
     // No se juntaron archivos: se está retomando uno ya unido. La lista
     // se deja vacía y el nombre del guardado es el que manda.
     archivos = [];
@@ -5638,6 +5679,7 @@
   function envíosFiltrados() {
     const palabras = normalizarBusquedaFirmas(buscaAsesor).split(/\s+/).filter(Boolean);
     const lista = envios.filter((e) => {
+      if (e.estado === 'eliminado' && filtro !== 'eliminado') return false;
       if (filtro === 'mis-pendientes') {
         if (!meFaltaFirmar(e)) return false;
       } else if (filtro === 'activos') {
@@ -5752,6 +5794,9 @@
   // ya quedó y no que la opción desapareció.
   function marcarFrecuentesPuestos() {
     const puestos = leerFirmantes().map((f) => f.correo.toLowerCase());
+    const yoPuesto = puestos.includes(correoNormalizado(miPerfil.correo));
+    $('firmo-si').disabled = yoPuesto;
+    $('firmo-si').classList.toggle('elegido', yoPuesto);
     $('frecuentes').querySelectorAll('.firma-frecuente').forEach((b) => {
       b.disabled = puestos.includes(b.dataset.correo);
     });
@@ -5789,7 +5834,7 @@
       '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
         ' data-nombre="' + escapar(f.nombre) + '">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-        '<span>¿' + escapar(nombreFrecuenteVisible(f)) + ' firma este documento?</span>' +
+        '<span>' + escapar(nombreFrecuenteVisible(f)) + '</span>' +
       '</button>').join('');
 
     caja.querySelectorAll('.firma-frecuente').forEach((b) => {
@@ -5836,6 +5881,17 @@
     });
   }
 
+  async function cargarPosiblesFirmantes(id, respaldo) {
+    let personas = Array.isArray(respaldo) ? respaldo : [];
+    if (!personas.length && id) {
+      try {
+        const { data, error } = await window.kwSupabase.from('documentos_guardados').select('datos').eq('id', id).maybeSingle();
+        if (!error && data?.datos) personas = window.kwFirmaPuente.detectarFirmantes(data.datos);
+      } catch { /* Las sugerencias no bloquean la preparación del documento. */ }
+    }
+    if (id === documentoGuardadoId) window.kwFirmantesPersonales.candidatos(personas);
+  }
+
   async function importarDocumentoFinalizado() {
     if (new URLSearchParams(location.search).get('desde') !== 'documento') return false;
     if (!window.kwFirmaPuente) return false;
@@ -5850,6 +5906,7 @@
     rutaSubida = null;
     origenEnvio = 'guardado';
     documentoGuardadoId = pendiente.documentoId || null;
+    await cargarPosiblesFirmantes(documentoGuardadoId, pendiente.posiblesFirmantes);
 
     var archivo = new File([pendiente.blob], pendiente.nombre || 'documento.pdf', {
       type: 'application/pdf',
@@ -5878,11 +5935,16 @@
     miUserId = userData.user.id;
 
     const { data: perfil } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
-      .from('profiles').select('nombre, email, role').eq('id', miUserId).single());
+      .from('profiles').select('nombre, apellido, email, role').eq('id', miUserId).single());
     miPerfil = {
-      nombre: perfil?.nombre || '',
+      nombre: [perfil?.nombre, perfil?.apellido].filter(Boolean).join(' '),
       correo: userData.user.email || perfil?.email || '',
     };
+    await window.kwFirmantesPersonales.iniciar({ userId: miUserId, leer: leerFirmantes, agregar: (nombre, correo) => {
+      const puesto = leerFirmantes().some((f) => correo && correoNormalizado(f.correo) === correoNormalizado(correo));
+      if (!puesto) agregarFirmante(nombre, correo);
+      marcarFrecuentesPuestos();
+    } });
 
     // El liderazgo ve el historial de todo el equipo. Esto solo decide
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las

@@ -253,11 +253,12 @@ async function pedirDocumento(token: string, documentID: string) {
     `${WEETRUST_URL}/documents/${encodeURIComponent(documentID)}`,
     { headers: encabezados(token) },
   )
-  if (res.status === 404) return null
+  if (res.status === 404 || res.status === 410) return null
   const datos = await leerRespuesta(res, 'Consultar el documento')
   const lista = Array.isArray(datos) ? datos : (datos ? [datos] : [])
   const documento = lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID)
   if (!documento) throw new Error('weetrust no devolvió el documento solicitado; no se marcará como eliminado.')
+  if (documento.isDeleted === true || documento.isDeleted === 1 || String(documento.status).toUpperCase() === 'DELETED') return null
   return documento
 }
 
@@ -307,6 +308,7 @@ async function borrarDocumento(token: string, documentID: string) {
     `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
     { method: 'DELETE', headers: encabezados(token) },
   )
+  if (res.status === 404 || res.status === 410) return null
   return await leerRespuesta(res, 'Borrar el documento')
 }
 
@@ -847,7 +849,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       const { data: fila } = await admin
         .from('firmas_documentos')
-        .select('id, user_id, weetrust_document_id, firmantes')
+        .select('id, user_id, weetrust_document_id, firmantes, estado')
         .eq('id', id)
         .single()
 
@@ -864,6 +866,9 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
       if (!doc) {
+        if (fila.estado === 'completado') {
+          return respond({ ok: true, estado: 'completado', firmantes: fila.firmantes })
+        }
         // Igual que en "actualizar_todos": ya no existe allá, así que se
         // marca en vez de dejarlo pendiente para siempre.
         await admin.from('firmas_documentos')
@@ -1244,14 +1249,19 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       }
 
       let avisoWeetrust: string | null = null
-      if (fila.weetrust_document_id) {
+      if (fila.weetrust_document_id && fila.estado !== 'eliminado') {
         try {
           const token = await obtenerToken()
           await borrarDocumento(token, fila.weetrust_document_id)
         } catch (e) {
           const detalle = (e as Error).message
           const sinPermiso = /\(403\)|not authori[sz]ed/i.test(detalle)
-          return respond({
+          let yaEliminado = false
+          if (!sinPermiso) {
+            try { yaEliminado = await pedirDocumento(await obtenerToken(), fila.weetrust_document_id) === null }
+            catch { /* Una falla temporal no confirma que el documento se borró. */ }
+          }
+          if (!yaEliminado) return respond({
             error: sinPermiso
               ? 'La cuenta de weetrust conectada a KW Premier no tiene permiso para borrar este documento. Debe eliminarlo la cuenta que lo creó. El documento se conserva en KW Premier.'
               : 'weetrust no pudo borrar el documento. Inténtalo de nuevo más tarde. El documento se conserva en KW Premier.',
@@ -1344,7 +1354,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         ...(filas || []).filter((fila) => !porId.has(fila.weetrust_document_id!) &&
           !['completado', 'cancelado', 'eliminado'].includes(fila.estado))
           .map((fila) => fila.weetrust_document_id!),
-        ...[...porId.entries()].filter(([, doc]) => !Array.isArray(doc.signatory) || !doc.signatory.length)
+        ...[...porId.entries()].filter(([, doc]) => doc.isDeleted === true || doc.isDeleted === 1 || String(doc.status).toUpperCase() === 'DELETED' || !Array.isArray(doc.signatory) || !doc.signatory.length)
           .map(([id]) => id),
       ])]
       const eliminacionConfirmada = new Set<string>()
@@ -1354,7 +1364,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
           try {
             const detalle = await pedirDocumento(token, id)
             if (detalle) porId.set(id, { ...(porId.get(id) || {}), ...detalle })
-            else eliminacionConfirmada.add(id)
+            else { porId.delete(id); eliminacionConfirmada.add(id) }
           } catch {
             sinVerificar++
           }
@@ -1537,7 +1547,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       const { data: fila } = await admin
         .from('firmas_documentos')
-        .select('id, user_id, weetrust_document_id, firmantes, posiciones')
+        .select('id, user_id, estado, weetrust_document_id, firmantes, posiciones')
         .eq('id', id)
         .single()
 
@@ -1553,6 +1563,11 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
+      if (!doc && fila.estado !== 'completado') {
+        const { error } = await admin.from('firmas_documentos').update({ estado: 'eliminado', error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.' }).eq('id', id)
+        if (error) return respond({ error: 'No se pudo actualizar el estado del documento.' }, 500)
+        return respond({ ok: true, url: null, estado: 'eliminado' })
+      }
       const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
       if (accion === 'archivo_documento') {
         const bytes = await descargarPdfWeetrust(archivo.url)
@@ -1561,6 +1576,21 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       if (!doc) return respond({ ok: true, url: null })
       const firmantes = sincronizarFirmantes(fila.firmantes || [], Array.isArray(doc.signatory) ? doc.signatory : [], new Date().toISOString())
       const posiciones = posicionesDeWeetrust(doc, fila.posiciones || [])
+      if (!posiciones.length && firmantes.some((f) => f.firmado)) {
+        // Solo nombres de campos y geometria, sin personas, URLs ni trazos.
+        const estructura = (valor: any, profundidad = 0): any => {
+          if (profundidad > 5) return typeof valor
+          if (typeof valor === 'string') return {tipo:'texto',longitud:valor.length}
+          if (Array.isArray(valor)) return valor.slice(0,8).map((v) => estructura(v,profundidad+1))
+          if (valor && typeof valor === 'object') return Object.fromEntries(Object.entries(valor).map(([k,v]) => [k,estructura(v,profundidad+1)]))
+          return valor
+        }
+        console.info('firmas-vista-estructura', JSON.stringify({
+          documento: Object.keys(doc),
+          firmantes: estructura(doc.signatory),
+          posiciones: estructura(doc.staticSignPositions),
+        }))
+      }
       const {error: errorVista} = await admin.from('firmas_documentos')
         .update({firmantes,posiciones}).eq('id',id)
       if (errorVista) throw new Error('No se pudieron sincronizar los campos de firma')

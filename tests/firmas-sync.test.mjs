@@ -47,4 +47,8 @@ test('solo un 404 confirma que el documento no existe; una respuesta incorrecta 
   await assert.rejects(vm.runInContext('pedirDocumento("token", "correcto")', contexto), /no se marcará como eliminado/);
   respuesta = { status: 404 };
   assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
+  respuesta = { status: 410 };
+  assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
+  respuesta = { status: 200, data: { documentID: 'correcto', isDeleted: true } };
+  assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
 });
