@@ -9,7 +9,7 @@ const source = fs.readFileSync(new URL('../assets/js/kw-ficha-propiedad.js', imp
 const jspdf = fs.readFileSync(new URL('../assets/vendor/jspdf/jspdf-4.2.1.umd.min.js', import.meta.url), 'utf8');
 const output = path.join(os.tmpdir(), 'kw-ficha-plantillas');
 
-test('cambia diseño conservando fotos y genera un PDF distinto con el título completo en escritorio y móvil', async () => {
+test('solo ofrece Clásica y oculta o restaura los datos del asesor en vista y PDF sin perder fotos', async () => {
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
   try {
@@ -46,8 +46,11 @@ test('cambia diseño conservando fotos y genera un PDF distinto con el título c
           asesor: { nombre: 'María Fernanda', apellido: 'López', whatsapp: '+52 55 1234 5678', email: 'maria@kwpremier.com' } });
       }, titulo);
       const hashes = new Set();
-      for (const diseno of ['clasica', 'editorial', 'panorama']) {
-        await page.locator(`.kw-ficha-diseno input[value="${diseno}"]`).check();
+      assert.equal(await page.locator('.kw-ficha-diseno').count(), 1);
+      assert.equal(await page.locator('.kw-ficha-diseno input').inputValue(), 'clasica');
+      for (const [indice, mostrar] of [true, false, true].entries()) {
+        const diseno = `clasica-${mostrar ? 'con' : 'sin'}-asesor-${indice}`;
+        await page.locator('input[name="kw-ficha-asesor"]').setChecked(mostrar);
         hashes.add(await page.locator('.kw-ficha-canvas').evaluate(c => c.toDataURL()));
         assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 4);
         await page.evaluate(() => { window.pdfTextos = []; });
@@ -58,6 +61,9 @@ test('cambia diseño conservando fotos y genera un PDF distinto con el título c
         await download.saveAs(target);
         assert.ok(fs.readFileSync(target).subarray(0, 5).equals(Buffer.from('%PDF-')));
         const textos = await page.evaluate(() => window.pdfTextos.flat().join(' '));
+        for (const dato of ['MARÍA FERNANDA LÓPEZ', '+52 55 1234 5678', 'MARIA@KWPREMIER.COM', 'ASESOR INMOBILIARIO']) {
+          assert.equal(textos.toLocaleUpperCase('es-MX').includes(dato), mostrar, dato);
+        }
         assert.ok(textos.toLocaleUpperCase('es-MX').replace(/\s+/g, ' ').includes(titulo.toLocaleUpperCase('es-MX')), 'el PDF conserva el título completo');
         const png = await page.locator('.kw-ficha-canvas').evaluate(canvas => canvas.toDataURL().split(',')[1]);
         fs.writeFileSync(path.join(output, `${diseno}-${width}.png`), Buffer.from(png, 'base64'));
@@ -66,14 +72,14 @@ test('cambia diseño conservando fotos y genera un PDF distinto con el título c
         assert.ok(box.x >= 0 && box.x + box.width <= width);
         assert.equal(await page.locator('.kw-ficha-diseno input:disabled').count(), 0);
       }
-      assert.equal(hashes.size, 3, 'cada plantilla tiene una composición diferente');
+      assert.equal(hashes.size, 2, 'oculta y vuelve a restaurar la misma vista');
       await page.locator('.kw-ficha-selector summary').click();
       for (const i of [1, 2, 3]) await page.locator('.kw-ficha-foto input').nth(i).uncheck();
       await page.waitForFunction(() => !document.querySelector('.kw-ficha-boton-pdf').disabled);
-      await page.locator('.kw-ficha-diseno input[value="editorial"]').check();
+      await page.locator('input[name="kw-ficha-asesor"]').uncheck();
       assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 1);
       const png = await page.locator('.kw-ficha-canvas').evaluate(canvas => canvas.toDataURL().split(',')[1]);
-      fs.writeFileSync(path.join(output, `editorial-una-foto-${width}.png`), Buffer.from(png, 'base64'));
+      fs.writeFileSync(path.join(output, `clasica-sin-asesor-una-foto-${width}.png`), Buffer.from(png, 'base64'));
       assert.deepEqual(errors, []);
       await page.close();
     }

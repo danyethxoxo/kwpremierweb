@@ -17,9 +17,7 @@
   var pdfJsPromesa = null;
   var cerrarFichaActiva = null;
   var PLANTILLAS = [
-    { id: 'clasica', nombre: 'Clásica' },
-    { id: 'editorial', nombre: 'Editorial' },
-    { id: 'panorama', nombre: 'Panorama' }
+    { id: 'clasica', nombre: 'Clásica' }
   ];
 
   var ESTILOS = [
@@ -64,7 +62,9 @@
     '.kw-ficha-foto label{display:block;cursor:pointer;font-size:12px}.kw-ficha-foto img{width:100%;height:75px;object-fit:cover;border-radius:5px;display:block;margin-bottom:6px}',
     '.kw-ficha-foto input{accent-color:#cc0000;margin-right:5px}.kw-ficha-portada{width:100%;margin-top:6px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white;color:#302c2c;font:inherit;font-size:11px;cursor:pointer}',
     '.kw-ficha-portada:disabled{opacity:.6;cursor:default}',
-    '.kw-ficha-disenos{display:flex;gap:8px;flex-shrink:0;border:0;padding:0;margin:0 0 12px;min-width:0}',
+    '.kw-ficha-disenos{display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;border:0;padding:0;margin:0 0 12px;min-width:0}',
+    '.kw-ficha-asesor{display:flex;align-items:center;gap:8px;flex-basis:100%;font-size:12px;color:#302c2c;cursor:pointer;margin-top:6px}',
+    '.kw-ficha-asesor input{accent-color:#8a0000}',
     '.kw-ficha-disenos legend{font-size:12px;margin-bottom:7px;color:#66615f}',
     '.kw-ficha-diseno{flex:1;min-width:0;position:relative;cursor:pointer;text-align:center;font-size:12px}',
     '.kw-ficha-diseno input{position:absolute;opacity:0;width:1px;height:1px}',
@@ -191,6 +191,7 @@
 
     return {
       plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
+      mostrarAsesor: opciones.mostrarAsesor !== false,
       operacion: propiedad.operaciones_filtro && propiedad.operaciones_filtro.length > 1 ? 'VENTA Y RENTA' : propiedad.operacion === 'renta' ? 'RENTA' : propiedad.operacion === 'venta' ? 'VENTA' : 'POR CONFIRMAR',
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: texto(propiedad.tipo),
@@ -763,6 +764,13 @@
 
     ctx.fillStyle = '#eeeeec';
     ctx.fillRect(0, 1565, ANCHO, 335);
+    if (modelo.mostrarAsesor === false) {
+      var datosSinAsesor = modelo.features.slice(0, 4);
+      datosSinAsesor.forEach(function (dato, i) {
+        dibujarDatoFicha(ctx, dato, 800 + (i - (datosSinAsesor.length - 1) / 2) * 360, 1680);
+      });
+      return canvas;
+    }
     dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, 183, 1735, 138);
 
     ctx.fillStyle = COLORES.texto;
@@ -1082,6 +1090,13 @@
 
     pdf.setFillColor('#eeeeec');
     pdf.rect(0, 1565 * escala, ANCHO * escala, 335 * escala, 'F');
+    if (modelo.mostrarAsesor === false) {
+      var datosSinAsesor = modelo.features.slice(0, 4);
+      datosSinAsesor.forEach(function (dato, i) {
+        pdfDatoFicha(pdf, dato, 800 + (i - (datosSinAsesor.length - 1) / 2) * 360, 1680, 280, escala);
+      });
+      return;
+    }
     pdfFotoAsesorFicha(pdf, modelo._asesorFoto, modelo.asesor.nombre, 183, 1735, 138, escala);
     pdfTextoAjustado(pdf, modelo.asesor.nombre.toLocaleUpperCase('es-MX'), 370, 1645, 680, 47, 29, COLORES.texto, 'bold', escala);
     pdfTextoAjustado(pdf, modelo.asesor.puesto.toLocaleUpperCase('es-MX'), 370, 1690, 680, 29, 22, COLORES.rojo, 'bold', escala);
@@ -1161,7 +1176,8 @@
       '<fieldset class="kw-ficha-disenos" disabled><legend>Diseño</legend>' + PLANTILLAS.map(function (plantilla) {
         return '<label class="kw-ficha-diseno"><input type="radio" name="kw-ficha-diseno" value="' + plantilla.id + '"' +
           (modelo.plantilla === plantilla.id ? ' checked' : '') + '><span><i aria-hidden="true" class="kw-ficha-mini kw-ficha-mini-' + plantilla.id + '"></i>' + plantilla.nombre + '</span></label>';
-      }).join('') + '</fieldset>' +
+      }).join('') + '<label class="kw-ficha-asesor"><input type="checkbox" name="kw-ficha-asesor"' +
+        (modelo.mostrarAsesor ? ' checked' : '') + '>Mostrar datos del asesor</label></fieldset>' +
       (fotosDisponibles.length ? '<details class="kw-ficha-selector"><summary>Elegir fotos <span class="kw-ficha-fotos-cuenta"></span></summary>' +
         '<p>Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.</p>' +
         '<fieldset class="kw-ficha-fotos-campos" disabled aria-label="Fotos de la ficha"><div class="kw-ficha-fotos"></div></fieldset></details>' : '') +
@@ -1185,8 +1201,11 @@
     var cacheFotos = new Map();
 
     camposDisenos.addEventListener('change', function (evento) {
-      if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
-      modelo.plantilla = evento.target.value;
+      if (evento.target.name === 'kw-ficha-asesor') modelo.mostrarAsesor = evento.target.checked;
+      else {
+        if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
+        modelo.plantilla = evento.target.value;
+      }
       pdfBlob = null;
       pdfPromesa = null;
       canvas = dibujarModelo(modelo);
