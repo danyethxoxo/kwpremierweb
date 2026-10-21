@@ -20,7 +20,7 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
       await page.route('https://fotos.example/**', async route => {
         const pathname = new URL(route.request().url()).pathname;
         if (pathname === '/') return route.fulfill({ contentType: 'text/html', body: '<html><body></body></html>' });
-        if (pathname.includes('logo-kw-premier')) return route.fulfill({ contentType: 'image/png', body: fs.readFileSync(new URL('../assets/img/logo-kw-premier.png', import.meta.url)) });
+        if (pathname.includes('logo-kw-premier')) return route.fulfill({ contentType: 'image/png', body: fs.readFileSync(new URL('..' + pathname, import.meta.url)) });
         const i = Number(pathname.slice(1)) || 0;
         await route.fulfill({ contentType: 'image/svg+xml', headers: { 'access-control-allow-origin': '*' },
           body: `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="${['#c5b9a6', '#aebcaf', '#b0bcc7', '#ccc0b4'][i % 4]}"/><path d="M0 650 300 300 700 650 900 150 1200 550V800H0Z" fill="#ffffff" opacity=".4"/><text x="60" y="100" font-size="45" fill="#302c2c">FOTO ${i + 1}</text></svg>` });
@@ -46,7 +46,7 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
           asesor: { nombre: 'María Fernanda', apellido: 'López', whatsapp: '+52 55 1234 5678', email: 'maria@kwpremier.com' } });
       }, titulo);
       const hashes = new Set();
-      assert.deepEqual(await page.locator('.kw-ficha-diseno input').evaluateAll(inputs => inputs.map(input => input.value)), ['clasica', 'redes']);
+      assert.deepEqual(await page.locator('.kw-ficha-diseno input').evaluateAll(inputs => inputs.map(input => input.value)), ['clasica', 'redes', 'mosaico']);
       for (const [indice, mostrar] of [true, false, true].entries()) {
         const diseno = `clasica-${mostrar ? 'con' : 'sin'}-asesor-${indice}`;
         await page.locator('input[name="kw-ficha-asesor"]').setChecked(mostrar);
@@ -85,7 +85,7 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
   } finally { await browser.close(); }
 });
 
-test('Redes usa Poppins, una portada y exporta PNG y PDF 4:5 sin datos del asesor', async () => {
+test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor', async () => {
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
   try {
@@ -97,7 +97,7 @@ test('Redes usa Poppins, una portada y exporta PNG y PDF 4:5 sin datos del aseso
         const pathname = new URL(route.request().url()).pathname;
         if (pathname === '/') return route.fulfill({ contentType: 'text/html', body: '<html><body></body></html>' });
         if (pathname.endsWith('.ttf')) return route.fulfill({ contentType: 'font/ttf', body: fs.readFileSync(new URL('..' + pathname, import.meta.url)) });
-        if (pathname.includes('logo-kw-premier')) return route.fulfill({ contentType: 'image/png', body: fs.readFileSync(new URL('../assets/img/logo-kw-premier.png', import.meta.url)) });
+        if (pathname.includes('logo-kw-premier')) return route.fulfill({ contentType: 'image/png', body: fs.readFileSync(new URL('..' + pathname, import.meta.url)) });
         return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#dfd9cd"/><path d="M0 600 900 350 1200 450V800H0Z" fill="#a49c88"/><rect x="100" y="80" width="1000" height="500" fill="#f7f5f0"/><rect x="750" y="120" width="300" height="350" fill="#a7bcc1"/><rect x="340" y="420" width="500" height="220" rx="30" fill="#777e7f"/></svg>' });
       });
       await page.goto('https://fotos.example/');
@@ -116,9 +116,9 @@ test('Redes usa Poppins, una portada y exporta PNG y PDF 4:5 sin datos del aseso
           window.medidasPDF = [pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight()];
           return pdf;
         };
-        await kwFichaPropiedad.abrir({ propiedad: { titulo: 'Departamento en venta', operacion: 'venta', precio: 99999999,
-          calle: 'Rancho la joya #43', estado: 'Ciudad de México', recamaras: 2, banos: 4, estacionamientos: 1,
-          m2_construccion: 32, imagenes: [0, 1, 2, 3].map(i => 'https://fotos.example/' + i) },
+        await kwFichaPropiedad.abrir({ propiedad: { titulo: 'Departamento en renta', tipo: 'Departamento', operacion: 'renta', precio: 10000000,
+          calle: 'Calle Cualquiera 123', estado: 'Cualquier Lugar', recamaras: 3, banos: 2, estacionamientos: 1,
+          m2_construccion: 80, imagenes: [0, 1, 2, 3].map(i => 'https://fotos.example/' + i) },
           asesor: { nombre: 'DATOS DEL ASESOR', email: 'privado@example.com' } });
       });
       await page.evaluate(() => { window.textosRedes = []; });
@@ -128,7 +128,7 @@ test('Redes usa Poppins, una portada y exporta PNG y PDF 4:5 sin datos del aseso
       assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 1);
       assert.equal(await page.evaluate(() => document.fonts.check('700 60px PoppinsFicha')), true);
       const textos = await page.evaluate(() => window.textosRedes);
-      assert.ok(textos.some(item => item.text === 'Departamento en venta' && item.font.includes('PoppinsFicha')));
+      assert.ok(textos.some(item => item.text === 'Departamento en renta' && item.font.includes('PoppinsFicha')));
       assert.equal(textos.some(item => /DATOS DEL ASESOR|privado@example/.test(item.text)), false);
       const pngEvent = page.waitForEvent('download');
       await page.locator('.kw-ficha-boton-png').click();
@@ -154,6 +154,21 @@ test('Redes usa Poppins, una portada y exporta PNG y PDF 4:5 sin datos del aseso
       await page.waitForFunction(() => document.querySelector('.kw-ficha-canvas').width === 1600 && !document.querySelector('.kw-ficha-boton-png').disabled);
       assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 4);
       assert.equal(await page.locator('.kw-ficha-asesor').isVisible(), true);
+      await page.locator('.kw-ficha-diseno input[value="mosaico"]').check();
+      await page.waitForFunction(() => document.querySelector('.kw-ficha-canvas').width === 1080 && !document.querySelector('.kw-ficha-boton-png').disabled);
+      assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 4);
+      assert.equal(await page.locator('.kw-ficha-asesor').isVisible(), false);
+      const fondo = await page.locator('.kw-ficha-canvas').evaluate(c => [...c.getContext('2d').getImageData(10, 1000, 1, 1).data]);
+      assert.deepEqual(fondo, [206, 0, 37, 255]);
+      const mosaicoPNG = page.waitForEvent('download');
+      await page.locator('.kw-ficha-boton-png').click();
+      await (await mosaicoPNG).saveAs(path.join(output, `mosaico-${width}.png`));
+      const mosaicoPDF = page.waitForEvent('download');
+      await page.locator('.kw-ficha-boton-pdf').click();
+      await (await mosaicoPDF).saveAs(path.join(output, `mosaico-${width}.pdf`));
+      const medidasMosaico = await page.evaluate(() => window.medidasPDF);
+      assert.ok(Math.abs(medidasMosaico[0] / medidasMosaico[1] - 4 / 5) < .0001);
+      await page.screenshot({ path: path.join(output, `selector-mosaico-${width}.png`) });
       assert.deepEqual(errors, []);
       await page.close();
     }
