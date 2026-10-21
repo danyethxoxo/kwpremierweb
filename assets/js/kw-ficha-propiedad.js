@@ -26,7 +26,7 @@
     '.kw-ficha-overlay{position:fixed;inset:0;z-index:9500;padding:18px;background:rgba(28,24,24,.56);',
     'display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s ease}',
     '.kw-ficha-overlay.abierto{opacity:1}',
-    '.kw-ficha-dialog{width:min(100%,820px);max-height:calc(100vh - 36px);overflow:auto;overscroll-behavior:contain;',
+    '.kw-ficha-dialog{box-sizing:border-box;width:min(100%,1120px);height:min(960px,calc(100dvh - 36px));max-height:calc(100vh - 36px);overflow:hidden;overscroll-behavior:contain;',
     'display:flex;flex-direction:column;background:#fff;border-radius:20px;padding:18px;box-shadow:0 20px 55px rgba(0,0,0,.28);',
     'transform:translateY(10px) scale(.98);transition:transform .18s ease}',
     '.kw-ficha-overlay.abierto .kw-ficha-dialog{transform:none}',
@@ -37,9 +37,12 @@
     '.kw-ficha-cerrar:hover{background:#e8e5e3;color:#8a0000}',
     '.kw-ficha-cerrar:focus-visible{outline:2px solid #cc0000;outline-offset:2px}',
     '.kw-ficha-cerrar svg{width:17px;height:17px}',
-    '.kw-ficha-vista{padding:10px;border-radius:15px;background:#f2f1f0;min-height:220px;',
-    'display:block;overflow:auto;min-height:0;flex:1}',
-    '.kw-ficha-canvas{display:block;width:100%;height:auto;border-radius:7px;box-shadow:0 5px 18px rgba(38,30,30,.18)}',
+    '.kw-ficha-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;flex:1;min-height:0}',
+    '.kw-ficha-controles{min-width:0;overflow:auto;overscroll-behavior:contain;padding:2px}',
+    '.kw-ficha-controles .kw-ficha-fotos{max-height:none;overflow:visible}',
+    '.kw-ficha-vista{padding:10px;border-radius:15px;background:#f2f1f0;',
+    'display:flex;align-items:center;justify-content:center;overflow:auto;min-width:0;min-height:0}',
+    '.kw-ficha-canvas{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;border-radius:7px;box-shadow:0 5px 18px rgba(38,30,30,.18)}',
     '.kw-ficha-cargando{color:#777;font-size:12px;text-align:center;padding:70px 20px}',
     '.kw-ficha-estado{min-height:18px;margin:11px 2px 8px;color:#777;font-size:11.5px;text-align:center}',
     '.kw-ficha-cargando .kw-loader{min-height:60px;padding:0}.kw-ficha-estado .kw-loader{min-height:36px;height:36px;padding:0;transform:scale(.5)}',
@@ -73,6 +76,9 @@
     '.kw-ficha-mini-clasica{background:linear-gradient(90deg,#fff 42%,transparent 42%),linear-gradient(#d4cfca 65%,#fff 65%,#fff 68%,#d4cfca 68%,#d4cfca 82%,#eee 82%)}',
     '.kw-ficha-mini-editorial{background:linear-gradient(#fff 25%,transparent 25%,transparent 78%,#fff 78%),linear-gradient(90deg,#d4cfca 64%,#fff 64%,#fff 68%,#b8b1ab 68%)}',
     '.kw-ficha-mini-panorama{background:linear-gradient(#302c2c 24%,#d4cfca 24%,#d4cfca 65%,#fff 65%,#fff 69%,#b8b1ab 69%,#b8b1ab 83%,#fff 83%)}',
+    '@media(max-width:700px){.kw-ficha-cuerpo{display:flex;flex-direction:column;overflow:auto;gap:14px}',
+    '.kw-ficha-controles{overflow:visible;flex-shrink:0}.kw-ficha-vista{flex:0 0 auto;overflow:visible}',
+    '.kw-ficha-canvas{width:100%;max-height:none}}',
     '@media(max-width:440px){.kw-ficha-overlay{padding:10px}.kw-ficha-dialog{max-height:calc(100vh - 20px);padding:13px}',
     '.kw-ficha-vista{padding:6px}.kw-ficha-boton{font-size:12px}}'
   ].join('');
@@ -1150,6 +1156,8 @@
     overlay.innerHTML = '<div class="kw-ficha-dialog" role="dialog" aria-modal="true" aria-labelledby="kw-ficha-titulo">' +
       '<div class="kw-ficha-top"><div class="kw-ficha-titulo" id="kw-ficha-titulo">Ficha técnica</div>' +
       '<button type="button" class="kw-ficha-cerrar" aria-label="Cerrar">' + iconoCerrar() + '</button></div>' +
+      '<div class="kw-ficha-cuerpo"><div class="kw-ficha-vista"><div class="kw-ficha-cargando"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div></div>' +
+      '<aside class="kw-ficha-controles" aria-label="Opciones de la ficha">' +
       '<fieldset class="kw-ficha-disenos" disabled><legend>Diseño</legend>' + PLANTILLAS.map(function (plantilla) {
         return '<label class="kw-ficha-diseno"><input type="radio" name="kw-ficha-diseno" value="' + plantilla.id + '"' +
           (modelo.plantilla === plantilla.id ? ' checked' : '') + '><span><i aria-hidden="true" class="kw-ficha-mini kw-ficha-mini-' + plantilla.id + '"></i>' + plantilla.nombre + '</span></label>';
@@ -1157,7 +1165,7 @@
       (fotosDisponibles.length ? '<details class="kw-ficha-selector"><summary>Elegir fotos <span class="kw-ficha-fotos-cuenta"></span></summary>' +
         '<p>Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.</p>' +
         '<fieldset class="kw-ficha-fotos-campos" disabled aria-label="Fotos de la ficha"><div class="kw-ficha-fotos"></div></fieldset></details>' : '') +
-      '<div class="kw-ficha-vista"><div class="kw-ficha-cargando"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div></div>' +
+      '</aside></div>' +
       '<div class="kw-ficha-estado" role="status" aria-live="polite"></div>' +
       '<div class="kw-ficha-botones"><button type="button" class="kw-ficha-boton kw-ficha-boton-png" disabled>Descargar PNG</button>' +
       '<button type="button" class="kw-ficha-boton kw-ficha-boton-pdf" disabled>Descargar PDF</button></div>' +

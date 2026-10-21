@@ -4,7 +4,7 @@
   function cargarModulo() {
     if (g.kwFichaPropiedad) return Promise.resolve(g.kwFichaPropiedad);
     if (!modulo) modulo = new Promise(function(ok,bad) {
-      var script = document.createElement('script'); script.src='/assets/js/kw-ficha-propiedad.js?v=20261021plantillas';
+      var script = document.createElement('script'); script.src='/assets/js/kw-ficha-propiedad.js?v=20261021lateral';
       script.onload=function() { ok(g.kwFichaPropiedad); }; script.onerror=function() { modulo=null; bad(new Error('No se pudo preparar la ficha.')); };document.head.append(script);
     });
     return modulo;
