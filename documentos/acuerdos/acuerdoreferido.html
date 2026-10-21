@@ -53,7 +53,7 @@ fieldset[disabled] .field input, fieldset[disabled] .field select, fieldset[disa
 .r-seccion { font-size: 9.5pt; font-weight: 700; margin: 16px 0px 8px; }
 .r-seccion:first-of-type { margin-top: 0px; }
 table.r-tabla { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 8.8pt; }
-table.r-tabla td { border: 1px solid rgb(0, 0, 0); padding: 5px 8px; vertical-align: top; width: 50%; }
+table.r-tabla td, table.r-tabla th { border: 1px solid rgb(0, 0, 0); padding: 5px 8px; vertical-align: top; width: 50%; }
 .r-line { font-size: 9pt; line-height: 1.7; margin-bottom: 3px; }
 .r-line .r-val { font-weight: 600; }
 .r-comision { font-size: 8.8pt; line-height: 1.55; color: rgb(0, 0, 0); }
@@ -116,7 +116,7 @@ fieldset[disabled] textarea { opacity: 0.55; }
 .r-titulo { margin: 2px 0px 8px; font-size: 12pt; }
 .r-seccion { background: #fff; text-align: center; padding: 4px 5px; margin: 6px 0px 0px; font-size: 8pt; border: 1px solid rgb(51, 51, 51); }
 table.r-tabla { table-layout: fixed; font-size: 7.4pt; margin: 0px; }
-table.r-tabla td { padding: 2px 5px; line-height: 1.22; overflow-wrap: anywhere; }
+table.r-tabla td, table.r-tabla th { padding: 2px 5px; line-height: 1.22; overflow-wrap: anywhere; }
 .r-val { white-space: pre-wrap; }
 .r-comision { font-size: 7.5pt; line-height: 1.3; margin: 7px 0px; }
 .r-firmas { margin-top: 10px; }
@@ -378,7 +378,7 @@ function updatePreview() {
   const cell = (label, id) => id ? '<td' + enlaceCampo(id, label) + '><strong>' + label + ':</strong> <span class="r-val">' + (referidoValor(id) || '________________') + '</span></td>' : '<td></td>';
   const firma = (id, rol, fecha) => '<div class="r-firma"><div class="r-firma-nombre"' + enlaceCampo(id, rol) + '>' + referidoValor(id) + '</div><div class="r-firma-linea"><div class="r-firma-rol">Nombre y firma del ' + rol + (fecha ? '<br><span' + enlaceCampo(fecha, 'Fecha de firma') + '>Fecha: ' + (referidoValor(fecha) || '____________') + '</span>' : '') + '</div></div></div>';
   document.getElementById('referido-preview').innerHTML = '<div class="r-logo"><img src="data:image/png;base64,' + LOGO_B64 + '" alt="KW Premier"></div><div class="r-titulo">ACUERDO DE REFERIDO</div>' +
-    sections.map((s,i) => '<div class="r-seccion">SECCIÓN ' + s.title.toUpperCase() + '</div><table class="r-tabla">' + (i === 0 ? '<tr><td' + enlaceCampo('mc-recibe', 'Market Center que recibe') + '><strong>MARKET CENTER QUE RECIBE</strong></td><td' + enlaceCampo('mc-envia', 'Market Center que envía') + '><strong>MARKET CENTER QUE ENVÍA</strong></td></tr>' : '') + s.rows.map(r => '<tr>' + cell(r[0],r[1]) + cell(r[2],r[3]) + '</tr>').join('') + '</table>').join('') +
+    sections.map((s,i) => '<div class="r-seccion">SECCIÓN ' + s.title.toUpperCase() + '</div><table class="r-tabla">' + (i === 0 ? '<tr><th scope="col" style="text-align:center"><strong>MARKET CENTER QUE RECIBE</strong></th><th scope="col" style="text-align:center"><strong>MARKET CENTER QUE ENVÍA</strong></th></tr>' : '') + s.rows.map(r => '<tr>' + cell(r[0],r[1]) + cell(r[2],r[3]) + '</tr>').join('') + '</table>').join('') +
     '<div class="r-comision">ACEPTO ESTE REFERIDO Y, CUANDO LA OPERACIÓN SE CONCRETE, ACEPTO PAGAR 25% DE MI COMISIÓN AL ASESOR DE LA OFICINA QUE REFIRIÓ AL VENDEDOR O COMPRADOR SEGÚN SEA EL CASO, OBLIGÁNDOME A ADJUNTAR LOS DETALLES DEL CIERRE DE LA OPERACIÓN CON EL PAGO.</div>' +
     '<div class="r-firmas"><div class="r-firmas-grid">' + firma('asesor-recibe','Asesor del Market Center que recibe','fecha-firma-recibe') + firma('asesor-envia','Asesor del Market Center que refiere','fecha-firma-envia') + firma('tl-recibe','Team Leader del Market Center que recibe') + firma('tl-envia','Team Leader del Market Center que refiere') + firma('mca-recibe','MCA del Market Center que recibe') + firma('mca-envia','MCA del Market Center que refiere') + '</div></div><div class="r-page-footer"><span>' + (folioActual ? folioRevisionActual() : 'Folio: __________') + '</span><span>Página 1 de 1</span><span>Fecha: ' + new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric' }) + '</span></div>';
   fitPreviewMobile();
@@ -458,7 +458,7 @@ function downloadPDF(opciones) {
   .r-titulo { text-align:center; font-size:12pt; font-weight:700; margin:6px 0 20px; }
   .r-seccion { font-size:9.5pt; font-weight:700; margin:16px 0 8px; }
   table.r-tabla { width:100%; border-collapse:collapse; margin-bottom:4px; font-size:8.8pt; }
-  table.r-tabla td { border:1px solid #000; padding:5px 8px; vertical-align:top; width:50%; }
+  table.r-tabla td, table.r-tabla th { border:1px solid #000; padding:5px 8px; vertical-align:top; width:50%; }
   .r-line { font-size:9pt; line-height:1.7; margin-bottom:3px; }
   .r-line .r-val { font-weight:600; }
   .r-comision { font-size:8.8pt; line-height:1.55; color:#000; }
@@ -481,7 +481,7 @@ function downloadPDF(opciones) {
   .r-titulo { margin:2px 0 8px; font-size:12pt; }
   .r-seccion { background:#fff;text-align:center; padding:4px 5px; margin:6px 0 0; font-size:8pt; border:1px solid #333; }
   table.r-tabla { table-layout:fixed; font-size:7.4pt; margin:0; }
-  table.r-tabla td { padding:2px 5px; line-height:1.22; overflow-wrap:anywhere; }
+  table.r-tabla td, table.r-tabla th { padding:2px 5px; line-height:1.22; overflow-wrap:anywhere; }
   .r-val { white-space:pre-wrap; }
   .r-comision { font-size:7.5pt; line-height:1.3; margin:7px 0; }
   .r-firmas { margin-top:10px; }
