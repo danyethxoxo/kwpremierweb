@@ -1750,7 +1750,14 @@
   var cambiandoMultiple = false;
   function filtroMultiple(id) {
     var elegidas=seleccionesMultiples[id] || [];
-    return elegidas.length ? elegidas.map(function(o){return o.valor;}) : val(id);
+    var valores = elegidas.length ? elegidas.map(function(o){return o.valor;}) : val(id);
+    if (id === 'f-colonia') {
+      var lista = Array.isArray(valores) ? valores : valores ? [valores] : [];
+      if (lista.includes('grupo:del-valle-bj')) return Array.from(new Set(lista.flatMap(function(v){
+        return v === 'grupo:del-valle-bj' ? ['Del Valle Norte','Del Valle Centro','Del Valle Sur'] : [v];
+      })));
+    }
+    return valores;
   }
   function pintarEtiquetasFiltro(id) {
     var select=document.getElementById(id),contenedor=select.closest('.filtro');
@@ -1862,6 +1869,9 @@
         var opciones = Array.from(colonias.entries()).sort(function (a, b) { return a[1].colonia.localeCompare(b[1].colonia, 'es'); });
         var fragmento = document.createDocumentFragment();
         fragmento.appendChild(new Option(textoVacio, ''));
+        if (normalizarTexto(contexto.estado).trim() === 'ciudad de mexico' && normalizarTexto(contexto.municipio).trim() === 'benito juarez') {
+          fragmento.appendChild(new Option('Del Valle (todas)', 'grupo:del-valle-bj'));
+        }
         opciones.forEach(function (entrada) {
           var lugar = entrada[1];
           fragmento.appendChild(new Option([lugar.colonia, lugar.municipio, lugar.estado].filter(Boolean).join(' · '), entrada[0]));
