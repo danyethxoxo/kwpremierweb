@@ -37,11 +37,9 @@
     if (!bibliotecas) {
       bibliotecas = Promise.all([
         recurso('/assets/vendor/mapa/leaflet.css?v=1.9.4', true),
-        recurso('/assets/vendor/mapa/MarkerCluster.css?v=1.5.3', true),
-        recurso('/assets/js/propiedades-entorno.js?v=20261020'),
+        recurso('/assets/js/propiedades-entorno.js?v=20261020metro1'),
         (async function () {
           if (!window.L) await recurso('/assets/vendor/mapa/leaflet.js?v=1.9.4');
-          if (!window.L.markerClusterGroup) await recurso('/assets/vendor/mapa/leaflet.markercluster.js?v=1.5.3');
         })()
       ]).catch(function (error) { bibliotecas = null; throw error; });
     }
@@ -223,25 +221,31 @@
       else if (zona) mapa.fitBounds([[zona[0],zona[1]],[zona[2],zona[3]]],{animate:false});
       else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
       else if (limites.length && !primeraVista && (filtros.texto || filtros.colonia || filtros.municipio || filtros.estado)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
-      var capa = L.markerClusterGroup({
-        maxClusterRadius: function (zoom) { return zoom >= 15 ? 64 : 70; }, showCoverageOnHover: false, animate: false, removeOutsideVisibleBounds: true,
-        iconCreateFunction: function (grupo) {
-          var hijos = grupo.getAllChildMarkers();
-          var operaciones = new Set(hijos.map(function (pin) { return pin.options.operacion; }));
-          // Los pendientes no cambian el color de todo el grupo.
-          operaciones.delete('sin-operacion');
-          var tipo = !operaciones.size ? 'neutro' : operaciones.size > 1 || operaciones.has('mixto') ? 'mixto' : operaciones.has('renta') ? 'renta' : 'venta';
-          var precios = hijos.filter(function (pin) { return Number.isFinite(pin.options.precio) && pin.options.precio > 0; });
-          var monedas = new Set(precios.map(function (pin) { return pin.options.moneda; }));
-          var etiqueta = 'Consultar';
-          if (monedas.size > 1) etiqueta = 'Ver precios';
-          else if (precios.length) etiqueta = 'Desde ' + precioPin(Math.min.apply(null, precios.map(function (pin) { return pin.options.precio; })), precios[0].options.moneda);
-          var ancho = Math.max(80, etiqueta.length * 7 + 22);
-          var contenido = texto('span', etiqueta);
-          contenido.title = hijos.length.toLocaleString('es-MX') + ' propiedades. Acercar para ver precios individuales.';
-          return L.divIcon({html: contenido.outerHTML, className: 'prop-mapa-grupo prop-mapa-grupo-' + tipo, iconSize: [ancho,32], iconAnchor:[ancho/2,16]});
-        }
-      });
+      var todos = !!(filtros.zona || filtros.poligono || filtros.texto || filtros.operacion || filtros.tipo || filtros.minimo || filtros.maximo || (inicioCancelado && (filtros.estado || filtros.colonia || filtros.municipio)) || filtros.marketCenter || filtros.asesor || filtros.recamaras || filtros.banos || filtros.estacionamientos || filtros.m2Min || filtros.m2Max);
+      var capa = L.featureGroup(), candidatos = [], destacado;
+      function mostrarPines() {
+        if (!mapa.hasLayer(capa)) return;
+        var celdas = new Set(), visibles = new Set(), limitesVista = mapa.getBounds().pad(.15);
+        var espacio = mapa.getZoom() >= 15 ? 45 : 85;
+        candidatos.forEach(function (pin) {
+          if (!limitesVista.contains(pin.getLatLng())) return;
+          var punto = mapa.project(pin.getLatLng(), mapa.getZoom());
+          var celda = Math.floor(punto.x / espacio) + ':' + Math.floor(punto.y / espacio);
+          if (todos || mapa.getZoom() >= 18 || pin === destacado || pin.isPopupOpen() || !celdas.has(celda)) {
+            celdas.add(celda); visibles.add(pin);
+          }
+        });
+        capa.eachLayer(function (pin) { if (!visibles.has(pin)) capa.removeLayer(pin); });
+        visibles.forEach(function (pin) { if (!capa.hasLayer(pin)) capa.addLayer(pin); });
+      }
+      capa.addLayers = function (marcadores) { candidatos.push.apply(candidatos, marcadores); mostrarPines(); };
+      capa.zoomToShowLayer = function (pin, listo) {
+        destacado = pin;
+        if (mapa.getZoom() < 16 || !mapa.getBounds().contains(pin.getLatLng())) mapa.setView(pin.getLatLng(), Math.max(16,mapa.getZoom()), {animate:false});
+        mostrarPines(); listo();
+      };
+      mapa.on('moveend zoomend', mostrarPines);
+      capa.on('remove', function () { mapa.off('moveend zoomend', mostrarPines); });
       grupos = capa; mapa.addLayer(capa);
       var iconos = {};
       // Repartir el trabajo entre cuadros para mantener la interfaz utilizable.
@@ -300,18 +304,12 @@
     }
     var capaActual = grupos;
     grupos.zoomToShowLayer(marker, function () {
-      // No recentrar después de desplegar pines coincidentes: el movimiento
-      // desharía su separación y retiraría la ficha que acabamos de abrir.
-      if (mapa.getZoom() < 16) mapa.setView(marker.getLatLng(), 16, {animate: false});
-      // MarkerCluster termina de limpiar zoomend después de este callback.
-      // En el siguiente cuadro se puede separar el grupo y abrir la ficha
-      // sin que esa limpieza retire sus marcadores.
       requestAnimationFrame(function () {
-        if (grupos !== capaActual || pines.get(String(id)) !== marker) return;
-        capaActual.zoomToShowLayer(marker, function () { marker.openPopup(); });
+        if (grupos === capaActual && pines.get(String(id)) === marker) marker.openPopup();
       });
     });
   }
+
   function localizar(inicial) {
     if (!mapa || localizando) return Promise.resolve(null);
     return new Promise(function (resolve) {
@@ -324,7 +322,7 @@
       btnUbicacion.disabled = false;
       btnUbicacion.removeAttribute('aria-busy');
       btnUbicacion.title = 'Mi ubicación';
-      if (mensaje) { errorUbicacion.textContent = mensaje; errorUbicacion.hidden = false; }
+      if (mensaje && !inicial) { errorUbicacion.textContent = mensaje; errorUbicacion.hidden = false; }
       resolve(posicion || null);
     }
     if (!navigator.geolocation) { terminar('Tu navegador no permite obtener la ubicación.'); return; }
