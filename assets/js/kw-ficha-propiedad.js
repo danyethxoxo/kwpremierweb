@@ -15,9 +15,11 @@
   var estilosInstalados = false;
   var jsPdfPromesa = null;
   var pdfJsPromesa = null;
+  var fuentesRedesPromesa = null;
   var cerrarFichaActiva = null;
   var PLANTILLAS = [
-    { id: 'clasica', nombre: 'Clásica' }
+    { id: 'clasica', nombre: 'Clásica' },
+    { id: 'redes', nombre: 'Redes 4:5' }
   ];
 
   var ESTILOS = [
@@ -65,6 +67,7 @@
     '.kw-ficha-disenos{display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;border:0;padding:0;margin:0 0 12px;min-width:0}',
     '.kw-ficha-asesor{display:flex;align-items:center;gap:8px;flex-basis:100%;font-size:12px;color:#302c2c;cursor:pointer;margin-top:6px}',
     '.kw-ficha-asesor input{accent-color:#8a0000}',
+    '.kw-ficha-asesor[hidden]{display:none}',
     '.kw-ficha-disenos legend{font-size:12px;margin-bottom:7px;color:#66615f}',
     '.kw-ficha-diseno{flex:1;min-width:0;position:relative;cursor:pointer;text-align:center;font-size:12px}',
     '.kw-ficha-diseno input{position:absolute;opacity:0;width:1px;height:1px}',
@@ -74,6 +77,7 @@
     '.kw-ficha-diseno input:disabled+span{opacity:.55;cursor:default}',
     '.kw-ficha-mini{display:block;width:48px;height:48px;margin:0 auto 5px;border:1px solid #ddd;background-color:#fff}',
     '.kw-ficha-mini-clasica{background:linear-gradient(90deg,#fff 42%,transparent 42%),linear-gradient(#d4cfca 65%,#fff 65%,#fff 68%,#d4cfca 68%,#d4cfca 82%,#eee 82%)}',
+    '.kw-ficha-mini-redes{background:linear-gradient(#fff 12%,#d4cfca 12%,#d4cfca 65%,#fff 65%);border-radius:4px}',
     '.kw-ficha-mini-editorial{background:linear-gradient(#fff 25%,transparent 25%,transparent 78%,#fff 78%),linear-gradient(90deg,#d4cfca 64%,#fff 64%,#fff 68%,#b8b1ab 68%)}',
     '.kw-ficha-mini-panorama{background:linear-gradient(#302c2c 24%,#d4cfca 24%,#d4cfca 65%,#fff 65%,#fff 69%,#b8b1ab 69%,#b8b1ab 83%,#fff 83%)}',
     '@media(max-width:700px){.kw-ficha-cuerpo{display:flex;flex-direction:column;overflow:auto;gap:14px}',
@@ -192,6 +196,7 @@
     return {
       plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
       mostrarAsesor: opciones.mostrarAsesor !== false,
+      ubicacionRedes: [propiedad.calle || propiedad.colonia, propiedad.estado || propiedad.municipio].filter(Boolean),
       operacion: propiedad.operaciones_filtro && propiedad.operaciones_filtro.length > 1 ? 'VENTA Y RENTA' : propiedad.operacion === 'renta' ? 'RENTA' : propiedad.operacion === 'venta' ? 'VENTA' : 'POR CONFIRMAR',
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: texto(propiedad.tipo),
@@ -687,7 +692,128 @@
       .filter(Boolean).forEach(function (dato, i) { p.texto(dato, 330, 1762 + i * 37, 1160, 35, 26, COLORES.texto); });
   }
 
+  function cargarFuentesRedes() {
+    if (!fuentesRedesPromesa) fuentesRedesPromesa = Promise.all([
+      new FontFace('PoppinsFicha', 'url(/assets/fonts/poppins/Poppins-Regular.ttf)', { weight: '400' }).load(),
+      new FontFace('PoppinsFicha', 'url(/assets/fonts/poppins/Poppins-Bold.ttf)', { weight: '700' }).load()
+    ]).then(function (fuentes) {
+      fuentes.forEach(function (fuente) { document.fonts.add(fuente); });
+    }).catch(function () {
+      fuentesRedesPromesa = null;
+      throw new Error('No se pudo cargar la fuente Poppins. Intenta nuevamente.');
+    });
+    return fuentesRedesPromesa;
+  }
+
+  // Iconos de contorno negro: superficie, cama, tina con regadera y cochera.
+  function iconoRedes(ctx, tipo, x, y) {
+    ctx.save();
+    ctx.translate(x - 48, y);
+    ctx.scale(1.5, 1.5);
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    var trazos;
+    if (tipo === 'superficie') trazos = [
+      [[15,38],[15,16],[32,4],[49,16],[49,38],[37,38],[37,23],[26,23],[26,38],[15,38]],
+      [[8,53],[56,53]], [[17,47],[8,53],[17,59]], [[47,47],[56,53],[47,59]]
+    ];
+    else if (tipo === 'cuartos') trazos = [
+      [[7,37],[7,13],[57,13],[57,37]],
+      [[12,32],[12,23],[16,20],[27,20],[29,23],[29,32]],
+      [[35,32],[35,23],[39,20],[50,20],[52,23],[52,32]],
+      [[4,54],[4,38],[9,32],[55,32],[60,38],[60,54],[4,54]],
+      [[4,43],[60,43]], [[8,54],[8,61]], [[56,54],[56,61]]
+    ];
+    else if (tipo === 'banos') trazos = [
+      [[7,37],[57,37],[53,49],[44,55],[20,55],[11,49],[7,37]],
+      [[17,55],[14,61]], [[47,55],[50,61]],
+      [[40,36],[40,10],[37,5],[31,4],[26,7],[24,12]],
+      [[18,16],[19,12],[29,12],[31,16],[18,16]],
+      [[19,22],[19,24]], [[25,22],[25,24]], [[31,22],[31,24]],
+      [[19,29],[19,31]], [[25,29],[25,31]], [[31,29],[31,31]]
+    ];
+    else trazos = [
+      [[3,54],[3,35],[8,30],[13,18],[34,18],[40,30],[45,35],[45,54],[3,54]],
+      [[8,30],[40,30]], [[3,44],[45,44]],
+      [[10,54],[10,60],[16,60],[16,54]], [[33,54],[33,60],[39,60],[39,54]],
+      [[9,37],[14,37],[14,40],[9,40],[9,37]], [[34,37],[39,37],[39,40],[34,40],[34,37]],
+      [[53,23],[53,55]]
+    ];
+    trazos.forEach(function (puntos) {
+      ctx.beginPath();
+      puntos.forEach(function (punto, i) { if (i) ctx.lineTo(punto[0], punto[1]); else ctx.moveTo(punto[0], punto[1]); });
+      ctx.stroke();
+    });
+    if (tipo === 'cochera') {
+      ctx.beginPath(); ctx.ellipse(53, 12, 10, 12, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '400 16px PoppinsFicha'; ctx.textAlign = 'center'; ctx.fillText('P', 53, 18);
+    }
+    ctx.restore();
+  }
+
+  function textoRedes(ctx, valor, x, y, ancho, alto, tamano, negrita, alineacion) {
+    var lineas;
+    do {
+      ctx.font = (negrita ? '700 ' : '400 ') + tamano + 'px PoppinsFicha';
+      lineas = envolver(ctx, valor, ancho);
+      if (lineas.length * tamano * 1.12 <= alto) break;
+      tamano--;
+    } while (tamano > 12);
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = alineacion || 'left';
+    lineas.forEach(function (linea, i) { ctx.fillText(linea, x, y + tamano + i * tamano * 1.12); });
+    ctx.textAlign = 'left';
+    return lineas.length * tamano * 1.12;
+  }
+
+  function dibujarRedes(modelo) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1350;
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1080, 1350);
+    if (modelo._logo && modelo._logo.naturalWidth) {
+      ctx.drawImage(modelo._logo, 54, 40, 205, 205 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
+    } else textoRedes(ctx, 'KW PREMIER', 54, 48, 250, 70, 32, true);
+    textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 1008, 57, 700, 74, 46, false, 'right');
+    imagenCubierta(ctx, modelo._fotos[0], 36, 150, 1008, 670, 76, true);
+    var altoTitulo = textoRedes(ctx, modelo.titulo, 54, 846, 972, 124, 60, true);
+    var ubicacion = (modelo.ubicacionRedes || []).join('\n') || modelo.direccion;
+    var y = 846 + altoTitulo + 8;
+    // Cada línea de la ubicación se conserva separada como en la referencia.
+    var lineasUbicacion = ubicacion.split('\n');
+    var altoUbicacion = Math.min(50, Math.max(50, 1050 - y) / lineasUbicacion.length);
+    lineasUbicacion.forEach(function (linea) {
+      textoRedes(ctx, linea, 54, y, 972, altoUbicacion, 44, false);
+      y += altoUbicacion;
+    });
+    var area = modelo.features.find(function (d) { return /CONSTRUCCI|TERRENO/.test(d.etiqueta); });
+    var habitaciones = modelo.features.find(function (d) { return /RECÁMARA/.test(d.etiqueta); });
+    var banos = modelo.features.find(function (d) { return /BAÑO/.test(d.etiqueta); });
+    var cochera = modelo.features.find(function (d) { return /COCHERA/.test(d.etiqueta); });
+    var datos = [
+      area && { tipo: 'superficie', valor: area.valor, etiqueta: '' },
+      habitaciones && { tipo: 'cuartos', valor: habitaciones.valor, etiqueta: Number(habitaciones.valor) === 1 ? 'Cuarto' : 'Cuartos' },
+      banos && { tipo: 'banos', valor: banos.valor, etiqueta: Number(banos.valor) === 1 ? 'Baño' : 'Baños' },
+      cochera && { tipo: 'cochera', valor: cochera.valor, etiqueta: Number(cochera.valor) === 1 ? 'Cochera' : 'Cocheras' }
+    ].filter(Boolean);
+    datos.forEach(function (dato, i) {
+      var x = 954 - (datos.length - 1 - i) * 172;
+      iconoRedes(ctx, dato.tipo, x, 1110);
+      textoRedes(ctx, String(dato.valor), x, 1218, 160, 44, 32, false, 'center');
+      if (dato.etiqueta) textoRedes(ctx, dato.etiqueta, x, 1252, 160, 44, 32, false, 'center');
+    });
+    return canvas;
+  }
+
   function dibujarModelo(modelo) {
+    if (modelo.plantilla === 'redes') return dibujarRedes(modelo);
     var canvas = document.createElement('canvas');
     canvas.width = ANCHO;
     canvas.height = ALTO;
@@ -1120,10 +1246,14 @@
   async function convertirPDF(modelo) {
     var JsPDF = await cargarJsPDF();
     var anchoPDF = 612;
-    var altoPDF = anchoPDF * ALTO / ANCHO;
+    var redes = modelo.plantilla === 'redes';
+    var altoPDF = anchoPDF * (redes ? 1350 / 1080 : ALTO / ANCHO);
     var escala = anchoPDF / ANCHO;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
-    dibujarPDFVector(pdf, modelo, escala);
+    if (redes) {
+      var imagenRedes = dibujarRedes(modelo);
+      pdf.addImage(imagenRedes.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
+    } else dibujarPDFVector(pdf, modelo, escala);
     return pdf.output('blob');
   }
 
@@ -1164,7 +1294,8 @@
     if (anterior) anterior.remove();
     var modelo = crearModelo(opciones || {});
     var fotosDisponibles = modelo.fotos.slice();
-    var seleccion = fotosDisponibles.slice(0, 4).map(function (_, indice) { return indice; });
+    var seleccion = fotosDisponibles.slice(0, modelo.plantilla === 'redes' ? 1 : 4).map(function (_, indice) { return indice; });
+    var seleccionClasica = fotosDisponibles.slice(0, 4).map(function (_, indice) { return indice; });
     modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
     var overlay = document.createElement('div');
     overlay.className = 'kw-ficha-overlay';
@@ -1179,7 +1310,7 @@
       }).join('') + '<label class="kw-ficha-asesor"><input type="checkbox" name="kw-ficha-asesor"' +
         (modelo.mostrarAsesor ? ' checked' : '') + '>Mostrar datos del asesor</label></fieldset>' +
       (fotosDisponibles.length ? '<details class="kw-ficha-selector"><summary>Elegir fotos <span class="kw-ficha-fotos-cuenta"></span></summary>' +
-        '<p>Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.</p>' +
+        '<p class="kw-ficha-fotos-ayuda"></p>' +
         '<fieldset class="kw-ficha-fotos-campos" disabled aria-label="Fotos de la ficha"><div class="kw-ficha-fotos"></div></fieldset></details>' : '') +
       '</aside></div>' +
       '<div class="kw-ficha-estado" role="status" aria-live="polite"></div>' +
@@ -1204,7 +1335,11 @@
       if (evento.target.name === 'kw-ficha-asesor') modelo.mostrarAsesor = evento.target.checked;
       else {
         if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
+        if (modelo.plantilla === 'clasica') seleccionClasica = seleccion.slice();
         modelo.plantilla = evento.target.value;
+        seleccion = modelo.plantilla === 'redes' ? seleccion.slice(0, 1) : seleccionClasica.slice();
+        actualizarFotos();
+        return;
       }
       pdfBlob = null;
       pdfPromesa = null;
@@ -1214,13 +1349,16 @@
     });
 
     function pintarSeleccion() {
+      dialog.querySelector('.kw-ficha-asesor').hidden = modelo.plantilla === 'redes';
       if (!galeria) return;
-      cuentaFotos.textContent = '(' + seleccion.length + '/4)';
+      var limite = modelo.plantilla === 'redes' ? 1 : 4;
+      cuentaFotos.textContent = '(' + seleccion.length + '/' + limite + ')';
+      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = limite === 1 ? 'Selecciona la foto de portada.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
       galeria.querySelectorAll('.kw-ficha-foto').forEach(function (tarjeta, indice) {
         var posicion = seleccion.indexOf(indice);
         var input = tarjeta.querySelector('input');
         input.checked = posicion >= 0;
-        input.disabled = posicion < 0 && seleccion.length >= 4;
+        input.disabled = limite !== 1 && posicion < 0 && seleccion.length >= limite;
         tarjeta.classList.toggle('elegida', posicion >= 0);
         var portada = tarjeta.querySelector('button');
         portada.disabled = posicion <= 0;
@@ -1236,6 +1374,11 @@
       botonPDF.disabled = true;
       pintarSeleccion();
       modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
+      if (modelo.plantilla === 'redes') {
+        try { await cargarFuentesRedes(); }
+        catch (error) { estado.textContent = error.message; return; }
+        if (cerrado || revision !== revisionFotos) return;
+      }
       if (!seleccion.length) {
         modelo._fotos = [];
         canvas = dibujarModelo(modelo);
@@ -1274,7 +1417,8 @@
       var input = document.createElement('input');
       input.type = 'checkbox';
       input.addEventListener('change', function () {
-        if (input.checked && seleccion.length < 4) seleccion.push(indice);
+        if (input.checked && modelo.plantilla === 'redes') seleccion = [indice];
+        else if (input.checked && seleccion.length < 4) seleccion.push(indice);
         else seleccion = seleccion.filter(function (elegida) { return elegida !== indice; });
         actualizarFotos();
       });
@@ -1326,6 +1470,7 @@
     var canvas;
     try {
       await cargarImagenes(modelo);
+      if (modelo.plantilla === 'redes') await cargarFuentesRedes();
       if (cerrado) return;
       canvas = dibujarModelo(modelo);
       vista.replaceChildren(canvas);
@@ -1369,9 +1514,19 @@
       boton.setAttribute('aria-busy','true');
       estado.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try {
-        var pdf = await obtenerPDF();
-        var blob = tipo === 'png' ? await convertirPNGDesdePDF(pdf) : pdf;
-        descargar(blob, 'ficha-' + slug(modelo.titulo) + '.' + tipo);
+        var blob;
+        if (tipo === 'png' && modelo.plantilla === 'redes') {
+          blob = await new Promise(function (resolver, rechazar) {
+            dibujarRedes(modelo).toBlob(function (resultado) {
+              if (resultado) resolver(resultado);
+              else rechazar(new Error('No se pudo generar la imagen.'));
+            }, 'image/png');
+          });
+        } else {
+          var pdf = await obtenerPDF();
+          blob = tipo === 'png' ? await convertirPNGDesdePDF(pdf) : pdf;
+        }
+        descargar(blob, 'ficha-' + slug(modelo.titulo) + (modelo.plantilla === 'redes' ? '-redes-4x5' : '') + '.' + tipo);
         estado.textContent = 'Descarga lista.';
       } catch (error) {
         estado.textContent = error.message || 'No se pudo generar el archivo.';
