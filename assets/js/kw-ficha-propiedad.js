@@ -16,6 +16,11 @@
   var jsPdfPromesa = null;
   var pdfJsPromesa = null;
   var cerrarFichaActiva = null;
+  var PLANTILLAS = [
+    { id: 'clasica', nombre: 'Clásica' },
+    { id: 'editorial', nombre: 'Editorial' },
+    { id: 'panorama', nombre: 'Panorama' }
+  ];
 
   var ESTILOS = [
     '.kw-ficha-overlay{position:fixed;inset:0;z-index:9500;padding:18px;background:rgba(28,24,24,.56);',
@@ -56,6 +61,18 @@
     '.kw-ficha-foto label{display:block;cursor:pointer;font-size:12px}.kw-ficha-foto img{width:100%;height:75px;object-fit:cover;border-radius:5px;display:block;margin-bottom:6px}',
     '.kw-ficha-foto input{accent-color:#cc0000;margin-right:5px}.kw-ficha-portada{width:100%;margin-top:6px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white;color:#302c2c;font:inherit;font-size:11px;cursor:pointer}',
     '.kw-ficha-portada:disabled{opacity:.6;cursor:default}',
+    '.kw-ficha-disenos{display:flex;gap:8px;flex-shrink:0;border:0;padding:0;margin:0 0 12px;min-width:0}',
+    '.kw-ficha-disenos legend{font-size:12px;margin-bottom:7px;color:#66615f}',
+    '.kw-ficha-diseno{flex:1;min-width:0;position:relative;cursor:pointer;text-align:center;font-size:12px}',
+    '.kw-ficha-diseno input{position:absolute;opacity:0;width:1px;height:1px}',
+    '.kw-ficha-diseno span{display:block;padding:7px;border:1px solid #dedbd9;border-radius:9px;color:#302c2c}',
+    '.kw-ficha-diseno input:checked+span{border-color:#8a0000;box-shadow:inset 0 0 0 1px #8a0000;background:#fff8f8}',
+    '.kw-ficha-diseno input:focus-visible+span{outline:2px solid #8a0000;outline-offset:2px}',
+    '.kw-ficha-diseno input:disabled+span{opacity:.55;cursor:default}',
+    '.kw-ficha-mini{display:block;width:48px;height:48px;margin:0 auto 5px;border:1px solid #ddd;background-color:#fff}',
+    '.kw-ficha-mini-clasica{background:linear-gradient(90deg,#fff 42%,transparent 42%),linear-gradient(#d4cfca 65%,#fff 65%,#fff 68%,#d4cfca 68%,#d4cfca 82%,#eee 82%)}',
+    '.kw-ficha-mini-editorial{background:linear-gradient(#fff 25%,transparent 25%,transparent 78%,#fff 78%),linear-gradient(90deg,#d4cfca 64%,#fff 64%,#fff 68%,#b8b1ab 68%)}',
+    '.kw-ficha-mini-panorama{background:linear-gradient(#302c2c 24%,#d4cfca 24%,#d4cfca 65%,#fff 65%,#fff 69%,#b8b1ab 69%,#b8b1ab 83%,#fff 83%)}',
     '@media(max-width:440px){.kw-ficha-overlay{padding:10px}.kw-ficha-dialog{max-height:calc(100vh - 20px);padding:13px}',
     '.kw-ficha-vista{padding:6px}.kw-ficha-boton{font-size:12px}}'
   ].join('');
@@ -167,6 +184,7 @@
     if (!features.length && propiedad.tipo) features.push({ valor: texto(propiedad.tipo), etiqueta: 'TIPO DE PROPIEDAD' });
 
     return {
+      plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
       operacion: propiedad.operaciones_filtro && propiedad.operaciones_filtro.length > 1 ? 'VENTA Y RENTA' : propiedad.operacion === 'renta' ? 'RENTA' : propiedad.operacion === 'venta' ? 'VENTA' : 'POR CONFIRMAR',
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: texto(propiedad.tipo),
@@ -565,6 +583,103 @@
     ctx.textAlign = 'left';
   }
 
+  // Las plantillas nuevas comparten posiciones y medidas entre la vista y el PDF.
+  function pintorPlantilla(ctx, pdf, escala) {
+    return {
+      rect: function (x, y, w, h, color) {
+        if (pdf) { pdf.setFillColor(color); pdf.rect(x * escala, y * escala, w * escala, h * escala, 'F'); }
+        else { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+      },
+      foto: function (imagen, x, y, w, h, principal) {
+        if (pdf) pdfImagenCubierta(pdf, imagen, x, y, w, h, principal, escala);
+        else imagenCubierta(ctx, imagen, x, y, w, h, 0, principal);
+      },
+      logo: function (imagen, x, y, w) {
+        if (!imagen || !imagen.naturalWidth) {
+          this.texto('KW PREMIER', x, y, w, 64, 38, COLORES.rojo, true);
+          return;
+        }
+        var h = w * imagen.naturalHeight / imagen.naturalWidth;
+        if (pdf) pdfImagen(pdf, rasterizarImagen(imagen, w, h, 'contain'), x, y, w, h, escala);
+        else ctx.drawImage(imagen, x, y, w, h);
+      },
+      texto: function (valor, x, y, w, h, tamano, color, negrita) {
+        if (!valor) return;
+        var lineas;
+        function medir() {
+          if (pdf) {
+            pdfFuente(pdf, tamano * escala, color, negrita ? 'bold' : 'normal');
+            return pdf.splitTextToSize(String(valor), w * escala);
+          }
+          ctx.font = (negrita ? '700 ' : '400 ') + tamano + 'px Arial, sans-serif';
+          return envolver(ctx, valor, w);
+        }
+        do { lineas = medir(); if (lineas.length * tamano * 1.22 <= h) break; tamano--; } while (tamano > 10);
+        if (pdf) pdf.text(lineas, x * escala, (y + tamano) * escala, { lineHeightFactor: 1.22 });
+        else {
+          ctx.fillStyle = color;
+          ctx.textAlign = 'left';
+          lineas.forEach(function (linea, i) { ctx.fillText(linea, x, y + tamano + i * tamano * 1.22); });
+        }
+      },
+      asesor: function (modelo, x, y, radio) {
+        if (pdf) pdfFotoAsesorFicha(pdf, modelo._asesorFoto, modelo.asesor.nombre, x, y, radio, escala);
+        else dibujarFotoAsesorFicha(ctx, modelo._asesorFoto, modelo.asesor.nombre, x, y, radio);
+      },
+      dato: function (dato, x, y) {
+        if (pdf) pdfDatoFicha(pdf, dato, x, y, 280, escala);
+        else dibujarDatoFicha(ctx, dato, x, y);
+      }
+    };
+  }
+
+  function dibujarPlantilla(p, modelo) {
+    var panorama = modelo.plantilla === 'panorama';
+    var fotos = modelo._fotos || [];
+    p.rect(0, 0, ANCHO, ALTO, COLORES.blanco);
+    if (panorama) {
+      p.rect(0, 0, ANCHO, 440, COLORES.texto);
+      p.rect(60, 35, 300, 118, COLORES.blanco);
+      p.logo(modelo._logo, 85, 48, 250);
+      p.texto(modelo.operacion, 1100, 64, 430, 55, 36, COLORES.blanco, true);
+      p.texto(modelo.titulo, 70, 165, 1460, 160, 58, COLORES.blanco, true);
+      p.texto(modelo.direccion, 70, 345, 1460, 76, 28, COLORES.blanco);
+      p.foto(fotos[0], 0, 440, ANCHO, 700, true);
+      p.rect(70, 1010, 920, 130, COLORES.rojo);
+      p.texto((modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 105, 1035, 850, 80, 58, COLORES.blanco, true);
+      var secundarias = fotos.slice(1);
+      if (secundarias.length) {
+        var ancho = (1460 - (secundarias.length - 1) * 16) / secundarias.length;
+        secundarias.forEach(function (foto, i) { p.foto(foto, 70 + i * (ancho + 16), 1160, ancho, 240, false); });
+      }
+    } else {
+      p.logo(modelo._logo, 70, 60, 290);
+      p.rect(1120, 65, 410, 75, COLORES.rojo);
+      p.texto(modelo.operacion, 1140, 78, 370, 48, 32, COLORES.blanco, true);
+      p.texto(modelo.titulo, 70, 200, 1460, 180, 64, COLORES.texto, true);
+      p.rect(70, 406, 90, 6, COLORES.rojo);
+      p.texto(modelo.direccion, 70, 438, 1460, 90, 30, COLORES.gris);
+      var tieneLaterales = fotos.length > 1;
+      p.foto(fotos[0], 70, 560, tieneLaterales ? 970 : 1460, 630, true);
+      if (tieneLaterales) {
+        p.foto(fotos[1], 1060, 560, 470, fotos.length > 2 ? 305 : 630, false);
+        if (fotos.length > 2) p.foto(fotos[2], 1060, 885, 470, 305, false);
+      }
+      if (fotos.length > 3) p.foto(fotos[3], 70, 1210, 470, 200, false);
+      p.texto(modelo.operacion === 'RENTA' ? 'PRECIO DE RENTA' : 'PRECIO', 590, 1220, 940, 40, 24, COLORES.gris, true);
+      p.texto((modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 590, 1275, 940, 110, 64, COLORES.rojo, true);
+    }
+    var datos = modelo.features.slice(0, 4);
+    datos.forEach(function (dato, i) { p.dato(dato, 800 + (i - (datos.length - 1) / 2) * 365, 1440); });
+    p.rect(70, 1580, 1460, 2, COLORES.linea);
+    p.rect(0, 1605, ANCHO, 295, '#f4f3f1');
+    p.asesor(modelo, 175, 1748, 102);
+    p.texto(modelo.asesor.nombre, 330, 1642, 1160, 64, 44, COLORES.texto, true);
+    p.texto(modelo.asesor.puesto, 330, 1714, 1160, 42, 25, COLORES.rojo, true);
+    [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio ? limpiarUrl(modelo.asesor.sitio) : '']
+      .filter(Boolean).forEach(function (dato, i) { p.texto(dato, 330, 1762 + i * 37, 1160, 35, 26, COLORES.texto); });
+  }
+
   function dibujarModelo(modelo) {
     var canvas = document.createElement('canvas');
     canvas.width = ANCHO;
@@ -574,6 +689,11 @@
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = COLORES.blanco;
     ctx.fillRect(0, 0, ANCHO, ALTO);
+
+    if (modelo.plantilla === 'editorial' || modelo.plantilla === 'panorama') {
+      dibujarPlantilla(pintorPlantilla(ctx), modelo);
+      return canvas;
+    }
 
     var anchoPanel = 680;
     var altoFotos = 1230;
@@ -890,6 +1010,10 @@
   }
 
   function dibujarPDFVector(pdf, modelo, escala) {
+    if (modelo.plantilla === 'editorial' || modelo.plantilla === 'panorama') {
+      dibujarPlantilla(pintorPlantilla(null, pdf, escala), modelo);
+      return;
+    }
     var anchoPanel = 680;
     var altoFotos = 1230;
     pdf.setFillColor(COLORES.blanco);
@@ -1026,6 +1150,10 @@
     overlay.innerHTML = '<div class="kw-ficha-dialog" role="dialog" aria-modal="true" aria-labelledby="kw-ficha-titulo">' +
       '<div class="kw-ficha-top"><div class="kw-ficha-titulo" id="kw-ficha-titulo">Ficha técnica</div>' +
       '<button type="button" class="kw-ficha-cerrar" aria-label="Cerrar">' + iconoCerrar() + '</button></div>' +
+      '<fieldset class="kw-ficha-disenos" disabled><legend>Diseño</legend>' + PLANTILLAS.map(function (plantilla) {
+        return '<label class="kw-ficha-diseno"><input type="radio" name="kw-ficha-diseno" value="' + plantilla.id + '"' +
+          (modelo.plantilla === plantilla.id ? ' checked' : '') + '><span><i aria-hidden="true" class="kw-ficha-mini kw-ficha-mini-' + plantilla.id + '"></i>' + plantilla.nombre + '</span></label>';
+      }).join('') + '</fieldset>' +
       (fotosDisponibles.length ? '<details class="kw-ficha-selector"><summary>Elegir fotos <span class="kw-ficha-fotos-cuenta"></span></summary>' +
         '<p>Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.</p>' +
         '<fieldset class="kw-ficha-fotos-campos" disabled aria-label="Fotos de la ficha"><div class="kw-ficha-fotos"></div></fieldset></details>' : '') +
@@ -1040,12 +1168,23 @@
     var botonPNG = dialog.querySelector('.kw-ficha-boton-png');
     var botonPDF = dialog.querySelector('.kw-ficha-boton-pdf');
     var camposFotos = dialog.querySelector('.kw-ficha-fotos-campos');
+    var camposDisenos = dialog.querySelector('.kw-ficha-disenos');
     var galeria = dialog.querySelector('.kw-ficha-fotos');
     var cuentaFotos = dialog.querySelector('.kw-ficha-fotos-cuenta');
     var revisionFotos = 0;
     var pdfBlob = null;
     var pdfPromesa = null;
     var cacheFotos = new Map();
+
+    camposDisenos.addEventListener('change', function (evento) {
+      if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
+      modelo.plantilla = evento.target.value;
+      pdfBlob = null;
+      pdfPromesa = null;
+      canvas = dibujarModelo(modelo);
+      canvas.className = 'kw-ficha-canvas';
+      vista.replaceChildren(canvas);
+    });
 
     function pintarSeleccion() {
       if (!galeria) return;
@@ -1169,6 +1308,7 @@
       estado.textContent = '';
       modelo.fotos.forEach(function (url, indice) { cacheFotos.set(url, Promise.resolve(modelo._fotos[indice])); });
       if (camposFotos) camposFotos.disabled = false;
+      camposDisenos.disabled = false;
       if (fotosDisponibles.length && modelo._fotos.some(function (imagen) { return !imagen; })) {
         estado.textContent = 'Alguna foto no se pudo cargar. Elige otra foto antes de descargar.';
         botonPNG.disabled = true;
@@ -1198,6 +1338,7 @@
       botonPNG.disabled = true;
       botonPDF.disabled = true;
       if (camposFotos) camposFotos.disabled = true;
+      camposDisenos.disabled = true;
       boton.setAttribute('aria-busy','true');
       estado.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try {
@@ -1211,6 +1352,7 @@
         botonPNG.disabled = false;
         botonPDF.disabled = false;
         if (camposFotos) camposFotos.disabled = false;
+        camposDisenos.disabled = false;
         boton.removeAttribute('aria-busy');
         boton.textContent = tipo === 'png' ? 'Descargar PNG' : 'Descargar PDF';
       }
