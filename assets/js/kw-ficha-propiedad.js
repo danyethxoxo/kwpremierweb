@@ -842,13 +842,15 @@
     textoRedes(ctx, 'EN\n' + modelo.operacion, 104, 892, 510, 184, 84, true, 'left', '#ffffff');
     var direccion = (modelo.ubicacionRedes || []).join(', ') || modelo.direccion;
     textoRedes(ctx, 'En ' + direccion, 104, 1084, 500, 120, 32, false, 'left', '#ffffff');
-    textoRedes(ctx, 'CARACTERÍSTICAS:', 725, 832, 320, 50, 27, false, 'left', '#ffffff');
+    var centroCaracteristicas = 860;
+    var anchoCaracteristicas = 330;
+    textoRedes(ctx, 'CARACTERÍSTICAS:', centroCaracteristicas, 832, anchoCaracteristicas, 50, 27, false, 'center', '#ffffff');
     var datos = modelo.features.slice().sort(function (a, b) {
       function orden(d) { return /RECÁMARA/.test(d.etiqueta) ? 0 : /CONSTRUCCI|TERRENO/.test(d.etiqueta) ? 1 : /COCHERA/.test(d.etiqueta) ? 2 : 3; }
       return orden(a) - orden(b);
     }).slice(0, 4);
     datos.forEach(function (dato, i) {
-      var x = 785 + i % 2 * 150;
+      var x = centroCaracteristicas - 75 + i % 2 * 150;
       var y = 925 + Math.floor(i / 2) * 112;
       ctx.save();
       ctx.translate(x, y);
@@ -866,8 +868,8 @@
       var etiqueta = /RECÁMARA/.test(dato.etiqueta) ? ' hab.' : /COCHERA/.test(dato.etiqueta) ? (Number(dato.valor) === 1 ? ' cochera' : ' cocheras') : /BAÑO/.test(dato.etiqueta) ? (Number(dato.valor) === 1 ? ' baño' : ' baños') : '';
       textoRedes(ctx, String(dato.valor) + etiqueta, x, y + 33, 145, 43, 27, true, 'center', '#ffffff');
     });
-    textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 875, 1147, 360, 60, 38, true, 'center', '#ffffff');
-    if (modelo.operacion === 'RENTA') textoRedes(ctx, '/por mes', 875, 1200, 360, 28, 18, true, 'center', '#ffffff');
+    textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), centroCaracteristicas, 1147, anchoCaracteristicas, 60, 38, true, 'center', '#ffffff');
+    if (modelo.operacion === 'RENTA') textoRedes(ctx, '/por mes', centroCaracteristicas, 1200, anchoCaracteristicas, 28, 18, true, 'center', '#ffffff');
     if (modelo._logoBlanco && modelo._logoBlanco.naturalWidth) {
       ctx.drawImage(modelo._logoBlanco, 435, 1230, 230, 230 * modelo._logoBlanco.naturalHeight / modelo._logoBlanco.naturalWidth);
     } else textoRedes(ctx, 'KW PREMIER', 540, 1245, 350, 65, 35, true, 'center', '#ffffff');
