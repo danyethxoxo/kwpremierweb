@@ -798,7 +798,7 @@
     var banos = modelo.features.find(function (d) { return /BAÑO/.test(d.etiqueta); });
     var cochera = modelo.features.find(function (d) { return /COCHERA/.test(d.etiqueta); });
     var datos = [
-      area && { tipo: 'superficie', valor: area.valor, etiqueta: '' },
+      area && { tipo: 'superficie', valor: String(area.valor).replace(/\s*m[²2]\s*$/i, ''), etiqueta: 'm²' },
       habitaciones && { tipo: 'cuartos', valor: habitaciones.valor, etiqueta: Number(habitaciones.valor) === 1 ? 'Cuarto' : 'Cuartos' },
       banos && { tipo: 'banos', valor: banos.valor, etiqueta: Number(banos.valor) === 1 ? 'Baño' : 'Baños' },
       cochera && { tipo: 'cochera', valor: cochera.valor, etiqueta: Number(cochera.valor) === 1 ? 'Cochera' : 'Cocheras' }
