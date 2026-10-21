@@ -20,7 +20,8 @@
   var PLANTILLAS = [
     { id: 'clasica', nombre: 'Clásica' },
     { id: 'redes', nombre: 'Redes 4:5' },
-    { id: 'mosaico', nombre: 'Mosaico 4:5' }
+    { id: 'mosaico', nombre: 'Mosaico 4:5' },
+    { id: 'expediente', nombre: 'Detalle' }
   ];
 
   var ESTILOS = [
@@ -70,7 +71,7 @@
     '.kw-ficha-asesor input{accent-color:#8a0000}',
     '.kw-ficha-asesor[hidden]{display:none}',
     '.kw-ficha-disenos legend{font-size:12px;margin-bottom:7px;color:#66615f}',
-    '.kw-ficha-diseno{flex:1;min-width:0;position:relative;cursor:pointer;text-align:center;font-size:12px}',
+    '.kw-ficha-diseno{flex:1 1 40%;min-width:0;position:relative;cursor:pointer;text-align:center;font-size:12px}',
     '.kw-ficha-diseno input{position:absolute;opacity:0;width:1px;height:1px}',
     '.kw-ficha-diseno span{display:block;padding:7px;border:1px solid #dedbd9;border-radius:9px;color:#302c2c}',
     '.kw-ficha-diseno input:checked+span{border-color:#8a0000;box-shadow:inset 0 0 0 1px #8a0000;background:#fff8f8}',
@@ -80,6 +81,7 @@
     '.kw-ficha-mini-clasica{background:linear-gradient(90deg,#fff 42%,transparent 42%),linear-gradient(#d4cfca 65%,#fff 65%,#fff 68%,#d4cfca 68%,#d4cfca 82%,#eee 82%)}',
     '.kw-ficha-mini-redes{background:linear-gradient(#fff 12%,#d4cfca 12%,#d4cfca 65%,#fff 65%);border-radius:4px}',
     '.kw-ficha-mini-mosaico{background:linear-gradient(transparent 54%,#ce0025 54%),linear-gradient(90deg,transparent 49%,#fff 49%,#fff 51%,transparent 51%),linear-gradient(#d4cfca 26%,#fff 26%,#fff 28%,#b8b1ab 28%)}',
+    '.kw-ficha-mini-expediente{background:linear-gradient(#fff 14%,transparent 14%,transparent 65%,#fff 65%,#fff 83%,transparent 83%),linear-gradient(90deg,#d4cfca 49%,#fff 49%,#fff 51%,#b82129 51%)}',
     '.kw-ficha-mini-editorial{background:linear-gradient(#fff 25%,transparent 25%,transparent 78%,#fff 78%),linear-gradient(90deg,#d4cfca 64%,#fff 64%,#fff 68%,#b8b1ab 68%)}',
     '.kw-ficha-mini-panorama{background:linear-gradient(#302c2c 24%,#d4cfca 24%,#d4cfca 65%,#fff 65%,#fff 69%,#b8b1ab 69%,#b8b1ab 83%,#fff 83%)}',
     '@media(max-width:700px){.kw-ficha-cuerpo{display:flex;flex-direction:column;overflow:auto;gap:14px}',
@@ -180,6 +182,45 @@
     }).filter(Boolean).slice(0, 8);
   }
 
+  function tipoPrincipalFicha(propiedad) {
+    var original = texto(propiedad.tipo);
+    var titulo = texto(propiedad.titulo).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    // Solo un tipo que encabeza el anuncio identifica al inmueble. No se
+    // deduce de la descripción, de usos posibles ni de referencias cercanas.
+    titulo = titulo.replace(/^[\s¡!¿?.,:;*-]+/, '');
+    titulo = titulo.replace(/^(?:(?:(?:en\s+)?(?:venta|renta|preventa|traspaso)(?:\s+(?:de|del|un|una))?|se\s+(?:vende|renta|arrienda)|excelente|amplio|amplia|hermoso|hermosa|nuevo|nueva|bonito|bonita|lujoso|lujosa|oportunidad)[\s!:,.-]+)+/, '');
+    var encontrado = titulo.match(/^(terrenos?(?:\s+(?:comercial|comerciales|industrial|industriales|habitacional|habitacionales))?|lotes?(?:\s+(?:comercial|comerciales|industrial|industriales))?|casas?(?:\s+en\s+condominio)?|departamentos?|deptos?\.?|depas?|oficinas?|consultorios?|local(?:es)?(?:\s+comerciales?)?|bodegas?|naves?\s+industriales?|edificios?|ranchos?|duplex|condominios?)\b/);
+    if (!encontrado) return original || 'Propiedad';
+    var principal = encontrado[1];
+    var tipo = /^(terreno|lote)/.test(principal) ? (/comercial/.test(principal) ? 'Terreno comercial' : /industrial/.test(principal) ? 'Terreno industrial' : /habitacional/.test(principal) ? 'Terreno habitacional' : 'Terreno')
+      : /^casa/.test(principal) ? (/condominio/.test(principal) ? 'Casa en condominio' : 'Casa')
+        : /^(departamento|depto|depa)/.test(principal) ? 'Departamento'
+          : /^oficina/.test(principal) ? 'Oficina' : /^consultorio/.test(principal) ? 'Consultorio'
+            : /^local/.test(principal) ? 'Local comercial' : /^bodega/.test(principal) ? 'Bodega'
+              : /^nave/.test(principal) ? 'Nave industrial' : /^edificio/.test(principal) ? 'Edificio'
+                : /^rancho/.test(principal) ? 'Rancho' : /^duplex/.test(principal) ? 'Duplex' : 'Condominio';
+    // Un título genérico no borra un subtipo más preciso del mismo inmueble.
+    if ((tipo === 'Terreno' && /^terreno\b/i.test(original)) || (tipo === 'Casa' && /^casa\b/i.test(original))) return original;
+    return tipo;
+  }
+
+  function descripcionFicha(valor) {
+    var contenido = texto(valor).replace(/<br\s*\/?\s*>|<\/p>/gi, '\n').replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;/g, "'").trim();
+    if (contenido.length <= 1000) return contenido;
+    return contenido.slice(0, 1000).replace(/\s+\S*$/, '') + '…';
+  }
+
+  function operacionFicha(propiedad) {
+    var operacion = texto(propiedad.operacion).toLowerCase();
+    var operaciones = Array.isArray(propiedad.operaciones_filtro) ? propiedad.operaciones_filtro.map(function (valor) { return texto(valor).toLowerCase(); }) : [];
+    if (operaciones.includes('venta') && operaciones.includes('renta')) return 'VENTA Y RENTA';
+    if (operacion === 'venta' || operacion === 'renta') return operacion.toUpperCase();
+    if (operaciones.includes('venta')) return 'VENTA';
+    if (operaciones.includes('renta')) return 'RENTA';
+    return 'POR CONFIRMAR';
+  }
+
   function crearModelo(opciones) {
     var propiedad = opciones.propiedad || {};
     var asesor = Object.assign({}, opciones.asesor || {});
@@ -188,20 +229,33 @@
     if (!direccion) direccion = 'Ubicación no disponible';
 
     var features = [];
-    if (numero(propiedad.recamaras)) features.push({ valor: propiedad.recamaras, etiqueta: propiedad.recamaras === 1 ? 'RECÁMARA' : 'RECÁMARAS' });
+    var tipoPrincipal = tipoPrincipalFicha(propiedad);
+    var operacionPrincipal = operacionFicha(propiedad);
+    var noHabitacional = /^(terreno|oficina|consultorio|local|bodega|nave|estacionamiento)\b/i.test(tipoPrincipal);
+    if (!noHabitacional && numero(propiedad.recamaras)) features.push({ valor: propiedad.recamaras, etiqueta: Number(propiedad.recamaras) === 1 ? 'RECÁMARA' : 'RECÁMARAS' });
     if (numero(propiedad.banos)) features.push({ valor: propiedad.banos, etiqueta: propiedad.banos === 1 ? 'BAÑO' : 'BAÑOS' });
     if (numero(propiedad.estacionamientos)) features.push({ valor: propiedad.estacionamientos, etiqueta: propiedad.estacionamientos === 1 ? 'COCHERA' : 'COCHERAS' });
-    if (numero(propiedad.m2_construccion)) features.push({ valor: propiedad.m2_construccion + ' m²', etiqueta: 'CONSTRUCCIÓN' });
-    if (numero(propiedad.m2_terreno) && !numero(propiedad.m2_construccion)) features.push({ valor: propiedad.m2_terreno + ' m²', etiqueta: 'TERRENO' });
-    if (!features.length && propiedad.tipo) features.push({ valor: texto(propiedad.tipo), etiqueta: 'TIPO DE PROPIEDAD' });
+    if (/^terreno\b/i.test(tipoPrincipal) && numero(propiedad.m2_terreno)) features.push({ valor: propiedad.m2_terreno + ' m²', etiqueta: 'TERRENO' });
+    else if (numero(propiedad.m2_construccion)) features.push({ valor: propiedad.m2_construccion + ' m²', etiqueta: 'CONSTRUCCIÓN' });
+    else if (numero(propiedad.m2_terreno)) features.push({ valor: propiedad.m2_terreno + ' m²', etiqueta: 'TERRENO' });
+    if (!features.length) features.push({ valor: tipoPrincipal, etiqueta: 'TIPO DE PROPIEDAD' });
 
     return {
       plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
       mostrarAsesor: opciones.mostrarAsesor !== false,
       ubicacionRedes: [propiedad.calle || propiedad.colonia, propiedad.estado || propiedad.municipio].filter(Boolean),
-      operacion: propiedad.operaciones_filtro && propiedad.operaciones_filtro.length > 1 ? 'VENTA Y RENTA' : propiedad.operacion === 'renta' ? 'RENTA' : propiedad.operacion === 'venta' ? 'VENTA' : 'POR CONFIRMAR',
+      operacion: operacionPrincipal,
+      tituloRedes: tipoPrincipal + (operacionPrincipal === 'POR CONFIRMAR' ? ': operación por confirmar' : ' en ' + operacionPrincipal.toLocaleLowerCase('es-MX')),
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
-      tipo: texto(propiedad.tipo),
+      tipo: tipoPrincipal,
+      descripcion: descripcionFicha(propiedad.descripcion),
+      datosDetalle: [
+        { etiqueta: 'Recámaras', valor: noHabitacional ? 0 : numero(propiedad.recamaras) },
+        { etiqueta: 'Baños', valor: numero(propiedad.banos) },
+        { etiqueta: 'Estacionamientos', valor: numero(propiedad.estacionamientos) },
+        { etiqueta: 'Construcción', valor: numero(propiedad.m2_construccion), unidad: ' m²' },
+        { etiqueta: 'Terreno', valor: numero(propiedad.m2_terreno), unidad: ' m²' }
+      ].filter(function (dato) { return dato.valor > 0; }),
       direccion: direccion,
       precio: precio(propiedad.precio, propiedad.moneda),
       moneda: texto(propiedad.moneda, 'MXN').toUpperCase(),
@@ -788,7 +842,7 @@
     } else textoRedes(ctx, 'KW PREMIER', 54, 48, 250, 70, 32, true);
     textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 1008, 57, 700, 74, 46, false, 'right');
     imagenCubierta(ctx, modelo._fotos[0], 36, 150, 1008, 670, 76, true);
-    var altoTitulo = textoRedes(ctx, modelo.titulo, 54, 846, 972, 124, 60, true);
+    var altoTitulo = textoRedes(ctx, modelo.tituloRedes || modelo.titulo, 54, 846, 972, 124, 60, true);
     var ubicacion = (modelo.ubicacionRedes || []).join('\n') || modelo.direccion;
     var y = 846 + altoTitulo + 8;
     // Cada línea de la ubicación se conserva separada como en la referencia.
@@ -818,6 +872,56 @@
   }
 
   function esFichaRedes(modelo) { return modelo.plantilla === 'redes' || modelo.plantilla === 'mosaico'; }
+  function esFichaCanvas(modelo) { return esFichaRedes(modelo) || modelo.plantilla === 'expediente'; }
+
+  function dibujarDetalle(modelo) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 1680;
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1200, 1680);
+    ctx.fillStyle = '#b82129';
+    ctx.fillRect(24, 18, 7, 145);
+    textoRedes(ctx, modelo.direccion, 54, 22, 650, 82, 25, false);
+    textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 54, 111, 650, 49, 35, false, 'left', '#b82129');
+    if (modelo._logo && modelo._logo.naturalWidth) {
+      ctx.drawImage(modelo._logo, 760, 20, 390, 390 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
+    }
+    var fotos = modelo._fotos || [];
+    var posiciones = fotos.length <= 1 ? [[24, 185, 1152, 770]] : fotos.length === 2
+      ? [[24, 185, 574, 770], [602, 185, 574, 770]] : fotos.length === 3
+        ? [[24, 185, 574, 770], [602, 185, 574, 383], [602, 572, 574, 383]]
+        : [[24, 185, 574, 383], [602, 185, 574, 383], [24, 572, 574, 383], [602, 572, 574, 383]];
+    posiciones.forEach(function (p, i) { imagenCubierta(ctx, fotos[i], p[0], p[1], p[2], p[3], 0, i === 0); });
+    textoRedes(ctx, modelo.tituloRedes || modelo.titulo, 40, 990, 1120, 72, 32, true);
+    textoRedes(ctx, modelo.descripcion, 40, 1080, 1120, 216, 24, false, 'left', '#555555');
+    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(24, 1320, 1152, 7);
+    ctx.fillStyle = '#b82129'; ctx.fillRect(24, 1320, 665, 7);
+    ctx.beginPath(); ctx.moveTo(100, 1327); ctx.lineTo(115, 1342); ctx.lineTo(130, 1327); ctx.fill();
+    if (modelo.mostrarAsesor !== false) {
+      if (modelo._asesorFoto && modelo._asesorFoto.naturalWidth) imagenCubierta(ctx, modelo._asesorFoto, 24, 1370, 185, 275, 0, false);
+      var x = modelo._asesorFoto && modelo._asesorFoto.naturalWidth ? 234 : 40;
+      textoRedes(ctx, modelo.asesor.nombre, x, 1370, 690 - x, 100, 31, false);
+      textoRedes(ctx, modelo.asesor.market_center, x, 1480, 690 - x, 43, 25, false, 'left', '#777777');
+      [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio].filter(Boolean).forEach(function (dato, i) {
+        textoRedes(ctx, dato, x, 1530 + i * 35, 690 - x, 34, 22, false);
+      });
+    }
+    var panelX = modelo.mostrarAsesor === false ? 310 : 750;
+    var panelAncho = modelo.mostrarAsesor === false ? 580 : 426;
+    ctx.fillStyle = '#b82129';
+    ctx.fillRect(panelX, 1365, panelAncho, 280);
+    textoRedes(ctx, modelo.tipo, panelX + 20, 1380, panelAncho - 40, 44, 28, true, 'left', '#ffffff');
+    (modelo.datosDetalle || []).forEach(function (dato, i) {
+      var y = 1435 + i * 37;
+      textoRedes(ctx, dato.etiqueta, panelX + 20, y, panelAncho - 150, 34, 22, false, 'left', '#ffffff');
+      textoRedes(ctx, String(dato.valor) + (dato.unidad || ''), panelX + panelAncho - 20, y, 115, 34, 22, false, 'right', '#ffffff');
+    });
+    return canvas;
+  }
 
   function dibujarMosaico(modelo) {
     var canvas = document.createElement('canvas');
@@ -836,7 +940,7 @@
     posiciones.forEach(function (p, i) { imagenCubierta(ctx, fotos[i], p[0], p[1], p[2], p[3], 0, i === 0); });
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(185, 754, 710, 12);
-    var tipo = texto(modelo.tipo, modelo.titulo.split(/\s+/)[0] || 'Propiedad');
+    var tipo = texto(modelo.tipo, 'Propiedad');
     tipo = tipo.charAt(0).toLocaleUpperCase('es-MX') + tipo.slice(1).toLocaleLowerCase('es-MX');
     textoRedes(ctx, tipo, 104, 830, 500, 54, 32, false, 'left', '#ffffff');
     textoRedes(ctx, 'EN\n' + modelo.operacion, 104, 892, 510, 184, 84, true, 'left', '#ffffff');
@@ -877,6 +981,7 @@
   }
 
   function dibujarModelo(modelo) {
+    if (modelo.plantilla === 'expediente') return dibujarDetalle(modelo);
     if (modelo.plantilla === 'mosaico') return dibujarMosaico(modelo);
     if (modelo.plantilla === 'redes') return dibujarRedes(modelo);
     var canvas = document.createElement('canvas');
@@ -1312,10 +1417,10 @@
     var JsPDF = await cargarJsPDF();
     var anchoPDF = 612;
     var redes = esFichaRedes(modelo);
-    var altoPDF = anchoPDF * (redes ? 1350 / 1080 : ALTO / ANCHO);
+    var altoPDF = anchoPDF * (redes ? 1350 / 1080 : modelo.plantilla === 'expediente' ? 1680 / 1200 : ALTO / ANCHO);
     var escala = anchoPDF / ANCHO;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
-    if (redes) {
+    if (esFichaCanvas(modelo)) {
       var imagenRedes = dibujarModelo(modelo);
       pdf.addImage(imagenRedes.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
     } else dibujarPDFVector(pdf, modelo, escala);
@@ -1418,7 +1523,7 @@
       if (!galeria) return;
       var limite = modelo.plantilla === 'redes' ? 1 : 4;
       cuentaFotos.textContent = '(' + seleccion.length + '/' + limite + ')';
-      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
+      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' || modelo.plantilla === 'expediente' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
       galeria.querySelectorAll('.kw-ficha-foto').forEach(function (tarjeta, indice) {
         var posicion = seleccion.indexOf(indice);
         var input = tarjeta.querySelector('input');
@@ -1439,7 +1544,7 @@
       botonPDF.disabled = true;
       pintarSeleccion();
       modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
-      if (esFichaRedes(modelo)) {
+      if (esFichaCanvas(modelo)) {
         try { await cargarFuentesRedes(); }
         catch (error) { estado.textContent = error.message; return; }
         if (cerrado || revision !== revisionFotos) return;
@@ -1535,7 +1640,7 @@
     var canvas;
     try {
       await cargarImagenes(modelo);
-      if (esFichaRedes(modelo)) await cargarFuentesRedes();
+      if (esFichaCanvas(modelo)) await cargarFuentesRedes();
       if (cerrado) return;
       canvas = dibujarModelo(modelo);
       vista.replaceChildren(canvas);
@@ -1580,7 +1685,7 @@
       estado.innerHTML = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try {
         var blob;
-        if (tipo === 'png' && esFichaRedes(modelo)) {
+        if (tipo === 'png' && esFichaCanvas(modelo)) {
           blob = await new Promise(function (resolver, rechazar) {
             dibujarModelo(modelo).toBlob(function (resultado) {
               if (resultado) resolver(resultado);
@@ -1591,7 +1696,7 @@
           var pdf = await obtenerPDF();
           blob = tipo === 'png' ? await convertirPNGDesdePDF(pdf) : pdf;
         }
-        descargar(blob, 'ficha-' + slug(modelo.titulo) + (esFichaRedes(modelo) ? '-' + modelo.plantilla + '-4x5' : '') + '.' + tipo);
+        descargar(blob, 'ficha-' + slug(modelo.titulo) + (esFichaRedes(modelo) ? '-' + modelo.plantilla + '-4x5' : modelo.plantilla === 'expediente' ? '-detalle' : '') + '.' + tipo);
         estado.textContent = 'Descarga lista.';
       } catch (error) {
         estado.textContent = error.message || 'No se pudo generar el archivo.';

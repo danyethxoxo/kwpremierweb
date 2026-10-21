@@ -46,7 +46,7 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
           asesor: { nombre: 'María Fernanda', apellido: 'López', whatsapp: '+52 55 1234 5678', email: 'maria@kwpremier.com' } });
       }, titulo);
       const hashes = new Set();
-      assert.deepEqual(await page.locator('.kw-ficha-diseno input').evaluateAll(inputs => inputs.map(input => input.value)), ['clasica', 'redes', 'mosaico']);
+      assert.deepEqual(await page.locator('.kw-ficha-diseno input').evaluateAll(inputs => inputs.map(input => input.value)), ['clasica', 'redes', 'mosaico', 'expediente']);
       for (const [indice, mostrar] of [true, false, true].entries()) {
         const diseno = `clasica-${mostrar ? 'con' : 'sin'}-asesor-${indice}`;
         await page.locator('input[name="kw-ficha-asesor"]').setChecked(mostrar);
@@ -118,7 +118,9 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
         };
         await kwFichaPropiedad.abrir({ propiedad: { titulo: 'Departamento en renta', tipo: 'Departamento', operacion: 'renta', precio: 10000000,
           calle: 'Calle Cualquiera 123', estado: 'Cualquier Lugar', recamaras: 3, banos: 2, estacionamientos: 1,
-          m2_construccion: 80, imagenes: [0, 1, 2, 3].map(i => 'https://fotos.example/' + i) },
+          m2_construccion: 80, m2_terreno: 120,
+          descripcion: 'Departamento con espacios amplios, iluminación natural y una distribución funcional. Cuenta con sala, comedor y cocina equipada.\n\nUbicación cerca de parques y servicios. Las superficies y características corresponden a los datos del inmueble.',
+          imagenes: [0, 1, 2, 3].map(i => 'https://fotos.example/' + i) },
           asesor: { nombre: 'DATOS DEL ASESOR', email: 'privado@example.com' } });
       });
       await page.evaluate(() => { window.textosRedes = []; });
@@ -169,6 +171,22 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
       const medidasMosaico = await page.evaluate(() => window.medidasPDF);
       assert.ok(Math.abs(medidasMosaico[0] / medidasMosaico[1] - 4 / 5) < .0001);
       await page.screenshot({ path: path.join(output, `selector-mosaico-${width}.png`) });
+      await page.evaluate(() => { window.textosRedes = []; });
+      await page.locator('.kw-ficha-diseno input[value="expediente"]').check();
+      await page.waitForFunction(() => document.querySelector('.kw-ficha-canvas').width === 1200 && !document.querySelector('.kw-ficha-boton-png').disabled);
+      assert.equal(await page.locator('.kw-ficha-asesor').isVisible(), true);
+      const textosDetalle = await page.evaluate(() => window.textosRedes.map(item => item.text));
+      for (const etiqueta of ['Departamento', 'Recámaras', 'Baños', 'Estacionamientos', 'Construcción', 'Terreno']) assert.ok(textosDetalle.includes(etiqueta), etiqueta);
+      assert.equal(textosDetalle.some(text => /City Tax|Land Tax|Common Area/.test(text)), false);
+      const detallePNG = page.waitForEvent('download');
+      await page.locator('.kw-ficha-boton-png').click();
+      await (await detallePNG).saveAs(path.join(output, `detalle-${width}.png`));
+      const detallePDF = page.waitForEvent('download');
+      await page.locator('.kw-ficha-boton-pdf').click();
+      await (await detallePDF).saveAs(path.join(output, `detalle-${width}.pdf`));
+      const medidasDetalle = await page.evaluate(() => window.medidasPDF);
+      assert.ok(Math.abs(medidasDetalle[0] / medidasDetalle[1] - 1200 / 1680) < .0001);
+      await page.screenshot({ path: path.join(output, `selector-detalle-${width}.png`) });
       assert.deepEqual(errors, []);
       await page.close();
     }
