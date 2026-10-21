@@ -1321,6 +1321,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"/></svg>
             </button>
             <div class="kw-menu" id="mas-menu" role="menu" hidden>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-descargar-csv">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>
+                <span>Descargar asesores en CSV</span>
+              </button>
               <button type="button" class="kw-menu-op" role="menuitem" id="op-verificar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
                 <span>Revisar accesos</span>
@@ -2752,6 +2756,52 @@
     return filtro ? g.personas.filter(function (p) { return coincide(p, filtro); }) : g.personas;
   }
 
+  function telefonoParaCsv(valor) {
+    const texto = String(valor || '').trim();
+    let digitos = texto.replace(/\D/g, '');
+    if (!digitos) return '';
+    if (digitos.startsWith('00')) digitos = digitos.slice(2);
+    // México: diez dígitos locales y el antiguo prefijo móvil +521.
+    if (digitos.length === 13 && digitos.startsWith('521')) digitos = '52' + digitos.slice(3);
+    if (digitos.length === 10 && !texto.startsWith('+') && !texto.startsWith('00')) digitos = '52' + digitos;
+    return '+' + digitos;
+  }
+
+  function crearCsvAsesores(personas, fecha) {
+    const mes = fecha.toLocaleDateString('es-MX', { month: 'long' }) + ' ' + fecha.getFullYear();
+    const filas = [['Nombre completo', 'Teléfono', 'Correo electrónico', 'Etiquetas']];
+    personas.forEach(function (p) {
+      filas.push([
+        p.nombre || '', telefonoParaCsv(p.telefono), p.correo || '',
+        'Asesor KW Premier, ' + (esDeBaja(p.grupo) ? 'Baja' : 'Activo') + ', ' + mes,
+      ]);
+    });
+    // BOM para Excel, CRLF y comillas CSV para comas, tildes y saltos de línea.
+    return '\uFEFF' + filas.map(function (fila) {
+      return fila.map(function (valor) { return '"' + String(valor).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n') + '\r\n';
+  }
+
+  function descargarAsesoresCsv() {
+    abrirMas(false);
+    const grupo = grupoDe(grupoActivo);
+    const personas = visiblesDe(grupo);
+    if (!personas.length) {
+      avisoAsesores('No hay asesores en la lista actual para descargar.', 'error');
+      return;
+    }
+    const fecha = new Date();
+    const url = URL.createObjectURL(new Blob([crearCsvAsesores(personas, fecha)], { type: 'text/csv;charset=utf-8;' }));
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = 'asesores-' + grupo.clave.replace(/[^a-z0-9_-]/gi, '-') + '-' +
+      fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0') + '-' + String(fecha.getDate()).padStart(2, '0') + '.csv';
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   // ── La tarjeta de cada persona ──
   // Cerrada trae el nombre, el correo y el botón; abierta, sus datos y
   // los tres accesos con su estado, en una sola fila seleccionable.
@@ -3651,6 +3701,7 @@
   // días, que es irse a la base.
   function abrirMas(abrir) {
     const menu = document.getElementById('mas-menu');
+    document.getElementById('op-descargar-csv').hidden = !document.body.classList.contains('en-asesores');
     const quiere = abrir === undefined ? menu.hidden : abrir;
     menu.hidden = !quiere;
     document.getElementById('btn-mas').setAttribute('aria-expanded', quiere ? 'true' : 'false');
@@ -3676,6 +3727,7 @@
     abrirMas(false);
     abrirVerificacion();
   });
+  document.getElementById('op-descargar-csv').addEventListener('click', descargarAsesoresCsv);
   document.getElementById('op-recargar').addEventListener('click', function () {
     abrirMas(false);
     cargarAsesores(true);
