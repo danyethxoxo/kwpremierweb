@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import '../assets/js/kw-firmas-carga.js';
 
 const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -70,4 +72,24 @@ test('un error conserva el historial y permite reintentar', async () => {
   falla = false;
   await e.carga.cargar();
   assert.equal(e.pintadas.length, 1);
+});
+
+test('la recarga y Actualizar comparten una sincronizacion y la siguiente entrada vuelve a consultar', async () => {
+  const html = readFileSync(new URL('../hub/firmas.html', import.meta.url), 'utf8');
+  const inicio = html.indexOf('  let sincronizacionEnCurso = null;');
+  const codigo = html.slice(inicio, html.indexOf("  $('btn-nuevo')", inicio));
+  let consultas = 0, resolver;
+  const contexto = vm.createContext({
+    llamarFuncion: () => { consultas++; return new Promise(r => { resolver = r; }); },
+  });
+  vm.runInContext(codigo + ';this.sincronizar = sincronizarWeetrust;', contexto);
+  const a = contexto.sincronizar(), b = contexto.sincronizar();
+  assert.equal(a, b);
+  assert.equal(consultas, 1);
+  resolver({ actualizados: 0, importados: 0 });
+  await a;
+  const c = contexto.sincronizar();
+  assert.equal(consultas, 2);
+  resolver({ actualizados: 0, importados: 0 });
+  await c;
 });

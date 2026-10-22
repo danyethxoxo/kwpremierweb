@@ -1,5 +1,6 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarFirmantes } from '../firmar-documento/firmantes-sync.ts'
+import { etiquetasDeWeetrust, etiquetasDelAviso } from '../firmar-documento/etiquetas-sync.ts'
 // Edge Function: weetrust-webhook
 //
 // Recibe los avisos de weetrust cuando alguien firma un documento o
@@ -252,7 +253,7 @@ async function crearDesdeWeetrust(
       created_at: cuando,
       enviado_at: cuando,
     })
-    .select('id, user_id, titulo, estado, firmantes, weetrust_document_id')
+    .select('id, user_id, titulo, estado, firmantes, weetrust_document_id, etiquetas')
     .single()
 
   if (error) {
@@ -291,6 +292,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
     }
 
     const crudo = await req.text()
+    const aviso = JSON.parse(crudo)
     const candidatos = posiblesIdentificadores(crudo)
     if (!candidatos.length) {
       // 200 a propósito: el aviso llegó bien, simplemente no traía nada
@@ -304,7 +306,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
 
     const { data: filas } = await admin
       .from('firmas_documentos')
-      .select('id, user_id, titulo, estado, firmantes, weetrust_document_id')
+      .select('id, user_id, titulo, estado, firmantes, weetrust_document_id, etiquetas')
       .in('weetrust_document_id', candidatos)
 
     const token = await obtenerToken()
@@ -359,10 +361,21 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
 
       const estado = ESTADOS[String(doc.status)] || fila.estado
 
+      // El secreto autentica el aviso y la API ya confirmó la identidad.
+      // Las etiquetas son metadatos; el estado sigue viniendo de la API.
+      const etiquetasAviso = etiquetasDelAviso(aviso, fila.weetrust_document_id!)
+      const tags = await etiquetasDeWeetrust(admin, new Map([
+        [fila.weetrust_document_id!, etiquetasAviso || doc],
+      ]))
+      const etiquetas = [...new Set([
+        ...(fila.etiquetas || []), ...(tags.get(fila.weetrust_document_id!) || []),
+      ])]
+
       await admin.from('firmas_documentos')
         .update({
           estado,
           firmantes,
+          etiquetas,
           ...(estado === 'completado'
             ? {
               completado_at: new Date().toISOString(),

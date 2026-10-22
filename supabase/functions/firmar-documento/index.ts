@@ -1,5 +1,7 @@
 import { secureServe } from '../_shared/security.ts'
-import { sincronizarFirmantes, nombresEtiquetasWeetrust } from './firmantes-sync.ts'
+import { sincronizarFirmantes } from './firmantes-sync.ts'
+import { etiquetasDeWeetrust } from './etiquetas-sync.ts'
+import { leerHistorialCompleto, hayCambios, mismaUbicacionPdf } from './historial-sync.ts'
 import { posicionesDeWeetrust, descargarPdfWeetrust } from './documento-vista.ts'
 // Edge Function: firmar-documento
 //
@@ -57,27 +59,6 @@ function respond(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
-}
-
-async function etiquetasDeWeetrust(admin: SupabaseClient<any>, documentos: Map<string, Record<string, any>>) {
-  const nombres = [...new Set([...documentos.values()].flatMap(nombresEtiquetasWeetrust))]
-  const resultado = new Map<string, string[]>()
-  if (!nombres.length) return resultado
-  const { data, error } = await admin.from('firmas_etiquetas').select('id, nombre')
-  if (error) throw new Error(`No se pudieron leer las etiquetas: ${error.message}`)
-  const normalizar = (nombre: string) => nombre.trim().toLowerCase()
-  const porNombre = new Map((data || []).map((tag) => [normalizar(tag.nombre), String(tag.id)]))
-  for (const nombre of nombres) {
-    if (porNombre.has(normalizar(nombre))) continue
-    const { data: nueva, error: fallo } = await admin.from('firmas_etiquetas')
-      .insert({ nombre }).select('id').single()
-    if (fallo) throw new Error(`No se pudo recuperar la etiqueta ${nombre}: ${fallo.message}`)
-    porNombre.set(normalizar(nombre), String(nueva.id))
-  }
-  for (const [id, doc] of documentos) {
-    resultado.set(id, nombresEtiquetasWeetrust(doc).map((nombre) => porNombre.get(normalizar(nombre))!))
-  }
-  return resultado
 }
 
 // ── Hablar con weetrust ─────────────────────────────────────
@@ -282,7 +263,7 @@ async function pedirDocumento(token: string, documentID: string) {
 function nombreEnWeetrust(doc: Record<string, unknown>, documentID: string): string {
   const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
 
-  const directo = doc?.documentName || doc?.name || doc?.title || archivo.name
+  const directo = doc?.nickname || doc?.documentName || doc?.name || doc?.title || archivo.name
   if (directo) return String(directo)
 
   const url = String(archivo.url || '')
@@ -1333,7 +1314,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // El asesor pone al día los suyos; el liderazgo, los de todos.
       let q = admin
         .from('firmas_documentos')
-        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo, etiquetas')
+        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo, etiquetas, pdf_firmado_url, completado_at')
         .not('weetrust_document_id', 'is', null)
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
@@ -1346,29 +1327,16 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       }
 
       const token = await obtenerToken()
-      const porId = new Map<string, Record<string, any>>()
-      const POR_TANDA = 100
-
+      let porId: Map<string, Record<string, any>>
       try {
-        for (let vuelta = 0; vuelta < 20; vuelta++) {
-          const url = `${WEETRUST_URL}/documents?status=ALL`
-            + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
-          const res = await fetch(url, { headers: encabezados(token) })
+        porId = await leerHistorialCompleto(async (limite, inicio) => {
+          const res = await fetch(WEETRUST_URL + '/documents?status=ALL&limit=' + limite + '&skip=' + inicio,
+            { headers: encabezados(token), signal: AbortSignal.timeout(20000) })
           const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
-          const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
-          if (!tanda.length) break
-
-          let novedades = 0
-          for (const d of tanda) {
-            const id = String((d as Record<string, unknown>)?.documentID || '')
-            if (!id || porId.has(id)) continue
-            porId.set(id, d as Record<string, any>)
-            novedades++
-          }
-          if (!novedades || tanda.length < POR_TANDA) break
-        }
+          return Array.isArray(datos) ? datos : (datos ? [datos] : [])
+        })
       } catch (e) {
-        return respond({ error: `weetrust no contestó: ${(e as Error).message}` }, 502)
+        return respond({ error: 'weetrust no contestó: ' + (e as Error).message }, 502)
       }
 
       const estados: Record<string, string> = {
@@ -1459,17 +1427,17 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
           }
           : {}
 
-        cambios.push({
-          id: fila.id,
-          datos: {
-            estado,
-            firmantes,
-            etiquetas: [...new Set([...(fila.etiquetas || []), ...(etiquetasRemotas.get(fila.weetrust_document_id!) || [])])],
-            pdf_firmado_url: (archivo.url as string) ?? null,
-            ...renombrar,
-            ...(estado === 'completado' ? { completado_at: new Date().toISOString() } : {}),
-          },
-        })
+        const datos = {
+          estado,
+          firmantes,
+          etiquetas: [...new Set([...(fila.etiquetas || []), ...(etiquetasRemotas.get(fila.weetrust_document_id!) || [])])],
+          ...(archivo.url && !mismaUbicacionPdf(fila.pdf_firmado_url, archivo.url)
+            ? { pdf_firmado_url: archivo.url as string } : {}),
+          ...renombrar,
+          ...(estado === 'completado' && fila.estado !== 'completado' && !fila.completado_at
+            ? { completado_at: new Date().toISOString() } : {}),
+        }
+        if (hayCambios(fila, datos)) cambios.push({ id: fila.id, datos })
       }
 
       let actualizados = 0
