@@ -2187,6 +2187,7 @@
     </div>
   </div>
 
+<script src="/assets/js/kw-firmas-carga.js?v=20261022a"></script>
 <script>
 (function () {
   'use strict';
@@ -4920,6 +4921,7 @@
     if (flotante) { flotante.remove(); flotante = null; }
     botonAbierto = null;
     tagAbierta = null;
+    setTimeout(() => cargaHistorial.aplicarPendiente(), 0);
   }
 
   // El menu elige el lado con espacio y se desplaza por dentro si hace falta.
@@ -5067,11 +5069,26 @@
     $('editar-cuerpo').innerHTML = '';
     tagAbierta = null;
     bloquearFondo(false);
+    cargaHistorial.aplicarPendiente();
   }
 
-  function abrirEditar(i) {
+  async function abrirEditar(i) {
     const f = visibles[i];
     if (!puedeAdministrarEnvio(f)) return;
+
+    if (veTodo && !asesores.length) {
+      $('editar-cuerpo').innerHTML = '<div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+      $('modal-editar').style.display = 'flex';
+      bloquearFondo(true);
+      try {
+        await cargarAsesores();
+      } catch (error) {
+        cerrarEditar();
+        await window.kwUI.alert('No se pudo cargar la lista de asesores. Intenta de nuevo.');
+        return;
+      }
+      if ($('modal-editar').style.display !== 'flex') return;
+    }
 
     $('editar-cuerpo').innerHTML = '<div class="editar-columnas">' +
       (veTodo
@@ -5684,22 +5701,68 @@
   }
 
   async function cargarEtiquetas() {
-    const { data } = await window.kwSupabase
+    const { data, error } = await window.kwSupabase
       .from('firmas_etiquetas').select('id, nombre, color').order('nombre');
+    if (error) throw error;
     etiquetas = data || [];
   }
 
   // Solo para el liderazgo: es el único que puede reasignar, y traerse
   // la lista completa de usuarios para quien no la va a usar es gastar
   // una consulta en balde.
-  async function cargarAsesores() {
-    if (!veTodo) return;
-    const { data } = await window.kwSupabase
-      .from('profiles').select('id, nombre, email').order('nombre');
-    asesores = data || [];
+  let asesoresPendientes = null;
+  function cargarAsesores() {
+    if (!veTodo) return Promise.resolve();
+    if (!asesoresPendientes) {
+      asesoresPendientes = (async () => {
+        const { data, error } = await window.kwSupabase
+          .from('profiles').select('id, nombre, email').order('nombre');
+        if (error) throw error;
+        asesores = data || [];
+      })().catch((error) => {
+        asesoresPendientes = null;
+        throw error;
+      });
+    }
+    return asesoresPendientes;
   }
 
-  async function cargarEnvios(catalogosPendientes) {
+  let catalogosHistorial = null;
+  let historialListo = false;
+  const cargaHistorial = window.kwFirmasCarga.crear({
+    leer: async () => {
+      const catalogos = catalogosHistorial;
+      try {
+        const [datos] = await Promise.all([leerEnvios(), catalogos]);
+        return datos;
+      } finally {
+        if (catalogosHistorial === catalogos) catalogosHistorial = null;
+      }
+    },
+    clave: (datos) => JSON.stringify([datos, etiquetas]),
+    ocupado: () => !!flotante || $('modal-editar').style.display === 'flex',
+    aplicar: (datos) => {
+      const cont = $('lista-envios');
+      const scroll = cont.scrollTop;
+      envios = datos;
+      const vivos = new Set(envios.map((x) => x.id));
+      [...elegidos].forEach((id) => { if (!vivos.has(id)) elegidos.delete(id); });
+      pintarEnvios();
+      cont.scrollTop = scroll;
+      historialListo = true;
+    },
+    error: (error) => {
+      console.error('No se pudo actualizar el historial de firmas:', error);
+      if (!historialListo) $('lista-envios').innerHTML = '<div class="kw-vacio">No se pudieron cargar los envíos. Intenta actualizar.</div>';
+    },
+  });
+
+  function cargarEnvios(catalogosPendientes) {
+    if (catalogosPendientes) catalogosHistorial = catalogosPendientes;
+    return cargaHistorial.cargar();
+  }
+
+  async function leerEnvios() {
     // Quien es Staff o más ve los envíos de todo el equipo, así que en su
     // caso hay que traer también de quién es cada uno. Para el asesor esa
     // consulta extra no aporta nada: todos son suyos.
@@ -5721,19 +5784,8 @@
       if ((pagina.data || []).length < porPagina) break;
     }
 
-    if (error) {
-      $('lista-envios').innerHTML =
-        '<div class="kw-vacio">No se pudieron cargar los envíos: ' + escapar(error.message) + '</div>';
-      return;
-    }
-    // Descargar en paralelo; los nombres y colores deben estar antes de pintar.
-    if (catalogosPendientes) await catalogosPendientes;
-    envios = data || [];
-    // Lo que ya no está (se borró, o cambió de estado y el filtro lo
-    // esconde) deja de contar como seleccionado.
-    const vivos = new Set(envios.map((x) => x.id));
-    [...elegidos].forEach((id) => { if (!vivos.has(id)) elegidos.delete(id); });
-    pintarEnvios();
+    if (error) throw error;
+    return data;
   }
 
 
@@ -5798,13 +5850,13 @@
           // Solo se repinta si el historial está a la vista. Recargar
           // mientras alguien arma un envío no sirve de nada y le mueve
           // la pantalla debajo de las manos.
-          if ($('vista-historial').style.display !== 'none') cargarEnvios();
+          if ($('vista-historial').style.display !== 'none') cargaHistorial.programar();
         })
       .subscribe();
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible'
-        && $('vista-historial').style.display !== 'none') cargarEnvios();
+        && $('vista-historial').style.display !== 'none') cargaHistorial.programar();
     });
   }
 
@@ -5845,9 +5897,18 @@
     return true;
   }
 
-  async function iniciar() {
+  let inicioEnCurso = null;
+  function iniciar() {
+    if (!inicioEnCurso) inicioEnCurso = iniciarUnaVez();
+    return inicioEnCurso;
+  }
+
+  async function iniciarUnaVez() {
     try {
       await iniciarDeVerdad();
+    } catch (error) {
+      console.error('No se pudo iniciar Firmas Digitales:', error);
+      if (!historialListo) $('lista-envios').innerHTML = '<div class="kw-vacio">No se pudo cargar Firmas Digitales. Intenta de nuevo.</div>';
     } finally {
       // Pase lo que pase (que todo salga bien, que algo truene a medio
       // camino), la pantalla de carga no se puede quedar tapando todo
@@ -5867,7 +5928,7 @@
       nombre: [perfil?.nombre, perfil?.apellido].filter(Boolean).join(' '),
       correo: userData.user.email || perfil?.email || '',
     };
-    await window.kwFirmantesPersonales.iniciar({ userId: miUserId, leer: leerFirmantes, agregar: (nombre, correo) => {
+    const personales = window.kwFirmantesPersonales.iniciar({ userId: miUserId, leer: leerFirmantes, agregar: (nombre, correo) => {
       const puesto = leerFirmantes().some((f) => correo && correoNormalizado(f.correo) === correoNormalizado(correo));
       if (!puesto) agregarFirmante(nombre, correo);
       marcarFrecuentesPuestos();
@@ -5906,20 +5967,16 @@
       revisarObservadorTM();
     });
 
+    armarFiltros();
+    const etiquetasListas = cargarEtiquetas().then(pintarOpcionesFiltros);
+    // El historial no espera favoritos, cuota ni el catálogo para reasignar.
+    const secundarios = Promise.allSettled([
+      personales, cargarCupo(),
+      cargarFrecuentes().then(pintarOpcionesFiltros),
+    ]);
+    await cargarEnvios(etiquetasListas);
     escucharCambios();
-    // Leer los catálogos independientes a la vez. Los filtros necesitan
-    // los frecuentes y la tabla necesita las etiquetas y los asesores.
-    const catalogos = Promise.all([cargarFrecuentes(), cargarEtiquetas(), cargarAsesores()]).then(() => {
-      armarFiltros();
-      pintarOpcionesFiltros();
-    });
-
-    // Se pinta de inmediato con lo que ya hay en la base: la pantalla de
-    // carga no tiene por qué esperar a preguntarle a weetrust, que es lo
-    // lento. El webhook mantiene la base al día casi siempre, así que la
-    // mayoría de las veces esto ya es lo correcto.
-    await Promise.all([catalogos, cargarCupo(), cargarEnvios(catalogos)]);
-    marcarFrecuentesPuestos();
+    secundarios.then(marcarFrecuentesPuestos);
     const importado = await importarDocumentoFinalizado();
     if (!importado) {
       const solicitada = vistaDesdeURL();
