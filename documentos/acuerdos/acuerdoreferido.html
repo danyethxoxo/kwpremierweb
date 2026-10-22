@@ -119,11 +119,11 @@ table.r-tabla { table-layout: fixed; font-size: 7.4pt; margin: 0px; }
 table.r-tabla td, table.r-tabla th { padding: 2px 5px; line-height: 1.22; overflow-wrap: anywhere; }
 .r-val { white-space: pre-wrap; }
 .r-comision { font-size: 7.5pt; line-height: 1.3; margin: 7px 0px; }
-.r-firmas { margin-top: 10px; }
-.r-firmas-grid { gap: 8px 24px; }
-.r-firma { break-inside: avoid; padding-top: 8px; }
-.r-firma-nombre { font-size: 8pt; min-height: 12px; }
-.r-firma-rol { font-size: 7pt; }
+.r-firmas { margin-top: 18px; }
+.r-firmas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 40px; align-items: stretch; }
+.r-firma { break-inside: avoid; min-width: 0; min-height: 80px; padding-top: 28px; }
+.r-firma-nombre { font-size: 8pt; min-height: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.r-firma-rol { font-size: 7pt; line-height: 1.35; }
 tr { break-inside: avoid; }
 .r-seccion { break-after: avoid; }
 </style><link rel="stylesheet" href="/assets/css/kw-guardar-exito.css?v=20261007a">
@@ -385,7 +385,7 @@ function updatePreview() {
   const sections = [{"title":"1. Market Center que recibe / Market Center que envía","rows":[["Asesor que recibe","asesor-recibe","Asesor que envía","asesor-envia"],["Nombre del Market Center que recibe","mc-recibe","Nombre del Market Center que envía","mc-envia"],["Dirección (recibe)","direccion-recibe","Dirección (envía)","direccion-envia"],["Ciudad, estado, municipio, C.P. (recibe)","ciudad-recibe","Ciudad, estado, municipio, C.P. (envía)","ciudad-envia"],["Teléfono MC (recibe)","tel-mc-recibe","Teléfono MC (envía)","tel-mc-envia"],["Celular asesor (recibe)","cel-recibe","Celular asesor (envía)","cel-envia"],["Correo (recibe)","correo-recibe","Correo (envía)","correo-envia"]]},{"title":"2. Información del vendedor","rows":[["Nombre","vendedor-nombre","Fecha de contacto inicial","vendedor-contacto"],["Dirección","vendedor-direccion","Dirección del inmueble para listado","inmueble-direccion"],["Ciudad, estado, municipio, C.P.","vendedor-ciudad","Tipo de inmueble","inmueble-tipo"],["Teléfono oficina","vendedor-oficina","Comisión","vendedor-comision"],["Celular","vendedor-celular","Información adicional de apoyo","vendedor-apoyo"],["Correo","vendedor-correo","",""]]},{"title":"3. Información del comprador","rows":[["Nombre","comprador-nombre","Dirección actual","comprador-direccion"],["Teléfono celular","comprador-celular","Teléfono de casa","comprador-casa"],["Ubicación preferida","comprador-ubicacion","Rango de precio","comprador-precio"],["¿Necesita vender primero?","comprador-vender","Fecha esperada de compra","comprador-fecha-compra"],["Comentarios","comprador-comentarios","",""]]},{"title":"4. Aceptación del referido","rows":[["Nombre","autorizacion-nombre","Comentarios","autorizacion-comentarios"],["Fecha de contacto","autorizacion-contacto","",""],["Fecha de primera cita","autorizacion-cita","",""]]}];
   const enlaceCampo = (id, label) => ' data-referido-field="f-' + id + '" tabindex="0" role="button" aria-label="Ver campo: ' + label + '"';
   const cell = (label, id) => id ? '<td' + enlaceCampo(id, label) + '><strong>' + label + ':</strong> <span class="r-val">' + (referidoValor(id) || '________________') + '</span></td>' : '<td></td>';
-  const firma = (id, rol, fecha) => '<div class="r-firma"><div class="r-firma-nombre"' + enlaceCampo(id, rol) + '>' + referidoValor(id) + '</div><div class="r-firma-linea"><div class="r-firma-rol">Nombre y firma del ' + rol + (fecha ? '<br><span' + enlaceCampo(fecha, 'Fecha de firma') + '>Fecha: ' + (referidoValor(fecha) || '____________') + '</span>' : '') + '</div></div></div>';
+  const firma = (id, rol, fecha) => '<div class="r-firma"><div class="r-firma-linea"><div class="r-firma-nombre"' + enlaceCampo(id, rol) + '>' + referidoValor(id) + '</div><div class="r-firma-rol">Nombre y firma del ' + rol + (fecha ? '<br><span' + enlaceCampo(fecha, 'Fecha de firma') + '>Fecha: ' + (referidoValor(fecha) || '____________') + '</span>' : '') + '</div></div></div>';
   document.getElementById('referido-preview').innerHTML = '<div class="r-logo"><img src="data:image/png;base64,' + LOGO_B64 + '" alt="KW Premier"></div><div class="r-titulo">ACUERDO DE REFERIDO</div>' +
     sections.map((s,i) => '<div class="r-seccion"><strong>SECCIÓN ' + s.title.toUpperCase() + '</strong></div><table class="r-tabla">' + (i === 0 ? '<tr><th scope="col" style="text-align:center"><strong>MARKET CENTER QUE RECIBE</strong></th><th scope="col" style="text-align:center"><strong>MARKET CENTER QUE ENVÍA</strong></th></tr>' : '') + s.rows.map(r => '<tr>' + cell(r[0],r[1]) + cell(r[2],r[3]) + '</tr>').join('') + '</table>').join('') +
     '<div class="r-comision">ACEPTO ESTE REFERIDO Y, CUANDO LA OPERACIÓN SE CONCRETE, ACEPTO PAGAR 25% DE MI COMISIÓN AL ASESOR DE LA OFICINA QUE REFIRIÓ AL VENDEDOR O COMPRADOR SEGÚN SEA EL CASO, OBLIGÁNDOME A ADJUNTAR LOS DETALLES DEL CIERRE DE LA OPERACIÓN CON EL PAGO.</div>' +
@@ -493,11 +493,11 @@ function downloadPDF(opciones) {
   table.r-tabla td, table.r-tabla th { padding:2px 5px; line-height:1.22; overflow-wrap:anywhere; }
   .r-val { white-space:pre-wrap; }
   .r-comision { font-size:7.5pt; line-height:1.3; margin:7px 0; }
-  .r-firmas { margin-top:10px; }
-  .r-firmas-grid { gap:8px 24px; }
-  .r-firma { break-inside:avoid; padding-top:8px; }
-  .r-firma-nombre { font-size:8pt; min-height:12px; }
-  .r-firma-rol { font-size:7pt; }
+  .r-firmas { margin-top:18px; }
+  .r-firmas-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 40px; align-items:stretch; }
+  .r-firma { break-inside:avoid; min-width:0; min-height:80px; padding-top:28px; }
+  .r-firma-nombre { font-size:8pt; min-height:14px; line-height:1.3; overflow-wrap:anywhere; }
+  .r-firma-rol { font-size:7pt; line-height:1.35; }
   tr { break-inside:avoid; }
   .r-seccion { break-after:avoid; }
 </style></head>
