@@ -9,11 +9,19 @@ function fmtFechaHora(iso) {
 }
 
 
-async function cargarListaDocumentos() {
+let kwListaPendiente = null;
+let kwListaCargada = false;
+function cargarListaDocumentos() {
+  if (kwListaPendiente) return kwListaPendiente;
+  kwListaPendiente = consultarListaDocumentos().finally(() => { kwListaPendiente = null; });
+  return kwListaPendiente;
+}
+
+async function consultarListaDocumentos() {
   const contB = document.getElementById('lista-borradores');
   const contF = document.getElementById('lista-finalizados');
-  contB.innerHTML = '<div class="kw-lista"><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div></div>';
-  contF.innerHTML = '<div class="kw-lista"><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w70"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w50"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w30" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div><div class="kw-fila"><div class="kw-fila-cabeza"><div class="kw-skel kw-skel-circle" style="width:11px;height:11px;"></div><div class="kw-fila-texto"><div class="kw-skel kw-skel-line kw-skel-w60"></div><div class="kw-skel kw-skel-line kw-skel-sm kw-skel-w40" style="margin-top:7px;"></div></div><div class="kw-skel kw-skel-circle"></div></div></div></div>';
+  const indicador = '<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+  if (!kwListaCargada) { contB.innerHTML = indicador; contF.innerHTML = indicador; }
   try {
     if (!window.kwSupabase) throw new Error('No se pudo conectar con la sesión.');
     const { data: userData, error: userError } = await (window.kwSession.usuarioInicial
@@ -29,9 +37,13 @@ async function cargarListaDocumentos() {
 
     if (error) throw error;
 
-    documentosCache = data || [];
+    const siguientes = data || [];
+    if (kwListaCargada && JSON.stringify(documentosCache) === JSON.stringify(siguientes)) return;
+    documentosCache = siguientes;
+    kwListaCargada = true;
     renderListaDocumentos();
   } catch (err) {
+    if (documentosCache.length) { console.error('No se pudo actualizar la lista de documentos.', err); return; }
     const msg = `<div class="lista-vacio" style="color:#ff6b6b;">${escapeHtml(err.message || 'Ocurrió un error al cargar tus documentos.')}</div>`;
     contB.innerHTML = msg;
     contF.innerHTML = msg;

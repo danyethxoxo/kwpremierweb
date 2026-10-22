@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://iloetojomzqtadkithtv.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="/assets/js/kw-security.js?v=20260922"></script>
-  <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/assets/css/kw-ui.css?v=20261016uniforme">
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
+<link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261013general">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+    <link rel="stylesheet" href="/assets/css/kw-ui.css?v=20261016uniforme">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
@@ -17,9 +23,6 @@
 <style>
 html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261013general"></script>
 <script src="/assets/js/kw-prellenar.js?v=20261013general" data-campos="f-asesor-envia"></script>
 <style>
 .layout { display: grid; grid-template-columns: 340px 1fr; gap: 0px; height: 100vh; }
@@ -105,7 +108,7 @@ table.r-tabla td, table.r-tabla th { border: 1px solid rgb(0, 0, 0); padding: 5p
 </style>
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
-<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261016auditoria">
+<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261022compacto">
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <style>
 .field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-language-override: inherit; font-size: 13px; color: var(--text); background: var(--input-bg, #fff); resize: vertical; }
@@ -133,8 +136,8 @@ tr { break-inside: avoid; }
 .r-page-footer span:nth-child(2) { text-align: center; }
 .r-page-footer span:last-child { text-align: right; }
 </style>
-<link rel="stylesheet" href="/assets/css/kw-referido-form.css?v=20261019a">
-<script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
+<link rel="stylesheet" href="/assets/css/kw-referido-form.css?v=20261022compacto">
+<script src="/assets/js/kw-documentos-shell.js?v=20261022campos"></script>
 <link rel="stylesheet" href="/assets/css/kw-acuerdos-guardado.css?v=20261019a">
 </head>
 <body class="doc-borrador">
@@ -210,30 +213,30 @@ tr { break-inside: avoid; }
   <div class="form-col acuerdos-form-col" id="acuerdos-form-col">
     <div class="form-title">Acuerdo de Referido</div>
 
-    <fieldset id="form-fields">
+    <fieldset id="form-fields" class="kw-documentos-formulario">
 <div class="section-label"><strong>1. Market Center que recibe / Market Center que envía</strong></div>
-<div class="referido-form-grid"><div class="field"><label for="f-asesor-recibe">Asesor que recibe</label><input type="text" id="f-asesor-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-asesor-envia">Asesor que envía</label><input type="text" id="f-asesor-envia" value="" oninput="updatePreview()"></div><div class="field"><label for="f-mc-recibe">Nombre del Market Center que recibe</label><input type="text" id="f-mc-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-mc-envia">Nombre del Market Center que envía</label><input type="text" id="f-mc-envia" value="KW PREMIER" oninput="updatePreview()"></div><div class="field referido-ancho"><label for="f-direccion-recibe">Dirección (recibe)</label><textarea id="f-direccion-recibe" rows="2" oninput="updatePreview()"></textarea></div><div class="field referido-ancho"><label for="f-direccion-envia">Dirección (envía)</label><textarea id="f-direccion-envia" rows="2" oninput="updatePreview()">SAN FRANCISCO 25, DESPACHO 201, COLONIA DEL VALLE NORTE</textarea></div><div class="field referido-ancho"><label for="f-ciudad-recibe">Ciudad, estado, municipio, C.P. (recibe)</label><input type="text" id="f-ciudad-recibe" value="" oninput="updatePreview()"></div><div class="field referido-ancho"><label for="f-ciudad-envia">Ciudad, estado, municipio, C.P. (envía)</label><input type="text" id="f-ciudad-envia" value="ALCALDÍA BENITO JUÁREZ, 03103, CDMX" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-tel-mc-recibe">Teléfono MC (recibe)</label><input type="text" id="f-tel-mc-recibe" value="" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-tel-mc-envia">Teléfono MC (envía)</label><input type="text" id="f-tel-mc-envia" value="55 8995 4967" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-cel-recibe">Celular asesor (recibe)</label><input type="text" id="f-cel-recibe" value="" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-cel-envia">Celular asesor (envía)</label><input type="text" id="f-cel-envia" value="" oninput="updatePreview()"></div><div class="field"><label for="f-correo-recibe">Correo (recibe)</label><input type="email" id="f-correo-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-correo-envia">Correo (envía)</label><input type="email" id="f-correo-envia" value="" oninput="updatePreview()"></div>
+<div class="referido-form-grid kw-documentos-campos"><div class="field acuerdo-field"><label for="f-asesor-recibe">Asesor que recibe</label><input type="text" id="f-asesor-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-asesor-envia">Asesor que envía</label><input type="text" id="f-asesor-envia" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-mc-recibe">Nombre del Market Center que recibe</label><input type="text" id="f-mc-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-mc-envia">Nombre del Market Center que envía</label><input type="text" id="f-mc-envia" value="KW PREMIER" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-direccion-recibe">Dirección (recibe)</label><input type="text" id="f-direccion-recibe" value="" autocomplete="street-address" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-direccion-envia">Dirección (envía)</label><input type="text" id="f-direccion-envia" value="SAN FRANCISCO 25, DESPACHO 201, COLONIA DEL VALLE NORTE" autocomplete="street-address" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-ciudad-recibe">Ciudad, estado, municipio, C.P. (recibe)</label><input type="text" id="f-ciudad-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-ciudad-envia">Ciudad, estado, municipio, C.P. (envía)</label><input type="text" id="f-ciudad-envia" value="ALCALDÍA BENITO JUÁREZ, 03103, CDMX" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-tel-mc-recibe">Teléfono MC (recibe)</label><input type="text" id="f-tel-mc-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-tel-mc-envia">Teléfono MC (envía)</label><input type="text" id="f-tel-mc-envia" value="55 8995 4967" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-cel-recibe">Celular asesor (recibe)</label><input type="text" id="f-cel-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-cel-envia">Celular asesor (envía)</label><input type="text" id="f-cel-envia" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-correo-recibe">Correo (recibe)</label><input type="email" id="f-correo-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-correo-envia">Correo (envía)</label><input type="email" id="f-correo-envia" value="" oninput="updatePreview()"></div>
 </div>
 <div class="section-label"><strong>2. Información del vendedor</strong></div>
-<div class="referido-form-grid"><div class="field"><label for="f-vendedor-nombre">Nombre</label><input type="text" id="f-vendedor-nombre" value="" oninput="updatePreview()"></div><div class="field"><label for="f-vendedor-contacto">Fecha de contacto inicial</label><input type="date" id="f-vendedor-contacto" value="" oninput="updatePreview()"></div><div class="field referido-ancho"><label for="f-vendedor-direccion">Dirección</label><textarea id="f-vendedor-direccion" rows="2" oninput="updatePreview()"></textarea></div><div class="field referido-ancho"><label for="f-inmueble-direccion">Dirección del inmueble para listado</label><textarea id="f-inmueble-direccion" rows="2" oninput="updatePreview()"></textarea></div><div class="field referido-ancho"><label for="f-vendedor-ciudad">Ciudad, estado, municipio, C.P.</label><input type="text" id="f-vendedor-ciudad" value="" oninput="updatePreview()"></div><div class="field"><label for="f-inmueble-tipo">Tipo de inmueble</label><input type="text" id="f-inmueble-tipo" value="" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-vendedor-oficina">Teléfono oficina</label><input type="text" id="f-vendedor-oficina" value="" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-vendedor-comision">Comisión</label><input type="text" id="f-vendedor-comision" value="" oninput="updatePreview()"></div><div class="field referido-corto"><label for="f-vendedor-celular">Celular</label><input type="text" id="f-vendedor-celular" value="" oninput="updatePreview()"></div><div class="field referido-ancho"><label for="f-vendedor-apoyo">Información adicional de apoyo</label><textarea id="f-vendedor-apoyo" rows="2" oninput="updatePreview()"></textarea></div><div class="field"><label for="f-vendedor-correo">Correo</label><input type="email" id="f-vendedor-correo" value="" oninput="updatePreview()"></div>
+<div class="referido-form-grid kw-documentos-campos"><div class="field acuerdo-field"><label for="f-vendedor-nombre">Nombre</label><input type="text" id="f-vendedor-nombre" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-vendedor-contacto">Fecha de contacto inicial</label><input type="date" id="f-vendedor-contacto" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-vendedor-direccion">Dirección</label><input type="text" id="f-vendedor-direccion" value="" autocomplete="street-address" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-inmueble-direccion">Dirección del inmueble para listado</label><input type="text" id="f-inmueble-direccion" value="" autocomplete="street-address" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-vendedor-ciudad">Ciudad, estado, municipio, C.P.</label><input type="text" id="f-vendedor-ciudad" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-inmueble-tipo">Tipo de inmueble</label><input type="text" id="f-inmueble-tipo" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-vendedor-oficina">Teléfono oficina</label><input type="text" id="f-vendedor-oficina" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-vendedor-comision">Comisión</label><input type="text" id="f-vendedor-comision" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-corto"><label for="f-vendedor-celular">Celular</label><input type="text" id="f-vendedor-celular" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-vendedor-apoyo">Información adicional de apoyo</label><textarea id="f-vendedor-apoyo" rows="2" oninput="updatePreview()"></textarea></div><div class="field acuerdo-field"><label for="f-vendedor-correo">Correo</label><input type="email" id="f-vendedor-correo" value="" oninput="updatePreview()"></div>
 </div>
 <div class="section-label"><strong>3. Información del comprador</strong></div>
-<div class="referido-form-grid">
-<div class="field"><label for="f-comprador-nombre">Nombre</label><input type="text" id="f-comprador-nombre" value="" oninput="updatePreview()"></div>
-<div class="field referido-ancho"><label for="f-comprador-direccion">Dirección actual</label><textarea id="f-comprador-direccion" rows="2" oninput="updatePreview()"></textarea></div>
-<div class="field referido-corto"><label for="f-comprador-celular">Teléfono celular</label><input type="text" id="f-comprador-celular" value="" oninput="updatePreview()"></div>
-<div class="field referido-corto"><label for="f-comprador-casa">Teléfono de casa</label><input type="text" id="f-comprador-casa" value="" oninput="updatePreview()"></div>
-<div class="field referido-ancho"><label for="f-comprador-ubicacion">Ubicación preferida</label><input type="text" id="f-comprador-ubicacion" value="" oninput="updatePreview()"></div>
-<div class="field referido-corto"><label for="f-comprador-precio">Rango de precio</label><input type="text" id="f-comprador-precio" value="" oninput="updatePreview()"></div>
-<div class="field referido-corto"><label for="f-comprador-vender">¿Necesita vender primero?</label><input type="text" id="f-comprador-vender" value="" oninput="updatePreview()"></div>
-<div class="field"><label for="f-comprador-fecha-compra">Fecha esperada de compra</label><input type="date" id="f-comprador-fecha-compra" value="" oninput="updatePreview()"></div>
-<div class="field referido-ancho"><label for="f-comprador-comentarios">Comentarios</label><textarea id="f-comprador-comentarios" rows="2" oninput="updatePreview()"></textarea></div>
+<div class="referido-form-grid kw-documentos-campos">
+<div class="field acuerdo-field"><label for="f-comprador-nombre">Nombre</label><input type="text" id="f-comprador-nombre" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-comprador-direccion">Dirección actual</label><input type="text" id="f-comprador-direccion" value="" autocomplete="street-address" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-corto"><label for="f-comprador-celular">Teléfono celular</label><input type="text" id="f-comprador-celular" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-corto"><label for="f-comprador-casa">Teléfono de casa</label><input type="text" id="f-comprador-casa" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-comprador-ubicacion">Ubicación preferida</label><input type="text" id="f-comprador-ubicacion" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-corto"><label for="f-comprador-precio">Rango de precio</label><input type="text" id="f-comprador-precio" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-corto"><label for="f-comprador-vender">¿Necesita vender primero?</label><input type="text" id="f-comprador-vender" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field"><label for="f-comprador-fecha-compra">Fecha esperada de compra</label><input type="date" id="f-comprador-fecha-compra" value="" oninput="updatePreview()"></div>
+<div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-comprador-comentarios">Comentarios</label><textarea id="f-comprador-comentarios" rows="2" oninput="updatePreview()"></textarea></div>
 </div>
 <div class="section-label"><strong>4. Aceptación del referido</strong></div>
-<div class="referido-form-grid"><div class="field"><label for="f-autorizacion-nombre">Nombre</label><input type="text" id="f-autorizacion-nombre" value="" oninput="updatePreview()"></div><div class="field referido-ancho"><label for="f-autorizacion-comentarios">Comentarios</label><textarea id="f-autorizacion-comentarios" rows="2" oninput="updatePreview()"></textarea></div><div class="field"><label for="f-autorizacion-contacto">Fecha de contacto</label><input type="date" id="f-autorizacion-contacto" value="" oninput="updatePreview()"></div><div class="field"><label for="f-autorizacion-cita">Fecha de primera cita</label><input type="date" id="f-autorizacion-cita" value="" oninput="updatePreview()"></div>
+<div class="referido-form-grid kw-documentos-campos"><div class="field acuerdo-field"><label for="f-autorizacion-nombre">Nombre</label><input type="text" id="f-autorizacion-nombre" value="" oninput="updatePreview()"></div><div class="field acuerdo-field referido-ancho kw-campo-ancho"><label for="f-autorizacion-comentarios">Comentarios</label><textarea id="f-autorizacion-comentarios" rows="2" oninput="updatePreview()"></textarea></div><div class="field acuerdo-field"><label for="f-autorizacion-contacto">Fecha de contacto</label><input type="date" id="f-autorizacion-contacto" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-autorizacion-cita">Fecha de primera cita</label><input type="date" id="f-autorizacion-cita" value="" oninput="updatePreview()"></div>
 </div>
 <div class="section-label"><strong>Firmas</strong></div>
-<div class="referido-form-grid"><div class="field"><label for="f-tl-recibe">Team Leader del MC que recibe</label><input type="text" id="f-tl-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-tl-envia">Team Leader del MC que refiere</label><input type="text" id="f-tl-envia" value="LESLY RODRIGUEZ S." oninput="updatePreview()"></div><div class="field"><label for="f-mca-recibe">MCA del MC que recibe</label><input type="text" id="f-mca-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-mca-envia">MCA del MC que refiere</label><input type="text" id="f-mca-envia" value="MARÍA FERNANDA PACHECO B." oninput="updatePreview()"></div><div class="field"><label for="f-fecha-firma-recibe">Fecha firma asesor que recibe</label><input type="date" id="f-fecha-firma-recibe" value="" oninput="updatePreview()"></div><div class="field"><label for="f-fecha-firma-envia">Fecha firma asesor que refiere</label><input type="date" id="f-fecha-firma-envia" value="" oninput="updatePreview()"></div></div>
+<div class="referido-form-grid kw-documentos-campos"><div class="field acuerdo-field"><label for="f-tl-recibe">Team Leader del MC que recibe</label><input type="text" id="f-tl-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-tl-envia">Team Leader del MC que refiere</label><input type="text" id="f-tl-envia" value="LESLY RODRIGUEZ S." oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-mca-recibe">MCA del MC que recibe</label><input type="text" id="f-mca-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-mca-envia">MCA del MC que refiere</label><input type="text" id="f-mca-envia" value="MARÍA FERNANDA PACHECO B." oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-fecha-firma-recibe">Fecha firma asesor que recibe</label><input type="date" id="f-fecha-firma-recibe" value="" oninput="updatePreview()"></div><div class="field acuerdo-field"><label for="f-fecha-firma-envia">Fecha firma asesor que refiere</label><input type="date" id="f-fecha-firma-envia" value="" oninput="updatePreview()"></div></div>
 </fieldset>
 
     <div class="desktop-btn-row" style="display:flex;gap:8px;margin-top:14px;">
@@ -789,7 +792,9 @@ function abrirDocumentoGuardado(row, marcar) {
     const datos = row.datos || {};
     CAMPOS_GUARDABLES.forEach(id => {
       const el = document.getElementById(id);
-      if (el && Object.prototype.hasOwnProperty.call(datos, id)) el.value = datos[id];
+      if (el && Object.prototype.hasOwnProperty.call(datos, id)) {
+        el.value = id.includes('direccion') ? String(datos[id] || '').replace(/[\r\n]+/g, ' ') : datos[id];
+      }
     });
     document.querySelectorAll('input[type="radio"]').forEach(el => { el.checked = false; });
     updatePreview();
@@ -1118,7 +1123,6 @@ function initSlideFinalizar() {
 
 // Inicializar preview al cargar
 document.addEventListener('DOMContentLoaded', () => {
-  updatePreview();
   mostrarVista('lista', false);
   initSlideFinalizar();
 
@@ -1199,7 +1203,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 <script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
-<script src="/assets/js/kw-documentos-lista.js?v=20261013general"></script>
+<script src="/assets/js/kw-documentos-lista.js?v=20261022carga"></script>
 <script src="/assets/js/kw-documentos-revision-local.js?v=20261008a"></script>
 <script src="/assets/js/kw-documento-zoom.js?v=20261015zoomfirmas"></script>
 <script src="/assets/js/kw-revisiones.js?v=20261015shell"></script>

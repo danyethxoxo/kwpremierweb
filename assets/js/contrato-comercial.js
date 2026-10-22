@@ -215,11 +215,12 @@
   }
   async function iniciar() {
     try {
-      const r=await window.kwSupabase.auth.getUser();if(r.error||!r.data.user)throw new Error('No hay sesión activa.');usuario=r.data.user;botones();await cargarLista();
-      const docId=new URLSearchParams(location.search).get('doc');
+      const r=await (window.kwSession?.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());if(r.error||!r.data.user)throw new Error('No hay sesión activa.');usuario=r.data.user;botones();
+      const parametros=new URLSearchParams(location.search),docId=parametros.get('doc');
       if(docId){
         const r=await window.kwSupabase.from('documentos_guardados').select('id,nombre_archivo,datos,estado,folio,revision,updated_at').eq('id',docId).eq('user_id',usuario.id).eq('tipo_documento',tipo).single();if(r.error)throw r.error;if(!r.data)throw new Error('No se encontró el contrato.');abrir(r.data,false);
-      }else if(new URLSearchParams(location.search).has('nuevo'))abrir(null);
+      }else if(parametros.has('nuevo'))abrir(null);
+      else await cargarLista();
     }catch(e){mensaje(e.message||'No se pudo iniciar el contrato.',true);}
   }
   pintarCampos();botones();
@@ -242,6 +243,6 @@
   $('buscador-input').oninput=pintarLista;
   window.addEventListener('beforeunload',e=>{if(sucio){e.preventDefault();e.returnValue='';}});
   window.addEventListener('popstate',e=>{vista(e.state?.kwVista==='formulario',false);if(!e.state?.kwVista)cargarLista();});
-  window.addEventListener('kw-auth-ready',iniciar,{once:true});
   if(document.documentElement.classList.contains('kw-auth-ok'))iniciar();
+  else window.addEventListener('kw-auth-ready',iniciar,{once:true});
 })();

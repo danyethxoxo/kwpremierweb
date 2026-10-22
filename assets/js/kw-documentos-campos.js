@@ -7,8 +7,8 @@
   let consultaPerfil;
   async function perfil(){
     if(!consultaPerfil)consultaPerfil=(async()=>{
-      const u=await global.kwSupabase.auth.getUser();if(u.error||!u.data.user)return {};
-      const r=await global.kwSupabase.from('profiles').select('nombre,apellido,email,whatsapp').eq('id',u.data.user.id).single();
+      const u=await (global.kwSession?.usuarioInicial ? global.kwSession.usuarioInicial(global.kwSupabase) : global.kwSupabase.auth.getUser());if(u.error||!u.data.user)return {};
+      const r=await (global.kwSession?.perfilInicial ? global.kwSession.perfilInicial(global.kwSupabase) : global.kwSupabase.from('profiles').select('nombre,apellido,email,whatsapp').eq('id',u.data.user.id).single());
       if(r.error)throw r.error;
       return {...r.data,nombre:[r.data?.nombre,r.data?.apellido].filter(Boolean).join(' ').trim(),email:r.data?.email||u.data.user.email||''};
     })().catch(()=>{consultaPerfil=null;return {};});

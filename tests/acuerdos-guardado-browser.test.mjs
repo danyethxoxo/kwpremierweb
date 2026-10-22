@@ -45,6 +45,16 @@ test('acuerdos: guardar, animación, reintento sin duplicados, revisión y formu
   await page.goto('https://kw.local/documentos/acuerdos/acuerdoreferido.html?nuevo=1');
   await page.locator('#btn-guardar').waitFor({state:'visible'});
   const input=page.locator('.referido-form-grid input').first();await input.fill('Asesor QA');await input.focus();
+  assert.ok(await input.evaluate(el=>el.closest('.field').querySelector('label').getBoundingClientRect().height<30));
+  const direccion=page.locator('#f-direccion-envia');
+  assert.equal(await direccion.evaluate(el=>el.tagName),'INPUT');
+  assert.ok(await direccion.evaluate(el=>el.getBoundingClientRect().width>el.closest('.referido-form-grid').clientWidth*.95));
+  assert.equal(await page.locator('.acuerdos-form-heading').evaluate(el=>getComputedStyle(el).borderBottomWidth),'1px');
+  const comentarios=page.locator('#f-comprador-comentarios');
+  await comentarios.fill('Comentarios extensos de prueba. '.repeat(30));
+  assert.ok(await comentarios.evaluate(el=>el.scrollHeight<=el.clientHeight+1));
+  await comentarios.fill('');
+  await input.focus();
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.referido-form-grid input')).boxShadow==='none');
   assert.deepEqual(await input.evaluate(el=>{const s=getComputedStyle(el);return [s.height,s.boxShadow,s.outlineStyle];}),['43px','none','none']);
   assert.deepEqual(await page.locator('.r-seccion').first().evaluate(el=>{const s=getComputedStyle(el);return [s.backgroundColor,s.textAlign];}),['rgb(255, 255, 255)','center']);
@@ -91,6 +101,9 @@ test('acuerdos: guardar, animación, reintento sin duplicados, revisión y formu
   await page.goto('https://kw.local/documentos/acuerdos/acuerdoreferido.html?nuevo=1');
   await page.locator('#btn-guardar').waitFor({state:'visible'});
   assert.ok(await input.evaluate(el=>el.getBoundingClientRect().right<=innerWidth));
+  await page.evaluate(()=>abrirDocumentoGuardado({id:'anterior',estado:'borrador',datos:{'f-comprador-direccion':'Calle de prueba 25\nColonia Centro'}}));
+  await page.waitForFunction(()=>document.getElementById('f-comprador-direccion').value==='Calle de prueba 25 Colonia Centro');
+  assert.ok(await page.locator('#f-comprador-direccion').evaluate(el=>el.getBoundingClientRect().right<=innerWidth));
   assert.deepEqual(errors,[]);
  } finally {await browser.close();}
 });

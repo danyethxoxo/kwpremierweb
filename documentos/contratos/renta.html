@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://iloetojomzqtadkithtv.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="/assets/js/kw-security.js?v=20260922"></script>
-  <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/assets/css/kw-ui.css?v=20261016uniforme">
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
+<link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261013general">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
+<script src="/assets/js/kw-session.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+    <link rel="stylesheet" href="/assets/css/kw-ui.css?v=20261016uniforme">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
   <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
 <title>Acuerdo de Renta</title>
@@ -16,10 +22,7 @@
 <style>
 html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261013general"></script>
-<script src="/assets/js/kw-documentos-campos.js?v=20261015homogeneo"></script>
+<script src="/assets/js/kw-documentos-campos.js?v=20261022carga"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 .kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
@@ -98,7 +101,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
-<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261016auditoria">
+<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261022compacto">
 <style>
 .kw-renta-revision-back { display: inline-flex; align-items: center; gap: 7px; margin: 0px 0px 16px; padding: 8px 12px; border: 0px; border-radius: 10px; background: rgb(255, 250, 250); color: rgb(138, 0, 0); font: 600 12px / 1 Poppins, Arial, sans-serif; cursor: pointer; transition: background 0.16s, border-color 0.16s, transform 0.12s; }
 .kw-renta-revision-back:hover { background: rgb(248, 238, 238); border-color: rgb(185, 121, 121); }
@@ -107,7 +110,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 .kw-renta-revision-back svg { flex: 0 0 15px; width: 15px; height: 15px; }
 </style>
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
-<script src="/assets/js/kw-documentos-shell.js?v=20261016alineado"></script>
+<script src="/assets/js/kw-documentos-shell.js?v=20261022campos"></script>
 <link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016profeco">
 <script src="/assets/js/kw-contrato-documento.js?v=20261021firmantes"></script>
 <link rel="stylesheet" href="/assets/css/kw-logo-empresa.css?v=20261016recorte">
@@ -1322,7 +1325,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   renderClientesFields();
 
-  updatePreview();
   initSlideFinalizar();
 
   // Si se abrió con ?doc=<id> (por ejemplo desde el panel de Admin),
@@ -1427,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => { showMobileTab('form'); });
 </script>
 
 <script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
-<script src="/assets/js/kw-documentos-lista.js?v=20261013general"></script>
+<script src="/assets/js/kw-documentos-lista.js?v=20261022carga"></script>
 <script src="/assets/js/kw-documentos-revision-local.js?v=20261008a"></script>
 <script src="/assets/js/kw-documento-zoom.js?v=20261015zoomfirmas"></script>
 <script src="/assets/js/kw-revisiones.js?v=20261015shell"></script>

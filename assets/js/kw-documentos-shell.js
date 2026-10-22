@@ -18,6 +18,13 @@
   }
   aplicarMarca(document);
   const esc = v => String(v || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function ajustarCampos(raiz) {
+    raiz.querySelectorAll('textarea').forEach(campo=>{
+      if(!campo.clientWidth)return;
+      campo.style.height='0px';
+      campo.style.height=Math.max(43,campo.scrollHeight+campo.offsetHeight-campo.clientHeight)+'px';
+    });
+  }
   function prepararFormularioFijo(raiz) {
     if(!raiz || raiz.dataset.kwFormularioFijo)return;
     const acciones=raiz.querySelector('.desktop-btn-row');if(!acciones)return;
@@ -34,6 +41,12 @@
     const pie=document.createElement('div');pie.className='kw-form-acciones';pie.appendChild(acciones);if(mensaje)pie.appendChild(mensaje);
     const panel=raiz.querySelector('.kw-revision-panel');raiz.insertBefore(scroll,panel?panel.nextSibling:raiz.firstChild);raiz.appendChild(pie);
     const encabezado=raiz.querySelector('.acuerdos-form-heading');if(encabezado)raiz.insertBefore(encabezado,scroll);
+    raiz.addEventListener('input',e=>{if(e.target.tagName==='TEXTAREA')ajustarCampos(raiz);});
+    raiz.addEventListener('focusin',e=>{if(e.target.tagName==='TEXTAREA')ajustarCampos(raiz);});
+    if(global.ResizeObserver){
+      let ancho=0;
+      new ResizeObserver(([entrada])=>{if(entrada.contentRect.width!==ancho){ancho=entrada.contentRect.width;ajustarCampos(raiz);}}).observe(scroll);
+    }
   }
   function montar(config) {
     const cont=document.querySelector('[data-kw-documento-shell]');if(!cont)return;

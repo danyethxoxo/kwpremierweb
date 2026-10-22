@@ -9,6 +9,10 @@ Para el papel, vista previa y PDF de los tres contratos, la referencia aprobada 
 - `assets/css/kw-documentos-form.css`: medidas, etiquetas y controles compartidos del formulario, así como el zoom.
 - `assets/css/kw-revisiones.css` y `assets/js/kw-revisiones.js`: revisiones y acciones comunes. La preparación del pie delega en `kwDocumentosShell.prepararFormularioFijo`.
 
+El separador bajo el título y el espacio inicial pertenecen a `kw-documentos-form.css`. Referidos usa `kw-documentos-campos`, sin alturas fijas en las etiquetas; `kw-campo-ancho` reserva una fila completa para direcciones y comentarios. Las direcciones se capturan con input de una línea, igual que Renta. El armazón ajusta la altura de los comentarios al contenido.
+
+El arranque de las páginas protegidas precarga los scripts de sesión y los ejecuta antes de las hojas de estilo. Se mantiene la comprobación del servidor antes de mostrar datos. El listado comparte consultas simultáneas y conserva sus filas al actualizar; si los datos no cambian, no se vuelve a dibujar. Las vistas previas se preparan al abrir el documento, y una URL directa a Comercial consulta solo ese documento.
+
 ## Nuevo documento
 
 Copiar únicamente el arranque de Comercial y definir su configuración, no su interfaz:
