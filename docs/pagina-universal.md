@@ -43,3 +43,9 @@ La referencia aprobada es Firmas Digitales. La distribución para nuevas pantall
 - Formulario: dos columnas en escritorio y una en móvil. El área de contenido desplaza; el encabezado permanece en su lugar en escritorio.
 
 No crear otra versión de estos botones, cambiar sus tamaños desde el módulo ni duplicar la campana. Las mejoras universales se hacen en las piezas compartidas. Migrar pantallas anteriores solamente cuando se solicite; esta base no cambia sus permisos ni sus flujos.
+
+## Base móvil
+
+Por indicación del usuario, Firmas Digitales también es la referencia móvil de todo el portal. Las páginas protegidas cargan `kw-movil.css` al final del head y `kw-movil.js` después de sus controladores y del menú. Hasta 1023 px se comparte encabezado blanco fijo, título, acción principal compacta, relleno de 12 px y búsqueda visible. Los filtros de `kw-lateral.js` se abren en un panel lateral con los mismos controles y valores del escritorio. La campana conserva una sola instancia.
+
+Los nodos de acciones se trasladan con sus manejadores y vuelven al lugar original al ampliar la pantalla. No duplicar botones, formularios o estados para móvil. Las tablas anchas conservan su scroll dentro del marco. Los acuerdos y contratos conservan Renta como formulario y añaden este encabezado compartido; los nombres y metadatos de su listado se distribuyen en renglones separados.

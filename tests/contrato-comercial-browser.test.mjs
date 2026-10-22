@@ -256,8 +256,13 @@ test('comercial: captura, contenido completo, guardado, reapertura, errores, fin
    const filas=await page.locator('.kw-documentos-campos').evaluateAll(grupos=>grupos.map(grupo=>Array.from(grupo.children).map(campo=>{
     const control=campo.querySelector('.kw-select-btn,input,textarea');const rect=control.getBoundingClientRect();return {id:control.id,x:rect.x,y:rect.y,ancho:rect.width};
    })));
-   for(const fila of filas)for(let i=0;i<fila.length;i+=2){
+   for(const fila of filas)for(let i=0;i<fila.length;i+=width<=600?1:2){
     if(!fila[i+1])continue;
+    if(width<=600){
+     assert.ok(Math.abs(fila[i].x-fila[i+1].x)<1,'campos en una columna en celular');
+     assert.ok(fila[i+1].y>fila[i].y,'cada campo empieza otro renglon');
+     continue;
+    }
     assert.ok(Math.abs(fila[i].y-fila[i+1].y)<1,'controles alineados: '+fila[i].id+' / '+fila[i+1].id);
     assert.ok(Math.abs(fila[i].ancho-fila[i+1].ancho)<1,'columnas iguales');
     assert.ok(fila[i+1].x>fila[i].x,'dos campos ordenados por fila');

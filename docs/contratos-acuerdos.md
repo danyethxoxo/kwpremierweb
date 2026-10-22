@@ -13,6 +13,8 @@ El separador bajo el título y el espacio inicial pertenecen a `kw-documentos-fo
 
 El arranque de las páginas protegidas precarga los scripts de sesión y los ejecuta antes de las hojas de estilo. Se mantiene la comprobación del servidor antes de mostrar datos. El listado comparte consultas simultáneas y conserva sus filas al actualizar; si los datos no cambian, no se vuelve a dibujar. Las vistas previas se preparan al abrir el documento, y una URL directa a Comercial consulta solo ese documento.
 
+En móvil se carga la estructura común de Firmas descrita en `pagina-universal.md`, mediante `kw-movil.css` y `kw-movil.js`. El listado muestra el título y Nuevo en el encabezado, la búsqueda debajo y cada documento con su nombre y metadatos legibles. El formulario conserva sus campos y acciones; las pestañas Formulario y Vista previa quedan debajo del encabezado. Al volver a escritorio, las acciones regresan a su posición original.
+
 ## Nuevo documento
 
 Copiar únicamente el arranque de Comercial y definir su configuración, no su interfaz:

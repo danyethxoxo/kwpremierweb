@@ -98,13 +98,11 @@
      diálogo de elegir archivo aunque el clic venga de su <label>. Esta
      es la técnica estándar para esconder visualmente sin quitarlo del
      todo: sigue "presente" para el navegador, solo que en un pixel. */
-  .firma-input-real {
-    position: absolute; width: 1px; height: 1px;
-    padding: 0; margin: -1px; overflow: hidden;
-    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
-  }
+  .firma-input-real { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1; }
+  .firma-drop:focus-within { outline:2px solid var(--red);outline-offset:3px; }
 
   .firma-drop {
+    position:relative;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 8px; padding: 26px 18px; text-align: center;
     border: 1.5px dashed rgba(0,0,0,0.16);
@@ -1783,7 +1781,8 @@
   .verif-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
-<link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261008c">
+<link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261022archivos">
+<link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022base">
 </head>
 <body class="en-historial firmas-pagina">
 
@@ -2007,9 +2006,8 @@
       <div class="kw-card" id="paso-archivos">
           <div id="cupo-archivos" class="firma-cupo" style="display:none;"></div>
 
-          <input type="file" id="archivo" class="firma-input-real" multiple
-            accept=".pdf,application/pdf">
           <label for="archivo" class="firma-drop" id="drop">
+            <input type="file" id="archivo" class="firma-input-real" multiple accept=".pdf,application/pdf" aria-label="Elegir documentos PDF">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
@@ -2191,6 +2189,7 @@
   </div>
 
 <script src="/assets/js/kw-firmas-carga.js?v=20261022a"></script>
+<script src="/assets/js/kw-firmas-archivos.js?v=20261022movil"></script>
 <script>
 (function () {
   'use strict';
@@ -2423,45 +2422,32 @@
   // Las dos librerías se cargan hasta que hacen falta, no al abrir la
   // pantalla: entre las dos pesan cerca de un mega, y quien solo viene a
   // ver cómo va un envío no tiene por qué esperarlas.
+  const scriptsPendientes=new Map();
   function cargarScript(src) {
-    return new Promise((listo, falla) => {
-      if (document.querySelector('script[data-lib="' + src + '"]')) return listo();
-      const s = document.createElement('script');
-      s.src = src;
-      s.dataset.lib = src;
-      s.onload = listo;
-      s.onerror = () => { s.remove(); falla(new Error('No se pudo cargar una librería necesaria. Revisa tu conexión.')); };
-      document.head.appendChild(s);
-    });
+    if(scriptsPendientes.has(src))return scriptsPendientes.get(src);
+    const pendiente=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src=src;
+      const tiempo=setTimeout(()=>fallar(),20000);
+      function fallar(){clearTimeout(tiempo);script.remove();scriptsPendientes.delete(src);reject(new Error('No se pudo cargar el visor. Revisa tu conexi\u00f3n y vuelve a presionar Continuar.'));}
+      script.onload=()=>{clearTimeout(tiempo);resolve();};script.onerror=fallar;document.head.appendChild(script);
+    });scriptsPendientes.set(src,pendiente);return pendiente;
   }
-
-  let libsListas = null;
-  function cargarLibs() {
-    if (!libsListas) {
-      libsListas = Promise.all([
-        cargarScript('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'),
-        cargarScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'),
-      ]).then(() => {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      }).catch((e) => {
-        // Si falló, se olvida para que el siguiente intento lo vuelva a
-        // probar en vez de quedarse pegado en el error de la primera vez.
-        libsListas = null;
-        throw e;
-      });
-    }
-    return libsListas;
+  let libsListas=null,unionLista=null;
+  function cargarLibs(unir=false){
+    if(!libsListas)libsListas=cargarScript('/assets/vendor/firmas/pdf-3.11.174.min.js').then(()=>{
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='/assets/vendor/firmas/pdf.worker-3.11.174.min.js';
+    }).catch(error=>{libsListas=null;throw error;});
+    if(!unir)return libsListas;
+    if(!unionLista)unionLista=cargarScript('/assets/vendor/firmas/pdf-lib-1.17.1.min.js').catch(error=>{unionLista=null;throw error;});
+    return Promise.all([libsListas,unionLista]);
   }
-
-  // ── Paso 1: juntar y ordenar los archivos ───────────────────
 
   function agregarArchivos(lista) {
     const nuevos = Array.from(lista || []);
     if (!nuevos.length) return;
 
     for (const a of nuevos) {
-      if (!a.name.toLowerCase().endsWith('.pdf')) {
+      if (!window.kwFirmasArchivos.esPDF(a)) {
         avisoArchivos('Por ahora solo se pueden unir PDF. "' + a.name + '" no lo es.', 'error');
         continue;
       }
@@ -2473,6 +2459,8 @@
     }
 
     pintarArchivos();
+    if(archivos.length)cargarLibs().catch(error=>avisoArchivos(error.message,'error'));
+    requestAnimationFrame(()=>$('archivos-pie').scrollIntoView({block:'nearest',behavior:'smooth'}));
   }
 
   function pintarArchivos() {
@@ -2575,12 +2563,9 @@
     validarPesoArchivos();
   }
 
-  $('archivo').addEventListener('change', (e) => {
-    agregarArchivos(e.target.files);
-    // Se limpia para que volver a elegir el mismo archivo dispare otro
-    // 'change'; si no, quitarlo de la lista y reelegirlo no hace nada.
-    e.target.value = '';
-  });
+  $('archivo').addEventListener('click',e=>{e.currentTarget.value='';});
+  $('archivo').addEventListener('change',e=>agregarArchivos(Array.from(e.currentTarget.files||[])));
+  $('archivo').addEventListener('cancel',()=>validarPesoArchivos());
 
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => {
@@ -2594,20 +2579,20 @@
   // ── Unir los PDF en uno solo ────────────────────────────────
 
   async function unirArchivos() {
-    await cargarLibs();
+    await cargarLibs(archivos.length>1);
 
     // Con un solo archivo no hay nada que unir. Se devuelve tal cual en
     // vez de pasarlo por la librería: reescribirlo puede romper campos
     // de formulario o firmas previas que el original sí traía bien.
     if (archivos.length === 1) {
-      return new Uint8Array(await archivos[0].arrayBuffer());
+      return await window.kwFirmasArchivos.leer(archivos[0]);
     }
 
     const unido = await window.PDFLib.PDFDocument.create();
     for (const a of archivos) {
       let doc;
       try {
-        doc = await window.PDFLib.PDFDocument.load(await a.arrayBuffer());
+        doc = await window.PDFLib.PDFDocument.load(await window.kwFirmasArchivos.leer(a));
       } catch {
         // Un PDF con contraseña o dañado truena aquí. Decir cuál es
         // ahorra tener que ir probándolos de uno en uno.
@@ -2628,6 +2613,7 @@
   // Devuelve el tamaño real de cada página en puntos, que es lo que
   // weetrust necesita y no cambia aunque la pantalla sea chica.
   async function dibujarEn(bytes, cont, marco) {
+    if(matchMedia('(max-width:1023px)').matches)return window.kwFirmasArchivos.dibujar(bytes,cont,marco);
     // pdf.js se queda con el arreglo que recibe y lo deja inservible
     // para lo que venga después; se le pasa una copia para poder seguir
     // usando el original al subirlo.
@@ -2744,10 +2730,10 @@
 
       const mini = document.createElement('canvas');
       const ANCHO_MINI = Math.max(72, Math.min(108, lista.clientWidth - 16 || 104));
-      const escala = ANCHO_MINI / p.lienzo.width;
-      mini.width = ANCHO_MINI;
-      mini.height = Math.round(p.lienzo.height * escala);
-      mini.getContext('2d').drawImage(p.lienzo, 0, 0, mini.width, mini.height);
+      const proporcion=p.altoPt&&p.anchoPt?p.altoPt/p.anchoPt:p.lienzo.height/p.lienzo.width;
+      mini.width=ANCHO_MINI;mini.height=Math.round(ANCHO_MINI*proporcion);
+      const actualizarMini=()=>{mini.getContext('2d').clearRect(0,0,mini.width,mini.height);mini.getContext('2d').drawImage(p.lienzo,0,0,mini.width,mini.height);};
+      actualizarMini();p.lienzo.addEventListener('kw-pdf-dibujada',actualizarMini,{once:true});
 
       const num = document.createElement('span');
       num.className = 'mini-num';
@@ -2930,6 +2916,7 @@
     }
 
     if (cual === 'historial' && vistaActual !== 'historial') {
+      window.kwFirmasArchivos?.liberar($('paginas'));
       archivos = [];
       pdfUnido = null;
       marcas = [];
@@ -3107,6 +3094,7 @@
   }
 
   $('btn-nuevo').addEventListener('click', () => {
+    window.kwFirmasArchivos?.liberar($('paginas'));
     // Se limpia todo: si se venía de retomar un borrador, seguir con su
     // identificador haría que el documento nuevo lo sobrescribiera.
     archivos = [];
@@ -3132,6 +3120,7 @@
     avisoArchivos('', '');
 
     try {
+      await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
       pdfUnido = await unirArchivos();
 
       mostrarVista('editor');
@@ -5374,6 +5363,7 @@
   }
 
   function cerrarDoc() {
+    window.kwFirmasArchivos?.liberar($('doc-paginas'));
     $('modal-doc').style.display = 'none';
     $('doc-cuerpo').onscroll = null;
     $('doc-cuerpo').innerHTML = '';
@@ -5983,7 +5973,8 @@
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
 <script src="/assets/js/drawer.js?v=20261019-notif-lista2" data-menu="hub"></script>
-<script src="/assets/js/kw-lateral.js?v=20261008switch"></script>
+<script src="/assets/js/kw-lateral.js?v=20261022movil"></script>
 
+<script src="/assets/js/kw-movil.js?v=20261022base"></script>
 </body>
 </html>

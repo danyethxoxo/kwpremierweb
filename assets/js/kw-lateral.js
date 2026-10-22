@@ -58,7 +58,7 @@
   function acomodarFuentes(lateral) {
     if (!lateral || !fuentes.length) return;
     const contenedor = lateral.querySelector('.kw-lateral-contenido');
-    if (escritorio.matches) {
+    if (escritorio.matches || lateral.hasAttribute('data-kw-lateral-movil')) {
       fuentes.forEach(function (item) {
         item.nodo.classList.add('kw-lateral-filtro-origen');
         contenedor.appendChild(item.nodo);
@@ -77,7 +77,6 @@
     const menuDrawer = document.getElementById('drawer-hamburguesa');
     const botones = document.querySelectorAll('[data-kw-menu-principal]');
     if (!lateral || !drawer || !menuDrawer || !botones.length) return;
-    prepararMovil(lateral);
 
     // Las pantallas que tienen una barra propia arrancan con ella visible.
     // drawer.js mantiene el menú global abierto en escritorio; si no se
@@ -85,6 +84,13 @@
     if (escritorio.matches) drawer.classList.remove('open');
 
     prepararFuentes(lateral);
+    if (!lateral.hasAttribute('data-kw-lateral-movil') &&
+        (fuentes.length || lateral.querySelector('.kw-lateral-nav,.kw-filtros,.filtros,.kw-universal-panel > .kw-resumen'))) {
+      if (!lateral.id) lateral.id = 'kw-filtros-pagina';
+      lateral.setAttribute('data-kw-lateral-movil','');
+      lateral.dataset.kwLateralDisparador = '#kw-drawer-toggle';
+    }
+    prepararMovil(lateral);
     if (!fuentes.length && lateral.classList.contains('kw-lateral-universal')) {
       const contenedor = lateral.querySelector('.kw-lateral-contenido');
       if (contenedor && !contenedor.children.length) {
@@ -151,10 +157,11 @@
   }
 
   function prepararMovil(lateral) {
-    if (!lateral.hasAttribute('data-kw-lateral-movil')) return;
+    if (!lateral.hasAttribute('data-kw-lateral-movil') || lateral.dataset.kwMovilListo) return;
     lateral.classList.add('kw-lateral-movil');
     const abrir = document.querySelector(lateral.dataset.kwLateralDisparador || '[data-kw-lateral-abrir="' + lateral.id + '"]');
     if (!abrir) return;
+    lateral.dataset.kwMovilListo = '1';
     abrir.setAttribute('aria-controls', lateral.id);
     abrir.setAttribute('aria-expanded', 'false');
     const velo = document.createElement('div');
