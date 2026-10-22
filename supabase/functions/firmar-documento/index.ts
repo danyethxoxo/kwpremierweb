@@ -140,7 +140,7 @@ async function leerRespuesta(res: Response, queHacia: string) {
 // puede comprobar de antemano.
 async function subirDocumento(token: string, archivo: Blob, nombre: string) {
   const form = new FormData()
-  form.append('document', archivo, nombre)
+  form.append('document', new Blob([archivo], { type: 'application/pdf' }), nombre)
 
   const res = await fetch(`${WEETRUST_URL}/documents`, {
     method: 'POST',
@@ -435,7 +435,7 @@ function limpiarFirmantes(crudo: unknown): Firmante[] {
     // cuelan espacios de ancho cero que no se ven pero lo invalidan.
     const correo = String(f?.correo || '').replace(/[\u200B\u200C\u200D\uFEFF\s]/g, '').toLowerCase()
 
-    if (!nombre) throw new Error(`Al firmante ${i + 1} le falta el nombre.`)
+    if (nombre.length < 4 || nombre.length > 100) throw new Error(`Escribe el nombre completo del firmante ${i + 1}, de 4 a 100 caracteres.`)
     if (!RE_CORREO.test(correo)) throw new Error(`El correo de ${nombre} no es válido: "${correo}"`)
 
     const identificacion = String(f?.identificacion || '').trim()
@@ -621,22 +621,24 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // documento aparecería dos veces en el historial.
       const borradorId = String(body.borradorId || '')
       let fila: { id: string } | null = null
+      let documentoExistente: string | null = null
 
       if (borradorId) {
         const { data: previo } = await admin
           .from('firmas_documentos')
-          .select('id, user_id, estado')
+          .select('id, user_id, estado, weetrust_document_id, archivo_ruta')
           .eq('id', borradorId)
           .single()
 
         if (!previo) return respond({ error: 'Ese borrador ya no existe.' }, 404)
         if (previo.user_id !== userId) return respond({ error: 'Ese borrador no es tuyo.' }, 403)
-        if (previo.estado !== 'borrador') {
+        if (previo.estado !== 'borrador' && !(previo.estado === 'error' && !previo.weetrust_document_id)) {
           return respond({ error: 'Ese documento ya se había mandado a firma.' }, 409)
         }
 
+        if (previo.archivo_ruta === rutaArchivo) documentoExistente = previo.weetrust_document_id || null
         const { error } = await admin.from('firmas_documentos')
-          .update({ ...datosFila, estado: 'preparando' })
+          .update({ ...datosFila, estado: 'preparando', error_mensaje: null, weetrust_document_id: documentoExistente })
           .eq('id', borradorId)
         if (error) return respond({ error: `No se pudo retomar el borrador: ${error.message}` }, 500)
         fila = { id: borradorId }
@@ -654,6 +656,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         fila = data
       }
 
+      let etapa = 'subir'
       try {
         // El PDF se baja del bucket con la llave de servicio. El bucket
         // es privado, así que esta es la única manera de leerlo sin
@@ -664,8 +667,23 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
         const token = await obtenerToken()
 
-        const subido = await subirDocumento(token, archivo, String(body.nombreArchivo || 'documento.pdf'))
-        const documentID = subido?.documentID
+        let documentID = documentoExistente
+        if (documentID) {
+          const existente = await pedirDocumento(token, documentID)
+          if (!existente) {
+            documentID = null
+            await admin.from('firmas_documentos').update({ weetrust_document_id: null }).eq('id', fila!.id)
+          }
+          else if (String(existente.status).toUpperCase() !== 'DRAFT') {
+            const estado = String(existente.status).toUpperCase() === 'COMPLETED' ? 'completado' : 'pendiente'
+            await admin.from('firmas_documentos').update({ estado }).eq('id', fila!.id)
+            return respond({ error: 'Ese documento ya salió de borrador en WeeTrust. Actualiza el historial antes de enviarlo otra vez.' }, 409)
+          }
+        }
+        if (!documentID) {
+          const subido = await subirDocumento(token, archivo, String(body.nombreArchivo || 'documento.pdf'))
+          documentID = subido?.documentID
+        }
         if (!documentID) throw new Error('weetrust no devolvió un documentID.')
 
         // El documentID se guarda de inmediato, antes de invitar. Si el
@@ -680,10 +698,12 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         // mientras el documento sigue en borrador. Si se manda primero la
         // invitación, las coordenadas ya no se pueden poner y cada quien
         // firmaría donde se le ocurriera.
+        etapa = 'posiciones'
         if (posiciones.length) {
           await fijarFirmas(token, documentID, posiciones)
         }
 
+        etapa = 'invitar'
         const enviado = await enviarAFirma(token, documentID, titulo, mensaje, firmantes, enOrden, observadores)
 
         // weetrust regresa la lista de firmantes con su signatoryID y su
@@ -710,6 +730,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         await admin.from('firmas_documentos')
           .update({
             estado: 'pendiente',
+            error_mensaje: null,
             firmantes: conDatos,
             enviado_at: new Date().toISOString(),
           })
@@ -718,10 +739,18 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         return respond({ ok: true, id: fila!.id, documentID, firmantes: conDatos })
       } catch (e) {
         const mensajeError = (e as Error).message || String(e)
+        const recuperable = etapa !== 'invitar' || /falló \(4\d\d\)/.test(mensajeError)
         await admin.from('firmas_documentos')
-          .update({ estado: 'error', error_mensaje: mensajeError })
+          .update({ estado: recuperable ? 'borrador' : 'error', error_mensaje: mensajeError })
           .eq('id', fila!.id)
-        return respond({ error: mensajeError, id: fila!.id }, 502)
+        // El resultado de la operación usa mensajes fijos. La respuesta técnica
+        // del proveedor queda en el expediente y no se devuelve al navegador.
+        const aviso = etapa === 'subir'
+          ? 'WeeTrust no pudo recibir el PDF. Tu documento quedó guardado como borrador; puedes volver a intentarlo.'
+          : recuperable
+          ? 'WeeTrust rechazó la preparación de la firma. Revisa los nombres completos y los campos de firma. El documento quedó como borrador.'
+          : 'No se pudo confirmar el envío en WeeTrust. Revisa el estado desde el historial antes de volver a enviar.'
+        return respond({ ok: false, error: aviso, id: fila!.id, recuperable }, 409)
       }
     }
 
@@ -827,7 +856,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         }
 
         const { error } = await admin.from('firmas_documentos')
-          .update(datos).eq('id', borradorId)
+          .update({ ...datos, ...(previo.archivo_ruta !== rutaArchivo ? { weetrust_document_id: null } : {}) }).eq('id', borradorId)
         if (error) return respond({ error: `No se pudo guardar: ${error.message}` }, 500)
         return respond({ ok: true, id: borradorId })
       }

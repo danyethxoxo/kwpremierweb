@@ -21,7 +21,7 @@
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
-<script src="/assets/js/kw-firmantes-personales.js?v=20261021a"></script>
+<script src="/assets/js/kw-firmantes-personales.js?v=20261021b"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -222,6 +222,9 @@
   .firmante-favorito { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:32px; height:32px; border:0; border-radius:50%; color:var(--muted); background:none; cursor:pointer; }
   .firmante-favorito.activo { color:var(--red); }
   .firmante-favorito.activo svg { fill:currentColor; }
+  .firmante-favorito.pendiente svg { animation:corazon-guardando .7s ease-in-out infinite alternate; }
+  @keyframes corazon-guardando { to { transform:scale(.8); opacity:.5; } }
+  @media (prefers-reduced-motion:reduce) { .firmante-favorito.pendiente svg { animation:none; opacity:.6; } }
   #posibles-firmantes-lista,#favoritos-firmantes-lista { max-height:260px; overflow:auto; }
   /* Las dos acciones del editor de firmas comparten una fila,
      también en celular, debajo del correo para conservar su ancho. */
@@ -2072,7 +2075,7 @@
                      había manera de casar uno con otro. -->
                 <div class="kw-tabs planas firma-tabs" data-kw-tabs="firma-tabpanels">
                   <button type="button" class="kw-tab activo" data-tab="firmantes">Quién firma</button>
-                  <button type="button" class="kw-tab" data-tab="observadores">Observadores</button>
+                  <button type="button" class="kw-tab" data-tab="favoritos">Firmantes frecuentes</button>
                 </div>
 
                 <!-- Lo único que se desplaza. El título de arriba y los
@@ -2082,36 +2085,18 @@
                 <div class="editor-scroll barra-oscura">
                   <div class="kw-tabpanels firma-tabpanels" id="firma-tabpanels">
                     <section class="kw-tabpanel activo" data-panel="firmantes">
-                      <!-- Se pregunta antes de nada porque es lo que cambia
-                           el resto: si el asesor firma, su tarjeta ya sale
-                           llena y no tiene que capturarse a sí mismo. -->
-                      <div class="firmante-opciones" id="firmante-opciones">
-                        <div class="firmo-yo" id="pregunta-firmo">
-                          <button type="button" class="firma-opcion" id="firmo-si">
-                            Tú
-                          </button>
-                        </div>
-                        <div id="frecuentes" class="firma-frecuentes"></div>
-                      </div>
+                      <details class="firmantes-catalogo" id="posibles-firmantes"><summary>Posibles firmantes</summary><div id="posibles-firmantes-lista"></div></details>
                       <div id="firmantes"></div>
                       <button type="button" class="firma-agregar" id="btn-agregar">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Agregar otro firmante
                       </button>
 
-                      <details class="firmantes-catalogo" id="posibles-firmantes"><summary>Posibles firmantes</summary><div id="posibles-firmantes-lista"></div></details>
-                      <details class="firmantes-catalogo"><summary>Firmantes frecuentes</summary>
-                        <input type="search" class="kw-input" id="favoritos-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar firmantes frecuentes">
-                        <div id="favoritos-firmantes-lista"></div>
-                      </details>
                       <label class="firma-en-orden">
                         <input type="checkbox" id="en-orden">
                         <span>Firmar en orden</span>
                       </label>
-                    </section>
-
-                    <section class="kw-tabpanel" data-panel="observadores">
-                      <p class="observadores-nota">Ven el flujo de firmas del documento, pero no firman nada.</p>
+                      <details class="firmantes-catalogo"><summary>Observadores</summary>
                       <div id="observadores"></div>
                       <button type="button" class="firma-agregar" id="btn-agregar-observador">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2121,6 +2106,11 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                         <span>Se agregó a la Transaction Manager como observadora, porque firman el MCA y la OP. Si no hace falta, quítala con el bote.</span>
                       </div>
+                      </details>
+                    </section>
+                    <section class="kw-tabpanel" data-panel="favoritos">
+                      <input type="search" class="kw-input" id="favoritos-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar firmantes frecuentes">
+                      <div id="favoritos-firmantes-lista"></div>
                     </section>
                   </div>
 
@@ -3616,46 +3606,15 @@
     revisarObservadorTM();
   }
 
-  // ── ¿Yo también firmo? ──
-  // Se pregunta cada vez que se arma un documento, no una sola vez: que
-  // el asesor firme uno no quiere decir que firme el que sigue. Mientras
-  // no conteste no hay ninguna tarjeta, para que la pregunta no compita
-  // con un campo vacío que ya invita a escribir.
+  // Cada documento empieza sin firmantes elegidos.
   function prepararFirmantes() {
     $('firmantes').innerHTML = '';
     $('observadores').innerHTML = '';
     $('aviso-tm').style.display = 'none';
     tmQuitadaAMano = false;
     asegurarFilaObservador();
-    const opciones = $('firmante-opciones');
-    if (opciones) opciones.style.display = 'grid';
-    const botonYo = $('firmo-si');
-    if (botonYo) {
-      botonYo.disabled = false;
-      botonYo.classList.remove('elegido');
-    }
-    responderFirmo(true);
-    FIRMANTES_DESTACADOS.forEach((persona) => {
-      if (!leerFirmantes().some((f) => correoNormalizado(f.correo) === persona.correo)) agregarFirmante(persona.nombre, persona.correo);
-    });
-    marcarFrecuentesPuestos();
-    window.kwFirmantesPersonales.actualizar();
+    window.kwFirmantesPersonales.base([{ nombre: miPerfil.nombre, correo: miPerfil.correo, etiqueta: 'Tú' }, ...FIRMANTES_DESTACADOS]);
   }
-
-  function responderFirmo(firmaYo) {
-    if (!firmaYo) return;
-    const botonYo = $('firmo-si');
-    if (botonYo) {
-      botonYo.disabled = true;
-      botonYo.classList.add('elegido');
-    }
-    agregarFirmante(miPerfil.nombre, miPerfil.correo);
-    marcarFrecuentesPuestos();
-    const primero = $('firmantes').querySelector('.firmante-mail');
-    if (primero) primero.focus();
-  }
-
-  $('firmo-si').addEventListener('click', () => responderFirmo(true));
 
   $('btn-agregar').addEventListener('click', () => {
     agregarFirmante('', '');
@@ -3982,7 +3941,10 @@
     }
     if (res.ok && (res.headers.get('content-type') || '').includes('application/pdf')) return res.blob();
     const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error((json && json.error) || ('Falló la operación (' + res.status + ')'));
+    if (!res.ok || json?.ok === false) {
+      if (json?.recuperable && json.id && cuerpo.accion === 'enviar') borradorId = json.id;
+      throw new Error((json && json.error) || ('Falló la operación (' + res.status + ')'));
+    }
     return json;
   }
 
@@ -4062,7 +4024,7 @@
     // se salte esta pantalla. Aquí solo se atajan los descuidos obvios
     // para no gastar una subida en balde.
     for (const f of firmantes) {
-      if (!f.nombre) return aviso('A uno de los firmantes le falta el nombre.', 'error');
+      if (f.nombre.length < 4 || f.nombre.length > 100) return aviso('Escribe el nombre completo de cada firmante, de 4 a 100 caracteres.', 'error');
       if (!f.correo) return aviso('A ' + f.nombre + ' le falta el correo.', 'error');
     }
 
@@ -4508,7 +4470,7 @@
     // se quedó, con sus firmantes y sus firmas ya colocadas. Solo los
     // nuestros: uno traído del panel de weetrust no tiene archivo aquí
     // ni sabemos dónde puso las firmas.
-    if (f.estado === 'borrador' && f.archivo_ruta) return retomarBorrador(f);
+    if ((f.estado === 'borrador' || (f.estado === 'error' && !f.weetrust_document_id)) && f.archivo_ruta) return retomarBorrador(f);
 
     // Primero la copia de weetrust: la de ellos va cambiando conforme la
     // gente firma, así que en un documento a medias ya trae dibujadas las
@@ -4850,7 +4812,6 @@
     // Los firmantes, como se dejaron. La pregunta de "¿yo también
     // firmo?" no aplica: eso ya se contestó cuando se armó.
     $('firmantes').innerHTML = '';
-    $('firmante-opciones').style.display = 'none';
     const guardados = Array.isArray(f.firmantes) ? f.firmantes : [];
     if (guardados.length) {
       guardados.forEach((x) => agregarFirmante(x.nombre || '', x.correo || ''));
@@ -5793,13 +5754,7 @@
   // ya está puesto en vez de esconderlo, para que se vea que esa persona
   // ya quedó y no que la opción desapareció.
   function marcarFrecuentesPuestos() {
-    const puestos = leerFirmantes().map((f) => f.correo.toLowerCase());
-    const yoPuesto = puestos.includes(correoNormalizado(miPerfil.correo));
-    $('firmo-si').disabled = yoPuesto;
-    $('firmo-si').classList.toggle('elegido', yoPuesto);
-    $('frecuentes').querySelectorAll('.firma-frecuente').forEach((b) => {
-      b.disabled = puestos.includes(b.dataset.correo);
-    });
+    window.kwFirmantesPersonales.actualizar();
   }
 
   const NOMBRES_FRECUENTES_CORTOS = {
@@ -5824,35 +5779,7 @@
       .order('orden');
 
     frecuentes = error || !Array.isArray(data) ? [] : data;
-    const destacados = FIRMANTES_DESTACADOS.map((base) => {
-      const registro = frecuentes.find((f) => String(f.correo || '').toLowerCase() === base.correo);
-      return registro ? { ...registro, nombre: base.nombre, correo: base.correo } : base;
-    });
-
-    const caja = $('frecuentes');
-    caja.innerHTML = destacados.map((f) =>
-      '<button type="button" class="firma-frecuente" data-correo="' + escapar(f.correo.toLowerCase()) + '"' +
-        ' data-nombre="' + escapar(f.nombre) + '">' +
-        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-        '<span>' + escapar(nombreFrecuenteVisible(f)) + '</span>' +
-      '</button>').join('');
-
-    caja.querySelectorAll('.firma-frecuente').forEach((b) => {
-      b.addEventListener('click', () => {
-        // Si el primer renglón está vacío se aprovecha en vez de dejar
-        // un hueco arriba del que se acaba de agregar.
-        const vacia = Array.from($('firmantes').querySelectorAll('.firmante-fila')).find((f) =>
-          !f.querySelector('.firmante-nom').value.trim() && !f.querySelector('.firmante-mail').value.trim());
-        if (vacia) {
-          vacia.querySelector('.firmante-nom').value = b.dataset.nombre;
-          vacia.querySelector('.firmante-mail').value = b.dataset.correo;
-          ajustarVerificacionesFirmante(vacia);
-        } else {
-          agregarFirmante(b.dataset.nombre, b.dataset.correo);
-        }
-        marcarFrecuentesPuestos();
-      });
-    });
+    window.kwFirmantesPersonales.actualizar();
   }
 
   // ── Que la tabla se mantenga al día sola ────────────────────
@@ -5945,6 +5872,8 @@
       if (!puesto) agregarFirmante(nombre, correo);
       marcarFrecuentesPuestos();
     } });
+
+    window.kwFirmantesPersonales.base([{ nombre: miPerfil.nombre, correo: miPerfil.correo, etiqueta: 'Tú' }, ...FIRMANTES_DESTACADOS]);
 
     // El liderazgo ve el historial de todo el equipo. Esto solo decide
     // qué se pide y cómo se pinta; quién puede ver qué lo resuelven las

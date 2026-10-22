@@ -12,7 +12,7 @@ window.qaFirmantes={preparar:prepararFirmantes,leer:leerFirmantes,agregar:agrega
 configurar:()=>{miUserId='usuario';miPerfil={nombre:'Asesor Premier',correo:'asesor@ejemplo.com'};mostrarVista('editor');}};
 })();`;
 
-test('predeterminados, sugerencias del documento, corazones persistentes y búsqueda sin acentos', async () => {
+test('selección voluntaria, sugerencias, favoritos inmediatos con guardado y búsqueda sin acentos', async () => {
   const browser = await chromium.launch({ channel: 'chrome' });
   try {
     for (const width of [1366, 390]) {
@@ -37,7 +37,7 @@ test('predeterminados, sugerencias del documento, corazones persistentes y búsq
           let mode = '', filtros = {};
           const q = { select() { return q; }, eq(key, value) { filtros[key] = value; return q; },
             order: async () => ({ data: window.qaFavoritos, error: null }),
-            upsert: async persona => { window.qaFavoritos = [persona]; return { error: null }; },
+            upsert: async persona => { await new Promise(r => setTimeout(r, 700)); if (window.qaFallar) return { error: 'fallo' }; window.qaFavoritos = [persona]; return { error: null }; },
             delete() { mode = 'delete'; return q; },
             then(resolve) { if (mode === 'delete') window.qaFavoritos = window.qaFavoritos.filter(p => p.correo !== filtros.correo); return Promise.resolve({ error: null }).then(resolve); }
           }; return q;
@@ -53,14 +53,22 @@ test('predeterminados, sugerencias del documento, corazones persistentes y búsq
         document.getElementById('pantalla-carga').remove();
       });
       const iniciales = await page.evaluate(() => qaFirmantes.leer());
-      assert.deepEqual(iniciales.map(f => f.correo), ['asesor@ejemplo.com', 'gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx']);
+      assert.deepEqual(iniciales, []);
+      assert.equal(await page.locator('#firmo-si').count(), 0);
       await page.locator('#posibles-firmantes summary').click();
-      await page.locator('#posibles-firmantes-lista .firmante-persona-agregar').first().click();
-      assert.equal(await page.locator('.firmante-fila').count(), 4);
-      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona-agregar').first().isDisabled(), true);
-      await page.locator('#posibles-firmantes-lista .firmante-favorito').first().click();
+      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona').count(), 5);
+      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona-agregar').first().locator('span').innerText(), 'Tú');
+      const lucia = page.locator('#posibles-firmantes-lista .firmante-persona').filter({ hasText: 'Lucía Pérez' });
+      await lucia.locator('.firmante-persona-agregar').click();
+      assert.equal(await page.locator('.firmante-fila').count(), 1);
+      assert.equal(await lucia.locator('.firmante-persona-agregar').isDisabled(), true);
+      await lucia.locator('.firmante-favorito').click();
+      assert.equal(await lucia.locator('.firmante-favorito').getAttribute('aria-pressed'), 'true');
+      assert.equal(await lucia.locator('.firmante-favorito').getAttribute('aria-busy'), 'true');
+      assert.equal(await page.evaluate(() => window.qaFavoritos.length), 0);
       await page.waitForFunction(() => window.qaFavoritos.length === 1);
-      await page.locator('.firmantes-catalogo').filter({ hasText: 'Firmantes frecuentes' }).locator('summary').click();
+      await page.locator('[data-tab="favoritos"]').click();
+      assert.equal(await page.locator('[data-panel="favoritos"]').isVisible(), true);
       await page.locator('#favoritos-firmantes-buscar').fill('LUCIA');
       assert.equal(await page.locator('#favoritos-firmantes-lista .firmante-persona').count(), 1);
       await page.evaluate(async () => kwFirmantesPersonales.iniciar({ userId: 'usuario', leer: qaFirmantes.leer, agregar: qaFirmantes.agregar }));
@@ -68,6 +76,12 @@ test('predeterminados, sugerencias del documento, corazones persistentes y búsq
       await page.locator('#favoritos-firmantes-lista .firmante-favorito').click();
       await page.waitForFunction(() => window.qaFavoritos.length === 0);
       assert.equal(await page.locator('#favoritos-firmantes-lista .firmante-persona').count(), 0);
+      await page.locator('[data-tab="firmantes"]').click();
+      await page.evaluate(() => { window.qaFallar = true; kwUI.alert = async () => {}; });
+      await lucia.locator('.firmante-favorito').click();
+      assert.equal(await lucia.locator('.firmante-favorito').getAttribute('aria-pressed'), 'true');
+      await page.waitForFunction(() => document.querySelector('#posibles-firmantes-lista [data-favorito-correo="lucia@ejemplo.com"]').getAttribute('aria-busy') === 'false');
+      assert.equal(await lucia.locator('.firmante-favorito').getAttribute('aria-pressed'), 'false');
       await page.screenshot({ path: path.join(os.tmpdir(), `kw-firmantes-personales-${width}.png`) });
       assert.deepEqual(errors, []);
       await page.close();
