@@ -19,7 +19,7 @@
 .kw-doc-menu>button:nth-of-type(4),.kw-doc-menu>button:nth-of-type(5){border-top:1px solid #eee;margin-top:4px;padding-top:10px;border-radius:0 0 8px 8px}
 .kw-doc-email{display:flex;gap:8px;margin:10px 4px 4px;padding-top:12px;border-top:1px solid #eee}
 .kw-doc-email input{min-width:0;width:100%;flex:1}
-.kw-doc-email button{flex:0 0 auto}
+.kw-doc-email button{flex:0 0 auto}.kw-doc-email .kw-doc-control{border-radius:10px;padding:8px 14px;font-weight:600;line-height:18px}.kw-doc-email input{border-radius:10px}
 @media(max-width:600px){.kw-doc-dialog{padding:16px}.kw-doc-dialog .kw-doc-control{min-height:40px}.kw-doc-viewer{inset:16px;width:calc(100vw - 32px);height:calc(100dvh - 32px)}.kw-doc-toolbar{grid-template-columns:minmax(0,1fr) auto}.kw-doc-toolbar h2{grid-column:1;grid-row:1}.kw-doc-toolbar .kw-select{grid-column:1;grid-row:2;width:100%}.kw-doc-toolbar .kw-doc-download{grid-column:2;grid-row:2}.kw-doc-toolbar .kw-doc-close{grid-column:2;grid-row:1;justify-self:end}.kw-doc-menu{padding:8px}}
 `;
 
@@ -79,7 +79,7 @@
         var b=document.createElement('button');b.type='button';b.textContent=item[1];d.appendChild(b);
         b.onclick=function(){if(item[0]!=='otro'){result={destinatario:item[0]};d.close();return;}
           if(d.querySelector('form')){d.querySelector('input').focus();return;}
-          var form=document.createElement('form');form.className='kw-doc-email';form.innerHTML='<input type="email" required maxlength="254" aria-label="Otro correo" placeholder="Correo electrónico"><button class="kw-doc-primary" type="submit">Enviar</button>';d.appendChild(form);
+          var form=document.createElement('form');form.className='kw-doc-email';form.innerHTML='<input type="email" required maxlength="254" aria-label="Otro correo" placeholder="Correo electrónico"><button class="kw-doc-control kw-doc-primary btn-modal-confirmar" type="submit">Enviar</button>';d.appendChild(form);
           form.onsubmit=function(e){e.preventDefault();var input=form.querySelector('input');input.value=input.value.trim();if(!form.reportValidity())return;result={destinatario:'otro',correo:input.value};d.close();};form.querySelector('input').focus();
         };
       });
