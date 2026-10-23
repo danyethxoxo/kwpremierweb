@@ -1221,22 +1221,19 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
-  #e-ver-pdf svg { width: 15px; height: 15px; flex: 0 0 auto; }
-  #e-descargar-menu, #e-enviar-correo {
+  #e-descargar-menu, #e-enviar-correo, #e-ver-pdf, #e-cambiar-estatus, #e-guardar {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
   }
-  #e-descargar-menu, #e-enviar-correo {
-    border-color: var(--red); background: var(--red); color: #fff;
-    font-weight: 500; box-shadow: 0 4px 12px rgba(138,0,0,0.18);
+  #e-descargar-menu, #e-enviar-correo, #e-ver-pdf, #e-cambiar-estatus {
+    border: 1px solid var(--border); background: #fff; color: var(--text);
+    font-weight: 500; box-shadow: none;
   }
-  #e-enviar-correo { background: #7d0000; border-color: #7d0000; }
-  #e-descargar-menu:hover { background: #6e0000; border-color: #6e0000; }
-  #e-enviar-correo:hover { background: #550000; border-color: #550000; }
-  #e-descargar-menu:disabled, #e-enviar-correo:disabled {
+  #e-descargar-menu:hover:not(:disabled), #e-enviar-correo:hover:not(:disabled), #e-ver-pdf:hover:not(:disabled), #e-cambiar-estatus:hover:not(:disabled) { background: #fff; border-color: var(--red); }
+  #e-descargar-menu:disabled, #e-enviar-correo:disabled, #e-ver-pdf:disabled, #e-cambiar-estatus:disabled {
     opacity: .46; cursor: not-allowed; box-shadow: none; transform: none;
   }
-  #e-descargar-menu svg, #e-enviar-correo svg {
+  #e-descargar-menu svg, #e-enviar-correo svg, #e-ver-pdf svg, #e-cambiar-estatus svg, #e-guardar svg {
     width: 15px; height: 15px; flex: 0 0 auto;
   }
   .dic-send-spinner {
@@ -2090,8 +2087,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
             Enviar por correo
           </button>
-          <button type="button" class="kw-fila-btn" id="e-cambiar-estatus" disabled>Cambiar estatus</button>
-          <button type="button" class="btn-nuevo" id="e-guardar">Guardar</button>
+          <button type="button" class="kw-fila-btn" id="e-cambiar-estatus" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-9M20 17h-9M4 7l2 2 3-4M4 17l2 2 3-4"/></svg><span>Cambiar estatus</span></button>
+          <button type="button" class="btn-nuevo" id="e-guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg><span>Guardar</span></button>
         </div>
 
       </div>
@@ -2099,7 +2096,7 @@
 
   </main>
 
-<script src="/assets/js/kw-document-viewer.js?v=20261023a"></script>
+<script src="/assets/js/kw-document-viewer.js?v=20261023b"></script>
 <script>
 (function () {
   'use strict';
@@ -3767,7 +3764,7 @@
         });
 
         b.disabled = true;
-        b.textContent = 'Guardando...';
+        if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardando...';
         var r = await window.kwSupabase.rpc('dictamen_guardar_checklist_marketing', {
           p_id: id,
           p_checklist: checklist,
@@ -5820,6 +5817,7 @@
 
   $('e-guardar').addEventListener('click', async function () {
     var b = $('e-guardar');
+    var etiquetaGuardar = b.querySelector('span');
     if (b.disabled) return;
     b.disabled = true;
     var cerrarGuardando = function () {};
@@ -5851,7 +5849,7 @@
       else mostrarDictamenGuardado();
     } catch (error) { await fallo('No se pudo completar el guardado: ' + error.message); }
     finally {
-      cerrarGuardando(); b.disabled = false; b.textContent = 'Guardar';
+      cerrarGuardando(); b.disabled = false; if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardar';
     }
   });
 
