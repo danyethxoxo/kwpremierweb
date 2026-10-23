@@ -81,10 +81,9 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
    const {page,errores}=await pagina(browser,viewport,[[id(1001),19.43,-99.13],[id(1002),20.67,-103.35],[id(1003),25.68,-100.31]]);
    try {
     if(viewport.width<1024){
-      assert.equal(await page.locator('#prop-filtros-contenido').isVisible(),false);
-      await page.locator('#prop-filtros-expandir').click();
       assert.equal(await page.locator('#prop-filtros-contenido').isVisible(),true);
-      await page.locator('#prop-filtros-expandir').click();
+      assert.equal(await page.locator('#prop-filtros-expandir').count(),0);
+      assert.equal(await page.locator('#filtros').evaluate(el=>el.closest('main')!==null),true);
     }
     await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.leaflet-marker-icon').length>0);
     const vista=await page.evaluate(()=>({lat:qaMapa.getCenter().lat,lng:qaMapa.getCenter().lng,zoom:qaMapa.getZoom()}));
@@ -98,6 +97,15 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     const marco=await page.locator('#prop-mapa').boundingBox(),lupa=await page.locator('#prop-mapa-zona').boundingBox();
     assert.ok(lupa.x>=marco.x&&lupa.y>=marco.y&&lupa.x+lupa.width<=marco.x+marco.width,'controles dentro del mapa');
     assert.ok(lupa.y+lupa.height<=marco.y+marco.height-18,'buscar queda encima de la atribución');
+    if(viewport.width<1024){
+      await page.locator('#prop-mapa-zona').scrollIntoViewIfNeeded();
+      await page.locator('#kw-drawer-toggle').click();
+      await page.locator('#drawer.open').waitFor();
+      await page.waitForFunction(()=>{const el=document.querySelector('#drawer .drawer-link[href="/propiedades.html"]'),r=el.getBoundingClientRect();return r.x>=0&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});
+      const capa=await page.locator('#drawer .drawer-link[href="/propiedades.html"]').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});
+      assert.equal(capa,true,'el mapa no cubre los accesos del menu');
+      await page.locator('#drawer-close').click();
+    }
     assert.ok(lupa.width>=120&&lupa.height<=40,'buscar en esta zona tiene una etiqueta visible y compacta');
     assert.equal(await page.locator('#prop-mapa-zona').innerText(),'Buscar en esta zona');
     if(viewport.width>=1024)assert.ok(marco.height>=viewport.height-180,'aprovecha la altura disponible');
@@ -182,7 +190,6 @@ test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zo
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.zona?.[0]>24));
    const filtros=await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').at(-1).args.p_filtros);
    assert.equal(filtros.estado,null);assert.equal(filtros.municipio,null);assert.ok(filtros.zona[0]<25.68&&filtros.zona[2]>25.68);
-   if(width<1024)await page.locator('#prop-filtros-expandir').click();
    await page.locator('#f-min').fill('1000000');
    await page.selectOption('#f-operacion','renta',{force:true});
    await page.locator('#filtros .btn-aplicar').click();
@@ -380,7 +387,6 @@ test('filtros requieren confirmacion; pluma a mano alzada y rueda funcionan en e
    await page.screenshot({path:path.join(root,`artifacts/mapa-qa/michoacan-${viewport.width}.png`)});
    await page.locator('#f-buscar').fill('');
    await page.evaluate(()=>{ponerFiltroRelacionado('f-estado','Ciudad de México');document.querySelector('#f-estado').dispatchEvent(new Event('change',{bubbles:true}));ponerFiltroRelacionado('f-municipio','Benito Juárez');document.querySelector('#f-municipio').dispatchEvent(new Event('change',{bubbles:true}));});
-   if(viewport.width<640)await page.locator('#prop-filtros-expandir').click();
    await page.locator('#filtros .btn-aplicar').click();
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-lugar').textContent.includes('Benito Juárez'));
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.municipio.includes('Benito Juárez')));
@@ -539,7 +545,6 @@ test('precio agrega comas al escribir y envia numeros al aplicar filtros',async(
  try {for(const width of [1440,390]) {
   const {page,errores}=await pagina(browser,{width,height:900},[]);
   try {
-   if(width<640)await page.locator('#prop-filtros-expandir').click();
    await page.locator('#f-min').fill('1000000');
    await page.locator('#f-max').fill('9000000');
    assert.equal(await page.locator('#f-min').inputValue(),'1,000,000');
@@ -587,7 +592,6 @@ test('Del Valle todas incluye Norte Centro y Sur en lista y mapa',async()=>{
  try {for(const width of [1280,390]) {
   const {page,errores}=await pagina(browser,{width,height:1000},[[id(0),19.369,-99.163,'venta',3500000,'MXN']]);
   try {
-   if(width<1024)await page.locator('#prop-filtros-expandir').click();
    await page.evaluate(async()=>{
     qaCatalogoColonias=['Del Valle Norte','Del Valle Centro','Del Valle Sur'].map(colonia=>({colonia,estado:'Ciudad de M\u00e9xico',municipio:'Benito Ju\u00e1rez'}));
     ponerFiltroRelacionado('f-estado','Ciudad de M\u00e9xico');

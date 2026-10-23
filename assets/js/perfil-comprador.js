@@ -11,12 +11,14 @@
   // La campana comparte el renglón de acciones, como en Firmas Digitales.
   function ubicarCampana() {
     var slot = document.getElementById('notif-bell-slot');
-    var acciones = document.getElementById('comprador-acciones');
+    var acciones = matchMedia('(max-width:1023px)').matches ? document.querySelector('header.kw-header .kw-header-sueltos') : document.getElementById('comprador-acciones');
+    if (!acciones) return;
     if (slot && slot.parentNode !== acciones) acciones.prepend(slot);
   }
   var observadorHeader = new MutationObserver(ubicarCampana);
   observadorHeader.observe(document.body, { childList: true, subtree: true });
   ubicarCampana();
+  matchMedia('(max-width:1023px)').addEventListener('change', ubicarCampana);
   var perfiles = [], editando = null, ocupado = false, cargando = false;
   var tipos = ['Casa','Departamento','Terreno','Oficina','Local comercial','Bodega','Duplex','Nave industrial','Edificio','Rancho'];
   var textos = ['nombre','telefono','correo','operacion','moneda','estado','notas'];

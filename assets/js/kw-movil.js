@@ -2,7 +2,27 @@
   'use strict';
   const movil=matchMedia('(max-width:1023px)');
   const traslados=[];
-  let encabezado,creado=false,pendiente=0;
+  let encabezado,creado=false,pendiente=0,menu;
+  const iconoMenu='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  function prepararNavegacion(){
+    const boton=encabezado.querySelector('#kw-drawer-toggle');
+    if(boton)return;
+    const abrir=document.createElement('button');abrir.type='button';abrir.id='kw-movil-menu';abrir.className='hamburger-btn';
+    abrir.setAttribute('aria-label','Menú');abrir.setAttribute('aria-haspopup','dialog');abrir.innerHTML=iconoMenu;
+    encabezado.querySelector('.kw-header-capsula').prepend(abrir);
+    menu=document.createElement('dialog');menu.className='kw-movil-navegacion';menu.setAttribute('aria-label','Menú del Hub');
+    const destinos=[['/portal.html','Inicio del Hub'],['/propiedades.html','Propiedades'],['/documentos/documentos.html','Acuerdos y Contratos'],['/hub/firmas.html','Firmas Digitales'],['/hub/dictamenes.html','Dictaminación de Expedientes'],['/hub/drive.html','Documentos de Drive'],['/hub/perfil-comprador.html','Perfil comprador'],['/hub/tickets.html','Reportar una incidencia'],['/perfil.html','Mi perfil']];
+    menu.innerHTML='<div class="kw-movil-nav-cabecera"><strong>Menú del Hub</strong><button type="button" aria-label="Cerrar menú">×</button></div><nav aria-label="Navegación principal"><a data-kw-movil-regresar></a></nav>';
+    destinos.forEach(([url,texto])=>{const enlace=document.createElement('a');enlace.href=url;enlace.textContent=texto;menu.querySelector('nav').appendChild(enlace);});
+    document.body.appendChild(menu);
+    abrir.addEventListener('click',()=>{menu.showModal();abrir.setAttribute('aria-expanded','true');});
+    menu.querySelector('button').addEventListener('click',()=>menu.close());
+    menu.addEventListener('click',evento=>{if(evento.target===menu)menu.close();});
+    menu.addEventListener('close',()=>{abrir.setAttribute('aria-expanded','false');abrir.focus();});
+    const slot=document.createElement('div');slot.id='notif-bell-slot';
+    slot.innerHTML='<a class="kw-movil-notificaciones" href="/hub/notificaciones.html" aria-label="Notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></a>';
+    if(!document.getElementById('notif-bell-slot'))encabezado.querySelector('.kw-header-sueltos').appendChild(slot);
+  }
   function visible(el){return el&&el.getClientRects().length>0&&!el.closest('[hidden]');}
   function mover(nodo,destino){
     let registro=traslados.find(r=>r.nodo===nodo);
@@ -15,45 +35,43 @@
     traslados.length=0;
     document.querySelectorAll('.kw-movil-titulo-origen').forEach(el=>el.classList.remove('kw-movil-titulo-origen'));
     if(creado){encabezado?.remove();encabezado=null;creado=false;}
+    if(menu){menu.close();menu.remove();menu=null;}
     if(document.body.classList.contains('kw-movil'))document.body.classList.remove('kw-movil');
   }
   function actualizar(){
     pendiente=0;
     if(!movil.matches){restaurar();return;}
-    // Firmas ya conserva estas piezas en su propio controlador de vistas.
-    if(document.body.classList.contains('firmas-pagina'))return;
+    const esFirmas=document.body.classList.contains('firmas-pagina');
     if(!document.body.classList.contains('kw-movil'))document.body.classList.add('kw-movil');
     encabezado=document.querySelector('body > header.kw-header');
     if(!encabezado){
       encabezado=document.createElement('header');encabezado.className='kw-header kw-movil-header';
-      encabezado.innerHTML='<div class="kw-header-capsula"><a class="back-btn" aria-label="Volver a documentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></a><span class="kw-header-title"></span></div><div class="kw-header-sueltos"></div>';
+      encabezado.innerHTML='<div class="kw-header-capsula"><span class="kw-header-title"></span></div><div class="kw-header-sueltos"></div>';
       document.body.prepend(encabezado);creado=true;
     }
     let titulo=encabezado.querySelector('.kw-header-title');
     if(!titulo){titulo=document.createElement('span');titulo.className='kw-header-title';(encabezado.querySelector('.kw-header-capsula')||encabezado).appendChild(titulo);}
-    const tituloPagina=document.querySelector('.vista-lista-title,.kw-page-titulo,.page-title');
-    if(titulo){const texto=tituloPagina?.textContent.trim()||document.title.split(/[|·]/)[0].trim();if(titulo.textContent!==texto)titulo.textContent=texto;}
+    const tituloPagina=document.querySelector('.vista-lista-title,.kw-page-titulo,.page-title,main > .encabezado > h1');
+    if(titulo){const texto=esFirmas?'Firmas Digitales':tituloPagina?.textContent.trim()||titulo.textContent.trim()||document.title.split(/[|·]/)[0].trim();if(titulo.textContent!==texto)titulo.textContent=texto;titulo.setAttribute('title',texto);}
     if(tituloPagina&&!tituloPagina.classList.contains('kw-movil-titulo-origen'))tituloPagina.classList.add('kw-movil-titulo-origen');
-    if(creado){
-      const enlace=encabezado.querySelector('.back-btn');
-      const enFormulario=visible(document.getElementById('vista-formulario'));
-      const esDocumento=location.pathname.startsWith('/documentos/');
-      const url=enFormulario?location.pathname:esDocumento?'/documentos/documentos.html':'/portal.html';
-      if(enlace.getAttribute('href')!==url)enlace.setAttribute('href',url);
-      enlace.setAttribute('aria-label',enFormulario?'Volver al listado':esDocumento?'Volver a documentos':'Volver al Hub');
-    }
     let sueltos=encabezado.querySelector('.kw-header-sueltos');
     if(!sueltos){sueltos=document.createElement('div');sueltos.className='kw-header-sueltos';encabezado.appendChild(sueltos);}
+    if(creado&&!menu)prepararNavegacion();
+    if(menu){const volver=menu.querySelector('[data-kw-movil-regresar]');const formulario=visible(document.getElementById('vista-formulario'));volver.href=formulario?location.pathname:'/documentos/documentos.html';volver.textContent=formulario?'Volver al listado':'Volver a documentos';}
+    let capsula=encabezado.querySelector('.kw-header-capsula');
+    if(!capsula){capsula=document.createElement('div');capsula.className='kw-header-capsula';encabezado.prepend(capsula);capsula.appendChild(titulo);}
+    const navegacion=encabezado.querySelector('#kw-drawer-toggle,#kw-movil-menu');
+    if(navegacion&&navegacion.parentElement!==capsula)capsula.prepend(navegacion);
     const campana=document.getElementById('notif-bell-slot');
     if(campana&&campana.parentElement!==sueltos)mover(campana,sueltos);
     document.querySelectorAll('.kw-lateral .kw-lateral-buscador').forEach(nodo=>{
       const principal=document.querySelector('.kw-lateral-principal,.kw-universal-principal')||document.querySelector('main');
       if(principal){mover(nodo,principal);nodo.classList.add('kw-movil-buscar');principal.prepend(nodo);}
     });
-    document.querySelectorAll('.kw-page-acciones > :is(.kw-menu-ancla,#btn-nuevo,.btn-nuevo-doc,.btn-nuevo-asesor,.btn-reportar,.btn-nuevo),.vista-lista-header > .btn-nuevo-documento').forEach(nodo=>{
+    if(!esFirmas)document.querySelectorAll('.kw-page-acciones > :is(.kw-menu-ancla,#btn-nuevo,.btn-nuevo-doc,.btn-nuevo-asesor,.btn-reportar,.btn-nuevo),.vista-lista-header > .btn-nuevo-documento,#comprador-acciones > #abrir-cliente').forEach(nodo=>{
       if(!visible(nodo))return;
       const registro=mover(nodo,sueltos);
-      if(nodo.matches('#btn-nuevo,.btn-nuevo-doc,.btn-nuevo-documento,.btn-nuevo-asesor,.btn-reportar,.btn-nuevo')){
+      if(nodo.matches('#btn-nuevo,.btn-nuevo-doc,.btn-nuevo-documento,.btn-nuevo-asesor,.btn-reportar,.btn-nuevo,#abrir-cliente')){
         nodo.classList.add('kw-movil-accion');
         if(/nuevo|crear/i.test(nodo.textContent)&&!registro.textoCorto){nodo.setAttribute('aria-label',nodo.textContent.trim());nodo.textContent='+ Nuevo';registro.textoCorto=true;}
       }

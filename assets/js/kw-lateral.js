@@ -58,17 +58,15 @@
   function acomodarFuentes(lateral) {
     if (!lateral || !fuentes.length) return;
     const contenedor = lateral.querySelector('.kw-lateral-contenido');
-    if (escritorio.matches || lateral.hasAttribute('data-kw-lateral-movil')) {
-      fuentes.forEach(function (item) {
+    fuentes.forEach(function (item) {
+      if (escritorio.matches || (lateral.hasAttribute('data-kw-lateral-movil') && !item.nodo.hasAttribute('data-kw-movil-visible'))) {
         item.nodo.classList.add('kw-lateral-filtro-origen');
         contenedor.appendChild(item.nodo);
-      });
-    } else {
-      fuentes.forEach(function (item) {
+      } else {
         item.nodo.classList.remove('kw-lateral-filtro-origen');
         item.marca.parentNode.insertBefore(item.nodo, item.marca.nextSibling);
-      });
-    }
+      }
+    });
   }
 
   function iniciar() {
@@ -85,7 +83,7 @@
 
     prepararFuentes(lateral);
     if (!lateral.hasAttribute('data-kw-lateral-movil') &&
-        (fuentes.length || lateral.querySelector('.kw-lateral-nav,.kw-filtros,.filtros,.kw-universal-panel > .kw-resumen'))) {
+        (fuentes.some(item=>!item.nodo.hasAttribute('data-kw-movil-visible')) || lateral.querySelector('.kw-lateral-nav,.kw-filtros,.filtros,.kw-universal-panel > .kw-resumen'))) {
       if (!lateral.id) lateral.id = 'kw-filtros-pagina';
       lateral.setAttribute('data-kw-lateral-movil','');
       lateral.dataset.kwLateralDisparador = '#kw-drawer-toggle';

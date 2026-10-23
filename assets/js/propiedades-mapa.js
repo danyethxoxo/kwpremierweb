@@ -15,14 +15,6 @@
   var fichas = new Map();
   var pines = new Map(), propiedadPendiente = null;
   var dibujo, contorno, clavePendiente = '';
-  var btnFiltros = document.getElementById('prop-filtros-expandir');
-  function expandirFiltros(abierto) {
-    document.getElementById('filtros').classList.toggle('prop-filtros-abiertos', abierto);
-    btnFiltros.setAttribute('aria-expanded', String(abierto));
-    btnFiltros.textContent = abierto ? 'Ocultar filtros' : 'Mostrar filtros';
-  }
-  btnFiltros.onclick = function () { expandirFiltros(btnFiltros.getAttribute('aria-expanded') !== 'true'); };
-
   function recurso(url, css) {
     return new Promise(function (resolve, reject) {
       var el = document.createElement(css ? 'link' : 'script');
