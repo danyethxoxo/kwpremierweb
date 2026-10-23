@@ -1374,8 +1374,7 @@
       </div>
 
       <div class="kw-tabpanels" id="panel-paneles">
-      <!-- El equipo de altas es el único que ve esto; initAdmin() quita
-           la pestaña entera si quien entró no lo es. -->
+      <!-- Todo liderazgo consulta la sección; las acciones de gestión conservan sus permisos. -->
       <section class="kw-tabpanel activo" data-panel="asesores">
         <!-- Todo lo de arriba en un renglón: buscar de un lado, y del
              otro el menú, la base y cuántos hay. Antes el nombre y el
@@ -1721,6 +1720,7 @@
   };
 
   let miRol = null;
+  let miCorreo = '';
   let miUserId = null;
   let usuariosCache = [];
   let documentosCache = [];
@@ -2430,6 +2430,7 @@
   function esMaster() { return miRol === 'master'; }
 
   async function llamarAlta(cuerpo) {
+    if (!puedeGestionarAsesores() && !['listar', 'verificar'].includes(cuerpo.accion || 'listar')) throw new Error('No tienes permiso para modificar asesores o accesos.');
     const { data: sesion } = await window.kwSupabase.auth.getSession();
     const token = sesion && sesion.session && sesion.session.access_token;
     const res = await fetch(ALTA_URL, {
@@ -2483,6 +2484,19 @@
   function usuarioDePagina(correo) {
     const clave = correoPersona(correo);
     return clave ? usuariosCache.find(function (u) { return correoPersona(u.email) === clave; }) || null : null;
+  }
+
+  function puedeGestionarAsesores() {
+    return ['master', 'admin'].includes(miRol) ||
+      (typeof miCorreo !== 'undefined' && CORREOS_ALTA.includes(miCorreo));
+  }
+
+  async function cargarDirectorioLiderazgo() {
+    const resultado = await window.kwSupabase.from('perfiles_publicos')
+      .select('id, nombre, apellido, email, role, puesto, foto_url').order('nombre');
+    if (resultado.error) { avisoAsesores('No se pudo cargar el directorio del portal.', 'error'); return; }
+    usuariosCache = resultado.data || [];
+    if (gruposAsesores.length) { armarTabsAsesores(); pintarGrupos(); }
   }
 
   function actualizarGrupoTodos() {
@@ -2924,7 +2938,7 @@
       }
       const clase = estado === null ? 'esperando' : (tiene ? 'si' : 'no');
       const icono = estado === null ? ICONO_RELOJ : (tiene ? ICONO_LISTO : ICONO_EQUIS);
-      const bloqueado = (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos');
+      const bloqueado = !puedeGestionarAsesores() || (a.clave === 'contactos' && tiene) || (!cuentaPermiteTodos && a.clave !== 'contactos');
       const elegido = !bloqueado && seleccionesAcceso.get(correoClave)?.has(a.clave);
       return '<div class="acceso ' + clase + '">' +
         '<label class="acceso-label" title="' + a.nombre + ': ' + (estado === null ? 'Sin verificar; puedes agregarlo' : (tiene ? 'Ya tiene acceso' : 'Sin acceso')) + '" aria-label="' + a.nombre + '">' +
@@ -2932,7 +2946,7 @@
             (bloqueado ? ' disabled' : '') + (elegido ? ' checked' : '') + '>' +
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
-          '<span class="acceso-texto">' + ({ contactos: 'Agregar Contacto', drive: 'Agregar Drive', calendario: 'Agregar Calendario' })[a.clave] + '</span>' +
+          '<span class="acceso-texto">' + (puedeGestionarAsesores() ? { contactos: 'Agregar Contacto', drive: 'Agregar Drive', calendario: 'Agregar Calendario' } : { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' })[a.clave] + '</span>' +
         '</label>' +
       '</div>';
     }).join('');
@@ -2948,13 +2962,14 @@
       titulo +
       '<div class="accesos-fila">' + filas +
         accesoPaginaHtml(p) +
-        '<button type="button" class="acceso-seleccion-accion dar" data-hacer="dar" disabled title="Agregar los accesos seleccionados" aria-label="Agregar los accesos seleccionados">' + ICONO_SUBIR + '<span>Agregar</span></button>' +
-        '<button type="button" class="acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Retirar los accesos seleccionados de Drive y Calendario" aria-label="Retirar los accesos seleccionados de Drive y Calendario">' + ICONO_BAJAR + '<span>Retirar</span></button>' +
+        (puedeGestionarAsesores() ? '<button type="button" class="acceso-seleccion-accion dar" data-hacer="dar" disabled title="Agregar los accesos seleccionados" aria-label="Agregar los accesos seleccionados">' + ICONO_SUBIR + '<span>Agregar</span></button>' +
+        '<button type="button" class="acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Retirar los accesos seleccionados de Drive y Calendario" aria-label="Retirar los accesos seleccionados de Drive y Calendario">' + ICONO_BAJAR + '<span>Retirar</span></button>' : '') +
       '</div>' +
     '</div>';
   }
 
   function menuAsesorHtml(p, g) {
+    if (!puedeGestionarAsesores()) return '';
     const grupoPersona = p.grupo || g.clave;
     const esBaja = esDeBaja(grupoPersona);
     const opcionBaja = !esBaja
@@ -3496,6 +3511,7 @@
   }
 
   async function pasarAsesorABaja(boton) {
+    if (!puedeGestionarAsesores()) return;
     if (!boton || boton.dataset.procesando === 'true') return;
     boton.dataset.procesando = 'true';
 
@@ -3625,7 +3641,7 @@
       gruposLibro.forEach(function (g) {
         hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
       });
-      await sincronizarBaseDesdeLibro(gruposLibro);
+      if (puedeGestionarAsesores()) await sincronizarBaseDesdeLibro(gruposLibro);
     } catch (err) {
       fallaLibro = err;
     }
@@ -4075,6 +4091,7 @@
       if (error || !perfil) throw new Error('sin perfil');
 
       miRol = perfil.role;
+      miCorreo = String(userData.user.email || '').trim().toLowerCase();
       if (!['master', 'admin', 'staff'].includes(miRol)) {
         document.getElementById('denegado').style.display = '';
         return;
@@ -4084,18 +4101,21 @@
       document.getElementById('panel-title').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
       document.getElementById('panel-title-header').textContent = 'Panel ' + NOMBRE_PANEL[miRol];
 
-      // Asesores es de Master y Admin, más el equipo de altas. Esto solo
-      // decide si se ENSEÑA la pestaña: el candado real está en la Edge
-      // Function, que comprueba lo mismo del lado del servidor.
+      // Todo liderazgo consulta Asesores. Las acciones de gestión conservan
+      // el permiso de Master, Admin y el equipo de altas.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
-      if (!puedeAltas) quitarTabPanel('asesores');
-      else document.getElementById('acceso-nuevo-asesor').style.display = '';
+      if (puedeAltas) document.getElementById('acceso-nuevo-asesor').style.display = '';
+      else {
+        document.getElementById('op-recargar').hidden = true;
+        document.getElementById('op-verificar').hidden = true;
+      }
 
       if (miRol === 'staff') {
         // Liderazgo no administra usuarios: se le quita esa pestaña en
         // vez de dejársela puesta y que le rebote.
         quitarTabPanel('usuarios');
+        cargarDirectorioLiderazgo().catch(function () { avisoAsesores('No se pudo cargar el directorio del portal.', 'error'); });
       } else {
         if (miRol !== 'master') {
           document.querySelector('#invite-rol option[value="admin"]').remove();
@@ -4339,7 +4359,7 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
-<script src="/assets/js/drawer.js?v=20261023buscador" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261023puestos" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>

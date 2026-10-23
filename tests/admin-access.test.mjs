@@ -38,6 +38,7 @@ test('directory opens from the database once; manual Excel refresh skips overlap
   const pending = new Promise((resolve) => { release = resolve; });
   const element = { disabled: false, classList: { add() {}, remove() {} } };
   const context = vm.createContext({
+    puedeGestionarAsesores: () => true,
     recargaAsesoresEnCurso: false, ultimaLecturaLibro: 0, Date,
     document: { getElementById: () => element }, gruposAsesores: [{ clave: 'asesor_activo' }], bdAsesores: [{ correo: 'viejo@example.com' }],
     leerBaseDatos: async () => true, gruposDesdeBase: () => [{ clave: 'asesor_activo' }],
@@ -181,6 +182,7 @@ test('card status actions synchronize grants or removals before changing the gro
     const calls = [];
     const chain = { update: (data) => { calls.push({ kind: 'group', data }); return chain; }, eq: () => chain, select: () => chain, single: async () => ({}) };
     const context = vm.createContext({
+      puedeGestionarAsesores: () => true,
       bdAsesores: [{ id: '1', nombre: 'Asesor de prueba', correo: 'test@example.com' }],
       window: { kwUI: { confirm: async () => true }, kwSupabase: { from: () => chain } },
       llamarAlta: async (data) => { calls.push({ kind: 'access', data }); return { ok, estado: [] }; },

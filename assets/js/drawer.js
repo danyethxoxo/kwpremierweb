@@ -926,7 +926,7 @@
       if (!u || !u.user) return;
       const { data: perfil } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
         .from('profiles')
-        .select('nombre, apellido, role, foto_url')
+        .select('nombre, apellido, role, puesto, foto_url')
         .eq('id', u.user.id)
         .single());
       if (!perfil) return;
@@ -939,7 +939,9 @@
 
       const rol = document.getElementById('drawer-usuario-rol');
       if (rol && perfil.role) {
-        rol.textContent = ROLES_TXT[perfil.role] || perfil.role;
+        rol.textContent = perfil.role === 'staff' && String(perfil.puesto || '').trim()
+          ? String(perfil.puesto).trim() : ROLES_TXT[perfil.role] || perfil.role;
+        rol.title = rol.textContent;
         rol.className = 'drawer-usuario-rol rol-' + perfil.role;
       }
 

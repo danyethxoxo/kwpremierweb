@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../hub/admin.html',import.meta.url),'utf8');
 const code=html.slice(html.indexOf('  function menuAsesorHtml'),html.indexOf('  function filaAsesorHtml'));
 function setup(canEdit=true){
- const ctx=vm.createContext({URLSearchParams,encodeURIComponent,ICONO_LAPIZ:'',ICONO_BAJAR:'',ICONO_LISTO:'',
+ const ctx=vm.createContext({puedeGestionarAsesores:()=>true,URLSearchParams,encodeURIComponent,ICONO_LAPIZ:'',ICONO_BAJAR:'',ICONO_LISTO:'',
   usuariosCache:[{id:'web-user'}],puedeGestionarPagina:()=>canEdit,escapeHtml:s=>String(s).replaceAll('"','&quot;'),
   esDeBaja:g=>g.endsWith('_baja'),grupoBajaDe:g=>g.startsWith('back_office')?'back_office_baja':'asesor_baja',estatusDe:a=>a.grupo});
  vm.runInContext(code,ctx);return ctx.menuAsesorHtml;

@@ -1227,7 +1227,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
     // El ABC lo sincroniza el equipo de liderazgo (Master/Admin/Staff),
     // que es quien da las sesiones - no solo los correos del alta.
-    const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync']
+    const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync', 'listar', 'verificar']
 
     // Las altas las hacen Master y Admin, más quien esté puesto a mano en
     // ALTA_EMAILS. El rol es lo que manda: así, dar de alta a un Admin
