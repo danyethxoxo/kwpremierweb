@@ -2101,7 +2101,7 @@
 
   </main>
 
-<script src="/assets/js/kw-document-viewer.js?v=20261023b"></script>
+<script src="/assets/js/kw-document-viewer.js?v=20261023c"></script>
 <script>
 (function () {
   'use strict';
@@ -5367,7 +5367,8 @@
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
     window.kwDocumentViewer.open({ title: 'Dictamen ' + (d.folio || ''),
-      variants: ['Solo con datos', 'Datos y correcciones'],
+      variants: ['Solo con datos', 'Datos y correcciones'], initialIndex: 1,
+      filename: function (index) { return nombrePDF(d, index === 1); },
       load: function (index) { return crearPDF(d, index === 1); } });
   }
 

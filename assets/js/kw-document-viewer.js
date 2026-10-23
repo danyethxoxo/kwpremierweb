@@ -2,25 +2,25 @@
   'use strict';
   var css = document.createElement('style');
   css.textContent = `
-.kw-doc-dialog{border:1px solid #ded8d3;border-radius:14px;padding:24px;background:#fff;color:#332c29;box-sizing:border-box}
+.kw-doc-dialog{border:1px solid #ded8d3;border-radius:14px;padding:24px;background:#fff;color:#332c29;box-sizing:border-box;font-family:inherit;font-size:13px}
 .kw-doc-dialog::backdrop{background:rgba(0,0,0,.45)}
-.kw-doc-dialog button,.kw-doc-dialog select,.kw-doc-dialog input{font:inherit;min-height:36px;border:1px solid #ded8d3;border-radius:8px;padding:8px 12px;background:#fff;color:inherit;box-sizing:border-box}
-.kw-doc-dialog header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0}
-.kw-doc-dialog h2{font-size:18px;margin:0;flex:1}
+.kw-doc-dialog .kw-doc-control,.kw-doc-dialog input{font:inherit;min-height:36px;border:1px solid #ded8d3;border-radius:8px;padding:8px 12px;background:#fff;color:inherit;box-sizing:border-box}
+.kw-doc-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:12px;margin:0}
+.kw-doc-dialog h2{font-size:18px;margin:0;flex:1}.kw-doc-toolbar .kw-select{width:210px;flex:0 1 210px}.kw-doc-control{display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}.kw-doc-control svg{width:16px;height:16px}.kw-doc-dialog .kw-doc-close{width:36px;padding:0;flex:0 0 36px}.kw-doc-error{grid-column:1 / -1;color:#8a1212}
 .kw-doc-dialog .kw-doc-primary{background:#800020;color:#fff;border-color:#800020}
 .kw-doc-viewer{position:fixed;inset:24px;margin:0;width:calc(100vw - 48px);height:calc(100dvh - 48px);max-width:none;max-height:none}
 .kw-doc-viewer[open]{display:flex;flex-direction:column;gap:16px}
-.kw-doc-viewer header{flex:0 0 auto}
+.kw-doc-viewer .kw-doc-toolbar{flex:0 0 auto}
 .kw-doc-pages{flex:1;min-height:0;overflow:auto;background:#eee;padding:12px;box-sizing:border-box}
 .kw-doc-pages canvas{display:block;max-width:100%;height:auto;margin:0 auto 12px;background:#fff}
-.kw-doc-menu{position:fixed;inset:auto;margin:0;padding:10px;width:360px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;z-index:11050;box-shadow:0 8px 28px rgba(0,0,0,.14)}
-.kw-doc-menu>button{display:flex;align-items:center;width:100%;min-height:46px;padding:12px 14px;text-align:left;border:0;line-height:1.4;white-space:normal}
+.kw-doc-menu{position:fixed;inset:auto;margin:0;padding:6px;width:292px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;z-index:11050;box-shadow:0 8px 28px rgba(0,0,0,.14)}
+.kw-doc-menu>button{display:flex;align-items:center;width:100%;min-height:36px;padding:8px 12px;font-size:13px;text-align:left;border:0;line-height:1.4;white-space:normal;background:#fff;color:inherit;font-family:inherit;font-weight:400;border-radius:8px;cursor:pointer}
 .kw-doc-menu>button:hover,.kw-doc-menu>button:focus-visible{background:#f5efef}
-.kw-doc-menu>button:nth-of-type(4),.kw-doc-menu>button:nth-of-type(5){border-top:1px solid #eee;margin-top:6px;padding-top:16px;border-radius:0 0 8px 8px}
+.kw-doc-menu>button:nth-of-type(4),.kw-doc-menu>button:nth-of-type(5){border-top:1px solid #eee;margin-top:4px;padding-top:10px;border-radius:0 0 8px 8px}
 .kw-doc-email{display:flex;gap:8px;margin:10px 4px 4px;padding-top:12px;border-top:1px solid #eee}
 .kw-doc-email input{min-width:0;width:100%;flex:1}
 .kw-doc-email button{flex:0 0 auto}
-@media(max-width:600px){.kw-doc-dialog{padding:16px}.kw-doc-dialog button{min-height:40px}.kw-doc-viewer{inset:16px;width:calc(100vw - 32px);height:calc(100dvh - 32px)}.kw-doc-viewer h2{flex-basis:100%}.kw-doc-menu{padding:8px}}
+@media(max-width:600px){.kw-doc-dialog{padding:16px}.kw-doc-dialog .kw-doc-control{min-height:40px}.kw-doc-viewer{inset:16px;width:calc(100vw - 32px);height:calc(100dvh - 32px)}.kw-doc-toolbar{grid-template-columns:minmax(0,1fr) auto}.kw-doc-toolbar h2{grid-column:1;grid-row:1}.kw-doc-toolbar .kw-select{grid-column:1;grid-row:2;width:100%}.kw-doc-toolbar .kw-doc-download{grid-column:2;grid-row:2}.kw-doc-toolbar .kw-doc-close{grid-column:2;grid-row:1;justify-self:end}.kw-doc-menu{padding:8px}}
 `;
 
   document.head.appendChild(css);
@@ -39,17 +39,25 @@
     return library;
   }
   async function open(options) {
-    var d=dialog('kw-doc-viewer');d.innerHTML='<header><h2></h2><select aria-label="Versión del PDF"></select><button type="button" aria-label="Cerrar visor">Cerrar</button></header><div class="kw-doc-pages" tabindex="0" aria-label="Páginas del documento"></div>';
+    var d=dialog('kw-doc-viewer');d.innerHTML='<div class="kw-doc-toolbar"><h2></h2><select aria-label="Versión del PDF"></select><button type="button" class="kw-doc-control kw-doc-download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>Descargar</button><button type="button" class="kw-doc-control kw-doc-close" aria-label="Cerrar visor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button><span class="kw-doc-error" role="status" hidden></span></div><div class="kw-doc-pages" tabindex="0" aria-label="Páginas del documento"></div>';
     d.querySelector('h2').textContent=options.title||'Documento';d.setAttribute('aria-label',options.title||'Documento');
-    var select=d.querySelector('select'), pages=d.querySelector('.kw-doc-pages'), generation=0, task=null;
+    var select=d.querySelector('select'), pages=d.querySelector('.kw-doc-pages'), generation=0, task=null, blobs=new Map();
+    function loadBlob(index){if(!blobs.has(index)){blobs.set(index,Promise.resolve().then(function(){return options.load(index);}).catch(function(error){blobs.delete(index);throw error;}));}return blobs.get(index);}
     (options.variants||['Documento']).forEach(function(label,index){var o=document.createElement('option');o.textContent=label;o.value=index;select.appendChild(o);});
+    select.selectedIndex=Math.min(select.options.length-1,Math.max(0,options.initialIndex||0));
     select.hidden=select.options.length<2;
-    d.querySelector('button').onclick=function(){d.close();};
-    d.onclose=function(){generation++;if(task)task.destroy();d.remove();};
+    d.querySelector('.kw-doc-close').onclick=function(){d.close();};
+    d.querySelector('.kw-doc-download').onclick=async function(){
+      var button=this,index=Number(select.value),errorMessage=d.querySelector('.kw-doc-error');button.disabled=true;errorMessage.hidden=true;
+      try{var blob=await loadBlob(index),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=options.filename?options.filename(index):'documento.pdf';d.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},4000);}
+      catch(error){errorMessage.textContent='No se pudo descargar el PDF. Intenta nuevamente.';errorMessage.hidden=false;}
+      finally{button.disabled=false;}
+    };
+    d.onclose=function(){generation++;if(task)task.destroy();d.remove();if(options.onClose)options.onClose();};
     async function render(){
       var current=++generation;if(task){task.destroy();task=null;}pages.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando documento"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
       try{
-        var results=await Promise.all([libs(),options.load(Number(select.value))]);
+        var results=await Promise.all([libs(),loadBlob(Number(select.value))]);
         var bytes=new Uint8Array(await results[1].arrayBuffer());if(current!==generation)return;
         results[0].GlobalWorkerOptions.workerSrc='/assets/vendor/firmas/pdf.worker-3.11.174.min.js';
         task=results[0].getDocument({data:bytes,isEvalSupported:false});var pdf=await task.promise;
@@ -62,7 +70,7 @@
         }
       }catch(error){if(current===generation)pages.textContent='No se pudo abrir el PDF. Intenta nuevamente.';}
     }
-    select.onchange=render;d.showModal();render();
+    select.onchange=render;d.showModal();if(window.kwUI&&select.options.length>1)window.kwUI.selects(d);render();
   }
   function recipient(anchor) {
     return new Promise(function(resolve){
