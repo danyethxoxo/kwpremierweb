@@ -8,7 +8,7 @@ import { chromium } from 'playwright';
 const root = fileURLToPath(new URL('../', import.meta.url));
 function pages(dir = root) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-    if (['node_modules', '.git'].includes(entry.name)) return [];
+    if (['node_modules', '.git', 'artifacts'].includes(entry.name)) return [];
     const file = path.join(dir, entry.name);
     if (entry.isDirectory()) return pages(file);
     return file.endsWith('.html') && /src=["'][^"']*drawer\.js/.test(fs.readFileSync(file, 'utf8')) ? [file] : [];
@@ -38,11 +38,18 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
       return route.fulfill({ contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'application/javascript' : 'application/octet-stream', body: fs.readFileSync(file) });
     });
     const files = pages();
-    assert.ok(files.length >= 30);
+    assert.ok(files.length >= 30); console.log('Páginas con búsqueda verificadas: ' + files.length);
     for (const file of files) {
       const route = '/' + path.relative(root, file).replaceAll('\\', '/');
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto('http://kw.local' + route);
+      if (!route.endsWith('/portal.html') && await page.locator('html.kw-riel body:not(.firmas-riel-contraido) #drawer-buscar-toggle').count()) {
+        await page.mouse.move(700, 400);
+        const label = await page.locator('#drawer-buscar-toggle span').evaluate(el => {
+          const css = getComputedStyle(el); return { display: css.display, opacity: css.opacity, width: el.getBoundingClientRect().width };
+        });
+        assert.ok(label.display !== 'none' && label.opacity === '1' && label.width > 0, route + ': texto visible desde el inicio');
+      }
       if (route === '/hub/dictamenes.html') {
         // El menú de Máster en una ventana baja no debe comprimir el
         // buscador hasta encimarlo con Inicio del Hub.
@@ -89,6 +96,22 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
       if (hub && !route.endsWith('/portal.html') && !(await page.locator('body.firmas-riel-contraido').count())) {
         assert.ok(await page.locator('#drawer.open').count(), route);
         assert.ok(await page.locator('#drawer-buscar-toggle span').isVisible(), route);
+      }
+      if (['/hub/dictamenes.html', '/hub/firmas.html'].includes(route)) {
+        for (let i = 0; i < 4; i++) {
+          await toggle.click(); await search.fill('contrato'); await search.press('Escape');
+          assert.equal(await toggle.getAttribute('aria-expanded'), 'false', route);
+          const label = await page.locator('#drawer-buscar-toggle span').evaluate(el => ({display:getComputedStyle(el).display,opacity:getComputedStyle(el).opacity}));
+          assert.ok(label.display !== 'none' && label.opacity === '1', route + ': texto tras cierre ' + i);
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator('#kw-drawer-toggle').click();
+        if (!(await page.locator('#drawer.open').count())) await page.locator('[data-kw-menu-principal]:visible').first().click();
+        await page.locator('#drawer-buscar-toggle').click();
+        await search.fill('propiedades');
+        assert.equal(await page.locator('#drawer.open').count(), 0, route + ': menú no tapa la búsqueda móvil');
+        assert.equal(await page.locator('#drawer-overlay.open').count(), 0, route);
+        await search.press('Escape');
       }
       await page.setViewportSize({ width: 390, height: 844 });
       await page.keyboard.press('Escape');

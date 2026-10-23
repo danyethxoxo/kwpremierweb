@@ -1,5 +1,5 @@
 import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
-import { plantillaCorreo } from '../_shared/mailer.ts'
+import { correoDictamen } from '../_shared/dictamen-email.ts'
 import { secureServe } from '../_shared/security.ts'
 // Envía al asesor el PDF del dictamen que acaba de finalizarse.
 //
@@ -12,10 +12,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'KW Premier <noreply@kwpremieroficial.com>'
+const EMAIL_FROM = Deno.env.get('DICTAMEN_EMAIL_FROM') || 'KW Premier <dictamenes@kwpremieroficial.com>'
 const MAX_PDF_BYTES = 7 * 1024 * 1024
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const ROLES_DICTAMEN = ['mca', 'mcaa', 'MCA', 'MCAA']
 const RECIPIENTES_MANUALES = [
   'fernanda.pacheco@kwmexico.mx',
   'alberto.velazquez@kwpremier.com.mx',
@@ -94,39 +93,38 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
     // los campos que requiere el envío.
     const { data: dictamen, error: dictamenError } = await admin
       .from('dictamenes')
-      .select('id, folio, inmueble, asesor_id, archivado_at')
+      .select('id, folio, inmueble, asesor_id, estado, archivado_at')
       .eq('id', body.dictamen_id).maybeSingle()
     if (dictamenError || !dictamen || dictamen.archivado_at) {
       return response(req, { error: 'No se encontró un dictamen activo para enviar.' }, 404)
     }
 
-    if (!dictamen.asesor_id) {
-      return response(req, { error: 'El dictamen no tiene una persona asignada.' }, 400)
+    const modo = body.destinatario || 'todos'
+    if (!['asesor', 'mca', 'mcaa', 'todos', 'yo', 'otro'].includes(modo)) {
+      return response(req, { error: 'Destinatario inválido.' }, 400)
     }
-    const { data: asesorAsignado, error: asesorError } = await admin
-      .from('dictamen_asesores').select('nombre, correo').eq('id', dictamen.asesor_id).maybeSingle()
-    if (asesorError || !asesorAsignado) {
-      return response(req, { error: 'No se encontró la persona asignada al dictamen.' }, 404)
+    let asesorAsignado: { nombre: string; correo: string } | null = null
+    if (dictamen.asesor_id) {
+      const resultado = await admin.from('dictamen_asesores').select('nombre, correo')
+        .eq('id', dictamen.asesor_id).maybeSingle()
+      asesorAsignado = resultado.data
     }
-
-    const destino = String(asesorAsignado.correo || '').trim().toLowerCase()
-    if (!EMAIL_RE.test(destino)) {
+    const destino = String(asesorAsignado?.correo || '').trim().toLowerCase()
+    if (['asesor', 'todos'].includes(modo) && !EMAIL_RE.test(destino)) {
       return response(req, { error: 'El asesor no tiene un correo válido registrado.' }, 400)
     }
-    // Los correos manuales cubren la operación actual. Cuando MCA y MCAA
-    // tengan cuentas en profiles, sus correos entran automáticamente por
-    // el rol y se deduplican con los manuales.
-    const { data: perfilesMca, error: perfilesMcaError } = await admin
-      .from('profiles').select('email, role').in('role', ROLES_DICTAMEN)
-    if (perfilesMcaError) console.warn('No se pudieron leer los destinatarios por rol', perfilesMcaError)
-    const destinatarios = Array.from(new Set([
-      destino,
-      ...RECIPIENTES_MANUALES,
-      ...(perfilesMca || []).map((perfil) => String(perfil.email || '').trim().toLowerCase()),
-    ].filter((correo) => EMAIL_RE.test(correo))))
+    const destinatarios = Array.from(new Set((modo === 'asesor' ? [destino]
+      : modo === 'mca' ? [RECIPIENTES_MANUALES[0]]
+      : modo === 'mcaa' ? [RECIPIENTES_MANUALES[1]]
+      : modo === 'yo' ? [identity.user.email || '']
+      : modo === 'otro' ? [String(body.correo || '').trim().toLowerCase()]
+      : [destino, ...RECIPIENTES_MANUALES])))
+    if (!destinatarios.length || destinatarios.some((correo) => !EMAIL_RE.test(correo) || correo.length > 254)) {
+      return response(req, { error: 'Ingresa un correo válido.' }, 400)
+    }
     const direccion = String(dictamen.inmueble || 'sin dirección').trim()
-    const asesor = String(asesorAsignado.nombre || 'Asesor(a)').trim()
-    const asunto = 'Dictamen de Expediente, ' + direccion
+    const asesor = String(asesorAsignado?.nombre || 'Asesor(a)').trim()
+    const { asunto, html } = correoDictamen(asesor, direccion, String(dictamen.estado))
 
     const envio = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -135,7 +133,7 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
         from: EMAIL_FROM,
         to: destinatarios,
         subject: asunto,
-        html: plantillaCorreo({ intro: 'Hola ' + asesor + ' y equipo KW Premier, adjuntamos el dictamen de expediente:', title: 'Dictamen de expediente', content: direccion, note: 'Incluye una versión con los datos y otra con las correcciones.', actionLabel: 'Ver dictámenes', actionUrl: 'https://www.kwpremieroficial.com/hub/dictamenes.html' }),
+        html,
         attachments: [
           { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
           { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },

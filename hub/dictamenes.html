@@ -18,7 +18,7 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="/assets/js/notif-bell.js?v=20261019-notif-lista2"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261019-notif-lista2">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261023buscador">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
@@ -546,6 +546,7 @@
     padding: 13px 15px; cursor: pointer; text-align: left;
     transition: border-color 0.15s, background 0.15s, transform 0.12s;
   }
+  .dic-preguntar-op[aria-pressed="true"] { border-color: var(--red); background: #faf0f0; box-shadow: inset 0 0 0 1px var(--red); }
   .dic-preguntar-op:hover { background: #fafafa; border-color: #c9c9c9; }
   .dic-preguntar-op:active { transform: translateY(1px) scale(0.99); }
   .dic-preguntar-op i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -1177,6 +1178,8 @@
   }
   body.en-editor #e-descargar-menu,
   body.en-editor #e-enviar-correo,
+  body.en-editor #e-cambiar-estatus,
+  body.en-editor #e-ver-pdf,
   body.en-editor #e-guardar {
     min-height: 34px;
     padding: 7px 14px;
@@ -1191,7 +1194,7 @@
        pie fijo del editor: Cerrar sesión ya no queda flotando arriba. */
   }
   @media (max-width: 640px) {
-    body.en-editor #vista-editor { padding-bottom: 128px; }
+    body.en-editor #vista-editor { padding-bottom: 180px; }
     body.en-editor #vista-editor > .dic-editor > .dic-acciones {
       padding-left: 14px;
       padding-right: 14px;
@@ -1218,6 +1221,7 @@
   }
   .dic-listo.visible { display: flex; }
   .dic-listo > span { flex: 1; min-width: 200px; font-size: 13.5px; }
+  #e-ver-pdf svg { width: 15px; height: 15px; flex: 0 0 auto; }
   #e-descargar-menu, #e-enviar-correo {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     font-family: inherit;
@@ -2081,10 +2085,12 @@
               <button type="button" id="e-descargar-correcciones">Datos y correcciones</button>
             </div>
           </div>
+          <button type="button" class="kw-fila-btn" id="e-ver-pdf" disabled aria-label="Ver PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Ver PDF</button>
           <button type="button" class="kw-fila-btn" id="e-enviar-correo" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
             Enviar por correo
           </button>
+          <button type="button" class="kw-fila-btn" id="e-cambiar-estatus" disabled>Cambiar estatus</button>
           <button type="button" class="btn-nuevo" id="e-guardar">Guardar</button>
         </div>
 
@@ -2093,6 +2099,7 @@
 
   </main>
 
+<script src="/assets/js/kw-document-viewer.js?v=20261023a"></script>
 <script>
 (function () {
   'use strict';
@@ -2748,49 +2755,61 @@
   // hacen falta tres respuestas. Se arma con las mismas piezas del aviso
   // del sitio (.modal-overlay/.modal-box) para que se vea igual que todo
   // lo demás. Devuelve el estado elegido, o null si se cerró sin elegir.
-  function preguntarEstado() {
+  function preguntarEstado(opciones) {
+    opciones = opciones || {};
     return new Promise(function (resolver) {
+      var anterior = document.activeElement;
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
-
       var caja = document.createElement('div');
       caja.className = 'modal-box dic-modal-estado';
-      caja.setAttribute('role', 'alertdialog');
+      caja.setAttribute('role', 'dialog');
       caja.setAttribute('aria-modal', 'true');
-      caja.innerHTML =
-        '<h3>¿En qué estatus quedó este expediente?</h3>' +
-        '<div class="dic-preguntar">' +
-          ORDEN_ESTADOS.map(function (e) {
-            return '<button type="button" class="dic-preguntar-op" data-elige="' + e + '">' +
-              '<i class="' + e + '"></i>' + ESTADOS[e] + '</button>';
-          }).join('') +
-        '</div>' +
-        '<div class="modal-actions">' +
-          '<button type="button" class="btn-modal-cancelar" data-elige="">Ahora no</button>' +
-        '</div>';
-
+      caja.setAttribute('aria-labelledby', 'dic-estado-titulo');
+      var elegido = ORDEN_ESTADOS.includes(opciones.estado) ? opciones.estado : '';
+      caja.innerHTML = '<h3 id="dic-estado-titulo">¿Cuál es el estatus de este expediente?</h3>' +
+        '<div class="dic-preguntar" role="group" aria-label="Estatus del expediente">' +
+        ORDEN_ESTADOS.map(function (estado) {
+          return '<button type="button" class="dic-preguntar-op" data-elige="' + estado +
+            '" aria-pressed="' + (elegido === estado) + '"><i class="' + estado + '"></i>' + ESTADOS[estado] + '</button>';
+        }).join('') + '</div><div class="modal-actions">' +
+        '<button type="button" class="btn-modal-cancelar" data-cancelar>Cancelar</button>' +
+        '<button type="button" class="btn-modal-confirmar" data-guardar>Guardar</button>' +
+        (opciones.envio ? '<button type="button" class="btn-modal-confirmar" data-enviar>Guardar y enviar por correo</button>' : '') + '</div>';
       var listo = false;
       function cerrar(valor) {
         if (listo) return;
         listo = true;
         document.removeEventListener('keydown', porTecla);
-        if (window.kwUI) window.kwUI.cerrarModal(overlay, function () { overlay.remove(); });
-        else overlay.remove();
+        var quitar = function () { overlay.remove(); if (anterior && anterior.isConnected) anterior.focus(); };
+        if (window.kwUI) window.kwUI.cerrarModal(overlay, quitar); else quitar();
         resolver(valor);
       }
-      function porTecla(e) { if (e.key === 'Escape') cerrar(null); }
-
-      caja.querySelectorAll('[data-elige]').forEach(function (b) {
-        b.addEventListener('click', function () { cerrar(b.dataset.elige || null); });
+      function actualizar() {
+        caja.querySelectorAll('[data-elige]').forEach(function (boton) {
+          boton.setAttribute('aria-pressed', String(boton.dataset.elige === elegido));
+        });
+        caja.querySelector('[data-guardar]').disabled = !elegido;
+        if (opciones.envio) caja.querySelector('[data-enviar]').disabled = !elegido || !opciones.puedeEnviar;
+      }
+      function porTecla(e) {
+        if (e.key === 'Escape') { e.preventDefault(); cerrar(null); }
+        if (e.key === 'Tab') {
+          var botones = Array.from(caja.querySelectorAll('button:not(:disabled)'));
+          var primero = botones[0], ultimo = botones[botones.length - 1];
+          if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
+          else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
+        }
+      }
+      caja.querySelectorAll('[data-elige]').forEach(function (boton) {
+        boton.onclick = function () { elegido = boton.dataset.elige; actualizar(); };
       });
-      overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) cerrar(null);
-      });
-
-      overlay.appendChild(caja);
-      document.body.appendChild(overlay);
-      document.addEventListener('keydown', porTecla);
-      caja.querySelector('[data-elige]').focus();
+      caja.querySelector('[data-cancelar]').onclick = function () { cerrar(null); };
+      caja.querySelector('[data-guardar]').onclick = function () { cerrar({ estado: elegido, enviar: false }); };
+      if (opciones.envio) caja.querySelector('[data-enviar]').onclick = function () { cerrar({ estado: elegido, enviar: true }); };
+      overlay.onclick = function (e) { if (e.target === overlay) cerrar(null); };
+      actualizar(); overlay.appendChild(caja); document.body.appendChild(overlay);
+      document.addEventListener('keydown', porTecla); caja.querySelector('[data-elige]').focus();
     });
   }
 
@@ -3434,7 +3453,7 @@
     }
 
     var acciones = '<div class="dic-acciones-iconos">' +
-      menuPDF(d.id) +
+      iconoBtn('data-ver-pdf', d.id, 'Ver PDF', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>') + menuPDF(d.id) +
       (puedoDictaminar && !d.archivado_at
         ? iconoBtn('data-enviar-correo', d.id, 'Enviar por correo', ICONO_ENVIAR) +
           iconoBtn('data-editar', d.id, 'Editar', ICONO_LAPIZ) +
@@ -3811,6 +3830,7 @@
         alternarMenuPDF(b.closest('.dic-pdf-menu'));
       });
     });
+    raiz.querySelectorAll('[data-ver-pdf]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); verPDF(b.dataset.verPdf); }; });
     raiz.querySelectorAll('[data-enviar-correo]').forEach(function (b) {
       b.addEventListener('click', function (e) {
         e.preventDefault();
@@ -4424,8 +4444,11 @@
     // Si ya se está editando un expediente guardado, sus PDFs y el envío
     // están disponibles desde el inicio. Solo un dictamen nuevo espera a
     // su primera guardada para tener id, folio y archivos descargables.
+    $('e-ver-pdf').disabled = !d;
+    $('e-ver-pdf').onclick = d ? function () { verPDF(d.id); } : null;
     $('e-descargar-menu').disabled = !d;
     $('e-enviar-correo').disabled = !d;
+    $('e-cambiar-estatus').disabled = !d;
     $('e-descargar').onclick = d ? function () { cerrarMenusPDF(); imprimir(d.id, false); } : null;
     $('e-descargar-correcciones').onclick = d ? function () { cerrarMenusPDF(); imprimir(d.id, true); } : null;
     $('e-enviar-correo').onclick = d ? function () { enviarDictamenPorCorreo(d.id); } : null;
@@ -5338,6 +5361,14 @@
     URL.revokeObjectURL(url);
   }
 
+  async function verPDF(id) {
+    var d = dictamenes.find(function (x) { return x.id === id; });
+    if (!d) return;
+    window.kwDocumentViewer.open({ title: 'Dictamen ' + (d.folio || ''),
+      variants: ['Solo con datos', 'Datos y correcciones'],
+      load: function (index) { return crearPDF(d, index === 1); } });
+  }
+
   function base64DeBlob(blob) {
     return new Promise(function (resolve, reject) {
       var lector = new FileReader();
@@ -5350,22 +5381,15 @@
     });
   }
 
-  async function enviarDictamenPorCorreo(id, botonEnvio) {
+  async function enviarDictamenPorCorreo(id, botonEnvio, seleccion) {
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
-    if (!d.asesor_correo) {
-      await window.kwUI.alert('Este asesor no tiene un correo registrado. Actualízalo antes de enviar el dictamen.');
+    seleccion = seleccion || await window.kwDocumentViewer.recipient(botonEnvio || $('e-enviar-correo'));
+    if (!seleccion) return;
+    if (['asesor', 'todos'].includes(seleccion.destinatario) && !d.asesor_correo) {
+      await window.kwUI.alert('El asesor no tiene un correo registrado.');
       return;
     }
-    var aceptar = await window.kwUI.confirm(
-      'Se enviará el PDF del dictamen al asesor, MCA y MCAA.\n\n' +
-      'Asesor: ' + d.asesor_correo +
-      '\nMCA: fernanda.pacheco@kwmexico.mx' +
-      '\nMCAA: alberto.velazquez@kwpremier.com.mx' +
-      '\n\n¿Continuar?'
-    );
-    if (!aceptar) return;
-
     var boton = botonEnvio || $('e-enviar-correo');
     var contenidoOriginal = boton.innerHTML;
     boton.disabled = true;
@@ -5393,6 +5417,8 @@
             'Authorization': 'Bearer ' + token,
           },
           body: JSON.stringify({
+            destinatario: seleccion.destinatario,
+            correo: seleccion.correo,
             dictamen_id: d.id,
             nombre_archivo_solo_datos: nombrePDF(d, false),
             pdf_solo_datos: await base64DeBlob(pdfs[0]),
@@ -5766,44 +5792,66 @@
     }
   });
 
+  function activarAccionesDictamen(id) {
+    $('e-ver-pdf').disabled = false;
+    $('e-ver-pdf').onclick = function () { verPDF(id); };
+    $('e-descargar-menu').disabled = false;
+    $('e-enviar-correo').disabled = false;
+    $('e-cambiar-estatus').disabled = false;
+    $('e-descargar').onclick = function () { cerrarMenusPDF(); imprimir(id, false); };
+    $('e-descargar-correcciones').onclick = function () { cerrarMenusPDF(); imprimir(id, true); };
+    $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
+  }
+
+  $('e-cambiar-estatus').addEventListener('click', async function () {
+    if (!borrador || !borrador.id) return;
+    var d = dictamenes.find(function (x) { return x.id === borrador.id; });
+    var seleccion = await preguntarEstado({ estado: d && d.estado });
+    if (!seleccion) return;
+    var boton = $('e-cambiar-estatus');
+    boton.disabled = true;
+    try {
+      var resultado = await window.kwSupabase.rpc('dictaminar', { p_id: borrador.id, p_estado: seleccion.estado });
+      if (resultado.error) throw new Error(resultado.error.message);
+      await cargar();
+    } catch (error) { await fallo('No se pudo cambiar el estatus: ' + error.message); }
+    finally { boton.disabled = false; }
+  });
+
   $('e-guardar').addEventListener('click', async function () {
     var b = $('e-guardar');
-    var cerrarGuardando = window.kwUI && window.kwUI.cargando
-      ? window.kwUI.cargando('Guardando dictamen...')
-      : function () {};
+    if (b.disabled) return;
+    b.disabled = true;
+    var cerrarGuardando = function () {};
     try {
-      b.disabled = true;
+      leerEditor();
+      var d = dictamenes.find(function (x) { return x.id === borrador.id; });
+      var asesor = asesores.find(function (x) { return x.id === borrador.asesor_id; });
+      var seleccion = await preguntarEstado({ estado: d && d.estado, envio: true,
+        puedeEnviar: !!(asesor && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asesor.correo || '')) });
+      if (!seleccion) return;
+      cerrarGuardando = window.kwUI && window.kwUI.cargando
+        ? window.kwUI.cargando('Guardando dictamen...') : function () {};
       b.textContent = 'Guardando...';
       var id = await guardar();
       if (!id) return;
-
-      // Guardar y dictaminar son un solo movimiento: se revisó el
-      // expediente y se llegó a una conclusión. Preguntarlo aquí es lo que
-      // hace que el folio y el PDF salgan en el mismo momento, en vez de
-      // dejar el expediente en borrador esperando a que alguien se acuerde.
-      var quedo = borrador.completo_para_dictaminar ? await preguntarEstado() : null;
-      if (quedo) {
-        var r = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: quedo });
-        if (r.error) {
-          await fallo('Se guardó el expediente, pero no se le pudo poner el dictamen: '
-            + r.error.message);
-          return;
-        }
+      var resultado = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: seleccion.estado });
+      if (resultado.error) {
+        await cargar(); activarAccionesDictamen(id);
+        await fallo('Se guardó el expediente, pero no se pudo cambiar el estatus: ' + resultado.error.message);
+        return;
       }
-
       await cargar();
-      aviso('editor-msg', '', '');
-
-      mostrarDictamenGuardado();
-      $('e-descargar-menu').disabled = false;
-      $('e-enviar-correo').disabled = false;
-      $('e-descargar').onclick = function () { cerrarMenusPDF(); imprimir(id, false); };
-      $('e-descargar-correcciones').onclick = function () { cerrarMenusPDF(); imprimir(id, true); };
-      $('e-enviar-correo').onclick = function () { enviarDictamenPorCorreo(id); };
-    } finally {
-      cerrarGuardando();
-      b.disabled = false;
-      b.textContent = 'Guardar';
+      if (!dictamenes.some(function (x) { return x.id === id; })) {
+        await fallo('El dictamen se guardó. Recarga la página para consultar su PDF.'); return;
+      }
+      aviso('editor-msg', '', ''); activarAccionesDictamen(id);
+      cerrarGuardando(); cerrarGuardando = function () {};
+      if (seleccion.enviar) await enviarDictamenPorCorreo(id, $('e-enviar-correo'), { destinatario: 'todos' });
+      else mostrarDictamenGuardado();
+    } catch (error) { await fallo('No se pudo completar el guardado: ' + error.message); }
+    finally {
+      cerrarGuardando(); b.disabled = false; b.textContent = 'Guardar';
     }
   });
 
@@ -5815,7 +5863,7 @@
 })();
 </script>
 
-<script src="/assets/js/drawer.js?v=20261019-notif-lista2" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261023buscador" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros=".dic-campo-buscar|#resumen|#filtros-caja"></script>
 
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>

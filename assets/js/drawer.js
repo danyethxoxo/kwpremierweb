@@ -624,6 +624,7 @@
   }
 
   function abrirBuscar() {
+    colocarBuscador();
     if (!capsula && !areaBuscarRiel) return;
     [searchBtn, document.getElementById('drawer-buscar-toggle')].filter(Boolean)
       .forEach((boton) => boton.setAttribute('aria-expanded', 'true'));
@@ -633,9 +634,10 @@
     if (searchCheck) searchCheck.checked = true;
     if (buscadorVaEnRiel()) {
       const riel = areaBuscarRiel.closest('.drawer');
-      riel.classList.remove('sin-hover', 'busqueda-cerrando');
+      riel.classList.remove('sin-hover');
       riel.classList.add('open', 'buscando');
     } else if (header) {
+      cerrarPaneles();
       header.classList.add('kw-buscando');
     }
     buscarResultados.hidden = true;
@@ -648,7 +650,7 @@
     // lo ignoren.
     requestAnimationFrame(() => buscarInput.focus());
   }
-  function cerrarBuscar() {
+  function cerrarBuscar(devolverFoco) {
     if (!capsula && !areaBuscarRiel) return;
     [searchBtn, document.getElementById('drawer-buscar-toggle')].filter(Boolean)
       .forEach((boton) => boton.setAttribute('aria-expanded', 'false'));
@@ -656,8 +658,6 @@
     if (header) header.classList.remove('kw-buscando');
     if (areaBuscarRiel) {
       const riel = areaBuscarRiel.closest('.drawer');
-      riel.classList.add('busqueda-cerrando');
-      window.setTimeout(() => riel.classList.remove('busqueda-cerrando'), 180);
       riel.classList.remove('buscando', 'busqueda-con-resultados');
       if (esRielFijo(riel)) {
         riel.classList.remove('sin-hover');
@@ -670,6 +670,11 @@
     buscarInput.blur();
     buscarResultados.hidden = true;
     buscarInput.value = '';
+    buscarResultados.innerHTML = '';
+    if (devolverFoco) {
+      const acceso = buscadorVaEnRiel() ? document.getElementById('drawer-buscar-toggle') : searchBtn;
+      if (acceso) acceso.focus({ preventScroll: true });
+    }
   }
 
   function pintarResultados(termino) {
@@ -711,7 +716,7 @@
     if (busquedaAbierta()) cerrarBuscar();
     else abrirBuscar();
   });
-  buscarCerrar.addEventListener('click', volverAlAccesoBuscar);
+  buscarCerrar.addEventListener('click', () => cerrarBuscar(true));
 
   buscarInput.addEventListener('input', () => {
     // La búsqueda del riel es universal. Los filtros particulares de
@@ -719,14 +724,14 @@
     pintarResultados(buscarInput.value);
   });
   buscarInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { cerrarBuscar(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrarBuscar(true); return; }
     if (e.key === 'Enter') {
       const primero = buscarResultados.querySelector('.kw-buscar-item');
       if (primero) location.href = primero.getAttribute('href');
     }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && busquedaAbierta()) cerrarBuscar();
+    if (e.key === 'Escape' && busquedaAbierta()) cerrarBuscar(true);
   });
   // Picar fuera cierra la búsqueda y devuelve el riel a su ancho angosto.
   // Los resultados viven dentro del área de búsqueda, así que se pueden
