@@ -90,6 +90,7 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
     assert.ok(vista.zoom>=4&&vista.zoom<=8,'una búsqueda explícita encuadra sus resultados');
     assert.match(await page.locator('#prop-mapa-estado').innerText(),/3 propiedades.*19 sin coordenadas/);
     assert.equal(await page.locator('#lista').isVisible(),true);
+    assert.equal(await page.locator('#conteo').isVisible(),true,'el conteo sigue visible en el contenido');
     assert.equal(await page.locator('#prop-vista-mapa, #prop-vista-lista').count(),0);
     const cajas=await page.evaluate(()=>({lista:document.querySelector('#lista').getBoundingClientRect().toJSON(),mapa:document.querySelector('#prop-mapa-panel').getBoundingClientRect().toJSON()}));
     if(viewport.width>=1024)assert.ok(cajas.lista.right<=cajas.mapa.left,'mapa a la derecha del listado');
