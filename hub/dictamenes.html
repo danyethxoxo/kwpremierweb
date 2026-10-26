@@ -1928,6 +1928,11 @@
           </div>
         </div>
 
+        <div class="dic-campo">
+          <label for="e-folio-real">Folio real</label>
+          <input type="text" id="e-folio-real" name="dic-folio-real" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
+        </div>
+
         <div class="dic-tres">
           <div class="dic-campo">
             <label for="e-condominio">Condominio</label>
@@ -1941,8 +1946,12 @@
                preguntarlas cuando no aplica es pedir datos que no existen. -->
           <div id="e-esc-condominio-caja" style="display:none;">
             <div class="dic-campo">
+              <label for="e-condominio-folio-real">Folio real del condominio</label>
+              <input type="text" id="e-condominio-folio-real" class="kw-input" autocomplete="off">
+            </div>
+            <div class="dic-campo">
               <label for="e-esc-condominio">Escritura del condominio</label>
-              <textarea id="e-esc-condominio" rows="2"></textarea>
+              <input type="text" id="e-esc-condominio" class="kw-input" autocomplete="off">
             </div>
             <div class="dic-campo">
               <label for="e-esc-condominio-dia">Fecha de escrituración del condominio</label>
@@ -1962,11 +1971,6 @@
               <input type="text" id="e-condominio-notaria" class="kw-input" autocomplete="off">
             </div>
           </div>
-        </div>
-
-        <div class="dic-campo">
-          <label for="e-folio-real">Folio real</label>
-          <input type="text" id="e-folio-real" name="dic-folio-real" data-lpignore="true" data-1p-ignore class="kw-input" autocomplete="off">
         </div>
 
         <h2 class="dic-subtitulo">CFDI</h2>
@@ -3382,6 +3386,7 @@
     var escritura =
       datosEscritura(d) +
       dato('Condominio', siNo(d.condominio), correccionDe(d, 'condominio')) +
+      dato('Folio real del condominio', d.condominio_folio_real, correccionDe(d, 'condominio_folio_real')) +
       dato('Escritura del condominio', d.escritura_condominio,
         correccionDe(d, 'escritura_condominio')) +
       dato('Fecha de escrituración del condominio', fecha(d.escritura_condominio_fecha),
@@ -3954,6 +3959,7 @@
     ['e-esc-condominio-fecha', 'escritura_condominio_fecha'],
     ['e-condominio-notario', 'condominio_notario_nombre'],
     ['e-condominio-notaria', 'condominio_notaria_numero'],
+    ['e-condominio-folio-real', 'condominio_folio_real'],
     ['e-cfdi-necesario', 'cfdi_necesario'],
     ['e-cfdi-tiene', 'cfdi_tiene'],
     ['e-cfdi', 'cfdi'],
@@ -4346,6 +4352,7 @@
     $('e-esc-condominio-caja').style.display = aplica ? 'contents' : 'none';
     if (!aplica) {
       $('e-esc-condominio').value = '';
+      $('e-condominio-folio-real').value = '';
       $('e-condominio-notario').value = '';
       $('e-condominio-notaria').value = '';
       ponerFechaCondominio('');
@@ -4635,6 +4642,7 @@
     // antes deja de tener a qué referirse.
     if (borrador.condominio !== 'si') {
       fila.escritura_condominio = null;
+      fila.condominio_folio_real = null;
       fila.escritura_condominio_fecha = null;
       fila.condominio_notario_nombre = null;
       fila.condominio_notaria_numero = null;
@@ -4767,6 +4775,7 @@
     ['Escrituras (sin desglosar)', 'texto', 34, function (d) {
       return tieneEscrituraDesglosada(d) ? '' : d.escritura_propiedad; }],
     ['Condominio', 'texto', 11, function (d) { return siNo(d.condominio); }],
+    ['Folio real del condominio', 'texto', 24, function (d) { return d.condominio_folio_real; }],
     ['Escritura del condominio', 'texto', 30, function (d) { return d.escritura_condominio; }],
     ['Fecha de escrituración del condominio', 'fecha', 28, function (d) { return d.escritura_condominio_fecha; }],
     ['Nombre del notario del condominio', 'texto', 30, function (d) { return d.condominio_notario_nombre; }],
@@ -5163,6 +5172,8 @@
 
     filas.push(hojaFila('Condominio', textoPDF(d, siNo(d.condominio),
       ['condominio'], incluirCorrecciones)));
+    filas.push(hojaFila('Folio real del condominio', textoPDF(d, d.condominio_folio_real,
+      ['condominio_folio_real'], incluirCorrecciones)));
     filas.push(hojaFila('Escritura del condominio', textoPDF(d, d.escritura_condominio,
       ['escritura_condominio'], incluirCorrecciones)));
     filas.push(hojaFila('Fecha de escrituración del condominio',
@@ -5836,7 +5847,8 @@
       if (!seleccion) return;
       cerrarGuardando = window.kwUI && window.kwUI.cargando
         ? window.kwUI.cargando('Guardando dictamen...') : function () {};
-      b.textContent = 'Guardando...';
+      if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardando...';
+      else b.textContent = 'Guardando...';
       var id = await guardar();
       if (!id) return;
       var resultado = await window.kwSupabase.rpc('dictaminar', { p_id: id, p_estado: seleccion.estado });
@@ -5855,7 +5867,9 @@
       else mostrarDictamenGuardado();
     } catch (error) { await fallo('No se pudo completar el guardado: ' + error.message); }
     finally {
-      cerrarGuardando(); b.disabled = false; if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardar';
+      cerrarGuardando(); b.disabled = false;
+      if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardar';
+      else b.textContent = 'Guardar';
     }
   });
 
