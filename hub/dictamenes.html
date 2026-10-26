@@ -5227,44 +5227,78 @@
       return 'BT\n' + color(rgb) + '/' + (negrita ? 'F2' : 'F1') + ' ' + tam + ' Tf\n' +
         pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba) + ' Td\n(' + pdfTexto(txt) + ') Tj\nET\n';
     }
-    function caja(x, yArriba, ancho, alto) {
-      return pdfNum(x) + ' ' + pdfNum(PAG_ALTO - yArriba - alto) + ' ' +
-        pdfNum(ancho) + ' ' + pdfNum(alto) + ' re S\n';
+    function linea(x1, y1, x2, y2) {
+      return pdfNum(x1) + ' ' + pdfNum(PAG_ALTO - y1) + ' m ' +
+        pdfNum(x2) + ' ' + pdfNum(PAG_ALTO - y2) + ' l S\n';
+    }
+    function cajaRedondeada(x, yArriba, ancho, alto, radio) {
+      var abajo = PAG_ALTO - yArriba - alto;
+      var arriba = PAG_ALTO - yArriba;
+      var derecha = x + ancho;
+      var r = Math.min(radio, ancho / 2, alto / 2);
+      var k = r * 0.55228475;
+      function punto(a, b) { return pdfNum(a) + ' ' + pdfNum(b); }
+      return punto(x + r, abajo) + ' m\n' +
+        punto(derecha - r, abajo) + ' l\n' +
+        punto(derecha - r + k, abajo) + ' ' + punto(derecha, abajo + r - k) + ' ' + punto(derecha, abajo + r) + ' c\n' +
+        punto(derecha, arriba - r) + ' l\n' +
+        punto(derecha, arriba - r + k) + ' ' + punto(derecha - r + k, arriba) + ' ' + punto(derecha - r, arriba) + ' c\n' +
+        punto(x + r, arriba) + ' l\n' +
+        punto(x + r - k, arriba) + ' ' + punto(x, arriba - r + k) + ' ' + punto(x, arriba - r) + ' c\n' +
+        punto(x, abajo + r) + ' l\n' +
+        punto(x, abajo + r - k) + ' ' + punto(x + r - k, abajo) + ' ' + punto(x + r, abajo) + ' c\nh S\n';
     }
 
-    // El encabezado: el título y el folio a la izquierda, el logo a la
-    // derecha. Va nada más en la primera página; en las que siguen la
-    // tabla arranca desde arriba.
-    c = escribir('DICTAMEN DE EXPEDIENTE', MARGEN, MARGEN + 14, 15, true, HOJA_ROJO);
-    c += escribir((d.folio || 'Borrador, sin folio') +
-      (Number(d.revision) > 0 ? ' · Rev ' + Number(d.revision) : ''),
-      MARGEN, MARGEN + 32, 10, false, HOJA_GRIS);
+    // Logo a la izquierda, titulo centrado y datos del expediente a la derecha.
+    var titulo = 'Dictamen de expediente';
+    var tamTitulo = 13.5;
+    c = escribir(titulo, (PAG_ANCHO - anchoTexto(titulo, tamTitulo, true)) / 2,
+      MARGEN + 22, tamTitulo, true, HOJA_ROJO);
     if (logo) {
-      var altoLogo = 34;
-      var anchoLogo = logo.ancho * altoLogo / logo.alto;
+      var escalaLogo = Math.min(96 / logo.ancho, 34 / logo.alto);
+      var altoLogo = logo.alto * escalaLogo;
+      var anchoLogo = logo.ancho * escalaLogo;
       c += 'q\n' + pdfNum(anchoLogo) + ' 0 0 ' + pdfNum(altoLogo) + ' ' +
-        pdfNum(PAG_ANCHO - MARGEN - anchoLogo) + ' ' +
-        pdfNum(PAG_ALTO - MARGEN - altoLogo) + ' cm\n/Im0 Do\nQ\n';
+        pdfNum(MARGEN) + ' ' + pdfNum(PAG_ALTO - MARGEN - altoLogo) + ' cm\n/Im0 Do\nQ\n';
     }
+    var derechaEncabezado = PAG_ANCHO - MARGEN;
+    var yEncabezado = MARGEN + 10;
+    var estatus = d.estado === 'borrador' ? 'Sin dictaminar' : (ESTADOS[d.estado] || '');
+    cortar(estatus, 132, 8, true).forEach(function (l) {
+      c += escribir(l, derechaEncabezado - anchoTexto(l, 8, true), yEncabezado, 8, true, HOJA_NEGRO);
+      yEncabezado += 11;
+    });
+    var folio = (d.folio || 'Borrador, sin folio') +
+      (Number(d.revision) > 0 ? ' \xB7 Rev ' + Number(d.revision) : '');
+    cortar(folio, 132, 8, false).forEach(function (l) {
+      c += escribir(l, derechaEncabezado - anchoTexto(l, 8, false), yEncabezado, 8, false, HOJA_NEGRO);
+      yEncabezado += 11;
+    });
 
-    y = MARGEN + 56;
+    y = Math.max(MARGEN + 56, yEncabezado + 12);
+    var inicioTabla = y;
     c += '0.7 w\n' + color(HOJA_NEGRO, true);
+    function cerrarTabla() {
+      c += linea(MARGEN + COL_ROTULO, inicioTabla, MARGEN + COL_ROTULO, y);
+      c += cajaRedondeada(MARGEN, inicioTabla, anchoUtil, y - inicioTabla, 4);
+    }
 
     filas.forEach(function (f) {
       if (y + f.altoFila > PAG_ALTO - MARGEN) {
+        cerrarTabla();
         paginas.push(c);
         c = '0.7 w\n' + color(HOJA_NEGRO, true);
         y = MARGEN;
+        inicioTabla = y;
       }
-      c += caja(MARGEN, y, COL_ROTULO, f.altoFila);
-      c += caja(MARGEN + COL_ROTULO, y, anchoDato, f.altoFila);
+      if (y > inicioTabla) c += linea(MARGEN, y, MARGEN + anchoUtil, y);
 
       // El rótulo y el dato arrancan en la misma raya de abajo, aunque el
       // rótulo sea de letra más chica: alineados por arriba se veían
       // corridos uno del otro.
       f.rotuloLineas.forEach(function (l, i) {
         c += escribir(l, MARGEN + RELLENO,
-          y + RELLENO + TAM_DATO + i * (ALTO_LINEA - 2), TAM_ROTULO, true, HOJA_ROJO);
+          y + RELLENO + TAM_DATO + i * (ALTO_LINEA - 2), TAM_ROTULO, true, HOJA_NEGRO);
       });
 
       f.lineas.forEach(function (l, i) {
@@ -5279,6 +5313,7 @@
       y += f.altoFila;
     });
 
+    cerrarTabla();
     paginas.push(c);
     return paginas;
   }
