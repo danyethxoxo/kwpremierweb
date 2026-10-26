@@ -2,6 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runtime,pdfScript} from './helpers/dictamen-pdf-runtime.mjs';
 
+test('superficies colocan Predial despues de m² y eliminan decimales innecesarios', async () => {
+  const ctx = runtime();
+  for (const valor of ['32.0 PREDIAL', '32.00 PREDIAL m2', '32.0 m² (PREDIAL)', '32 m² (Predial)']) {
+    assert.equal(ctx.conUnidad(valor), '32 m² (Predial)');
+  }
+  assert.equal(ctx.conUnidad('32.50 PREDIAL'), '32.5 m² (Predial)');
+  assert.equal(ctx.conUnidad('32.0'), '32 m²');
+  assert.equal(ctx.conUnidad(0), '0 m²');
+  assert.equal(ctx.conUnidad(null), '');
+  assert.equal(ctx.conUnidad('Por confirmar'), 'Por confirmar m²');
+  const d = {id: 'qa', superficie_terreno: '32.0 PREDIAL', superficie_construccion: '32.0 PREDIAL'};
+  const pdf = Buffer.from(await (await ctx.crearPDF(d, false)).arrayBuffer()).toString('latin1');
+  assert.equal((pdf.match(/32 m² \\\(Predial\\\)/g) || []).length, 2);
+  assert.equal(pdf.includes('32.0 PREDIAL'), false);
+});
+
 test('reproduce el fallo anterior con una respuesta de CFDI no vacía',()=>{
   const anterior=pdfScript.replace('textoSimple(respuestaCfdi(d.cfdi_necesario))','respuestaCfdi(d.cfdi_necesario)');
   const ctx=runtime({},anterior);
