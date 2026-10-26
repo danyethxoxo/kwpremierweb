@@ -1,5 +1,6 @@
 import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
+import { correoNotificacionDictamen } from '../_shared/dictamen-email.ts'
 import { secureServe } from '../_shared/security.ts'
 // Edge Function: notificar-email
 //
@@ -104,10 +105,12 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
     const notificacionId = typeof fila?.notificacion_id === 'string' && /^[0-9a-f-]{36}$/i.test(fila.notificacion_id) ? fila.notificacion_id : null
     let correoComprador = false
+    let tipoNotificacion = String(fila?.tipo || '')
     if (notificacionId) {
       const {data: aviso,error: errorAviso} = await admin.from('notificaciones').select('user_id,tipo,titulo,mensaje,url').eq('id',notificacionId).single()
       if (errorAviso || !aviso || aviso.user_id !== userId || aviso.titulo !== titulo || (aviso.mensaje || '') !== mensaje || aviso.url !== fila.url) return respond({error:'Aviso inválido'},400)
       correoComprador = aviso.tipo === 'comprador_matches'
+      tipoNotificacion = aviso.tipo
     }
 
     const { data: perfil, error: errPerfil } = await admin
@@ -123,7 +126,8 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     const nombre = String(perfil.nombre || '').trim() || 'Hola'
     const liga = ligaCompleta(fila?.url)
 
-    const html = plantillaCorreo({ intro: nombre + ', tienes un aviso nuevo en la plataforma:', title: titulo, content: mensaje, actionLabel: 'Verlo en la plataforma', actionUrl: liga })
+    const dictamen = correoNotificacionDictamen(tipoNotificacion, titulo, mensaje)
+    const html = dictamen?.html || plantillaCorreo({ intro: nombre + ', tienes un aviso nuevo en la plataforma:', title: titulo, content: mensaje, actionLabel: 'Verlo en la plataforma', actionUrl: liga })
 
     const resendResp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -135,7 +139,7 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
       body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
         to: [perfil.email],
-        subject: titulo,
+        subject: dictamen?.asunto || titulo,
         html,
       })),
     })

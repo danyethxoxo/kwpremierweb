@@ -14,7 +14,7 @@ function fixture() {
   const now = Date.now();
   const uid = 'usuario-propio';
   const rows = [
-    { id:'reciente',tipo:'dictamen',titulo:'Autorizado condicionado: Av. Reforma 123, Ciudad de México',mensaje:'Expediente de María López. Folio D-2026-001.',url:'/hub/dictamenes.html',leido:false,created_at:new Date(now-60000).toISOString(),user_id:uid },
+    { id:'reciente',tipo:'dictamen',titulo:'Dictamen de expediente: Autorizado condicionado',mensaje:'Hola: María López, te compartimos el dictamen de expediente de tu listado con dirección:\n\nAv. Reforma 123, Ciudad de México',url:'/hub/dictamenes.html',leido:false,created_at:new Date(now-60000).toISOString(),user_id:uid },
     { id:'limite',titulo:'Por cumplir 24 horas',leido:false,created_at:new Date(now-86400000+30000).toISOString(),user_id:uid },
     { id:'leida',titulo:'Ya leída',leido:true,created_at:new Date(now-120000).toISOString(),user_id:uid },
     { id:'insegura',titulo:'<img src=x onerror=alert(1)>',mensaje:'<script>alert(1)</script>',url:'javascript:alert(1)',leido:false,created_at:new Date(now-3*86400000).toISOString(),user_id:uid },
@@ -80,10 +80,10 @@ test('notificaciones UI: filas, dictamen, navegación, lectura explícita, histo
       assert.equal(await page.locator('#notif-bell-slot').count(),1);
       assert.equal(await page.getByText('Ver notificación',{exact:true}).count(),0);
       const dictamen=page.locator('#notif-dropdown [data-notif-id="reciente"]');
-      assert.equal(await dictamen.locator('.notif-item-titulo').textContent(),'Dictamen de expediente de: María López');
-      assert.equal(await dictamen.locator('.notif-item-estatus').textContent(),'Autorizado condicionado');
-      assert.equal(await dictamen.locator('.notif-item-msg').textContent(),'Av. Reforma 123, Ciudad de México');
-      assert.equal(await dictamen.locator('.notif-item-folio').textContent(),'Folio: D-2026-001');
+      assert.equal(await dictamen.locator('.notif-item-titulo').textContent(),'Dictamen de expediente: Autorizado condicionado');
+      assert.equal(await dictamen.locator('.notif-item-msg').first().textContent(),'Hola: María López, te compartimos el dictamen de expediente de tu listado con dirección:');
+      assert.equal(await dictamen.locator('.notif-item-direccion').textContent(),'Av. Reforma 123, Ciudad de México');
+      assert.equal(await dictamen.locator('.notif-item-folio').textContent(),'Ver dictámenes');
       const overlay=await page.locator('#notif-backdrop').evaluate(el=>({bg:getComputedStyle(el).backgroundColor,z:getComputedStyle(el).zIndex}));
       assert.deepEqual(overlay,{bg:'rgba(0, 0, 0, 0.28)',z:'210'});
       await page.clock.runFor(300);

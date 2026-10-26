@@ -7,11 +7,17 @@ const { esReciente, cargarHistorial, datosDictamen } = require('../assets/js/not
 test('dictámenes: recuperar asesor, estatus, dirección y folio del historial sin perder puntuación', () => {
   for (const estatus of ['Devuelto', 'Autorizado condicionado', 'Autorizado para promoción']) {
     const n = { tipo: 'dictamen', titulo: `${estatus}: Av. Juárez 12: interior 3`, mensaje: 'Expediente de Lic. María López. Folio D-2026-001.' };
-    assert.deepEqual(datosDictamen(n), { asesor: 'Lic. María López', estatus, direccion: 'Av. Juárez 12: interior 3', folio: 'D-2026-001' });
+    assert.deepEqual(datosDictamen(n), { asesor: 'Lic. María López', estatus: estatus === 'Autorizado para promoción' ? 'Autorizado' : estatus, direccion: 'Av. Juárez 12: interior 3', folio: 'D-2026-001' });
   }
   assert.equal(datosDictamen({ tipo: 'ticket', titulo: 'Devuelto: Otro aviso', mensaje: 'Expediente de Ana. Folio 1.' }), null);
   assert.equal(datosDictamen({ tipo: 'dictamen', titulo: 'Dictamen actualizado', mensaje: 'Revisa los cambios' }), null);
   assert.equal(datosDictamen({ tipo: 'dictamen' }), null);
+});
+
+test('dictámenes: aviso nuevo conserva asunto, asesor y dirección del correo', () => {
+  assert.deepEqual(datosDictamen({tipo: 'dictamen', titulo: 'Dictamen de expediente: Autorizado',
+    mensaje: 'Hola: María López, te compartimos el dictamen de expediente de tu listado con dirección:\n\nAv. Juárez 12: interior 3'}),
+  {asesor: 'María López', estatus: 'Autorizado', direccion: 'Av. Juárez 12: interior 3', folio: ''});
 });
 
 test('notificaciones: el límite de 24 horas y la lectura no borran el historial', () => {
