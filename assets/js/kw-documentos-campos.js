@@ -22,7 +22,7 @@
   function formatear(input){
     const anterior=input.value,pos=input.selectionStart??anterior.length,digitos=(anterior.slice(0,pos).match(/\d/g)||[]).length;
     const limpio=anterior.replace(/[^\d.]/g,''),partes=limpio.split('.');
-    input.value=partes[0].replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,',')+(partes.length>1?'.'+partes.slice(1).join('').slice(0,2):'');
+    input.value=partes[0].replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,',')+(partes.length>1?'.'+partes.slice(1).join('').slice(0,input.dataset.kwDecimales==='todos'?undefined:2):'');
     if(document.activeElement===input){let i=0,n=0;while(i<input.value.length&&n<digitos){if(/\d/.test(input.value[i]))n++;i++;}if(anterior[pos-1]==='.'&&input.value[i]==='.')i++;input.setSelectionRange(i,i);}
   }
   global.kwDocumentosCampos={divisas,estados,civiles,inmuebles,perfil,prellenar,formatear};

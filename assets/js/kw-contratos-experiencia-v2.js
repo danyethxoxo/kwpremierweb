@@ -59,8 +59,13 @@
   }
   function resaltar(){
    const paginas=Array.from(hojas.querySelectorAll('.page.kw-contrato-hoja')),arriba=hojas.getBoundingClientRect().top+30;
-   const indice=paginas.findIndex(p=>p.getBoundingClientRect().bottom>arriba);
-   Array.from(rail.children).forEach((b,i)=>{b.classList.toggle('activo',i===indice);if(i===indice)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+   let indice=paginas.findIndex(p=>p.getBoundingClientRect().bottom>arriba);
+   if(hojas.scrollHeight>hojas.clientHeight&&hojas.scrollTop+hojas.clientHeight>=hojas.scrollHeight-2)indice=paginas.length-1;
+   Array.from(rail.children).forEach((b,i)=>{
+    const cambio=i===indice&&!b.classList.contains('activo');
+    b.classList.toggle('activo',i===indice);if(i===indice)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+    if(cambio&&rail.clientHeight){const r=b.getBoundingClientRect(),marco=rail.getBoundingClientRect();if(r.top<marco.top||r.bottom>marco.bottom)rail.scrollTop+=r.top-marco.top-(rail.clientHeight-r.height)/2;}
+   });
   }
   let frame;hojas.addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;resaltar();});},{passive:true});document.addEventListener('kw-contrato-render',actualizar);actualizar();
  }
