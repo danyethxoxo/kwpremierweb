@@ -25,6 +25,62 @@ async function abrirGrupo(page, titulo) {
 }
 async function elegir(page,id,valor) {await page.locator('#'+id).selectOption(valor,{force:true});}
 
+test('PROFECO: divisas, detalles juridicos y fechas por partes se guardan y reabren',async()=>{
+  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{}), ctx=await contexto(browser);
+  try {
+    const page=await ctx.newPage({viewport:{width:1440,height:1000}}), errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    await page.goto('https://kw.local/documentos/contratos/profeco.html?nuevo=1');
+    await page.waitForSelector('#contrato-preview .kw-contrato-hoja');
+    assert.equal(await page.locator('#f-con-contraprestacion').inputValue(),'6');
+    for(const id of ['f-nec-precio-compra','f-nec-inversion']) {
+      await page.locator('#'+id).evaluate(el=>el.closest('details').open=true);
+      assert.equal(await page.locator('#'+id).locator('..').locator('span').textContent(),'$');
+      await page.locator('#'+id).fill('1000000.50');await elegir(page,id+'-divisa','DLS');
+    }
+    for(const [control,campo] of [['f-car-bodega-aplica','f-car-bodega'],['f-car-cuota-aplica','f-car-cuota'],['f-hip-gravamen','f-hip-acreedor'],['f-suc-aplica','f-suc-herederos'],['f-jui-proceso','f-jui-tipo']]) {
+      await page.locator('#'+control).evaluate(el=>el.closest('details').open=true);
+      assert.equal(await page.locator('#'+campo).isVisible(),false);
+      await elegir(page,control,'SI');assert.equal(await page.locator('#'+campo).isVisible(),true);
+      await page.locator('#'+campo).fill(campo.includes('car-')?'1000':'Prueba');
+      await elegir(page,control,'NO');assert.equal(await page.locator('#'+campo).isVisible(),false);
+      assert.equal(await page.locator('#'+campo).inputValue(),'');
+    }
+    await elegir(page,'f-car-cuota-aplica','SI');await page.locator('#f-car-cuota').fill('1500');await elegir(page,'f-car-cuota-divisa','DLS');
+    await page.locator('#f-con-fecha-dia').evaluate(el=>el.closest('details').open=true);
+    await elegir(page,'f-con-fecha-ano','2024');await elegir(page,'f-con-fecha-mes','02');await elegir(page,'f-con-fecha-dia','29');
+    assert.equal(await page.locator('#f-con-fecha').inputValue(),'2024-02-29');
+    await elegir(page,'f-con-fecha-ano','2025');assert.equal(await page.locator('#f-con-fecha').inputValue(),'');
+    assert.equal(await page.locator('#f-con-fecha-dia option[value="29"]').count(),0);
+    await elegir(page,'f-con-fecha-dia','28');
+    await abrirGrupo(page,'Contenido del contrato');
+    await elegir(page,'f-con-vig-inicio-ano','2026');await elegir(page,'f-con-vig-inicio-mes','10');await elegir(page,'f-con-vig-inicio-dia','27');
+    assert.equal(await page.locator('#f-con-vig-fin').inputValue(),'2027-04-26');
+    assert.equal(await page.locator('#f-con-vig-fin-dia').inputValue(),'26');
+    const mismaFila=await page.evaluate(()=>document.getElementById('f-con-precio').closest('.acuerdo-duo')===document.getElementById('f-con-divisa').closest('.acuerdo-duo'));
+    assert.ok(mismaFila);
+    await page.evaluate(()=>guardarComoNuevo('Profeco condiciones QA'));
+    const row=await page.evaluate(()=>window.qaRows.at(-1));
+    assert.equal(row.datos['f-con-fecha'],'2025-02-28');assert.equal(row.datos['f-nec-inversion-divisa'],'DLS');
+    assert.equal(row.datos['f-car-cuota'],'1500');assert.equal(row.datos['f-car-cuota-divisa'],'DLS');assert.equal(row.datos['f-hip-acreedor'],'');
+    await page.evaluate(row=>abrirDocumentoGuardado(row,false),row);await page.waitForTimeout(250);
+    assert.equal(await page.locator('#f-con-fecha-dia').inputValue(),'28');assert.equal(await page.locator('#f-con-fecha-mes').inputValue(),'02');
+    assert.equal(await page.locator('#f-nec-precio-compra-divisa').inputValue(),'DLS');
+    assert.ok((await page.locator('#contrato-raw').textContent()).includes('1,000,000.50 DLS'));
+    await page.evaluate(()=>bloquearFormulario(true));assert.equal(await page.locator('#f-con-fecha-dia').isDisabled(),true);
+    await page.evaluate(()=>bloquearFormulario(false));
+    await page.locator('#guardar-exito .guardar-exito-ok').click();
+    await abrirGrupo(page,'Generales');
+    for(const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000});
+      await page.locator('#f-con-fecha-dia').scrollIntoViewIfNeeded();
+      const desborde=await page.locator('.kw-fecha-partes').evaluateAll(cajas=>cajas.some(c=>c.scrollWidth>c.clientWidth+1));assert.equal(desborde,false);
+      await page.screenshot({path:path.join(output,'fechas-'+width+'.png')});
+    }
+    assert.deepEqual(errors,[]);
+  } finally {await ctx.close();await browser.close();}
+});
+
 test('PROFECO: identificacion, condiciones, comas y guardado conservan los datos',async()=>{
   const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
   const ctx=await contexto(browser);
