@@ -76,6 +76,14 @@ test('PROFECO: divisas, detalles juridicos y fechas por partes se guardan y reab
       await page.locator('#f-con-fecha-dia').scrollIntoViewIfNeeded();
       const desborde=await page.locator('.kw-fecha-partes').evaluateAll(cajas=>cajas.some(c=>c.scrollWidth>c.clientWidth+1));assert.equal(desborde,false);
       await page.screenshot({path:path.join(output,'fechas-'+width+'.png')});
+      await abrirGrupo(page,'Contenido del contrato');
+      await page.locator('#f-con-precio').scrollIntoViewIfNeeded();
+      const alineados=await page.evaluate(()=>{
+        const a=document.getElementById('f-con-precio').closest('.acuerdo-field').getBoundingClientRect();
+        const b=document.getElementById('f-con-divisa').closest('.acuerdo-field').getBoundingClientRect();
+        return Math.abs(a.top-b.top)<2 && b.left>a.left;
+      });assert.ok(alineados,'Precio y divisa en la misma fila a '+width);
+      await page.screenshot({path:path.join(output,'precio-fila-'+width+'.png')});
     }
     assert.deepEqual(errors,[]);
   } finally {await ctx.close();await browser.close();}
