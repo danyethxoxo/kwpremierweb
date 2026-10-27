@@ -1502,7 +1502,7 @@ function updatePreview() {
 
     <div class="doc-p" style="margin-top:10pt;">Leído que fue por las Partes el contenido del presente Contrato y sabedores de su alcance legal, lo aprueban y aceptan las condiciones expresadas, firmándolo por duplicado el día ${campo(fechaFirma, 'Fecha de firma')} en ${campo(ciudadFirma, 'Ciudad donde se firma')}, quedando obligado el Intermediario a entregar un tanto del Contrato y sus anexos originales firmados al Cliente.</div>
 
-    <div class="doc-salto"></div><div class="doc-firmas-wrap kw-hoja-firmas" data-kw-firmas="hoja" data-profeco-firmas="contrato">${firmasHTML}</div>
+    ${n + 3 > 6 ? '<div class="doc-salto"></div>' : ''}<div class="doc-firmas-wrap ${n + 3 > 6 ? 'kw-hoja-firmas' : 'profeco-firmas-c'}" data-kw-firmas="hoja" data-profeco-firmas="contrato">${firmasHTML}</div>
 
     <div class="doc-salto"></div>
     ${encabezado}
@@ -1533,8 +1533,8 @@ function updatePreview() {
     <div class="doc-p"><strong>F.</strong> Gestionar a través de mecanismos de Marketing, páginas web, revistas o cualquier otro mecanismo de Publicidad su inmueble para venta o renta según sea el caso.</div>
     <div class="doc-p" style="margin-top:24px;">Los datos personales que los responsables recaben no serán utilizados para ninguna actividad o finalidad distinta a la establecida en el aviso de privacidad. Usted podrá limitar el uso o divulgación de sus datos personales dirigiendo la solicitud correspondiente a nuestro Departamento de Datos Personales. Los requisitos para atender su solicitud serán los mismos que los señalados en el apartado &ldquo;Ejercicio de los Derechos ARCO&rdquo; del Aviso de Privacidad Integral. Para conocer más información sobre los términos, ejercicio de sus derechos ARCO, datos que recabamos, finalidades secundarias, terceros con quienes compartimos su información personal, forma en que podrá ejercer sus derechos ARCO y condiciones en que serán tratados sus datos personales al contratar un servicio puede consultar el Aviso de Privacidad Integral en la oficina del Proveedor.</div>
     <div class="doc-p" style="margin-top:28px;">Explicado el alcance del presente ANEXO, se firma el día ${campo(fechaFirma, 'Fecha de firma')} en ${campo(ciudadFirma, 'Ciudad donde se firma')}.</div>
-    <div class="doc-p" style="text-align:center;margin-top:10pt;"><strong>${varios ? 'ENTERADOS Y CONFORMES' : 'ENTERADO Y CONFORME'}</strong></div>
-    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="a">${filasDeFirmas(celdasCliente.map(c => c.replace('POR EL CLIENTE', 'POR EL TITULAR')))}</div>
+    <div class="profeco-bloque-firmas"><div class="doc-p" style="text-align:center;margin-top:10pt;"><strong>${varios ? 'ENTERADOS Y CONFORMES' : 'ENTERADO Y CONFORME'}</strong></div>
+    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="a">${filasDeFirmas(celdasCliente.map(c => c.replace('POR EL CLIENTE', 'POR EL TITULAR')))}</div></div>
 
     <div class="doc-salto"></div>
     ${encabezado}
@@ -1574,8 +1574,8 @@ function updatePreview() {
     <div class="doc-p">${documentacion}</div>
     </div>
 
-    <div class="doc-p" style="text-align:center;margin-top:14pt;"><strong>${varios ? 'NOMBRES Y FIRMAS DE LOS CLIENTES' : 'NOMBRE Y FIRMA DEL CLIENTE'}</strong></div>
-    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="b">${filasDeFirmas(celdasCliente)}</div>
+    <div class="profeco-bloque-firmas"><div class="doc-p" style="text-align:center;margin-top:14pt;"><strong>${varios ? 'NOMBRES Y FIRMAS DE LOS CLIENTES' : 'NOMBRE Y FIRMA DEL CLIENTE'}</strong></div>
+    <div class="doc-firmas-wrap profeco-firmas-anexo" data-kw-firmas="anexo" data-profeco-firmas="b">${filasDeFirmas(celdasCliente)}</div></div>
 
     <div class="doc-salto"></div>
     ${encabezado}
@@ -2242,7 +2242,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const selNumClientes = document.getElementById('f-num-clientes');
   if (selNumClientes) {
     let opts = '';
-    for (let i = 1; i <= 6; i++) opts += `<option value="${i}">${i}</option>`;
+    for (let i = 1; i <= 9; i++) opts += `<option value="${i}">${i}</option>`;
     selNumClientes.innerHTML = opts;
   }
   enBloque(() => {

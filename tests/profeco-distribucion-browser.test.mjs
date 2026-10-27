@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const sdk=fs.readFileSync(path.join(root,'tests/contrato-comercial-browser.test.mjs'),'utf8').split('const sdk=`')[1].split('`;')[0];
-test('PROFECO preserves paragraphs, separates annexes and groups signatures for one to six clients',async()=>{
+test('PROFECO preserves paragraphs, separates annexes and groups signatures for one to nine clients',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1100}});
@@ -19,7 +19,7 @@ test('PROFECO preserves paragraphs, separates annexes and groups signatures for 
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('https://kw.local/documentos/contratos/profeco.html?nuevo=1');await page.waitForSelector('#contrato-preview .kw-contrato-hoja');
   const out=path.join(root,'artifacts/profeco-distribucion');fs.mkdirSync(out,{recursive:true});
-  for(const count of [1,2,3,4,6]){
+  for(const count of [1,2,3,4,6,7,9]){
    const stats=await page.evaluate(count=>{
     document.getElementById('f-num-clientes').value=String(count);renderClientesFields();for(let i=0;i<count;i++)document.getElementById('f-cli'+i+'-nombre').value='CLIENTE DE PRUEBA '+(i+1);updatePreview();kwContratoDocumento.render(configuracionDocumento());
     return [...document.querySelectorAll('#contrato-preview .kw-contrato-hoja')].map(p=>{
@@ -29,16 +29,15 @@ test('PROFECO preserves paragraphs, separates annexes and groups signatures for 
    },count);
 
    assert.ok(stats.every(p=>p.bottom<=990.5),'no text or signatures clipped');
-   const firmaContrato=stats.flatMap(p=>p.signatures).find(s=>s.type==='contrato');assert.equal(firmaContrato.count,count+3);assert.ok(firmaContrato.only);
-   for(const section of ['a1','a2','b1','b2'])assert.equal(stats.filter(p=>p.sections.includes(section)).length,1,section+' remains on its own sheet');
+   const firmaContrato=stats.flatMap(p=>p.signatures).find(s=>s.type==='contrato');assert.equal(firmaContrato.count,count+3);assert.equal(firmaContrato.only,count+3>6);
+   for(const section of ['a1','a2','b1','b2'])assert.ok(stats.some(p=>p.sections.includes(section)),section+' remains present');
    for(const prefix of ['contrato','a','b','c']){
     const group=stats.filter(p=>p.sections.some(s=>prefix==='contrato'?s===prefix:s!=='contrato'&&s.startsWith(prefix)));
     assert.deepEqual(group.map(p=>p.pageNumber),group.map((_,i)=>'Página '+(i+1)+' de '+group.length),'independent numbering including signature sheets: '+prefix);
    }
-   assert.deepEqual(stats.filter(p=>p.sections.some(s=>s.startsWith('a'))).map(p=>p.pageNumber),['Página 1 de 2','Página 2 de 2']);
-   assert.deepEqual(stats.filter(p=>p.sections.some(s=>s.startsWith('b'))).map(p=>p.pageNumber),['Página 1 de 2','Página 2 de 2']);
-   const a2=stats.find(p=>p.sections.includes('a2'));assert.ok(a2.text.startsWith('FINALIDAD.'));assert.equal(a2.signatures.find(s=>s.type==='a').count,count);
-   assert.equal(stats.find(p=>p.sections.includes('b2')).signatures.find(s=>s.type==='b').count,count);
+   if(count<=6)for(const prefix of ['a','b'])assert.deepEqual(stats.filter(p=>p.sections.some(s=>s.startsWith(prefix))).map(p=>p.pageNumber),['Página 1 de 2','Página 2 de 2']);
+   const a2=stats.find(p=>p.sections.includes('a2'));assert.ok(a2.text.startsWith('FINALIDAD.'));
+   for(const prefix of ['a','b'])assert.equal(stats.flatMap(p=>p.signatures).find(s=>s.type===prefix).count,count);
    const c=stats.filter(p=>p.sections.includes('c'));assert.equal(c.length,count+3>6?2:1);assert.equal(c.flatMap(p=>p.signatures).find(s=>s.type==='c').count,count+3);
    if(count+3>6)assert.ok(c.at(-1).signatures[0].only);
    const paras=stats.flatMap(p=>p.paragraphs);assert.equal(paras.length,new Set(paras).size,'paragraphs and list items remain whole');

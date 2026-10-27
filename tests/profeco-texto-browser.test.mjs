@@ -8,7 +8,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const sdk=fs.readFileSync(path.join(root,'tests/contrato-comercial-browser.test.mjs'),'utf8').split('const sdk=`')[1].split('`;')[0];
 const out=path.join(root,'artifacts/profeco-texto');fs.mkdirSync(out,{recursive:true});
 
-test('PROFECO: texto completo, concordancia y firmas de uno a seis clientes; PDF real',async()=>{
+test('PROFECO: texto completo, concordancia y firmas de uno a nueve clientes; PDF real',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   const ctx=await browser.newContext({viewport:{width:1440,height:1100}});
@@ -31,11 +31,11 @@ test('PROFECO: texto completo, concordancia y firmas de uno a seis clientes; PDF
    };
   });
   const reports=[];
-  for(const count of [1,2,3,4,5,6]) {
+  for(const count of [1,2,3,4,5,6,7,8,9]) {
    const result=await page.evaluate(count=>{
     const input=(id,value)=>{document.getElementById(id).value=value;};
     limpiarFormulario();input('f-num-clientes',String(count));renderClientesFields();
-    const nombres=['Alberto Prueba Uno','Beatriz Prueba Dos','Carlos Prueba Tres','Diana Prueba Cuatro','Elena Prueba Cinco','Fernando Prueba Seis'].slice(0,count);
+    const nombres=['Alberto Prueba Uno','Beatriz Prueba Dos','Carlos Prueba Tres','Diana Prueba Cuatro','Elena Prueba Cinco','Fernando Prueba Seis','Gabriela Prueba Siete','Hector Prueba Ocho','Isabel Prueba Nueve'].slice(0,count);
     for(let i=0;i<count;i++) {
      const cli={nombre:nombres[i],rfc:'PRUEBA123456',curp:'PRUEBA123456789012',idtipo:i%2?'PASAPORTE':'INE',identidad:i%2?'Secretaría de Relaciones Exteriores (SRE)':'Instituto Nacional Electoral',idnum:'IDMEX1234567',domicilio:'San Francisco 25',tel:'5512345678',correo:'prueba@example.com',civil:'SOLTERO(A)'};
      for(const [key,value] of Object.entries(cli))input('f-cli'+i+'-'+key,value);
@@ -71,7 +71,7 @@ test('PROFECO: texto completo, concordancia y firmas de uno a seis clientes; PDF
    assert.match(result.all,count>1?/NOMBRES Y FIRMAS DE LOS CLIENTES/:/NOMBRE Y FIRMA DEL CLIENTE/);
    for(const palabra of count>1?['Estimados','ustedes','les informamos','brindarles','ofrecerles','pueden comunicarse','les enviamos']:['Estimado','usted','le informamos','brindarle','ofrecerle','puede comunicarse','le enviamos'])assert.ok(result.c.includes(palabra),palabra);
    assert.ok(result.pages.every(p=>p.bottom<=991&&!p.overflow),'Sin cortes ni desbordamiento: '+count);
-   if([1,2,6].includes(count)){
+   if([1,3,9].includes(count)){
     await page.evaluate(()=>{qaPdfScales=[];});
     const download=page.waitForEvent('download');await page.evaluate(()=>downloadPDF());await (await download).saveAs(path.join(out,'profeco-'+count+'-clientes.pdf'));
     const scales=await page.evaluate(()=>qaPdfScales);

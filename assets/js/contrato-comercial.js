@@ -98,7 +98,7 @@
   function programar() { clearTimeout(frame);frame=setTimeout(()=>{frame=0;paginar();},120); }
   function ampliarCampo(el) { if(el.tagName!=='TEXTAREA')return;el.style.height='0px';el.style.height=Math.max(42,el.scrollHeight+2)+'px'; }
   function pintarCampos() {
-    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes">'+Array.from({length:6},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
+    $('comercial-campos').innerHTML=window.kwComercialCampos.map(([titulo,lista],i)=>'<fieldset><legend>'+escapar(titulo)+'</legend>'+(i===1?'<div class="acuerdo-field"><label for="com-num-clientes">Número de clientes propietarios</label><select id="com-num-clientes" name="numero_clientes">'+Array.from({length:9},(_,n)=>'<option value="'+(n+1)+'">'+(n+1)+'</option>').join('')+'</select></div><div id="comercial-clientes"></div>':'<div class="acuerdo-duo kw-documentos-campos">'+lista.map(pintarCampo).join('')+'</div>')+'</fieldset>').join('');
     pintarClientes();window.kwUI.selects($('comercial-campos'));
     window.kwSelectBusqueda.preparar($('com-lugar_firma'));
   }
@@ -146,7 +146,7 @@
     if(row?.id&&marcar&&new URLSearchParams(location.search).get('doc')!==row.id){location.assign(location.pathname+'?doc='+encodeURIComponent(row.id));return;}
     actual=row;sucio=false;nombreDocumento=row?.nombre_archivo||row?.datos?.nombre||'';
     window.kwLogoEmpresa?.cargar(row?.datos,row?.estado==='finalizado',!row);
-    clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,6):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
+    clientesEnMemoria=Array.isArray(row?.datos?.clientes)&&row.datos.clientes.length?row.datos.clientes.slice(0,9):[Object.fromEntries(camposCliente.map(([id])=>[id,row?.datos?.[id]||'']))];
     numeroClientes=clientesEnMemoria.length;pintarClientes();
     asignar($('com-pais_notaria'),row?.datos?.pais_notaria??'México');actualizarEstado(row?.datos?.ciudad_notaria);
     for(const [id,,,respaldo] of campos)asignar($('com-'+id),row?.datos?.[id] ?? respaldo);
@@ -231,7 +231,7 @@
   $('com-pais-selector').addEventListener('change',()=>{$('com-pais_notaria').value=$('com-pais-selector').value==='México'?'México':'';sincronizarPais();actualizarEstado();sucio=true;programar();if(!$('com-pais_notaria').hidden)$('com-pais_notaria').focus();});
   $('com-num-clientes').addEventListener('change',()=>{
     leerClientes().forEach((cliente,i)=>clientesEnMemoria[i]=cliente);
-    numeroClientes=Math.max(1,Math.min(6,Number($('com-num-clientes').value)||1));
+    numeroClientes=Math.max(1,Math.min(9,Number($('com-num-clientes').value)||1));
     pintarClientes();botones();sucio=true;programar();
   });
   document.addEventListener('kw-logo-empresa-cambio',()=>{sucio=true;});
