@@ -97,26 +97,27 @@
         var rect = rango.getBoundingClientRect();
         if (!rect.width || !rect.height) continue;
         var fin = match.index + match[0].length;
-        // Dibujar cada línea del nodo como una unidad
-        // conserva los espacios reales de los nombres, no solo su posición.
-        {
-          var proxima;
-          while ((proxima = re.exec(original))) {
-            rango.setStart(nodo, proxima.index);
-            rango.setEnd(nodo, proxima.index + proxima[0].length);
-            var proximoRect = rango.getBoundingClientRect();
-            if (Math.abs(proximoRect.top - rect.top) > 1) {
-              re.lastIndex = proxima.index;
-              break;
+        // Anclar cada palabra a su posicion HTML evita acumular diferencias
+        // entre las metricas de Arial y Helvetica al llegar a una negrita.
+        var fragmentos = [];
+        if (rango.getClientRects().length > 1) {
+          // Un telefono con guiones o un identificador puede partirse entre
+          // lineas. Su caja conjunta no es el ancho real de ninguna linea.
+          var inicio = match.index, arriba = null;
+          for (var i = match.index; i < fin; i++) {
+            rango.setStart(nodo, i); rango.setEnd(nodo, i + 1);
+            var letraRect = rango.getBoundingClientRect();
+            if (arriba !== null && Math.abs(letraRect.top - arriba) > 1) {
+              fragmentos.push({ inicio: inicio, fin: i }); inicio = i;
             }
-            fin = proxima.index + proxima[0].length;
+            arriba = letraRect.top;
           }
-          if (!proxima) re.lastIndex = original.length;
-          match[0] = original.slice(match.index, fin).replace(/\s+/g, ' ');
-          rango.setStart(nodo, match.index);
-          rango.setEnd(nodo, fin);
-          rect = rango.getBoundingClientRect();
-        }
+          fragmentos.push({ inicio: inicio, fin: fin });
+        } else fragmentos.push({ inicio: match.index, fin: fin });
+        for (var fragmento of fragmentos) {
+        rango.setStart(nodo, fragmento.inicio); rango.setEnd(nodo, fragmento.fin);
+        rect = rango.getBoundingClientRect();
+        var palabra = original.slice(fragmento.inicio, fragmento.fin);
         var r = relativo(rect, paginaRect, margen);
         var tamanoPx = numero(estilo.fontSize, 13.333);
         var c = color(estilo.color, [0, 0, 0]);
@@ -129,22 +130,23 @@
         }
         // Preservar el espacio en el flujo del PDF, incluso entre nodos inline.
         // Las coordenadas siguen viniendo del navegador; el blanco no altera el dibujo.
-        var siguiente = original.slice(fin);
+        var siguiente = original.slice(fragmento.fin);
         if (!siguiente) {
           var siguienteNodo = walker.nextNode();
           walker.currentNode = nodo;
           siguiente = siguienteNodo ? siguienteNodo.nodeValue || '' : '';
         }
-        var texto = match[0] + (/^\s/.test(siguiente) ? ' ' : '');
+        var texto = palabra + (/^\s/.test(siguiente) ? ' ' : '');
         // Arial (HTML) y Helvetica (PDF) no tienen idénticas métricas.
         // Ajustar cada palabra al ancho medido evita que invada el espacio siguiente.
-        var anchoPDF = pdf.getTextWidth(match[0]) + numero(estilo.letterSpacing, 0) * PX_MM * Math.max(0, match[0].length - 1);
+        var anchoPDF = pdf.getTextWidth(palabra) + numero(estilo.letterSpacing, 0) * PX_MM * Math.max(0, palabra.length - 1);
         var escala = anchoPDF > 0 ? r.w / anchoPDF : 1;
         pdf.text(texto, r.x, r.y + r.h * 0.82, { baseline: 'alphabetic', horizontalScale: escala });
         if ((estilo.textDecorationLine || '').indexOf('underline') !== -1) {
           pdf.setDrawColor(c[0], c[1], c[2]);
           pdf.setLineWidth(0.18);
           pdf.line(r.x, r.y + r.h * 0.93, r.x + r.w, r.y + r.h * 0.93);
+        }
         }
       }
     }
