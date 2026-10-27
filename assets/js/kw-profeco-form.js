@@ -38,6 +38,27 @@
   function clientes() {
     document.querySelectorAll('#clientes-fields select[id$="-idtipo"]').forEach(el => identificacion(el.id.match(/cli(\d+)/)[1], false));
   }
+  function colocarMenu(caja) {
+    const menu = caja.querySelector('.kw-select-menu');
+    if (!menu?.showPopover) return;
+    if (!caja.classList.contains('abierto')) { if (menu.matches(':popover-open')) menu.hidePopover(); return; }
+    if (!menu.matches(':popover-open')) menu.showPopover();
+    const r = caja.querySelector('.kw-select-btn').getBoundingClientRect();
+    const ancho = Math.min(r.width, innerWidth - 16);
+    const abajo = innerHeight - r.bottom - 12, arriba = r.top - 12;
+    const haciaArriba = abajo < Math.min(menu.scrollHeight, 300) && arriba > abajo;
+    menu.style.cssText = 'position:fixed;inset:auto;margin:0;bottom:auto;right:auto;transform:none;box-sizing:border-box;width:' + ancho + 'px;min-width:0;max-width:calc(100vw - 16px);max-height:' + Math.max(40, Math.min(300, haciaArriba ? arriba : abajo)) + 'px;left:' + Math.max(8, Math.min(r.left, innerWidth - ancho - 8)) + 'px;';
+    menu.style.top = (haciaArriba ? r.top - menu.offsetHeight - 6 : r.bottom + 6) + 'px';
+  }
+  function menus() {
+    document.querySelectorAll('#acuerdos-form-col .kw-select:not([data-profeco-menu])').forEach(caja => {
+      caja.dataset.profecoMenu = '1';
+      const menu = caja.querySelector('.kw-select-menu');
+      if (!menu?.showPopover) return;
+      menu.setAttribute('popover', 'manual');
+      new MutationObserver(() => colocarMenu(caja)).observe(caja, {attributes:true, attributeFilter:['class']});
+    });
+  }
   function formatear(el) { el.dataset.kwDecimales = 'todos'; global.kwDocumentosCampos.formatear(el); }
   function refrescar() {
     document.querySelectorAll('#acuerdos-form-col [data-kw-miles]').forEach(el => {
@@ -45,6 +66,7 @@
     });
     actualizarCondicionales();
     clientes();
+    menus();
   }
   function leer(el) {
     if (!el || el.closest('.acuerdo-field[hidden]')) return '';
@@ -52,6 +74,7 @@
   }
   function prepararDatos(original) {
     const datos = {...original};
+    if (!datos['f-con-divisa']) datos['f-con-divisa'] = 'MXN';
     ['niveles', 'pisos', 'viviendas', 'recamaras', 'estacionamientos'].forEach(nombre => {
       const id = 'f-car-' + nombre, el = porId(id), valor = String(datos[id] ?? '');
       // Conservar textos de borradores que antes permitian captura libre.
@@ -82,12 +105,13 @@
       if (!cuerpo || !titulo || cuerpo.querySelector('[data-contraer-grupo]')) return;
       if (!cuerpo.id) cuerpo.id = 'profeco-apartado-' + i;
       const boton = document.createElement('button');
-      boton.type = 'button'; boton.className = 'btn-download btn-outline-red'; boton.dataset.contraerGrupo = '';
+      boton.type = 'button'; boton.className = 'kw-grupo-contraer'; boton.dataset.contraerGrupo = '';
       boton.setAttribute('aria-label', 'Contraer ' + titulo.textContent.trim());
       boton.setAttribute('title', 'Contraer apartado'); boton.setAttribute('aria-controls', cuerpo.id);
       boton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
       boton.onclick = () => { grupo.open = false; titulo.focus({preventScroll: true}); titulo.scrollIntoView({block: 'nearest'}); };
-      cuerpo.appendChild(boton);
+      const cierre = document.createElement('div'); cierre.className = 'kw-grupo-cierre';
+      cierre.appendChild(boton); cuerpo.appendChild(cierre);
     });
     refrescar();
   }
@@ -102,7 +126,9 @@
     if (cliente) identificacion(cliente[1], true);
     actualizarCondicionales(e.target);
   }, true);
-  global.kwProfecoForm = {refrescar, clientes, leer, prepararDatos};
+  document.addEventListener('scroll', e => { if (!e.target.closest?.('.kw-select-menu')) document.querySelectorAll('#acuerdos-form-col .kw-select.abierto').forEach(colocarMenu); }, true);
+  global.addEventListener('resize', () => document.querySelectorAll('#acuerdos-form-col .kw-select.abierto').forEach(colocarMenu));
+  global.kwProfecoForm = {refrescar, clientes, leer, prepararDatos, menus};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
   else iniciar();
 })(window);

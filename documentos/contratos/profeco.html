@@ -98,11 +98,11 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261015renta">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261015shell">
-<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261022compacto">
+<link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261027controles">
 <script defer src="/assets/js/kw-pdf-vector.js?v=20261016carga"></script>
 <script src="/assets/js/kw-documentos-shell.js?v=20261022campos"></script>
 <script src="/assets/js/kw-documentos-campos.js?v=20261027profeco"></script>
-<script src="/assets/js/kw-profeco-form.js?v=20261027campos"></script>
+<script src="/assets/js/kw-profeco-form.js?v=20261027correcciones"></script>
 <link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016profeco">
 <script src="/assets/js/kw-contrato-documento.js?v=20261021firmantes"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261027miniaturas">
@@ -208,7 +208,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       </div>
     </details>
     <details class="acuerdo-grupo">
-      <summary>Datos de KW Premier</summary>
+      <summary>Datos del profesional asignado</summary>
       <div class="acuerdo-grupo-cuerpo">
     <div class="acuerdo-field">
       <label>Nombre del agente</label>
@@ -724,8 +724,14 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
     </div>
     </div>
     <div class="acuerdo-field">
+      <label for="f-con-divisa">Divisa del inmueble</label>
+      <select id="f-con-divisa" onchange="updatePrecioLetra(); updatePreview();"><option value="MXN">MXN</option><option value="DLS">DLS</option></select>
+    </div>
+    <div class="acuerdo-field">
       <label>Precio aproximado de venta</label>
+      <div class="kw-importe"><span aria-hidden="true">$</span>
       <input type="text" inputmode="decimal" data-kw-miles id="f-con-precio" oninput="updatePrecioLetra(); updatePreview();" />
+      </div>
     </div>
     <div class="monto-letra-display" id="precio-letra-display" style="margin:-9px 0 14px;">El precio en letra aparecerá aquí automáticamente.</div>
     <div class="acuerdo-field">
@@ -954,12 +960,13 @@ function letrasEnteras(num) {
   return numeroALetra(n).replace(/ PESOS \d\d\/100 M\.N\.$/, '').replace(/ DE$/, '').trim();
 }
 
-function dinero(v) {
+function dinero(v, divisa = 'MXN') {
   const n = parseFloat(String(v).replace(/,/g, ''));
   if (isNaN(n)) return '';
   const cents = Math.round((n - Math.floor(n)) * 100);
   return '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    + ' M.N. (' + letrasEnteras(n) + ' ' + String(cents).padStart(2, '0') + '/100 PESOS MEXICANOS)';
+    + (divisa === 'DLS' ? ' DLS (' : ' M.N. (') + letrasEnteras(n) + ' ' + String(cents).padStart(2, '0')
+    + (divisa === 'DLS' ? '/100 DÓLARES ESTADOUNIDENSES)' : '/100 PESOS MEXICANOS)');
 }
 
 function letrasPorcentaje(n) {
@@ -1004,7 +1011,7 @@ function updatePrecioLetra() {
   if (!display) return;
   display.textContent = (!val || val <= 0)
     ? 'El precio en letra aparecerá aquí automáticamente.'
-    : '→ ' + dinero(val);
+    : '→ ' + dinero(val, gv('f-con-divisa') || 'MXN');
 }
 
 // Llenar el formulario de golpe (abrir un guardado, empezar uno nuevo)
@@ -1186,6 +1193,7 @@ function renderClientesFields() {
   // Los desplegables recién creados también toman el estilo del sitio
   // (kw-ui.js solo convierte los que ya estaban al cargar la página).
   if (window.kwUI) window.kwUI.selects(cont);
+  window.kwProfecoForm.menus();
 }
 
 function datosCliente(i) {
@@ -1262,7 +1270,7 @@ function updatePreview() {
   const folioRpp      = gv('f-inm-folio');
   const condominio    = gv('f-inm-condominio');
 
-  const precio        = dinero(gv('f-con-precio'));
+  const precio        = dinero(gv('f-con-precio'), gv('f-con-divisa') || 'MXN');
   const vigIni        = fechaMayus(gv('f-con-vig-inicio'));
   const vigFin        = fechaMayus(gv('f-con-vig-fin'));
   const exclusividad  = gv('f-con-exclusividad');
@@ -1429,7 +1437,7 @@ function updatePreview() {
 
     <div class="doc-p"><span class="doc-clausula-titulo">QUINTA. Contraprestación, forma y lugar de pago.</span> El Cliente deberá pagar al Intermediario, el ${campo(contrapresta, '% de contraprestación')} más I.V.A. sobre el precio en el que se realice la operación de compraventa del Inmueble, debiendo ser liquidado por el Cliente en un ${campo(pagoPrivado, '% a la firma del contrato privado')} el día de la firma del contrato privado de compraventa y el ${campo(pagoEscritura, '% a la firma de escrituras')} restante en la fecha de firma de la escritura pública correspondiente o a más tardar el día en que el Cliente y el comprador decidan que por el momento no escriturarán el Inmueble. Dicha contraprestación deberá ser pagada por el Cliente al Intermediario mediante transferencia bancaria a la cuenta del Intermediario número 6551035805-1, Clabe 014180655103580513, Banco Santander. El Intermediario se obliga a emitir por concepto de contraprestación económica del servicio prestado, la factura para el Cliente, misma que contendrá los requisitos que establece la legislación fiscal.</div>
     <div class="doc-p">La falta de pago de la contraprestación generará intereses moratorios a razón del 0.75% mensual o 9% anual por todo el tiempo que dure el incumplimiento.</div>
-    <div class="doc-p">El precio indicado será en Moneda Nacional. En caso de expresarse la operación en moneda extranjera, se estará al tipo de cambio que rija en el lugar y fecha en que se realice el pago, de conformidad con la legislación aplicable.</div>
+    <div class="doc-p">${gv('f-con-divisa') === 'DLS' ? 'El precio indicado está expresado en dólares estadounidenses.' : 'El precio indicado será en Moneda Nacional.'} En caso de expresarse la operación en moneda extranjera, se estará al tipo de cambio que rija en el lugar y fecha en que se realice el pago, de conformidad con la legislación aplicable.</div>
 
     <div class="doc-p"><span class="doc-clausula-titulo">SEXTA. Penas Convencionales.</span> Las Partes acuerdan que para en caso de incumplimiento de cualquiera de las obligaciones contraídas en el presente Contrato, la parte que incumpla deberá pagar a la otra una pena convencional equivalente al ${campo(pena, '% de pena convencional')} sobre la contraprestación pactada en la cláusula quinta del presente Contrato.</div>
 
@@ -1546,7 +1554,7 @@ function updatePreview() {
     <div class="doc-p">${et('¿Ha remodelado su propiedad?', gv('f-nec-remodelo'))} &nbsp; ${et('¿Cuánto invirtió?', gv('f-nec-inversion') ? dinero(gv('f-nec-inversion')) : '')}</div>
     <div class="doc-p">${et('¿Cuál es el motivo por el cual ha decidido vender?', gv('f-nec-motivo'))}</div>
     <div class="doc-p">${et('¿Cuánto tiempo lleva vendiendo su propiedad?', gv('f-nec-tiempo-venta'))}</div>
-    <div class="doc-p">${et('¿Qué precio desea obtener por su propiedad?', gv('f-con-precio') ? dinero(gv('f-con-precio')) : '')}</div>
+    <div class="doc-p">${et('¿Qué precio desea obtener por su propiedad?', gv('f-con-precio') ? dinero(gv('f-con-precio'), gv('f-con-divisa') || 'MXN') : '')}</div>
     <div class="doc-p">${et('¿Cuenta con planos arquitectónicos, estructurales o dictamen estructural?', gv('f-nec-planos'))}</div>
     <div class="doc-p">${et('¿Cuenta con Programa de Protección Civil?', gv('f-nec-proteccion'))}</div>
     <div class="doc-p">${et('¿Se encuentra al corriente en el pago de contribuciones, derechos y servicios? Agua', gv('f-nec-agua'))} &nbsp; ${et('Luz', gv('f-nec-luz'))} &nbsp; ${et('Predial', gv('f-nec-predial'))}</div>
@@ -1623,7 +1631,7 @@ const CAMPOS_GUARDABLES = [
   'f-doc-titulo', 'f-doc-poder', 'f-doc-planos', 'f-doc-mantenimiento',
   'f-doc-predial', 'f-doc-matrimonio', 'f-doc-alineamiento', 'f-doc-agua',
   'f-doc-regimen', 'f-doc-licencia-construccion', 'f-doc-otros',
-  'f-con-vig-inicio', 'f-con-vig-fin', 'f-con-precio', 'f-con-contraprestacion',
+  'f-con-vig-inicio', 'f-con-vig-fin', 'f-con-precio', 'f-con-divisa', 'f-con-contraprestacion',
   'f-con-pago-privado', 'f-con-pago-escrituras', 'f-con-pena',
   'f-con-exclusividad', 'f-con-mercadotecnia', 'f-con-publicidad'
 ];
@@ -1818,6 +1826,7 @@ function bloquearFormulario(bloquear) {
 // Valores con los que arranca un contrato nuevo: los que casi siempre
 // son los mismos, para no volver a escribirlos cada vez.
 const VALORES_INICIALES = {
+  'f-con-divisa': 'MXN',
   'f-num-clientes': '1',
   'f-car-area-libre-unidad': '%',
   'f-con-ciudad': 'CIUDAD DE MÉXICO',
