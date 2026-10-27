@@ -1,4 +1,4 @@
-﻿(function(global){
+(function(global){
   'use strict';
   const normalizar=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   function preparar(select){
@@ -17,7 +17,7 @@
       if(!caja.classList.contains('abierto'))return;
       const r=caja.getBoundingClientRect(),arriba=caja.classList.contains('hacia-arriba');
       const alto=Math.max(60,Math.min(274,arriba?r.top-14:innerHeight-r.bottom-14));
-      menu.style.width=Math.min(Math.max(r.width,280),innerWidth-24)+'px';
+      menu.style.width=Math.min(Math.max(r.width,Number(select.dataset.kwMenuAnchoMin)||280),innerWidth-24)+'px';
       menu.style.maxHeight=alto+'px';
       menu.style.left=Math.max(12,Math.min(r.left,innerWidth-menu.offsetWidth-12))+'px';
       menu.style.right='auto';menu.style.top=(arriba?Math.max(8,r.top-menu.offsetHeight-6):r.bottom+6)+'px';
@@ -30,7 +30,8 @@
     }
     function filtrar(){
       menu.querySelectorAll('.kw-select-opcion').forEach(op=>{
-        op.hidden=!normalizar(op.textContent).includes(normalizar(buscar.value));
+        const consulta=normalizar(buscar.value);
+        op.hidden=!normalizar(op.textContent).includes(consulta)&&!normalizar(select.options[Number(op.dataset.i)]?.value).includes(consulta);
         op.id=menu.id+'-'+op.dataset.i;op.classList.remove('resaltada');
       });
       buscar.removeAttribute('aria-activedescendant');

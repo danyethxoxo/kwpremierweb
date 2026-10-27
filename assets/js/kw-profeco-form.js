@@ -48,6 +48,7 @@
       const partes = ['Día', 'Mes', 'Año'].map((nombre, i) => {
         const select = document.createElement('select');
         select.id = input.id + ['-dia', '-mes', '-ano'][i];
+        select.dataset.kwMenuAnchoMin = '124';
         select.setAttribute('aria-label', nombre + ' de ' + etiqueta);
         select.add(new Option(nombre, ''));
         caja.appendChild(select); return select;
@@ -83,7 +84,9 @@
         descriptor.set.call(input, ano.value && mes.value && dia.value ? [ano.value,mes.value,dia.value].join('-') : '');
         input.dispatchEvent(new Event('change', {bubbles:true}));
       }));
-      input.after(caja); global.kwUI?.selects(caja); pintar(input.value);
+      input.after(caja); global.kwUI?.selects(caja);
+      partes.forEach(select => global.kwSelectBusqueda.preparar(select));
+      pintar(input.value);
     });
   }
   function identificacion(i, cambio) {

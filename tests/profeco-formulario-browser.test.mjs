@@ -48,14 +48,18 @@ test('PROFECO: divisas, detalles juridicos y fechas por partes se guardan y reab
     }
     await elegir(page,'f-car-cuota-aplica','SI');await page.locator('#f-car-cuota').fill('1500');await elegir(page,'f-car-cuota-divisa','DLS');
     await page.locator('#f-con-fecha-dia').evaluate(el=>el.closest('details').open=true);
-    await elegir(page,'f-con-fecha-ano','2024');await elegir(page,'f-con-fecha-mes','02');await elegir(page,'f-con-fecha-dia','29');
+    const buscarFecha=async(parte,texto)=>{
+      const campo=page.locator('#f-con-fecha-'+parte).locator('..').locator('.kw-select-busqueda');
+      await campo.fill(texto);await campo.press('Enter');
+    };
+    await buscarFecha('ano','2024');await buscarFecha('mes','feb');await buscarFecha('dia','29');
     assert.equal(await page.locator('#f-con-fecha').inputValue(),'2024-02-29');
     await elegir(page,'f-con-fecha-ano','2025');assert.equal(await page.locator('#f-con-fecha').inputValue(),'');
     assert.equal(await page.locator('#f-con-fecha-dia option[value="29"]').count(),0);
     await elegir(page,'f-con-fecha-dia','28');
     assert.equal(await page.locator('[data-profeco-fecha-partes] > .kw-select').count(),12);
     assert.equal(await page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-valor').textContent(),'Febrero');
-    await page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-btn').click();
+    await page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-busqueda').click();
     const meses=page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-menu');
     assert.ok(await meses.evaluate(el=>el.matches(':popover-open')));
     await meses.getByText('Marzo',{exact:true}).click();
