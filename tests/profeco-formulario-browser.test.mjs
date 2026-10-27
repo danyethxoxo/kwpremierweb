@@ -53,6 +53,14 @@ test('PROFECO: divisas, detalles juridicos y fechas por partes se guardan y reab
     await elegir(page,'f-con-fecha-ano','2025');assert.equal(await page.locator('#f-con-fecha').inputValue(),'');
     assert.equal(await page.locator('#f-con-fecha-dia option[value="29"]').count(),0);
     await elegir(page,'f-con-fecha-dia','28');
+    assert.equal(await page.locator('[data-profeco-fecha-partes] > .kw-select').count(),12);
+    assert.equal(await page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-valor').textContent(),'Febrero');
+    await page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-btn').click();
+    const meses=page.locator('#f-con-fecha-mes').locator('..').locator('.kw-select-menu');
+    assert.ok(await meses.evaluate(el=>el.matches(':popover-open')));
+    await meses.getByText('Marzo',{exact:true}).click();
+    assert.equal(await page.locator('#f-con-fecha').inputValue(),'2025-03-28');
+    await elegir(page,'f-con-fecha-mes','02');
     await abrirGrupo(page,'Contenido del contrato');
     await elegir(page,'f-con-vig-inicio-ano','2026');await elegir(page,'f-con-vig-inicio-mes','10');await elegir(page,'f-con-vig-inicio-dia','27');
     assert.equal(await page.locator('#f-con-vig-fin').inputValue(),'2027-04-26');

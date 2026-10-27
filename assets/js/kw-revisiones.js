@@ -179,33 +179,11 @@
         es_actual: true
       };
       if (typeof adaptador.iniciarEdicion === 'function') {
-        var numeroSiguiente = (Number(original.data.revision) || 0) + 1;
-        if (original.data.folio) {
-          var consultaRevisiones = global.kwSupabase
-            .from('documentos_guardados')
-            .select('revision')
-            .eq('folio', original.data.folio);
-          if (original.data.tipo_documento) {
-            consultaRevisiones = consultaRevisiones.eq('tipo_documento', original.data.tipo_documento);
-          }
-          var filasRevisiones = await consultaRevisiones;
-          if (!filasRevisiones.error && Array.isArray(filasRevisiones.data)) {
-            var mayorRevision = filasRevisiones.data.reduce(function (mayor, fila) {
-              return Math.max(mayor, Number(fila.revision) || 0);
-            }, 0);
-            numeroSiguiente = Math.max(numeroSiguiente, mayorRevision + 1);
-          }
-        }
-        adaptador.iniciarEdicion(numeroSiguiente, documentoEdicionOriginal);
+        // La version seleccionada se conserva hasta que Guardar cree la revision.
+        adaptador.iniciarEdicion(Number(original.data.revision) || 0, documentoEdicionOriginal);
         return;
       }
-      var respuesta = await global.kwSupabase.rpc('crear_revision_documento', {
-        p_id: documentoId
-      });
-      if (respuesta.error) throw respuesta.error;
-      viendoHistorica = false;
-      adaptador.revisionCreada(Number(respuesta.data) || 1);
-      refrescar();
+      throw new Error('No se pudo abrir el editor del documento. Recarga la página e inténtalo de nuevo.');
     } catch (err) {
       cerrar();
       if (global.kwUI && global.kwUI.alert) {

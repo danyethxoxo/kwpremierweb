@@ -48,7 +48,7 @@
       const partes = ['Día', 'Mes', 'Año'].map((nombre, i) => {
         const select = document.createElement('select');
         select.id = input.id + ['-dia', '-mes', '-ano'][i];
-        select.dataset.kwNo = ''; select.setAttribute('aria-label', nombre + ' de ' + etiqueta);
+        select.setAttribute('aria-label', nombre + ' de ' + etiqueta);
         select.add(new Option(nombre, ''));
         caja.appendChild(select); return select;
       });
@@ -62,19 +62,28 @@
         for (let d=1; d<=total; d++) dia.add(new Option(String(d), String(d).padStart(2,'0')));
         dia.value = Number(anterior) <= total ? anterior : '';
       }
+      let sincronizando = false;
+      function refrescarPartes() {
+        sincronizando = true;
+        try { partes.forEach(select => select.dispatchEvent(new Event('change', {bubbles:true}))); }
+        finally { sincronizando = false; }
+      }
       function pintar(valor) {
         const p = String(valor || '').split('-');
         if (p[0] && !Array.from(ano.options).some(op => op.value === p[0])) ano.add(new Option(p[0], p[0]));
         ano.value = p[0] || ''; mes.value = p[1] || ''; dias(); dia.value = p[2] || '';
+        refrescarPartes();
       }
       const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
       Object.defineProperty(input, 'value', {configurable:true, get() {return descriptor.get.call(this);}, set(valor) {descriptor.set.call(this, valor); pintar(valor);}});
       partes.forEach(select => select.addEventListener('change', () => {
+        if (sincronizando) return;
         dias();
+        refrescarPartes();
         descriptor.set.call(input, ano.value && mes.value && dia.value ? [ano.value,mes.value,dia.value].join('-') : '');
         input.dispatchEvent(new Event('change', {bubbles:true}));
       }));
-      input.after(caja); pintar(input.value);
+      input.after(caja); global.kwUI?.selects(caja); pintar(input.value);
     });
   }
   function identificacion(i, cambio) {
@@ -108,7 +117,7 @@
     if (!caja.classList.contains('abierto')) { if (menu.matches(':popover-open')) menu.hidePopover(); return; }
     if (!menu.matches(':popover-open')) menu.showPopover();
     const r = caja.querySelector('.kw-select-btn').getBoundingClientRect();
-    const ancho = Math.min(r.width, innerWidth - 16);
+    const ancho = Math.min(caja.closest('.kw-fecha-partes') ? Math.max(124, r.width) : r.width, innerWidth - 16);
     const abajo = innerHeight - r.bottom - 12, arriba = r.top - 12;
     const haciaArriba = abajo < Math.min(menu.scrollHeight, 300) && arriba > abajo;
     menu.style.cssText = 'position:fixed;inset:auto;margin:0;bottom:auto;right:auto;transform:none;box-sizing:border-box;width:' + ancho + 'px;min-width:0;max-width:calc(100vw - 16px);max-height:' + Math.max(40, Math.min(300, haciaArriba ? arriba : abajo)) + 'px;left:' + Math.max(8, Math.min(r.left, innerWidth - ancho - 8)) + 'px;';
