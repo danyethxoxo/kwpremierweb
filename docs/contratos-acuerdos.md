@@ -67,4 +67,6 @@ PROFECO pagina cada parrafo y punto de lista completo, con la misma excepcion pa
 
 La numeracion de PROFECO es independiente por contrato y por cada anexo (A, B y C). Cada grupo inicia en Pagina 1 y cuenta sus propias hojas de firmas, tanto en vista previa como en PDF.
 
+DECLARACIONES se centra y separa del texto anterior y posterior. Cada cliente de PROFECO tiene su propio bloque II, siempre en singular, con la identificacion numerada y los incisos a-e completos. El encabezado, la carta y las denominaciones conjuntas conservan su concordancia. Las lineas de firma de PROFECO ocupan el 80 % de su columna y permanecen centradas.
+
 Editar conserva el numero y los datos de la version seleccionada mientras abre los campos localmente. No escribe ni anticipa una revision nueva. Guardar crea la revision de forma atomica y recibe su numero del servidor; las siguientes guardadas actualizan ese borrador. Cancelar restaura la version seleccionada sin crear registros. Las fechas por partes de PROFECO usan los selectores compartidos de `kw-ui.js`, con sus valores ISO internos y menus flotantes.

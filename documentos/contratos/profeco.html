@@ -105,7 +105,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <link rel="stylesheet" href="/assets/css/kw-select-busqueda.css?v=20261016campo">
 <script src="/assets/js/kw-select-busqueda.js?v=20261027fecha"></script>
 <script src="/assets/js/kw-profeco-form.js?v=20261027buscarfecha"></script>
-<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261016profeco">
+<link rel="stylesheet" href="/assets/css/kw-contrato-documento.css?v=20261027declaraciones">
 <script src="/assets/js/kw-contrato-documento.js?v=20261021firmantes"></script>
 <link rel="stylesheet" href="/assets/css/kw-contratos-experiencia-v2.css?v=20261027miniaturas">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
@@ -1293,16 +1293,18 @@ function updatePreview() {
     + `correo electrónico ${campo(c.correo, 'Correo electrónico')}, `
     + `estado civil ${campo(c.civil, 'Estado civil')}`;
 
-  let declaracionA;
-  if (!varios) {
-    declaracionA = `<div class="doc-p"><strong>a.</strong> ${campo(clientes[0]?.nombre, 'Nombre completo del consumidor')} es una persona física mayor de edad, con `
-      + datosDe(clientes[0] || {})
-      + `, con capacidad jurídica suficiente para suscribir el presente Contrato.</div>`;
-  } else {
-    declaracionA = `<div class="doc-p"><strong>a.</strong> Cada uno de los Clientes es una persona física mayor de edad, con capacidad jurídica suficiente para suscribir el presente Contrato, con los datos siguientes:</div>`
-      + clientes.map((c, i) => `<div class="doc-p">${i + 1}. `
-          + `${campo(c.nombre, 'Nombre completo del consumidor')}, con ` + datosDe(c) + `.</div>`).join('');
-  }
+  const declaracionesClientes = clientes.map((c, i) => `
+    <div class="profeco-cliente-inicio" data-profeco-cliente="${i}">
+      <div class="doc-p"><strong>II. Declara el Cliente, bajo protesta de decir verdad, que:</strong></div>
+      <div class="doc-p"><strong>a.</strong> Es una persona física mayor de edad, con capacidad jurídica suficiente para suscribir el presente Contrato, con los datos siguientes:</div>
+      <div class="doc-p">${i + 1}. ${campo(c.nombre, 'Nombre completo del consumidor')}, con ${datosDe(c)}.</div>
+    </div>
+    <div class="doc-p"><strong>b.</strong> Es legítimo propietario del inmueble ubicado en ${campo(dir, 'Dirección del inmueble')}, acreditándolo con la escritura pública número ${campo(escritura, 'Número de escritura')}, de fecha ${campo(escrituraFec, 'Fecha de la escritura')}, otorgada ante la fe del Licenciado ${campo(notario, 'Notario')}, Notario Público número ${campo(notarioNum, 'Número de notario')} ${ciudadNotarial}, misma que se encuentra debidamente inscrita en el Registro Público de la Propiedad bajo el folio real número ${campo(folioRpp, 'Folio de inscripción en el RPP')} (en adelante el &ldquo;Inmueble&rdquo;).</div>
+    <div class="doc-p"><strong>c.</strong> Pone a disposición del Intermediario en copia simple la documentación que garantiza la legítima propiedad del Inmueble para la integración del expediente técnico. La entrega de documentos originales se hará únicamente al notario que formalice la operación de compraventa.</div>
+    <div class="doc-p"><strong>d.</strong> El Inmueble ${campo(condominio, 'SÍ / NO')} está sujeto a régimen de propiedad en condominio.</div>
+    <div class="doc-p"><strong>e.</strong> El Inmueble cuenta con las características e información que se mencionan en el Anexo B del presente Contrato.</div>
+
+  `).join('');
 
   // ── Anexo B: características, en el mismo acomodo del formato ──
   const fila = (a, b, c) => `<tr><td>${a}</td><td>${b}</td><td>${c}</td></tr>`;
@@ -1396,7 +1398,7 @@ function updatePreview() {
 
     <div class="doc-intro">CONTRATO DE ADHESIÓN DE PRESTACIÓN DE SERVICIOS DE INTERMEDIACIÓN PARA LA COMPRAVENTA DE INMUEBLES DESTINADOS A CASA HABITACIÓN, QUE CELEBRAN POR UNA PARTE LA SOCIEDAD DENOMINADA INMUEBLES VALLE PREMIUM, S.A.P.I. DE C.V., REPRESENTADA EN ESTE ACTO POR GUSTAVO SOLARES CAMPOS, LA CUAL OPERA CON EL NOMBRE COMERCIAL DE KW PREMIER, A QUIEN EN LO SUCESIVO SE LE DENOMINARÁ EL &ldquo;INTERMEDIARIO&rdquo; O EL &ldquo;PROVEEDOR&rdquo;, Y POR LA OTRA PARTE ${campo(nombresTxt, 'NOMBRE DEL CONSUMIDOR')}, ${varios ? 'A QUIENES EN LO SUCESIVO SE LES DENOMINARÁ CONJUNTAMENTE' : 'A QUIEN EN LO SUCESIVO SE LE DENOMINARÁ'} EL &ldquo;CLIENTE&rdquo; O EL &ldquo;CONSUMIDOR&rdquo; DE MANERA INDISTINTA, SUJETÁNDOSE A LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:</div>
 
-    <div class="doc-seccion">DECLARACIONES</div>
+    <div class="doc-seccion profeco-declaraciones-titulo">DECLARACIONES</div>
 
     <div class="doc-p"><strong>I. Declara el Intermediario, por conducto de su apoderado legal, que:</strong></div>
     <div class="doc-p"><strong>a.</strong> Es una persona moral constituida bajo las leyes de los Estados Unidos Mexicanos mediante escritura pública número 22,047 otorgada ante la fe del Licenciado Andrés Hoffmann Palomar, Notario Público número 122 del Estado de México el día 12 de diciembre de 2016, la cual se encuentra debidamente inscrita en el Registro Público de la Propiedad y del Comercio bajo el folio mercantil electrónico N-2016043173.</div>
@@ -1408,12 +1410,7 @@ function updatePreview() {
     <div class="doc-p"><strong>g.</strong> Su horario de atención es de lunes a viernes de 9:00 a 18:00 horas, y sábados de 10 a 13 horas (excepto días festivos), previa cita.</div>
     <div class="doc-p"><strong>h.</strong> Puso a disposición del Cliente la Carta de Derechos de los Consumidores y el Aviso de Privacidad Simplificado contenidos en el Anexo A del presente Contrato.</div>
 
-    <div class="doc-p"><strong>II. ${varios ? 'Declaran los Clientes' : 'Declara el Cliente'}, bajo protesta de decir verdad, que:</strong></div>
-    ${declaracionA}
-    <div class="doc-p"><strong>b.</strong> ${varios ? 'Son legítimos propietarios' : 'Es legítimo propietario'} del inmueble ubicado en ${campo(dir, 'Dirección del inmueble')}, acreditándolo con la escritura pública número ${campo(escritura, 'Número de escritura')}, de fecha ${campo(escrituraFec, 'Fecha de la escritura')}, otorgada ante la fe del Licenciado ${campo(notario, 'Notario')}, Notario Público número ${campo(notarioNum, 'Número de notario')} ${ciudadNotarial}, misma que se encuentra debidamente inscrita en el Registro Público de la Propiedad bajo el folio real número ${campo(folioRpp, 'Folio de inscripción en el RPP')} (en adelante el &ldquo;Inmueble&rdquo;).</div>
-    <div class="doc-p"><strong>c.</strong> ${varios ? 'Ponen' : 'Pone'} a disposición del Intermediario en copia simple la documentación que garantiza la legítima propiedad del Inmueble para la integración del expediente técnico. La entrega de documentos originales se hará únicamente al notario que formalice la operación de compraventa.</div>
-    <div class="doc-p"><strong>d.</strong> El Inmueble ${campo(condominio, 'SÍ / NO')} está sujeto a régimen de propiedad en condominio.</div>
-    <div class="doc-p"><strong>e.</strong> El Inmueble cuenta con las características e información que se mencionan en el Anexo B del presente Contrato.</div>
+    ${declaracionesClientes}
 
     <div class="doc-p"><strong>III.</strong> Declaran las Partes que es su voluntad celebrar el presente Contrato y obligarse al tenor de las siguientes:</div>
 

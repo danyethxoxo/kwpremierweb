@@ -56,7 +56,10 @@ test('PROFECO: texto completo, concordancia y firmas de uno a nueve clientes; PD
     return {nombres,all,header:raw.querySelector('.doc-intro').textContent,declaraciones:section('.doc-seccion','.doc-seccion'),a:section('[data-profeco-seccion="a1"]','[data-profeco-seccion="b1"]'),b:section('[data-profeco-seccion="b1"]','[data-profeco-seccion="c"]'),c:section('[data-profeco-seccion="c"]'),firmas,pages};
    },count);
    assert.ok(result.header.includes('POR LA OTRA PARTE Alberto'));
-   for(const [texto,re] of [['Declaración',count===1?/Declara el Cliente/:/Declaran los Clientes/],['Propiedad',count===1?/Es legítimo propietario/:/Son legítimos propietarios/],['Denominación',count===1?/A QUIEN EN LO SUCESIVO SE LE DENOMINARÁ/:/A QUIENES EN LO SUCESIVO SE LES DENOMINARÁ CONJUNTAMENTE/]])assert.match(result.all,re,texto);
+   for(const [texto,re] of [['Declaración',/Declara el Cliente/],['Propiedad',/Es legítimo propietario/],['Denominación',count===1?/A QUIEN EN LO SUCESIVO SE LE DENOMINARÁ/:/A QUIENES EN LO SUCESIVO SE LES DENOMINARÁ CONJUNTAMENTE/]])assert.match(result.all,re,texto);
+   assert.equal((result.declaraciones.match(/II\. Declara el Cliente/g)||[]).length,count);
+   for(const frase of ['a. Es una persona física mayor de edad','b. Es legítimo propietario','c. Pone a disposición del Intermediario','d. El Inmueble','e. El Inmueble'])assert.equal(result.declaraciones.split(frase).length-1,count,frase);
+   assert.doesNotMatch(result.declaraciones,/Declaran los Clientes|Son legítimos propietarios|Ponen a disposición/);
    for(const nombre of result.nombres)for(const key of ['header','declaraciones','a','b','c'])assert.ok(result[key].includes(nombre),count+' '+key+' '+nombre);
    assert.equal(result.firmas.length,4);
    for(const firma of result.firmas){assert.equal(firma.nombres.length,count);for(const nombre of result.nombres)assert.equal(firma.nombres.filter(text=>text.includes(nombre)).length,1,firma.tipo+' '+nombre);}

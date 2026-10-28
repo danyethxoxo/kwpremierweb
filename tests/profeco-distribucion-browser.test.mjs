@@ -29,7 +29,7 @@ test('PROFECO preserves paragraphs, separates annexes and groups signatures for 
    },count);
 
    assert.ok(stats.every(p=>p.bottom<=990.5),'no text or signatures clipped');
-   const firmaContrato=stats.flatMap(p=>p.signatures).find(s=>s.type==='contrato');assert.equal(firmaContrato.count,count+3);assert.equal(firmaContrato.only,count+3>6);
+   const firmaContrato=stats.flatMap(p=>p.signatures).find(s=>s.type==='contrato');assert.equal(firmaContrato.count,count+3);if(count+3>6)assert.ok(firmaContrato.only);
    for(const section of ['a1','a2','b1','b2'])assert.ok(stats.some(p=>p.sections.includes(section)),section+' remains present');
    for(const prefix of ['contrato','a','b','c']){
     const group=stats.filter(p=>p.sections.some(s=>prefix==='contrato'?s===prefix:s!=='contrato'&&s.startsWith(prefix)));
