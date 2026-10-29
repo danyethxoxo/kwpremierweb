@@ -520,6 +520,11 @@
   function colocarCampanaEnAcciones() {
     const campana = document.getElementById('notif-bell-slot');
     if (!campana) return;
+    const destino = document.querySelector('[data-notificaciones-header]');
+    if (destino) {
+      if (campana.parentElement !== destino) destino.appendChild(campana);
+      return;
+    }
     const sueltos = header && header.querySelector('.kw-header-sueltos');
     if (!accionesMq.matches) {
       if (sueltos) sueltos.appendChild(campana);

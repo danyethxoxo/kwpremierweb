@@ -58,6 +58,8 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(100);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));
    assert.equal(await page.locator('#notif-bell-slot').count(),1);
+   assert.equal(await page.locator('.dash-tools #notif-bell-slot').count(),1);
+   assert.ok(await page.locator('main.dashboard, .dash-scroll').evaluateAll(els=>els.every(el=>el.scrollHeight<=el.clientHeight+1)));
    assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
    assert.equal(await page.locator('.dash-tools svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
