@@ -23,396 +23,51 @@
      oscuro por tarjeta blanca sobre lienzo claro, y para eso tiene que
      leerse al final. -->
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<style>
-  /* Los colores y el fondo vienen de kw-claro.css, que se enlaza arriba.
-     Esta pagina traia una copia del fondo oscuro pegada a mano, y al ir
-     en un <style> le ganaba al del sistema: por eso se quito. */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    min-height: 100%;
-    font-family: 'Poppins', Arial, sans-serif;
-    color: var(--text);
-  }
-  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261019-notif-rojo) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
-  body { background: transparent; }
-  body { display: flex; flex-direction: column; min-height: 100vh; }
-  .header-socials { display: flex; align-items: center; gap: 8px; }
 
-  /* El header existe como ancla para el menu movil, la campana y Panel
-     Master, pero nunca vuelve a dibujar la capsula. Esta regla aplica
-     desde el primer render y evita el destello al recargar. */
-  body.portal-page > header.kw-header,
-  body.portal-page > header.kw-header.kw-header-partido,
-  body.portal-page > header.kw-header .kw-header-capsula {
-    background: none !important;
-    background-image: none !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-  body.portal-page > header.kw-header.kw-header-partido { padding: 0; }
-  body.portal-page > header.kw-header .kw-header-capsula {
-    padding: 0;
-    min-height: 44px;
-  }
-  body.portal-page #kw-buscar-toggle { display: none !important; }
-  body.portal-page > header.kw-header:not(.kw-buscando) { pointer-events: none; }
-  body.portal-page > header.kw-header .kw-header-sueltos,
-  body.portal-page > header.kw-header .kw-header-sueltos * ,
-  body.portal-page > header.kw-header #kw-drawer-toggle { pointer-events: auto; }
-  #btn-admin.btn-admin-header {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    color: var(--pastel-indigo-txt);
-    text-decoration: none;
-  }
-  .btn-admin-header svg { width: 18px; height: 18px; fill: none; }
-
-  /* ── CONTENIDO ── */
-  main {
-    flex: 1;
-    width: 100%;
-    max-width: 1320px;
-    margin: 0 auto;
-    padding: 18px clamp(24px, 4vw, 64px) 18px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-  /* El riel global empuja las páginas a la izquierda. El portal es un
-     tablero y conserva su composición centrada. */
-  html.kw-riel body.portal-page > main {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding: 18px clamp(24px, 4vw, 64px) 18px !important;
-  }
-  .welcome { width: 100%; text-align: center; margin: 0 auto 24px; }
-  .welcome-title {
-    font-size: clamp(24px, 2.4vw, 30px);
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.03em;
-    line-height: 1.15;
-  }
-
-  .cards-grid {
-    width: 100%;
-    max-width: 1240px;
-    margin: auto;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: stretch;
-    gap: 16px;
-  }
-  .cards-grid .hover-card {
-    flex: 0 1 calc(25% - 12px);
-    min-width: 220px;
-    min-height: 145px;
-    padding: 20px 20px 18px;
-    border-color: var(--tono);
-  }
-  .cards-grid .hover-card:hover { border-color: var(--tono); }
-  /* Las tarjetas pausadas conservan su HTML para poder recuperarlas, pero
-     el estilo del componente no debe volverlas a mostrar. */
-  .cards-grid .hover-card[hidden] { display: none !important; }
-  .cards-grid .hover-card-icon {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 12px;
-  }
-  .cards-grid .hover-card-icon svg { width: 22px; height: 22px; }
-  .cards-grid .hover-card-title { font-size: 16px; margin-bottom: 6px; }
-  .cards-grid .hover-card-desc { font-size: 12.5px; line-height: 1.4; padding-right: 34px; }
-  .cards-grid .hover-card-arrow { right: 16px; bottom: 16px; width: 30px; height: 30px; }
-
-  /* El rol decide si se agregan las dos tarjetas de Liderazgo. Mantenemos
-     el grupo fuera de vista hasta terminar esa única consulta para que no
-     aparezca primero una parte del portal y, segundos después, otra. */
-  .portal-page .cards-grid > .hover-card { animation: none; }
-  .portal-page .cards-grid:not(.portal-cards-ready) > .hover-card:not([hidden]) {
-    visibility: hidden;
-  }
-  .portal-page .cards-grid.portal-cards-ready > .hover-card:not([hidden]) {
-    animation: kw-aparece 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .portal-page .cards-grid.portal-cards-ready > .hover-card:not([hidden]) { animation: none; }
-  }
-
-  @media (max-width: 980px) {
-    .cards-grid .hover-card { flex-basis: calc(33.333% - 11px); }
-  }
-  footer { display: flex; justify-content: center; gap: 10px; padding: 12px 20px 16px; }
-  /* Blancos con su borde, no gris sobre gris: el gris de antes se
-     apoyaba en que atrás hubiera oscuro, y sobre el lienzo claro queda
-     casi del mismo tono que el fondo. */
-  .footer-social {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: #fff; color: var(--muted);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
-  }
-  .footer-social:hover {
-    background: var(--pastel-rojo); color: var(--red);
-    border-color: rgba(138,0,0,0.18);
-    transform: translateY(-2px); box-shadow: var(--sombra-1);
-  }
-  .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
-
-  @media (max-width: 640px) {
-    main { padding: 82px 14px 24px; justify-content: flex-start; }
-    html.kw-riel body.portal-page > main { padding: 82px 14px 24px !important; }
-    .welcome { margin-bottom: 14px; }
-    .cards-grid { gap: 10px; margin: 0 auto; }
-    .cards-grid .hover-card {
-      flex-basis: calc(50% - 5px);
-      min-width: 0;
-      min-height: auto;
-      padding: 14px 12px;
-    }
-    .cards-grid .hover-card-desc { padding-right: 0; }
-    .welcome-title { font-size: 21px; }
-
-  }
-</style>
+<link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261019-sin-sombra-filtros">
+<link rel="stylesheet" href="/assets/css/kw-inicio.css?v=20261029dashboard">
+<script src="/assets/js/kw-pagina-universal.js?v=20261019"></script>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
 </head>
-<body class="portal-page">
+<body class="portal-page kw-pagina-universal kw-universal-adaptada">
 
   <header class="kw-header" aria-label="Acciones del portal">
     <div class="header-socials" style="margin-left:auto;">
       <div id="notif-bell-slot"></div>
-      <a href="hub/admin.html?v=20260919f" id="btn-admin" class="btn-admin-header" style="display:none;"
-         title="Panel Master" aria-label="Panel Master">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-      </a>
     </div>
   </header>
 
-  <main>
-    <div class="welcome">
-      <h1 class="welcome-title">¿A dónde necesitas acceder?</h1>
+  <main class="kw-page kw-universal-principal dashboard">
+    <nav class="dash-tools" aria-label="Herramientas y accesos rápidos">
+      <a href="https://agent.kw.com" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>Command</a>
+      <a href="https://canva.kw.com" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>Canva</a>
+      <a href="https://www.kwmexico.mx/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>KW México</a>
+      <a href="https://kw-one.mx/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>KW ONE</a>
+      <a href="https://www.weetrust.mx/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>WeeTrust</a>
+      <a href="https://calendar.google.com/calendar/u/0?cid=a3dwcmVtaWVyQGt3bWV4aWNvLm14" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6"/></svg>Calendario</a>
+      <a href="/documentos/documentos.html" class="dash-tool-interno">Contratos</a><a href="/hub/firmas.html">Firmas</a><a href="/hub/drive.html">Drive</a>
+      <a href="/documentos/operatividad.html" id="card-operatividad" style="display:none">Operatividad</a><a href="/documentos/internos/index.html" id="card-liderazgo" style="display:none">Liderazgo</a><a href="/hub/admin.html" id="btn-admin" style="display:none">Panel Master</a>
+    </nav>
+    <div class="kw-page-encabezado kw-universal-encabezado kw-acciones-firmas">
+      <div><h1 class="kw-page-titulo" id="inicio-titulo">Inicio</h1><p class="dash-date" id="inicio-fecha"></p></div>
+      <div class="kw-page-acciones"></div>
     </div>
-
-    <div class="cards-grid" id="portal-cards" aria-busy="true">
-
-      <a href="hub/perfil-comprador.html" class="hover-card">
-        <div class="hover-card-icon icon-prospectos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M17 7h5M19.5 4.5v5"/></svg>
-        </div>
-        <div><div class="hover-card-title">Perfil comprador</div><div class="hover-card-desc">Guarda tus clientes y lo que buscan comprar o rentar</div></div>
-        <div class="hover-card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg></div>
-      </a>
-
-      <a href="propiedades.html" class="hover-card">
-        <div class="hover-card-icon icon-propiedades">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <circle cx="12" cy="11" r="2"/>
-            <path d="M12 13v4"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Propiedades</div>
-          <div class="hover-card-desc">Consulta y comparte el inventario de KW</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- Temporalmente fuera del portal; la página y su enlace directo siguen disponibles. -->
-      <a href="hub/prospectos.html" class="hover-card" hidden>
-        <div class="hover-card-icon icon-prospectos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M19 8v6M22 11h-6"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Prospectos</div>
-          <div class="hover-card-desc">Quienes dejaron sus datos en tu perfil</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <a href="hub/accesosdirectos.html" class="hover-card">
-        <div class="hover-card-icon icon-accesos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Accesos Directos</div>
-          <div class="hover-card-desc">Command, propiedades, Weetrust y más herramientas del equipo</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- Pausado por ahora: se conserva la página y su enlace directo. -->
-      <a href="hub/calendario.html" class="hover-card" hidden>
-        <div class="hover-card-icon icon-calendario">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Calendario KW Premier</div>
-          <div class="hover-card-desc">Consulta los eventos y aparta una sala de juntas</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <a href="hub/tickets.html" class="hover-card">
-        <div class="hover-card-icon icon-incidencias">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Reporta una Incidencia</div>
-          <div class="hover-card-desc">Levanta un ticket de soporte tecnológico</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <a href="documentos/documentos.html" class="hover-card">
-        <div class="hover-card-icon icon-documentos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Acuerdos y Contratos</div>
-          <div class="hover-card-desc">Genera y descarga tus documentos en segundos</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <a href="hub/firmas.html" class="hover-card">
-        <div class="hover-card-icon icon-firmas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 17c3.5 0 3.5-10 7-10s3.5 10 7 10c1.5 0 2.5-1 3-2"/>
-            <line x1="3" y1="21" x2="21" y2="21"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Firmas Digitales</div>
-          <div class="hover-card-desc">Manda documentos a firma y sigue quién ya firmó</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- La tarjeta la ven todos, no solo el liderazgo: el asesor entra
-           a ver qué le observaron de sus expedientes y a marcar lo que ya
-           corrigió. Adentro cada quien ve lo suyo. -->
-      <a href="hub/dictamenes.html" class="hover-card">
-        <div class="hover-card-icon icon-dictamenes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <polyline points="9 13 10.5 14.5 14 11"/>
-            <line x1="9" y1="18" x2="15" y2="18"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Dictaminación de Expedientes</div>
-          <div class="hover-card-desc">Revisión de expedientes y qué falta por corregir</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- Los archivos se listan dentro del sitio (hub/drive.html) y al
-           abrir uno se va a Drive. No se incrusta la carpeta en un iframe
-           porque está compartida persona por persona, no con liga
-           pública: el iframe necesitaría la cookie de Google del
-           visitante, que Safari y el modo incógnito bloquean por ser de
-           otro dominio, y acabaría enseñando "Necesitas acceso" a media
-           oficina. -->
-      <a href="hub/drive.html" class="hover-card">
-        <div class="hover-card-icon icon-drive">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Documentos de Drive</div>
-          <div class="hover-card-desc">Formatos, manuales y material del Market Center</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- Solo Liderazgo: el acceso se revela junto con el Panel Master. -->
-      <a href="documentos/operatividad.html" class="hover-card" id="card-operatividad" style="display:none;">
-        <div class="hover-card-icon icon-documentos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="4" y="3" width="16" height="18" rx="2"/>
-            <line x1="8" y1="8" x2="16" y2="8"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
-            <line x1="8" y1="16" x2="13" y2="16"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Operatividad</div>
-          <div class="hover-card-desc">Control y seguimiento de captaciones del Market Center</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
-      <!-- Oculta de entrada: solo se muestra para Liderazgo (admin,
-           master o staff), igual que el botón de Panel del header. -->
-      <a href="documentos/internos/index.html" class="hover-card" id="card-liderazgo" style="display:none;">
-        <div class="hover-card-icon icon-liderazgo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <div>
-          <div class="hover-card-title">Liderazgo</div>
-          <div class="hover-card-desc">Documentación exclusiva para Liderazgo</div>
-        </div>
-        <div class="hover-card-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-      </a>
-
+    <div class="dash-grid">
+      <section class="dash-widget dash-properties" aria-label="Propiedades nuevas">
+        <div class="dash-widget-head"><h2><span class="dash-widget-icon" data-icono="casa"></span><a href="/propiedades.html">Propiedades nuevas</a></h2><div class="dash-head-actions"><span class="dash-count" id="conteo-propiedades" aria-label="Registros mostrados"></span><button type="button" class="dash-refresh" data-actualizar="propiedades" aria-label="Actualizar propiedades nuevas" title="Actualizar" data-icono="actualizar"></button></div></div>
+        <div class="dash-scroll" id="inicio-propiedades" data-widget-lista aria-busy="true"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
+        <div class="dash-widget-foot"><a href="/propiedades.html">Ver todas las propiedades →</a></div>
+      </section>
+      <section class="dash-widget dash-dictamenes" aria-label="Tus dictámenes">
+        <div class="dash-widget-head"><h2><span class="dash-widget-icon" data-icono="dictamen"></span><a href="/hub/dictamenes.html">Tus dictámenes</a></h2><div class="dash-head-actions"><span class="dash-count" id="conteo-dictamenes" aria-label="Registros mostrados"></span><button type="button" class="dash-refresh" data-actualizar="dictamenes" aria-label="Actualizar tus dictámenes" title="Actualizar" data-icono="actualizar"></button></div></div>
+        <div class="dash-scroll dash-table-scroll" id="inicio-dictamenes" data-widget-lista aria-busy="true"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
+        <div class="dash-widget-foot"><a href="/hub/dictamenes.html">Ver mis dictámenes →</a></div>
+      </section>
+      <section class="dash-widget dash-buyers" aria-label="Perfil comprador">
+        <div class="dash-widget-head"><h2><span class="dash-widget-icon" data-icono="comprador"></span><a href="/hub/perfil-comprador.html">Perfil comprador</a></h2><div class="dash-head-actions"><span class="dash-count" id="conteo-compradores" aria-label="Registros mostrados"></span><a href="/hub/cliente-formulario.html" class="dash-create"><span data-icono="mas"></span>Crear perfil</a><button type="button" class="dash-refresh" data-actualizar="compradores" aria-label="Actualizar perfil comprador" title="Actualizar" data-icono="actualizar"></button></div></div>
+        <div class="dash-scroll" id="inicio-compradores" data-widget-lista aria-busy="true"><div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>
+        <div class="dash-widget-foot"><a href="/hub/perfil-comprador.html">Ver todos mis perfiles →</a></div>
+      </section>
     </div>
   </main>
 
@@ -428,48 +83,9 @@
     </a>
   </footer>
 
-<script>
-  // Muestra el botón de Panel si el rol del usuario es
-  // 'admin', 'master' o 'staff'.
-  async function mostrarTarjetaAdminSiAplica() {
-    try {
-      const { data: userData } = await (window.kwSession && window.kwSession.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
-      if (!userData || !userData.user) return;
 
-      const { data: perfil } = await (window.kwSession && window.kwSession.perfilInicial ? window.kwSession.perfilInicial(window.kwSupabase) : window.kwSupabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userData.user.id)
-        .single());
-      if (perfil && (perfil.role === 'admin' || perfil.role === 'master' || perfil.role === 'staff')) {
-        const btnAdmin = document.getElementById('btn-admin');
-        const cardLiderazgo = document.getElementById('card-liderazgo');
-        const cardOperatividad = document.getElementById('card-operatividad');
-        if (btnAdmin) btnAdmin.style.display = '';
-        if (cardLiderazgo) cardLiderazgo.style.display = '';
-        if (cardOperatividad) cardOperatividad.style.display = '';
-      }
-    } catch (e) {
-      // Si algo falla, la tarjeta exclusiva permanece oculta.
-    } finally {
-      const tarjetas = document.getElementById('portal-cards');
-      if (!tarjetas) return;
-      // El siguiente cuadro aplica una sola entrada compartida, ya con las
-      // tarjetas de Liderazgo visibles cuando correspondan.
-      requestAnimationFrame(function () {
-        tarjetas.classList.add('portal-cards-ready');
-        tarjetas.setAttribute('aria-busy', 'false');
-      });
-    }
-  }
-
-  if (document.documentElement.classList.contains('kw-auth-ok')) {
-    mostrarTarjetaAdminSiAplica();
-  } else {
-    window.addEventListener('kw-auth-ready', mostrarTarjetaAdminSiAplica, { once: true });
-  }
-</script>
 <script src="/assets/js/drawer.js?v=20261023puestos" data-menu="hub"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
+<script src="/assets/js/kw-inicio.js?v=20261029dashboard"></script>
 </body>
 </html>

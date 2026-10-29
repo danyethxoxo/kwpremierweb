@@ -1,0 +1,82 @@
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const iconos = {
+    casa:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+    dictamen:'<path d="M14 3H6v18h12V7zM14 3v5h4M9 14l2 2 4-4"/>',
+    comprador:'<circle cx="9" cy="8" r="4"/><path d="M2 21v-3a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v3M20 7v6M17 10h6"/>',
+    actualizar:'<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 2M18 18A8 8 0 0 1 5 16"/>',
+    flecha:'<path d="m9 5 7 7-7 7"/>',mas:'<path d="M12 5v14M5 12h14"/>'
+  };
+  const svg = nombre => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+iconos[nombre]+'</svg>';
+  function nodo(tag,clase,texto) { const el=document.createElement(tag);if(clase)el.className=clase;if(texto!=null)el.textContent=texto;return el; }
+  function urlImagen(valor) { try { const u=new URL(valor,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:''; }catch(e){return '';} }
+  function dinero(valor,moneda) { if(valor==null||!Number.isFinite(Number(valor)))return 'Precio a consultar';try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:moneda||'MXN',maximumFractionDigits:0}).format(Number(valor))+' '+(moneda||'MXN');}catch(e){return Number(valor).toLocaleString('es-MX')+' '+(moneda||'MXN');} }
+  function fecha(valor) { if(!valor)return '';const f=new Date(valor.length===10?valor+'T12:00:00':valor);return Number.isNaN(f.getTime())?'':f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); }
+  function vacio(caja,texto,enlace,etiqueta) { caja.replaceChildren();const el=nodo('div','dash-empty');el.append(nodo('p','',texto));if(enlace){const a=nodo('a','',etiqueta);a.href=enlace;el.append(a);}caja.append(el); }
+  let usuario;
+  async function cargar(clave,consulta,pintar) {
+    const caja=$('inicio-'+clave),boton=document.querySelector('[data-actualizar="'+clave+'"]');
+    if(caja.getAttribute('aria-busy')==='true'&&caja.dataset.solicitud)return;
+    caja.dataset.solicitud='si';caja.setAttribute('aria-busy','true');boton.disabled=true;
+    if(!caja.dataset.cargado)caja.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+    try { const r=await consulta();if(r.error)throw r.error;pintar(r.data||[],caja);$('conteo-'+clave).textContent=(r.data||[]).length;caja.dataset.cargado='si'; }
+    catch(e){vacio(caja,'No pudimos cargar esta información.');caja.firstChild.setAttribute('role','alert');const reintentar=nodo('button','dash-retry','Volver a intentar');reintentar.type='button';reintentar.onclick=()=>cargar(clave,consulta,pintar);caja.firstChild.append(reintentar);$('conteo-'+clave).textContent='';}
+    finally{caja.setAttribute('aria-busy','false');boton.disabled=false;delete caja.dataset.solicitud;}
+  }
+  function propiedades(filas,caja) {
+    caja.replaceChildren();if(!filas.length)return vacio(caja,'No hay propiedades disponibles.','/propiedades.html','Ver propiedades');
+    filas.forEach(p=>{
+      const a=nodo('a','dash-property');a.href='/propiedad.html?id='+encodeURIComponent(p.id);
+      const foto=urlImagen(p.miniatura_url||p.foto);
+      if(foto){const img=nodo('img','dash-photo');img.src=foto;img.alt='';img.loading='lazy';img.decoding='async';img.width=94;img.height=71;img.onerror=()=>{img.replaceWith(nodo('span','dash-photo dash-photo-empty','Sin foto'));};a.append(img);}
+      else a.append(nodo('span','dash-photo dash-photo-empty','Sin foto'));
+      const info=nodo('div');info.append(nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio,p.estado].filter(Boolean).join(', ')),nodo('span','dash-property-meta',[p.operacion==='renta'?'Renta':'Venta',p.tipo,fecha(p.created_at)].filter(Boolean).join(' · ')),nodo('span','dash-property-price',dinero(p.precio,p.moneda)));
+      const flecha=nodo('span','dash-chevron');flecha.innerHTML=svg('flecha');a.append(info,flecha);caja.append(a);
+    });
+  }
+  function etiqueta(estado,tipo) {
+    const dic={borrador:'Borrador',devuelta:'Devuelto',condicionada:'Autorizado condicionado',autorizada:'Aprobado'};
+    const comunes={pendiente:'Pendiente',corregir:'Corregir',aprobado:'Aprobado',sin_listado:'Sin listado',publicado:'Publicado',no_publicado:'No publicado',suspendido:'Suspendido'};
+    return (tipo==='dictamen'?dic[estado]:comunes[estado])||estado||'Pendiente';
+  }
+  function dictamenes(filas,caja) {
+    caja.replaceChildren();if(!filas.length)return vacio(caja,'Todavía no tienes dictámenes.','/hub/dictamenes.html','Ir a dictámenes');
+    const tabla=nodo('table','kw-universal-tabla dash-table');tabla.setAttribute('aria-label','Tus dictámenes');
+    const head=document.createElement('thead'),tr=document.createElement('tr');['Expediente','Dictamen','Marketing','Listado'].forEach(t=>{const th=nodo('th','',t);th.scope='col';tr.append(th);});head.append(tr);tabla.append(head);
+    const body=document.createElement('tbody');filas.forEach(d=>{
+      const row=document.createElement('tr'),td=document.createElement('td'),a=nodo('a','dash-record',d.inmueble||'Sin dirección');a.href='/hub/dictamenes.html';a.title=d.inmueble||'Abrir dictámenes';td.append(a,nodo('span','dash-record-meta',[d.folio||'Sin folio',Number(d.revision)>0?'Rev. '+d.revision:'',fecha(d.fecha_dictamen||d.updated_at)].filter(Boolean).join(' · ')));row.append(td);
+      [[d.estado,'dictamen'],[d.estatus_marketing,'marketing'],[d.estatus_listado,'listado']].forEach(([estado,tipo])=>{const celda=document.createElement('td');celda.append(nodo('span','dash-pill '+(['borrador','devuelta','condicionada','autorizada','pendiente','corregir','aprobado','publicado'].includes(estado)?estado:''),etiqueta(estado,tipo)));row.append(celda);});
+      row.addEventListener('click',e=>{if(!e.target.closest('a'))location.assign(a.href);});body.append(row);
+    });tabla.append(body);caja.append(tabla);
+  }
+  function compradores(filas,caja) {
+    caja.replaceChildren();if(!filas.length)return vacio(caja,'Crea tu primer perfil comprador.','/hub/cliente-formulario.html','Crear perfil');
+    filas.forEach(p=>{
+      const a=nodo('a','dash-buyer');a.href='/hub/cliente-formulario.html?id='+encodeURIComponent(p.id);
+      const iniciales=String(p.nombre||'Perfil').split(/\s+/).filter(Boolean).slice(0,2).map(t=>t[0]).join('').toLocaleUpperCase('es-MX');
+      const info=nodo('div','dash-buyer-body');info.append(nodo('strong','',p.nombre||'Perfil sin nombre'),nodo('small','',[p.operacion==='renta'?'Renta':'Compra',(p.tipos||[]).join(', '),p.precio_max!=null?'Hasta '+dinero(p.precio_max,p.moneda):''].filter(Boolean).join(' · ')));
+      a.append(nodo('span','dash-avatar',iniciales),info,nodo('span','dash-pill '+(p.activo?'activo':''),p.activo?'Activo':'Pausado'));caja.append(a);
+    });
+  }
+  async function iniciar() {
+    document.querySelectorAll('[data-icono]').forEach(el=>{el.innerHTML=svg(el.dataset.icono);});
+    $('inicio-fecha').textContent=new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+    const sb=window.kwSupabase;
+    try {
+      const r=await (window.kwSession?.usuarioInicial?window.kwSession.usuarioInicial(sb):sb.auth.getUser());if(r.error||!r.data?.user)throw new Error('Sin sesión');usuario=r.data.user;
+      const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,role').eq('id',usuario.id).single());
+      if(perfil.data?.nombre)$('inicio-titulo').textContent='Hola, '+perfil.data.nombre;
+      if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad'].forEach(id=>{$(id).style.display='';});
+    }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
+    const cargas={
+      propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
+      dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
+      compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores)
+    };
+    Object.entries(cargas).forEach(([clave,accion])=>{document.querySelector('[data-actualizar="'+clave+'"]').addEventListener('click',accion);});
+    await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
+  }
+  if(document.documentElement.classList.contains('kw-auth-ok'))iniciar();
+  else window.addEventListener('kw-auth-ready',iniciar,{once:true});
+})();
