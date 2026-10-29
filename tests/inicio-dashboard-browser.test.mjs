@@ -62,6 +62,8 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('.dash-property').count(),10);assert.equal(await page.locator('.dash-table tbody tr').count(),5);assert.equal(await page.locator('.dash-buyer').count(),4);
   assert.equal(await page.locator('.dash-property-link').first().getAttribute('href'),'https://qa.kw.com/es-419/property/Prueba/1000');
   assert.equal(await page.locator('.dash-operation').first().textContent(),'Renta');
+  assert.equal(await page.locator('.dash-property-owner > .dash-operation').count(),10);
+  assert.ok(await page.locator('.dash-property-owner').first().evaluate(el=>el.querySelector('.dash-operation').getBoundingClientRect().bottom<=el.querySelector('.dash-property-mc').getBoundingClientRect().top));
   assert.ok((await page.locator('.dash-property').first().textContent()).includes('KW Premier'));
   assert.ok((await page.locator('.dash-property').first().textContent()).includes('Asesor de prueba'));
   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.qaCopied=text;}}}));

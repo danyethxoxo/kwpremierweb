@@ -63,10 +63,10 @@
       if(foto){const img=nodo('img','dash-photo');img.src=foto;img.alt='';img.loading='lazy';img.decoding='async';img.width=94;img.height=71;img.onerror=()=>{img.replaceWith(nodo('span','dash-photo dash-photo-empty','Sin foto'));};a.append(img);}
       else a.append(nodo('span','dash-photo dash-photo-empty','Sin foto'));
       const info=nodo('div','dash-property-info'),precio=nodo('span','dash-property-price');
-      precio.append(nodo('span','dash-operation',p.operacion==='renta'?'Renta':p.operacion==='venta'?'Venta':'Por confirmar'),nodo('span','',dinero(p.precio,p.moneda)));
+      precio.append(nodo('span','',dinero(p.precio,p.moneda)));
       const mc=nodo('span','dash-property-meta',p.market_center||'MC no disponible'),asesor=nodo('span','dash-property-meta',p.asesor_nombre||'Asesor no disponible');mc.title=mc.textContent;asesor.title=asesor.textContent;
       info.append(precio,nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio].filter(Boolean).join(', ')));
-      const responsable=nodo('div','dash-property-owner');responsable.append(mc,asesor);
+      const responsable=nodo('div','dash-property-owner');mc.classList.add('dash-property-mc');responsable.append(nodo('span','dash-operation',p.operacion==='renta'?'Renta':p.operacion==='venta'?'Venta':'Por confirmar'),mc,asesor);
       const boton=nodo('button','dash-property-options');boton.type='button';boton.setAttribute('aria-label','Opciones de '+(p.titulo||'propiedad'));boton.setAttribute('aria-expanded','false');boton.setAttribute('aria-controls',menuPropiedad.id);boton.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';boton.onclick=()=>{if(botonMenu===boton&&menuPropiedad.matches(':popover-open'))cerrarMenu();else abrirMenu(boton,a.href,p.titulo||'Propiedad',p);};
       a.append(info,responsable);fila.append(a,boton);caja.append(fila);
     });
