@@ -50,6 +50,8 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('#inicio-fecha').count(),0);
   assert.equal(await page.locator('.dash-count,.dash-refresh').count(),0);
   assert.deepEqual(await page.locator('.dash-view-all').allTextContents(),['Ver todo','Ver todo','Ver todo']);
+  assert.equal(await page.locator('.dash-widget-head .dash-view-all').count(),3);
+  assert.equal(await page.locator('.dash-widget-foot').count(),0);
   assert.ok(await page.locator('.dash-view-all').evaluateAll(els=>els.every(el=>getComputedStyle(el).color==='rgb(255, 255, 255)'&&getComputedStyle(el).backgroundColor!=='rgba(0, 0, 0, 0)')));
   assert.equal(await page.locator('.dash-tools a[href*="weetrust"],.dash-tools a[href*="kwmexico.mx"]').count(),0);
   assert.ok(await page.locator('.dash-property-link').first().evaluate(el=>el.querySelector('.dash-property-owner').getBoundingClientRect().left>el.querySelector('.dash-property-info').getBoundingClientRect().left));
@@ -81,6 +83,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>el.scrollHeight>el.clientHeight));
    assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>Math.abs(el.clientHeight-el.firstElementChild.getBoundingClientRect().height*5)<2));
    assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+   assert.ok(await page.locator('.dash-widget-head').evaluateAll(heads=>heads.every(el=>{const t=el.querySelector('h2').getBoundingClientRect(),b=el.querySelector('.dash-view-all').getBoundingClientRect();return Math.abs(t.top+t.height/2-b.top-b.height/2)<2&&el.scrollWidth<=el.clientWidth+1;})));
    assert.equal(await page.locator('.dash-tools > a svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
    await page.locator('.dash-property-options').first().click();

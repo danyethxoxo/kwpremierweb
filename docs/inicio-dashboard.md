@@ -10,6 +10,6 @@
 
 Los filtros personales se mantienen tambien para administradores. Los accesos de liderazgo se muestran segun `profiles.role`; no se cambian permisos ni politicas. Las consultas son de solo lectura y cada widget tiene carga, vacio, error y reintento independientes.
 
-Los widgets no muestran contadores ni botones de actualizacion; se actualizan al recargar la pagina. Sus acciones inferiores usan botones solidos Ver todo. WeeTrust y KW Mexico no forman parte de la barra de herramientas de Inicio.
+Los widgets no muestran contadores ni botones de actualizacion; se actualizan al recargar la pagina. Los botones compactos Ver todo comparten la fila del titulo; Crear perfil conserva el signo mas centrado con su texto. El saludo y los accesos comparten el encabezado, con los accesos a la derecha. WeeTrust y KW Mexico no forman parte de la barra de herramientas de Inicio.
 
 La prueba `tests/inicio-dashboard-browser.test.mjs` cubre aislamiento por asesor, limite y orden de consultas, enlaces, roles, fallos parciales, reintentos y anchuras de 320 a 1440 px. Las capturas se guardan en `artifacts/inicio/`.
