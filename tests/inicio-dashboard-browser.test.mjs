@@ -66,6 +66,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    assert.equal(await page.locator('.dash-tools #notif-bell-slot').count(),1);
    assert.ok(await page.locator('main.dashboard').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
    assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>el.scrollHeight>el.clientHeight));
+   assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>Math.abs(el.clientHeight-el.firstElementChild.getBoundingClientRect().height*5)<2));
    assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
    assert.equal(await page.locator('.dash-tools > a svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
@@ -83,6 +84,8 @@ test('Inicio distingue estados vacios, errores parciales y reintentos sin perder
   const parcial=await abrir(browser,{error:'dictamenes',admin:true});
   assert.equal(await parcial.page.locator('#btn-admin svg').count(),1);
   assert.equal(await parcial.page.locator('#btn-admin').textContent(),'');
+  const estiloMaster=()=>parcial.page.locator('#btn-admin').evaluate(el=>{const s=getComputedStyle(el);return [s.color,s.backgroundColor,s.boxShadow,s.transform];});
+  const masterNormal=await estiloMaster();await parcial.page.locator('#btn-admin').hover();assert.deepEqual(await estiloMaster(),masterNormal);
   assert.equal(await parcial.page.locator('#inicio-dictamenes [role="alert"]').count(),1);assert.equal(await parcial.page.locator('.dash-property').count(),10);assert.equal(await parcial.page.locator('#card-liderazgo').isVisible(),true);
   for(const width of [1440,768,320]){
    await parcial.page.setViewportSize({width,height:1000});
