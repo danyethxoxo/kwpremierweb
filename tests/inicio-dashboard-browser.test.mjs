@@ -42,6 +42,11 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const {page,context,errors}=await abrir(browser);
+  assert.equal(await page.locator('#inicio-titulo').textContent(),'Hola Daniel, Welcome Home.');
+  assert.equal(await page.locator('#inicio-fecha').count(),0);
+  assert.ok(await page.evaluate(()=>{const d=document.querySelector('.dash-dictamenes').getBoundingClientRect(),c=document.querySelector('.dash-buyers').getBoundingClientRect();return Math.abs(c.top-d.bottom-18)<2;}));
+  await page.locator('#notif-bell-slot').evaluate(el=>{el.innerHTML='<button class="notif-bell-btn" aria-label="Notificaciones"><svg viewBox="0 0 24 24"></svg></button>';});
+  assert.equal(await page.locator('.notif-bell-btn').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.locator('#drawer').screenshot({path:path.join(out,'menu-lateral.png')});
   assert.equal(await page.locator('.dash-property').count(),10);assert.equal(await page.locator('.dash-table tbody tr').count(),5);assert.equal(await page.locator('.dash-buyer').count(),4);
   assert.equal(await page.locator('.dash-property').first().getAttribute('href'),'/propiedad.html?id=p-0');
@@ -59,9 +64,10 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));
    assert.equal(await page.locator('#notif-bell-slot').count(),1);
    assert.equal(await page.locator('.dash-tools #notif-bell-slot').count(),1);
-   assert.ok(await page.locator('main.dashboard, .dash-scroll').evaluateAll(els=>els.every(el=>el.scrollHeight<=el.clientHeight+1)));
+   assert.ok(await page.locator('main.dashboard').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
+   assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>el.scrollHeight>el.clientHeight));
    assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
-   assert.equal(await page.locator('.dash-tools svg').count(),0);
+   assert.equal(await page.locator('.dash-tools > a svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
    await page.screenshot({path:path.join(out,'inicio-'+width+'.png'),fullPage:width<1024});
   }
@@ -75,6 +81,8 @@ test('Inicio distingue estados vacios, errores parciales y reintentos sin perder
  try{
   const vacio=await abrir(browser,{vacio:true});assert.equal(await vacio.page.locator('.dash-empty').count(),3);assert.equal(await vacio.page.locator('.dash-create').count(),1);await vacio.context.close();
   const parcial=await abrir(browser,{error:'dictamenes',admin:true});
+  assert.equal(await parcial.page.locator('#btn-admin svg').count(),1);
+  assert.equal(await parcial.page.locator('#btn-admin').textContent(),'');
   assert.equal(await parcial.page.locator('#inicio-dictamenes [role="alert"]').count(),1);assert.equal(await parcial.page.locator('.dash-property').count(),10);assert.equal(await parcial.page.locator('#card-liderazgo').isVisible(),true);
   for(const width of [1440,768,320]){
    await parcial.page.setViewportSize({width,height:1000});

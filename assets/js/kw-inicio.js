@@ -61,12 +61,11 @@
   }
   async function iniciar() {
     document.querySelectorAll('[data-icono]').forEach(el=>{el.innerHTML=svg(el.dataset.icono);});
-    $('inicio-fecha').textContent=new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
     const sb=window.kwSupabase;
     try {
       const r=await (window.kwSession?.usuarioInicial?window.kwSession.usuarioInicial(sb):sb.auth.getUser());if(r.error||!r.data?.user)throw new Error('Sin sesión');usuario=r.data.user;
       const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,role').eq('id',usuario.id).single());
-      if(perfil.data?.nombre)$('inicio-titulo').textContent='Hola, '+perfil.data.nombre;
+      $('inicio-titulo').textContent='Hola '+(perfil.data?.nombre||'')+', Welcome Home.';
       if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad'].forEach(id=>{$(id).style.display='';});
     }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
     const cargas={
