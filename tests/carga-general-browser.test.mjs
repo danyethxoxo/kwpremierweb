@@ -36,7 +36,7 @@ window.supabase={createClient(){return {
 
 test('siete pantallas reutilizan usuario y perfil verificados sin peticiones extra, escritorio y móvil',async()=>{
   const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
-  const paginas=[['/portal.html','#portal-cards'],['/perfil.html','#perfil-nombre'],
+  const paginas=[['/portal.html','.dash-grid'],['/perfil.html','#perfil-nombre'],
     ['/hub/base-asesores.html','#bd-lista'],['/hub/firmas.html','#lista-envios'],
     ['/documentos/internos/gps.html','#lista'],['/hub/tickets.html','#inc-filas'],['/hub/resenas.html','tbody']];
   try {
