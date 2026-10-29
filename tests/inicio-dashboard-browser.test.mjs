@@ -18,10 +18,11 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  if(qaEmpty)return {data:[],error:null};
  let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,market_center:'KW Premier',asesor_nombre:'Asesor de prueba',enlace_kw:'https://kw.com/es-419/property/Prueba/'+(1000+i),titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
  table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
+ table==='firmas_documentos'?Array.from({length:6},(_,i)=>({id:'f-'+i,user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado'][i],firmantes:[{firmado:i===1},{firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
- for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
+ for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,value]of estado.desiguales||[])data=data.filter(row=>row[col]!==value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
  }).then(resolve);
-return(...args)=>{if(key==='eq'||key==='is')filtros.push(args);if(key==='order')orden.push(args);if(key==='select')estado.select=args[0];if(key==='limit')limite=args[0];if(key==='single')estado.single=true;return q;};}});return q;},
+return(...args)=>{if(key==='eq'||key==='is')filtros.push(args);if(key==='order')orden.push(args);if(key==='select')estado.select=args[0];if(key==='limit')limite=args[0];if(key==='single')estado.single=true;if(key==='neq')(estado.desiguales||=[]).push(args);return q;};}});return q;},
 rpc:async()=>({data:[],error:null}),channel(){return {on(){return this;},subscribe(){return this;},unsubscribe(){}};},removeChannel(){}};
 window.kwSession={usuarioInicial:async()=>({data:{user:usuario}}),perfilInicial:async()=>({data:perfil})};
 `;
@@ -49,10 +50,10 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.ok(await page.locator('.dash-create').evaluate(el=>{const i=el.querySelector('svg').getBoundingClientRect(),t=el.lastElementChild.getBoundingClientRect();return Math.abs(i.top+i.height/2-t.top-t.height/2)<1;}));
   assert.equal(await page.locator('#inicio-fecha').count(),0);
   assert.equal(await page.locator('.dash-count,.dash-refresh').count(),0);
-  assert.deepEqual(await page.locator('.dash-view-all').allTextContents(),['Ver todo','Ver todo','Ver todo']);
-  assert.equal(await page.locator('.dash-widget-head .dash-view-all').count(),3);
+  assert.deepEqual(await page.locator('.dash-view-all').allTextContents(),['Ver todo','Ver todo','Ver todo','Ver todo']);
+  assert.equal(await page.locator('.dash-widget-head .dash-view-all').count(),4);
   assert.equal(await page.locator('.dash-widget-foot').count(),0);
-  assert.ok(await page.locator('.dash-view-all').evaluateAll(els=>els.every(el=>getComputedStyle(el).color==='rgb(255, 255, 255)'&&getComputedStyle(el).backgroundColor!=='rgba(0, 0, 0, 0)')));
+  assert.ok(await page.locator('.dash-view-all').evaluateAll(els=>els.every(el=>getComputedStyle(el).color===getComputedStyle(el).borderTopColor&&getComputedStyle(el).borderTopWidth==='1px'&&getComputedStyle(el).backgroundColor==='rgb(255, 255, 255)')));
   assert.equal(await page.locator('.dash-tools a[href*="weetrust"],.dash-tools a[href*="kwmexico.mx"]').count(),0);
   assert.ok(await page.locator('.dash-property-link').first().evaluate(el=>el.querySelector('.dash-property-owner').getBoundingClientRect().left>el.querySelector('.dash-property-info').getBoundingClientRect().left));
   assert.ok(await page.evaluate(()=>{const d=document.querySelector('.dash-dictamenes').getBoundingClientRect(),c=document.querySelector('.dash-buyers').getBoundingClientRect();return Math.abs(c.top-d.bottom-18)<2;}));
@@ -76,6 +77,14 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   for(const c of calls){assert.ok(c.filtros.some(([col,v])=>col==='asesor_id'&&v==='self'));assert.equal(c.limite,10);}
   const props=await page.evaluate(()=>qaCalls.find(c=>c.table==='propiedades_inventario'));assert.equal(props.orden[0][0],'created_at');assert.equal(props.limite,10);
   assert.ok(!(await page.locator('main').textContent()).includes('Cliente ajeno'));
+  assert.equal(await page.locator('.dash-signature').count(),4);
+  assert.equal(await page.locator('.dash-firmas .dash-view-all').getAttribute('href'),'/hub/firmas.html');
+  assert.ok((await page.locator('.dash-signature').first().textContent()).includes('0 de 2 firmas'));
+  assert.ok((await page.locator('.dash-signature').nth(1).textContent()).includes('Firmado'));
+  assert.ok(!(await page.locator('#inicio-firmas').textContent()).includes('Documento ajeno'));
+  const firmaQuery=await page.evaluate(()=>qaCalls.find(c=>c.table==='firmas_documentos'));
+  assert.ok(firmaQuery.filtros.some(([k,v])=>k==='user_id'&&v==='self'));assert.equal(firmaQuery.limite,10);
+  assert.ok(firmaQuery.desiguales.some(([k,v])=>k==='estado'&&v==='eliminado'));
   for(const width of [1440,1024,768,390,320]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(100);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));
@@ -111,8 +120,9 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
 test('Inicio distingue estados vacios, errores parciales y reintentos sin perder los otros widgets',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
-  const vacio=await abrir(browser,{vacio:true});assert.equal(await vacio.page.locator('.dash-empty').count(),3);assert.equal(await vacio.page.locator('.dash-create').count(),1);await vacio.context.close();
+  const vacio=await abrir(browser,{vacio:true});assert.equal(await vacio.page.locator('.dash-empty').count(),4);assert.equal(await vacio.page.locator('.dash-create').count(),1);await vacio.context.close();
   const parcial=await abrir(browser,{error:'dictamenes',admin:true});
+  assert.ok(await parcial.page.evaluate(()=>qaCalls.find(c=>c.table==='firmas_documentos').filtros.some(([k,v])=>k==='user_id'&&v==='self')));
   assert.equal(await parcial.page.locator('#btn-admin svg').count(),1);
   assert.equal(await parcial.page.locator('#btn-admin').textContent(),'');
   const estiloMaster=()=>parcial.page.locator('#btn-admin').evaluate(el=>{const s=getComputedStyle(el);return [s.color,s.backgroundColor,s.boxShadow,s.transform];});
@@ -127,5 +137,11 @@ test('Inicio distingue estados vacios, errores parciales y reintentos sin perder
   assert.equal(await parcial.page.locator('.dash-tools a').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await parcial.page.evaluate(()=>qaFail='');await parcial.page.getByRole('button',{name:'Volver a intentar'}).click();await parcial.page.waitForSelector('.dash-table tbody tr');
   assert.equal(await parcial.page.locator('.dash-table tbody tr').count(),5);assert.deepEqual(parcial.errors,[]);await parcial.context.close();
+  const firmasError=await abrir(browser,{error:'firmas_documentos'});
+  assert.equal(await firmasError.page.locator('#inicio-firmas [role="alert"]').count(),1);
+  assert.equal(await firmasError.page.locator('.dash-property').count(),10);
+  await firmasError.page.evaluate(()=>qaFail='');await firmasError.page.getByRole('button',{name:'Volver a intentar'}).click();
+  await firmasError.page.waitForSelector('.dash-signature');assert.equal(await firmasError.page.locator('.dash-signature').count(),4);
+  await firmasError.context.close();
  }finally{await browser.close();}
 });

@@ -2,9 +2,10 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const iconos = {
-    casa:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
-    dictamen:'<path d="M14 3H6v18h12V7zM14 3v5h4M9 14l2 2 4-4"/>',
-    comprador:'<circle cx="9" cy="8" r="4"/><path d="M2 21v-3a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v3M20 7v6M17 10h6"/>',
+    casa:'<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 10h.01M15 10h.01"/>',
+    dictamen:'<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="m8 13 3 3 5-6"/>',
+    comprador:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M6 16a3 3 0 0 1 6 0M15 9h3M15 13h3"/>',
+    firma:'<path d="m14 5 3-3 5 5-3 3M14 5 5 14l-2 7 7-2 9-9M14 5l5 5M3 21h18"/>',
     actualizar:'<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 2M18 18A8 8 0 0 1 5 16"/>',
     flecha:'<path d="m9 5 7 7-7 7"/>',mas:'<path d="M12 5v14M5 12h14"/>'
   };
@@ -95,6 +96,18 @@
       a.append(nodo('span','dash-avatar',iniciales),info,nodo('span','dash-pill '+(p.activo?'activo':''),p.activo?'Activo':'Pausado'));caja.append(a);
     });
   }
+  function firmas(filas,caja) {
+    caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
+    const estados={preparando:'Preparando',borrador:'Borrador',pendiente:'Esperando firmas',completado:'Firmado',cancelado:'Cancelado',error:'Falló'};
+    filas.forEach(f=>{
+      const a=nodo('a','dash-signature');a.href='/hub/firmas.html';
+      const info=nodo('span','dash-signature-info');info.append(nodo('strong','',f.titulo||f.nombre_archivo||'Documento sin título'),nodo('small','',fecha(f.enviado_at||f.created_at)));
+      const firmantes=Array.isArray(f.firmantes)?f.firmantes:[],completas=firmantes.filter(x=>x.firmado).length;
+      const progreso=nodo('span','dash-signature-progress',firmantes.length?completas+' de '+firmantes.length+' firmas':'Sin firmantes');
+      const clase=f.estado==='completado'?'aprobado':f.estado==='pendiente'?'condicionada':f.estado==='error'?'devuelta':'';
+      a.append(info,progreso,nodo('span','dash-pill '+clase,estados[f.estado]||'Pendiente'));caja.append(a);
+    });
+  }
   async function iniciar() {
     document.querySelectorAll('[data-icono]').forEach(el=>{el.innerHTML=svg(el.dataset.icono);});
     const sb=window.kwSupabase;
@@ -109,7 +122,8 @@
     const cargas={
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
-      compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores)
+      compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores),
+      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,estado,firmantes,created_at,enviado_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),firmas)
     };
     await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
   }
