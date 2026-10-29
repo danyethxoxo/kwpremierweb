@@ -44,6 +44,9 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
  try{
   const {page,context,errors}=await abrir(browser);
   assert.equal(await page.locator('#inicio-titulo').textContent(),'Hola Daniel, Welcome Home.');
+  assert.ok(await page.evaluate(()=>{const t=document.querySelector('#inicio-titulo').getBoundingClientRect(),n=document.querySelector('.dash-tools').getBoundingClientRect();return t.right<n.left&&Math.abs((t.top+t.height/2)-(n.top+n.height/2))<2;}));
+  assert.equal(await page.locator('.dash-view-all').first().evaluate(el=>el.getBoundingClientRect().height),32);
+  assert.ok(await page.locator('.dash-create').evaluate(el=>{const i=el.querySelector('svg').getBoundingClientRect(),t=el.lastElementChild.getBoundingClientRect();return Math.abs(i.top+i.height/2-t.top-t.height/2)<1;}));
   assert.equal(await page.locator('#inicio-fecha').count(),0);
   assert.equal(await page.locator('.dash-count,.dash-refresh').count(),0);
   assert.deepEqual(await page.locator('.dash-view-all').allTextContents(),['Ver todo','Ver todo','Ver todo']);
