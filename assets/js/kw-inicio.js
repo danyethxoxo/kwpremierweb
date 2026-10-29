@@ -14,30 +14,43 @@
   function dinero(valor,moneda) { if(valor==null||!Number.isFinite(Number(valor)))return 'Precio a consultar';try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:moneda||'MXN',maximumFractionDigits:0}).format(Number(valor))+' '+(moneda||'MXN');}catch(e){return Number(valor).toLocaleString('es-MX')+' '+(moneda||'MXN');} }
   function fecha(valor) { if(!valor)return '';const f=new Date(valor.length===10?valor+'T12:00:00':valor);return Number.isNaN(f.getTime())?'':f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); }
   function vacio(caja,texto,enlace,etiqueta) { caja.replaceChildren();const el=nodo('div','dash-empty');el.append(nodo('p','',texto));if(enlace){const a=nodo('a','',etiqueta);a.href=enlace;el.append(a);}caja.append(el); }
-  let usuario,sitioAsesor;
+  let usuario,sitioAsesor,perfilAsesor,moduloFicha;
+  async function abrirFicha(propiedad,enlace){
+    if(!window.kwFichaPropiedad){
+      if(!moduloFicha)moduloFicha=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/js/kw-ficha-propiedad.js?v=20261021fichas-tipos-detalle';script.onload=()=>window.kwFichaPropiedad?resolve():reject(new Error('No se pudo preparar la ficha'));script.onerror=()=>reject(new Error('No se pudo preparar la ficha'));document.head.append(script);}).catch(e=>{moduloFicha=null;throw e;});
+      await moduloFicha;
+    }
+    const r=await window.kwSupabase.from('propiedades_inventario').select('*').eq('id',propiedad.id).single();if(r.error||!r.data)throw new Error('No se pudo cargar la propiedad');
+    const completa=r.data;
+    if(completa.fuente==='kwmexico'&&completa.fuente_id&&(completa.imagenes||[]).length<12&&window.kwSupabase.functions){
+      try{const fotos=await window.kwSupabase.functions.invoke('fotos-propiedad',{body:{fuente:'kwmexico',fuente_id:String(completa.fuente_id)}});if(!fotos.error&&Array.isArray(fotos.data?.imagenes))completa.imagenes=Array.from(new Set((completa.imagenes||[]).concat(fotos.data.imagenes)));}catch(e){/* La ficha conserva las fotos disponibles. */}
+    }
+    await window.kwFichaPropiedad.abrir({propiedad:completa,asesor:{...perfilAsesor,market_center:perfilAsesor?.market_center||'KW Premier'},url:enlace});
+  }
   const menuPropiedad=nodo('div','dash-property-menu');menuPropiedad.popover='auto';menuPropiedad.id='inicio-menu-propiedad';menuPropiedad.setAttribute('aria-label','Opciones de propiedad');document.body.append(menuPropiedad);
   let botonMenu;
   menuPropiedad.addEventListener('toggle',()=>{if(botonMenu)botonMenu.setAttribute('aria-expanded',String(menuPropiedad.matches(':popover-open')));});
   function cerrarMenu(){if(menuPropiedad.matches(':popover-open'))menuPropiedad.hidePopover();}
   window.addEventListener('resize',cerrarMenu);document.addEventListener('scroll',cerrarMenu,true);
   async function copiarEnlace(url){await navigator.clipboard.writeText(url);}
-  function abrirMenu(boton,enlace,titulo){
+  function abrirMenu(boton,enlace,titulo,propiedad){
     cerrarMenu();botonMenu=boton;menuPropiedad.replaceChildren();
     const abrir=nodo('a','','Abrir propiedad');abrir.href=enlace;abrir.target='_blank';abrir.rel='noopener noreferrer';abrir.onclick=cerrarMenu;
     const aviso=nodo('span','dash-menu-aviso');aviso.setAttribute('role','status');
     const copiar=nodo('button','','Copiar enlace');copiar.type='button';copiar.onclick=async()=>{try{await copiarEnlace(enlace);aviso.textContent='Enlace copiado';}catch(e){aviso.textContent='No se pudo copiar el enlace';}};
     const compartir=nodo('button','','Compartir propiedad');compartir.type='button';compartir.onclick=async()=>{try{if(navigator.share){await navigator.share({title:titulo,url:enlace});cerrarMenu();}else{await copiarEnlace(enlace);aviso.textContent='Enlace copiado';}}catch(e){if(e.name!=='AbortError')aviso.textContent='No se pudo compartir';}};
-    menuPropiedad.append(abrir,copiar,compartir,aviso);menuPropiedad.showPopover();
+    const ficha=nodo('button','','Descargar ficha técnica');ficha.type='button';ficha.onclick=async()=>{ficha.disabled=true;ficha.setAttribute('aria-busy','true');try{await abrirFicha(propiedad,enlace);cerrarMenu();}catch(e){aviso.textContent=e.message||'No se pudo preparar la ficha';}finally{ficha.disabled=false;ficha.removeAttribute('aria-busy');}};
+    menuPropiedad.append(abrir,copiar,compartir,ficha,aviso);menuPropiedad.showPopover();
     const r=boton.getBoundingClientRect();menuPropiedad.style.left=Math.max(8,Math.min(r.right-menuPropiedad.offsetWidth,innerWidth-menuPropiedad.offsetWidth-8))+'px';menuPropiedad.style.top=(r.bottom+menuPropiedad.offsetHeight+8>innerHeight?Math.max(8,r.top-menuPropiedad.offsetHeight-4):r.bottom+4)+'px';abrir.focus();
   }
   async function cargar(clave,consulta,pintar) {
-    const caja=$('inicio-'+clave),boton=document.querySelector('[data-actualizar="'+clave+'"]');
+    const caja=$('inicio-'+clave);
     if(caja.getAttribute('aria-busy')==='true'&&caja.dataset.solicitud)return;
-    caja.dataset.solicitud='si';caja.setAttribute('aria-busy','true');boton.disabled=true;
+    caja.dataset.solicitud='si';caja.setAttribute('aria-busy','true');
     if(!caja.dataset.cargado)caja.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
-    try { const r=await consulta();if(r.error)throw r.error;pintar(r.data||[],caja);$('conteo-'+clave).textContent=(r.data||[]).length;caja.dataset.cargado='si'; }
-    catch(e){vacio(caja,'No pudimos cargar esta información.');caja.firstChild.setAttribute('role','alert');const reintentar=nodo('button','dash-retry','Volver a intentar');reintentar.type='button';reintentar.onclick=()=>cargar(clave,consulta,pintar);caja.firstChild.append(reintentar);$('conteo-'+clave).textContent='';}
-    finally{caja.setAttribute('aria-busy','false');boton.disabled=false;delete caja.dataset.solicitud;}
+    try { const r=await consulta();if(r.error)throw r.error;pintar(r.data||[],caja);caja.dataset.cargado='si'; }
+    catch(e){vacio(caja,'No pudimos cargar esta información.');caja.firstChild.setAttribute('role','alert');const reintentar=nodo('button','dash-retry','Volver a intentar');reintentar.type='button';reintentar.onclick=()=>cargar(clave,consulta,pintar);caja.firstChild.append(reintentar);}
+    finally{caja.setAttribute('aria-busy','false');delete caja.dataset.solicitud;}
   }
   function propiedades(filas,caja) {
     cerrarMenu();
@@ -52,9 +65,10 @@
       const info=nodo('div','dash-property-info'),precio=nodo('span','dash-property-price');
       precio.append(nodo('span','dash-operation',p.operacion==='renta'?'Renta':p.operacion==='venta'?'Venta':'Por confirmar'),nodo('span','',dinero(p.precio,p.moneda)));
       const mc=nodo('span','dash-property-meta',p.market_center||'MC no disponible'),asesor=nodo('span','dash-property-meta',p.asesor_nombre||'Asesor no disponible');mc.title=mc.textContent;asesor.title=asesor.textContent;
-      info.append(precio,nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio].filter(Boolean).join(', ')),mc,asesor);
-      const boton=nodo('button','dash-property-options');boton.type='button';boton.setAttribute('aria-label','Opciones de '+(p.titulo||'propiedad'));boton.setAttribute('aria-expanded','false');boton.setAttribute('aria-controls',menuPropiedad.id);boton.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';boton.onclick=()=>{if(botonMenu===boton&&menuPropiedad.matches(':popover-open'))cerrarMenu();else abrirMenu(boton,a.href,p.titulo||'Propiedad');};
-      a.append(info);fila.append(a,boton);caja.append(fila);
+      info.append(precio,nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio].filter(Boolean).join(', ')));
+      const responsable=nodo('div','dash-property-owner');responsable.append(mc,asesor);
+      const boton=nodo('button','dash-property-options');boton.type='button';boton.setAttribute('aria-label','Opciones de '+(p.titulo||'propiedad'));boton.setAttribute('aria-expanded','false');boton.setAttribute('aria-controls',menuPropiedad.id);boton.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';boton.onclick=()=>{if(botonMenu===boton&&menuPropiedad.matches(':popover-open'))cerrarMenu();else abrirMenu(boton,a.href,p.titulo||'Propiedad',p);};
+      a.append(info,responsable);fila.append(a,boton);caja.append(fila);
     });
   }
   function etiqueta(estado,tipo) {
@@ -86,7 +100,8 @@
     const sb=window.kwSupabase;
     try {
       const r=await (window.kwSession?.usuarioInicial?window.kwSession.usuarioInicial(sb):sb.auth.getUser());if(r.error||!r.data?.user)throw new Error('Sin sesión');usuario=r.data.user;
-      const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,role,sitio_web').eq('id',usuario.id).single());
+      const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,apellido,role,sitio_web,email,whatsapp,foto_url').eq('id',usuario.id).single());
+      perfilAsesor=perfil.data;
       sitioAsesor=perfil.data?.sitio_web;
       $('inicio-titulo').textContent='Hola '+(perfil.data?.nombre||'')+', Welcome Home.';
       if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad'].forEach(id=>{$(id).style.display='';});
@@ -96,7 +111,6 @@
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores)
     };
-    Object.entries(cargas).forEach(([clave,accion])=>{document.querySelector('[data-actualizar="'+clave+'"]').addEventListener('click',accion);});
     await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
   }
   if(document.documentElement.classList.contains('kw-auth-ok'))iniciar();
