@@ -58,6 +58,8 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(100);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));
    assert.equal(await page.locator('#notif-bell-slot').count(),1);
+   assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+   assert.equal(await page.locator('.dash-tools svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
    await page.screenshot({path:path.join(out,'inicio-'+width+'.png'),fullPage:width<1024});
   }
@@ -72,6 +74,13 @@ test('Inicio distingue estados vacios, errores parciales y reintentos sin perder
   const vacio=await abrir(browser,{vacio:true});assert.equal(await vacio.page.locator('.dash-empty').count(),3);assert.equal(await vacio.page.locator('.dash-create').count(),1);await vacio.context.close();
   const parcial=await abrir(browser,{error:'dictamenes',admin:true});
   assert.equal(await parcial.page.locator('#inicio-dictamenes [role="alert"]').count(),1);assert.equal(await parcial.page.locator('.dash-property').count(),10);assert.equal(await parcial.page.locator('#card-liderazgo').isVisible(),true);
+  for(const width of [1440,768,320]){
+   await parcial.page.setViewportSize({width,height:1000});
+   assert.ok(await parcial.page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+   assert.ok(await parcial.page.locator('.dash-tools a:visible').evaluateAll(links=>links.every(el=>el.scrollWidth<=el.clientWidth+1)));
+  }
+  await parcial.page.locator('.dash-tools a').first().hover();
+  assert.equal(await parcial.page.locator('.dash-tools a').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await parcial.page.evaluate(()=>qaFail='');await parcial.page.getByRole('button',{name:'Volver a intentar'}).click();await parcial.page.waitForSelector('.dash-table tbody tr');
   assert.equal(await parcial.page.locator('.dash-table tbody tr').count(),5);assert.deepEqual(parcial.errors,[]);await parcial.context.close();
  }finally{await browser.close();}
