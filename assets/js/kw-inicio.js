@@ -14,7 +14,22 @@
   function dinero(valor,moneda) { if(valor==null||!Number.isFinite(Number(valor)))return 'Precio a consultar';try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:moneda||'MXN',maximumFractionDigits:0}).format(Number(valor))+' '+(moneda||'MXN');}catch(e){return Number(valor).toLocaleString('es-MX')+' '+(moneda||'MXN');} }
   function fecha(valor) { if(!valor)return '';const f=new Date(valor.length===10?valor+'T12:00:00':valor);return Number.isNaN(f.getTime())?'':f.toLocaleDateString('es-MX',{day:'numeric',month:'short'}); }
   function vacio(caja,texto,enlace,etiqueta) { caja.replaceChildren();const el=nodo('div','dash-empty');el.append(nodo('p','',texto));if(enlace){const a=nodo('a','',etiqueta);a.href=enlace;el.append(a);}caja.append(el); }
-  let usuario;
+  let usuario,sitioAsesor;
+  const menuPropiedad=nodo('div','dash-property-menu');menuPropiedad.popover='auto';menuPropiedad.id='inicio-menu-propiedad';menuPropiedad.setAttribute('aria-label','Opciones de propiedad');document.body.append(menuPropiedad);
+  let botonMenu;
+  menuPropiedad.addEventListener('toggle',()=>{if(botonMenu)botonMenu.setAttribute('aria-expanded',String(menuPropiedad.matches(':popover-open')));});
+  function cerrarMenu(){if(menuPropiedad.matches(':popover-open'))menuPropiedad.hidePopover();}
+  window.addEventListener('resize',cerrarMenu);document.addEventListener('scroll',cerrarMenu,true);
+  async function copiarEnlace(url){await navigator.clipboard.writeText(url);}
+  function abrirMenu(boton,enlace,titulo){
+    cerrarMenu();botonMenu=boton;menuPropiedad.replaceChildren();
+    const abrir=nodo('a','','Abrir propiedad');abrir.href=enlace;abrir.target='_blank';abrir.rel='noopener noreferrer';abrir.onclick=cerrarMenu;
+    const aviso=nodo('span','dash-menu-aviso');aviso.setAttribute('role','status');
+    const copiar=nodo('button','','Copiar enlace');copiar.type='button';copiar.onclick=async()=>{try{await copiarEnlace(enlace);aviso.textContent='Enlace copiado';}catch(e){aviso.textContent='No se pudo copiar el enlace';}};
+    const compartir=nodo('button','','Compartir propiedad');compartir.type='button';compartir.onclick=async()=>{try{if(navigator.share){await navigator.share({title:titulo,url:enlace});cerrarMenu();}else{await copiarEnlace(enlace);aviso.textContent='Enlace copiado';}}catch(e){if(e.name!=='AbortError')aviso.textContent='No se pudo compartir';}};
+    menuPropiedad.append(abrir,copiar,compartir,aviso);menuPropiedad.showPopover();
+    const r=boton.getBoundingClientRect();menuPropiedad.style.left=Math.max(8,Math.min(r.right-menuPropiedad.offsetWidth,innerWidth-menuPropiedad.offsetWidth-8))+'px';menuPropiedad.style.top=(r.bottom+menuPropiedad.offsetHeight+8>innerHeight?Math.max(8,r.top-menuPropiedad.offsetHeight-4):r.bottom+4)+'px';abrir.focus();
+  }
   async function cargar(clave,consulta,pintar) {
     const caja=$('inicio-'+clave),boton=document.querySelector('[data-actualizar="'+clave+'"]');
     if(caja.getAttribute('aria-busy')==='true'&&caja.dataset.solicitud)return;
@@ -25,14 +40,21 @@
     finally{caja.setAttribute('aria-busy','false');boton.disabled=false;delete caja.dataset.solicitud;}
   }
   function propiedades(filas,caja) {
+    cerrarMenu();
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No hay propiedades disponibles.','/propiedades.html','Ver propiedades');
     filas.forEach(p=>{
-      const a=nodo('a','dash-property');a.href='/propiedad.html?id='+encodeURIComponent(p.id);
+      const fila=nodo('article','dash-property'),a=nodo('a','dash-property-link');
+      const original=urlImagen(p.enlace_kw)||(p.fuente==='kwmexico'&&p.fuente_id?'https://www.kwmexico.mx/propiedades/'+encodeURIComponent(p.fuente_id):'/propiedad.html?id='+encodeURIComponent(p.id));
+      a.href=window.kwSitioAsesor.personalizar(original,sitioAsesor);a.target='_blank';a.rel='noopener noreferrer';
       const foto=urlImagen(p.miniatura_url||p.foto);
       if(foto){const img=nodo('img','dash-photo');img.src=foto;img.alt='';img.loading='lazy';img.decoding='async';img.width=94;img.height=71;img.onerror=()=>{img.replaceWith(nodo('span','dash-photo dash-photo-empty','Sin foto'));};a.append(img);}
       else a.append(nodo('span','dash-photo dash-photo-empty','Sin foto'));
-      const info=nodo('div');info.append(nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio,p.estado].filter(Boolean).join(', ')),nodo('span','dash-property-meta',[p.operacion==='renta'?'Renta':'Venta',p.tipo,fecha(p.created_at)].filter(Boolean).join(' · ')),nodo('span','dash-property-price',dinero(p.precio,p.moneda)));
-      const flecha=nodo('span','dash-chevron');flecha.innerHTML=svg('flecha');a.append(info,flecha);caja.append(a);
+      const info=nodo('div','dash-property-info'),precio=nodo('span','dash-property-price');
+      precio.append(nodo('span','dash-operation',p.operacion==='renta'?'Renta':p.operacion==='venta'?'Venta':'Por confirmar'),nodo('span','',dinero(p.precio,p.moneda)));
+      const mc=nodo('span','dash-property-meta',p.market_center||'MC no disponible'),asesor=nodo('span','dash-property-meta',p.asesor_nombre||'Asesor no disponible');mc.title=mc.textContent;asesor.title=asesor.textContent;
+      info.append(precio,nodo('span','dash-property-title',p.titulo||'Propiedad sin título'),nodo('span','dash-property-place',[p.colonia,p.municipio].filter(Boolean).join(', ')),mc,asesor);
+      const boton=nodo('button','dash-property-options');boton.type='button';boton.setAttribute('aria-label','Opciones de '+(p.titulo||'propiedad'));boton.setAttribute('aria-expanded','false');boton.setAttribute('aria-controls',menuPropiedad.id);boton.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';boton.onclick=()=>{if(botonMenu===boton&&menuPropiedad.matches(':popover-open'))cerrarMenu();else abrirMenu(boton,a.href,p.titulo||'Propiedad');};
+      a.append(info);fila.append(a,boton);caja.append(fila);
     });
   }
   function etiqueta(estado,tipo) {
@@ -64,12 +86,13 @@
     const sb=window.kwSupabase;
     try {
       const r=await (window.kwSession?.usuarioInicial?window.kwSession.usuarioInicial(sb):sb.auth.getUser());if(r.error||!r.data?.user)throw new Error('Sin sesión');usuario=r.data.user;
-      const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,role').eq('id',usuario.id).single());
+      const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,role,sitio_web').eq('id',usuario.id).single());
+      sitioAsesor=perfil.data?.sitio_web;
       $('inicio-titulo').textContent='Hola '+(perfil.data?.nombre||'')+', Welcome Home.';
       if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad'].forEach(id=>{$(id).style.display='';});
     }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
     const cargas={
-      propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
+      propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores)
     };

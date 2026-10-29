@@ -16,7 +16,7 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  qaCalls.push({...estado,limite});if(qaFail===table)return {data:null,error:{message:'Error simulado'}};
  if(table==='profiles'||table==='perfiles_publicos')return {data:perfil,error:null};
  if(qaEmpty)return {data:[],error:null};
- let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
+ let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,market_center:'KW Premier',asesor_nombre:'Asesor de prueba',enlace_kw:'https://kw.com/es-419/property/Prueba/'+(1000+i),titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
  table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
  for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:data.slice(0,limite),error:null};
@@ -49,7 +49,11 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('.notif-bell-btn').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.locator('#drawer').screenshot({path:path.join(out,'menu-lateral.png')});
   assert.equal(await page.locator('.dash-property').count(),10);assert.equal(await page.locator('.dash-table tbody tr').count(),5);assert.equal(await page.locator('.dash-buyer').count(),4);
-  assert.equal(await page.locator('.dash-property').first().getAttribute('href'),'/propiedad.html?id=p-0');
+  assert.equal(await page.locator('.dash-property-link').first().getAttribute('href'),'https://qa.kw.com/es-419/property/Prueba/1000');
+  assert.equal(await page.locator('.dash-operation').first().textContent(),'Renta');
+  assert.ok((await page.locator('.dash-property').first().textContent()).includes('KW Premier'));
+  assert.ok((await page.locator('.dash-property').first().textContent()).includes('Asesor de prueba'));
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.qaCopied=text;}}}));
   assert.equal(await page.locator('.dash-buyer').first().getAttribute('href'),'/hub/cliente-formulario.html?id=c-0');
   assert.equal(await page.locator('.dash-create').getAttribute('href'),'/hub/cliente-formulario.html');
   assert.equal(await page.locator('.dash-widget-head h2 a').first().getAttribute('href'),'/propiedades.html');
@@ -70,6 +74,13 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    assert.ok(await page.locator('.dash-tools').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
    assert.equal(await page.locator('.dash-tools > a svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
+   await page.locator('.dash-property-options').first().click();
+   assert.ok(await page.locator('#inicio-menu-propiedad').isVisible());
+   assert.equal(await page.locator('#inicio-menu-propiedad a').getAttribute('href'),'https://qa.kw.com/es-419/property/Prueba/1000');
+   assert.ok(await page.locator('#inicio-menu-propiedad').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}));
+   await page.getByRole('button',{name:'Copiar enlace',exact:true}).click();
+   await page.waitForFunction(()=>window.qaCopied==='https://qa.kw.com/es-419/property/Prueba/1000');
+   await page.keyboard.press('Escape');
    await page.screenshot({path:path.join(out,'inicio-'+width+'.png'),fullPage:width<1024});
   }
   const antes=await page.evaluate(()=>qaCalls.filter(c=>c.table==='propiedades_inventario').length);
