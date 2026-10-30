@@ -13,6 +13,7 @@ const fixture={id:'11111111-1111-4111-8111-111111111111',nombre:'Cliente prueba'
 const mock=`
 document.documentElement.classList.add('kw-auth-ok');
 window.qaPerfil=${JSON.stringify(fixture)};
+if(new URLSearchParams(location.search).has('referencia'))Object.assign(window.qaPerfil,{nombre:'Diana Omana',correo:'diana.omana@example.com',precio_min:7000000,precio_max:9000000,municipios:['Coyoacán','Iztacalco','Benito Juárez','Miguel Hidalgo'],colonias_seleccionadas:[],recamaras_min:3,banos_min:2,notas:'Roof garden'});
 window.qaPendiente=new URLSearchParams(location.search).has('pendiente');
 window.kwSupabase={
  channel(){return {on(){return this},subscribe(){return this}}},removeChannel(){},
@@ -88,6 +89,16 @@ try {
   assert.equal(await page.locator('#zonas-colonias .etiqueta').count(),2);
   await page.getByRole('button',{name:'Quitar Coyoacán',exact:true}).click();
   assert.equal(await page.locator('#zonas-colonias .etiqueta').count(),1);
+  await page.goto(base+'/hub/perfil-comprador.html?referencia=1');await page.locator('.cliente h3').waitFor();
+  assert.equal(await page.locator('.cliente h3').textContent(),'Diana Omana');
+  assert.match(await page.locator('.cliente-etiquetas').textContent(),/7,000,000.*9,000,000/);
+  assert.match(await page.locator('.cliente-ubicacion').textContent(),/Coyoacán, Iztacalco, Benito Juárez, Miguel Hidalgo/);
+  assert.match(await page.locator('.cliente-requisitos').textContent(),/3 recámaras.*2 baños.*Roof garden/);
+  assert(await page.locator('.cliente-info').evaluate(el=>el.scrollWidth<=el.clientWidth),'resumen sin scroll');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'tarjeta sin desbordes');
+  if(width>700)assert(await page.locator('.cliente-identidad').evaluate(el=>el.getBoundingClientRect().right<el.parentElement.querySelector('.cliente-resumen').getBoundingClientRect().left));
+  await page.locator('.cliente-menu summary').click();assert(await page.getByRole('button',{name:'Editar',exact:true}).isVisible());await page.locator('.cliente-menu summary').click();
+  await page.screenshot({path:`outputs/comprador/resumen-${width}.png`,fullPage:true});
   await page.goto(base+'/hub/perfil-comprador.html?pendiente=1');
   await page.locator('.btn-coincidencias .kw-loader').waitFor();
   assert.equal(await page.locator('.kw-loader').count(),1);

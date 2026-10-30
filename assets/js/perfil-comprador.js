@@ -361,16 +361,26 @@
       var identidad = document.createElement('div'); identidad.className = 'cliente-identidad'; card.append(identidad);
       var nombreCliente = agregarTexto(identidad,'h3',p.nombre); nombreCliente.className = p.activo ? 'cliente-activo' : 'cliente-inactivo';
       nombreCliente.setAttribute('aria-label',p.nombre + (p.activo ? ', búsqueda activa' : ', búsqueda inactiva'));
+      function iconoDato(nombre) {
+        var icono=document.createElement('span');icono.className='cliente-dato-icono';icono.setAttribute('aria-hidden','true');
+        var trazos={telefono:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 5.2 2 2 0 0 1 5 3h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.9L8.5 10.8a16 16 0 0 0 4.7 4.7l1.4-1.4a2 2 0 0 1 1.9-.6l2.8.5a2 2 0 0 1 1.7 2Z"/>',correo:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>',ubicacion:'<path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>'};
+        icono.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+trazos[nombre]+'</svg>';return icono;
+      }
+      [[p.telefono,'telefono'],[p.correo,'correo']].forEach(function(dato){
+        if(!dato[0])return;var contacto=document.createElement('span');contacto.className='cliente-contacto';contacto.append(iconoDato(dato[1]));agregarTexto(contacto,'span',dato[0]);identidad.append(contacto);
+      });
+      var resumen=document.createElement('div');resumen.className='cliente-resumen';card.append(resumen);
       var etiquetasCliente = document.createElement('div'); etiquetasCliente.className = 'cliente-etiquetas';
       var monto = new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.moneda, maximumFractionDigits: 0 });
-      [p.telefono,p.correo].filter(Boolean).forEach(function (texto) { agregarTexto(card,'span',texto).className = 'cliente-contacto'; });
-      card.append(etiquetasCliente);
+      resumen.append(etiquetasCliente);
       [p.operacion === 'venta' ? 'Compra' : 'Renta',p.tipos.join(', '),
-        (p.precio_min == null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda,
-        [p.estado,window.kwCompradorMatches.zonas(p).municipios.join(', '),window.kwCompradorMatches.zonas(p).colonias.map(function(c) { return c.colonia + (c.municipio ? ' (' + c.municipio + ')' : ''); }).join(', ')].filter(Boolean).join(' · '),
-        p.recamaras_min ? p.recamaras_min + ' recámaras' : '',p.banos_min ? p.banos_min + ' baños' : '',
-        p.estacionamientos_min ? p.estacionamientos_min + ' estacionamientos' : '',p.superficie_min ? p.superficie_min + ' m² mínimo' : '',p.notas]
+        (p.precio_min == null ? 'Hasta ' : monto.format(p.precio_min) + ' a ') + monto.format(p.precio_max) + ' ' + p.moneda]
         .filter(Boolean).forEach(function (texto) { agregarTexto(etiquetasCliente,'span',texto).className = 'cliente-etiqueta'; });
+      var zonas=window.kwCompradorMatches.zonas(p);
+      var detalleZona=[zonas.municipios.join(', '),zonas.colonias.map(function(c){return c.colonia+(c.municipio?' ('+c.municipio+')':'');}).join(', ')].filter(Boolean).join(' · ');
+      if(p.estado||detalleZona){var ubicacion=document.createElement('div');ubicacion.className='cliente-ubicacion';ubicacion.append(iconoDato('ubicacion'));var textoZona=document.createElement('span');if(p.estado)agregarTexto(textoZona,'span',p.estado).className='cliente-entidad';if(p.estado&&detalleZona)textoZona.append(document.createTextNode(' · '));textoZona.append(document.createTextNode(detalleZona));ubicacion.append(textoZona);resumen.append(ubicacion);}
+      var requisitos=[p.recamaras_min?p.recamaras_min+' recámaras':'',p.banos_min?p.banos_min+' baños':'',p.estacionamientos_min?p.estacionamientos_min+' estacionamientos':'',p.superficie_min?p.superficie_min+' m² mínimo':'',p.notas].filter(Boolean).join(' · ');
+      if(requisitos)agregarTexto(resumen,'div',requisitos).className='cliente-requisitos';
       var acciones = document.createElement('div'); acciones.className = 'acciones';
       var estadoGuardado = estadosServidor.get(p.id), listo = p.activo && estadoGuardado && (!estadoGuardado.pendiente || (estadoGuardado.calculado_at && estadoGuardado.motivo === 'inventario'));
       var coincidencias = [];
