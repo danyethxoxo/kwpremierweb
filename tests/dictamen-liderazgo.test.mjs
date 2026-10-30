@@ -24,18 +24,20 @@ test('liderazgo: solo Dani, DT y PC asignado, sin enviar a las otras PC ni a TL'
  assert.ok(correo.html.includes('Dictamen de María &lt;López&gt; con dirección:'));assert.ok(correo.html.includes('Ver en la plataforma'));assert.ok(correo.html.includes('Incluye un PDF'));assert.equal(correo.html.includes('Hola:'),false);
 });
 test('Guardar y enviar adjunta ambos PDF a cada grupo con texto acorde al destinatario',async()=>{
- for(const modo of ['todos','asesor','mca']){
-  let handler;const envios=[];const helper=contexto();
+ for(const caso of ['todos','asesor','mca','fallo']){
+  const modo=caso==='fallo'?'todos':caso;
+  let handler;const envios=[],auditoria=[];const helper=contexto();
   const c=vm.createContext({Response,Request,TextDecoder,Uint8Array,atob,console,
-   Deno:{env:{get:()=>'configurado'}},secureServe:(_,fn)=>{handler=fn;},
+   Deno:{env:{get:()=>'configurado'}},secureServe:(_,fn)=>{handler=fn;},console:{error(){}},
    prepararCorreoUtf8:x=>x,correoDictamen:helper.correoDictamen,destinatariosDictamenLiderazgo:helper.destinatariosDictamenLiderazgo,
-   createClient:()=>({auth:{getUser:async()=>({data:{user:{id:'operador',email:'operador@example.com'}}})},from(table){let campos='';const valor=()=>table==='profiles'?(campos.includes('puede_dictaminar')?{role:'master'}:personas):table==='dictamenes'?{id:'11111111-1111-4111-8111-111111111111',asesor_id:'asesor',inmueble:'Av. Juárez 12',estado:'devuelta'}:table==='dictamen_asesores'?{nombre:'María López',correo:'asesor@example.com'}:{coach_asignado:'Carol Silva'};const q={select(s){campos=s;return q;},eq(){return q;},in(){return q;},single:async()=>({data:valor()}),maybeSingle:async()=>({data:valor()}),then(ok,bad){return Promise.resolve({data:valor()}).then(ok,bad);}};return q;}}),
-   fetch:async(url,init)=>{assert.equal(url,'https://api.resend.com/emails');envios.push(JSON.parse(init.body));return new Response('{}');},
+   createClient:()=>({auth:{getUser:async()=>({data:{user:{id:'operador',email:'operador@example.com'}}})},from(table){let campos='';const valor=()=>table==='profiles'?(campos.includes('puede_dictaminar')?{role:'master'}:personas):table==='dictamenes'?{id:'11111111-1111-4111-8111-111111111111',asesor_id:'asesor',inmueble:'Av. Juárez 12',estado:'devuelta'}:table==='dictamen_asesores'?{nombre:'María López',correo:'asesor@example.com'}:{coach_asignado:'Carol Silva'};const q={insert(datos){if(table==='dictamen_historial')auditoria.push(datos);return q;},select(s){campos=s;return q;},eq(){return q;},in(){return q;},single:async()=>({data:valor()}),maybeSingle:async()=>({data:valor()}),then(ok,bad){return Promise.resolve({data:valor()}).then(ok,bad);}};return q;}}),
+   fetch:async(url,init)=>{assert.equal(url,'https://api.resend.com/emails');envios.push(JSON.parse(init.body));return new Response('{}',{status:caso==='fallo'?502:200});},
   });
   vm.runInContext(js(read('supabase/functions/enviar-dictamen-email/index.ts')),c);
   const pdf=Buffer.from('%PDF-1.4\nprueba').toString('base64');
   const respuesta=await handler(new Request('https://local.test',{method:'POST',headers:{Authorization:'Bearer prueba'},body:JSON.stringify({dictamen_id:'11111111-1111-4111-8111-111111111111',destinatario:modo,pdf_solo_datos:pdf,pdf_con_correcciones:pdf})}));
-  assert.equal(respuesta.status,200);assert.equal(envios.length,modo==='todos'?2:1);
+  if(caso==='fallo'){assert.equal(respuesta.status,502);assert.equal(auditoria.length,0);continue;}
+  assert.equal(respuesta.status,200);assert.equal(envios.length,modo==='todos'?2:1);assert.equal(auditoria.length,envios.length);assert.ok(auditoria.every(h=>h.que==='correo_enviado'&&h.detalle.startsWith('Se envi\u00f3 a ')));
   for(const e of envios){assert.equal(e.attachments.length,2);assert.equal(e.attachments[0].content,pdf);assert.equal(e.html.includes('Hola:'),e.to.includes('asesor@example.com'));}
   if(modo==='todos')assert.deepEqual(envios[1].to,['fernanda.pacheco@kwmexico.mx','alberto.velazquez@kwpremier.com.mx','dani.guerrero@kwmexico.mx','dt@example.com','carol.silva@kwmexico.mx']);
  }

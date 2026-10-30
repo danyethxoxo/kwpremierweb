@@ -16,7 +16,8 @@
 <script src="/assets/js/auth-guard.js?v=20261013general"></script>
     <title>Dictaminación de Expedientes</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
-<style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
+<style>html:not(.kw-auth-ok) body { visibility: hidden; }
+</style>
 <script src="/assets/js/notif-bell.js?v=20261030dictamen-liderazgo"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261023buscador">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
@@ -1576,6 +1577,7 @@
   #vista-editor .dic-cliente-num { text-transform: none; letter-spacing: normal; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
+<link rel="stylesheet" href="/assets/css/kw-dictamen-historial.css?v=20261030">
 </head>
 <body class="en-lista">
   <script>
@@ -1812,6 +1814,7 @@
       <div class="dic-barra">
         <div>
           <h1 class="kw-page-titulo" id="editor-titulo">Nuevo dictamen</h1>
+          <span id="e-autoguardado" role="status" aria-live="polite" style="font-size:11px;color:var(--muted)"></span>
         </div>
       </div>
 
@@ -2106,6 +2109,7 @@
   </main>
 
 <script src="/assets/js/kw-document-viewer.js?v=20261023d"></script>
+<script src="/assets/js/kw-dictamen-autoguardado.js?v=20261030"></script>
 <script>
 (function () {
   'use strict';
@@ -2587,6 +2591,12 @@
       return;
     }
     dictamenes = r.data || [];
+    if (puedoDictaminar && window.kwDictamenAutoguardado) {
+      window.kwDictamenAutoguardado.locales(yo.id).filter(function (s) { return !s.persistido && !dictamenes.some(function (d) { return d.id === s.id; }); }).forEach(function (s) {
+        var datos = s.datos.borrador || {};
+        dictamenes.push(Object.assign({}, datos, {id:s.id,estado:'borrador',folio:null,created_at:new Date(s.fecha).toISOString(),cliente:(datos.clientes||[]).map(function(c){return c.nombre;}).filter(Boolean).join(', ')}));
+      });
+    }
     puntos = resultados[1].data || [];
     clientes = resultados[2].data || [];
     historial = resultados[3].data || [];
@@ -3464,7 +3474,9 @@
       (puedoDictaminar && !d.archivado_at
         ? iconoBtn('data-enviar-correo', d.id, 'Enviar por correo', ICONO_ENVIAR) +
           iconoBtn('data-editar', d.id, 'Editar', ICONO_LAPIZ) +
-          iconoBtn('data-archivar', d.id, 'Archivar', ICONO_CAJA, true)
+          (d.estado === 'borrador' && !d.folio
+            ? iconoBtn('data-borrar', d.id, 'Eliminar borrador', BOTE, true)
+            : iconoBtn('data-archivar', d.id, 'Archivar', ICONO_CAJA, true))
         : '') +
       (puedoDictaminar && d.archivado_at
         ? iconoBtn('data-restaurar', d.id, 'Restaurar', ICONO_REGRESAR) +
@@ -3512,40 +3524,45 @@
   // ── El historial ────────────────────────────────────────────
 
   var COMO = {
-    creado: 'Se levantó el expediente',
+    creado: 'Se inició el dictamen',
     estado: 'Dictamen',
     marketing: 'Marketing',
     marketing_checklist: 'Checklist de Marketing',
     listado: 'Listado',
-    revision: 'Revisión',
+    revision: 'Edición',
     contrato_enlazado: 'Contrato enlazado',
     archivado: 'Archivado',
     restaurado: 'Restaurado',
     punto_nuevo: 'Observación nueva',
+    punto_editado: 'Observación editada',
     punto_corregida: 'Corregida',
     punto_pendiente: 'De vuelta a pendiente',
     punto_quitado: 'Observación quitada',
     punto_nota: 'Nota',
+    correo_enviado: 'Envío por correo',
+    observaciones: 'Observaciones',
+    edicion: 'Edición',
   };
 
   function historialHTML(d) {
     var suyo = historial
       .filter(function (h) { return h.dictamen_id === d.id; })
-      .sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+      .sort(function (a, b) { return (a.created_at || '').localeCompare(b.created_at || '') || (a.que === 'creado' ? -1 : b.que === 'creado' ? 1 : 0); });
+    if (!suyo.some(function (h) { return h.que === 'creado'; })) suyo.unshift({que:'creado',detalle:'Borrador',created_at:d.created_at});
 
     if (!suyo.length) {
       return '<div class="kw-vacio" style="padding:var(--sp-4);">' +
         'Todavía no hay movimientos registrados en este expediente.</div>';
     }
 
-    return '<div class="dic-historia">' + suyo.map(function (h) {
+    return '<ol class="dic-historia" aria-label="Historial del dictamen">' + suyo.map(function (h) {
       var titulo = COMO[h.que] || h.que;
       // Hay movimientos cuyo detalle es la misma frase del título (el de
       // "se levantó el expediente", por ejemplo). Repetirla dos renglones
       // seguidos se lee como un error.
-      var detalle = (h.detalle && h.detalle !== titulo) ? h.detalle : '';
+      var detalle = h.que === 'creado' ? 'Borrador' : (h.detalle && h.detalle !== titulo) ? h.detalle : '';
 
-      return '<div class="dic-historia-fila">' +
+      return '<li class="dic-historia-fila">' +
         '<span class="dic-historia-punto ' + escapar(h.que) + '"></span>' +
         '<div class="dic-historia-txt">' +
           '<b>' + escapar(titulo) + '</b>' +
@@ -3555,8 +3572,8 @@
           fechaHora(h.created_at) +
           (h.quien_nombre ? '<span>' + escapar(h.quien_nombre) + '</span>' : '') +
         '</div>' +
-      '</div>';
-    }).join('') + '</div>';
+      '</li>';
+    }).join('') + '</ol>';
   }
 
   function fechaHora(iso) {
@@ -3876,6 +3893,7 @@
         if (!(await window.kwUI.confirm('Se va a borrar este dictamen para siempre, con sus observaciones. No se puede deshacer.\n\n¿Seguimos?'))) return;
         var r = await window.kwSupabase.from('dictamenes').delete().eq('id', b.dataset.borrar);
         if (r.error) { await window.kwUI.alert('No se pudo borrar: ' + r.error.message); return; }
+        if (window.kwDictamenDraft) window.kwDictamenDraft.olvidar(b.dataset.borrar);
         abierto = null;
         await cargar();
       });
@@ -4378,7 +4396,30 @@
     if (correccion) correccion.style.display = tiene ? '' : 'none';
   }
 
+  function prepararRespaldoDictamen() {
+    if (window.kwDictamenDraft || !puedoDictaminar) return;
+    window.kwDictamenDraft = window.kwDictamenAutoguardado.crear({
+      userId: yo.id, cliente: window.kwSupabase, editor: $('vista-editor'),
+      estado: function (texto) { $('e-autoguardado').textContent = texto; },
+      leer: function () {
+        leerEditor(); var campos = {};
+        $('vista-editor').querySelectorAll('input[id],select[id],textarea[id],[contenteditable][id]').forEach(function (el) { campos[el.id] = el.value; });
+        return { borrador: JSON.parse(JSON.stringify(borrador)), campos: campos };
+      },
+      restaurar: function (respaldo) {
+        var id = borrador.id;
+        Object.assign(borrador, respaldo.borrador); borrador.id = id || borrador.id;
+        Object.keys(respaldo.campos || {}).forEach(function (id) { if ($(id)) $(id).value = respaldo.campos[id]; });
+        pintarClientes(); pintarPuntosEditor(); pintarCorrecciones();
+        elegirAsesor(asesores.find(function (a) { return a.id === borrador.asesor_id; }));
+        ['e-operacion','e-uso','e-tipo','e-tipo-contrato','e-condominio','e-cfdi-necesario','e-cfdi-tiene'].forEach(function (id) { $(id).dispatchEvent(new Event('change', {bubbles:true})); });
+        acomodarCondominio(); acomodarCfdi();
+      }
+    });
+  }
+
   function abrirEditor(id) {
+    if (window.kwDictamenDraft) window.kwDictamenDraft.cerrar();
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
     contratoSeleccionado = null;
@@ -4481,9 +4522,13 @@
     if (drawerEditor) drawerEditor.classList.remove('open', 'sin-hover', 'buscando');
     document.body.classList.remove('cargando-nuevo');
     window.scrollTo(0, 0);
+    prepararRespaldoDictamen();
+    $('e-autoguardado').textContent = '';
+    if (window.kwDictamenDraft) window.kwDictamenDraft.abrir(id);
   }
 
   function cerrarEditor() {
+    if (window.kwDictamenDraft) window.kwDictamenDraft.cerrar().then(cargar);
     borrador = null;
     if (location.search) history.replaceState(null, '', location.pathname);
     document.querySelector('.back-btn').href = '../portal.html';
@@ -4585,6 +4630,8 @@
   }
 
   async function guardar() {
+    var proteccion = window.kwDictamenDraft;
+    if (proteccion) await proteccion.pausar();
     leerEditor();
     // Se puede guardar aunque el expediente esté incompleto. Mientras
     // falten asesor, inmueble o cliente permanece como borrador y no se
@@ -4653,11 +4700,13 @@
     if (fila.cfdi_necesario !== 'si') fila.cfdi_tiene = null;
     if (fila.cfdi_necesario !== 'si' || fila.cfdi_tiene !== 'si') fila.cfdi = null;
 
-    var id = borrador.id;
-    var eraEdicion = !!id;
+    var id = borrador.id || (proteccion && proteccion.id());
+    var previo = dictamenes.find(function (d) { return d.id === id; });
+    var eraEdicion = !!(previo && previo.estado !== 'borrador');
     if (id) {
       var u = await window.kwSupabase.from('dictamenes').update(fila).eq('id', id);
       if (u.error) return await fallo('No se pudo guardar: ' + u.error.message);
+      borrador.id = id;
       // Los clientes sí se rehacen enteros: no llevan historial ni fechas
       // propias, así que volver a escribirlos no pierde nada.
       await window.kwSupabase.from('dictamen_clientes').delete().eq('dictamen_id', id);
@@ -4703,6 +4752,7 @@
       }
     }
 
+    if (proteccion) await proteccion.completar(id);
     return id;
   }
 
@@ -4744,8 +4794,9 @@
     }
 
     if (nuevos.length) {
-      var rn = await window.kwSupabase.from('dictamen_puntos').insert(nuevos);
+      var rn = await window.kwSupabase.from('dictamen_puntos').insert(nuevos).select('id,orden');
       if (rn.error) return rn.error.message;
+      (rn.data || []).forEach(function (p) { if (borrador.puntos[p.orden - 1]) borrador.puntos[p.orden - 1].id = p.id; });
     }
     return null;
   }
@@ -5484,7 +5535,8 @@
       var enviados = Array.isArray(datos.enviado_a)
         ? datos.enviado_a.join(', ')
         : String(datos.enviado_a || '');
-      await window.kwUI.alert('Dictamen enviado correctamente a ' + enviados + '.');
+      await window.kwUI.alert('Dictamen enviado correctamente a ' + enviados + '.' + (datos.aviso ? '\n\n' + datos.aviso : ''));
+      await cargar();
     } catch (e) {
       await window.kwUI.alert(e.message || 'No se pudo enviar el dictamen por correo.');
     } finally {
@@ -5906,6 +5958,7 @@
     } catch (error) { await fallo('No se pudo completar el guardado: ' + error.message); }
     finally {
       cerrarGuardando(); b.disabled = false;
+      if (window.kwDictamenDraft) window.kwDictamenDraft.reanudar();
       if (etiquetaGuardar) etiquetaGuardar.textContent = 'Guardar';
       else b.textContent = 'Guardar';
     }

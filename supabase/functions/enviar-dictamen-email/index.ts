@@ -140,28 +140,39 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
     const asesor = String(asesorAsignado?.nombre || 'Asesor(a)').trim()
     // El asesor recibe su mensaje personal; el equipo recibe la version informativa.
     const grupos = [destinatarios.filter(c => c === destino), destinatarios.filter(c => c !== destino)].filter(g => g.length)
+    const avisos: string[] = avisoPC ? [avisoPC] : []
     for (const grupo of grupos) {
       const { asunto, html } = correoDictamen(asesor, direccion, String(dictamen.estado), true, grupo[0] === destino ? 'asesor' : 'liderazgo')
       const envio = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(prepararCorreoUtf8({
-        from: EMAIL_FROM,
-        to: grupo,
-        subject: asunto,
-        html,
-        attachments: [
-          { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
-          { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },
-        ],
-      })),
-    })
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(prepararCorreoUtf8({
+          from: EMAIL_FROM,
+          to: grupo,
+          subject: asunto,
+          html,
+          attachments: [
+            { filename: fileName(body.nombre_archivo_solo_datos), content: pdfSoloDatos },
+            { filename: fileName(body.nombre_archivo_con_correcciones), content: pdfConCorrecciones },
+          ],
+        })),
+      })
       if (!envio.ok) {
-      console.error('Resend rechazó el dictamen', envio.status, await envio.text())
-      return response(req, { error: 'El proveedor de correo rechazó el envío.' }, 502)
+        console.error('Resend rechazó el dictamen', envio.status, await envio.text())
+        return response(req, { error: 'El proveedor de correo rechazó el envío.' }, 502)
+      }
+      try {
+        const historial = await admin.from('dictamen_historial').insert({
+          dictamen_id: dictamen.id, quien: identity.user.id, que: 'correo_enviado',
+          detalle: 'Se envió a ' + grupo.join(', '),
+        })
+        if (historial.error) throw historial.error
+      } catch (errorHistorial) {
+        console.error('El correo se envió, pero no se pudo registrar en el historial', errorHistorial)
+        avisos.push('El correo se envió, pero no se pudo registrar en el historial.')
       }
     }
-    return response(req, { ok: true, enviado_a: destinatarios, ...(avisoPC ? { aviso: avisoPC } : {}) })
+    return response(req, { ok: true, enviado_a: destinatarios, ...(avisos.length ? { aviso: avisos.join(' ') } : {}) })
   } catch (error) {
     console.error(error)
     return response(req, { error: 'No se pudo enviar el dictamen.' }, 500)

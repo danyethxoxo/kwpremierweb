@@ -3,13 +3,14 @@ import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 const source=readFileSync(new URL('../supabase/functions/enviar-dictamen-email/index.ts',import.meta.url),'utf8');
-const block=source.slice(source.indexOf('    const modo ='),source.indexOf('    const direccion')).replace('let asesorAsignado: { nombre: string; correo: string } | null','let asesorAsignado');
+const block=source.slice(source.indexOf('    const modo ='),source.indexOf('    const direccion')).replace('let asesorAsignado: { nombre: string; correo: string } | null','let asesorAsignado').replace('let liderazgo: string[]','let liderazgo');
 async function recipients(body,email='session@example.com',advisor='advisor@example.com'){
   return vm.runInNewContext('(async()=>{'+block+';return {destinatarios};})()',{
     body,identity:{user:{email}},dictamen:{asesor_id:'1'},req:{},
     EMAIL_RE:/^[^\s@]+@[^\s@]+\.[^\s@]+$/,RECIPIENTES_MANUALES:['fernanda.pacheco@kwmexico.mx','alberto.velazquez@kwpremier.com.mx'],
     response:(_req,body,status)=>({body,status}),
-    admin:{from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{nombre:'Asesor',correo:advisor}})})})})}
+    destinatariosDictamenLiderazgo:()=>({correos:[],pcEncontrado:false}),
+    admin:{from:()=>({select:()=>({in:async()=>({data:[]}),eq:()=>({maybeSingle:async()=>({data:{nombre:'Asesor',correo:advisor}})})})})}
   });
 }
 test('cada opcion envia exclusivamente a sus destinatarios',async()=>{

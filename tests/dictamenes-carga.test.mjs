@@ -11,7 +11,7 @@ function funcion(nombre) {
 function sandbox(extra = {}) {
   const elements = new Map();
   return vm.createContext({ console, URL, URLSearchParams, Promise,
-    dictamenes: [], puntos: [], clientes: [], historial: [], documentosEnlazados: [], listaCargando: true,
+    dictamenes: [], puntos: [], clientes: [], historial: [], documentosEnlazados: [], listaCargando: true, puedoDictaminar:false,
     $: id => { if (!elements.has(id)) elements.set(id, {setAttribute(){}, innerHTML:'',style:{}}); return elements.get(id); },
     escapar: x => x, pintar(){}, ...extra });
 }
@@ -47,7 +47,7 @@ test('nuevo dictamen se abre antes de terminar lista y contratos', async () => {
 });
 test('abrir y cerrar editor conserva la pagina y su lista cargada', () => {
   const llamadas=[];const clases={add(){},remove(){},contains(){return false;}};
-  const ctx=sandbox({location:{href:'https://ejemplo.com/hub/dictamenes.html',search:'?nuevo=1',pathname:'/hub/dictamenes.html'},
+  const ctx=sandbox({window:{},location:{href:'https://ejemplo.com/hub/dictamenes.html',search:'?nuevo=1',pathname:'/hub/dictamenes.html'},
     history:{pushState(a,b,url){llamadas.push(['push',url]);},replaceState(a,b,url){llamadas.push(['replace',url]);}},
     document:{body:{classList:clases},querySelector(){return {}; }},
     abrirEditor(id){llamadas.push(['editor',id]);},borrador:{},$:()=>({style:{},classList:clases})});

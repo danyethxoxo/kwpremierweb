@@ -70,7 +70,7 @@ test('los dos folios se guardan por separado; No elimina solo los datos del cond
     let guardado;
     const contexto = vm.createContext({
       $: elemento,
-      borrador: {clientes: [], observaciones_base: '', correcciones: {}},
+      borrador: {clientes: [], observaciones_base: '', correcciones: {}}, dictamenes: [],
       yo: {id: 'usuario'}, hoy: () => '2026-10-26',
       sincronizarFechaEscritura() {}, sincronizarFechaCondominio() {}, leerClientes() {},
       limpiar: (_campo, valor) => valor, cuantosClientes: () => 0,
