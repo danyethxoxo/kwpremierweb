@@ -97,17 +97,32 @@
       a.append(nodo('span','dash-avatar',iniciales),info,nodo('span','dash-pill '+(p.activo?'activo':''),p.activo?'Activo':'Pausado'));caja.append(a);
     });
   }
+  function abrirFirmaEnInicio(enlace,titulo) {
+    const dialogo=nodo('dialog','dash-firma-visor');dialogo.setAttribute('aria-label',titulo);
+    const marco=nodo('iframe','');marco.title=titulo;
+    const cerrar=nodo('button','dash-firma-cerrar','Cerrar');cerrar.type='button';
+    const carga=nodo('span','dash-firma-carga','Cargando...');carga.setAttribute('role','status');
+    const url=new URL(enlace,location.origin);url.searchParams.set('integrado','inicio');marco.src=url.href;
+    const limpiar=()=>{window.removeEventListener('message',mensaje);document.body.classList.remove('dash-visor-abierto');dialogo.remove();};
+    const mensaje=e=>{if(e.origin!==location.origin||e.source!==marco.contentWindow)return;if(e.data?.tipo==='kw-firma-cerrar')dialogo.close();};
+    window.addEventListener('message',mensaje);dialogo.addEventListener('close',limpiar,{once:true});
+    cerrar.onclick=()=>dialogo.close();marco.onload=()=>carga.remove();
+    dialogo.append(carga,marco,cerrar);document.body.append(dialogo);document.body.classList.add('dash-visor-abierto');dialogo.showModal();
+  }
+  function integrarEnlaceFirma(enlace,titulo) {
+    enlace.addEventListener('click',e=>{if(e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();abrirFirmaEnInicio(enlace.href,titulo);});
+  }
   function firmas(filas,caja) {
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
     filas.slice(0,5).forEach(f=>{
       const titulo=f.titulo||f.nombre_archivo||'Documento sin t\u00edtulo';
       const fila=nodo('article','dash-signature-row'),documento=nodo('a','dash-signature');
       documento.href='/hub/firmas.html?documento='+encodeURIComponent(f.id);documento.title='Ver el documento';
-      documento.append(nodo('span','dash-signature-name',titulo));
+      documento.append(nodo('span','dash-signature-name',titulo));integrarEnlaceFirma(documento,titulo);
       const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
       const hechas=personas.filter(x=>x.firmado).length,faltan=personas.length-hechas;
       const detalle=nodo('a','dash-signers');detalle.href='/hub/firmas.html?detalle='+encodeURIComponent(f.id);detalle.title='Ver firmantes y correos';
-      detalle.setAttribute('aria-label','Ver firmantes y correos de '+titulo);
+      detalle.setAttribute('aria-label','Ver firmantes y correos de '+titulo);integrarEnlaceFirma(detalle,'Firmantes de '+titulo);
       const estado=nodo('span','dash-signature-state'),punto=nodo('span','dash-signature-dot'+(personas.length&&!faltan?' completa':''));punto.setAttribute('aria-hidden','true');
       estado.append(punto,nodo('span','',personas.length?(faltan?(faltan===1?'Falta 1 firma':'Faltan '+faltan+' firmas'):'Firmas completas'):'Sin firmantes'));
       if(personas.length)estado.append(nodo('span','dash-signature-count',hechas+'/'+personas.length));

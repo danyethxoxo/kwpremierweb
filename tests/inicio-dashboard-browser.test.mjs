@@ -172,3 +172,28 @@ test('Skeletons independientes y compatibles con movimiento reducido',async()=>{
   assert.deepEqual(errors,[]);await context.close();
  }finally{await browser.close();}
 });
+
+
+test('documento y firmantes abren sobre Inicio sin navegar y cierran de forma segura',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  const {page,context,errors}=await abrir(browser);
+  await context.route('**/hub/firmas.html?*',route=>route.fulfill({contentType:'text/html',body:'<html><body><button id="cerrar" onclick="parent.postMessage({tipo: &quot;kw-firma-cerrar&quot;},location.origin)">Cerrar vista</button></body></html>'}));
+  for(const [selector,parametro] of [['.dash-signature','documento'],['.dash-signers','detalle']]){
+   const url=page.url();await page.locator(selector).first().click();
+   assert.equal(page.url(),url);
+   assert.ok(await page.locator('dialog.dash-firma-visor').isVisible());
+   assert.ok((await page.locator('.dash-firma-visor iframe').getAttribute('src')).includes(parametro+'=f-0'));
+   assert.ok((await page.locator('.dash-firma-visor iframe').getAttribute('src')).includes('integrado=inicio'));
+   await page.evaluate(()=>window.postMessage({tipo:'kw-firma-cerrar'},location.origin));
+   assert.equal(await page.locator('.dash-firma-visor').count(),1,'ignora mensajes ajenos al marco');
+   await page.frameLocator('.dash-firma-visor iframe').locator('#cerrar').click();
+   await page.waitForFunction(()=>!document.querySelector('.dash-firma-visor'));
+   assert.equal(await page.locator('body.dash-visor-abierto').count(),0);
+  }
+  await page.locator('.dash-signature').first().click();
+  await page.getByRole('button',{name:'Cerrar',exact:true}).click();
+  assert.equal(await page.locator('.dash-firma-visor').count(),0);
+  assert.deepEqual(errors,[]);await context.close();
+ }finally{await browser.close();}
+});
