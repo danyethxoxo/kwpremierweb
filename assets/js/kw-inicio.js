@@ -44,11 +44,12 @@
     menuPropiedad.append(abrir,copiar,compartir,ficha,aviso);menuPropiedad.showPopover();
     const r=boton.getBoundingClientRect();menuPropiedad.style.left=Math.max(8,Math.min(r.right-menuPropiedad.offsetWidth,innerWidth-menuPropiedad.offsetWidth-8))+'px';menuPropiedad.style.top=(r.bottom+menuPropiedad.offsetHeight+8>innerHeight?Math.max(8,r.top-menuPropiedad.offsetHeight-4):r.bottom+4)+'px';abrir.focus();
   }
+  const esqueletos=new Map([...document.querySelectorAll('[data-widget-lista]')].map(el=>[el.id,el.firstElementChild.cloneNode(true)]));
   async function cargar(clave,consulta,pintar) {
     const caja=$('inicio-'+clave);
     if(caja.getAttribute('aria-busy')==='true'&&caja.dataset.solicitud)return;
     caja.dataset.solicitud='si';caja.setAttribute('aria-busy','true');
-    if(!caja.dataset.cargado)caja.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
+    if(!caja.dataset.cargado)caja.replaceChildren(esqueletos.get(caja.id).cloneNode(true));
     try { const r=await consulta();if(r.error)throw r.error;pintar(r.data||[],caja);caja.dataset.cargado='si'; }
     catch(e){vacio(caja,'No pudimos cargar esta información.');caja.firstChild.setAttribute('role','alert');const reintentar=nodo('button','dash-retry','Volver a intentar');reintentar.type='button';reintentar.onclick=()=>cargar(clave,consulta,pintar);caja.firstChild.append(reintentar);}
     finally{caja.setAttribute('aria-busy','false');delete caja.dataset.solicitud;}
@@ -98,14 +99,12 @@
   }
   function firmas(filas,caja) {
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
-    const estados={preparando:'Preparando',borrador:'Borrador',pendiente:'Esperando firmas',completado:'Firmado',cancelado:'Cancelado',error:'Falló'};
-    filas.forEach(f=>{
+    filas.slice(0,5).forEach(f=>{
       const a=nodo('a','dash-signature');a.href='/hub/firmas.html';
-      const info=nodo('span','dash-signature-info');info.append(nodo('strong','',f.titulo||f.nombre_archivo||'Documento sin título'),nodo('small','',fecha(f.enviado_at||f.created_at)));
-      const firmantes=Array.isArray(f.firmantes)?f.firmantes:[],completas=firmantes.filter(x=>x.firmado).length;
-      const progreso=nodo('span','dash-signature-progress',firmantes.length?completas+' de '+firmantes.length+' firmas':'Sin firmantes');
-      const clase=f.estado==='completado'?'aprobado':f.estado==='pendiente'?'condicionada':f.estado==='error'?'devuelta':'';
-      a.append(info,progreso,nodo('span','dash-pill '+clase,estados[f.estado]||'Pendiente'));caja.append(a);
+      const icono=nodo('span','dash-signature-icon');icono.innerHTML=svg('dictamen');
+      const info=nodo('span','dash-signature-info');info.append(nodo('strong','',f.titulo||f.nombre_archivo||'Documento sin título'),nodo('small','',fecha(f.created_at)));
+      const flecha=nodo('span','dash-chevron');flecha.innerHTML=svg('flecha');
+      a.append(icono,info,flecha);caja.append(a);
     });
   }
   async function iniciar() {
@@ -123,7 +122,7 @@
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores),
-      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,estado,firmantes,created_at,enviado_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),firmas)
+      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,created_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
     };
     await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
   }

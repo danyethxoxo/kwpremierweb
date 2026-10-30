@@ -56,7 +56,7 @@ html:root body.portal-page > main.dashboard { height:auto; min-height:0; overflo
 .dash-empty { min-height:180px; padding:34px 22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; color:var(--muted); font-size:12px; }
 .dash-empty a { color:var(--red); font-weight:600; }
 .dash-retry { border:1px solid var(--border); border-radius:8px; background:#fff; padding:7px 12px; font:inherit; color:var(--text); cursor:pointer; }
-.dashboard [aria-busy=true] > .kw-loader { min-height:220px; }
+
 .portal-page > footer { display:flex; justify-content:center; gap:12px; padding:18px; }
 .portal-page .footer-social { display:grid; place-items:center; width:30px; height:30px; color:var(--muted); }
 .portal-page .footer-social svg { width:15px; height:15px; fill:currentColor; }
@@ -132,13 +132,32 @@ html:root body.portal-page > main.dashboard { height:auto; min-height:0; overflo
 .dashboard .dash-widget-icon svg { width:24px; height:24px; stroke-width:1.6; }
 .dash-widget .dash-view-all,.dash-create { border:1px solid var(--red); background:#fff; color:var(--red)!important; }
 .dash-widget .dash-view-all:hover,.dash-widget .dash-view-all:focus-visible,.dash-create:hover,.dash-create:focus-visible { border-color:var(--red); background:#fff; color:var(--red)!important; }
-.dash-firmas { grid-column:1 / -1; }
-.dash-signature { display:grid; grid-template-columns:minmax(0,1fr) 130px 140px; align-items:center; gap:20px; padding:16px 20px; border-bottom:1px solid #f0eeed; color:inherit; text-decoration:none; }
+
+.dash-buyers { grid-column:1 / -1; }
+.dash-signature { display:grid; grid-template-columns:28px minmax(0,1fr) 14px; align-items:center; gap:12px; min-height:62px; box-sizing:border-box; padding:12px 20px; border-bottom:1px solid #f0eeed; color:inherit; text-decoration:none; }
 .dash-signature:last-child { border-bottom:0; }
 .dash-signature:hover { background:#faf9f8; }
+.dash-signature:focus-visible { outline:2px solid var(--red); outline-offset:-3px; }
+.dash-signature-icon { display:flex; color:var(--red); }
+.dash-signature-icon svg { width:22px; height:22px; }
 .dash-signature-info { min-width:0; }
 .dash-signature-info strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; font-weight:600; }
 .dash-signature-info small { display:block; color:var(--muted); font-size:10px; margin-top:4px; }
-.dash-signature-progress { color:var(--muted); font-size:11px; }
-.dash-signature > .dash-pill { justify-self:end; }
-@media(max-width:600px) { .dash-signature { grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; padding:14px 15px; }.dash-signature-info { grid-row:span 2; }.dash-signature-progress { grid-column:2; text-align:right; font-size:10px; }.dash-signature > .dash-pill { grid-column:2; } }
+.dash-skeleton { position:relative; overflow:hidden; }
+.dash-skeleton::after { content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,#ffffff80,transparent); animation:dash-shimmer 1.8s ease-in-out infinite; pointer-events:none; }
+.dash-skeleton-row { display:flex; align-items:center; gap:14px; height:66px; padding:12px 20px; box-sizing:border-box; border-bottom:1px solid #f0eeed; }
+.dash-skeleton-thumb,.dash-skeleton-lines > span { display:block; background:#eeecea; border-radius:4px; }
+.dash-skeleton-thumb { flex:none; width:28px; height:30px; }
+.dash-skeleton-lines { flex:1; min-width:0; }
+.dash-skeleton-lines > span { height:10px; width:76%; }
+.dash-skeleton-lines > span + span { margin-top:9px; width:46%; height:8px; }
+.dash-properties .dash-skeleton-row { height:124px; }
+.dash-properties .dash-skeleton-thumb { width:84px; height:76px; border-radius:10px; }
+.dash-dictamenes .dash-skeleton-thumb { width:35%; height:10px; }
+.dash-buyers .dash-skeleton-thumb { width:35px; height:35px; border-radius:50%; }
+@keyframes dash-shimmer { to { transform:translateX(100%); } }
+@media(prefers-reduced-motion:reduce) { .dash-skeleton::after { animation:none; display:none; } }
+@media(max-width:1023px) { .dash-properties .dash-skeleton-row { height:140px; } }
+@media(max-width:600px) { .dash-signature { padding:12px 15px; }.dash-firmas .dash-widget-head { gap:8px; }.dash-firmas .dash-widget-head h2 { font-size:13px; gap:6px; } }
+
+.dash-firmas .dash-skeleton-row { height:62px; }
