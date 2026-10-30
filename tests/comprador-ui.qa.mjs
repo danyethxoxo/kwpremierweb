@@ -24,7 +24,7 @@ window.kwSupabase={
   const data=name==='comprador_matches_pagina'?Array.from({length:Math.max(0,Math.min(4,(args.p_nivel===80?12:1)-args.p_offset))},(_,i)=>({porcentaje:args.p_nivel===80?100:79,criterios:[],propiedad:{distancia_km:args.p_nivel===-4?0.6:null,id:'propiedad-'+(args.p_offset+i),titulo:'Casa de prueba '+(args.p_offset+i),estatus:'publicada',tipo:'Casa',operacion:'venta',precio:6500000,moneda:'MXN',colonia:'Del Valle Centro',municipio:'Benito Juárez',estado:'Ciudad de México',recamaras:3,banos:2,imagenes:[]}})):[];
   return {abortSignal:async()=>({data})};
  },
- from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:16,niveles:{'-4':1,80:12,'-1':1,'-2':1,'-3':1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
+ from(table){let payload;const data=()=>table==='profiles'?{role:'master',nombre:'QA',sitio_web:''}:table==='perfiles_comprador'?[window.qaPerfil]:table==='comprador_estados'?[{perfil_id:window.qaPerfil.id,total:16,niveles:{'-4':1,80:12,'-1':1,'-2':1,'-3':new URLSearchParams(location.search).has('vacio')?0:1},pendiente:window.qaPendiente,calculado_at:window.qaPendiente?null:'2026-10-14',motivo:'perfil'}]:[];
  const q=new Proxy({}, {get(t,k){if(k==='then')return(ok,bad)=>Promise.resolve({data:payload?{...window.qaPerfil,...payload}:data(),error:null}).then(ok,bad);if(k==='insert'||k==='update')return p=>{payload=p;window.qaRegistrar(p);return q};if(k==='single')return async()=>({data:table==='profiles'?data():payload?{...window.qaPerfil,...payload}:window.qaPerfil,error:null});return()=>q}});return q;}
 };`;
 const results=[];
@@ -56,6 +56,14 @@ try {
   assert.equal(guardados[0].umbral_match,80);
   for(const campo of ['recamaras_min','banos_min','estacionamientos_min','superficie_min']) assert.equal(guardados[0][campo],null);
   await page.locator('.btn-coincidencias').click();await page.locator('.match-prop').first().waitFor();
+  await page.waitForFunction(()=>!document.querySelector('.comprador-coincidencias').dataset.despliegue);
+  await page.locator('.btn-coincidencias').click();assert.equal(await page.locator('.comprador-coincidencias').getAttribute('data-despliegue'),'cerrando');
+  await page.waitForFunction(()=>document.querySelector('.comprador-coincidencias').hidden);
+  await page.locator('.btn-coincidencias').click();assert.equal(await page.locator('.comprador-coincidencias').getAttribute('data-despliegue'),'abriendo');
+  await page.waitForFunction(()=>!document.querySelector('.comprador-coincidencias').dataset.despliegue);
+  await page.mouse.move(0,0);await page.waitForTimeout(200);const borde=await page.locator('.match-prop').first().evaluate(el=>getComputedStyle(el).borderColor);
+  await page.locator('.match-prop').first().hover();await page.waitForTimeout(200);assert.notEqual(await page.locator('.match-prop').first().evaluate(el=>getComputedStyle(el).borderColor),borde);
+  await page.mouse.move(0,0);await page.waitForTimeout(200);assert.equal(await page.locator('.match-prop').first().evaluate(el=>getComputedStyle(el).borderColor),borde);
   const capacidad=await page.locator('.matches-grid').evaluate(el=>Number(el.style.getPropertyValue('--match-columnas')));
   assert.equal(await page.locator('.match-prop').count(),capacidad);
   if(width===1920)assert(capacidad>4);
@@ -107,6 +115,12 @@ try {
   if(width>700)assert(await page.locator('.cliente-identidad').evaluate(el=>el.getBoundingClientRect().right<el.parentElement.querySelector('.cliente-resumen').getBoundingClientRect().left));
   await page.locator('.cliente-menu summary').click();assert(await page.getByRole('button',{name:'Editar',exact:true}).isVisible());await page.locator('.cliente-menu summary').click();
   await page.screenshot({path:`outputs/comprador/resumen-${width}.png`,fullPage:true});
+  await page.goto(base+'/hub/perfil-comprador.html?vacio=1');await page.locator('.btn-coincidencias').click();await page.waitForFunction(()=>!document.querySelector('.comprador-coincidencias').dataset.despliegue);
+  await page.getByRole('button',{name:/Misma zona, hasta 10% más/}).click();await page.getByText('No hay alternativas en este grupo.',{exact:true}).waitFor();
+  assert(await page.locator('.matches-grid > .kw-vacio').evaluate(el=>{const s=getComputedStyle(el);return s.borderTopWidth==='0px'&&s.textAlign==='center';}));
+  await page.screenshot({path:`outputs/comprador/vacio-${width}.png`,fullPage:true});
+  await page.evaluate(()=>{const b=document.querySelector('.btn-coincidencias');b.click();b.click();b.click();});await page.waitForFunction(()=>document.querySelector('.comprador-coincidencias').hidden);
+  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.btn-coincidencias').click();assert.equal(await page.locator('.comprador-coincidencias').getAttribute('data-despliegue'),null);await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto(base+'/hub/perfil-comprador.html?pendiente=1');
   await page.locator('.btn-coincidencias .kw-loader').waitFor();
   assert.equal(await page.locator('.kw-loader').count(),1);
