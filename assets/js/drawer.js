@@ -410,7 +410,7 @@
       }
       if (!document.querySelector('script[src*="notif-bell.js"]')) {
         const sc = document.createElement('script');
-        sc.src = `${BASE}/assets/js/notif-bell.js?v=20261019-notif-lista2`;
+        sc.src = `${BASE}/assets/js/notif-bell.js?v=20261030dictamen-liderazgo`;
         document.head.appendChild(sc);
       } else {
         // Ya estaba cargado. Se le avisa de todos modos, sin importar si

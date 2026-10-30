@@ -81,9 +81,9 @@ test('notificaciones UI: filas, dictamen, navegación, lectura explícita, histo
       assert.equal(await page.getByText('Ver notificación',{exact:true}).count(),0);
       const dictamen=page.locator('#notif-dropdown [data-notif-id="reciente"]');
       assert.equal(await dictamen.locator('.notif-item-titulo').textContent(),'Dictamen de expediente: Autorizado condicionado');
-      assert.equal(await dictamen.locator('.notif-item-msg').first().textContent(),'Hola: María López, te compartimos el dictamen de expediente de tu listado con dirección:');
+      assert.equal(await dictamen.locator('.notif-item-msg').first().textContent(),'Dictamen de María López con dirección:');
       assert.equal(await dictamen.locator('.notif-item-direccion').textContent(),'Av. Reforma 123, Ciudad de México');
-      assert.equal(await dictamen.locator('.notif-item-folio').textContent(),'Ver dictámenes');
+      assert.equal(await dictamen.locator('.notif-item-folio').textContent(),'Ver en la plataforma');
       const overlay=await page.locator('#notif-backdrop').evaluate(el=>({bg:getComputedStyle(el).backgroundColor,z:getComputedStyle(el).zIndex}));
       assert.deepEqual(overlay,{bg:'rgba(0, 0, 0, 0.28)',z:'210'});
       await page.clock.runFor(300);

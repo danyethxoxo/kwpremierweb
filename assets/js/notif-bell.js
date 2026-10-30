@@ -6,7 +6,10 @@
   function datosDictamen(n) {
     if (n.tipo !== 'dictamen') return null;
     const nuevo = /^Dictamen de expediente: (Autorizado|Autorizado condicionado|Devuelto|Sin dictaminar)$/.exec(n.titulo || '');
-    const datos = /^Hola: ([\s\S]+), te compartimos el dictamen de expediente de tu listado con dirección:\n\n([\s\S]+)$/.exec(n.mensaje || '');
+    const texto = (n.mensaje || '').replace(/\\n/g, '\n');
+    const informativo = /^Dictamen de ([\s\S]+) con dirección:\n\n([\s\S]+)$/.exec(texto);
+    if (nuevo && informativo) return { asesor: informativo[1], estatus: nuevo[1], direccion: informativo[2], folio: '' };
+    const datos = /^Hola: ([\s\S]+), te compartimos el dictamen de expediente de tu listado con dirección:\n\n([\s\S]+)$/.exec(texto);
     if (nuevo && datos) return { asesor: datos[1], estatus: nuevo[1], direccion: datos[2], folio: '' };
     const titulo = /^(Devuelto|Autorizado condicionado|Autorizado para promoción):\s*([\s\S]+)$/.exec(n.titulo || '');
     const mensaje = /^Expediente de ([\s\S]+)\. Folio ([\s\S]+)\.$/.exec(n.mensaje || '');
@@ -79,9 +82,9 @@
       const dictamen = datosDictamen(n);
       const detalle = dictamen
         ? `<span class="notif-item-titulo">Dictamen de expediente: ${escapeHtml(dictamen.estatus)}</span>
-          <span class="notif-item-msg">Hola: ${escapeHtml(dictamen.asesor)}, te compartimos el dictamen de expediente de tu listado con dirección:</span>
+          <span class="notif-item-msg">Dictamen de ${escapeHtml(dictamen.asesor)} con dirección:</span>
           <span class="notif-item-msg notif-item-direccion">${escapeHtml(dictamen.direccion)}</span>
-          <span class="notif-item-folio">Ver dictámenes</span>`
+          <span class="notif-item-folio">Ver en la plataforma</span>`
         : `<span class="notif-item-titulo">${escapeHtml(n.titulo)}</span>
           ${n.mensaje ? `<span class="notif-item-msg">${escapeHtml(n.mensaje)}</span>` : ''}`;
       return `<article class="notif-item${n.leido ? '' : ' notif-item-nuevo'}" data-notif-id="${escapeHtml(n.id)}">

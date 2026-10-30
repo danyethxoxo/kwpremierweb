@@ -67,7 +67,7 @@ function escapeHtml(str: string) {
 function ligaCompleta(url: string | null) {
   if (!url) return SITIO + '/portal.html'
   if (/^https?:\/\//i.test(url)) return url
-  return SITIO + '/' + String(url).replace(/^\/+/, '')
+  return SITIO + '/' + String(url).replace(/^\/+/, '').replace(/^kwpremierweb\//i, '')
 }
 
 secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (req) => {
@@ -112,6 +112,9 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
       correoComprador = aviso.tipo === 'comprador_matches'
       tipoNotificacion = aviso.tipo
     }
+
+    // Los dictamenes solo notifican en plataforma. El envio explicito lleva los PDFs.
+    if (tipoNotificacion === 'dictamen') return respond({ ok: true, omitido: 'dictamen_solo_plataforma' })
 
     const { data: perfil, error: errPerfil } = await admin
       .from('profiles')

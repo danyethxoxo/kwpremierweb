@@ -15,6 +15,7 @@ test('dictámenes: recuperar asesor, estatus, dirección y folio del historial s
 });
 
 test('dictámenes: aviso nuevo conserva asunto, asesor y dirección del correo', () => {
+  for(const separador of ['\n\n','\\n\\n'])assert.deepEqual(datosDictamen({tipo:'dictamen',titulo:'Dictamen de expediente: Autorizado',mensaje:'Dictamen de María López con dirección:'+separador+'Av. Juárez 12'}),{asesor:'María López',estatus:'Autorizado',direccion:'Av. Juárez 12',folio:''});
   assert.deepEqual(datosDictamen({tipo: 'dictamen', titulo: 'Dictamen de expediente: Autorizado',
     mensaje: 'Hola: María López, te compartimos el dictamen de expediente de tu listado con dirección:\n\nAv. Juárez 12: interior 3'}),
   {asesor: 'María López', estatus: 'Autorizado', direccion: 'Av. Juárez 12: interior 3', folio: ''});

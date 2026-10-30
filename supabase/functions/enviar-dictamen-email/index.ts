@@ -1,5 +1,6 @@
 import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { correoDictamen } from '../_shared/dictamen-email.ts'
+import { destinatariosDictamenLiderazgo } from '../_shared/dictamen-destinatarios.ts'
 import { secureServe } from '../_shared/security.ts'
 // Envía al asesor el PDF del dictamen que acaba de finalizarse.
 //
@@ -113,25 +114,40 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
     if (['asesor', 'todos'].includes(modo) && !EMAIL_RE.test(destino)) {
       return response(req, { error: 'El asesor no tiene un correo válido registrado.' }, 400)
     }
+    let liderazgo: string[] = []
+    let avisoPC = ''
+    if (modo === 'todos') {
+      const [personas, baseAsesor] = await Promise.all([
+        admin.from('profiles').select('nombre,apellido,email,role,puesto').in('role', ['master', 'admin', 'staff']),
+        admin.from('asesores').select('coach_asignado').eq('correo', destino).maybeSingle(),
+      ])
+      if (personas.error || baseAsesor.error) return response(req, { error: 'No se pudieron resolver los destinatarios de liderazgo.' }, 503)
+      const coach = String(baseAsesor.data?.coach_asignado || '')
+      const seleccion = destinatariosDictamenLiderazgo(personas.data || [], coach)
+      liderazgo = seleccion.correos
+      if (!seleccion.pcEncontrado) avisoPC = coach ? 'No se encontró el correo del PC asignado.' : 'El asesor no tiene PC asignado en la base de asesores.'
+    }
     const destinatarios = Array.from(new Set((modo === 'asesor' ? [destino]
       : modo === 'mca' ? [RECIPIENTES_MANUALES[0]]
       : modo === 'mcaa' ? [RECIPIENTES_MANUALES[1]]
       : modo === 'yo' ? [identity.user.email || '']
       : modo === 'otro' ? [String(body.correo || '').trim().toLowerCase()]
-      : [destino, ...RECIPIENTES_MANUALES])))
+      : [destino, ...RECIPIENTES_MANUALES, ...liderazgo])))
     if (!destinatarios.length || destinatarios.some((correo) => !EMAIL_RE.test(correo) || correo.length > 254)) {
       return response(req, { error: 'Ingresa un correo válido.' }, 400)
     }
     const direccion = String(dictamen.inmueble || 'sin dirección').trim()
     const asesor = String(asesorAsignado?.nombre || 'Asesor(a)').trim()
-    const { asunto, html } = correoDictamen(asesor, direccion, String(dictamen.estado))
-
-    const envio = await fetch('https://api.resend.com/emails', {
+    // El asesor recibe su mensaje personal; el equipo recibe la version informativa.
+    const grupos = [destinatarios.filter(c => c === destino), destinatarios.filter(c => c !== destino)].filter(g => g.length)
+    for (const grupo of grupos) {
+      const { asunto, html } = correoDictamen(asesor, direccion, String(dictamen.estado), true, grupo[0] === destino ? 'asesor' : 'liderazgo')
+      const envio = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
-        to: destinatarios,
+        to: grupo,
         subject: asunto,
         html,
         attachments: [
@@ -140,11 +156,12 @@ secureServe({ name: 'enviar-dictamen-email', userLimit: 10, maxBytes: 20 * 1024 
         ],
       })),
     })
-    if (!envio.ok) {
+      if (!envio.ok) {
       console.error('Resend rechazó el dictamen', envio.status, await envio.text())
       return response(req, { error: 'El proveedor de correo rechazó el envío.' }, 502)
+      }
     }
-    return response(req, { ok: true, enviado_a: destinatarios })
+    return response(req, { ok: true, enviado_a: destinatarios, ...(avisoPC ? { aviso: avisoPC } : {}) })
   } catch (error) {
     console.error(error)
     return response(req, { error: 'No se pudo enviar el dictamen.' }, 500)

@@ -37,7 +37,7 @@ test('aviso comparte asunto y estructura con el correo PDF sin anunciar adjuntos
   assert.ok(ctx.correoDictamen('<script>alert(1)</script>', '<img src=x>', 'autorizada', false).html.includes('&lt;img src=x&gt;'));
 });
 
-test('webhook envia el asunto compartido sin adjuntos y mantiene otros avisos', async () => {
+test('webhook omite correos de dictamen y mantiene los otros avisos', async () => {
   const helper = plantilla();
   for (const tipo of ['dictamen','ticket']) {
     let handler, enviado;
@@ -53,6 +53,7 @@ test('webhook envia el asunto compartido sin adjuntos y mantiene otros avisos', 
     vm.runInContext(js(process.env.KW_NOTIFICAR_EMAIL_SOURCE ? fs.readFileSync(process.env.KW_NOTIFICAR_EMAIL_SOURCE, 'utf8') : read('supabase/functions/notificar-email/index.ts')), ctx);
     const res = await handler(new Request('https://example.com', {method:'POST',headers:{'x-webhook-secret':'configurado'},body:JSON.stringify({record:{...aviso,notificacion_id:'11111111-1111-4111-8111-111111111111'}})}));
     assert.equal(res.status,200);
+    if(tipo==='dictamen'){assert.equal(enviado,undefined);assert.equal((await res.json()).omitido,'dictamen_solo_plataforma');continue;}
     assert.equal(enviado.subject,aviso.titulo);
     assert.equal('attachments' in enviado,false);
     assert.equal(enviado.html.includes('Ver dictámenes'),tipo==='dictamen');
