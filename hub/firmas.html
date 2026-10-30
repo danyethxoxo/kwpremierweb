@@ -5706,14 +5706,17 @@
   let documentoInicialAbierto = false;
   function abrirDocumentoInicial() {
     if (documentoInicialAbierto) return;
-    const id = new URLSearchParams(location.search).get('documento');
+    const parametros = new URLSearchParams(location.search);
+    const detalle = parametros.get('detalle');
+    const id = detalle || parametros.get('documento');
     if (!id) return;
     documentoInicialAbierto = true;
     const documento = envios.find(f => String(f.id) === id && f.estado !== 'eliminado');
     if (!documento) { window.kwUI.alert('Documento no disponible.'); return; }
     let indice = visibles.findIndex(f => String(f.id) === id);
     if (indice < 0) { indice = visibles.length; visibles.push(documento); }
-    abrirDocumento(indice, true).catch(() => window.kwUI.alert('No se pudo abrir el documento.'));
+    if (detalle) abrirDetalle(indice);
+    else abrirDocumento(indice, true).catch(() => window.kwUI.alert('No se pudo abrir el documento.'));
   }
 
   const cargaHistorial = window.kwFirmasCarga.crear({

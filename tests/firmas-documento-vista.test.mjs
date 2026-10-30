@@ -67,3 +67,14 @@ test('el acceso desde Inicio abre solo documentos autorizados y una sola vez',as
   if(caso.abre)assert.deepEqual(llamadas[0],[0,true]);else assert.equal(avisos.length,1);
  }
 });
+
+
+test('el enlace de firmantes abre el detalle existente y no el visor',()=>{
+ const html=readFileSync(new URL('../hub/firmas.html',import.meta.url),'utf8');
+ const inicio=html.indexOf('  let documentoInicialAbierto = false;');
+ const codigo=html.slice(inicio,html.indexOf('  const cargaHistorial =',inicio));
+ const llamadas=[];
+ const context=vm.createContext({URLSearchParams,location:{search:'?detalle=propio'},envios:[{id:'propio',estado:'pendiente'}],visibles:[],window:{kwUI:{alert:()=>assert.fail('Documento disponible')}},abrirDetalle:i=>llamadas.push(i),abrirDocumento:()=>assert.fail('No debe abrir el visor')});
+ vm.runInContext(codigo+';abrirDocumentoInicial();abrirDocumentoInicial();',context);
+ assert.deepEqual(llamadas,[0]);
+});

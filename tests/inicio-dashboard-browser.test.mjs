@@ -61,7 +61,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   for(const [widget,href] of [['.dash-properties','/propiedades.html'],['.dash-buyers','/hub/perfil-comprador.html'],['.dash-firmas','/hub/firmas.html'],['.dash-dictamenes','/hub/dictamenes.html']]){
    assert.equal(await page.locator(widget+' .dash-widget-icon svg').evaluate(el=>el.innerHTML),await page.locator('#drawer a[href="'+href+'"] svg').evaluate(el=>el.innerHTML));
   }
-  assert.ok(await page.evaluate(()=>{const a=document.querySelector('.dash-signature').getBoundingClientRect(),b=document.querySelector('.dash-signers summary').getBoundingClientRect();return b.left>=a.right-1&&b.top>=a.top&&b.bottom<=a.bottom;}));
+  assert.ok(await page.evaluate(()=>{const a=document.querySelector('.dash-signature').getBoundingClientRect(),b=document.querySelector('.dash-signers').getBoundingClientRect();return b.left>=a.right-1&&b.top>=a.top&&b.bottom<=a.bottom;}));
   await page.locator('#notif-bell-slot').evaluate(el=>{el.innerHTML='<button class="notif-bell-btn" aria-label="Notificaciones"><svg viewBox="0 0 24 24"></svg></button>';});
   assert.equal(await page.locator('.notif-bell-btn').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.locator('#drawer').screenshot({path:path.join(out,'menu-lateral.png')});
@@ -84,15 +84,12 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.ok(!(await page.locator('main').textContent()).includes('Cliente ajeno'));
   assert.equal(await page.locator('.dash-signature').count(),5);
   assert.equal(await page.locator('.dash-firmas .dash-view-all').getAttribute('href'),'/hub/firmas.html');
-  assert.equal(await page.locator('.dash-signature strong').first().textContent(),'Contrato 1');
+  assert.equal(await page.locator('.dash-signature-name').first().textContent(),'Contrato 1');
   assert.equal(await page.locator('.dash-signature .dash-pill,.dash-signature-progress').count(),0);
   assert.equal(await page.locator('.dash-signature').first().getAttribute('href'),'/hub/firmas.html?documento=f-0');
-  assert.equal(await page.locator('.dash-signers summary').first().textContent(),'Faltan 2 firmas');
-  assert.equal(await page.locator('.dash-signers summary').nth(1).textContent(),'Firmas completas');
-  await page.locator('.dash-signers summary').first().click();
-  assert.ok(await page.getByText('ana@example.com',{exact:true}).first().isVisible());
-  assert.equal(await page.locator('.dash-signers-list').first().locator('li').count(),2);
-  await page.locator('.dash-signers summary').first().click();
+  assert.equal(await page.locator('.dash-signature-state').first().textContent(),'Faltan 2 firmas0/2');
+  assert.equal(await page.locator('.dash-signature-state').nth(1).textContent(),'Firmas completas2/2');
+  assert.equal(await page.locator('.dash-signers').first().getAttribute('href'),'/hub/firmas.html?detalle=f-0');
   assert.ok(!(await page.locator('#inicio-firmas').textContent()).includes('Documento ajeno'));
   const firmaQuery=await page.evaluate(()=>qaCalls.find(c=>c.table==='firmas_documentos'));
   assert.ok(firmaQuery.filtros.some(([k,v])=>k==='user_id'&&v==='self'));assert.equal(firmaQuery.limite,5);
