@@ -8,6 +8,7 @@
   var mas = document.getElementById('mas');
   var esFormulario = document.body.dataset.vistaComprador === 'formulario';
   var clienteEditar = new URLSearchParams(location.search).get('id');
+  var perfilDesdeCorreo = esFormulario ? null : new URLSearchParams(location.search).get('perfil');
   // La campana comparte el renglón de acciones, como en Firmas Digitales.
   function ubicarCampana() {
     var slot = document.getElementById('notif-bell-slot');
@@ -485,6 +486,11 @@
       }
       desplegar.addEventListener('click',alternarMatches);
       if (listo && abiertos.has(p.id)) alternarMatches(true);
+      if (listo && perfilDesdeCorreo === p.id) {
+        if (!abiertos.has(p.id)) alternarMatches(true);
+        perfilDesdeCorreo = null;
+        requestAnimationFrame(function () { fila.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); });
+      }
       var menu = document.createElement('details'); menu.className = 'cliente-menu'; agregarTexto(menu,'summary','⋮').setAttribute('aria-label','Acciones de ' + p.nombre);
       var opcionesMenu = document.createElement('div'); menu.append(opcionesMenu); acciones.append(menu);
       if (p.activo && estadoGuardado && estadoGuardado.ultimo_error) {
@@ -543,6 +549,10 @@
       var res = await consulta;
       if (res.error) throw res.error;
       perfiles = adicional ? perfiles.concat(res.data) : res.data;
+      if (!adicional && perfilDesdeCorreo && !perfiles.some(function(p){return p.id===perfilDesdeCorreo;})) {
+        const destino = await window.kwSupabase.from('perfiles_comprador').select('*').eq('id',perfilDesdeCorreo).maybeSingle();
+        if (!destino.error && destino.data) perfiles.unshift(destino.data);
+      }
       pintar(); mas.hidden = res.data.length < 50;
       if (!esFormulario) cargarInventarioMatches();
       if (esFormulario && clienteEditar) {
@@ -594,3 +604,4 @@
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
+

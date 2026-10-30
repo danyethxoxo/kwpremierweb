@@ -10,7 +10,7 @@ function preparar(falla=false){
  const admin={from(tabla){return {select(){return this},eq(){return this},async single(){return{data:tabla==='notificaciones'?{...record,tipo:'comprador_matches'}:{nombre:'Asesor',email:'test@example.com'}}},update(datos){updates.push(datos);return{eq:async()=>({error:null})}}}}};
  let source=readFileSync(new URL('../supabase/functions/notificar-email/index.ts',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import[^\r\n]*\r?\n/gm,'');
  source=stripTypeScriptTypes(source,{mode:'strip'});
- const scope=vm.createContext({Response,console,prepararCorreoUtf8,plantillaCorreo:()=>'<html>Correo de prueba</html>',Deno:{env:{get:()=> 'test'}},createClient:()=>admin,secureServe:(_,h)=>{handler=h},fetch:async(_,req)=>{
+ const scope=vm.createContext({Response,console,prepararCorreoUtf8,correoNotificacionDictamen:()=>null,correoCoincidencias:()=>null,plantillaCorreo:()=>'<html>Correo de prueba</html>',Deno:{env:{get:()=> 'test'}},createClient:()=>admin,secureServe:(_,h)=>{handler=h},fetch:async(_,req)=>{
   keys.push(req.headers['Idempotency-Key']);if(falla)return new Response('{}',{status:503});
   aceptados.add(req.headers['Idempotency-Key']);return Response.json({id:'provider-test'});
  }});vm.runInContext(source,scope);
@@ -25,3 +25,4 @@ test('fallo del proveedor no confirma entrega; aviso manipulado no envia',async(
  const m=preparar(true);assert.equal((await m.handler(solicitud())).status,502);assert.equal(m.updates.length,0);
  const n=preparar();assert.equal((await n.handler(solicitud({...record,user_id:'otro'}))).status,400);assert.equal(n.keys.length,0);
 });
+

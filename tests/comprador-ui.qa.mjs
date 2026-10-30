@@ -13,6 +13,7 @@ const fixture={id:'11111111-1111-4111-8111-111111111111',nombre:'Cliente prueba'
 const mock=`
 document.documentElement.classList.add('kw-auth-ok');
 window.qaPerfil=${JSON.stringify(fixture)};
+window.qaPerfil.notas='Roof garden, Alberca, Terraza, Jardín, Vigilancia, Patio, Estudio';
 if(new URLSearchParams(location.search).has('referencia'))Object.assign(window.qaPerfil,{nombre:'Diana Omana',correo:'diana.omana@example.com',precio_min:7000000,precio_max:9000000,municipios:['Coyoacán','Iztacalco','Benito Juárez','Miguel Hidalgo'],colonias_seleccionadas:[],recamaras_min:3,banos_min:2,notas:'Roof garden'});
 window.qaPendiente=new URLSearchParams(location.search).has('pendiente');
 window.kwSupabase={
@@ -81,6 +82,10 @@ try {
   await page.locator('.match-prop').first().getByRole('button',{name:'Ver compatibilidad',exact:true}).click();
   assert.equal(await page.locator('.match-prop').first().getByRole('meter',{name:'Compatibilidad'}).getAttribute('aria-valuenow'),'100');
   assert(await page.locator('.match-prop').first().locator('.criterio-icono').count()>=4);
+  const criterios=page.locator('.match-prop').first().locator('.match-criterios');
+  assert(await criterios.evaluate(el=>el.scrollHeight>el.clientHeight),'desglose con contenido desplazable');
+  await criterios.hover();await page.mouse.wheel(0,250);await page.waitForTimeout(250);
+  assert(await criterios.evaluate(el=>el.scrollTop>0),'la rueda desplaza el desglose');
   await page.screenshot({path:`outputs/comprador/desglose-${width}.png`,fullPage:true});
   await page.locator('.match-prop').first().getByRole('button',{name:'Ver propiedad',exact:true}).click();
   await page.getByRole('button',{name:'Más propiedades',exact:true}).click();
@@ -121,6 +126,9 @@ try {
   await page.screenshot({path:`outputs/comprador/vacio-${width}.png`,fullPage:true});
   await page.evaluate(()=>{const b=document.querySelector('.btn-coincidencias');b.click();b.click();b.click();});await page.waitForFunction(()=>document.querySelector('.comprador-coincidencias').hidden);
   await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.btn-coincidencias').click();assert.equal(await page.locator('.comprador-coincidencias').getAttribute('data-despliegue'),null);await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.goto(base+'/hub/perfil-comprador.html?perfil='+fixture.id);
+  await page.waitForFunction(()=>document.querySelector('.btn-coincidencias')?.getAttribute('aria-expanded')==='true');
+  await page.locator('.match-giro').first().waitFor();
   await page.goto(base+'/hub/perfil-comprador.html?pendiente=1');
   await page.locator('.btn-coincidencias .kw-loader').waitFor();
   assert.equal(await page.locator('.kw-loader').count(),1);
@@ -129,3 +137,4 @@ try {
  }
  writeFileSync('outputs/comprador/qa.json',JSON.stringify(results,null,2));console.log(results);
 } finally {await browser.close();server.close();}
+

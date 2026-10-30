@@ -1,6 +1,7 @@
 import { prepararCorreoUtf8 } from '../_shared/email-utf8.ts'
 import { plantillaCorreo } from '../_shared/mailer.ts'
 import { correoNotificacionDictamen } from '../_shared/dictamen-email.ts'
+import { correoCoincidencias } from '../_shared/comprador-email.ts'
 import { secureServe } from '../_shared/security.ts'
 // Edge Function: notificar-email
 //
@@ -118,7 +119,7 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
 
     const { data: perfil, error: errPerfil } = await admin
       .from('profiles')
-      .select('nombre, apellido, email')
+      .select('nombre, apellido, email, sitio_web')
       .eq('id', userId)
       .single()
 
@@ -130,7 +131,13 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     const liga = ligaCompleta(fila?.url)
 
     const dictamen = correoNotificacionDictamen(tipoNotificacion, titulo, mensaje)
-    const html = dictamen?.html || plantillaCorreo({ intro: nombre + ', tienes un aviso nuevo en la plataforma:', title: titulo, content: mensaje, actionLabel: 'Verlo en la plataforma', actionUrl: liga })
+    let coincidencias: ReturnType<typeof correoCoincidencias> = null
+    if (correoComprador) {
+      const {data: envio,error: errorEnvio} = await admin.from('comprador_correo_envios').select('contenido').eq('notificacion_id',notificacionId!).single()
+      if (errorEnvio) return respond({error:'No se pudo preparar el detalle de las propiedades; se reintentará.'},503)
+      coincidencias = correoCoincidencias(envio?.contenido || null, perfil)
+    }
+    const html = coincidencias?.html || dictamen?.html || plantillaCorreo({ intro: nombre + ', tienes un aviso nuevo en la plataforma:', title: titulo, content: mensaje, actionLabel: 'Verlo en la plataforma', actionUrl: liga })
 
     const resendResp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -142,8 +149,9 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
       body: JSON.stringify(prepararCorreoUtf8({
         from: EMAIL_FROM,
         to: [perfil.email],
-        subject: dictamen?.asunto || titulo,
+        subject: coincidencias?.asunto || dictamen?.asunto || titulo,
         html,
+        ...(coincidencias ? {text:coincidencias.text} : {}),
       })),
     })
 
@@ -163,3 +171,4 @@ secureServe({ name: 'notificar-email', auth: 'service', ipLimit: 120 }, async (r
     return respond({ error: (err as Error).message || 'Error inesperado' }, 500)
   }
 })
+
