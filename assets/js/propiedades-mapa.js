@@ -206,7 +206,7 @@
       var lugar = resultados[2], etiqueta = document.getElementById('prop-mapa-lugar');
       if (contorno) { mapa.removeLayer(contorno); contorno = null; }
       if (lugar.features.length) {
-        contorno = L.geoJSON({type:'FeatureCollection',features:lugar.features}, {style:{color:'#8a0000',weight:2,fillOpacity:.06},interactive:false}).addTo(mapa);
+        contorno = L.geoJSON({type:'FeatureCollection',features:lugar.features}, {style:{color:'#CE011F',weight:2,fillOpacity:.06},interactive:false}).addTo(mapa);
       }
       etiqueta.textContent = dibujo.poligono() ? 'Zona dibujada: los filtros se aplican dentro del contorno.' : lugar.nombres.length ? lugar.nombres.join(' · ') + ' · Contorno INEGI simplificado' : lugar.ambiguo ? 'Hay municipios con el mismo nombre. Elige el estado para mostrar su contorno.' : lugar.error ? 'El contorno no está disponible temporalmente; los resultados siguen activos.' : '';
       if (dibujo.poligono()) mapa.fitBounds(dibujo.poligono().map(function (p) { return [p[1],p[0]]; }), {padding:[20,20],maxZoom:16,animate:false});

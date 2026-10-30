@@ -80,7 +80,7 @@
       '.doc-modal-cuerpo { padding: 12px 14px; max-height: 52vh; overflow-y: auto; }',
       '.doc-rol { display: flex; align-items: flex-start; gap: 11px; padding: 10px; border-radius: 9px; cursor: pointer; }',
       '.doc-rol:hover { background: #f7f7f7; }',
-      '.doc-rol input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: #CC0000; cursor: pointer; flex-shrink: 0; }',
+      '.doc-rol input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: #CE011F; cursor: pointer; flex-shrink: 0; }',
       '.doc-rol-nom { font-size: 13.5px; font-weight: 600; }',
       '.doc-rol-desc { font-size: 11.5px; color: var(--muted, #777); margin-top: 1px; }',
       '.doc-modal-pie { display: flex; gap: 9px; justify-content: flex-end; padding: 13px 18px;',
@@ -88,8 +88,8 @@
       '.doc-btn { height: 38px; padding: 0 16px; border-radius: 9px; font-family: inherit; font-size: 13.5px;',
       '  font-weight: 600; cursor: pointer; border: 1.5px solid var(--border, #e5e5e5); background: #fff; color: var(--text, #111); }',
       '.doc-btn:hover { background: #f5f5f5; }',
-      '.doc-btn.ok { background: #CC0000; border-color: #CC0000; color: #fff; }',
-      '.doc-btn.ok:hover { background: #b30000; }',
+      '.doc-btn.ok { background: #CE011F; border-color: #CE011F; color: #fff; }',
+      '.doc-btn.ok:hover { background: #CE011F; }',
       '.doc-btn:disabled { opacity: .55; cursor: default; }',
     ].join('\n');
     document.head.appendChild(s);

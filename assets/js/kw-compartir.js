@@ -1,7 +1,7 @@
 // Hoja de "Compartir" reutilizable.
 //
 // Abre una ventana con el enlace, los botones de cada red y el código QR
-// (que genera kw-qr.js con la identidad de KW). Se usa en el perfil
+// (que genera kw-qr.js?v=20261030kwred con la identidad de KW). Se usa en el perfil
 // público y en "Mi Perfil", pero sirve para compartir cualquier enlace.
 //
 // Uso:
@@ -41,8 +41,8 @@
     'padding:10px 12px;font-size:12.5px;color:#555;background:#fafafa;font-family:inherit}',
     '.kwc-copiar{border:none;border-radius:11px;padding:10px 15px;font-size:13px;',
     'font-weight:700;cursor:pointer;color:#fff;flex-shrink:0;font-family:inherit;',
-    'background:linear-gradient(180deg,#e81010 0%,#CC0000 100%);',
-    'box-shadow:0 1px 0 rgba(255,255,255,0.25) inset,0 3px 10px rgba(204,0,0,0.28);',
+    'background:linear-gradient(180deg,#CE011F 0%,#CE011F 100%);',
+    'box-shadow:0 1px 0 rgba(255,255,255,0.25) inset,0 3px 10px rgba(206,1,31,0.28);',
     'transition:filter .15s,transform .12s}',
     '.kwc-copiar:hover{filter:brightness(1.07)}',
     '.kwc-copiar:active{transform:translateY(1px) scale(0.97)}',
@@ -64,7 +64,7 @@
     '.kwc-qr-chico{max-width:190px;margin:0 auto 8px;cursor:pointer;border-radius:14px;',
     'transition:transform .15s}',
     '.kwc-qr-chico:hover{transform:scale(1.03)}',
-    '.kwc-qr-chico:focus-visible{outline:2px solid #CC0000;outline-offset:3px}',
+    '.kwc-qr-chico:focus-visible{outline:2px solid #CE011F;outline-offset:3px}',
     '.kwc-nota-qr{margin-top:0;margin-bottom:16px}',
     '.kwc-qr svg{width:100%;height:auto;display:block}',
     '.kwc-acciones{display:flex;gap:9px}',
@@ -73,8 +73,8 @@
     '.kwc-acciones button:active{transform:translateY(1px) scale(0.97)}',
     '.kwc-sec{border:1.5px solid #e3e3e1;background:#fff;color:#3a3a3a}',
     '.kwc-sec:hover{background:#fafafa}',
-    '.kwc-pri{border:none;color:#fff;background:linear-gradient(180deg,#e81010 0%,#CC0000 100%);',
-    'box-shadow:0 1px 0 rgba(255,255,255,0.25) inset,0 3px 10px rgba(204,0,0,0.28)}',
+    '.kwc-pri{border:none;color:#fff;background:linear-gradient(180deg,#CE011F 0%,#CE011F 100%);',
+    'box-shadow:0 1px 0 rgba(255,255,255,0.25) inset,0 3px 10px rgba(206,1,31,0.28)}',
     '.kwc-pri:hover{filter:brightness(1.07)}',
     '.kwc-aviso{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);',
     'background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:30px;font-size:13px;',
@@ -191,7 +191,7 @@
           op1('correo', 'Correo', '#6b7280') +
           op1('facebook', 'Facebook', '#1877F2') +
           op1('instagram', 'Instagram', '#C13584') +
-          op1('qr', 'Código QR', '#CC0000') +
+          op1('qr', 'Código QR', '#CE011F') +
           (navigator.share ? op1('mas', 'Más', '#3a3a3a') : '') +
         '</div>';
 

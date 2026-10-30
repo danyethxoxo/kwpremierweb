@@ -24,7 +24,7 @@ function frase(cantidad: number, nombre: string) {
   return cantidad === 1 ? '1 nueva propiedad que le puede interesar a ' + nombre : cantidad + ' nuevas propiedades que le pueden interesar a ' + nombre
 }
 function boton(texto: string, url: string) {
-  return `<a href="${escaparHtml(url)}" style="display:inline-block;margin:4px 8px 4px 0;padding:10px 14px;border:1px solid #800020;border-radius:8px;color:#800020 !important;background:#ffffff;font-size:12px;line-height:18px;font-weight:700;text-decoration:none !important;">${escaparHtml(texto)}</a>`
+  return `<a href="${escaparHtml(url)}" style="display:inline-block;margin:4px 8px 4px 0;padding:10px 14px;border:1px solid #CE011F;border-radius:8px;color:#CE011F !important;background:#ffffff;font-size:12px;line-height:18px;font-weight:700;text-decoration:none !important;">${escaparHtml(texto)}</a>`
 }
 function precio(p: Propiedad) {
   if (!Number.isFinite(Number(p.precio)) || Number(p.precio) <= 0) return 'Precio a consultar'
@@ -56,7 +56,7 @@ export function correoCoincidencias(contenido: { clientes?: Cliente[] } | null, 
         <tr><td style="padding:18px;overflow-wrap:anywhere;">
           <p style="margin:0 0 6px;font-size:12px;color:#777;">${escaparHtml([operacion, p.tipo].filter(Boolean).join(' · '))}</p>
           <h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;color:#222;">${escaparHtml(titulo)}</h2>
-          <p style="margin:0 0 10px;font-size:20px;font-weight:700;color:#800020;">${escaparHtml(precio(p))}</p>
+          <p style="margin:0 0 10px;font-size:20px;font-weight:700;color:#CE011F;">${escaparHtml(precio(p))}</p>
           ${ubicacion ? `<p style="margin:0 0 10px;font-size:13px;color:#666;">${escaparHtml(ubicacion)}</p>` : ''}
           ${datos ? `<p style="margin:0 0 10px;font-size:12px;color:#555;line-height:1.7;">${escaparHtml(datos)}</p>` : ''}
           ${p.market_center || p.asesor_nombre ? `<p style="margin:0 0 14px;font-size:12px;color:#777;">${escaparHtml([p.market_center, p.asesor_nombre].filter(Boolean).join(' · '))}</p>` : ''}
@@ -64,7 +64,7 @@ export function correoCoincidencias(contenido: { clientes?: Cliente[] } | null, 
         </td></tr></table>`
     }).join('')
     const restantes = c.propiedades.length - visibles.length
-    return `${clientes.length > 1 ? `<h2 style="font-size:16px;line-height:1.5;margin:0 0 14px;">${escaparHtml(frase(c.propiedades.length, c.nombre))}</h2>` : ''}${tarjetas}${restantes ? `<p style="margin:0 0 20px;color:#666;font-size:13px;">${visibles.length ? 'Mostramos las primeras ' + visibles.length + ' propiedades. ' : ''}Hay ${restantes} más para ${escaparHtml(c.nombre)}. <a href="${escaparHtml(perfil)}" style="color:#800020;">Verlas en el perfil comprador</a>.</p>` : ''}`
+    return `${clientes.length > 1 ? `<h2 style="font-size:16px;line-height:1.5;margin:0 0 14px;">${escaparHtml(frase(c.propiedades.length, c.nombre))}</h2>` : ''}${tarjetas}${restantes ? `<p style="margin:0 0 20px;color:#666;font-size:13px;">${visibles.length ? 'Mostramos las primeras ' + visibles.length + ' propiedades. ' : ''}Hay ${restantes} más para ${escaparHtml(c.nombre)}. <a href="${escaparHtml(perfil)}" style="color:#CE011F;">Verlas en el perfil comprador</a>.</p>` : ''}`
   }).join('')
   const html = plantillaCorreo({ intro: 'Hola ' + (asesor.nombre || 'asesor') + ',', title: asunto, content: '', bodyHtml: grupos })
   return { asunto, html, text: texto.join('\n\n') }

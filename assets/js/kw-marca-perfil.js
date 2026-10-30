@@ -82,7 +82,7 @@
       var css = document.createElement('link');
       css.id = 'kw-marca-css';
       css.rel = 'stylesheet';
-      css.href = '/assets/css/kw-marca-perfil.css?v=20261003b';
+      css.href = '/assets/css/kw-marca-perfil.css?v=20261030kwred';
       document.head.appendChild(css);
     }
     var dialog = document.createElement('dialog');

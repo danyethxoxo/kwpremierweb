@@ -66,7 +66,7 @@
       if(!correcto){ayuda.textContent='Traza un contorno con superficie, sin cruzar la línea. Activa la pluma para volver a intentarlo.';ayuda.hidden=false;return;}
       guardado=puntos;
       if(capa)mapa.removeLayer(capa);
-      capa=L.polygon(guardado.map(function(p){return [p[1],p[0]];}),{color:'#8a0000',weight:3,fillOpacity:.12,interactive:false}).addTo(mapa);
+      capa=L.polygon(guardado.map(function(p){return [p[1],p[0]];}),{color:'#CE011F',weight:3,fillOpacity:.12,interactive:false}).addTo(mapa);
       aplicar(guardado);
     }
     btn.disabled=false;
@@ -74,7 +74,7 @@
     marco.addEventListener('pointerdown',function(e){
       if(!activo||puntero!==null||e.button!==0||e.target.closest('.leaflet-control, .leaflet-popup'))return;
       e.preventDefault();e.stopPropagation();puntero=e.pointerId;muestras=[];agregar(e);marco.setPointerCapture(puntero);
-      trazo=L.polyline([mapa.containerPointToLatLng(muestras[0])],{color:'#8a0000',weight:3,interactive:false}).addTo(mapa);
+      trazo=L.polyline([mapa.containerPointToLatLng(muestras[0])],{color:'#CE011F',weight:3,interactive:false}).addTo(mapa);
     },{capture:true,passive:false});
     document.addEventListener('pointermove',function(e){if(!activo||puntero!==e.pointerId)return;e.preventDefault();e.stopPropagation();agregar(e);if(!cuadro)cuadro=requestAnimationFrame(dibujar);},{capture:true,passive:false});
     document.addEventListener('pointerup',terminar,{capture:true,passive:false});

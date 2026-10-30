@@ -141,7 +141,7 @@
     var boton = document.createElement('button');
     boton.textContent = 'Reintentar';
     boton.type = 'button';
-    boton.style.cssText = 'margin-top:16px;padding:10px 20px;border:0;border-radius:20px;background:#8a0000;color:white;cursor:pointer';
+    boton.style.cssText = 'margin-top:16px;padding:10px 20px;border:0;border-radius:20px;background:#CE011F;color:white;cursor:pointer';
     boton.addEventListener('click', function () {
       boton.disabled = true;
       if (!window.kwSupabase) return location.reload();

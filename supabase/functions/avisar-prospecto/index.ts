@@ -64,7 +64,7 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
     `<tr>
        <td style="padding:6px 0;color:#8a8a88;font-size:13px;width:90px;">${etiqueta}</td>
        <td style="padding:6px 0;font-size:15px;font-weight:600;color:#1a1a1a;">
-         ${enlace ? `<a href="${enlace}" style="color:#CC0000;text-decoration:none;">${valor}</a>` : valor}
+         ${enlace ? `<a href="${enlace}" style="color:#CE011F;text-decoration:none;">${valor}</a>` : valor}
        </td>
      </tr>`
 
@@ -74,7 +74,7 @@ function armarCorreo(p: Record<string, unknown>, nombreAsesor: string) {
 <body style="margin:0;">
 <div style="background:#ffffff;padding:24px 16px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:560px;background:#ffffff;">
-    <div style="border-left:3px solid #cc0000;padding:2px 0 2px 14px;">
+    <div style="border-left:3px solid #CE011F;padding:2px 0 2px 14px;">
       <div style="color:#1a1a1a;font-size:18px;line-height:1.4;font-weight:700;">Tienes un prospecto nuevo</div>
     </div>
     <div style="padding:20px 0 0;">

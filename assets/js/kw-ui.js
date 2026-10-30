@@ -1,4 +1,4 @@
-// Comportamiento de los componentes compartidos (ver kw-base.css).
+// Comportamiento de los componentes compartidos (ver kw-base.css?v=20261030kwred).
 //
 // Se incluye al final del <body>, después del contenido:
 //

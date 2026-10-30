@@ -26,7 +26,7 @@
         ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
         ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.rect(0,0,canvas.width,canvas.height);ctx.rect(rect.x,rect.y,rect.w,rect.h);ctx.fill('evenodd');
         ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(rect.x+1,rect.y+1,Math.max(0,rect.w-2),Math.max(0,rect.h-2));
-        for(const [x,y] of [[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x,rect.y+rect.h],[rect.x+rect.w,rect.y+rect.h]]){ctx.fillStyle='#8a0000';ctx.fillRect(x-6,y-6,12,12);ctx.strokeRect(x-6,y-6,12,12);}
+        for(const [x,y] of [[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x,rect.y+rect.h],[rect.x+rect.w,rect.y+rect.h]]){ctx.fillStyle='#CE011F';ctx.fillRect(x-6,y-6,12,12);ctx.strokeRect(x-6,y-6,12,12);}
         preview.src=png();
       }
       const punto=e=>{const b=canvas.getBoundingClientRect();return {x:(e.clientX-b.left)*canvas.width/b.width,y:(e.clientY-b.top)*canvas.height/b.height};};

@@ -18,7 +18,7 @@
   let usuario,sitioAsesor,perfilAsesor,moduloFicha;
   async function abrirFicha(propiedad,enlace){
     if(!window.kwFichaPropiedad){
-      if(!moduloFicha)moduloFicha=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/js/kw-ficha-propiedad.js?v=20261021fichas-tipos-detalle';script.onload=()=>window.kwFichaPropiedad?resolve():reject(new Error('No se pudo preparar la ficha'));script.onerror=()=>reject(new Error('No se pudo preparar la ficha'));document.head.append(script);}).catch(e=>{moduloFicha=null;throw e;});
+      if(!moduloFicha)moduloFicha=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/js/kw-ficha-propiedad.js?v=20261030kwred';script.onload=()=>window.kwFichaPropiedad?resolve():reject(new Error('No se pudo preparar la ficha'));script.onerror=()=>reject(new Error('No se pudo preparar la ficha'));document.head.append(script);}).catch(e=>{moduloFicha=null;throw e;});
       await moduloFicha;
     }
     const r=await window.kwSupabase.from('propiedades_inventario').select('*').eq('id',propiedad.id).single();if(r.error||!r.data)throw new Error('No se pudo cargar la propiedad');

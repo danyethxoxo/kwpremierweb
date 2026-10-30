@@ -10,17 +10,17 @@
   <script src="/assets/js/kw-security.js?v=20260922"></script>
 <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
 <link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
-<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261013general">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261030kwred">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261030kwred"></script>
           <title>Perfil comprador · KW Premier</title>
   <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
   <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
     <script src="/assets/js/notif-bell.js?v=20261030dictamen-liderazgo"></script>
-  <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261023buscador" />
-  <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e" />
-  <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros" />
+  <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261030kwred" />
+  <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20261030kwred" />
+  <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261030kwred" />
   <style>
     * { box-sizing: border-box; }
     body { min-height: 100vh; color: var(--text); }
@@ -39,20 +39,20 @@
     .cantidad input::-webkit-inner-spin-button { appearance: none; }
     .cantidad button { border: 0; border-radius: 0; width: 44px; padding: 0; flex-shrink: 0; font-size: 22px; }
     .etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 44px; padding: 5px 10px; border: 1px solid #d9d5d5; border-radius: 10px; }
-    .etiquetas:focus-within { border-color: #800020; }
+    .etiquetas:focus-within { border-color: #CE011F; }
     #comprador-form .etiquetas input { flex: 1; width: 160px; min-width: 140px; min-height: 30px; padding: 0; border: 0 !important; background: transparent; }
-    .etiqueta { display: inline-flex; align-items: center; gap: 6px; background: #f6eeee; color: #800020; border-radius: 7px; padding: 3px 8px; font-size: 12px; }
+    .etiqueta { display: inline-flex; align-items: center; gap: 6px; background: #f6eeee; color: #CE011F; border-radius: 7px; padding: 3px 8px; font-size: 12px; }
     .etiqueta button { min-height: 22px; padding: 0 3px; border: 0; background: transparent; color: inherit; }
     .campo .kw-select { width: 100%; }
     .campo .kw-select-btn { width: 100%; min-height: 44px; }
     #comprador-form .campo, #comprador-form input, #comprador-form select, #comprador-form textarea, #comprador-form .kw-select-btn, #comprador-form .kw-select-opcion, #comprador-form .opciones label { font-weight: 400 !important; }
-    #comprador-form input:focus, #comprador-form textarea:focus, #comprador-form .kw-select-btn:focus-visible, #comprador-form .kw-select.abierto .kw-select-btn { outline: none !important; box-shadow: none !important; border-color: #800020 !important; }
-    #comprador-form .cantidad:focus-within, #comprador-form .kw-numero:focus-within { border-color: #800020; box-shadow: none !important; outline: none !important; }
-    #comprador-form .catalogo-select:focus-within .kw-select-btn { border-color: #800020; }
+    #comprador-form input:focus, #comprador-form textarea:focus, #comprador-form .kw-select-btn:focus-visible, #comprador-form .kw-select.abierto .kw-select-btn { outline: none !important; box-shadow: none !important; border-color: #CE011F !important; }
+    #comprador-form .cantidad:focus-within, #comprador-form .kw-numero:focus-within { border-color: #CE011F; box-shadow: none !important; outline: none !important; }
+    #comprador-form .catalogo-select:focus-within .kw-select-btn { border-color: #CE011F; }
     #comprador-form .catalogo-select .kw-select-valor { visibility: hidden; }
     #comprador-form .catalogo-buscar { position: absolute; top: 0; left: 15px; width: calc(100% - 86px); height: 100%; min-height: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent; box-shadow: none !important; outline: none !important; }
     #comprador-form .catalogo-buscar::placeholder { color: var(--text); opacity: 1; }
-    #comprador-form .catalogo-limpiar { position: absolute; right: 36px; top: 50%; transform: translateY(-50%); width: 30px; min-height: 30px; padding: 0; border: 0; background: transparent; color: #800020; }
+    #comprador-form .catalogo-limpiar { position: absolute; right: 36px; top: 50%; transform: translateY(-50%); width: 30px; min-height: 30px; padding: 0; border: 0; background: transparent; color: #CE011F; }
     #comprador-acciones > #notif-bell-slot { width: 40px; flex-basis: 40px; }
     #comprador-acciones > #notif-bell-slot .notif-bell-btn { width: 40px; min-width: 40px; height: 40px; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
     #comprador-acciones > #notif-bell-slot .notif-bell-btn:hover { color: var(--red); }
@@ -71,22 +71,22 @@
     .campo { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 600; }
     .ancho { grid-column: 1 / -1; }
     input:not([type=checkbox]), select, textarea { width: 100%; min-height: 44px; border: 1px solid #d9d5d5; border-radius: 10px; background: #fff; padding: 10px 12px; font: inherit; color: var(--text); }
-    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid #800020; outline-offset: 3px; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid #CE011F; outline-offset: 3px; }
     textarea { resize: vertical; }
     .opciones { display: flex; flex-wrap: wrap; gap: 10px; }
     .opciones label { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); padding: 10px 12px; border-radius: 12px; font-size: 13px; cursor: pointer; }
-    input[type=checkbox] { accent-color: #800020; width: 17px; height: 17px; }
+    input[type=checkbox] { accent-color: #CE011F; width: 17px; height: 17px; }
     .acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 10px; min-height: 42px; padding: 10px 16px; }
-    .principal { background: #800020; color: #fff; border-color: #800020; font-weight: 600; }
+    .principal { background: #CE011F; color: #fff; border-color: #CE011F; font-weight: 600; }
     button:disabled { opacity: .6; cursor: default; }
     #mensaje { margin: 12px 0 0; font-size: 13px; min-height: 20px; }
-    #mensaje.error { color: #a00024; }
+    #mensaje.error { color: #CE011F; }
     .cliente { border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin: 12px 0; }
     .cliente h3 { margin: 0 0 6px; font-size: 16px; overflow-wrap: anywhere; }
     .cliente p { margin: 6px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
     .cliente .acciones { margin-top: 12px; }
-    .estado { font-size: 11px; background: #f6eeee; color: #800020; border-radius: 20px; padding: 4px 9px; display: inline-block; margin-bottom: 8px; }
+    .estado { font-size: 11px; background: #f6eeee; color: #CE011F; border-radius: 20px; padding: 4px 9px; display: inline-block; margin-bottom: 8px; }
     #vista-clientes { border: 0; padding: 0; border-radius: 0; background: transparent; }
     .clientes-tabla { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: 14px; background: #fff; overflow: hidden; }
     .clientes-tabla td { padding: 14px 18px; border-bottom: 1px solid var(--border); }
@@ -104,7 +104,7 @@
     .clientes-tabla .estado { font-size: 10px; margin: 0 0 5px; }
     .clientes-tabla .acciones { margin: 0; flex-wrap: nowrap; }
     .clientes-tabla button { min-height: 32px; font-size: 12px; padding: 6px 11px; }
-    .btn-coincidencias { background: #f6eeee; border: 0; color: #800020; border-radius: 999px; white-space: nowrap; }
+    .btn-coincidencias { background: #f6eeee; border: 0; color: #CE011F; border-radius: 999px; white-space: nowrap; }
     .cliente-menu { position: relative; }
     .cliente-menu summary { cursor: pointer; list-style: none; padding: 6px 12px; font-size: 19px; }
     .cliente-menu summary::-webkit-details-marker { display: none; }
@@ -116,12 +116,12 @@
     .match-nivel-titulo { text-align: center; color: var(--nivel-color, var(--text)); font-size: 19px; font-weight: 600; margin: 24px 0 20px; }
     .matches-grid { grid-template-columns: repeat(auto-fit,minmax(240px,300px)); justify-content: center; padding: 8px 0; }
     .match-navegacion { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; margin: 24px 0 14px; }
-    .clientes-tabla .match-navegacion button { min-height: 40px; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #800020; border-color: #800020; color: #fff; }
-    .clientes-tabla .match-navegacion button:hover { background: #640019; }
+    .clientes-tabla .match-navegacion button { min-height: 40px; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #CE011F; border-color: #CE011F; color: #fff; }
+    .clientes-tabla .match-navegacion button:hover { background: #CE011F; }
     .match-foto { position: relative; height: 220px; background: #f5f5f5; }
     .match-foto img { width: 100%; height: 100%; object-fit: cover; }
     .match-foto > a { display: block; height: 100%; }
-    .match-badge { position: absolute; left: 12px; top: 12px; background: #fff; border-radius: 999px; padding: 5px 10px; color: #800020; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .match-badge { position: absolute; left: 12px; top: 12px; background: #fff; border-radius: 999px; padding: 5px 10px; color: #CE011F; font-size: 10px; font-weight: 700; text-transform: uppercase; }
     .match-body { padding: 16px; font-size: 12px; }
     .match-body a { color: inherit; text-decoration: none; }
     .match-precio { font-size: 19px; font-weight: 700; }
@@ -165,7 +165,7 @@
     .match-atras h3 { color: var(--text); font-size: 15px; }
     .catalogo-estado { color: var(--muted); font-size: 11px; margin: -8px 0 14px; }
   </style>
-<link rel="stylesheet" href="/assets/css/perfil-comprador.css?v=20261030rueda" /><link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
+<link rel="stylesheet" href="/assets/css/perfil-comprador.css?v=20261030kwred" /><link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 </head>
 <body class="comprador-pagina" data-vista-comprador="clientes">
   <header class="kw-header"><span class="kw-header-title">Perfil comprador</span><a href="/portal.html" class="back-btn">← Inicio</a></header>
@@ -207,12 +207,12 @@
       </form>
     </section>
   </main>
-  <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
+  <script src="/assets/js/kw-ui.js?v=20261030kwred"></script>
   <script src="/assets/js/kw-sitio-asesor.js"></script>
   <script src="/assets/js/colonias-cdmx.js?v=20260930a"></script>
   <script src="/assets/js/comprador-matches.js?v=20261014unificado4"></script>
   <script src="/assets/js/inventario-local.js?v=20261013general"></script>
-  <script src="/assets/js/comprador-acciones.js?v=20261021fichas-tipos-detalle"></script><script src="/assets/js/comprador-resumen.js?v=20261014unificado4"></script><script src="/assets/js/comprador-cargas.js?v=20261014tarjetas"></script><script src="/assets/js/perfil-comprador.js?v=20261030rueda"></script>
+  <script src="/assets/js/comprador-acciones.js?v=20261030kwred"></script><script src="/assets/js/comprador-resumen.js?v=20261014unificado4"></script><script src="/assets/js/comprador-cargas.js?v=20261014tarjetas"></script><script src="/assets/js/perfil-comprador.js?v=20261030rueda"></script>
   <script src="/assets/js/drawer.js?v=20261023puestos" data-menu="hub"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>

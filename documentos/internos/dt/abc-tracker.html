@@ -10,23 +10,23 @@
   <script src="/assets/js/kw-security.js?v=20260922"></script>
 <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
 <link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
-<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261013general">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261030kwred">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261030kwred"></script>
     <title>ABC de la Tecnología Tracker</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }</style>
 <script src="/assets/js/notif-bell.js?v=20261030dictamen-liderazgo"></script>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261023buscador">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261030kwred">
 <!-- El tema claro va al final: es el que cambia el material y el fondo, y
      para eso tiene que ganarle a lo que traiga kw-base.css?v=20261019-notif-lista2. Antes aquí
-     colgaba además kw-ui.css?v=20261016uniforme DESPUES de esta linea, y como esa hoja
+     colgaba además kw-ui.css?v=20261030kwred DESPUES de esta linea, y como esa hoja
      vuelve a declarar --bg con el guinda oscuro, esta pantalla se
      quedaba en negro mientras el resto del sitio ya iba en claro.
-     kw-ui.css?v=20261016uniforme no hace falta enlazarlo: kw-base.css?v=20261019-notif-lista2 ya lo trae. -->
-<link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
+     kw-ui.css?v=20261030kwred no hace falta enlazarlo: kw-base.css?v=20261030kwred ya lo trae. -->
+<link rel="stylesheet" href="/assets/css/kw-claro.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261030kwred">
 <style>
   /* Sin esto, cualquier elemento que también traiga su propio "display"
      (como .chips-row o .input-clear, que son flex) le gana en la
@@ -38,7 +38,7 @@
   [hidden] { display: none !important; }
 
   html, body { min-height: 100%; color: var(--text); }
-  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261019-notif-rojo) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
+  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261030kwred) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .page { flex: 1; max-width: 1180px; width: 100%; margin: 0 auto; padding: 94px 24px 60px; }
@@ -82,7 +82,7 @@
   }
   .buscador svg.lupa { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
   .buscador input { width: 100%; height: 36px; padding: 0 34px 0 38px; border: 1.5px solid var(--border); border-radius: 11px; background: #fff; font-family: inherit; font-size: 13.5px; color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; }
-  .buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
+  .buscador input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(206,1,31,.08); }
   .input-clear { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); width: 23px; height: 23px; border: none; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #666; padding: 0; }
   .input-clear:hover { background: #ddd; color: #111; }
   .input-clear svg { width: 11px; height: 11px; }
@@ -198,7 +198,7 @@
   .lista { display: flex; flex-direction: column; gap: 8px; }
   .fila {
     background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
-    border: 1px solid color-mix(in srgb, var(--dt-color, #8a0000) 34%, transparent); border-left: 4px solid var(--dt-color, #8a0000); border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--dt-color, #CE011F) 34%, transparent); border-left: 4px solid var(--dt-color, #CE011F); border-radius: 12px;
     backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     transition: box-shadow .15s;
@@ -207,7 +207,7 @@
   .fila-main { display: flex; align-items: center; gap: 14px; padding: 13px 16px; cursor: pointer; }
   .fila-txt { flex: 1; min-width: 0; }
   .fila-nom { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fila-baja { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #92400e; background: #fef3c7; border-radius: 5px; padding: 2px 6px; margin-left: 7px; vertical-align: 2px; }
+  .fila-baja { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #CE011F; background: #fef3c7; border-radius: 5px; padding: 2px 6px; margin-left: 7px; vertical-align: 2px; }
   .fila-meta { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
   .fila-dt { display: inline-flex; align-items: center; gap: 5px; }
   .fila-dt i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
@@ -236,7 +236,7 @@
   .fila-prog { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .barra { width: 110px; height: 7px; background: #eee; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
   .barra i {
-    display: block; height: 100%; background: #dc2626; border-radius: 99px;
+    display: block; height: 100%; background: #CE011F; border-radius: 99px;
     transition: width .3s, background-color .3s;
   }
   .pct { font-size: 13px; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
@@ -259,9 +259,9 @@
   .fila-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: none; font-family: inherit; font-size: 13.5px; color: var(--text); padding: 9px 10px; border-radius: 8px; cursor: pointer; text-align: left; }
   .fila-menu button:hover { background: #f5f5f5; }
   .fila-menu button svg { width: 15px; height: 15px; flex-shrink: 0; color: #666; }
-  .fila-menu button.peligro { color: #b91c1c; }
+  .fila-menu button.peligro { color: #CE011F; }
   .fila-menu button.peligro:hover { background: #fef2f2; }
-  .fila-menu button.peligro svg { color: #b91c1c; }
+  .fila-menu button.peligro svg { color: #CE011F; }
   .fila-panel-outer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
   .fila-panel-outer.abierto { grid-template-rows: 1fr; }
   .fila-panel-inner { min-height: 0; overflow: hidden; }
@@ -273,7 +273,7 @@
   .fila-panel-cerrar:hover { background: #eee; color: var(--text); }
   .fila-panel-contenido { min-width: 0; }
   .fila-panel-cargando, .fila-panel-vacio, .fila-panel-error { padding: 12px 0; color: var(--muted); font-size: 12.5px; }
-  .fila-panel-error { color: #8b1a10; }
+  .fila-panel-error { color: #CE011F; }
   .fila-comentario-confirmacion { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #16835b; font-size: 12.5px; font-weight: 600; animation: fila-confirmacion-entrada .18s ease; }
   .fila-comentario-confirmacion svg { width: 16px; height: 16px; flex: 0 0 auto; }
   @keyframes fila-confirmacion-entrada { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
@@ -285,13 +285,13 @@
   .fila-comentario-acciones { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
   .fila-comentario-accion { height: 25px; padding: 0 7px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--muted); font: inherit; font-size: 10.5px; cursor: pointer; }
   .fila-comentario-accion:hover { background: #f5f5f5; color: var(--text); }
-  .fila-comentario-accion.peligro { color: #b91c1c; }
+  .fila-comentario-accion.peligro { color: #CE011F; }
   .fila-comentario-accion.peligro:hover { background: #fef2f2; }
   .fila-comentario-editor { width: 100%; min-height: 74px; max-height: 170px; margin-top: 8px; resize: vertical; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; box-sizing: border-box; }
-  .fila-comentario-editor:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
+  .fila-comentario-editor:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(206,1,31,.08); }
   .fila-comentario-form { display: flex; align-items: flex-end; gap: 9px; }
   .fila-comentario-form textarea { flex: 1; min-height: 58px; max-height: 150px; resize: vertical; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
-  .fila-comentario-form textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
+  .fila-comentario-form textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(206,1,31,.08); }
   .fila-comentario-form button { height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: var(--red); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
   .fila-comentario-form button:hover { filter: brightness(1.08); }
   .fila-comentario-form button:disabled { opacity: .55; cursor: default; }
@@ -299,7 +299,7 @@
   .abc-historial-item { min-width: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); align-items: center; gap: 0 14px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
   .abc-historial-item-main { min-width: 0; display: flex; align-items: center; gap: 8px; }
   .abc-historial-item-estado { flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: #16835b; }
-  .abc-historial-item-estado.desmarcado { color: #b91c1c; }
+  .abc-historial-item-estado.desmarcado { color: #CE011F; }
   .abc-historial-item-tema { min-width: 0; margin-top: 0; color: var(--text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .abc-historial-item-meta { min-width: 0; grid-column: auto; color: var(--muted); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .abc-historial-item-fecha { align-self: center; color: var(--muted); font-size: 10.5px; white-space: nowrap; text-align: right; }
@@ -315,11 +315,11 @@
   .abc-modal-filtros label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 600; }
   .abc-modal-filtros select, .abc-modal-filtros input { height: 34px; min-width: 150px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
   .abc-modal-filtros input { width: min(300px, 42vw); }
-  .abc-modal-filtros select:focus, .abc-modal-filtros input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(138,0,0,.08); }
+  .abc-modal-filtros select:focus, .abc-modal-filtros input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(206,1,31,.08); }
   .abc-historial-salida { min-height: 250px; overflow: auto; padding: 14px 18px 18px; }
   .abc-historial-resumen { margin-bottom: 10px; color: var(--muted); font-size: 12px; }
   .abc-historial-vacio { padding: 42px 15px; color: var(--muted); font-size: 13px; text-align: center; }
-  .abc-historial-error { padding: 16px; border-radius: 9px; background: #fdecea; color: #8b1a10; font-size: 12.5px; }
+  .abc-historial-error { padding: 16px; border-radius: 9px; background: #fdecea; color: #CE011F; font-size: 12.5px; }
   body.abc-modal-abierto { overflow: hidden; }
   @media (max-width: 620px) {
     .fila-comentario-form { align-items: stretch; flex-direction: column; }
@@ -436,7 +436,7 @@
   }
   .abc-vacio strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 5px; }
   .aviso { display: flex; align-items: flex-start; gap: 10px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; color: #7a5c00; margin-bottom: 14px; white-space: pre-line; }
-  .aviso.error { background: #fdecea; border-color: #f5c6c2; color: #8b1a10; }
+  .aviso.error { background: #fdecea; border-color: #f5c6c2; color: #CE011F; }
   .aviso-txt { flex: 1; min-width: 0; }
   .aviso-x { flex: 0 0 auto; width: 22px; height: 22px; margin: -1px -5px 0 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; opacity: .5; cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
   .aviso-x:hover { opacity: 1; background: rgba(0, 0, 0, .07); }
@@ -449,7 +449,7 @@
     .page-title, .page-desc { display: none; }
   }
 </style>
-<link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
+<link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 </head>
 <body>
 

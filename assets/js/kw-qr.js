@@ -35,7 +35,7 @@
 
   var NIVEL = { L: 0, M: 1, Q: 2, H: 3 };
   var NIVEL_BITS = { L: 1, M: 0, Q: 3, H: 2 }; // como viajan en la info de formato
-  var ROJO_KW = '#C21532';
+  var ROJO_KW = '#CE011F';
 
   // ─────────────────────────────────────────────────────────────
   // Aritmética en GF(256), la base de Reed-Solomon

@@ -53,3 +53,7 @@ Los nodos de acciones se trasladan con sus manejadores y vuelven al lugar origin
 El encabezado móvil mide 60 px más el área segura. Menú a 8 px del borde, control de 44 px, título a continuación con la misma tipografía y alineación. Las acciones siguen el orden herramientas, notificaciones, acción principal. Firmas también carga esta base; sus vistas conservan su controlador. No colocar flechas de regreso junto al título. Los documentos sin menú general usan la navegación accesible compartida y el acceso a notificaciones. Perfil comprador respeta la posición de la campana al cargar datos y al cambiar a escritorio.
 
 En Propiedades los filtros permanecen desplegados en el contenido móvil, con dos columnas de campos y sin un botón para ocultarlos. `data-kw-movil-visible` conserva su ubicación original al salir del escritorio. El mapa crea su propio contexto de apilamiento; sus controles y contadores no pueden cubrir el encabezado, los menús o las ventanas. La prueba `movil-qa-browser.test.mjs` recorre todas las páginas a 320, 390, 768 y 1023 px y comprueba posición del encabezado, título, campana, acciones y desbordamientos.
+
+## Color de marca
+
+El rojo KW es #CE011F (RGB 206, 1, 31; Pantone 200; CMYK 0, 100, 66, 13). Sustituye los tonos guinda en toda la interfaz, documentos y correos. Botones, enlaces, contornos y estados de interacción usan este tono; las transparencias conservan su opacidad. Las acciones principales de los avisos llevan fondo rojo KW sólido y texto blanco.

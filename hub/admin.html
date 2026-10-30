@@ -10,10 +10,10 @@
   <script src="/assets/js/kw-security.js?v=20260922"></script>
 <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
 <link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
-<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261013general">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261030kwred">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
 <script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261013general"></script>
+<script src="/assets/js/auth-guard.js?v=20261030kwred"></script>
     <title>Panel</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }  /* ── Accesos dentro de la tarjeta ────────────────────────────
@@ -23,7 +23,7 @@
   .btn-abrir-accesos {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 6px 13px; border-radius: var(--r-pastilla);
-    background: #fff5f5; border: 1.5px solid rgba(138,0,0,0.3);
+    background: #fff5f5; border: 1.5px solid rgba(206,1,31,0.3);
     font-size: 12px; font-weight: 700; color: var(--red); white-space: nowrap;
     transition: background var(--t-rapido), border-color var(--t-rapido);
   }
@@ -37,7 +37,7 @@
      mientras el texto se quedaba blanco - blanco sobre casi blanco,
      that's the "las letras se ponen blancas" que se reportó. */
   .btn-abrir-accesos.activo { background: var(--red); color: #fff; border-color: var(--red); }
-  .kw-fila-cabeza:hover .btn-abrir-accesos.activo { background: #6e0000; border-color: #6e0000; }
+  .kw-fila-cabeza:hover .btn-abrir-accesos.activo { background: #CE011F; border-color: #CE011F; }
   .btn-abrir-accesos.activo.listo { background: #1a7a1a; color: #fff; border-color: #1a7a1a; }
   .kw-fila-cabeza:hover .btn-abrir-accesos.activo.listo { background: #146c14; border-color: #146c14; }
   .btn-abrir-accesos svg { width: 13px; height: 13px; }
@@ -91,7 +91,7 @@
   .color-cian      { --cc: #0e7490; --cc-bg: #e6f6f9; }
   .color-naranja   { --cc: #c2540c; --cc-bg: #fdece0; }
   .color-indigo    { --cc: #4338ca; --cc-bg: #ecebfc; }
-  .color-rojo      { --cc: #b91c1c; --cc-bg: #fbeaea; }
+  .color-rojo      { --cc: #CE011F; --cc-bg: #fbeaea; }
   .color-gris-oscuro { --cc: #52525b; --cc-bg: #eeeef0; }
 
   /* ── El expediente del asesor (Usuario Command, contraseña, correo
@@ -308,7 +308,7 @@
   }
   .asesor-menu-opcion:hover { background: #f6f6f6; color: var(--red); }
   .asesor-menu-opcion.peligro { color: var(--red); }
-  .asesor-menu-opcion.peligro:hover { background: #fdeaea; color: #8d0000; }
+  .asesor-menu-opcion.peligro:hover { background: #fdeaea; color: #CE011F; }
   .asesor-menu-opcion svg { width: 15px; height: 15px; }
 
   /* Capa de espera para operaciones contra Google. Cubre la pantalla
@@ -454,9 +454,9 @@
   }
 
 </style>
-<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261023buscador">
-<link rel="stylesheet" href="/assets/css/kw-claro.css?v=20260924e">
-<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261019-sin-sombra-filtros">
+<link rel="stylesheet" href="/assets/css/kw-base.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-claro.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261030kwred">
 <!-- Va en el <head> para que window.kwUI ya exista cuando el script de
      la página quiera cambiar de pestaña; se arma solo al cargar el DOM. -->
 <script src="/assets/js/kw-ui.js?v=20261016auditoria2"></script>
@@ -465,13 +465,13 @@
      pestañas, filtros, tablas, modales y campos vienen de kw-base.css?v=20261019-notif-lista2:
      esta hoja solo agrega lo que es propio del Panel. */
   html, body { min-height: 100%; color: var(--text); }
-  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261019-notif-rojo) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
+  /* El fondo real (la capa fija de kw-ui.css?v=20261016uniforme, o la propia si la pagina no carga kw-base.css?v=20261030kwred) solo se asoma detras de <body>, nunca de <html>: <html> necesita quedarse con SU color de respaldo para la franja de "rebote" al llegar al tope o al fondo del scroll en celular. */
   body { background: transparent; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
   /* El título y la descripción de la página viven directo sobre el
      fondo guinda (no dentro de una tarjeta blanca), así que necesitan
-     su propio color claro; kw-page-titulo/kw-page-desc de kw-ui.css?v=20261016uniforme
+     su propio color claro; kw-page-titulo/kw-page-desc de kw-ui.css?v=20261030kwred
      traen el oscuro de siempre, pensado para fondo gris. */
   .kw-page-titulo { color: var(--text); }
   .kw-page-desc { color: var(--muted); }
@@ -530,7 +530,7 @@
   }
   #panel-lateral-nav .kw-lateral-enlace:hover {
     background: #fafafa;
-    border-color: rgba(163,0,0,.28);
+    border-color: rgba(206,1,31,.28);
   }
   #panel-lateral-nav .kw-lateral-enlace:focus-visible {
     outline: 2px solid var(--red);
@@ -665,7 +665,7 @@
     display: inline-flex; align-items: center; gap: 6px;
     color: var(--muted); font: inherit; font-size: 12px; cursor: pointer;
   }
-  .usuario-visibilidad:hover { background: rgba(163,0,0,.06); color: var(--red); }
+  .usuario-visibilidad:hover { background: rgba(206,1,31,.06); color: var(--red); }
   .usuario-visibilidad svg { width: 17px; height: 17px; }
   .usuario-fila .documento-menu-ancla { margin-left: 2px; }
   .usuario-fila .documento-menu { z-index: 60; }
@@ -711,7 +711,7 @@
     margin: 0 auto 0 0;
   }
   #modal-editar-usuario .editar-acciones .btn-eliminar-usuario {
-    margin-right: auto; color: #a30000; border: 1px solid #d99; background: transparent;
+    margin-right: auto; color: #CE011F; border: 1px solid #d99; background: transparent;
   }
   @media (max-width: 620px), (max-height: 560px) {
     #modal-editar-usuario .modal-box {
@@ -730,10 +730,10 @@
     width: 100%; padding: 8px;
     border-radius: var(--r-pastilla);
     font-family: inherit; font-size: 12px; font-weight: 700;
-    background: none; border: 1.5px solid #d99; color: #a30000; cursor: pointer;
+    background: none; border: 1.5px solid #d99; color: #CE011F; cursor: pointer;
     transition: background var(--t-rapido), border-color var(--t-rapido);
   }
-  .btn-eliminar-usuario:hover { background: #fdeaea; border-color: #a30000; }
+  .btn-eliminar-usuario:hover { background: #fdeaea; border-color: #CE011F; }
   /* La separación va en el envoltorio del confirmar, que es quien ocupa
      el lugar del botón. Sin borde ni relleno: al voltearse giraría con
      él y la línea aparecería abajo. */
@@ -763,7 +763,7 @@
     background: transparent; color: var(--muted); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .documento-menu-btn:hover { background: rgba(163,0,0,.07); color: var(--red); }
+  .documento-menu-btn:hover { background: rgba(206,1,31,.07); color: var(--red); }
   .documento-menu-btn svg { width: 19px; height: 19px; }
   .documento-menu {
     position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
@@ -776,7 +776,7 @@
     background: transparent; color: var(--text); text-align: left;
     font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   }
-  .documento-menu button:hover { background: rgba(163,0,0,.07); color: var(--red); }
+  .documento-menu button:hover { background: rgba(206,1,31,.07); color: var(--red); }
   @media (max-width: 700px) {
     .documento-fila .kw-fila-extra { display: none; }
   }
@@ -875,11 +875,11 @@
   }
   .asesores-card .asesores-grupos .kw-tab.activo,
   .asesores-card .asesores-grupos .kw-tab[aria-selected="true"] {
-    color: var(--red, #a30000) !important;
+    color: var(--red, #CE011F) !important;
     font-weight: 700;
   }
   .asesores-card .asesores-grupos .kw-tabs-indicador {
-    background: var(--red, #a30000) !important;
+    background: var(--red, #CE011F) !important;
   }
   /* Separación breve y constante entre el selector de categorías y las
      filas; sin la raya general, sólo queda el indicador de la activa. */
@@ -1239,7 +1239,7 @@
 
   /* Información y accesos son dos vistas independientes de la tarjeta. */
   .kw-fila.solo-accesos .kw-datos { display: none; }
-  .acceso.no .acceso-icono { color: #c62828; }
+  .acceso.no .acceso-icono { color: #CE011F; }
   .acceso.no .acceso-icono svg { stroke: currentColor; }
 
   @media (max-width: 640px) {
@@ -1276,7 +1276,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261022qa2">
+<link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 </head>
 <body class="kw-panel-lateral">
 

@@ -111,7 +111,7 @@
       const doc=marco.contentDocument;doc.documentElement.className='kw-auth-ok';
       const cargas=[];
       document.head.querySelectorAll('style,link[rel="stylesheet"]').forEach(el=>{const copia=el.cloneNode(true);if(copia.tagName==='LINK')cargas.push(new Promise(resolve=>{copia.onload=resolve;copia.onerror=resolve;}));doc.head.appendChild(copia);});
-      const estilo=doc.createElement('style');estilo.textContent='html,body{margin:0!important;padding:0!important;width:816px!important;height:auto!important;overflow:visible!important;display:block!important;visibility:visible!important}.page.kw-contrato-hoja{transform:none!important;box-shadow:none!important}.kw-contrato-hoja .doc-campo:not(.filled),.kw-contrato-hoja .comercial-faltante{color:#a00015!important}';doc.head.appendChild(estilo);
+      const estilo=doc.createElement('style');estilo.textContent='html,body{margin:0!important;padding:0!important;width:816px!important;height:auto!important;overflow:visible!important;display:block!important;visibility:visible!important}.page.kw-contrato-hoja{transform:none!important;box-shadow:none!important}.kw-contrato-hoja .doc-campo:not(.filled),.kw-contrato-hoja .comercial-faltante{color:#CE011F!important}';doc.head.appendChild(estilo);
       document.getElementById(config.stack).querySelectorAll('.kw-contrato-hoja').forEach(p=>{const copia=p.cloneNode(true);copia.classList.add('print-page');copia.style.transform='none';copia.querySelector('.kw-contrato-encabezado img').src=logo;doc.body.appendChild(copia);});
       await Promise.all(cargas);
       await Promise.all(Array.from(doc.images,img=>img.decode()));
