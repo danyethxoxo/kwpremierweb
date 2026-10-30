@@ -53,3 +53,17 @@ test('la lectura del PDF verifica permisos antes de consultar Weetrust',async()=
  const resultado=await vm.runInContext(bloque,scope);
  assert.equal(resultado.status,403);assert.equal(consultas,0);
 });
+
+
+test('el acceso desde Inicio abre solo documentos autorizados y una sola vez',async()=>{
+ const html=readFileSync(new URL('../hub/firmas.html',import.meta.url),'utf8');
+ const inicio=html.indexOf('  let documentoInicialAbierto = false;');
+ const codigo=html.slice(inicio,html.indexOf('  const cargaHistorial =',inicio));
+ for(const caso of [{id:'propio',estado:'borrador',abre:true},{id:'eliminado',estado:'eliminado',abre:false},{id:'ajeno',estado:'pendiente',abre:false}]){
+  const llamadas=[],avisos=[];
+  const context=vm.createContext({URLSearchParams,location:{search:'?documento='+caso.id},envios:[{id:'propio',estado:'borrador'},{id:'eliminado',estado:'eliminado'}],visibles:[],window:{kwUI:{alert:msg=>avisos.push(msg)}},abrirDocumento:async(i,soloVista)=>llamadas.push([i,soloVista])});
+  vm.runInContext(codigo+';abrirDocumentoInicial();abrirDocumentoInicial();',context);
+  assert.equal(llamadas.length,caso.abre?1:0);
+  if(caso.abre)assert.deepEqual(llamadas[0],[0,true]);else assert.equal(avisos.length,1);
+ }
+});

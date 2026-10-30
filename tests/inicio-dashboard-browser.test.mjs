@@ -18,7 +18,7 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  if(qaEmpty)return {data:[],error:null};
  let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,market_center:'KW Premier',asesor_nombre:'Asesor de prueba',enlace_kw:'https://kw.com/es-419/property/Prueba/'+(1000+i),titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
  table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
- table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{firmado:i===1},{firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
+ table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{nombre:'Ana Prueba',correo:'ana@example.com',firmado:i===1},{nombre:'Luis Prueba',correo:'luis@example.com',firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
  for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,value]of estado.desiguales||[])data=data.filter(row=>row[col]!==value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
  }).then(resolve);
@@ -81,6 +81,13 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('.dash-firmas .dash-view-all').getAttribute('href'),'/hub/firmas.html');
   assert.equal(await page.locator('.dash-signature strong').first().textContent(),'Contrato 1');
   assert.equal(await page.locator('.dash-signature .dash-pill,.dash-signature-progress').count(),0);
+  assert.equal(await page.locator('.dash-signature').first().getAttribute('href'),'/hub/firmas.html?documento=f-0');
+  assert.equal(await page.locator('.dash-signers summary').first().textContent(),'Faltan 2 firmas');
+  assert.equal(await page.locator('.dash-signers summary').nth(1).textContent(),'Firmas completas');
+  await page.locator('.dash-signers summary').first().click();
+  assert.ok(await page.getByText('ana@example.com',{exact:true}).first().isVisible());
+  assert.equal(await page.locator('.dash-signers-list').first().locator('li').count(),2);
+  await page.locator('.dash-signers summary').first().click();
   assert.ok(!(await page.locator('#inicio-firmas').textContent()).includes('Documento ajeno'));
   const firmaQuery=await page.evaluate(()=>qaCalls.find(c=>c.table==='firmas_documentos'));
   assert.ok(firmaQuery.filtros.some(([k,v])=>k==='user_id'&&v==='self'));assert.equal(firmaQuery.limite,5);

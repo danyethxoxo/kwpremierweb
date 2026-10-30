@@ -4435,7 +4435,7 @@
   //   - completado: el firmado, que weetrust deja en su URL
   //   - mandado desde el sitio: el original, en nuestro bucket
   //   - traído de su panel y sin terminar: no tenemos archivo
-  async function abrirDocumento(i) {
+  async function abrirDocumento(i, soloVista = false) {
     const f = visibles[i];
     if (!f) return;
     if (f.estado === 'eliminado') return window.kwUI.alert('Este documento ya fue eliminado en WeeTrust. Puedes quitarlo del historial desde sus opciones.');
@@ -4444,7 +4444,7 @@
     // se quedó, con sus firmantes y sus firmas ya colocadas. Solo los
     // nuestros: uno traído del panel de weetrust no tiene archivo aquí
     // ni sabemos dónde puso las firmas.
-    if ((f.estado === 'borrador' || (f.estado === 'error' && !f.weetrust_document_id)) && f.archivo_ruta) return retomarBorrador(f);
+    if (!soloVista && (f.estado === 'borrador' || (f.estado === 'error' && !f.weetrust_document_id)) && f.archivo_ruta) return retomarBorrador(f);
 
     // Primero la copia de weetrust: la de ellos va cambiando conforme la
     // gente firma, así que en un documento a medias ya trae dibujadas las
@@ -5703,6 +5703,19 @@
 
   let catalogosHistorial = null;
   let historialListo = false;
+  let documentoInicialAbierto = false;
+  function abrirDocumentoInicial() {
+    if (documentoInicialAbierto) return;
+    const id = new URLSearchParams(location.search).get('documento');
+    if (!id) return;
+    documentoInicialAbierto = true;
+    const documento = envios.find(f => String(f.id) === id && f.estado !== 'eliminado');
+    if (!documento) { window.kwUI.alert('Documento no disponible.'); return; }
+    let indice = visibles.findIndex(f => String(f.id) === id);
+    if (indice < 0) { indice = visibles.length; visibles.push(documento); }
+    abrirDocumento(indice, true).catch(() => window.kwUI.alert('No se pudo abrir el documento.'));
+  }
+
   const cargaHistorial = window.kwFirmasCarga.crear({
     leer: async () => {
       const catalogos = catalogosHistorial;
@@ -5724,6 +5737,7 @@
       pintarEnvios();
       cont.scrollTop = scroll;
       historialListo = true;
+      abrirDocumentoInicial();
     },
     error: (error) => {
       console.error('No se pudo actualizar el historial de firmas:', error);

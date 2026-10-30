@@ -100,11 +100,19 @@
   function firmas(filas,caja) {
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
     filas.slice(0,5).forEach(f=>{
-      const a=nodo('a','dash-signature');a.href='/hub/firmas.html';
+      const fila=nodo('article','dash-signature-row'),a=nodo('a','dash-signature');a.href='/hub/firmas.html?documento='+encodeURIComponent(f.id);
       const icono=nodo('span','dash-signature-icon');icono.innerHTML=svg('dictamen');
-      const info=nodo('span','dash-signature-info');info.append(nodo('strong','',f.titulo||f.nombre_archivo||'Documento sin título'),nodo('small','',fecha(f.created_at)));
+      const info=nodo('span','dash-signature-info');info.append(nodo('strong','',f.titulo||f.nombre_archivo||'Documento sin t\u00edtulo'),nodo('small','',fecha(f.created_at)));
       const flecha=nodo('span','dash-chevron');flecha.innerHTML=svg('flecha');
-      a.append(icono,info,flecha);caja.append(a);
+      a.append(icono,info,flecha);fila.append(a);
+      const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
+      const faltan=personas.filter(x=>!x.firmado).length;
+      const detalle=nodo('details','dash-signers'),resumen=nodo('summary','',personas.length?(faltan?(faltan===1?'Falta 1 firma':'Faltan '+faltan+' firmas'):'Firmas completas'):'Sin firmantes');
+      resumen.setAttribute('aria-label',resumen.textContent+' - Ver firmantes de '+(f.titulo||f.nombre_archivo||'documento'));detalle.append(resumen);
+      const lista=nodo('ul','dash-signers-list');
+      personas.forEach(x=>{const item=nodo('li',''),datos=nodo('span','');datos.append(nodo('strong','',x.nombre||'Firmante'),nodo('small','',x.correo||x.email||''));item.append(datos,nodo('span','dash-signer-status',x.firmado?'Firmado':'Pendiente'));lista.append(item);});
+      if(personas.length)detalle.append(lista);else detalle.append(nodo('p','dash-signers-empty','No hay firmantes agregados.'));
+      fila.append(detalle);caja.append(fila);
     });
   }
   async function iniciar() {
@@ -122,7 +130,7 @@
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores),
-      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,created_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
+      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,firmantes,created_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
     };
     await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
   }
