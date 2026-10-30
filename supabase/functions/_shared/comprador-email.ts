@@ -43,12 +43,14 @@ export function correoCoincidencias(contenido: { clientes?: Cliente[] } | null, 
     const visibles = c.propiedades.slice(0, Math.min(10, disponibles)); disponibles -= visibles.length
     const tarjetas = visibles.map(p => {
       const enlace = enlacePropiedad(p, asesor.sitio_web || '')
+      const nombreAsesor = String(p.asesor_nombre || '').trim()
+      const enlaceAsesor = nombreAsesor && /^\d+$/.test(String(p.asesor_kw_id || '')) ? 'https://kw.com/es-419/agent/' + encodeURIComponent(nombreAsesor.toLocaleLowerCase('es-MX').replace(/\s+/g, '-')) + '/' + p.asesor_kw_id : ''
       const foto = urlSegura(p.imagen)
       const titulo = String(p.titulo || 'Propiedad sin título')
       const ubicacion = [p.colonia, p.municipio, p.estado].filter(Boolean).join(', ')
       const datos = [[p.recamaras, 'recámaras'], [p.banos, 'baños'], [p.estacionamientos, 'estacionamientos'], [p.m2_construccion, 'm² de construcción'], [p.m2_terreno, 'm² de terreno']].filter(([v]) => v !== null && v !== undefined && v !== '').map(([v, etiqueta]) => v + ' ' + etiqueta).join(' · ')
       const operacion = p.operacion === 'renta' ? 'Renta' : p.operacion === 'venta' ? 'Venta' : ''
-      texto.push([c.nombre, titulo, precio(p), ubicacion, datos, enlace, perfil].filter(Boolean).join('\n'))
+      texto.push([c.nombre, titulo, precio(p), ubicacion, datos, enlace, perfil, enlaceAsesor].filter(Boolean).join('\n'))
       return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border:1px solid #e9e4e6;border-radius:12px;margin-bottom:18px;">
         ${foto ? `<tr><td><img src="${escaparHtml(foto)}" alt="${escaparHtml(titulo)}" width="560" style="display:block;width:100%;max-width:560px;height:220px;object-fit:cover;border:0;border-radius:11px 11px 0 0;"></td></tr>` : ''}
         <tr><td style="padding:18px;overflow-wrap:anywhere;">
@@ -58,7 +60,7 @@ export function correoCoincidencias(contenido: { clientes?: Cliente[] } | null, 
           ${ubicacion ? `<p style="margin:0 0 10px;font-size:13px;color:#666;">${escaparHtml(ubicacion)}</p>` : ''}
           ${datos ? `<p style="margin:0 0 10px;font-size:12px;color:#555;line-height:1.7;">${escaparHtml(datos)}</p>` : ''}
           ${p.market_center || p.asesor_nombre ? `<p style="margin:0 0 14px;font-size:12px;color:#777;">${escaparHtml([p.market_center, p.asesor_nombre].filter(Boolean).join(' · '))}</p>` : ''}
-          ${enlace ? boton('Ver propiedad en KW', enlace) : ''} ${boton('Abrir perfil comprador', perfil)}
+          ${enlace ? boton('Ver propiedad en KW', enlace) : ''} ${boton('Abrir perfil comprador', perfil)} ${enlaceAsesor ? boton('Ver perfil del asesor', enlaceAsesor) : ''}
         </td></tr></table>`
     }).join('')
     const restantes = c.propiedades.length - visibles.length
