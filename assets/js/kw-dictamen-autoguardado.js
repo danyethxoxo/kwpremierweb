@@ -39,7 +39,7 @@
       capturar();clearTimeout(temporizador);
       var s=actual;temporizador=setTimeout(function(){enviar(s);},800);
     }
-    async function abrir(id){
+    async function abrir(id,publicadoEn){
       cerrar();pausado=false;restaurando=true;
       var local=leerLocal(id);
       var s=actual={id:local?.id||id||crypto.randomUUID(),origen:id||null,persistido:local?!!local.persistido:!!id,datos:local?.datos||null,huella:'',pendiente:!!local?.pendiente,version:0,fecha:local?.fecha||0};
@@ -50,7 +50,7 @@
         if(actual!==s)return;
         if(r.data){
           s.persistido=true;
-          if(!s.version&&!local?.pendiente){restaurando=true;op.restaurar(r.data.datos);s.datos=r.data.datos;s.huella=JSON.stringify(op.leer());restaurando=false;op.estado('Borrador recuperado');}
+          if(!s.version&&!local?.pendiente&&(!publicadoEn||Date.parse(r.data.updated_at)>Date.parse(publicadoEn))){restaurando=true;op.restaurar(r.data.datos);s.datos=r.data.datos;s.huella=JSON.stringify(op.leer());restaurando=false;op.estado('Borrador recuperado');}
         }
       }catch(e){/* El respaldo local sigue disponible sin conexion. */}
       if(actual===s&&s.pendiente)enviar(s);

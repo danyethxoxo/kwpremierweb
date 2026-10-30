@@ -63,7 +63,11 @@ test('recupera cambios locales y remotos al recargar, incluso sin conexion y sin
   await page.reload();assert.equal(await page.locator('#direccion').inputValue(),'Dirección sin conexión');assert.equal(await page.locator('#fecha').inputValue(),'2026-');assert.equal(await page.locator('#nota').inputValue(),'Observación aún sin agregar');
   fallar=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.waitForFunction(()=>estado.textContent==='Borrador guardado');assert.equal(cloud.size,1);assert.equal(cloud.get(id).datos.campos.nota,'Observación aún sin agregar');
   await page.locator('#nota').fill('Antes de salir');await page.reload();assert.equal(await page.locator('#nota').inputValue(),'Antes de salir');
+  const anterior=cloud.get(id);
   await page.evaluate(async id=>{await draft.pausar();await draft.completar(id);},id);await page.reload();assert.equal(await page.locator('#direccion').inputValue(),'');
+  cloud.set(id,anterior);
+  await page.evaluate(async({id,fecha})=>{await draft.cerrar();direccion.value='Versión emitida';await draft.abrir(id,fecha);},{id,fecha:new Date(Date.now()+86400000).toISOString()});
+  assert.equal(await page.locator('#direccion').inputValue(),'Versión emitida');
   assert.ok(llamadas>=3);
  }finally{await browser.close();}
 });
