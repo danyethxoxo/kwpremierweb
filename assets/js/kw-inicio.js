@@ -97,20 +97,56 @@
       a.append(nodo('span','dash-avatar',iniciales),info,nodo('span','dash-pill '+(p.activo?'activo':''),p.activo?'Activo':'Pausado'));caja.append(a);
     });
   }
-  function abrirFirmaEnInicio(enlace,titulo) {
-    const dialogo=nodo('dialog','dash-firma-visor');dialogo.setAttribute('aria-label',titulo);
-    const marco=nodo('iframe','');marco.title=titulo;
-    const cerrar=nodo('button','dash-firma-cerrar','Cerrar');cerrar.type='button';
-    const carga=nodo('span','dash-firma-carga','Cargando...');carga.setAttribute('role','status');
-    const url=new URL(enlace,location.origin);url.searchParams.set('integrado','inicio');marco.src=url.href;
-    const limpiar=()=>{window.removeEventListener('message',mensaje);document.body.classList.remove('dash-visor-abierto');dialogo.remove();};
-    const mensaje=e=>{if(e.origin!==location.origin||e.source!==marco.contentWindow)return;if(e.data?.tipo==='kw-firma-cerrar')dialogo.close();};
-    window.addEventListener('message',mensaje);dialogo.addEventListener('close',limpiar,{once:true});
-    cerrar.onclick=()=>dialogo.close();marco.onload=()=>carga.remove();
-    dialogo.append(carga,marco,cerrar);document.body.append(dialogo);document.body.classList.add('dash-visor-abierto');dialogo.showModal();
+  let libreriaPdfInicio;
+  function cargarPdfInicio() {
+    if(!libreriaPdfInicio)libreriaPdfInicio=new Promise((resolve,reject)=>{
+      if(window.pdfjsLib)return resolve(window.pdfjsLib);
+      const script=nodo('script');script.src='/assets/vendor/firmas/pdf-3.11.174.min.js';
+      script.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='/assets/vendor/firmas/pdf.worker-3.11.174.min.js';resolve(window.pdfjsLib);};
+      script.onerror=()=>reject(new Error('No se pudo cargar el visor.'));document.head.append(script);
+    }).catch(e=>{libreriaPdfInicio=null;throw e;});return libreriaPdfInicio;
   }
-  function integrarEnlaceFirma(enlace,titulo) {
-    enlace.addEventListener('click',e=>{if(e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();abrirFirmaEnInicio(enlace.href,titulo);});
+  function abrirFirmaEnInicio(f,titulo,firmantes) {
+    const dialogo=nodo('dialog','dash-firma-visor'+(firmantes?' dash-firma-personas':''));dialogo.setAttribute('aria-label',titulo);
+    const encabezado=nodo('div','dash-firma-head'),cerrar=nodo('button','dash-firma-cerrar','Cerrar');cerrar.type='button';
+    encabezado.append(nodo('h2','',titulo),cerrar);const cuerpo=nodo('div','dash-firma-cuerpo');
+    const corte=new AbortController();let tarea,pdf;const tareas=new Set();
+    dialogo.addEventListener('close',()=>{corte.abort();tareas.forEach(t=>t.cancel());if(pdf)pdf.destroy();else tarea?.destroy();document.body.classList.remove('dash-visor-abierto');dialogo.remove();},{once:true});
+    cerrar.onclick=()=>dialogo.close();dialogo.addEventListener('click',e=>{if(e.target===dialogo){const r=dialogo.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialogo.close();}});
+    dialogo.append(encabezado,cuerpo);document.body.append(dialogo);document.body.classList.add('dash-visor-abierto');dialogo.showModal();
+    if(firmantes){
+      const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
+      personas.forEach(x=>{const fila=nodo('div','dash-firma-persona'),datos=nodo('div','');datos.append(nodo('strong','',x.nombre||'Firmante'));
+        const correo=String(x.correo||x.email||'');if(correo){const a=nodo('a','',correo);a.href='mailto:'+encodeURIComponent(correo);datos.append(a);}
+        fila.append(datos,nodo('span','',x.firmado?'Firmado':'Pendiente'));cuerpo.append(fila);
+      });if(!personas.length)cuerpo.append(nodo('p','','Sin firmantes'));return;
+    }
+    const carga=nodo('p','dash-firma-carga','Cargando documento...');carga.setAttribute('role','status');cuerpo.append(carga);
+    const cargar=async()=>{
+      const r=await window.kwSupabase.from('firmas_documentos').select('id,archivo_ruta,weetrust_document_id').eq('id',f.id).eq('user_id',usuario.id).single();
+      if(r.error||!r.data)throw new Error('Documento no disponible.');if(corte.signal.aborted)return;
+      const dato=r.data;let bytes;
+      if(dato.weetrust_document_id){
+        try{
+          const sesion=await window.kwSupabase.auth.getSession();if(!sesion.data?.session)throw new Error('Sin sesi\u00f3n');
+          const res=await fetch('https://iloetojomzqtadkithtv.supabase.co/functions/v1/firmar-documento',{method:'POST',headers:{Authorization:'Bearer '+sesion.data.session.access_token,'Content-Type':'application/json'},body:JSON.stringify({accion:'archivo_documento',id:f.id}),signal:corte.signal});
+          if(!res.ok||!res.headers.get('content-type')?.includes('application/pdf'))throw new Error('No se pudo cargar el PDF.');bytes=new Uint8Array(await res.arrayBuffer());
+        }catch(e){if(!dato.archivo_ruta||corte.signal.aborted)throw e;}
+      }
+      if(!bytes&&dato.archivo_ruta){const firmado=await window.kwSupabase.storage.from('firmas').createSignedUrl(dato.archivo_ruta,300);if(firmado.error||!firmado.data?.signedUrl)throw new Error('No se pudo cargar el PDF.');const res=await fetch(firmado.data.signedUrl,{signal:corte.signal});if(!res.ok)throw new Error('No se pudo cargar el PDF.');bytes=new Uint8Array(await res.arrayBuffer());}
+      if(!bytes)throw new Error('El documento no tiene archivo disponible.');
+      const lib=await cargarPdfInicio();if(corte.signal.aborted)return;
+      tarea=lib.getDocument({data:bytes,isEvalSupported:false});pdf=await tarea.promise;if(corte.signal.aborted){pdf.destroy();return;}
+      for(let i=1;i<=pdf.numPages;i++){
+        if(corte.signal.aborted)return;const pagina=await pdf.getPage(i),base=pagina.getViewport({scale:1}),ancho=Math.max(180,Math.min(850,cuerpo.clientWidth-32));
+        const escala=Math.min(devicePixelRatio||1,2),vista=pagina.getViewport({scale:ancho/base.width*escala}),canvas=nodo('canvas','dash-firma-hoja');canvas.width=Math.ceil(vista.width);canvas.height=Math.ceil(vista.height);canvas.style.width=ancho+'px';canvas.style.maxWidth='100%';canvas.setAttribute('aria-label','P\u00e1gina '+i+' de '+pdf.numPages);canvas.setAttribute('role','img');
+        const render=pagina.render({canvasContext:canvas.getContext('2d'),viewport:vista});tareas.add(render);await render.promise;tareas.delete(render);if(corte.signal.aborted)return;carga.remove();cuerpo.append(canvas);pagina.cleanup();
+      }
+    };
+    const intentar=()=>{cuerpo.replaceChildren(carga);carga.textContent='Cargando documento...';cargar().catch(e=>{if(corte.signal.aborted)return;cuerpo.replaceChildren(nodo('p','dash-firma-error',e.message||'No se pudo abrir el documento.'));const boton=nodo('button','dash-retry','Volver a intentar');boton.type='button';boton.onclick=intentar;cuerpo.append(boton);});};intentar();
+  }
+  function integrarEnlaceFirma(enlace,titulo,f,firmantes=false) {
+    enlace.addEventListener('click',e=>{if(e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();abrirFirmaEnInicio(f,titulo,firmantes);});
   }
   function firmas(filas,caja) {
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
@@ -118,11 +154,11 @@
       const titulo=f.titulo||f.nombre_archivo||'Documento sin t\u00edtulo';
       const fila=nodo('article','dash-signature-row'),documento=nodo('a','dash-signature');
       documento.href='/hub/firmas.html?documento='+encodeURIComponent(f.id);documento.title='Ver el documento';
-      documento.append(nodo('span','dash-signature-name',titulo));integrarEnlaceFirma(documento,titulo);
+      documento.append(nodo('span','dash-signature-name',titulo));integrarEnlaceFirma(documento,titulo,f);
       const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
       const hechas=personas.filter(x=>x.firmado).length,faltan=personas.length-hechas;
       const detalle=nodo('a','dash-signers');detalle.href='/hub/firmas.html?detalle='+encodeURIComponent(f.id);detalle.title='Ver firmantes y correos';
-      detalle.setAttribute('aria-label','Ver firmantes y correos de '+titulo);integrarEnlaceFirma(detalle,'Firmantes de '+titulo);
+      detalle.setAttribute('aria-label','Ver firmantes y correos de '+titulo);integrarEnlaceFirma(detalle,'Firmantes de '+titulo,f,true);
       const estado=nodo('span','dash-signature-state'),punto=nodo('span','dash-signature-dot'+(personas.length&&!faltan?' completa':''));punto.setAttribute('aria-hidden','true');
       estado.append(punto,nodo('span','',personas.length?(faltan?(faltan===1?'Falta 1 firma':'Faltan '+faltan+' firmas'):'Firmas completas'):'Sin firmantes'));
       if(personas.length)estado.append(nodo('span','dash-signature-count',hechas+'/'+personas.length));

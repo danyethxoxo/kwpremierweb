@@ -2,12 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<script>if(window.parent!==window&&new URLSearchParams(location.search).get('integrado')==='inicio')document.documentElement.classList.add('firmas-integradas');</script>
-<style>
-html.firmas-integradas,html.firmas-integradas body { background:transparent!important; }
-.firmas-integradas body > main,.firmas-integradas body > header,.firmas-integradas body > footer,.firmas-integradas #drawer,.firmas-integradas #drawer-overlay { visibility:hidden!important; }
-.firmas-integradas #modal-doc,.firmas-integradas #modal-detalle { background:transparent!important; }
-</style>
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -5363,18 +5357,12 @@ html.firmas-integradas,html.firmas-integradas body { background:transparent!impo
     bloquearFondo(true);
   }
 
-  function avisarCierreIntegrado() {
-    if (document.documentElement.classList.contains('firmas-integradas')) window.parent.postMessage({tipo:'kw-firma-cerrar'},location.origin);
-  }
-
   function cerrarDetalle() {
-    avisarCierreIntegrado();
     $('modal-detalle').style.display = 'none';
     bloquearFondo(false);
   }
 
   function cerrarDoc() {
-    avisarCierreIntegrado();
     window.kwFirmasArchivos?.liberar($('doc-paginas'));
     $('modal-doc').style.display = 'none';
     $('doc-cuerpo').onscroll = null;

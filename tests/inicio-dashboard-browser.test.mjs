@@ -18,7 +18,7 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  if(qaEmpty)return {data:[],error:null};
  let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,market_center:'KW Premier',asesor_nombre:'Asesor de prueba',enlace_kw:'https://kw.com/es-419/property/Prueba/'+(1000+i),titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
  table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
- table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{nombre:'Ana Prueba',correo:'ana@example.com',firmado:i===1},{nombre:'Luis Prueba',correo:'luis@example.com',firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
+ table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,weetrust_document_id:'remoto',user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{nombre:'Ana Prueba',correo:'ana@example.com',firmado:i===1},{nombre:'Luis Prueba',correo:'luis@example.com',firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
  for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,value]of estado.desiguales||[])data=data.filter(row=>row[col]!==value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
  }).then(resolve);
@@ -106,6 +106,8 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    assert.ok(await page.locator('.dash-widget-head').evaluateAll(heads=>heads.every(el=>{const t=el.querySelector('h2').getBoundingClientRect(),b=el.querySelector('.dash-view-all').getBoundingClientRect();return Math.abs(t.top+t.height/2-b.top-b.height/2)<2&&el.scrollWidth<=el.clientWidth+1;})));
    assert.equal(await page.locator('.dash-tools > a svg').count(),0);
    if(width<1024)assert.ok(await page.locator('header.kw-header').isVisible());
+   await page.locator('.dash-property-options').first().scrollIntoViewIfNeeded();
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.locator('.dash-property-options').first().click();
    assert.ok(await page.locator('#inicio-menu-propiedad').isVisible());
    assert.equal(await page.locator('#inicio-menu-propiedad a').getAttribute('href'),'https://qa.kw.com/es-419/property/Prueba/1000');
@@ -174,26 +176,38 @@ test('Skeletons independientes y compatibles con movimiento reducido',async()=>{
 });
 
 
-test('documento y firmantes abren sobre Inicio sin navegar y cierran de forma segura',async()=>{
+
+test('visor centrado en Inicio sin iframe ni navegacion, con PDF, correos y cierre',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const {page,context,errors}=await abrir(browser);
-  await context.route('**/hub/firmas.html?*',route=>route.fulfill({contentType:'text/html',body:'<html><body><button id="cerrar" onclick="parent.postMessage({tipo: &quot;kw-firma-cerrar&quot;},location.origin)">Cerrar vista</button></body></html>'}));
-  for(const [selector,parametro] of [['.dash-signature','documento'],['.dash-signers','detalle']]){
-   const url=page.url();await page.locator(selector).first().click();
-   assert.equal(page.url(),url);
-   assert.ok(await page.locator('dialog.dash-firma-visor').isVisible());
-   assert.ok((await page.locator('.dash-firma-visor iframe').getAttribute('src')).includes(parametro+'=f-0'));
-   assert.ok((await page.locator('.dash-firma-visor iframe').getAttribute('src')).includes('integrado=inicio'));
-   await page.evaluate(()=>window.postMessage({tipo:'kw-firma-cerrar'},location.origin));
-   assert.equal(await page.locator('.dash-firma-visor').count(),1,'ignora mensajes ajenos al marco');
-   await page.frameLocator('.dash-firma-visor iframe').locator('#cerrar').click();
-   await page.waitForFunction(()=>!document.querySelector('.dash-firma-visor'));
-   assert.equal(await page.locator('body.dash-visor-abierto').count(),0);
-  }
+  let otrasPaginas=0;
+  await context.route('**/hub/firmas.html?*',route=>{otrasPaginas++;return route.abort();});
+  const {jsPDF}=await import('jspdf');const archivo=new jsPDF();archivo.text('Contrato de prueba',20,25);archivo.addPage();archivo.text('Segunda pagina',20,25);const bytes=Buffer.from(archivo.output('arraybuffer'));
+  await context.route('**/functions/v1/firmar-documento',route=>route.fulfill({contentType:'application/pdf',body:bytes}));
+  const url=page.url();
   await page.locator('.dash-signature').first().click();
+  await page.waitForSelector('.dash-firma-hoja');
+  await page.waitForFunction(()=>document.querySelectorAll('.dash-firma-hoja').length===2);
+  assert.equal(await page.locator('.dash-firma-hoja').count(),2);
+  assert.equal(page.url(),url);assert.equal(otrasPaginas,0);
+  assert.equal(await page.locator('.dash-firma-visor iframe').count(),0);
+  for(const width of [1440,390,320]){
+   await page.setViewportSize({width,height:900});
+   assert.ok(await page.locator('.dash-firma-visor').evaluate(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left+r.width/2-innerWidth/2)<2&&Math.abs(r.top+r.height/2-innerHeight/2)<2&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}),JSON.stringify(await page.locator('.dash-firma-visor').evaluate(el=>({r:el.getBoundingClientRect().toJSON(),w:innerWidth,h:innerHeight}))));
+   await page.screenshot({path:path.join(out,'visor-'+width+'.png')});
+  }
+  await page.keyboard.press('Escape');await page.locator('.dash-firma-visor').waitFor({state:'detached'});assert.equal(await page.locator('.dash-firma-visor').count(),0);
+  await page.locator('.dash-signers').first().click();
+  assert.ok(await page.getByText('ana@example.com',{exact:true}).isVisible());
+  assert.equal(await page.locator('.dash-firma-persona').count(),2);
+  assert.equal(page.url(),url);assert.equal(otrasPaginas,0);
   await page.getByRole('button',{name:'Cerrar',exact:true}).click();
-  assert.equal(await page.locator('.dash-firma-visor').count(),0);
+  assert.equal(await page.locator('body.dash-visor-abierto').count(),0);
+  await context.route('**/functions/v1/firmar-documento',route=>route.fulfill({status:503,body:'Error'}));
+  await page.locator('.dash-signature').first().click();await page.waitForSelector('.dash-firma-error');
+  assert.ok(await page.getByRole('button',{name:'Volver a intentar'}).isVisible());
+  await page.getByRole('button',{name:'Cerrar',exact:true}).click();
   assert.deepEqual(errors,[]);await context.close();
  }finally{await browser.close();}
 });
