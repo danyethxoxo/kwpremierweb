@@ -1225,7 +1225,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
     // El ABC lo sincroniza el equipo de liderazgo (Master/Admin/Staff),
     // que es quien da las sesiones - no solo los correos del alta.
-    const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync', 'listar', 'verificar']
+    const ACCIONES_STAFF = ['abc_sync', 'dictamen_asesores_sync', 'listar', 'verificar', 'acceso_nuevo_asesor']
 
     // Las altas las hacen Master y Admin, más quien esté puesto a mano en
     // ALTA_EMAILS. El rol es lo que manda: así, dar de alta a un Admin
@@ -1557,7 +1557,22 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
     //
     // Lo que hay en Google se lee UNA vez para toda la corrida, aunque
     // sean 80 personas: son 3 llamadas, no 3 por persona.
-    if (accion === 'acceso') {
+    if (accion === 'acceso' || accion === 'acceso_nuevo_asesor') {
+      if (accion === 'acceso_nuevo_asesor') {
+        const nueva = Array.isArray(body.personas) && body.personas.length === 1 ? body.personas[0] : null
+        if (!nueva || body.quitar === true || !['asesor_activo','back_office_activo'].includes(String(nueva.grupo))) {
+          return respond({error:'Esta acción solo permite dar de alta a un asesor nuevo y activo.'},400)
+        }
+        const correoNuevo = limpiarCorreo(nueva.correo)
+        if (!correoNuevo || !String(nueva.nombre || '').trim()) return respond({error:'Faltan el nombre o correo del nuevo asesor.'},400)
+        const {data: existente,error: errorExistente} = await admin.from('asesores').select('id').eq('correo',correoNuevo).maybeSingle()
+        if (errorExistente) return respond({error:'No se pudo comprobar si el asesor ya existe.'},503)
+        if (existente) return respond({error:'Ese correo ya pertenece a un asesor. Su acceso se administra desde el panel.'},409)
+        body.quitar = false
+        body.todasCuentas = true
+        body.pasos = [...PASOS]
+        delete body.cuentaContactos
+      }
       const quitar = body.quitar === true
       const pasos = pasosPedidos(body.pasos, quitar)
       if (!pasos.length) return respond({ error: 'Los contactos se conservan. Selecciona Drive o Calendario para retirar accesos.' }, 400)

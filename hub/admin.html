@@ -1277,7 +1277,7 @@
   }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
-<link rel="stylesheet" href="/assets/css/kw-admin-asesores.css?v=20261030accesos">
+<link rel="stylesheet" href="/assets/css/kw-admin-asesores.css?v=20261030alineacion">
 </head>
 <body class="kw-panel-lateral">
 
@@ -2956,18 +2956,17 @@
     const cuentas = desgloseContactosHtml(estado, '', cuentaVista, true);
     const titulo = cuentas
       ? '<div class="accesos-titulo' + (cuentaVista ? ' abierto' : '') + '">' +
-          '<button type="button" class="accesos-toggle" aria-expanded="' + (cuentaVista ? 'true' : 'false') + '">Accesos' + ICONO_DERECHA + '</button>' +
+          '<button type="button" class="accesos-toggle" aria-label="Cuentas de Google" title="Cuentas de Google" aria-expanded="' + (cuentaVista ? 'true' : 'false') + '">' + ICONO_DERECHA + '</button>' +
           '<div class="accesos-cuentas-deslizable">' + cuentas + '</div>' +
         '</div>'
       : '';
     return '<div class="accesos' + (visible ? '' : ' ocultos') + '" data-correo="' + escapeHtml(p.correo) + '">' +
       '<div class="accesos-progreso" role="status" aria-label="Actualizando accesos"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>' +
-      '<div class="accesos-encabezado">Servicios conectados</div>' +
       titulo +
       '<div class="accesos-fila">' + filas +
         accesoPaginaHtml(p) +
-        (puedeGestionarAsesores() ? '<button type="button" class="acceso-seleccion-accion dar" data-hacer="dar" disabled title="Agregar los accesos seleccionados" aria-label="Agregar los accesos seleccionados">' + ICONO_SUBIR + '<span>Agregar</span></button>' +
-        '<button type="button" class="acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Retirar los accesos seleccionados de Drive y Calendario" aria-label="Retirar los accesos seleccionados de Drive y Calendario">' + ICONO_BAJAR + '<span>Retirar</span></button>' : '') +
+        (puedeGestionarAsesores() ? '<div class="acceso-acciones"><button type="button" class="acceso-seleccion-accion dar" data-hacer="dar" disabled title="Agregar los accesos seleccionados" aria-label="Agregar los accesos seleccionados">' + ICONO_SUBIR + '<span>Agregar</span></button>' +
+        '<button type="button" class="acceso-seleccion-accion quitar" data-hacer="quitar" disabled title="Retirar los accesos seleccionados de Drive y Calendario" aria-label="Retirar los accesos seleccionados de Drive y Calendario">' + ICONO_BAJAR + '<span>Retirar</span></button></div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -3046,9 +3045,10 @@
         '<span class="asesor-avatar ' + tipo.clase + '" aria-hidden="true">' + escapeHtml(iniciales) + '</span>' +
         '<span class="kw-fila-punto ' + punto + '"></span>' +
         '<span class="kw-fila-texto">' +
-          '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '<span class="asesor-tipo ' + tipo.clase + '">' + tipo.titulo + '</span></span>' +
+          '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '</span>' +
           '<span class="kw-fila-sub">' + escapeHtml(p.correo || 'Sin correo') + '</span>' +
         '</span>' +
+        '<span class="asesor-tipo ' + tipo.clase + '">' + tipo.titulo + '</span>' +
         '<span class="kw-fila-extra">' +
           '<span class="kw-extra"><span class="kw-extra-id">ID:</span><span>' + escapeHtml(p.kwid || 'Sin KWID') + '</span></span>' +
           '<span class="kw-extra">' + I.calendario + '<span>' + escapeHtml(fecha || 'Sin fecha') + '</span></span>' +
@@ -4149,8 +4149,8 @@
       // el permiso de Master, Admin y el equipo de altas.
       const puedeAltas = ROLES_ALTA.includes(miRol)
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
-      if (puedeAltas) document.getElementById('acceso-nuevo-asesor').style.display = '';
-      else {
+      document.getElementById('acceso-nuevo-asesor').style.display = '';
+      if (!puedeAltas) {
         document.getElementById('op-recargar').hidden = true;
         document.getElementById('op-verificar').hidden = true;
       }

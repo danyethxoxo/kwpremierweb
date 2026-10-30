@@ -1267,6 +1267,7 @@
   // candado de verdad es la RLS de la tabla; esto solo evita enseñar una
   // pantalla que de todos modos no traería nada.
   const ROLES = ['master', 'admin'];
+  let soloAlta = false;
   const CORREOS = ['dani.guerrero@kwmexico.mx'];
 
   // Las Productivity Coach del Market Center. Todavía no son usuarios de
@@ -1297,6 +1298,7 @@
   }
 
   // ── Leer ──────────────────────────────────────────────────────
+  let baseCargada = false;
   async function leer() {
     const { data, error } = await window.kwSupabase
       .from('asesores').select('*').order('nombre', { ascending: true });
@@ -1309,6 +1311,7 @@
       return false;
     }
     asesores = data || [];
+    baseCargada = true;
     return true;
   }
 
@@ -1574,7 +1577,7 @@
     }
     const llamar = async function (persona, quitar) {
       const { data, error } = await window.kwSupabase.functions.invoke('hyper-processor', {
-        body: { accion: 'acceso', quitar: quitar, todasCuentas: true,
+        body: { accion: !anterior && !quitar ? 'acceso_nuevo_asesor' : 'acceso', quitar: quitar, todasCuentas: true,
           pasos: quitar ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario'],
           personas: [{ correo: persona.correo, nombre: persona.nombre, telefono: persona.telefono,
             cumpleanos: persona.cumpleanos, grupo: persona.grupo }] },
@@ -1716,7 +1719,7 @@
 
   async function cargarListas() {
     const { data } = await window.kwSupabase
-      .from('profiles').select('nombre, apellido, email, role');
+      .from('profiles').select('nombre, apellido, email, role').in('role', ['staff','pc']);
     const gente = data || [];
     const nombreDe = function (u) {
       return [u.nombre, u.apellido].filter(Boolean).join(' ') || u.email;
@@ -1738,8 +1741,9 @@
       .map(nombreDe)
       .sort(function (a, b) { return a.localeCompare(b, 'es'); });
 
-    llenarLista('f-coach', listaCoaches, 'Sin coach');
-    llenarLista('f-celula', listaCelulas, 'Sin célula');
+    llenarLista('f-coach', listaCoaches, 'Sin coach', $('f-coach').value);
+    llenarLista('f-celula', listaCelulas, 'Sin célula', $('f-celula').value);
+    ['f-coach','f-celula'].forEach(function(id){ $(id).dispatchEvent(new Event('change',{bubbles:true})); });
   }
 
   // Lo mismo para los desplegables de opciones fijas: el libro trae
@@ -1771,6 +1775,7 @@
     sel.innerHTML = '<option value="">' + vacio + '</option>' + todos.map(function (n) {
       return '<option value="' + escapar(n) + '">' + escapar(n) + '</option>';
     }).join('');
+    sel.value = valorActual || '';
   }
 
   // ── Los contactos ─────────────────────────────────────────────
@@ -1882,6 +1887,7 @@
   ];
 
   function abrirFicha(id) {
+    if (soloAlta && id) { aviso('Este asesor ya existe. La edición se realiza desde el panel de administración.', 'error'); return; }
     editando = id ? asesores.find(function (a) { return a.id === id; }) : null;
     const a = editando || {};
 
@@ -1924,7 +1930,7 @@
     // Pintar primero la carga para que no se vea la lista de Base de
     // asesores durante el cambio de vista. La animación dura lo justo
     // para que se perciba como una transición, no como un parpadeo.
-    window.setTimeout(function () {
+    window.requestAnimationFrame(function () {
       $('vista-lista').style.display = 'none';
       $('vista-ficha').style.display = '';
       if (carga) {
@@ -1935,7 +1941,7 @@
       window.scrollTo(0, 0);
       $('f-nombre').focus();
       limpiarAutollenado(a);
-    }, 320);
+    });
   }
 
   // El navegador ve un campo de texto seguido de uno de contraseña y le
@@ -1955,11 +1961,13 @@
   }
 
   function cerrarFicha() {
+    if (soloAlta) { window.location.assign('admin.html'); return; }
     editando = null;
     contactos = [];
     $('vista-ficha').style.display = 'none';
     $('vista-lista').style.display = '';
     document.body.classList.remove('en-ficha-asesor');
+    if (!baseCargada) leer().then(function(ok){if(ok)pintar();}).catch(function(){ aviso('No se pudo cargar la base de asesores.', 'error'); });
     const carga = $('ficha-carga');
     if (carga) {
       carga.hidden = true;
@@ -2026,7 +2034,7 @@
         : 'No se pudo guardar: ' + error.message, 'error');
       return;
     }
-    if (await leer()) pintar();
+    if (!soloAlta && await leer()) pintar();
     cerrarFicha();
   }
 
@@ -2056,8 +2064,10 @@
         .from('profiles').select('role').eq('id', userData.user.id).single());
       if (error || !perfil) throw new Error('sin perfil');
 
-      const puede = ROLES.includes(perfil.role)
-        || CORREOS.includes(String(userData.user.email || '').toLowerCase());
+      const params = new URLSearchParams(location.search);
+      const gestion = ROLES.includes(perfil.role) || CORREOS.includes(String(userData.user.email || '').toLowerCase());
+      soloAlta = !gestion && perfil.role === 'staff' && !!params.get('nuevo') && !params.get('id');
+      const puede = gestion || soloAlta;
       if (!puede) { $('denegado').style.display = ''; return; }
 
       $('contenido').style.display = '';
@@ -2077,6 +2087,16 @@
       }
       armarCumple();
       if (window.kwUI) window.kwUI.selects($('vista-ficha'));
+      // La captura vacía no necesita descargar el directorio de asesores.
+      if (params.get('nuevo') && !params.get('correo') && !params.get('kwid')) {
+        abrirFicha(null);
+        ['nombre','telefono','grupo'].forEach(function(campo){
+          const par=CAMPOS.find(function(c){return c[1]===campo;});
+          if(par&&params.get(campo)){ $(par[0]).value=params.get(campo);$(par[0]).dispatchEvent(new Event('change',{bubbles:true})); }
+        });
+        cargarListas().catch(function(){aviso('No se pudieron cargar los coaches y las células. Puedes continuar capturando los demás datos.', 'error');});
+        return;
+      }
       // La lista puede mostrarse sin esperar al catálogo de coaches y células.
       var catalogos = cargarListas();
       if (await leer()) pintar();
@@ -2084,7 +2104,6 @@
 
       // Se puede llegar directo a capturar a alguien (el botón del
       // Panel) o a la ficha de una persona.
-      const params = new URLSearchParams(location.search);
       if (params.get('nuevo')) {
         const existente = asesores.find(function (a) {
           return (params.get('correo') && String(a.correo || '').toLowerCase() === params.get('correo').toLowerCase())

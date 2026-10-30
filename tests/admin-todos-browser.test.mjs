@@ -101,6 +101,11 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     });
     const capsules=await list.locator('.btn-abrir-accesos').evaluateAll(els=>els.map(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
     assert.ok(capsules.every(r=>r.w===capsules[0].w&&r.h===capsules[0].h),'con y sin check conservan el mismo tamaño');
+    const columns=await list.locator('.kw-fila-cabeza').evaluateAll(els=>els.map(el=>({tipo:el.querySelector('.asesor-tipo').getBoundingClientRect().left,id:el.querySelector('.kw-fila-extra .kw-extra').getBoundingClientRect().left,fecha:el.querySelectorAll('.kw-fila-extra .kw-extra')[1].getBoundingClientRect().left})));
+    assert.ok(columns.every(c=>Math.abs(c.tipo-columns[0].tipo)<1&&Math.abs(c.id-columns[0].id)<1&&Math.abs(c.fecha-columns[0].fecha)<1),'tipo, ID y fecha conservan su columna');
+    const actions=await beto.locator('.acceso-seleccion-accion').evaluateAll(els=>els.map(e=>e.getBoundingClientRect().toJSON()));
+    assert.ok(Math.abs(actions[1].left-actions[0].right-8)<1,'Agregar y Retirar están juntos');
+    assert.equal(await beto.locator('.accesos-encabezado').count(),0);
     await page.evaluate(()=>{
       window.baseFetch=window.fetch;window.googleCalls=0;
       window.kwUI.confirm=async()=>true;

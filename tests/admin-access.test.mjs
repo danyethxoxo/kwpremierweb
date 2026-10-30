@@ -56,9 +56,29 @@ test('single-account grant returns freshly verified Google state and does not re
   moverAccesos:async()=>{changes++;granted=true;return[{paso:'drive',ok:true,detalle:'Otorgado'}];},
   contactoCompleto:()=>false,desglosePorCuenta:()=>({original:false}),desgloseAccesoPorCuenta:(states,correo)=>({original:states.get('original').has(correo)}),respond:data=>data,
  });
- const start=edge.indexOf("    if (accion === 'acceso')"),end=edge.indexOf('    // ── Revisar accesos',start);
+ const start=edge.indexOf("    if (accion === 'acceso' ||"),end=edge.indexOf('    // ── Revisar accesos',start);
  vm.runInContext(stripTypeScriptTypes('async function run(){'+edge.slice(start,end)+'}'),context);
  const response=await context.run();assert.equal(response.ok,true);assert.equal(response.estado[0].drive,true);assert.equal(response.estado[0].drivePorCuenta.original,true);assert.equal(reads,2);assert.equal(changes,1);
+});
+
+test('Liderazgo puede provisionar altas nuevas sin obtener administración general de accesos',async()=>{
+ const start=edge.indexOf('    const ACCIONES_ABIERTAS ='),end=edge.indexOf('    // ── Nuevo Asesor:',start);
+ const code=edge.slice(start,end);
+ for(const [role,accion,allowed] of [['staff','acceso_nuevo_asesor',true],['staff','acceso',false],['asociado','acceso_nuevo_asesor',false],['master','acceso',true]]){
+  const q={select(){return this},eq(){return this},single:async()=>({data:{role}})};
+  const ctx=vm.createContext({accion,admin:{from:()=>q},quien:{user:{id:'test',email:'alberto.velazquez@kwpremier.com.mx'}},ALTA_EMAILS:'',respond:(data,status)=>({data,status})});
+  vm.runInContext(stripTypeScriptTypes('async function run(){'+code+'return {allowed:true};}'),ctx);
+  const result=await ctx.run();assert.equal(!!result.allowed,allowed);if(!allowed)assert.equal(result.status,403);
+ }
+ const a=edge.indexOf("      if (accion === 'acceso_nuevo_asesor') {"),b=edge.indexOf('      const quitar =',a);
+ for(const scenario of ['nuevo','existente','retiro','baja','error']){
+  const body={personas:[{nombre:'Nueva persona',correo:'nuevo@example.com',grupo:scenario==='baja'?'asesor_baja':'asesor_activo'}],quitar:scenario==='retiro',pasos:['drive'],cuentaContactos:'otra'};
+  const q={select(){return this},eq(){return this},maybeSingle:async()=>({data:scenario==='existente'?{id:'existing'}:null,error:scenario==='error'?{}:null})};
+  const ctx=vm.createContext({accion:'acceso_nuevo_asesor',body,PASOS:['contactos','drive','calendario'],limpiarCorreo:v=>v,admin:{from:()=>q},respond:(data,status)=>({data,status})});
+  vm.runInContext(stripTypeScriptTypes('async function run(){'+edge.slice(a,b)+'return {allowed:true};}'),ctx);const result=await ctx.run();
+  if(scenario==='nuevo'){assert.equal(result.allowed,true);assert.equal(body.quitar,false);assert.equal(body.todasCuentas,true);assert.deepEqual(Array.from(body.pasos),['contactos','drive','calendario']);assert.equal(body.cuentaContactos,undefined);}
+  else assert.equal(result.status,scenario==='existente'?409:scenario==='error'?503:400);
+ }
 });
 
 test('directory opens from the database once; manual Excel refresh skips overlapping requests', async () => {
