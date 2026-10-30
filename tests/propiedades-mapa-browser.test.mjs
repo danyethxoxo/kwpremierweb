@@ -207,6 +207,29 @@ test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zo
  }}finally{await browser.close();}
 });
 
+test('quitar ciudad automática conserva pines y permite filtrar sin ubicación',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{for(const width of [1440,390]){
+  const {page,errores}=await pagina(browser,{width,height:1000},[[id(0),19.369,-99.163,'venta',3500000,'MXN']],false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
+  try{
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.evaluate(()=>{
+    qaRpc=[];qaPuntos=[[qaProps[0].id,25.68,-100.31,'renta',25000,'MXN']];
+    ['f-estado','f-municipio','f-colonia'].forEach(id=>{seleccionesMultiples[id]=[];ponerFiltroRelacionado(id,'');pintarEtiquetasFiltro(id);});
+    aplicarFiltros();
+   });
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.prop-mapa-pin').length>0);
+   assert.ok(await page.evaluate(()=>qaMapa.getBounds().contains([25.68,-100.31])),'encuadra los resultados fuera de la ciudad anterior');
+   const f=await page.evaluate(()=>qaRpc.find(r=>r.nombre==='propiedades_inventario_mapa').args.p_filtros);
+   assert.ok(!f.estado?.length&&!f.municipio?.length&&!f.zona&&!f.poligono);
+   await page.selectOption('#f-operacion','renta',{force:true});
+   await page.locator('#filtros .btn-aplicar').click();
+   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa'&&r.args.p_filtros.operacion?.includes('renta'))&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   assert.ok(await page.locator('.prop-mapa-pin').count()>0);assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }}finally{await browser.close();}
+});
+
 test('sin permiso muestra recientes y permite elegir ciudad manualmente',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{

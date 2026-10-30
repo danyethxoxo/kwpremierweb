@@ -171,7 +171,7 @@
   async function actualizar(forzar) {
     if (panel.hidden || !inicioPreparado) return;
     filtros = window.filtrosServidorActuales();
-    if (!puedeConsultar(filtros)) {
+    if (!inicioCancelado && !puedeConsultar(filtros)) {
       if (controlador) controlador.abort();
       ++revision; clave = ''; clavePendiente = '';
       if (grupos && mapa) mapa.removeLayer(grupos);
@@ -212,7 +212,7 @@
       if (dibujo.poligono()) mapa.fitBounds(dibujo.poligono().map(function (p) { return [p[1],p[0]]; }), {padding:[20,20],maxZoom:16,animate:false});
       else if (zona) mapa.fitBounds([[zona[0],zona[1]],[zona[2],zona[3]]],{animate:false});
       else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
-      else if (limites.length && !primeraVista && (filtros.texto || filtros.colonia || filtros.municipio || filtros.estado)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
+      else if (limites.length && !primeraVista) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
       var todos = !!(filtros.zona || filtros.poligono || filtros.texto || filtros.operacion || filtros.tipo || filtros.minimo || filtros.maximo || (inicioCancelado && (filtros.estado || filtros.colonia || filtros.municipio)) || filtros.marketCenter || filtros.asesor || filtros.recamaras || filtros.banos || filtros.estacionamientos || filtros.m2Min || filtros.m2Max);
       var capa = L.featureGroup(), candidatos = [], destacado;
       function mostrarPines() {
