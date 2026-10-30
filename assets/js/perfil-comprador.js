@@ -333,11 +333,20 @@
     var interior = document.createElement('div'); interior.className = 'match-giro';
     var frente = document.createElement('div'); frente.className = 'match-frente';
     var desglose = document.createElement('div'); desglose.className = 'match-atras'; desglose.inert = true;
-    agregarTexto(desglose,'h3',match.categoria === 'fuertes' ? match.porcentaje + '% de compatibilidad' : 'Qué cambia respecto al perfil');
+    var encabezadoCompatibilidad=document.createElement('div');encabezadoCompatibilidad.className='match-desglose-head';desglose.append(encabezadoCompatibilidad);
+    agregarTexto(encabezadoCompatibilidad,'h3',match.categoria === 'fuertes' ? 'Compatibilidad' : 'Alternativa');
+    if(match.categoria === 'fuertes' && Number.isFinite(Number(match.porcentaje))){
+      var porcentaje=Math.max(0,Math.min(100,Number(match.porcentaje)));
+      agregarTexto(encabezadoCompatibilidad,'strong',porcentaje+'%').className='match-desglose-score';
+      var barra=document.createElement('div');barra.className='match-desglose-barra';barra.setAttribute('role','meter');barra.setAttribute('aria-label','Compatibilidad');barra.setAttribute('aria-valuemin','0');barra.setAttribute('aria-valuemax','100');barra.setAttribute('aria-valuenow',String(porcentaje));var avance=document.createElement('span');avance.style.width=porcentaje+'%';barra.append(avance);encabezadoCompatibilidad.append(barra);
+    }
     var detalleCriterios = document.createElement('div'); detalleCriterios.className = 'match-criterios'; desglose.append(detalleCriterios);
     window.kwCompradorResumen(cliente,p,match.criterios).forEach(function (c) {
       var grupo = document.createElement('div'); grupo.className = 'criterio-resumen';
-      agregarTexto(grupo,'strong',c.nombre); agregarTexto(grupo,'p',c.detalle); detalleCriterios.append(grupo);
+      var icono=document.createElement('span');icono.className='criterio-icono';icono.setAttribute('aria-hidden','true');
+      var trazos={Presupuesto:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/>',Zona:'<path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',Cercanía:'<circle cx="12" cy="12" r="8"/><path d="m15 9-2 4-4 2 2-4Z"/>',Características:'<path d="M3 18v-7h18v7M3 15h18M5 11V6h14v5M9 8v3M15 8v3"/>',Tamaño:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10v10M17 7 7 17"/>'};
+      icono.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(trazos[c.nombre]||'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>')+'</svg>';
+      var contenido=document.createElement('div');agregarTexto(contenido,'strong',c.nombre);agregarTexto(contenido,'p',c.detalle);grupo.append(icono,contenido);detalleCriterios.append(grupo);
     });
     var ver = agregarTexto(body,'button','Ver compatibilidad'); ver.type = 'button'; ver.className = 'match-ver';
     var volver = agregarTexto(desglose,'button','Ver propiedad'); volver.type = 'button'; volver.className = 'match-ver';
@@ -387,6 +396,7 @@
       var fuertes = listo ? Number(estadoGuardado.niveles[80] || 0) : 0;
       var alternativas = listo ? Math.max(0,estadoGuardado.total - fuertes) : 0;
       var desplegar = agregarTexto(acciones,'button',!p.activo ? 'Búsqueda pausada' : listo ? fuertes + ' compatibles' + (alternativas ? ' · ' + alternativas + ' alternativas' : '') : errorMatches ? 'Reintentar' : ''); desplegar.type = 'button'; desplegar.className = 'btn-coincidencias'; desplegar.disabled = !listo && !errorMatches; desplegar.setAttribute('aria-expanded','false'); if (!listo && !errorMatches && p.activo) animacionCarga(desplegar,true);
+      if(listo){desplegar.replaceChildren();agregarTexto(desplegar,'span',fuertes+' compatibles').className='cliente-compatibles-cantidad';if(alternativas)agregarTexto(desplegar,'span',alternativas+' alternativas').className='cliente-alternativas-cantidad';desplegar.setAttribute('aria-label',fuertes+' compatibles'+(alternativas?', '+alternativas+' alternativas':''));}
       var filaMatches = document.createElement('section'), celdaMatches = document.createElement('div'); filaMatches.className = 'comprador-coincidencias'; filaMatches.hidden = true; filaMatches.id = 'coincidencias-' + p.id; filaMatches.append(celdaMatches); fila.append(filaMatches); desplegar.setAttribute('aria-controls',filaMatches.id);
       function alternarMatches() {
         if (errorMatches) { cargarInventarioMatches(); return; }

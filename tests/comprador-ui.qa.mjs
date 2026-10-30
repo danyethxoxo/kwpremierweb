@@ -61,12 +61,20 @@ try {
   if(width===1920)assert(capacidad>4);
   const hueco=await page.locator('.matches-grid').evaluate(el=>el.getBoundingClientRect().right-el.lastElementChild.getBoundingClientRect().right);
   assert(Math.abs(hueco)<2,'las tarjetas llenan el ancho');
+  const alineados=await page.evaluate(()=>Math.abs(document.querySelector('.match-niveles button').getBoundingClientRect().left-document.querySelector('.match-prop').getBoundingClientRect().left)<2);
+  assert(alineados,'filtros alineados con las propiedades');
+  assert(await page.locator('.btn-coincidencias').evaluate(el=>el.querySelector('.cliente-alternativas-cantidad').getBoundingClientRect().top>el.querySelector('.cliente-compatibles-cantidad').getBoundingClientRect().top),'alternativas en segunda linea');
   for(const boton of await page.locator('.match-carrusel > button').all()) {
    const b=await boton.boundingBox(),svg=await boton.locator('svg').boundingBox();
    assert(Math.abs(b.x+b.width/2-svg.x-svg.width/2)<1);assert(Math.abs(b.y+b.height/2-svg.y-svg.height/2)<1);
    assert(b.x>=0&&b.x+b.width<=width);
   }
   await page.screenshot({path:`outputs/comprador/tarjetas-${width}.png`,fullPage:true});
+  await page.locator('.match-prop').first().getByRole('button',{name:'Ver compatibilidad',exact:true}).click();
+  assert.equal(await page.locator('.match-prop').first().getByRole('meter',{name:'Compatibilidad'}).getAttribute('aria-valuenow'),'100');
+  assert(await page.locator('.match-prop').first().locator('.criterio-icono').count()>=4);
+  await page.screenshot({path:`outputs/comprador/desglose-${width}.png`,fullPage:true});
+  await page.locator('.match-prop').first().getByRole('button',{name:'Ver propiedad',exact:true}).click();
   await page.getByRole('button',{name:'Más propiedades',exact:true}).click();
   await page.waitForFunction(n=>document.querySelector('.match-paginacion p').textContent.startsWith((n+1)+' a '),capacidad);
   assert.match(await page.locator('.match-titulo').first().innerText(),new RegExp(' '+capacidad+'$'));
