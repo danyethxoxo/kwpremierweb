@@ -57,6 +57,11 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('.dash-tools a[href*="weetrust"],.dash-tools a[href*="kwmexico.mx"]').count(),0);
   assert.ok(await page.locator('.dash-property-link').first().evaluate(el=>el.querySelector('.dash-property-owner').getBoundingClientRect().left>el.querySelector('.dash-property-info').getBoundingClientRect().left));
   assert.ok(await page.evaluate(()=>{const d=document.querySelector('.dash-dictamenes').getBoundingClientRect(),c=document.querySelector('.dash-firmas').getBoundingClientRect();return Math.abs(c.top-d.bottom-18)<2;}));
+  assert.ok(await page.evaluate(()=>{const p=document.querySelector('.dash-properties').getBoundingClientRect(),c=document.querySelector('.dash-buyers').getBoundingClientRect();return Math.abs(c.top-p.bottom-18)<2;}));
+  for(const [widget,href] of [['.dash-properties','/propiedades.html'],['.dash-buyers','/hub/perfil-comprador.html'],['.dash-firmas','/hub/firmas.html'],['.dash-dictamenes','/hub/dictamenes.html']]){
+   assert.equal(await page.locator(widget+' .dash-widget-icon svg').evaluate(el=>el.innerHTML),await page.locator('#drawer a[href="'+href+'"] svg').evaluate(el=>el.innerHTML));
+  }
+  assert.ok(await page.evaluate(()=>{const a=document.querySelector('.dash-signature').getBoundingClientRect(),b=document.querySelector('.dash-signers summary').getBoundingClientRect();return b.left>=a.right-1&&b.top>=a.top&&b.bottom<=a.bottom;}));
   await page.locator('#notif-bell-slot').evaluate(el=>{el.innerHTML='<button class="notif-bell-btn" aria-label="Notificaciones"><svg viewBox="0 0 24 24"></svg></button>';});
   assert.equal(await page.locator('.notif-bell-btn').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.locator('#drawer').screenshot({path:path.join(out,'menu-lateral.png')});

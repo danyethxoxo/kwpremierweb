@@ -2,10 +2,10 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const iconos = {
-    casa:'<path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 10h.01M15 10h.01"/>',
-    dictamen:'<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="m8 13 3 3 5-6"/>',
-    comprador:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M6 16a3 3 0 0 1 6 0M15 9h3M15 13h3"/>',
-    firma:'<path d="m14 5 3-3 5 5-3 3M14 5 5 14l-2 7 7-2 9-9M14 5l5 5M3 21h18"/>',
+    casa:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v4"/>',
+    dictamen:'<path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z"/><path d="M16 5h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1"/><polyline points="9 13 11 15 15 11"/>',
+    comprador:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+    firma:'<path d="M3 18c3.5 0 4-6 7.5-6 2 0 2.5 2 4.5 2 2.5 0 3-3 6-3"/><path d="M3 21h18"/>',
     actualizar:'<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 2M18 18A8 8 0 0 1 5 16"/>',
     flecha:'<path d="m9 5 7 7-7 7"/>',mas:'<path d="M12 5v14M5 12h14"/>'
   };
