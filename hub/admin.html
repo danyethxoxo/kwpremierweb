@@ -1277,6 +1277,7 @@
   }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-admin-asesores.css?v=20261030accesos">
 </head>
 <body class="kw-panel-lateral">
 
@@ -2544,11 +2545,11 @@
     return '<div class="acceso-pagina">' +
       '<button type="button" class="acceso-web' + (usuario ? ' tiene' : '') + '" title="' + escapeHtml(estado) + '"' +
         (!permiso || usuario ? ' disabled' : ' data-acceso-pagina="' + escapeHtml(p.correo) + '"') + '>' +
-        '<img src="/assets/img/favicon-64.png?v=20261016" alt="" aria-hidden="true"><span>Agregar a Web</span></button>' +
+        '<img src="/assets/img/favicon-64.png?v=20261016" alt="" aria-hidden="true"><span class="servicio-texto"><span>Agregar a Web</span><span class="servicio-estado">' + (usuario ? 'Conectado' : 'Conectar') + '</span></span></button>' +
       '<button type="button" class="acceso-rol" title="' + escapeHtml(rol) + '"' +
         (!permiso || !usuario ? ' disabled' : ' data-acceso-pagina="' + escapeHtml(p.correo) + '"') + '>' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>' +
-        '<span>Administrar Rol</span></button>' +
+        '<span class="servicio-texto"><span>Administrar Rol</span><span class="servicio-estado">' + escapeHtml(usuario ? (ROLE_LABELS[usuario.role] || usuario.role) : 'Sin usuario Web') + '</span></span></button>' +
     '</div>';
   }
 
@@ -2947,6 +2948,7 @@
           '<span class="acceso-icono">' + icono + '</span>' +
           '<img class="acceso-google-icono" src="' + ICONOS_GOOGLE[a.clave] + '" alt="" aria-hidden="true">' +
           '<span class="acceso-texto">' + (puedeGestionarAsesores() ? { contactos: 'Agregar Contacto', drive: 'Agregar Drive', calendario: 'Agregar Calendario' } : { contactos: 'Contactos', drive: 'Drive', calendario: 'Calendario' })[a.clave] + '</span>' +
+          '<span class="acceso-estado">' + (estado === null ? 'Sin verificar' : tiene ? 'Conectado' : 'Sin acceso') + '</span>' +
         '</label>' +
       '</div>';
     }).join('');
@@ -2959,6 +2961,8 @@
         '</div>'
       : '';
     return '<div class="accesos' + (visible ? '' : ' ocultos') + '" data-correo="' + escapeHtml(p.correo) + '">' +
+      '<div class="accesos-progreso" role="status" aria-label="Actualizando accesos"><div class="kw-loader"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div></div>' +
+      '<div class="accesos-encabezado">Servicios conectados</div>' +
       titulo +
       '<div class="accesos-fila">' + filas +
         accesoPaginaHtml(p) +
@@ -2995,6 +2999,13 @@
       '</div></div>';
   }
 
+  function tipoPersona(p, g) {
+    const usuario = usuarioDePagina(p.correo);
+    if (['master','admin','staff'].includes(usuario ? usuario.role : p.rolPagina) || (p.grupo || g.clave) === 'liderazgo') return { clase:'liderazgo', titulo:'Liderazgo' };
+    if (/back[_ ]?office/.test(p.grupo || g.clave)) return { clase:'backoffice', titulo:'Backoffice' };
+    return { clase:'asesor', titulo:'Asesor' };
+  }
+
   function filaAsesorHtml(p, g, i) {
     const I = window.kwUI.iconos;
     const grupoPersona = p.grupo || g.clave;
@@ -3005,6 +3016,8 @@
     const punto = esBaja ? 'gris' : (completo ? 'verde' : (alguno ? 'ambar' : 'gris'));
     const fecha = esBaja ? (p.fechaBaja || p.fechaIngreso) : p.fechaIngreso;
     const etiquetaFecha = esBaja ? 'Baja' : 'Ingreso';
+    const tipo = tipoPersona(p, g);
+    const iniciales = (p.nombre || p.correo || '?').trim().split(/\s+/).slice(0,2).map(function(n){return n.charAt(0);}).join('').toLocaleUpperCase('es');
 
     // El botón vive DENTRO de la cabeza, que ya es el botón que abre la
     // tarjeta: por eso es un <span> y no un <button> (un botón dentro de
@@ -3030,9 +3043,10 @@
       ' style="animation-delay:' + Math.min(i * 25, 300) + 'ms">' +
       '<div class="kw-fila-barra">' +
       '<button type="button" class="kw-fila-cabeza">' +
+        '<span class="asesor-avatar ' + tipo.clase + '" aria-hidden="true">' + escapeHtml(iniciales) + '</span>' +
         '<span class="kw-fila-punto ' + punto + '"></span>' +
         '<span class="kw-fila-texto">' +
-          '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '</span>' +
+          '<span class="kw-fila-titulo">' + escapeHtml(p.nombre || 'Sin nombre') + '<span class="asesor-tipo ' + tipo.clase + '">' + tipo.titulo + '</span></span>' +
           '<span class="kw-fila-sub">' + escapeHtml(p.correo || 'Sin correo') + '</span>' +
         '</span>' +
         '<span class="kw-fila-extra">' +
@@ -3433,6 +3447,8 @@
   }
 
   async function moverAcceso(correo, pasos, quitar) {
+    correo = correoPersona(correo);
+    if (accesosEnCurso.has(correo) || verificacionOcupada) return;
     pasos = pasosDeOperacion(pasos, quitar);
     if (quitar && !pasos.length) return avisoAsesores('El contacto se conserva. Selecciona Drive o Calendario para retirar accesos.', 'error');
     const encontrado = personaPorCorreo(correo);
@@ -3442,12 +3458,14 @@
     const cuentaInfo = cuentasContactosInfo.find(function (c) { return c.clave === cuentaVista; });
     const destino = cuentaInfo ? ' desde ' + cuentaInfo.nombre : '';
 
-    const ok = await window.kwUI.confirm(
+    accesosEnCurso.add(correo);
+    let ok;
+    try { ok = await window.kwUI.confirm(
       (quitar ? 'Quitar ' : 'Dar ') + textoDeAccesos(pasos) + destino + ' a ' + (persona.nombre || correo) + '?');
-    if (!ok) return;
+    } catch (err) { accesosEnCurso.delete(correo); throw err; }
+    if (!ok) { accesosEnCurso.delete(correo); return; }
 
     marcarAccesosOcupados(correo, true);
-    mostrarCargaAccesos(quitar);
     try {
       const data = await llamarAlta({
         accion: 'acceso',
@@ -3463,13 +3481,14 @@
       if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       aplicarEstado(data.estado);
       if (data.ok) seleccionesAcceso.delete(String(correo).toLowerCase());
-      pintarGrupos();
+      actualizarAccesosGoogleVisibles();
+      if (document.getElementById('modal-verificar').style.display === 'flex') pintarVerificacion();
       data.ok ? avisoAsesores('', '') : avisoAsesores(mensajeDeResultado(data, quitar), 'error');
     } catch (err) {
-      marcarAccesosOcupados(correo, false);
       avisoAsesores(err.message || 'No se pudo cambiar el acceso.', 'error');
     } finally {
-      ocultarCargaAccesos();
+      accesosEnCurso.delete(correo);
+      marcarAccesosOcupados(correo, false);
     }
   }
 
@@ -3487,13 +3506,20 @@
       : ('Acceso dado' + (cuantos > 1 ? ' a ' + cuantos + ' personas.' : '.'));
   }
 
+  const accesosEnCurso = new Set();
+  let revisionEstadoGoogle = 0;
+  let consultaEstadoGoogle = null;
   function marcarAccesosOcupados(correo, ocupado) {
-    const caja = document.querySelector('.accesos[data-correo="' + (window.CSS && CSS.escape ? CSS.escape(correo) : correo) + '"]');
-    if (!caja) return;
-    Array.from(caja.querySelectorAll('button')).forEach(function (b) { b.disabled = ocupado; });
+    document.querySelectorAll('.accesos[data-correo]').forEach(function(caja){
+      if(correoPersona(caja.dataset.correo)!==correoPersona(correo)) return;
+      caja.setAttribute('aria-busy', String(ocupado));
+      caja.querySelectorAll('button,input').forEach(function(b){ if(ocupado)b.disabled=true; });
+    });
+    if(!ocupado) actualizarAccesosGoogleVisibles();
   }
 
   function aplicarEstado(lista) {
+    ++revisionEstadoGoogle;
     (lista || []).forEach(function (e) {
       estadoGoogle[String(e.correo).toLowerCase()] = {
         contactos: e.contactos, drive: e.drive, calendario: e.calendario,
@@ -3501,6 +3527,8 @@
         drivePorCuenta: e.drivePorCuenta || null,
         calendarioPorCuenta: e.calendarioPorCuenta || null,
       };
+      const fila = ultimaVerificacion.find(function(p){return correoPersona(p.correo)===correoPersona(e.correo);});
+      if(fila) Object.assign(fila, estadoGoogle[correoPersona(e.correo)]);
     });
   }
 
@@ -3758,8 +3786,12 @@
   // que la lista aparece de inmediato y los accesos se van llenando
   // cuando llegan, en vez de dejar la pantalla en blanco esperándolos.
   async function cargarEstadoGoogle() {
+    if(consultaEstadoGoogle) return consultaEstadoGoogle;
+    const revision = revisionEstadoGoogle;
+    consultaEstadoGoogle = (async function(){
     try {
       const data = await llamarAlta({ accion: 'verificar' });
+      if(revision!==revisionEstadoGoogle || accesosEnCurso.size || verificacionOcupada) return;
       if (data.cuentasContactos) cuentasContactosInfo = data.cuentasContactos;
       estadoGoogle = {};
       (data.personas || []).forEach(function (p) {
@@ -3777,6 +3809,8 @@
     } catch (err) {
       avisoAsesores('No se pudieron leer los accesos de Google: ' + (err.message || ''), 'error');
     }
+    })();
+    try { await consultaEstadoGoogle; } finally { consultaEstadoGoogle=null; }
   }
 
   // Los accesos llegan aparte sin reconstruir ni animar los renglones.
@@ -3784,6 +3818,16 @@
     document.querySelectorAll('.accesos[data-correo]').forEach(function (caja) {
       const encontrado = personaPorCorreo(caja.dataset.correo);
       if (!encontrado) return;
+      const fila = caja.closest('.kw-fila');
+      const estado = accesosDe(caja.dataset.correo);
+      const completo = estado && ACCESOS.every(function(a){return estado[a.clave];});
+      if(fila){
+        const boton=fila.querySelector('.btn-abrir-accesos');
+        if(boton){boton.classList.toggle('listo',!!completo);boton.innerHTML=(completo?ICONO_LISTO:'')+'Accesos';}
+        const punto=fila.querySelector('.kw-fila-punto');
+        if(punto){punto.classList.remove('verde','ambar','gris');punto.classList.add(completo?'verde':estado&&ACCESOS.some(function(a){return estado[a.clave];})?'ambar':'gris');}
+      }
+      if(accesosEnCurso.has(correoPersona(caja.dataset.correo))) return;
       const plantilla = document.createElement('template');
       plantilla.innerHTML = accesosHtml(encontrado.persona, encontrado.grupo, !caja.classList.contains('ocultos'));
       const renovada = plantilla.content.firstElementChild;
@@ -3959,7 +4003,7 @@
 
   // Cambia accesos desde el modal: a una persona o a las seleccionadas.
   async function accesoDesdeVerif(correos, pasos, quitar) {
-    if (verificacionOcupada) return;
+    if (verificacionOcupada || accesosEnCurso.size) return;
     pasos = pasosDeOperacion(pasos, quitar);
     if (quitar && !pasos.length) return mostrarMsgVerif('El contacto se conserva.', '');
     verificacionOcupada = true;
@@ -4006,7 +4050,7 @@
         }
       });
       pintarVerificacion();
-      pintarGrupos();
+      actualizarAccesosGoogleVisibles();
       mostrarMsgVerif(mensajeDeResultado(data, quitar), data.ok ? 'ok' : 'error');
     } catch (err) {
       mostrarMsgVerif(err.message || 'No se pudo cambiar el acceso.', 'error');

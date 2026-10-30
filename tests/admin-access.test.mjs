@@ -32,6 +32,35 @@ test('Excel import uses bounded batches, stops on failures and preserves the rea
   await assert.rejects(() => context.sincronizarBaseDesdeLibro([{ personas }]), /Servicio no disponible/);
 });
 
+test('Google reads contacts, Drive and Calendar concurrently without serial waits',async()=>{
+ const started=[],resolvers=[];
+ const read=name=>()=>{started.push(name);return new Promise(resolve=>resolvers.push(()=>resolve(new Map())));};
+ const context=vm.createContext({PASOS:['contactos','drive','calendario'],listarContactosTodasCuentas:read('contactos'),listarPermisosDrive:read('drive'),listarAclCalendario:read('calendario'),unirEstadosPorCuenta:()=>new Map()});
+ const start=edge.indexOf('async function leerEstadoGoogle('),end=edge.indexOf('// Da UN acceso',start);
+ vm.runInContext(stripTypeScriptTypes(edge.slice(start,end)),context);
+ const promise=context.leerEstadoGoogle('one',[{clave:'original',token:'one',accesosCompletos:true},{clave:'premier',token:'two',accesosCompletos:true}]);
+ assert.equal(started.length,5,'las cinco lecturas independientes empiezan sin esperar la anterior');
+ resolvers.forEach(resolve=>resolve());const state=await promise;assert.equal(state.drivePorCuenta.size,2);assert.equal(state.calendarioPorCuenta.size,2);
+ started.length=0;resolvers.length=0;
+ const after=context.leerEstadoGoogle('one',[{clave:'original',token:'one',accesosCompletos:true},{clave:'premier',token:'two',accesosCompletos:true}],state,['drive']);
+ assert.deepEqual(started,['drive','drive'],'solo reconsulta el servicio modificado en ambas cuentas');resolvers.forEach(resolve=>resolve());const fresh=await after;assert.equal(fresh.contactos,state.contactos);
+});
+
+test('single-account grant returns freshly verified Google state and does not repeat the mutation',async()=>{
+ let granted=false,reads=0,changes=0;
+ const map=()=>new Map(granted?[['test@example.com','permission']]:[]);
+ const accounts=[{clave:'original',nombre:'Original',token:'one',accesosCompletos:true}];
+ const context=vm.createContext({accion:'acceso',body:{pasos:['drive'],personas:[{correo:'test@example.com',nombre:'Prueba'}]},miRol:'master',tokenPrincipal:'one',CUENTAS_CONTACTOS:accounts,PASOS:['contactos','drive','calendario'],
+  pasosPedidos:()=>['drive'],limpiarCorreo:v=>v.toLowerCase(),getTokensContactos:async()=>accounts,
+  leerEstadoGoogle:async()=>{reads++;return{contactos:new Map(),drive:map(),calendario:new Map(),drivePorCuenta:new Map([['original',map()]]),calendarioPorCuenta:new Map([['original',new Map()]])};},
+  moverAccesos:async()=>{changes++;granted=true;return[{paso:'drive',ok:true,detalle:'Otorgado'}];},
+  contactoCompleto:()=>false,desglosePorCuenta:()=>({original:false}),desgloseAccesoPorCuenta:(states,correo)=>({original:states.get('original').has(correo)}),respond:data=>data,
+ });
+ const start=edge.indexOf("    if (accion === 'acceso')"),end=edge.indexOf('    // ── Revisar accesos',start);
+ vm.runInContext(stripTypeScriptTypes('async function run(){'+edge.slice(start,end)+'}'),context);
+ const response=await context.run();assert.equal(response.ok,true);assert.equal(response.estado[0].drive,true);assert.equal(response.estado[0].drivePorCuenta.original,true);assert.equal(reads,2);assert.equal(changes,1);
+});
+
 test('directory opens from the database once; manual Excel refresh skips overlapping requests', async () => {
   const calls = [];
   let release;

@@ -1076,16 +1076,18 @@ function desgloseAccesoPorCuenta(estados: Map<string, PorCorreo>, correo: string
 async function leerEstadoGoogle(
   tokenGoogle: string,
   cuentasContactos: CuentaConToken[],
+  anterior?: EstadoGoogle,
+  pasos: readonly Paso[] = PASOS,
 ): Promise<EstadoGoogle> {
-  const contactos = await listarContactosTodasCuentas(cuentasContactos)
+  const consultar = (paso: Paso) => !anterior || pasos.includes(paso)
   const cuentasCompletas = cuentasContactos.filter((c) => c.accesosCompletos)
-  const pares = await Promise.all(cuentasCompletas.map(async (cuenta) => {
+  const [contactos, pares] = await Promise.all([consultar('contactos') ? listarContactosTodasCuentas(cuentasContactos) : anterior!.contactos, Promise.all(cuentasCompletas.map(async (cuenta) => {
     const [drive, calendario] = await Promise.all([
-      listarPermisosDrive(cuenta.token),
-      listarAclCalendario(cuenta.token),
+      consultar('drive') ? listarPermisosDrive(cuenta.token) : anterior!.drivePorCuenta.get(cuenta.clave) || new Map(),
+      consultar('calendario') ? listarAclCalendario(cuenta.token) : anterior!.calendarioPorCuenta.get(cuenta.clave) || new Map(),
     ])
     return { cuenta: cuenta.clave, drive, calendario }
-  }))
+  }))])
   const drivePorCuenta = new Map<string, PorCorreo>()
   const calendarioPorCuenta = new Map<string, PorCorreo>()
   for (const par of pares) {
@@ -1147,11 +1149,7 @@ async function moverAccesos(
   estado: EstadoGoogle,
   detalladoContactos: boolean,
 ) {
-  const resultados = []
-  for (const paso of pasos) {
-    resultados.push(await moverAcceso(paso, quitar, tokenGoogle, cuentasContactos, persona, estado, detalladoContactos))
-  }
-  return resultados
+  return await Promise.all(pasos.map((paso) => moverAcceso(paso, quitar, tokenGoogle, cuentasContactos, persona, estado, detalladoContactos)))
 }
 
 // Qué pasos vienen en la petición. Sin nada, los tres.
@@ -1627,7 +1625,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
 
       // El estado de después, para que la pantalla se repinte con lo que
       // de verdad quedó en Google en vez de suponerlo.
-      let estadoPosterior = quitar || body.todasCuentas === true ? await leerEstadoGoogle(tokenPrincipal, cuentasContactos) : estado
+      let estadoPosterior = await leerEstadoGoogle(tokenPrincipal, cuentasContactos, estado, pasos)
       // Google puede tardar un instante en reflejar un DELETE. Solo se
       // repite la lectura, nunca el retiro ni otra acción sobre la cuenta.
       if (quitar && hechas.every((hecha) => hecha.ok)) {
@@ -1637,7 +1635,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
               .get(cuenta.clave)?.has(persona.correo.toLowerCase()))))
           if (!quedaAcceso) break
           await new Promise((resolve) => setTimeout(resolve, 600 * (intento + 1)))
-          estadoPosterior = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
+          estadoPosterior = await leerEstadoGoogle(tokenPrincipal, cuentasContactos, estado, pasos)
         }
       }
       if (quitar) {
@@ -1686,12 +1684,12 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
     // back office y células también son gente a la que se le dan estos
     // accesos, y antes no había forma de verlos aquí.
     if (accion === 'verificar') {
-      const hojas = await detectarHojas(tokenPrincipal)
-      const valores = await leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja)))
-
       const soyMaster = miRol === 'master'
-      const cuentasContactos = await getTokensContactos()
-      const estado = await leerEstadoGoogle(tokenPrincipal, cuentasContactos)
+      const [hojas, cuentasContactos] = await Promise.all([detectarHojas(tokenPrincipal), getTokensContactos()])
+      const [valores, estado] = await Promise.all([
+        leerValores(tokenPrincipal, hojas.map((h) => rangoDeHoja(h.hoja))),
+        leerEstadoGoogle(tokenPrincipal, cuentasContactos),
+      ])
 
       const { data: yaHechas } = await admin
         .from('altas_procesadas').select('correo, completo')

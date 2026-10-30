@@ -26,7 +26,9 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
         armarTabsAsesores(); pintarGrupos(); document.body.classList.add('en-asesores');
         document.getElementById('contenido-panel').style.display = '';
         prepararPanelLateral(); cambiarTabPanel('asesores');
-      }, guardarAltaPagina, pintarGrupos, actualizarAccesosGoogleVisibles};`;
+      }, guardarAltaPagina, pintarGrupos, actualizarAccesosGoogleVisibles, moverAcceso, abrirVerificacion, cargarEstadoGoogle, accesoDesdeVerif,
+      estado(){return {google:estadoGoogle,verificacion:ultimaVerificacion};},
+      google(lista){ultimaVerificacion=lista;estadoGoogleListo=true;aplicarEstado(lista);actualizarAccesosGoogleVisibles();}};`;
     html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
     await page.route('**/*', route => {
       const url = new URL(route.request().url());
@@ -79,7 +81,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     await page.waitForFunction(()=>Array.from(document.querySelectorAll('#lista-todos .acceso-google-icono')).filter(e=>e.closest('.accesos').dataset.correo==='beto@example.com').every(e=>e.complete&&e.naturalWidth>0));
     const controls = await beto.locator('.accesos-fila > .acceso, .accesos-fila .acceso-web, .accesos-fila .acceso-rol').evaluateAll(items=>items.map(e=>e.getBoundingClientRect().top));
     assert.ok(controls.every(top=>top===controls[0]),'Google, Web y Rol comparten una fila');
-    assert.equal(await beto.getByRole('button',{name:'Administrar Rol',exact:true}).isDisabled(),true);
+    assert.equal(await beto.getByRole('button',{name:/Administrar Rol/}).isDisabled(),true);
     assert.equal(await beto.locator('.acceso-label').first().evaluate(el=>getComputedStyle(el).cursor),'pointer');
     assert.equal(await beto.locator('.acceso-check:enabled').count(),3,'puede dar accesos aunque falte verificar Google');
     await beto.locator('.acceso-check[value="drive"]').check();
@@ -89,8 +91,75 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.equal(await beto.locator('.acceso-seleccion-accion.dar').isEnabled(),true);
     await beto.locator('.acceso-check[value="drive"]').uncheck();
     assert.equal(await beto.locator('.acceso-seleccion-accion.dar').isDisabled(),true);
+    const tarjetaGoogle=await list.locator('.kw-fila').first().elementHandle();
+    assert.equal(await list.locator('.asesor-tipo.asesor').count(),2);
+    assert.equal(await list.locator('.asesor-tipo.backoffice').count(),1);
+    assert.equal(await list.locator('.asesor-tipo.liderazgo').count(),2);
+    await page.evaluate(()=>{
+      window.qa.google([{correo:'ana@example.com',nombre:'Ana',grupo:'activos',contactos:true,drive:true,calendario:true},
+        {correo:'beto@example.com',nombre:'Beto López',grupo:'back_office_activo',contactos:false,drive:false,calendario:false}]);
+    });
+    const capsules=await list.locator('.btn-abrir-accesos').evaluateAll(els=>els.map(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
+    assert.ok(capsules.every(r=>r.w===capsules[0].w&&r.h===capsules[0].h),'con y sin check conservan el mismo tamaño');
+    await page.evaluate(()=>{
+      window.baseFetch=window.fetch;window.googleCalls=0;
+      window.kwUI.confirm=async()=>true;
+      window.fetch=async(url,options)=>{
+        const body=JSON.parse(options.body);
+        if(body.accion!=='acceso')return window.baseFetch(url,options);
+        ++window.googleCalls;await new Promise(r=>setTimeout(r,200));
+        if(window.failGoogle){window.failGoogle=false;return new Response(JSON.stringify({error:'Google no disponible'}),{status:503});}
+        if(window.partialGoogle){window.partialGoogle=false;return Response.json({ok:false,estado:[{correo:'beto@example.com',contactos:true,drive:true,calendario:false}],hechas:[{correo:'beto@example.com',ok:false,resultados:[{paso:'calendario',ok:false,detalle:'No se pudo compartir'}]}]});}
+        const estado={correo:'beto@example.com',nombre:'Beto López',grupo:'back_office_activo',contactos:true,drive:!body.quitar,calendario:!body.quitar};
+        return Response.json({ok:true,estado:[estado],hechas:[{correo:estado.correo,ok:true,resultados:[]}]});
+      };
+      window.qa.moverAcceso('beto@example.com',['drive','calendario'],false);
+      window.qa.moverAcceso('beto@example.com',['drive','calendario'],false);
+    });
+    await beto.locator('.accesos[aria-busy="true"]').waitFor();
+    assert.equal(await beto.locator('.accesos-progreso').isVisible(),true);
+    assert.equal(await page.locator('#accesos-carga.visible').count(),0,'no bloquea toda la pantalla');
+    await page.waitForFunction(()=>window.qa.estado().google['beto@example.com'].drive===true);
+    await beto.locator('.accesos:not([aria-busy="true"])').waitFor();
+    assert.equal(await page.evaluate(()=>window.googleCalls),1,'doble clic no duplica permisos');
+    assert.equal(await tarjetaGoogle.evaluate(el=>el.isConnected),true,'dar accesos conserva las tarjetas');
+    assert.equal(await beto.locator('.btn-abrir-accesos').evaluate(el=>el.classList.contains('listo')),true);
+    await page.evaluate(()=>window.qa.abrirVerificacion());
+    const verBeto=page.locator('.verif-item').filter({hasText:'beto@example.com'});
+    assert.match(await verBeto.locator('[data-acceso="drive"]').innerText(),/con acceso/);
+    await page.evaluate(()=>window.qa.accesoDesdeVerif(['beto@example.com'],['drive','calendario'],true));
+    assert.match(await verBeto.locator('[data-acceso="drive"]').innerText(),/sin acceso/);
+    assert.equal(await beto.locator('.btn-abrir-accesos').evaluate(el=>el.classList.contains('listo')),false);
+    assert.equal(await tarjetaGoogle.evaluate(el=>el.isConnected),true,'retirar desde revisión no reconstruye la lista');
+    await page.evaluate(()=>{document.getElementById('modal-verificar').style.display='none';window.failGoogle=true;return window.qa.moverAcceso('beto@example.com',['drive'],false);});
+    assert.equal(await page.evaluate(()=>window.qa.estado().google['beto@example.com'].drive),false,'fallo conserva el estado confirmado');
+    assert.equal(await beto.getByRole('button',{name:/Administrar Rol/}).isDisabled(),true,'fallo no habilita permisos Web');
+    await page.evaluate(()=>{window.partialGoogle=true;return window.qa.moverAcceso('beto@example.com',['drive','calendario'],false);});
+    assert.equal(await page.evaluate(()=>window.qa.estado().google['beto@example.com'].drive),true);
+    assert.equal(await page.evaluate(()=>window.qa.estado().verificacion.find(p=>p.correo==='beto@example.com').calendario),false);
+    assert.equal(await beto.locator('.btn-abrir-accesos').evaluate(el=>el.classList.contains('listo')),false,'un resultado parcial no muestra todos los accesos completos');
+    await page.evaluate(async()=>{
+      const normal=window.fetch;
+      window.fetch=async(url,options)=>{
+        if(JSON.parse(options.body).accion!=='verificar')return normal(url,options);
+        ++window.revisiones;await new Promise(r=>setTimeout(r,400));
+        return Response.json({personas:[{correo:'beto@example.com',nombre:'Beto López',grupo:'back_office_activo',contactos:true,drive:false,calendario:false}]});
+      };
+      window.revisiones=0;
+      const lecturas=[window.qa.cargarEstadoGoogle(),window.qa.cargarEstadoGoogle()];
+      await window.qa.moverAcceso('beto@example.com',['drive','calendario'],false);
+      await Promise.all(lecturas);window.fetch=normal;
+    });
+    assert.equal(await page.evaluate(()=>window.revisiones),1,'verificaciones simultáneas comparten una petición');
+    assert.equal(await page.evaluate(()=>window.qa.estado().google['beto@example.com'].drive),true,'una lectura anterior no pisa un cambio reciente');
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(root,'..','admin-access-design-mobile.png'),fullPage:true});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'tarjetas sin desbordes en móvil');
+    await page.setViewportSize({width:1366,height:900});
+    await page.evaluate(()=>{window.fetch=window.baseFetch;window.records=[];window.qa.google([{correo:'ana@example.com',nombre:'Ana',grupo:'activos',contactos:true,drive:true,calendario:true},{correo:'beto@example.com',nombre:'Beto López',grupo:'back_office_activo',contactos:false,drive:false,calendario:false}]);});
+    await page.screenshot({path:path.join(root,'..','admin-access-design.png'),fullPage:true});
     await page.screenshot({path:path.join(root,'..','admin-access-controls.png'),fullPage:true});
-    await beto.getByRole('button',{name:'Agregar a Web',exact:true}).click();
+    await beto.getByRole('button',{name:/Agregar a Web/}).click();
     assert.equal(await page.locator('#acceso-pagina-persona').textContent(),'Beto López');
     assert.equal(await page.locator('#acceso-pagina-correo').textContent(),'beto@example.com');
     assert.deepEqual(await page.locator('#acceso-pagina-rol option').evaluateAll(opts=>opts.map(o=>o.value)),['','admin','staff','asociado']);
@@ -110,8 +179,8 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.deepEqual(calls[2].body,{accion:'actualizar',user_id:'new',nombre:'Beto López',apellido:''});
     assert.deepEqual(calls[3].body,{accion:'actualizar',user_id:'new',role:'asociado',nombre:'Beto López',apellido:''});
     assert.equal(await list.locator('.kw-fila').count(),5);
-    assert.equal(await beto.getByRole('button',{name:'Agregar a Web',exact:true}).isDisabled(),true);
-    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
+    assert.equal(await beto.getByRole('button',{name:/Agregar a Web/}).isDisabled(),true);
+    await beto.getByRole('button',{name:/Administrar Rol/}).click();
     await page.evaluate(()=>{const s=document.getElementById('acceso-pagina-rol');s.value='staff';s.dispatchEvent(new Event('change',{bubbles:true}));});
     assert.equal(await page.locator('#acceso-pagina-puesto-wrap').isVisible(),true);
     assert.equal(await page.locator('#acceso-pagina-puesto option').count(),9);
@@ -131,7 +200,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     await page.locator('#accesos-carga').waitFor({state:'hidden'});
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
+    await beto.getByRole('button',{name:/Administrar Rol/}).click();
     assert.equal(await page.locator('#modal-acceso-pagina').isVisible(),true);
     assert.equal(await page.locator('#acceso-pagina-puesto').inputValue(),'Technology Director');
     assert.equal(await page.locator('#acceso-pagina-puesto-wrap').isVisible(),true);
@@ -142,14 +211,14 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.equal(await page.locator('#acceso-pagina-puesto').isDisabled(),true);
     await page.locator('#acceso-pagina-cancelar').click();
     await page.evaluate(()=>window.qa.setup('admin'));
-    await beto.getByRole('button',{name:'Administrar Rol',exact:true}).click();
+    await beto.getByRole('button',{name:/Administrar Rol/}).click();
     assert.deepEqual(await page.locator('#acceso-pagina-rol option').evaluateAll(opts=>opts.map(o=>o.value)),['','staff','asociado']);
     await page.locator('#acceso-pagina-cancelar').click();
     // Un alta nueva de Liderazgo guarda el puesto junto con la identidad.
     await page.setViewportSize({width:1366,height:900});
     await page.evaluate(()=>{window.testUsers=window.testUsers.filter(u=>u.id!=='new');window.qa.setup('master');});
-    if (!await beto.getByRole('button',{name:'Agregar a Web',exact:true}).isVisible()) await beto.locator('.btn-abrir-accesos').click();
-    await beto.getByRole('button',{name:'Agregar a Web',exact:true}).click();
+    if (!await beto.getByRole('button',{name:/Agregar a Web/}).isVisible()) await beto.locator('.btn-abrir-accesos').click();
+    await beto.getByRole('button',{name:/Agregar a Web/}).click();
     await page.evaluate(()=>{const rol=document.getElementById('acceso-pagina-rol');rol.value='staff';rol.dispatchEvent(new Event('change',{bubbles:true}));const puesto=document.getElementById('acceso-pagina-puesto');puesto.value='Team Leader';puesto.dispatchEvent(new Event('change',{bubbles:true}));});
     await page.locator('#acceso-pagina-guardar').click();
     await page.locator('#modal-acceso-pagina').waitFor({state:'hidden'});
