@@ -1330,6 +1330,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>
                 <span>Descargar asesores en CSV</span>
               </button>
+              <button type="button" class="kw-menu-op" role="menuitem" id="op-descargar-excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H5v20h14V7zM14 2v5h5M8 11l6 7m0-7-6 7"/></svg><span>Descargar asesores en Excel</span></button>
               <button type="button" class="kw-menu-op" role="menuitem" id="op-verificar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
                 <span>Revisar accesos</span>
@@ -3669,7 +3670,7 @@
       gruposLibro.forEach(function (g) {
         hojasDelLibro[g.clave] = { hoja: g.hoja, columnas: g.columnas, filasHoja: g.filasHoja };
       });
-      if (puedeGestionarAsesores()) await sincronizarBaseDesdeLibro(gruposLibro);
+      if (['master','admin','staff'].includes(miRol)) await sincronizarBaseDesdeLibro(gruposLibro);
     } catch (err) {
       fallaLibro = err;
     }
@@ -3743,6 +3744,31 @@
     op.classList.remove('trabajando');
   }
 
+  let canalLibro = null, cambioLibroPendiente = null, ultimoCambioLibro = null;
+  function escucharCambiosDelLibro() {
+    if(canalLibro || !window.kwSupabase.channel) return;
+    async function actualizar(){
+      if(recargaAsesoresEnCurso || accesosEnCurso.size || verificacionOcupada){cambioLibroPendiente=setTimeout(actualizar,600);return;}
+      if(!document.body.classList.contains('en-asesores')) return;
+      const abiertos=new Set(Array.from(document.querySelectorAll('.kw-fila.abierta .accesos[data-correo]')).map(c=>c.dataset.correo));
+      try {
+        if(!await leerBaseDatos()) return;
+        gruposAsesores=gruposDesdeBase();armarTabsAsesores();pintarGrupos();
+        document.querySelectorAll('.accesos[data-correo]').forEach(function(c){if(abiertos.has(c.dataset.correo))c.closest('.kw-fila').classList.add('abierta');});
+        document.querySelectorAll('.kw-aparece-fila').forEach(function(f){f.classList.remove('kw-aparece-fila');});
+      } catch(e){console.warn('La base se actualizará en la siguiente consulta.');}
+    }
+    canalLibro=window.kwSupabase.channel('asesores-libro-sincronizado').on('postgres_changes',
+      {event:'UPDATE',schema:'public',table:'asesores_sync_control'},function(event){
+        if(!event.new || !event.new.cambios_at) return;
+        if(event.new.activo){ultimoCambioLibro=event.new.cambios_at;return;}
+        if(event.new.cambios_at===ultimoCambioLibro) return;
+        ultimoCambioLibro=event.new.cambios_at;
+        clearTimeout(cambioLibroPendiente);cambioLibroPendiente=setTimeout(actualizar,350);
+      }).subscribe();
+    window.addEventListener('pagehide',function(){clearTimeout(cambioLibroPendiente);if(canalLibro)window.kwSupabase.removeChannel(canalLibro);canalLibro=null;},{once:true});
+  }
+
   // ── El menú de la barra ──
   // Lo que se hace cada tanto (revisar accesos, recargar el libro) vive
   // aquí adentro: afuera se queda el botón al que se le pica todos los
@@ -3750,6 +3776,7 @@
   function abrirMas(abrir) {
     const menu = document.getElementById('mas-menu');
     document.getElementById('op-descargar-csv').hidden = !document.body.classList.contains('en-asesores');
+    document.getElementById('op-descargar-excel').hidden = !document.body.classList.contains('en-asesores');
     const quiere = abrir === undefined ? menu.hidden : abrir;
     menu.hidden = !quiere;
     document.getElementById('btn-mas').setAttribute('aria-expanded', quiere ? 'true' : 'false');
@@ -3776,6 +3803,15 @@
     abrirVerificacion();
   });
   document.getElementById('op-descargar-csv').addEventListener('click', descargarAsesoresCsv);
+  document.getElementById('op-descargar-excel').addEventListener('click', async function(){
+    abrirMas(false);
+    const grupo=grupoDe(grupoActivo), personas=visiblesDe(grupo);
+    if(!personas.length) return avisoAsesores('No hay asesores en la lista actual para descargar.', 'error');
+    const btn=this;btn.disabled=true;btn.setAttribute('aria-busy','true');
+    try { await window.kwAsesoresExcel.descargar(personas,{grupo:grupo.titulo,tipo:p=>tipoPersona(p,grupo).titulo}); }
+    catch(e){avisoAsesores('No se pudo generar el Excel. Intenta nuevamente.','error');}
+    finally{btn.disabled=false;btn.removeAttribute('aria-busy');}
+  });
   document.getElementById('op-recargar').addEventListener('click', function () {
     abrirMas(false);
     cargarAsesores(true);
@@ -4151,8 +4187,8 @@
         || CORREOS_ALTA.includes(String(userData.user.email || '').toLowerCase());
       document.getElementById('acceso-nuevo-asesor').style.display = '';
       if (!puedeAltas) {
-        document.getElementById('op-recargar').hidden = true;
-        document.getElementById('op-verificar').hidden = true;
+        document.getElementById('op-recargar').hidden = false;
+        document.getElementById('op-verificar').hidden = false;
       }
 
       if (miRol === 'staff') {
@@ -4180,6 +4216,7 @@
       if (inicial) cambiarTabPanel(inicial.dataset.tab);
 
       document.getElementById('contenido-panel').style.display = '';
+      escucharCambiosDelLibro();
     } catch (err) {
       document.getElementById('denegado').style.display = '';
     }
@@ -4403,6 +4440,7 @@
     window.addEventListener('kw-auth-ready', initAdmin, { once: true });
   }
 </script>
+<script src="/assets/js/kw-asesores-excel.js?v=20261031excel"></script>
 <script src="/assets/js/drawer.js?v=20261023puestos" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>

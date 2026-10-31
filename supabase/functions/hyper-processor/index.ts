@@ -1,4 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
+import { sincronizarLibroAsesores } from '../_shared/asesores-sync.ts'
 // Edge Function: hyper-processor (proceso de alta)
 //
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
@@ -1196,7 +1197,7 @@ function pasosPedidos(valor: unknown, quitar = false): Paso[] {
   return permitidos.filter((p) => pedidos.includes(p))
 }
 
-secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => {
+secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has('x-webhook-secret')?'service':'user' }, async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return respond({ error: 'Método no permitido' }, 405)
 
@@ -1205,16 +1206,30 @@ secureServe({ name: 'hyper-processor', userLimit: 60 }, async (req: Request) => 
       return respond({ error: 'Faltan variables de entorno del proyecto.' }, 500)
     }
 
+    const body = await req.json().catch(() => ({}))
+    const accion = String(body.accion || 'listar')
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    // El cron solo importa datos. No puede otorgar ni retirar accesos de Google.
+    if(req.headers.has('x-webhook-secret')){
+      const secreto=Deno.env.get('WEBHOOK_SECRET')
+      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || accion!=='sincronizar_asesores') return respond({error:'No autorizado'},401)
+      const resultado=await sincronizarLibroAsesores(admin,async()=>{
+        const token=await getAccessToken(GOOGLE_REFRESH_TOKEN)
+        const hojas=await detectarHojas(token)
+        const valores=await leerValores(token,hojas.map(h=>rangoDeHoja(h.hoja)))
+        return hojas.map((h,i)=>({clave:h.clave,hoja:h.hoja,personas:parsearPersonas(valores[i]).map(p=>
+          (h.clave==='back_office_activo'||h.clave==='back_office_baja')&&!p.correo&&p.correoPersonal?{...p,correo:limpiarCorreo(p.correoPersonal)}:p)}))
+      })
+      return respond(resultado)
+    }
+
     // ── Quién llama ──
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
     if (!token) return respond({ error: 'No autenticado' }, 401)
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
     const { data: quien, error: errQuien } = await admin.auth.getUser(token)
     if (errQuien || !quien?.user) return respond({ error: 'Sesión inválida' }, 401)
 
-    const body = await req.json().catch(() => ({}))
-    const accion = String(body.accion || 'listar')
 
     // Consultar la carpeta de Drive lo hace cualquiera con sesión: esa
     // carpeta ya se le comparte a todo el mundo en el alta, así que ver

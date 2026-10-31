@@ -88,6 +88,7 @@ test('directory opens from the database once; manual Excel refresh skips overlap
   const element = { disabled: false, classList: { add() {}, remove() {} } };
   const context = vm.createContext({
     puedeGestionarAsesores: () => true,
+    miRol:'staff',
     recargaAsesoresEnCurso: false, ultimaLecturaLibro: 0, Date,
     document: { getElementById: () => element }, gruposAsesores: [{ clave: 'asesor_activo' }], bdAsesores: [{ correo: 'viejo@example.com' }],
     leerBaseDatos: async () => true, gruposDesdeBase: () => [{ clave: 'asesor_activo' }],

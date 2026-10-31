@@ -26,7 +26,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
         armarTabsAsesores(); pintarGrupos(); document.body.classList.add('en-asesores');
         document.getElementById('contenido-panel').style.display = '';
         prepararPanelLateral(); cambiarTabPanel('asesores');
-      }, guardarAltaPagina, pintarGrupos, actualizarAccesosGoogleVisibles, moverAcceso, abrirVerificacion, cargarEstadoGoogle, accesoDesdeVerif,
+      }, guardarAltaPagina, pintarGrupos, actualizarAccesosGoogleVisibles, moverAcceso, abrirVerificacion, cargarEstadoGoogle, accesoDesdeVerif, escucharCambiosDelLibro,
       estado(){return {google:estadoGoogle,verificacion:ultimaVerificacion};},
       google(lista){ultimaVerificacion=lista;estadoGoogleListo=true;aplicarEstado(lista);actualizarAccesosGoogleVisibles();}};`;
     html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
@@ -231,6 +231,18 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     assert.equal(await page.evaluate(()=>window.testUsers.find(u=>u.id==='new').puesto),'Team Leader');
     await page.evaluate(()=>window.qa.setup('staff'));
     assert.equal(await list.locator('[data-acceso-pagina]').count(),0);
+    await page.addScriptTag({content:fs.readFileSync(path.join(root,'assets/js/kw-asesores-excel.js'),'utf8')});
+    await page.addScriptTag({content:fs.readFileSync(path.join(root,'assets/vendor/exceljs/exceljs-4.4.0.min.js'),'utf8')});
+    await page.locator('#btn-mas').click();assert.equal(await page.locator('#op-descargar-excel').isVisible(),true);
+    const downloading=page.waitForEvent('download');await page.locator('#op-descargar-excel').click();const download=await downloading;assert.match(download.suggestedFilename(),/\.xlsx$/);assert.equal(await download.failure(),null);
+    await page.evaluate(()=>{
+      window.syncReads=0;const original=window.kwSupabase.from;
+      window.kwSupabase.from=table=>table==='asesores'?{select(){return this;},order:async()=>{window.syncReads++;return{data:[{id:'a',nombre:'Ana actualizada',correo:'ana@example.com',grupo:'asesor_activo'}],error:null};}}:original(table);
+      window.kwSupabase.channel=()=>({on(event,filter,cb){window.sheetCallback=cb;return this;},subscribe(){return this;}});window.kwSupabase.removeChannel=()=>{};
+      window.qa.escucharCambiosDelLibro();window.sheetCallback({new:{activo:true,cambios_at:'anterior'}});window.sheetCallback({new:{activo:false,cambios_at:'anterior'}});
+    });
+    await page.waitForTimeout(400);assert.equal(await page.evaluate(()=>window.syncReads),0,'una revisión sin cambios no recarga el directorio');
+    await page.evaluate(()=>window.sheetCallback({new:{activo:false,cambios_at:'nuevo'}}));await page.waitForFunction(()=>window.syncReads===1);await list.getByText('Ana actualizada',{exact:true}).waitFor();
     assert.deepEqual(errors,[]);
   } finally {await browser.close();}
 });
