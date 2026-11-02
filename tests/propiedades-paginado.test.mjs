@@ -11,7 +11,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
    create function propiedad_tipos_filtro(text,text) returns text[] language sql immutable as $$select array[$1]$$;
    create table propiedades(id uuid primary key,fuente text,fuente_id text,titulo text,descripcion text,operacion text,estatus text,tipo text,precio numeric,moneda text,
     recamaras int,banos numeric,estacionamientos int,m2_construccion numeric,m2_terreno numeric,calle text,colonia text,municipio text,estado text,cp text,pais text,
-    imagenes jsonb,miniatura_url text,caracteristicas jsonb,asesor_id uuid,asesor_nombre text,market_center text,updated_at timestamptz,enlace_kw text,asesor_kw_id text,lat numeric,lng numeric);
+    imagenes jsonb,miniatura_url text,caracteristicas jsonb,asesor_id uuid,asesor_nombre text,market_center text,created_at timestamptz default now()-interval '2 days',updated_at timestamptz,enlace_kw text,asesor_kw_id text,lat numeric,lng numeric);
    alter table propiedades enable row level security;
    create policy select_publicadas on propiedades for select to authenticated using(true);
    create policy inventario on propiedades for select to authenticated using(position('propiedades_inventario' in current_setting('request.path',true))>0);
@@ -35,6 +35,8 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   await db.exec(operacionSql);await db.exec(operacionSql);
   const preciosSql=readFileSync(new URL('../supabase/migrations/20261020190403_precios_pines_mapa.sql',import.meta.url),'utf8');
   await db.exec(preciosSql);await db.exec(preciosSql);
+  const antiguedadSql=readFileSync(new URL('../supabase/migrations/20261101000000_propiedades_antiguedad_tarjetas.sql',import.meta.url),'utf8');
+  await db.exec(antiguedadSql);await db.exec(antiguedadSql);
   await db.exec("update propiedades set lat=19+replace(titulo,'Casa ','')::numeric*.001,lng=-99;update propiedades set lat=null where titulo='Casa 45';update propiedades set lng=-190 where titulo='Casa 44'");
   await db.exec("set request.path='/rpc/propiedades_inventario_pagina';set role authenticated");
   const page=async(filters={},n=1)=>(await db.query('select propiedades_inventario_pagina($1,$2) r',[JSON.stringify(filters),n])).rows[0].r;
@@ -42,6 +44,7 @@ test('pagina de propiedades conserva filtros, total, orden y separacion entre pa
   const vacios=await page({estatus:'publicada',minimo:0,maximo:0,recamaras:0,recamarasMax:0,banos:0,estacionamientos:0,m2Min:0,m2Max:0});
   assert.equal(vacios.total,45);assert.equal(vacios.data.length,20);
   assert.equal(first.total,45);assert.equal(first.data.length,20);assert.equal(last.data.length,5);
+  assert.ok(first.data.every(p=>p.created_at && new Date(p.created_at)<new Date(p.updated_at)),'la fecha de alta no se sustituye por la ultima actualizacion');
   assert.equal(new Set(first.data.concat(second.data).map(p=>p.id)).size,40);
   const filtered=await page({estatus:'publicada',estado:'CDMX',minimo:10000,maximo:19000,tipo:'Casa',orden:'precio-desc'});
   assert.equal(filtered.total,5);assert.equal(Number(filtered.data[0].precio),19000);

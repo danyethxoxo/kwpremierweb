@@ -540,6 +540,8 @@
   }
   .prop-dato { display: flex; align-items: center; gap: 5px; }
   .prop-dato svg { width: 13px; height: 13px; color: var(--muted); }
+  .prop-datos { flex-wrap: wrap; align-items: center; }
+  .prop-antiguedad { margin-left: auto; white-space: nowrap; color: var(--muted); font-size: 11px; }
 
   .estado-msg { text-align: center; color: var(--muted); font-size: 14px; padding: 50px 0; grid-column: 1 / -1; }
   .paginacion { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 10px 0 28px; }
@@ -1228,6 +1230,22 @@
     vendida: 'Vendida', rentada: 'Rentada', suspendida: 'Suspendida',
   };
 
+  function antiguedadPublicacion(fecha, ahora) {
+    if (!fecha) return '';
+    var publicada = new Date(fecha).getTime();
+    var diferencia = (ahora == null ? Date.now() : ahora) - publicada;
+    if (!Number.isFinite(publicada) || diferencia < 0) return '';
+    var dias = Math.floor(diferencia / 86400000);
+    if (!dias) return 'Hoy';
+    if (dias < 30) return 'Hace ' + dias + (dias === 1 ? ' día' : ' días');
+    if (dias < 365) {
+      var meses = Math.floor(dias / 30);
+      return 'Hace ' + meses + (meses === 1 ? ' mes' : ' meses');
+    }
+    var anios = Math.floor(dias / 365);
+    return 'Hace ' + anios + (anios === 1 ? ' año' : ' años');
+  }
+
   function tarjeta(p, i) {
     var ubic = [p.colonia, p.municipio].filter(Boolean).join(', ');
     var tieneFoto = p.imagenes && p.imagenes.length;
@@ -1296,7 +1314,8 @@
           '</button>' +
         '</div>' +
         '<div class="prop-ubic">' + (ubic ? ICO.pin + '<span class="prop-ubic-texto">' + escapeHtml(ubic) + '</span>' : '') + '</div>' +
-        '<div class="prop-datos">' + datos.join('') + '</div>' +
+        '<div class="prop-datos">' + datos.join('') +
+          (antiguedadPublicacion(p.created_at) ? '<time class="prop-antiguedad" datetime="' + escapeHtml(p.created_at) + '" title="Publicado el ' + escapeHtml(new Date(p.created_at).toLocaleDateString('es-MX')) + '">' + antiguedadPublicacion(p.created_at) + '</time>' : '') + '</div>' +
         '<div class="prop-pie">' + pie + '</div>' +
       '</div>' +
     '</article>';
@@ -1575,7 +1594,7 @@
 
   var CAMPOS = 'id, fuente, fuente_id, titulo, operacion, operaciones_filtro, estatus, tipo, precio, moneda, recamaras, banos, ' +
                'estacionamientos, m2_construccion, m2_terreno, calle, colonia, municipio, estado, cp, pais, ' +
-               'imagenes, miniatura_url, caracteristicas, asesor_id, asesor_nombre, market_center, updated_at, enlace_kw, asesor_kw_id';
+               'imagenes, miniatura_url, caracteristicas, asesor_id, asesor_nombre, market_center, created_at, updated_at, enlace_kw, asesor_kw_id';
 
   function pintarBannerRef(asesor) {
     var banner = document.getElementById('banner-ref');
