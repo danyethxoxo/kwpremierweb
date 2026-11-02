@@ -34,7 +34,7 @@ test('Liderazgo abre nuevo asesor sin descargar la base ni esperar catálogos y 
    fs.mkdirSync(path.join(root,'outputs/asesores'),{recursive:true});await page.screenshot({path:path.join(root,'outputs/asesores/nuevo-'+role+'.png'),fullPage:true});
    if(role==='staff'){
     await page.locator('#f-correo').fill('nueva.persona@example.com');await page.locator('#ficha-guardar').click();await page.waitForURL('**/hub/admin.html');
-    assert.equal(saved[0].body.accion,'acceso_nuevo_asesor');assert.equal(saved[1].kind,'insert');assert.equal(saved[1].data.correo,'nueva.persona@example.com');
+    assert.equal(saved.length,1);assert.equal(saved[0].kind,'insert');assert.equal(saved[0].data.correo,'nueva.persona@example.com');
    }
    assert.deepEqual(errors,[]);await page.close();
   }

@@ -29,7 +29,7 @@
     position: fixed;
     inset: 0;
     z-index: 300;
-    background: rgba(255,255,255,.92);
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -44,6 +44,10 @@
     height: 56px;
     min-height: 0;
     padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
   #ficha-carga .kw-loader .circle { border-top-color: var(--red); }
   #ficha-carga-texto {
@@ -1004,11 +1008,10 @@
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 </head>
 <body data-kw-universal-adaptar>
-  <div id="ficha-carga" hidden role="status" aria-live="polite">
+  <div id="ficha-carga" hidden role="status" aria-label="Abriendo formulario" aria-live="polite">
     <div class="kw-loader" aria-hidden="true">
       <div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div>
     </div>
-    <div id="ficha-carga-texto">Abriendo Nuevo asesor…</div>
   </div>
   <script>
     // La carga se enciende antes de auth, Supabase y las listas: así la
@@ -1569,6 +1572,9 @@
     const baja = grupo === 'asesor_baja' || grupo === 'back_office_baja';
     const correo = String(fila.correo || '').trim().toLowerCase();
     const correoAnterior = String(anterior && anterior.correo || '').trim().toLowerCase();
+    // El trigger guarda el alta en Google junto con el cambio a activo.
+    // No bloquear el formulario ni crear permisos antes de guardar al asesor.
+    if (activo && (!correoAnterior || correo === correoAnterior)) return;
     if (anterior && estatusDe(anterior) === grupo && correo === correoAnterior) return;
     if (!activo && !baja) return;
     if (!correo) throw new Error('Falta el correo de KW para sincronizar los accesos.');
@@ -1592,7 +1598,7 @@
     };
     // Cambiar el correo no debe dejar permisos vigentes en el correo anterior.
     if (correoAnterior && correoAnterior !== correo) await llamar(anterior, true);
-    await llamar(Object.assign({}, fila, { correo: correo }), baja);
+    if (baja) await llamar(Object.assign({}, fila, { correo: correo }), true);
   }
 
   // ── Fechas ────────────────────────────────────────────────────
@@ -2018,7 +2024,6 @@
     aviso('Guardando...', '');
     let error;
     try {
-      aviso('Sincronizando accesos y guardando...', '');
       await sincronizarAccesosDeEstatus(fila, editando);
     if (editando) {
       ({ error } = await window.kwSupabase.from('asesores').update(fila).eq('id', editando.id).select('id').single());

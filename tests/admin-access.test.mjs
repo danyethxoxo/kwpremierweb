@@ -8,6 +8,18 @@ const html = readFileSync(new URL('../hub/admin.html', import.meta.url), 'utf8')
 const edge = readFileSync(new URL('../supabase/functions/hyper-processor/index.ts', import.meta.url), 'utf8');
 const base = readFileSync(new URL('../hub/base-asesores.html', import.meta.url), 'utf8');
 
+test('Google verification includes manual advisors and prefers their saved status over the sheet',()=>{
+  const start=edge.indexOf('      const vistos =',edge.indexOf("if (accion === 'verificar')"));
+  const end=edge.indexOf('      return respond({',start);
+  const result=vm.runInNewContext(stripTypeScriptTypes(edge.slice(start,end))+';personas',{
+    registrados:[{correo:'manual@example.com',nombre:'Manual',grupo:'asesor_activo'}],
+    hojas:[{clave:'bajas',titulo:'Bajas'}],valores:[[]],parsearPersonas:()=>[{correo:'manual@example.com',nombre:'Viejo',grupo:'bajas'}],
+    limpiarCorreo:c=>String(c||'').trim().toLowerCase(),contactoCompleto:()=>true,soyMaster:false,completosBD:new Set(),
+    estado:{contactos:new Map(),drive:new Map([['manual@example.com','id']]),calendario:new Map()},
+  });
+  assert.equal(result.length,1);assert.equal(result[0].nombre,'Manual');assert.equal(result[0].grupo,'asesor_activo');assert.equal(result[0].drive,true);
+});
+
 test('Excel import uses bounded batches, stops on failures and preserves the real error', async () => {
   const calls = [];
   let failure = null;
@@ -125,7 +137,7 @@ test('Excel ranges include new rows beyond the historical 500-row limit', () => 
   }
 });
 
-test('activating provisions both accounts; baja preserves contacts; unchanged status does not resend grants', async () => {
+test('activating delegates to the saved queue; baja preserves contacts; unchanged status does not resend grants', async () => {
   const calls = [];
   let ok = true;
   const context = vm.createContext({ asesores: [], estatusDe: (a) => a.grupo,
@@ -135,24 +147,23 @@ test('activating provisions both accounts; baja preserves contacts; unchanged st
   const activo = { id: '1', correo: 'test@example.com', grupo: 'asesor_activo' };
   const baja = { ...activo, grupo: 'asesor_baja' };
   await context.sincronizarAccesosDeEstatus(activo, baja);
-  assert.equal(calls[0].todasCuentas, true);
-  assert.deepEqual(Array.from(calls[0].pasos), ['contactos', 'drive', 'calendario']);
+  assert.equal(calls.length, 0);
   await context.sincronizarAccesosDeEstatus(baja, activo);
-  assert.equal(calls[1].quitar, true);
-  assert.deepEqual(Array.from(calls[1].pasos), ['drive', 'calendario']);
+  assert.equal(calls[0].quitar, true);
+  assert.deepEqual(Array.from(calls[0].pasos), ['drive', 'calendario']);
   await context.sincronizarAccesosDeEstatus(activo, activo);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 1);
   await context.sincronizarAccesosDeEstatus(activo, null);
-  assert.equal(calls.length, 3);
-  await assert.rejects(() => context.sincronizarAccesosDeEstatus({ ...activo, correo: '' }, null), /Falta el correo/);
+  assert.equal(calls.length, 1);
+  await context.sincronizarAccesosDeEstatus({ ...activo, correo: '' }, null);
   ok = false;
-  await assert.rejects(() => context.sincronizarAccesosDeEstatus(activo, baja), /estado no se cambió/);
+  await assert.rejects(() => context.sincronizarAccesosDeEstatus(baja, activo), /estado no se cambió/);
   ok = true;
   calls.length = 0;
   await context.sincronizarAccesosDeEstatus({ ...activo, correo: 'nuevo@example.com' }, activo);
   assert.equal(calls[0].quitar, true);
   assert.equal(calls[0].personas[0].correo, activo.correo);
-  assert.equal(calls[1].quitar, false);
+  assert.equal(calls.length, 1, 'el correo nuevo se da de alta después del guardado');
 });
 
 test('automatic grants create contacts once across accounts and grant Drive/Calendar separately per account', async () => {
@@ -227,7 +238,7 @@ test('removing all or selected Google accesses never includes contacts', () => {
   assert.ok(!edge.includes('borrarContacto'));
 });
 
-test('card status actions synchronize grants or removals before changing the group; failures preserve the group', async () => {
+test('card activation saves for automatic processing; removal failures preserve the group', async () => {
   for (const destino of ['asesor_activo', 'asesor_baja']) for (const ok of [true, false]) {
     const calls = [];
     const chain = { update: (data) => { calls.push({ kind: 'group', data }); return chain; }, eq: () => chain, select: () => chain, single: async () => ({}) };
@@ -244,11 +255,15 @@ test('card status actions synchronize grants or removals before changing the gro
     const end = html.indexOf('  // ── Cargar', start);
     vm.runInContext(html.slice(start, end), context);
     await context.pasarAsesorABaja({ dataset: { bajaAsesor: '1', bajaGrupo: destino } });
+    if(destino==='asesor_baja') {
     assert.equal(calls[0].kind, 'access');
-    assert.deepEqual(Array.from(calls[0].data.pasos), destino === 'asesor_baja' ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario']);
-    assert.equal(calls[0].data.quitar, destino === 'asesor_baja');
+    assert.deepEqual(Array.from(calls[0].data.pasos), ['drive', 'calendario']);
+    assert.equal(calls[0].data.quitar, true);
     assert.equal(calls[0].data.todasCuentas, true);
     assert.equal(calls.some((call) => call.kind === 'group'), ok);
+    } else {
+      assert.equal(calls.length,1);assert.equal(calls[0].kind,'group');assert.equal(calls[0].data.grupo,'asesor_activo');
+    }
     assert.equal(context.grupoActivo, 'todos', 'dar de alta o baja conserva la pestaña actual');
   }
 });

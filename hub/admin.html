@@ -316,15 +316,13 @@
   .accesos-carga {
     position: fixed; inset: 0; z-index: 10000;
     display: none; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.78);
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    background: transparent;
   }
   .accesos-carga.visible { display: flex; }
-  .accesos-carga-caja { text-align: center; }
-  .accesos-carga-caja .kw-loader { margin-bottom: 10px; }
+  .accesos-carga-caja { text-align: center; background: transparent; border: 0; box-shadow: none; }
+  .accesos-carga-caja .kw-loader { min-height: 56px; width: 56px; padding: 0; background: transparent; }
   .accesos-carga-texto {
-    font-size: 14px; font-weight: 700; color: var(--text);
-    text-shadow: 0 1px 8px rgba(255,255,255,0.9);
+    display: none;
   }
 
   /* ── Modal de Revisar Accesos ────────────────────────────────
@@ -3560,12 +3558,14 @@
     boton.disabled = true;
     try {
       if (!registro || !registro.correo) throw new Error('Falta el correo para sincronizar los accesos');
-      const accesos = await llamarAlta({ accion: 'acceso', quitar: quitar, todasCuentas: true,
-        pasos: quitar ? ['drive', 'calendario'] : ['contactos', 'drive', 'calendario'],
+      if (quitar) {
+      const accesos = await llamarAlta({ accion: 'acceso', quitar: true, todasCuentas: true,
+        pasos: ['drive', 'calendario'],
         personas: [{ correo: registro.correo, nombre: registro.nombre, telefono: registro.telefono,
           cumpleanos: registro.cumpleanos, grupo: destino }] });
       aplicarEstado(accesos.estado);
       if (!accesos.ok) throw new Error(mensajeDeResultado(accesos, quitar));
+      }
       const { error } = await window.kwSupabase
         .from('asesores')
         .update({ grupo: destino })
@@ -3744,7 +3744,7 @@
     op.classList.remove('trabajando');
   }
 
-  let canalLibro = null, cambioLibroPendiente = null, ultimoCambioLibro = null;
+  let canalLibro = null, cambioLibroPendiente = null, cambioAltaPendiente = null, ultimoCambioLibro = null;
   function escucharCambiosDelLibro() {
     if(canalLibro || !window.kwSupabase.channel) return;
     async function actualizar(){
@@ -3765,8 +3765,16 @@
         if(event.new.cambios_at===ultimoCambioLibro) return;
         ultimoCambioLibro=event.new.cambios_at;
         clearTimeout(cambioLibroPendiente);cambioLibroPendiente=setTimeout(actualizar,350);
+      }).on('postgres_changes',
+      {event:'UPDATE',schema:'public',table:'asesores_altas_google'},function(event){
+        if(!event.new || event.new.estado!=='completo') return;
+        clearTimeout(cambioAltaPendiente);
+        cambioAltaPendiente=setTimeout(async function(){
+          if(consultaEstadoGoogle) await consultaEstadoGoogle;
+          await cargarEstadoGoogle();
+        },500);
       }).subscribe();
-    window.addEventListener('pagehide',function(){clearTimeout(cambioLibroPendiente);if(canalLibro)window.kwSupabase.removeChannel(canalLibro);canalLibro=null;},{once:true});
+    window.addEventListener('pagehide',function(){clearTimeout(cambioLibroPendiente);clearTimeout(cambioAltaPendiente);if(canalLibro)window.kwSupabase.removeChannel(canalLibro);canalLibro=null;},{once:true});
   }
 
   // ── El menú de la barra ──

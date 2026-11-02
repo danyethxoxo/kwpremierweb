@@ -1,5 +1,6 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarLibroAsesores } from '../_shared/asesores-sync.ts'
+import { procesarAltasGoogle } from '../_shared/asesores-altas-google.ts'
 // Edge Function: hyper-processor (proceso de alta)
 //
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
@@ -1209,10 +1210,19 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
     const body = await req.json().catch(() => ({}))
     const accion = String(body.accion || 'listar')
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-    // El cron solo importa datos. No puede otorgar ni retirar accesos de Google.
+    // Servicio interno: importa el libro o procesa exclusivamente altas encoladas.
     if(req.headers.has('x-webhook-secret')){
       const secreto=Deno.env.get('WEBHOOK_SECRET')
-      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || accion!=='sincronizar_asesores') return respond({error:'No autorizado'},401)
+      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || !['sincronizar_asesores','procesar_altas_google'].includes(accion)) return respond({error:'No autorizado'},401)
+      if(accion==='procesar_altas_google'){
+        let cuentas:CuentaConToken[]|undefined, estado:EstadoGoogle|undefined
+        return respond(await procesarAltasGoogle(admin,async(persona)=>{
+          cuentas ??= await getTokensContactos()
+          estado ??= await leerEstadoGoogle(cuentas[0].token,cuentas)
+          const resultados=await otorgarAccesosPorCuenta([...PASOS],cuentas,persona,estado,false)
+          return {ok:resultados.every(r=>r.ok),detalle:resultados}
+        }))
+      }
       const resultado=await sincronizarLibroAsesores(admin,async()=>{
         const token=await getAccessToken(GOOGLE_REFRESH_TOKEN)
         const hojas=await detectarHojas(token)
@@ -1721,8 +1731,11 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
         leerEstadoGoogle(tokenPrincipal, cuentasContactos),
       ])
 
-      const { data: yaHechas } = await admin
-        .from('altas_procesadas').select('correo, completo')
+      const [{ data: yaHechas }, { data: registrados, error: errorRegistrados }] = await Promise.all([
+        admin.from('altas_procesadas').select('correo, completo'),
+        admin.from('asesores').select('correo,nombre,grupo,telefono,cumpleanos'),
+      ])
+      if(errorRegistrados) throw new Error('No se pudo consultar la base de asesores')
 
       const completosBD = new Set<string>()
       for (const a of yaHechas || []) {
@@ -1734,16 +1747,20 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
       // van al final para que no le ganen el lugar a la hoja buena.
       const vistos = new Set<string>()
       const personas = []
-      for (const [i, h] of hojas.entries()) {
-        for (const p of parsearPersonas(valores[i])) {
-          const c = p.correo.toLowerCase()
+      const titulos:Record<string,string>={asesor_activo:'Asesores activos',asesor_baja:'Asesores de baja',back_office_activo:'Back office',back_office_baja:'Back office de baja'}
+      // La base incluye las altas manuales que todavía no están en el libro.
+      const fuentes=[{clave:'base',titulo:'Base de asesores',personas:registrados||[]},
+        ...hojas.map((h,i)=>({...h,personas:parsearPersonas(valores[i]).map(p=>({...p,grupo:h.clave}))}))]
+      for (const h of fuentes) {
+        for (const p of h.personas) {
+          const c = limpiarCorreo(p.correo)
           if (!c || vistos.has(c)) continue
           vistos.add(c)
           personas.push({
-            correo: p.correo,
+            correo: c,
             nombre: p.nombre,
-            grupo: h.clave,
-            grupoTitulo: h.titulo,
+            grupo: p.grupo || h.clave,
+            grupoTitulo: titulos[p.grupo || h.clave] || h.titulo,
             telefono: p.telefono,
             cumpleanos: p.cumpleanos,
             contactos: contactoCompleto(estado.contactos, c),

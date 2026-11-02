@@ -1,0 +1,40 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {PGlite} from '@electric-sql/pglite';
+test('alta automática durable: transiciones, exclusión, reintentos, revisiones y autorización',async()=>{
+ const db=new PGlite();try{
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema private;create schema vault;create schema net;
+ grant usage on schema auth,private to anon,authenticated,service_role;
+ create function auth.role() returns text language sql as $$select current_setting('request.role',true)$$;
+ create function private.is_staff_or_above() returns boolean language sql as $$select false$$;
+ create function public.mfa_sesion_autorizada() returns boolean language sql as $$select true$$;
+ create table vault.decrypted_secrets(name text,decrypted_secret text);
+ create function net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds int) returns bigint language sql as $$select 1::bigint$$;
+ create table asesores(id uuid primary key default gen_random_uuid(),correo text,nombre text,grupo text);
+ create table altas_procesadas(correo text,nombre text,telefono text,pasos jsonb,completo boolean);
+ alter table asesores add column telefono text;
+ grant all on altas_procesadas to service_role;
+ grant select on asesores to service_role;
+ insert into asesores(correo,grupo) values('historico@example.com','asesor_activo');`);
+ const sql=fs.readFileSync(new URL('../supabase/migrations/20261102201106_asesores_altas_google_automaticas.sql',import.meta.url),'utf8').replace(/^select cron.schedule\([^\n]+/m,'').replace(/^alter publication[^\n]+/m,'');await db.exec(sql);
+ assert.equal((await db.query('select * from asesores_altas_google')).rows.length,0);
+ await db.exec("insert into asesores(correo,grupo) values('nuevo@example.com','asesor_activo'),('baja@example.com','asesor_baja'),(null,'asesor_activo');");
+ assert.equal((await db.query('select * from asesores_altas_google')).rows.length,1);
+ await db.exec("update asesores set grupo='asesor_activo' where correo='baja@example.com';update asesores set correo='concorreo@example.com' where correo is null;");
+ assert.equal((await db.query('select * from asesores_altas_google')).rows.length,3);
+ const row=(await db.query("select * from asesores_altas_google where correo='nuevo@example.com'")).rows[0];
+ await db.exec("update asesores set nombre='Cambiar nombre',grupo='asesor_activo' where correo='nuevo@example.com'");
+ assert.equal((await db.query('select revision from asesores_altas_google where asesor_id=$1',[row.asesor_id])).rows[0].revision,row.revision);
+ await db.exec("set role service_role;select set_config('request.role','service_role',false)");
+ const claim=(await db.query('select asesores_altas_google_tomar() as lote')).rows[0].lote;
+ assert.equal(claim.tareas.length,3);assert.equal((await db.query('select asesores_altas_google_tomar() as lote')).rows[0].lote,null);
+ await db.query("select asesores_altas_google_finalizar($1,$2,$3,'pendiente','{}')",[claim.lease,row.asesor_id,row.revision]);
+ assert.ok(new Date((await db.query('select proximo_at from asesores_altas_google where asesor_id=$1',[row.asesor_id])).rows[0].proximo_at)>new Date());
+ const otra=claim.tareas.find(t=>t.asesor_id!==row.asesor_id);
+ for(let i=0;i<2;i++) await db.query("select asesores_altas_google_finalizar($1,$2,$3,'completo','[]')",[claim.lease,otra.asesor_id,otra.revision]);
+ assert.equal((await db.query('select * from altas_procesadas')).rows.length,1,'la constancia se registra una sola vez');
+ await db.query('select asesores_altas_google_liberar($1)',[claim.lease]);
+ await db.exec("reset role;update asesores set grupo='asesor_baja' where correo='nuevo@example.com';update asesores set grupo='asesor_activo' where correo='nuevo@example.com';");
+ assert.notEqual((await db.query('select revision from asesores_altas_google where asesor_id=$1',[row.asesor_id])).rows[0].revision,row.revision);
+ await db.exec('set role authenticated');await assert.rejects(db.query('select asesores_altas_google_tomar()'),/permission denied/);assert.equal((await db.query('select * from asesores_altas_google')).rows.length,0);
+ await db.exec('reset role;set role anon');await assert.rejects(db.query('select * from asesores_altas_google'),/permission denied/);
+ }finally{await db.close()}
+});
