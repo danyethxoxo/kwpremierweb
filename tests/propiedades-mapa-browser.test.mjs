@@ -74,6 +74,25 @@ async function pagina(browser,viewport,puntos,entornoReal=false,inicio=null){
  return {page,errores,pedidos};
 }
 
+test('CDMX y Tláhuac: ningún pin exterior sobrevive al contorno en escritorio o móvil',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ const coords=[[19.29446888119494,-99.01853228951015],[19.282736061699698,-99.05710934130859],[19.3101177,-99.0504917],[19.2935824,-99.0102858],[19.270666,-99.007022],[19.3074496,-99.044955],[19.3079696,-99.0544916],[19.369,-99.163]];
+ try{for(const viewport of [{width:1366,height:900},{width:390,height:844}]){
+  const {page,errores}=await pagina(browser,viewport,coords.map((p,i)=>[id(i+1),...p,'venta',2000000,'MXN']));
+  try{
+   await page.evaluate(()=>{kwPropiedadesMapa.cancelarInicio();filtrosAplicados={estado:['Ciudad de México'],municipio:['Tláhuac'],estatus:'publicada'};dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));});
+   await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelector('#prop-mapa-lugar').textContent.includes('Tláhuac')&&document.querySelector('#prop-mapa-estado').textContent.startsWith('7 propiedades'));
+   await page.evaluate(()=>qaMapa.setView([19.33,-99.08],10,{animate:false}));
+   const visible=await page.evaluate(()=>{const p=[];qaMapa.eachLayer(l=>{if(l instanceof L.Marker&&l.options.operacion)p.push([l.getLatLng().lat,l.getLatLng().lng]);});return p;});
+   assert.equal(visible.length,7);assert.ok(!visible.some(p=>Math.abs(p[0]-19.369)<1e-8));
+   assert.match(await page.locator('#prop-mapa-estado').innerText(),/1 ubicación fuera del contorno/);
+   assert.doesNotMatch(await page.locator('#prop-mapa-estado').innerText(),/Hay más resultados/);
+   fs.mkdirSync(path.join(root,'outputs/mapa-tlahuac'),{recursive:true});await page.locator('#prop-mapa-panel').screenshot({path:path.join(root,'outputs/mapa-tlahuac/contorno-'+viewport.width+'.png')});
+   assert.deepEqual(errores,[]);
+  }finally{await page.close()}
+ }}finally{await browser.close()}
+});
+
 test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reintento en escritorio y móvil',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
@@ -396,7 +415,7 @@ test('filtros requieren confirmacion; pluma a mano alzada y rueda funcionan en e
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   for(const viewport of [{width:1280,height:1000},{width:390,height:844}]){
-  const {page,errores}=await pagina(browser,viewport,[[id(1001),19.43,-99.13],[id(1002),19.7,-101.1]]);
+  const {page,errores}=await pagina(browser,viewport,[[id(1001),19.369,-99.163],[id(1002),19.7,-101.1]]);
   try{
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    const inicial=await page.evaluate(()=>qaRpc.filter(r=>/propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length);
@@ -415,7 +434,7 @@ test('filtros requieren confirmacion; pluma a mano alzada y rueda funcionan en e
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-lugar').textContent.includes('Benito Juárez'));
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.municipio.includes('Benito Juárez')));
    assert.deepEqual(await page.evaluate(()=>Object.values(qaMapa._layers).filter(l=>l instanceof L.GeoJSON).flatMap(l=>l.toGeoJSON().features.map(f=>f.properties.cvegeo))),['09014']);
-   await page.evaluate(p=>{qaRenta=[p];},[id(1001),19.43,-99.13]);
+   await page.evaluate(p=>{qaRenta=[p];},[id(1001),19.369,-99.163]);
    const antesRenta=await page.evaluate(()=>qaRpc.filter(r=>/propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length);
    await page.selectOption('#f-operacion','renta',{force:true});
    await page.waitForTimeout(700);

@@ -65,6 +65,8 @@
     var dentro=false;
     for(var i=0,j=anillo.length-1;i<anillo.length;j=i++) {
       var a=anillo[i],b=anillo[j];
+      var cruz=(punto[0]-a[0])*(b[1]-a[1])-(punto[1]-a[1])*(b[0]-a[0]);
+      if(Math.abs(cruz)<1e-10&&punto[0]>=Math.min(a[0],b[0])-1e-10&&punto[0]<=Math.max(a[0],b[0])+1e-10&&punto[1]>=Math.min(a[1],b[1])-1e-10&&punto[1]<=Math.max(a[1],b[1])+1e-10)return true;
       if((a[1]>punto[1])!==(b[1]>punto[1])&&punto[0]<(b[0]-a[0])*(punto[1]-a[1])/(b[1]-a[1])+a[0]) dentro=!dentro;
     }
     return dentro;
@@ -73,6 +75,10 @@
     var geometria=feature.geometry;
     var poligonos=geometria.type==='Polygon'?[geometria.coordinates]:geometria.type==='MultiPolygon'?geometria.coordinates:[];
     return poligonos.some(function(p){return contieneAnillo(punto,p[0])&&!p.slice(1).some(function(h){return contieneAnillo(punto,h);});});
+  }
+  function filtrarPuntos(puntos,lugar) {
+    if(!lugar || !lugar.features || !lugar.features.length)return puntos;
+    return puntos.filter(function(p){return Number.isFinite(p[1])&&Number.isFinite(p[2])&&lugar.features.some(function(f){return contiene([p[2],p[1]],f);});});
   }
   async function porCoordenadas(lat,lng) {
     if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
@@ -86,5 +92,5 @@
     if(encontrados.length!==1)return null;
     return {estado:[entidad.properties.nomgeo],municipio:[encontrados[0].properties.nomgeo]};
   }
-  window.kwGeografiaMapa = Object.freeze({resolver: resolver,prepararFiltros:prepararFiltros,porCoordenadas:porCoordenadas});
+  window.kwGeografiaMapa = Object.freeze({resolver: resolver,prepararFiltros:prepararFiltros,porCoordenadas:porCoordenadas,filtrarPuntos:filtrarPuntos});
 })();

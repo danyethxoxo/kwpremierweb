@@ -202,8 +202,13 @@
       var primeraVista = !mapa;
       iniciarMapa(); mapa.invalidateSize({pan: false});
       var puntos = datos.puntos.filter(function (p) { return Array.isArray(p) && typeof p[0] === 'string' && Number.isFinite(p[1]) && Number.isFinite(p[2]) && Math.abs(p[1]) <= 85.05112878 && Math.abs(p[2]) <= 180; });
+      var lugar = resultados[2], fueraDeContorno = 0;
+      if(window.kwGeografiaMapa.filtrarPuntos){
+        var dentro=window.kwGeografiaMapa.filtrarPuntos(puntos,lugar);
+        fueraDeContorno=puntos.length-dentro.length;puntos=dentro;
+      }
       var limites = puntos.map(function (p) { return [p[1], p[2]]; });
-      var lugar = resultados[2], etiqueta = document.getElementById('prop-mapa-lugar');
+      var etiqueta = document.getElementById('prop-mapa-lugar');
       if (contorno) { mapa.removeLayer(contorno); contorno = null; }
       if (lugar.features.length) {
         contorno = L.geoJSON({type:'FeatureCollection',features:lugar.features}, {style:{color:'#CE011F',weight:2,fillOpacity:.06},interactive:false}).addTo(mapa);
@@ -269,8 +274,9 @@
       estado.textContent = puntos.length.toLocaleString('es-MX') + (puntos.length===1 ? ' propiedad en el mapa' : ' propiedades en el mapa') + (sinUbicacion ? ' · ' + sinUbicacion + ' sin coordenadas, disponibles en el listado' : '');
       var porConfirmar = puntos.filter(function (p) { return !p[3]; }).length;
       if (porConfirmar) estado.textContent += ' · ' + porConfirmar + ' con operación por confirmar (gris)';
-      if (Number(datos.ubicadas) > puntos.length) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
-      if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas para estos filtros. Puedes revisar el listado o quitar la zona.';
+      if (Number(datos.ubicadas) > puntos.length+fueraDeContorno) estado.textContent += ' · Hay más resultados: filtra o busca en una zona para verlos.';
+      if (!puntos.length) estado.textContent = 'No hay propiedades con coordenadas dentro de esta zona. Puedes revisar el listado o quitar la zona.';
+      if (fueraDeContorno) estado.textContent += ' · ' + fueraDeContorno + (fueraDeContorno===1?' ubicación fuera del contorno':' ubicaciones fuera del contorno');
       btnZona.disabled = false;
       if (propiedadPendiente) ubicar(propiedadPendiente);
     } catch (error) {
