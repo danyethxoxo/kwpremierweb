@@ -10,7 +10,7 @@ const output = path.resolve('outputs/fichas-tecnicas');
 
 test('Detalle conserva texto completo, todas las fotos, mapa y dos páginas en escritorio y móvil', async () => {
   fs.mkdirSync(output, { recursive: true });
-  const browser = await chromium.launch({ channel: 'chrome' });
+  const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
   try {
     for (const width of [1280, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
