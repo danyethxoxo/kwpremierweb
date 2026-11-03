@@ -1061,6 +1061,7 @@
         textoRedes(c, 'Mapa no disponible. Abre la ubicación desde el PDF.', margen + 24, my + 100, util - 48, 90, 25, false);
       }
       textoRedes(c, modelo.coordenadas.lat.toFixed(6) + ', ' + modelo.coordenadas.lng.toFixed(6), margen, 1555, util, 30, 18, false, 'left', '#777');
+      textoRedes(c, modelo.direccion, margen, 1592, util, 60, 18, false, 'left', '#454545');
     }
     if (cerrarPagina) cerrarPagina();
     return [primera.canvas, segunda.canvas];

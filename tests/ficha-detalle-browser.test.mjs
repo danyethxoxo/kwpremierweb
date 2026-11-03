@@ -87,6 +87,7 @@ test('Detalle conserva texto completo, contacto opcional, 2 + 12 fotos y mapa en
       assert.deepEqual(vector.map(p => p.imagenes), [2, 12], 'solo las fotografías son imágenes');
       for (const texto of ['Departamento en venta', 'FINAL ÍNTEGRO DE LA DESCRIPCIÓN.', 'Daniel Guerrero', 'Asesor Inmobiliario']) assert.ok(vector[0].texto.includes(texto), texto);
       assert.ok(vector[1].texto.includes('Museo de prueba'), 'las etiquetas del mapa también son texto seleccionable');
+      assert.ok(vector[1].texto.includes('San Francisco 87, Del Valle Norte, Benito Juárez, Ciudad de México, 03103'), 'la dirección completa aparece junto a las coordenadas del mapa');
       for (const [i, png] of renders.entries()) fs.writeFileSync(path.join(output, `detalle-pdf-${i + 1}-${width}.png`), Buffer.from(png, 'base64'));
       await page.locator('input[value="redes"]').check();
       await page.waitForFunction(() => document.querySelectorAll('.kw-ficha-canvas').length === 1 && !document.querySelector('.kw-ficha-boton-pdf').disabled);
