@@ -18,12 +18,15 @@ test('elige fotos de toda la galería, cambia portada y actualiza el PDF en escr
           body: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="rgb(${index * 10},70,120)"/></svg>` });
       });
       await page.setContent('<html><head></head><body style="margin:0;font-family:Arial"><button id="origen">Propiedades</button></body></html>');
+      await page.addScriptTag({ content: fs.readFileSync(new URL('../assets/vendor/fichas/vector.js', import.meta.url), 'utf8') });
       await page.addScriptTag({ content: source });
       await page.evaluate(async () => {
         window.pdfs = [];
         window.jspdf = { jsPDF: function () {
           const imagenes = [];
+          const contexto = new Proxy({}, { get: () => () => {} });
           return new Proxy({}, { get: (_, method) => {
+            if (method === 'context2d') return contexto;
             if (method === 'getTextWidth') return text => text.length * 5;
             if (method === 'splitTextToSize') return text => [text];
             if (method === 'addImage') return image => imagenes.push(image);

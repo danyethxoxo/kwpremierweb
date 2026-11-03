@@ -358,10 +358,15 @@
     var radio = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
     ctx.moveTo(x + radio, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radio);
-    ctx.arcTo(x + w, y + h, x, y + h, radio);
-    ctx.arcTo(x, y + h, x, y, radio);
-    ctx.arcTo(x, y, x + w, y, radio);
+    var k = radio * .55228475;
+    ctx.lineTo(x + w - radio, y);
+    ctx.bezierCurveTo(x + w - radio + k, y, x + w, y + radio - k, x + w, y + radio);
+    ctx.lineTo(x + w, y + h - radio);
+    ctx.bezierCurveTo(x + w, y + h - radio + k, x + w - radio + k, y + h, x + w - radio, y + h);
+    ctx.lineTo(x + radio, y + h);
+    ctx.bezierCurveTo(x + radio - k, y + h, x, y + h - radio + k, x, y + h - radio);
+    ctx.lineTo(x, y + radio);
+    ctx.bezierCurveTo(x, y + radio - k, x + radio - k, y, x + radio, y);
     ctx.closePath();
   }
 
@@ -831,11 +836,12 @@
     return lineas.length * tamano * 1.12;
   }
 
-  function dibujarRedes(modelo) {
+  function dibujarRedes(modelo, pdf) {
     var canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1350;
     var ctx = canvas.getContext('2d');
+    if (pdf) ctx = contextoDetallePDF(pdf, ctx, modelo, 612 / 1080);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#ffffff';
@@ -871,46 +877,106 @@
       textoRedes(ctx, String(dato.valor), x, 1218, 160, 44, 32, false, 'center');
       if (dato.etiqueta) textoRedes(ctx, dato.etiqueta, x, 1252, 160, 44, 32, false, 'center');
     });
+    if (pdf) pdf.context2d.restore();
     return canvas;
   }
 
   function esFichaRedes(modelo) { return modelo.plantilla === 'redes' || modelo.plantilla === 'mosaico'; }
   function esFichaCanvas(modelo) { return esFichaRedes(modelo) || modelo.plantilla === 'expediente'; }
 
-  var mapasDetalle = new Map();
-  function cargarMapaDetalle(modelo) {
-    if (!modelo.coordenadas) return Promise.resolve();
-    var c = modelo.coordenadas, clave = c.lat + ',' + c.lng;
-    if (!mapasDetalle.has(clave)) mapasDetalle.set(clave, (async function () {
-      var z = 16, n = Math.pow(2, z), rad = c.lat * Math.PI / 180;
-      var cx = (c.lng + 180) / 360 * n * 256;
-      var cy = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * 256;
-      var canvas = document.createElement('canvas'); canvas.width = 1072; canvas.height = 310;
-      var ctx = canvas.getContext('2d'), left = cx - canvas.width / 2, top = cy - canvas.height / 2, tareas = [];
-      for (var x = Math.floor(left / 256); x <= Math.floor((left + canvas.width - 1) / 256); x++) {
-        for (var y = Math.floor(top / 256); y <= Math.floor((top + canvas.height - 1) / 256); y++) {
-          tareas.push(new Promise(function (resolver) {
-            var imagen = new Image(), tx = x, ty = y;
-            imagen.crossOrigin = 'anonymous'; imagen.referrerPolicy = 'strict-origin-when-cross-origin';
-            var timer = setTimeout(function () { resolver(false); }, 7000);
-            imagen.onload = function () { clearTimeout(timer); ctx.drawImage(imagen, tx * 256 - left, ty * 256 - top); resolver(true); };
-            imagen.onerror = function () { clearTimeout(timer); resolver(false); };
-            imagen.src = 'https://tile.openstreetmap.org/' + z + '/' + ((tx % n + n) % n) + '/' + ty + '.png';
-          }));
-        }
-      }
-      var resultados = await Promise.all(tareas);
-      return resultados.every(Boolean) ? canvas : null;
-    })());
-    return mapasDetalle.get(clave).then(function (mapa) { modelo._mapaDetalle = mapa; });
+  var recursosVectorPromesa, fuentesPDFPromesa;
+  function cargarRecursosVector() {
+    if (global.kwFichaVector) return Promise.resolve(global.kwFichaVector);
+    if (!recursosVectorPromesa) recursosVectorPromesa = new Promise(function (resolve, reject) {
+      var script = document.createElement('script'), timer = setTimeout(function () { reject(new Error('No se pudo cargar el generador vectorial.')); }, 12000);
+      script.src = '/assets/vendor/fichas/vector.js?v=20261103vector1';
+      script.onload = function () { clearTimeout(timer); global.kwFichaVector ? resolve(global.kwFichaVector) : reject(new Error('No se pudo cargar el generador vectorial.')); };
+      script.onerror = function () { clearTimeout(timer); reject(new Error('No se pudo cargar el generador vectorial.')); };
+      document.head.appendChild(script);
+    }).catch(function (e) { recursosVectorPromesa = null; throw e; });
+    return recursosVectorPromesa;
   }
 
-  function dibujarPaginasDetalle(modelo) {
+  async function prepararFuentesPDF(pdf) {
+    if (!fuentesPDFPromesa) fuentesPDFPromesa = Promise.all(['Regular', 'Bold'].map(async function (peso) {
+      var r = await fetch('/assets/fonts/poppins/Poppins-' + peso + '.ttf', { signal: AbortSignal.timeout(12000) });
+      if (!r.ok) throw new Error('No se pudo cargar la tipografía del PDF.');
+      var bytes = new Uint8Array(await r.arrayBuffer()), partes = [];
+      for (var i = 0; i < bytes.length; i += 8192) partes.push(String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)));
+      return btoa(partes.join(''));
+    })).catch(function (e) { fuentesPDFPromesa = null; throw e; });
+    var fuentes = await fuentesPDFPromesa;
+    ['Regular', 'Bold'].forEach(function (peso, i) {
+      var archivo = 'Poppins-' + peso + '.ttf'; pdf.addFileToVFS(archivo, fuentes[i]);
+      pdf.addFont(archivo, 'PoppinsFicha', i ? 'bold' : 'normal');
+    });
+  }
+
+  function contextoDetallePDF(pdf, medida, modelo, escala) {
+    var destino = pdf.context2d, fotos = new WeakMap();
+    destino.autoPaging = false; destino.save(); destino.scale(escala, escala);
+    return new Proxy(medida, {
+      set: function (ctx, key, value) { ctx[key] = value; destino[key] = value; return true; },
+      get: function (ctx, key) {
+        if (key === 'measureText') return ctx.measureText.bind(ctx);
+        if (key === 'ellipse') return function (x, y, rx, ry, rotacion, inicio, fin, inverso) {
+          var total = fin - inicio;
+          if (!inverso && total < 0) total += Math.PI * 2;
+          if (inverso && total > 0) total -= Math.PI * 2;
+          var pasos = Math.max(1, Math.ceil(Math.abs(total) / (Math.PI / 2))), delta = total / pasos;
+          function punto(a) { return [x + rx * Math.cos(a) * Math.cos(rotacion) - ry * Math.sin(a) * Math.sin(rotacion), y + rx * Math.cos(a) * Math.sin(rotacion) + ry * Math.sin(a) * Math.cos(rotacion)]; }
+          function tangente(a) { return [-rx * Math.sin(a) * Math.cos(rotacion) - ry * Math.cos(a) * Math.sin(rotacion), -rx * Math.sin(a) * Math.sin(rotacion) + ry * Math.cos(a) * Math.cos(rotacion)]; }
+          destino.moveTo.apply(destino, punto(inicio));
+          for (var j = 0; j < pasos; j++) {
+            var a = inicio + j * delta, b = a + delta, p = punto(a), q = punto(b), t = tangente(a), u = tangente(b), k = 4 / 3 * Math.tan(delta / 4);
+            destino.bezierCurveTo(p[0] + k * t[0], p[1] + k * t[1], q[0] - k * u[0], q[1] - k * u[1], q[0], q[1]);
+          }
+        };
+        if (key === 'drawImage') return function (imagen) {
+          var args = Array.prototype.slice.call(arguments, 1);
+          if (imagen === modelo._logo) return global.kwFichaVector.dibujarLogo(this, args[0], args[1], args[2]);
+          if (imagen === modelo._logoBlanco) return global.kwFichaVector.dibujarLogo(this, args[0], args[1], args[2], true);
+          if (!fotos.has(imagen)) {
+            var raster = document.createElement('canvas'), ratio = Math.min(1, 1600 / Math.max(imagen.naturalWidth, imagen.naturalHeight));
+            raster.width = Math.round(imagen.naturalWidth * ratio); raster.height = Math.round(imagen.naturalHeight * ratio);
+            var fotoCtx = raster.getContext('2d'); fotoCtx.fillStyle = '#fff'; fotoCtx.fillRect(0, 0, raster.width, raster.height);
+            fotoCtx.drawImage(imagen, 0, 0, raster.width, raster.height);
+            fotos.set(imagen, { url: raster.toDataURL('image/jpeg', .9), ratio: ratio });
+          }
+          var foto = fotos.get(imagen);
+          if (args.length === 8) for (var i = 0; i < 4; i++) args[i] *= foto.ratio;
+          destino.drawImage.apply(destino, [foto.url].concat(args));
+        };
+        if (typeof destino[key] === 'function') return destino[key].bind(destino);
+        return ctx[key];
+      }
+    });
+  }
+
+  var mapasDetalle = new Map();
+  async function cargarMapaDetalle(modelo) {
+    var recurso = await cargarRecursosVector();
+    if (!modelo.coordenadas) return;
+    var c = modelo.coordenadas, clave = c.lat + ',' + c.lng;
+    if (!mapasDetalle.has(clave)) mapasDetalle.set(clave, recurso.cargarMapa(c).catch(function () { mapasDetalle.delete(clave); return null; }));
+    modelo._mapaDetalle = await mapasDetalle.get(clave);
+  }
+
+  function dibujarPaginasDetalle(modelo, pdf) {
+    var cerrarPagina = null;
     var ancho = 1200, alto = 1680, margen = 64, util = ancho - margen * 2;
     function pagina(numero, subtitulo) {
       var canvas = document.createElement('canvas'); canvas.width = ancho; canvas.height = alto;
-      var ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ancho, alto);
-      if (modelo._logo && modelo._logo.naturalWidth) ctx.drawImage(modelo._logo, margen, 42, 190, 190 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
+      var ctx = canvas.getContext('2d');
+      if (pdf) {
+        if (cerrarPagina) cerrarPagina();
+        if (numero > 1) pdf.addPage([612, 856.8], 'portrait');
+        ctx = contextoDetallePDF(pdf, ctx, modelo, 612 / ancho);
+        cerrarPagina = function () { pdf.context2d.restore(); };
+      }
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ancho, alto);
+      if (global.kwFichaVector) global.kwFichaVector.dibujarLogo(ctx, margen, 42, 190);
+      else if (modelo._logo && modelo._logo.naturalWidth) ctx.drawImage(modelo._logo, margen, 42, 190, 190 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
       textoRedes(ctx, subtitulo, ancho - margen, 55, 700, 38, 23, false, 'right', '#777');
       ctx.fillStyle = '#CE011F'; ctx.fillRect(margen, 126, util, 3);
       return { canvas: canvas, ctx: ctx };
@@ -982,20 +1048,21 @@
       textoRedes(c, 'Ubicación', margen, my - 46, util, 38, 25, true);
       if (modelo._mapaDetalle) {
         c.save(); rutaRedondeada(c, margen, my, util, 310, 14); c.clip();
-        c.drawImage(modelo._mapaDetalle, margen, my, util, 310); c.restore();
+        global.kwFichaVector.dibujarMapa(c, modelo._mapaDetalle, margen, my, util, 310); c.restore();
         c.save(); c.translate(ancho / 2, my + 155); c.scale(.65, .65);
         c.fillStyle = '#CE011F'; c.strokeStyle = '#fff'; c.lineWidth = 4;
         c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-12, -18, -32, -38, -32, -56);
         c.arc(0, -56, 32, Math.PI, 0); c.bezierCurveTo(32, -38, 12, -18, 0, 0); c.closePath(); c.fill(); c.stroke();
         c.fillStyle = '#fff'; c.beginPath(); c.arc(0, -56, 11, 0, Math.PI * 2); c.fill(); c.restore();
-        c.fillStyle = '#fff'; c.fillRect(ancho - margen - 380, my + 282, 380, 28);
-        textoRedes(c, '© OpenStreetMap contributors', ancho - margen - 8, my + 284, 370, 24, 16, false, 'right', '#333');
+        c.fillStyle = '#fff'; c.fillRect(ancho - margen - 660, my + 282, 660, 28);
+        textoRedes(c, 'OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors', ancho - margen - 8, my + 284, 650, 24, 14, false, 'right', '#333');
       } else {
         c.fillStyle = '#f6f6f6'; c.fillRect(margen, my, util, 310);
         textoRedes(c, 'Mapa no disponible. Abre la ubicación desde el PDF.', margen + 24, my + 100, util - 48, 90, 25, false);
       }
       textoRedes(c, modelo.coordenadas.lat.toFixed(6) + ', ' + modelo.coordenadas.lng.toFixed(6), margen, 1555, util, 30, 18, false, 'left', '#777');
     }
+    if (cerrarPagina) cerrarPagina();
     return [primera.canvas, segunda.canvas];
   }
 
@@ -1007,11 +1074,12 @@
     return canvas;
   }
 
-  function dibujarMosaico(modelo) {
+  function dibujarMosaico(modelo, pdf) {
     var canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1350;
     var ctx = canvas.getContext('2d');
+    if (pdf) ctx = contextoDetallePDF(pdf, ctx, modelo, 612 / 1080);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#CE011F';
@@ -1061,6 +1129,7 @@
     if (modelo._logoBlanco && modelo._logoBlanco.naturalWidth) {
       ctx.drawImage(modelo._logoBlanco, 435, 1230, 230, 230 * modelo._logoBlanco.naturalHeight / modelo._logoBlanco.naturalWidth);
     } else textoRedes(ctx, 'KW PREMIER', 540, 1245, 350, 65, 35, true, 'center', '#ffffff');
+    if (pdf) pdf.context2d.restore();
     return canvas;
   }
 
@@ -1424,7 +1493,8 @@
     var logoAlto = modelo._logo && modelo._logo.naturalWidth
       ? logoAncho * modelo._logo.naturalHeight / modelo._logo.naturalWidth : 0;
     if (logoAlto) {
-      pdfImagen(pdf, rasterizarImagen(modelo._logo, logoAncho, logoAlto, 'contain'), 78, 112, logoAncho, logoAlto, escala);
+      pdf.context2d.autoPaging = false; pdf.context2d.save(); pdf.context2d.scale(escala, escala);
+      global.kwFichaVector.dibujarLogo(pdf.context2d, 78, 112, logoAncho); pdf.context2d.restore();
     } else {
       pdfFuente(pdf, 42 * escala, COLORES.rojo, 'bold');
       pdf.text('kw', 78 * escala, 160 * escala);
@@ -1504,15 +1574,18 @@
     var altoPDF = anchoPDF * (redes ? 1350 / 1080 : modelo.plantilla === 'expediente' ? 1680 / 1200 : ALTO / ANCHO);
     var escala = anchoPDF / ANCHO;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
+    await cargarRecursosVector();
+    if (esFichaCanvas(modelo)) await prepararFuentesPDF(pdf);
     if (modelo.plantilla === 'expediente') {
-      dibujarPaginasDetalle(modelo).forEach(function (pagina, i) {
-        if (i) pdf.addPage([anchoPDF, altoPDF], 'portrait');
-        pdf.addImage(pagina.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
-        if (i && modelo.coordenadas) pdf.link(28, altoPDF - 205, anchoPDF - 56, 160, { url: 'https://www.openstreetmap.org/?mlat=' + modelo.coordenadas.lat + '&mlon=' + modelo.coordenadas.lng + '#map=16/' + modelo.coordenadas.lat + '/' + modelo.coordenadas.lng });
-      });
-    } else if (esFichaCanvas(modelo)) {
-      var imagenRedes = dibujarModelo(modelo);
-      pdf.addImage(imagenRedes.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
+      dibujarPaginasDetalle(modelo, pdf);
+      if (modelo.coordenadas) {
+        pdf.setPage(2);
+        pdf.link(28, altoPDF - 205, anchoPDF - 56, 160, { url: 'https://www.openstreetmap.org/?mlat=' + modelo.coordenadas.lat + '&mlon=' + modelo.coordenadas.lng + '#map=16/' + modelo.coordenadas.lat + '/' + modelo.coordenadas.lng });
+        if (modelo._mapaDetalle) pdf.link(242, 773, 337, 15, { url: 'https://www.openstreetmap.org/copyright' });
+      }
+    } else if (esFichaRedes(modelo)) {
+      if (modelo.plantilla === 'redes') dibujarRedes(modelo, pdf);
+      else dibujarMosaico(modelo, pdf);
     } else dibujarPDFVector(pdf, modelo, escala);
     return pdf.output('blob');
   }

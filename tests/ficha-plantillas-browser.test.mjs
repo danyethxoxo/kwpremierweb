@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { instalarVectorFicha, inspeccionarPDFVector } from './helpers/ficha-vector-fixture.mjs';
 
 const source = fs.readFileSync(new URL('../assets/js/kw-ficha-propiedad.js', import.meta.url), 'utf8');
 const jspdf = fs.readFileSync(new URL('../assets/vendor/jspdf/jspdf-4.2.1.umd.min.js', import.meta.url), 'utf8');
@@ -26,6 +27,7 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
           body: `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="${['#c5b9a6', '#aebcaf', '#b0bcc7', '#ccc0b4'][i % 4]}"/><path d="M0 650 300 300 700 650 900 150 1200 550V800H0Z" fill="#ffffff" opacity=".4"/><text x="60" y="100" font-size="45" fill="#302c2c">FOTO ${i + 1}</text></svg>` });
       });
       await page.goto('https://fotos.example/');
+      await instalarVectorFicha(page);
       await page.setContent('<html><head></head><body style="margin:0;font-family:Arial"><button>Propiedades</button></body></html>');
       await page.addScriptTag({ content: jspdf });
       await page.addScriptTag({ content: source });
@@ -58,6 +60,10 @@ test('Clásica oculta o restaura los datos del asesor en vista y PDF sin perder 
         const download = await downloadPromise;
         const target = path.join(output, `${diseno}-${width}.pdf`);
         await download.saveAs(target);
+        if (width === 1280 && indice === 0) {
+          const vector = await inspeccionarPDFVector(page, target);
+          assert.equal(vector[0].imagenes, 4, 'Clásica conserva únicamente las cuatro fotos como imágenes');
+        }
         assert.ok(fs.readFileSync(target).subarray(0, 5).equals(Buffer.from('%PDF-')));
         const textos = await page.evaluate(() => window.pdfTextos.flat().join(' '));
         for (const dato of ['MARÍA FERNANDA LÓPEZ', '+52 55 1234 5678', 'MARIA@KWPREMIER.COM', 'ASESOR INMOBILIARIO']) {
@@ -101,6 +107,7 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
         return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#dfd9cd"/><path d="M0 600 900 350 1200 450V800H0Z" fill="#a49c88"/><rect x="100" y="80" width="1000" height="500" fill="#f7f5f0"/><rect x="750" y="120" width="300" height="350" fill="#a7bcc1"/><rect x="340" y="420" width="500" height="220" rx="30" fill="#777e7f"/></svg>' });
       });
       await page.goto('https://fotos.example/');
+      await instalarVectorFicha(page);
       await page.addScriptTag({ content: jspdf });
       await page.addScriptTag({ content: source });
       await page.evaluate(async () => {
@@ -140,10 +147,17 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
       const bytes = fs.readFileSync(pngPath);
       assert.equal(bytes.readUInt32BE(16), 1080);
       assert.equal(bytes.readUInt32BE(20), 1350);
-      const pdfEvent = page.waitForEvent('download');
+      const pdfEvent = page.waitForEvent('download').catch(e => ({ error: e.message }));
       await page.locator('.kw-ficha-boton-pdf').click();
+      await page.waitForFunction(() => !document.querySelector('.kw-ficha-boton-pdf').disabled);
+      assert.equal(await page.locator('.kw-ficha-estado').textContent(), 'Descarga lista.');
       const pdf = await pdfEvent;
       await pdf.saveAs(path.join(output, `redes-${width}.pdf`));
+      if (width === 1280) {
+        const vector = await inspeccionarPDFVector(page, path.join(output, `redes-${width}.pdf`));
+        assert.equal(vector[0].imagenes, 1);
+        assert.ok(vector[0].texto.includes('Departamento en renta'));
+      }
       const [w, h] = await page.evaluate(() => window.medidasPDF);
       assert.ok(Math.abs(w / h - 4 / 5) < .0001);
       await page.screenshot({ path: path.join(output, `selector-redes-${width}.png`) });
@@ -168,6 +182,11 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
       const mosaicoPDF = page.waitForEvent('download');
       await page.locator('.kw-ficha-boton-pdf').click();
       await (await mosaicoPDF).saveAs(path.join(output, `mosaico-${width}.pdf`));
+      if (width === 1280) {
+        const vector = await inspeccionarPDFVector(page, path.join(output, `mosaico-${width}.pdf`));
+        assert.equal(vector[0].imagenes, 4);
+        assert.ok(vector[0].texto.includes('Departamento'));
+      }
       const medidasMosaico = await page.evaluate(() => window.medidasPDF);
       assert.ok(Math.abs(medidasMosaico[0] / medidasMosaico[1] - 4 / 5) < .0001);
       await page.screenshot({ path: path.join(output, `selector-mosaico-${width}.png`) });

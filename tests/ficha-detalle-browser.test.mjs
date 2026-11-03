@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { instalarVectorFicha } from './helpers/ficha-vector-fixture.mjs';
 
 const root = new URL('../', import.meta.url);
 const leer = p => fs.readFileSync(new URL(p, root), 'utf8');
@@ -24,6 +25,7 @@ test('Detalle conserva texto completo, contacto opcional, 2 + 12 fotos y mapa en
       });
       await page.route('https://tile.openstreetmap.org/**', r => r.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#eee9df"/><path d="M0 80H256M80 0V256M180 0V256M0 180H256" stroke="white" stroke-width="15"/><text x="10" y="35" font-size="14">Mapa de prueba</text></svg>' }));
       await page.goto('https://ficha.example/');
+      await instalarVectorFicha(page);
       await page.addScriptTag({ content: leer('assets/vendor/jspdf/jspdf-4.2.1.umd.min.js') });
       await page.addScriptTag({ content: leer('assets/js/kw-ficha-propiedad.js') });
       await page.evaluate(async () => {
@@ -59,8 +61,10 @@ test('Detalle conserva texto completo, contacto opcional, 2 + 12 fotos y mapa en
       await page.locator('.kw-ficha-vista').evaluate(el => { el.scrollTop = el.scrollHeight; });
       if (width >= 700) assert.ok(await page.locator('.kw-ficha-vista').evaluate(el => el.scrollTop > 0));
       await page.screenshot({ path: path.join(output, `detalle-selector-${width}.png`) });
-      const evento = page.waitForEvent('download');
+      const evento = page.waitForEvent('download').catch(e => ({ error: e.message }));
       await page.locator('.kw-ficha-boton-pdf').click();
+      await page.waitForFunction(() => !document.querySelector('.kw-ficha-boton-pdf').disabled);
+      assert.equal(await page.locator('.kw-ficha-estado').textContent(), 'Descarga lista.');
       const archivo = path.join(output, `detalle-${width}.pdf`);
       await (await evento).saveAs(archivo);
       await page.addScriptTag({ content: leer('assets/vendor/firmas/pdf-3.11.174.min.js') });
@@ -69,10 +73,20 @@ test('Detalle conserva texto completo, contacto opcional, 2 + 12 fotos y mapa en
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://ficha.example/pdf.worker.js';
         const doc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
         const result = [];
-        for (let n = 1; n <= doc.numPages; n++) { const p = await doc.getPage(n), v = p.getViewport({ scale: 1.3 }), c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await p.render({ canvasContext: c.getContext('2d'), viewport: v }).promise; result.push(c.toDataURL().split(',')[1]); }
+        window.pdfVector = [];
+        for (let n = 1; n <= doc.numPages; n++) {
+          const p = await doc.getPage(n), v = p.getViewport({ scale: 1.3 }), c = document.createElement('canvas');
+          const ops = await p.getOperatorList(), text = await p.getTextContent();
+          window.pdfVector.push({ texto: text.items.map(i => i.str).join(' '), imagenes: ops.fnArray.filter(op => [pdfjsLib.OPS.paintImageXObject, pdfjsLib.OPS.paintInlineImageXObject].includes(op)).length });
+          c.width = v.width; c.height = v.height; await p.render({ canvasContext: c.getContext('2d'), viewport: v }).promise; result.push(c.toDataURL().split(',')[1]);
+        }
         return result;
       }, [...fs.readFileSync(archivo)]);
       assert.equal(renders.length, 2);
+      const vector = await page.evaluate(() => window.pdfVector);
+      assert.deepEqual(vector.map(p => p.imagenes), [2, 12], 'solo las fotografías son imágenes');
+      for (const texto of ['Departamento en venta', 'FINAL ÍNTEGRO DE LA DESCRIPCIÓN.', 'Daniel Guerrero', 'Asesor Inmobiliario']) assert.ok(vector[0].texto.includes(texto), texto);
+      assert.ok(vector[1].texto.includes('Museo de prueba'), 'las etiquetas del mapa también son texto seleccionable');
       for (const [i, png] of renders.entries()) fs.writeFileSync(path.join(output, `detalle-pdf-${i + 1}-${width}.png`), Buffer.from(png, 'base64'));
       await page.locator('input[value="redes"]').check();
       await page.waitForFunction(() => document.querySelectorAll('.kw-ficha-canvas').length === 1 && !document.querySelector('.kw-ficha-boton-pdf').disabled);
