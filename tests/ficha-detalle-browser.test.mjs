@@ -8,7 +8,7 @@ const root = new URL('../', import.meta.url);
 const leer = p => fs.readFileSync(new URL(p, root), 'utf8');
 const output = path.resolve('outputs/fichas-tecnicas');
 
-test('Detalle conserva texto completo, todas las fotos, mapa y dos páginas en escritorio y móvil', async () => {
+test('Detalle conserva texto completo, contacto opcional, 2 + 12 fotos y mapa en dos páginas', async () => {
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch(process.platform === 'win32' ? { channel: 'chrome' } : {});
   try {
@@ -33,8 +33,8 @@ test('Detalle conserva texto completo, todas las fotos, mapa y dos páginas en e
         window.propiedadPrueba = { titulo: 'Departamento en venta con terraza, luz natural y excelentes espacios en Del Valle Norte', tipo: 'Departamento', operacion: 'venta', precio: 7450000, moneda: 'MXN', calle: 'San Francisco 87', colonia: 'Del Valle Norte', municipio: 'Benito Juárez', estado: 'Ciudad de México', cp: '03103', lat: 19.391, lng: -99.162,
           recamaras: 3, banos: 2, estacionamientos: 2, m2_construccion: 165, m2_terreno: 200,
           descripcion: 'Departamento con espacios amplios, iluminación natural y una distribución funcional. Cuenta con sala, comedor y cocina equipada. '.repeat(11) + 'FINAL ÍNTEGRO DE LA DESCRIPCIÓN.',
-          caracteristicas: ['Terraza', 'Elevador', 'Vigilancia', 'Cocina equipada', 'Balcón', 'Bodega', 'Área de lavado', 'Acceso controlado', 'Jardín común', 'Salón de usos múltiples'], imagenes: Array.from({ length: 14 }, (_, i) => 'https://ficha.example/' + (i + 1)) };
-        await kwFichaPropiedad.abrir({ plantilla: 'expediente', propiedad: window.propiedadPrueba, asesor: { nombre: 'Daniel Guerrero', email: 'asesor@example.com', whatsapp: '55 1234 5678' }, url: 'https://asesor.kw.com/propiedad' });
+          caracteristicas: ['Terraza', 'Elevador', 'Vigilancia', 'Cocina equipada', 'Balcón', 'Bodega', 'Área de lavado', 'Acceso controlado', 'Jardín común', 'Salón de usos múltiples'], imagenes: Array.from({ length: 20 }, (_, i) => 'https://ficha.example/' + (i + 1)) };
+        await kwFichaPropiedad.abrir({ plantilla: 'expediente', propiedad: window.propiedadPrueba, asesor: { nombre: 'Daniel', apellido: 'Guerrero', market_center: 'MC NO PUBLICAR', email: 'asesor@example.com', whatsapp: '55 1234 5678', sitio_web: 'https://daniel.kw.com' }, url: 'https://asesor.kw.com/propiedad' });
       });
       assert.equal(await page.locator('.kw-ficha-canvas').count(), 2);
       const marco = await page.locator('.kw-ficha-dialog').boundingBox();
@@ -44,6 +44,14 @@ test('Detalle conserva texto completo, todas las fotos, mapa y dos páginas en e
       assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 14);
       const textos = await page.evaluate(() => window.textos.join(' '));
       for (const texto of ['FINAL ÍNTEGRO DE LA DESCRIPCIÓN.', 'Jardín común', 'San Francisco 87', 'Benito Juárez', 'OpenStreetMap']) assert.ok(textos.includes(texto), texto);
+      for (const texto of ['Ficha técnica ·', 'Ver propiedad en KW', 'KW Premier ·', 'MC NO PUBLICAR']) assert.equal(textos.includes(texto), false, texto);
+      for (const texto of ['Daniel Guerrero', 'asesor@example.com', '55 1234 5678', 'daniel.kw.com']) assert.ok(textos.includes(texto), texto);
+      await page.evaluate(() => { window.textos = []; });
+      await page.locator('input[name="kw-ficha-asesor"]').uncheck();
+      const ocultos = await page.evaluate(() => window.textos.join(' '));
+      for (const texto of ['Daniel Guerrero', 'asesor@example.com', '55 1234 5678', 'daniel.kw.com']) assert.equal(ocultos.includes(texto), false, texto);
+      await page.locator('input[name="kw-ficha-asesor"]').check();
+      assert.equal(await page.locator('.kw-ficha-foto input').nth(19).isDisabled(), true);
       for (let i = 0; i < 2; i++) {
         const png = await page.locator('.kw-ficha-canvas').nth(i).evaluate(c => c.toDataURL().split(',')[1]);
         fs.writeFileSync(path.join(output, `detalle-vista-${i + 1}-${width}.png`), Buffer.from(png, 'base64'));
@@ -70,6 +78,8 @@ test('Detalle conserva texto completo, todas las fotos, mapa y dos páginas en e
       await page.waitForFunction(() => document.querySelectorAll('.kw-ficha-canvas').length === 1 && !document.querySelector('.kw-ficha-boton-pdf').disabled);
       const direccion = await page.evaluate(() => kwFichaPropiedad.crearModelo({ propiedad: window.propiedadPrueba }).ubicacionRedes);
       assert.deepEqual(direccion, ['Del Valle Norte', 'Benito Juárez, CDMX']);
+      const respaldo = await page.evaluate(() => kwFichaPropiedad.crearModelo({ propiedad: { ...window.propiedadPrueba, colonia: '  ', calle: 'Avenida Tláhuac 232' } }).ubicacionRedes);
+      assert.deepEqual(respaldo, ['Avenida Tláhuac 232', 'Benito Juárez, CDMX']);
       const redes = await page.locator('.kw-ficha-canvas').evaluate(c => c.toDataURL().split(',')[1]);
       fs.writeFileSync(path.join(output, `redes-${width}.png`), Buffer.from(redes, 'base64'));
       await page.locator('input[value="clasica"]').check();

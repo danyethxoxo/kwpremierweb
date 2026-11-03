@@ -244,7 +244,7 @@
     return {
       plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
       mostrarAsesor: opciones.mostrarAsesor !== false,
-      ubicacionRedes: [propiedad.colonia, [propiedad.municipio, /^(ciudad de m[eé]xico|cdmx|distrito federal)$/i.test(texto(propiedad.estado)) ? 'CDMX' : propiedad.estado].filter(Boolean).join(', ')].filter(Boolean),
+      ubicacionRedes: [texto(propiedad.colonia) || texto(propiedad.calle), [propiedad.municipio, /^(ciudad de m[eé]xico|cdmx|distrito federal)$/i.test(texto(propiedad.estado)) ? 'CDMX' : propiedad.estado].filter(Boolean).join(', ')].filter(Boolean),
       operacion: operacionPrincipal,
       tituloRedes: tipoPrincipal + (operacionPrincipal === 'POR CONFIRMAR' ? ': operación por confirmar' : ' en ' + operacionPrincipal.toLocaleLowerCase('es-MX')),
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
@@ -882,13 +882,13 @@
     if (!modelo.coordenadas) return Promise.resolve();
     var c = modelo.coordenadas, clave = c.lat + ',' + c.lng;
     if (!mapasDetalle.has(clave)) mapasDetalle.set(clave, (async function () {
-      var z = 15, n = Math.pow(2, z), rad = c.lat * Math.PI / 180;
+      var z = 16, n = Math.pow(2, z), rad = c.lat * Math.PI / 180;
       var cx = (c.lng + 180) / 360 * n * 256;
       var cy = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * 256;
-      var canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 256;
-      var ctx = canvas.getContext('2d'), left = cx - 384, top = cy - 128, tareas = [];
-      for (var x = Math.floor(left / 256); x <= Math.floor((left + 767) / 256); x++) {
-        for (var y = Math.floor(top / 256); y <= Math.floor((top + 255) / 256); y++) {
+      var canvas = document.createElement('canvas'); canvas.width = 1072; canvas.height = 310;
+      var ctx = canvas.getContext('2d'), left = cx - canvas.width / 2, top = cy - canvas.height / 2, tareas = [];
+      for (var x = Math.floor(left / 256); x <= Math.floor((left + canvas.width - 1) / 256); x++) {
+        for (var y = Math.floor(top / 256); y <= Math.floor((top + canvas.height - 1) / 256); y++) {
           tareas.push(new Promise(function (resolver) {
             var imagen = new Image(), tx = x, ty = y;
             imagen.crossOrigin = 'anonymous'; imagen.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -913,12 +913,9 @@
       if (modelo._logo && modelo._logo.naturalWidth) ctx.drawImage(modelo._logo, margen, 42, 190, 190 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
       textoRedes(ctx, subtitulo, ancho - margen, 55, 700, 38, 23, false, 'right', '#777');
       ctx.fillStyle = '#CE011F'; ctx.fillRect(margen, 126, util, 3);
-      ctx.fillStyle = '#ddd'; ctx.fillRect(margen, 1605, util, 1);
-      textoRedes(ctx, 'KW Premier · ' + numero + ' / 2', ancho - margen, 1620, 300, 30, 18, false, 'right', '#777');
-      textoRedes(ctx, modelo.enlace ? 'Ver propiedad en KW' : '', margen, 1620, util - 330, 30, 18, false, 'left', '#777');
       return { canvas: canvas, ctx: ctx };
     }
-    var primera = pagina(1, 'Ficha técnica · ' + modelo.tipo), ctx = primera.ctx;
+    var primera = pagina(1, ''), ctx = primera.ctx;
     var bloques = [
       { texto: modelo.titulo, tamano: 35, negrita: true, color: '#252525', espacio: 14 },
       { texto: modelo.direccion, tamano: 24, espacio: 14 },
@@ -930,7 +927,8 @@
       { texto: modelo.descripcionCompleta ? 'Descripción' : '', tamano: 23, negrita: true, espacio: 10 },
       { texto: modelo.descripcionCompleta, tamano: 23, espacio: 22 }
     ];
-    if (modelo.mostrarAsesor !== false) bloques.push({ texto: [modelo.asesor.nombre, modelo.asesor.market_center, modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio].filter(Boolean).join(' · '), tamano: 21, espacio: 0 });
+    var contactoVisible = modelo.mostrarAsesor !== false;
+    var limiteTexto = contactoVisible ? 1375 : 1570;
     function preparar(factor) {
       var y = 157;
       bloques.forEach(function (b) {
@@ -946,8 +944,8 @@
       return y;
     }
     var factor = 1;
-    while (preparar(factor) > 1570 && factor > .58) factor -= .02;
-    if (preparar(factor) > 1580) throw new Error('El texto completo de esta propiedad supera el espacio de dos páginas. Reduce la descripción para generar la ficha sin recortes.');
+    while (preparar(factor) > limiteTexto && factor > .58) factor -= .02;
+    if (preparar(factor) > limiteTexto + 10) throw new Error('El texto completo de esta propiedad supera el espacio de dos páginas. Reduce la descripción para generar la ficha sin recortes.');
     bloques.forEach(function (b) {
       if (b.fotos) {
         var fotos = (modelo._fotos || []).slice(0, 2);
@@ -958,9 +956,17 @@
       ctx.font = (b.negrita ? '700 ' : '400 ') + b.t + 'px PoppinsFicha, Arial, sans-serif'; ctx.fillStyle = b.color || '#454545';
       (b.lineas || []).forEach(function (linea, i) { ctx.fillText(linea, margen, b.y + b.t + i * b.t * 1.42); });
     });
-    var segunda = pagina(2, 'Galería y ubicación'), c = segunda.ctx;
+    if (contactoVisible) {
+      ctx.fillStyle = '#f6f6f6'; rutaRedondeada(ctx, margen, 1410, util, 190, 14); ctx.fill();
+      ctx.fillStyle = '#CE011F'; ctx.fillRect(margen + 24, 1436, 4, 138);
+      textoRedes(ctx, modelo.asesor.nombre, margen + 48, 1430, util - 96, 45, 27, true);
+      textoRedes(ctx, modelo.asesor.whatsapp, margen + 48, 1490, 330, 36, 22, false);
+      textoRedes(ctx, modelo.asesor.email, margen + 410, 1490, util - 458, 36, 22, false);
+      textoRedes(ctx, modelo.asesor.sitio, margen + 48, 1540, util - 96, 36, 22, false, 'left', '#CE011F');
+    }
+    var segunda = pagina(2, ''), c = segunda.ctx;
     textoRedes(c, 'Galería', margen, 155, util, 50, 30, true);
-    var fotos = (modelo._fotos || []).slice(2), mapaAlto = modelo.coordenadas ? 350 : 0;
+    var fotos = (modelo._fotos || []).slice(2, 14), mapaAlto = modelo.coordenadas ? 350 : 0;
     var galeriaAlto = 1280 - mapaAlto, columnas = Math.max(1, Math.round(Math.sqrt(fotos.length * util / (galeriaAlto * 1.5))));
     var filas = Math.max(1, Math.ceil(fotos.length / columnas)), gap = 12;
     var fw = (util - gap * (columnas - 1)) / columnas, fh = Math.min(fw / 1.45, (galeriaAlto - gap * (filas - 1)) / filas);
@@ -970,8 +976,9 @@
       var my = 1235;
       textoRedes(c, 'Ubicación', margen, my - 46, util, 38, 25, true);
       if (modelo._mapaDetalle) {
-        c.drawImage(modelo._mapaDetalle, margen, my, util, 310);
-        c.save(); c.translate(ancho / 2, my + 155);
+        c.save(); rutaRedondeada(c, margen, my, util, 310, 14); c.clip();
+        c.drawImage(modelo._mapaDetalle, margen, my, util, 310); c.restore();
+        c.save(); c.translate(ancho / 2, my + 155); c.scale(.65, .65);
         c.fillStyle = '#CE011F'; c.strokeStyle = '#fff'; c.lineWidth = 4;
         c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-12, -18, -32, -38, -32, -56);
         c.arc(0, -56, 32, Math.PI, 0); c.bezierCurveTo(32, -38, 12, -18, 0, 0); c.closePath(); c.fill(); c.stroke();
@@ -1496,7 +1503,6 @@
       dibujarPaginasDetalle(modelo).forEach(function (pagina, i) {
         if (i) pdf.addPage([anchoPDF, altoPDF], 'portrait');
         pdf.addImage(pagina.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
-        if (modelo.enlace) pdf.link(28, altoPDF - 28, anchoPDF - 56, 16, { url: modelo.enlace });
         if (i && modelo.coordenadas) pdf.link(28, altoPDF - 205, anchoPDF - 56, 160, { url: 'https://www.openstreetmap.org/?mlat=' + modelo.coordenadas.lat + '&mlon=' + modelo.coordenadas.lng + '#map=16/' + modelo.coordenadas.lat + '/' + modelo.coordenadas.lng });
       });
     } else if (esFichaCanvas(modelo)) {
@@ -1543,7 +1549,7 @@
     if (anterior) anterior.remove();
     var modelo = crearModelo(opciones || {});
     var fotosDisponibles = modelo.fotos.slice();
-    var seleccion = fotosDisponibles.slice(0, modelo.plantilla === 'expediente' ? fotosDisponibles.length : modelo.plantilla === 'redes' ? 1 : 4).map(function (_, indice) { return indice; });
+    var seleccion = fotosDisponibles.slice(0, modelo.plantilla === 'expediente' ? 14 : modelo.plantilla === 'redes' ? 1 : 4).map(function (_, indice) { return indice; });
     var seleccionClasica = fotosDisponibles.slice(0, 4).map(function (_, indice) { return indice; });
     modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
     var overlay = document.createElement('div');
@@ -1586,7 +1592,7 @@
         if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
         if (modelo.plantilla !== 'redes' && modelo.plantilla !== 'expediente') seleccionClasica = seleccion.slice();
         modelo.plantilla = evento.target.value;
-        seleccion = modelo.plantilla === 'expediente' ? fotosDisponibles.map(function (_, i) { return i; }) : modelo.plantilla === 'redes' ? seleccion.slice(0, 1) : seleccionClasica.slice();
+        seleccion = modelo.plantilla === 'expediente' ? fotosDisponibles.slice(0, 14).map(function (_, i) { return i; }) : modelo.plantilla === 'redes' ? seleccion.slice(0, 1) : seleccionClasica.slice();
         actualizarFotos().catch(errorFotos);
         return;
       }
@@ -1622,9 +1628,9 @@
     function pintarSeleccion() {
       dialog.querySelector('.kw-ficha-asesor').hidden = esFichaRedes(modelo);
       if (!galeria) return;
-      var limite = modelo.plantilla === 'expediente' ? fotosDisponibles.length : modelo.plantilla === 'redes' ? 1 : 4;
+      var limite = modelo.plantilla === 'expediente' ? 14 : modelo.plantilla === 'redes' ? 1 : 4;
       cuentaFotos.textContent = '(' + seleccion.length + '/' + limite + ')';
-      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = modelo.plantilla === 'expediente' ? 'Las primeras dos fotos van en la primera página; las demás, en la galería.' : limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' || modelo.plantilla === 'expediente' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
+      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = modelo.plantilla === 'expediente' ? '2 fotos en la primera página y hasta 12 en la galería.' : limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
       galeria.querySelectorAll('.kw-ficha-foto').forEach(function (tarjeta, indice) {
         var posicion = seleccion.indexOf(indice);
         var input = tarjeta.querySelector('input');
@@ -1689,7 +1695,7 @@
       input.type = 'checkbox';
       input.addEventListener('change', function () {
         if (input.checked && modelo.plantilla === 'redes') seleccion = [indice];
-        else if (input.checked && (modelo.plantilla === 'expediente' || seleccion.length < 4)) seleccion.push(indice);
+        else if (input.checked && seleccion.length < (modelo.plantilla === 'expediente' ? 14 : 4)) seleccion.push(indice);
         else seleccion = seleccion.filter(function (elegida) { return elegida !== indice; });
         actualizarFotos().catch(errorFotos);
       });
