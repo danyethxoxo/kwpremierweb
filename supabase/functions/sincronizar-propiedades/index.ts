@@ -391,6 +391,13 @@ function priorizarDetallesKw<T extends {listado:KwRegistro;existente:KwRegistro|
   return seleccion
 }
 
+function listadoKwRequiereGuardar(listado:KwRegistro,existente:KwRegistro|undefined,nombres:Map<string,string>,ids:Map<string,string>):boolean {
+  if(!existente || existente.estatus!==kwEstatus(listado.Property_Status_ID) || kwCambioListado(listado,kwListadoAnterior(existente.datos_origen)))return true
+  const agente=kwTexto(listado.Agent_ID)||''
+  return Boolean((nombres.get(agente) && nombres.get(agente)!==kwTexto(existente.asesor_nombre)) ||
+    (ids.get(agente) && ids.get(agente)!==kwTexto(existente.asesor_kw_id)))
+}
+
 // ─────────────────────────────────────────────────────────────
 // Lectura tolerante de campos
 // ─────────────────────────────────────────────────────────────
@@ -544,6 +551,7 @@ async function sincronizarKwMexico(
           fuente_id: id,
           estatus: fila.estatus,
           asesor_nombre: fila.asesor_nombre,
+          asesor_kw_id: fila.asesor_kw_id,
           datos_origen: {
             listado: fila.listado,
             detalle_pendiente: fila.detalle_pendiente,
@@ -566,7 +574,7 @@ async function sincronizarKwMexico(
     })
     // Solo cargar fotografías y detalles completos de los registros que cambian.
     // El inventario completo puede exceder la memoria del worker si se lee todo.
-    const idsPendientes = pendientesDetalle.filter(item => item.existente).map(item => String(item.listado.ID))
+    const idsPendientes = pendientesDetalle.filter(item => item.existente && (item.existente.datos_origen as KwRegistro)?.detalle).map(item => String(item.listado.ID))
     for (let i = 0; i < idsPendientes.length; i += 100) {
       const respuesta = await admin.from('propiedades').select('fuente_id, datos_origen')
         .eq('fuente', 'kwmexico').in('fuente_id', idsPendientes.slice(i, i + 100))
@@ -600,17 +608,18 @@ async function sincronizarKwMexico(
     const filasDetalle = resultados
       .map((resultado) => resultado.fila)
       .filter((fila): fila is Fila => fila !== null)
-    const filasListado = pendientesDetalle
-      .filter(p=>!idsConDetalle.has(String(p.listado.ID)))
-      .map(({ listado, existente }) => normalizarDetallePendiente(listado, existente, catalogo.marketCenters))
-      .filter((fila): fila is Fila => fila !== null)
-    const filasCompletas = filasDetalle.concat(filasListado)
     for(const fila of filasDetalle){
       const agenteId=kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
       if(!agenteId)continue
       if(kwTexto(fila.asesor_nombre))nombresPorAgente.set(agenteId,String(fila.asesor_nombre))
       if(kwTexto(fila.asesor_kw_id))idsPorAgente.set(agenteId,String(fila.asesor_kw_id))
     }
+    const filasListado = pendientesDetalle
+      .filter(p=>!idsConDetalle.has(String(p.listado.ID)))
+      .filter(p=>listadoKwRequiereGuardar(p.listado,p.existente,nombresPorAgente,idsPorAgente))
+      .map(({ listado, existente }) => normalizarDetallePendiente(listado, existente, catalogo.marketCenters))
+      .filter((fila): fila is Fila => fila !== null)
+    const filasCompletas = filasDetalle.concat(filasListado)
     for (const fila of filasCompletas) {
       const agenteId = kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
       if (agenteId && !kwTexto(fila.asesor_nombre)) {
@@ -623,8 +632,8 @@ async function sincronizarKwMexico(
     const listas = await enlazarAsesores(admin, filasCompletas)
 
     let guardadas = 0
-    for (let i = 0; i < listas.length; i += 250) {
-      const lote = listas.slice(i, i + 250)
+    for (let i = 0; i < listas.length; i += 50) {
+      const lote = listas.slice(i, i + 50)
       const { error } = await admin
         .from('propiedades')
         .upsert(lote, { onConflict: 'fuente,fuente_id' })

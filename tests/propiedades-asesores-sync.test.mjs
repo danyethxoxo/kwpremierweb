@@ -19,3 +19,12 @@ test('extrae el asesor de la ficha aunque el listado general no lo incluya',()=>
   {success:true,data:{Property_Data:[],Property_Agent:[{ID:696,First_Name:'ELIZABETH',Last_Name:'ROBLES BONILLA',Agent_Command_ID:557233,Email:'elizabeth.robles@kwmexico.mx'}]}},new Map([['21','KW PREMIER']]));
  assert.equal(fila.asesor_nombre,'ELIZABETH ROBLES BONILLA');assert.equal(fila.asesor_kw_id,'557233');assert.equal(fila.asesor_email,'elizabeth.robles@kwmexico.mx');
 });
+
+test('no reescribe miles de pendientes sin cambios; sí guarda altas, cambios y asesores recuperados',()=>{
+ const s=setup(),listado={ID:1,Agent_ID:696,Property_Status_ID:1,Title:'Casa'},existing={estatus:'publicada',asesor_nombre:'ELIZABETH ROBLES BONILLA',asesor_kw_id:'557233',datos_origen:{listado,detalle:null,detalle_pendiente:true}},names=new Map([['696','ELIZABETH ROBLES BONILLA']]),ids=new Map([['696','557233']]);
+ assert.equal(s.listadoKwRequiereGuardar(listado,existing,names,ids),false);
+ assert.equal(s.listadoKwRequiereGuardar(listado,undefined,names,ids),true);
+ assert.equal(s.listadoKwRequiereGuardar({...listado,Title:'Casa nueva'},existing,names,ids),true);
+ assert.equal(s.listadoKwRequiereGuardar(listado,{...existing,asesor_nombre:null},names,ids),true);
+ assert.equal(s.listadoKwRequiereGuardar(listado,{...existing,asesor_kw_id:null},names,ids),true);
+});
