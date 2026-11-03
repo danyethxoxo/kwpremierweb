@@ -1060,8 +1060,11 @@
         c.fillStyle = '#f6f6f6'; c.fillRect(margen, my, util, 310);
         textoRedes(c, 'Mapa no disponible. Abre la ubicación desde el PDF.', margen + 24, my + 100, util - 48, 90, 25, false);
       }
-      textoRedes(c, modelo.coordenadas.lat.toFixed(6) + ', ' + modelo.coordenadas.lng.toFixed(6), margen, 1555, util, 30, 18, false, 'left', '#777');
-      textoRedes(c, modelo.direccion, margen, 1592, util, 60, 18, false, 'left', '#454545');
+      var pieMapa = modelo.coordenadas.lat.toFixed(6) + ', ' + modelo.coordenadas.lng.toFixed(6) + ' · ' + modelo.direccion;
+      c.font = '400 18px PoppinsFicha';
+      var tamanoPie = Math.min(18, 18 * util / Math.max(1, c.measureText(pieMapa).width));
+      c.font = '400 ' + tamanoPie + 'px PoppinsFicha'; c.fillStyle = '#555555'; c.textAlign = 'left';
+      c.fillText(pieMapa, margen, 1573);
     }
     if (cerrarPagina) cerrarPagina();
     return [primera.canvas, segunda.canvas];
