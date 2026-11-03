@@ -255,20 +255,31 @@ async function kwJson(url: string): Promise<KwRespuesta> {
   const parsed = new URL(url)
   if (parsed.protocol !== 'https:') throw new Error('La fuente de KW México debe usar HTTPS.')
 
-  const response = await fetch(parsed, {
-    headers: { Accept: 'application/json' },
-    redirect: 'error',
-    signal: AbortSignal.timeout(30000),
-  })
-  if (!response.ok) {
-    throw new Error('KW México respondió ' + response.status + ' en ' + parsed.pathname)
+  for(let intento=0;intento<3;intento++){
+    const destino=new URL(parsed)
+    if(intento)destino.searchParams.set('comprobacion',String(Date.now())+'-'+intento)
+    let response:Response
+    try {
+      response=await fetch(destino, {
+        headers: { Accept: 'application/json','Cache-Control':'no-cache' },
+        cache:'no-store',redirect:'error',signal:AbortSignal.timeout(30000),
+      })
+    } catch(error){
+      if(intento===2)throw error
+      await new Promise(r=>setTimeout(r,400*(intento+1)));continue
+    }
+    if(!response.ok){
+      if(intento<2 && [429,500,502,503,504].includes(response.status)){
+        await response.body?.cancel()
+        await new Promise(r=>setTimeout(r,400*(intento+1)));continue
+      }
+      throw new Error('KW México respondió '+response.status+' en '+parsed.pathname+(parsed.searchParams.has('init')?' (página '+parsed.searchParams.get('init')+')':''))
+    }
+    const body=await response.json() as KwRespuesta
+    if(body.success===false)throw new Error(body.message||'KW México devolvió un error.')
+    return body
   }
-
-  const body = await response.json() as KwRespuesta
-  if (body.success === false) {
-    throw new Error(body.message || 'KW México devolvió un error.')
-  }
-  return body
+  throw new Error('No se pudo completar la lectura de KW México.')
 }
 
 async function enParalelo<T, R>(
