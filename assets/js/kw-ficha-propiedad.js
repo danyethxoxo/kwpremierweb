@@ -928,7 +928,7 @@
       { texto: modelo.descripcionCompleta, tamano: 23, espacio: 22 }
     ];
     var contactoVisible = modelo.mostrarAsesor !== false;
-    var limiteTexto = contactoVisible ? 1375 : 1570;
+    var limiteTexto = contactoVisible ? 1430 : 1570;
     function preparar(factor) {
       var y = 157;
       bloques.forEach(function (b) {
@@ -957,12 +957,17 @@
       (b.lineas || []).forEach(function (linea, i) { ctx.fillText(linea, margen, b.y + b.t + i * b.t * 1.42); });
     });
     if (contactoVisible) {
-      ctx.fillStyle = '#f6f6f6'; rutaRedondeada(ctx, margen, 1410, util, 190, 14); ctx.fill();
-      ctx.fillStyle = '#CE011F'; ctx.fillRect(margen + 24, 1436, 4, 138);
-      textoRedes(ctx, modelo.asesor.nombre, margen + 48, 1430, util - 96, 45, 27, true);
-      textoRedes(ctx, modelo.asesor.whatsapp, margen + 48, 1490, 330, 36, 22, false);
-      textoRedes(ctx, modelo.asesor.email, margen + 410, 1490, util - 458, 36, 22, false);
-      textoRedes(ctx, modelo.asesor.sitio, margen + 48, 1540, util - 96, 36, 22, false, 'left', '#CE011F');
+      ctx.fillStyle = '#f6f6f6'; rutaRedondeada(ctx, margen, 1464, util, 136, 12); ctx.fill();
+      var altoNombre = textoRedes(ctx, modelo.asesor.nombre, margen + 24, 1494, 462, 60, 26, true);
+      textoRedes(ctx, 'Asesor Inmobiliario', margen + 24, 1494 + altoNombre + 6, 462, 29, 20, false, 'left', '#777777');
+      ctx.fillStyle = '#dddddd'; ctx.fillRect(margen + 510, 1488, 1, 88);
+      [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio].forEach(function (dato, i) {
+        if (!dato) return;
+        var x = margen + 548, y = 1480 + i * 34;
+        ctx.save(); ctx.translate(x, y + 14); ctx.scale(.7, .7);
+        dibujarContactoIcono(ctx, i, 0, 0); ctx.restore();
+        textoRedes(ctx, dato, x + 38, y, util - 610, 29, 20, false, 'left', '#454545');
+      });
     }
     var segunda = pagina(2, ''), c = segunda.ctx;
     textoRedes(c, 'Galería', margen, 155, util, 50, 30, true);

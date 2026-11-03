@@ -7,7 +7,7 @@ La implementación compartida está en `assets/js/kw-ficha-propiedad.js`. Propie
 - Detalle permite seleccionar hasta catorce fotos: dos en la primera página y un máximo de doce en la segunda. Las primeras catorce se seleccionan inicialmente; es posible sustituirlas por otras de la galería. Clásica y Mosaico conservan el límite de cuatro, y Redes el de una.
 - `fotos-propiedad` devuelve todas las imágenes disponibles de KW México, sin el antiguo límite de doce. Los consumidores consultan esta galería al abrir la ficha, sin ampliar las consultas iniciales de los listados.
 - El mapa se carga al elegir Detalle, con más acercamiento, resolución nativa, esquinas redondeadas, marcador pequeño y atribución de OpenStreetMap. Si no se puede cargar, el PDF ofrece la ubicación mediante un enlace; no se inventan coordenadas.
-- El contacto se presenta en un bloque con nombre completo, teléfono, correo y sitio web. La opción Mostrar datos del asesor permite ocultarlo. No muestra el Market Center. El encabezado no añade tipo de ficha y el pie no lleva enlaces ni numeración.
+- El contacto se presenta en una barra compacta de dos columnas: nombre completo y Asesor Inmobiliario a la izquierda; teléfono, correo y sitio web con sus iconos a la derecha. La opción Mostrar datos del asesor permite ocultarlo. No muestra el Market Center. El encabezado no añade tipo de ficha y el pie no lleva enlaces ni numeración.
 - La vista previa presenta ambas páginas. El PNG de Detalle contiene las dos páginas una debajo de la otra; el PDF tiene dos páginas independientes.
 - El texto se ajusta al espacio disponible. Si una descripción excepcionalmente extensa no cabe íntegra, se impide la descarga y se informa del problema, evitando recortes silenciosos.
 
