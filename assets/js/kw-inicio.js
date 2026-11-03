@@ -18,12 +18,12 @@
   let usuario,sitioAsesor,perfilAsesor,moduloFicha;
   async function abrirFicha(propiedad,enlace){
     if(!window.kwFichaPropiedad){
-      if(!moduloFicha)moduloFicha=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/js/kw-ficha-propiedad.js?v=20261030kwred';script.onload=()=>window.kwFichaPropiedad?resolve():reject(new Error('No se pudo preparar la ficha'));script.onerror=()=>reject(new Error('No se pudo preparar la ficha'));document.head.append(script);}).catch(e=>{moduloFicha=null;throw e;});
+      if(!moduloFicha)moduloFicha=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/js/kw-ficha-propiedad.js?v=20261103detalle2';script.onload=()=>window.kwFichaPropiedad?resolve():reject(new Error('No se pudo preparar la ficha'));script.onerror=()=>reject(new Error('No se pudo preparar la ficha'));document.head.append(script);}).catch(e=>{moduloFicha=null;throw e;});
       await moduloFicha;
     }
     const r=await window.kwSupabase.from('propiedades_inventario').select('*').eq('id',propiedad.id).single();if(r.error||!r.data)throw new Error('No se pudo cargar la propiedad');
     const completa=r.data;
-    if(completa.fuente==='kwmexico'&&completa.fuente_id&&(completa.imagenes||[]).length<12&&window.kwSupabase.functions){
+    if(completa.fuente==='kwmexico'&&completa.fuente_id&&window.kwSupabase.functions){
       try{const fotos=await window.kwSupabase.functions.invoke('fotos-propiedad',{body:{fuente:'kwmexico',fuente_id:String(completa.fuente_id)}});if(!fotos.error&&Array.isArray(fotos.data?.imagenes))completa.imagenes=Array.from(new Set((completa.imagenes||[]).concat(fotos.data.imagenes)));}catch(e){/* La ficha conserva las fotos disponibles. */}
     }
     await window.kwFichaPropiedad.abrir({propiedad:completa,asesor:{...perfilAsesor,market_center:perfilAsesor?.market_center||'KW Premier'},url:enlace});

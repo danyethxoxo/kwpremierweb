@@ -4,7 +4,7 @@
   function cargarModulo() {
     if (g.kwFichaPropiedad) return Promise.resolve(g.kwFichaPropiedad);
     if (!modulo) modulo = new Promise(function(ok,bad) {
-      var script = document.createElement('script'); script.src='/assets/js/kw-ficha-propiedad.js?v=20261030kwred';
+      var script = document.createElement('script'); script.src='/assets/js/kw-ficha-propiedad.js?v=20261103detalle2';
       script.onload=function() { ok(g.kwFichaPropiedad); }; script.onerror=function() { modulo=null; bad(new Error('No se pudo preparar la ficha.')); };document.head.append(script);
     });
     return modulo;
@@ -42,7 +42,7 @@
         var datos=await Promise.all([cargarModulo(),cargarPerfil(),g.kwSupabase.from('propiedades_inventario').select('*').eq('id',propiedad.id).single()]);
         if(datos[2].error)throw datos[2].error;
         var completa=datos[2].data;if(!completa)throw new Error('Esta propiedad ya no está disponible.');
-        if(completa.fuente==='kwmexico' && (completa.imagenes || []).length<12) {
+        if(completa.fuente==='kwmexico' && completa.fuente_id) {
           var fotos=await g.kwSupabase.functions.invoke('fotos-propiedad',{body:{fuente:'kwmexico',fuente_id:String(completa.fuente_id)}});
           if(!fotos.error && Array.isArray(fotos.data && fotos.data.imagenes)) completa.imagenes=Array.from(new Set((completa.imagenes || []).concat(fotos.data.imagenes)));
         }

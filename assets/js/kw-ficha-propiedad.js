@@ -45,6 +45,7 @@
     '.kw-ficha-vista{padding:10px;border-radius:15px;background:#f2f1f0;',
     'display:flex;align-items:center;justify-content:center;overflow:auto;min-width:0;min-height:0}',
     '.kw-ficha-canvas{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;border-radius:7px;box-shadow:0 5px 18px rgba(38,30,30,.18)}',
+    '.kw-ficha-paginas{display:flex;flex-direction:column;gap:18px;width:100%;align-self:flex-start}.kw-ficha-paginas .kw-ficha-canvas{width:100%;max-height:none}',
     '.kw-ficha-cargando{color:#777;font-size:12px;text-align:center;padding:70px 20px}',
     '.kw-ficha-estado{min-height:18px;margin:11px 2px 8px;color:#777;font-size:11.5px;text-align:center}',
     '.kw-ficha-cargando .kw-loader{min-height:60px;padding:0}.kw-ficha-estado .kw-loader{min-height:36px;height:36px;padding:0;transform:scale(.5)}',
@@ -179,7 +180,7 @@
       if (typeof item === 'string') return item.trim();
       if (item && typeof item === 'object') return texto(item.nombre || item.label || item.valor || item.value);
       return '';
-    }).filter(Boolean).slice(0, 8);
+    }).filter(Boolean);
   }
 
   function tipoPrincipalFicha(propiedad) {
@@ -204,10 +205,10 @@
     return tipo;
   }
 
-  function descripcionFicha(valor) {
+  function descripcionFicha(valor, completa) {
     var contenido = texto(valor).replace(/<br\s*\/?\s*>|<\/p>/gi, '\n').replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;/g, "'").trim();
-    if (contenido.length <= 1000) return contenido;
+    if (completa || contenido.length <= 1000) return contenido;
     return contenido.slice(0, 1000).replace(/\s+\S*$/, '') + '…';
   }
 
@@ -243,12 +244,14 @@
     return {
       plantilla: PLANTILLAS.some(function (p) { return p.id === opciones.plantilla; }) ? opciones.plantilla : 'clasica',
       mostrarAsesor: opciones.mostrarAsesor !== false,
-      ubicacionRedes: [propiedad.calle || propiedad.colonia, propiedad.estado || propiedad.municipio].filter(Boolean),
+      ubicacionRedes: [propiedad.colonia, [propiedad.municipio, /^(ciudad de m[eé]xico|cdmx|distrito federal)$/i.test(texto(propiedad.estado)) ? 'CDMX' : propiedad.estado].filter(Boolean).join(', ')].filter(Boolean),
       operacion: operacionPrincipal,
       tituloRedes: tipoPrincipal + (operacionPrincipal === 'POR CONFIRMAR' ? ': operación por confirmar' : ' en ' + operacionPrincipal.toLocaleLowerCase('es-MX')),
       titulo: texto(propiedad.titulo, 'Propiedad KW Premier'),
       tipo: tipoPrincipal,
       descripcion: descripcionFicha(propiedad.descripcion),
+      descripcionCompleta: descripcionFicha(propiedad.descripcion, true),
+      coordenadas: propiedad.lat != null && propiedad.lng != null && texto(propiedad.lat) && texto(propiedad.lng) && Number.isFinite(Number(propiedad.lat)) && Number.isFinite(Number(propiedad.lng)) && Math.abs(Number(propiedad.lat)) <= 85 && Math.abs(Number(propiedad.lng)) <= 180 && (Number(propiedad.lat) !== 0 || Number(propiedad.lng) !== 0) ? { lat: Number(propiedad.lat), lng: Number(propiedad.lng) } : null,
       datosDetalle: [
         { etiqueta: 'Recámaras', valor: noHabitacional ? 0 : numero(propiedad.recamaras) },
         { etiqueta: 'Baños', valor: numero(propiedad.banos) },
@@ -874,52 +877,121 @@
   function esFichaRedes(modelo) { return modelo.plantilla === 'redes' || modelo.plantilla === 'mosaico'; }
   function esFichaCanvas(modelo) { return esFichaRedes(modelo) || modelo.plantilla === 'expediente'; }
 
-  function dibujarDetalle(modelo) {
-    var canvas = document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 1680;
-    var ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 1200, 1680);
-    ctx.fillStyle = '#CE011F';
-    ctx.fillRect(24, 18, 7, 145);
-    textoRedes(ctx, modelo.direccion, 54, 22, 650, 82, 25, false);
-    textoRedes(ctx, (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : ''), 54, 111, 650, 49, 35, false, 'left', '#CE011F');
-    if (modelo._logo && modelo._logo.naturalWidth) {
-      ctx.drawImage(modelo._logo, 760, 20, 390, 390 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
+  var mapasDetalle = new Map();
+  function cargarMapaDetalle(modelo) {
+    if (!modelo.coordenadas) return Promise.resolve();
+    var c = modelo.coordenadas, clave = c.lat + ',' + c.lng;
+    if (!mapasDetalle.has(clave)) mapasDetalle.set(clave, (async function () {
+      var z = 15, n = Math.pow(2, z), rad = c.lat * Math.PI / 180;
+      var cx = (c.lng + 180) / 360 * n * 256;
+      var cy = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * 256;
+      var canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 256;
+      var ctx = canvas.getContext('2d'), left = cx - 384, top = cy - 128, tareas = [];
+      for (var x = Math.floor(left / 256); x <= Math.floor((left + 767) / 256); x++) {
+        for (var y = Math.floor(top / 256); y <= Math.floor((top + 255) / 256); y++) {
+          tareas.push(new Promise(function (resolver) {
+            var imagen = new Image(), tx = x, ty = y;
+            imagen.crossOrigin = 'anonymous'; imagen.referrerPolicy = 'strict-origin-when-cross-origin';
+            var timer = setTimeout(function () { resolver(false); }, 7000);
+            imagen.onload = function () { clearTimeout(timer); ctx.drawImage(imagen, tx * 256 - left, ty * 256 - top); resolver(true); };
+            imagen.onerror = function () { clearTimeout(timer); resolver(false); };
+            imagen.src = 'https://tile.openstreetmap.org/' + z + '/' + ((tx % n + n) % n) + '/' + ty + '.png';
+          }));
+        }
+      }
+      var resultados = await Promise.all(tareas);
+      return resultados.every(Boolean) ? canvas : null;
+    })());
+    return mapasDetalle.get(clave).then(function (mapa) { modelo._mapaDetalle = mapa; });
+  }
+
+  function dibujarPaginasDetalle(modelo) {
+    var ancho = 1200, alto = 1680, margen = 64, util = ancho - margen * 2;
+    function pagina(numero, subtitulo) {
+      var canvas = document.createElement('canvas'); canvas.width = ancho; canvas.height = alto;
+      var ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ancho, alto);
+      if (modelo._logo && modelo._logo.naturalWidth) ctx.drawImage(modelo._logo, margen, 42, 190, 190 * modelo._logo.naturalHeight / modelo._logo.naturalWidth);
+      textoRedes(ctx, subtitulo, ancho - margen, 55, 700, 38, 23, false, 'right', '#777');
+      ctx.fillStyle = '#CE011F'; ctx.fillRect(margen, 126, util, 3);
+      ctx.fillStyle = '#ddd'; ctx.fillRect(margen, 1605, util, 1);
+      textoRedes(ctx, 'KW Premier · ' + numero + ' / 2', ancho - margen, 1620, 300, 30, 18, false, 'right', '#777');
+      textoRedes(ctx, modelo.enlace ? 'Ver propiedad en KW' : '', margen, 1620, util - 330, 30, 18, false, 'left', '#777');
+      return { canvas: canvas, ctx: ctx };
     }
-    var fotos = modelo._fotos || [];
-    var posiciones = fotos.length <= 1 ? [[24, 185, 1152, 770]] : fotos.length === 2
-      ? [[24, 185, 574, 770], [602, 185, 574, 770]] : fotos.length === 3
-        ? [[24, 185, 574, 770], [602, 185, 574, 383], [602, 572, 574, 383]]
-        : [[24, 185, 574, 383], [602, 185, 574, 383], [24, 572, 574, 383], [602, 572, 574, 383]];
-    posiciones.forEach(function (p, i) { imagenCubierta(ctx, fotos[i], p[0], p[1], p[2], p[3], 0, i === 0); });
-    textoRedes(ctx, modelo.tituloRedes || modelo.titulo, 40, 990, 1120, 72, 32, true);
-    textoRedes(ctx, modelo.descripcion, 40, 1080, 1120, 216, 24, false, 'left', '#555555');
-    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(24, 1320, 1152, 7);
-    ctx.fillStyle = '#CE011F'; ctx.fillRect(24, 1320, 665, 7);
-    ctx.beginPath(); ctx.moveTo(100, 1327); ctx.lineTo(115, 1342); ctx.lineTo(130, 1327); ctx.fill();
-    if (modelo.mostrarAsesor !== false) {
-      if (modelo._asesorFoto && modelo._asesorFoto.naturalWidth) imagenCubierta(ctx, modelo._asesorFoto, 24, 1370, 185, 275, 0, false);
-      var x = modelo._asesorFoto && modelo._asesorFoto.naturalWidth ? 234 : 40;
-      textoRedes(ctx, modelo.asesor.nombre, x, 1370, 690 - x, 100, 31, false);
-      textoRedes(ctx, modelo.asesor.market_center, x, 1480, 690 - x, 43, 25, false, 'left', '#777777');
-      [modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio].filter(Boolean).forEach(function (dato, i) {
-        textoRedes(ctx, dato, x, 1530 + i * 35, 690 - x, 34, 22, false);
+    var primera = pagina(1, 'Ficha técnica · ' + modelo.tipo), ctx = primera.ctx;
+    var bloques = [
+      { texto: modelo.titulo, tamano: 35, negrita: true, color: '#252525', espacio: 14 },
+      { texto: modelo.direccion, tamano: 24, espacio: 14 },
+      { texto: (modelo.precio || 'Precio a consultar') + (modelo.precio ? ' ' + modelo.moneda : '') + ' · ' + modelo.tituloRedes, tamano: 26, negrita: true, color: '#CE011F', espacio: 20 },
+      { fotos: true, alto: 285, espacio: 24 },
+      { texto: 'Características', tamano: 23, negrita: true, espacio: 10 },
+      { texto: (modelo.datosDetalle || []).map(function (d) { return d.etiqueta + ': ' + Number(d.valor).toLocaleString('en-US') + (d.unidad || ''); }).join('   ·   '), tamano: 23, espacio: 12 },
+      { texto: (modelo.extras || []).join(' · '), tamano: 22, espacio: 20 },
+      { texto: modelo.descripcionCompleta ? 'Descripción' : '', tamano: 23, negrita: true, espacio: 10 },
+      { texto: modelo.descripcionCompleta, tamano: 23, espacio: 22 }
+    ];
+    if (modelo.mostrarAsesor !== false) bloques.push({ texto: [modelo.asesor.nombre, modelo.asesor.market_center, modelo.asesor.whatsapp, modelo.asesor.email, modelo.asesor.sitio].filter(Boolean).join(' · '), tamano: 21, espacio: 0 });
+    function preparar(factor) {
+      var y = 157;
+      bloques.forEach(function (b) {
+        b.y = y;
+        if (b.fotos) { b.h = b.alto * factor; y += b.h + b.espacio; return; }
+        if (!b.texto) { b.lineas = []; return; }
+        b.t = b.tamano * factor;
+        ctx.font = (b.negrita ? '700 ' : '400 ') + b.t + 'px PoppinsFicha, Arial, sans-serif';
+        b.lineas = [];
+        String(b.texto).split(/\r?\n/).forEach(function (p) { b.lineas = b.lineas.concat(p ? envolver(ctx, p, util) : ['']); });
+        y += b.lineas.length * b.t * 1.42 + b.espacio;
       });
+      return y;
     }
-    var panelX = modelo.mostrarAsesor === false ? 310 : 750;
-    var panelAncho = modelo.mostrarAsesor === false ? 580 : 426;
-    ctx.fillStyle = '#CE011F';
-    ctx.fillRect(panelX, 1365, panelAncho, 280);
-    textoRedes(ctx, modelo.tipo, panelX + 20, 1380, panelAncho - 40, 44, 28, true, 'left', '#ffffff');
-    (modelo.datosDetalle || []).forEach(function (dato, i) {
-      var y = 1435 + i * 37;
-      textoRedes(ctx, dato.etiqueta, panelX + 20, y, panelAncho - 150, 34, 22, false, 'left', '#ffffff');
-      textoRedes(ctx, String(dato.valor) + (dato.unidad || ''), panelX + panelAncho - 20, y, 115, 34, 22, false, 'right', '#ffffff');
+    var factor = 1;
+    while (preparar(factor) > 1570 && factor > .58) factor -= .02;
+    if (preparar(factor) > 1580) throw new Error('El texto completo de esta propiedad supera el espacio de dos páginas. Reduce la descripción para generar la ficha sin recortes.');
+    bloques.forEach(function (b) {
+      if (b.fotos) {
+        var fotos = (modelo._fotos || []).slice(0, 2);
+        var w = fotos.length > 1 ? (util - 16) / 2 : util;
+        fotos.forEach(function (foto, i) { imagenCubierta(ctx, foto, margen + i * (w + 16), b.y, w, b.h, 8, i === 0); });
+        return;
+      }
+      ctx.font = (b.negrita ? '700 ' : '400 ') + b.t + 'px PoppinsFicha, Arial, sans-serif'; ctx.fillStyle = b.color || '#454545';
+      (b.lineas || []).forEach(function (linea, i) { ctx.fillText(linea, margen, b.y + b.t + i * b.t * 1.42); });
     });
+    var segunda = pagina(2, 'Galería y ubicación'), c = segunda.ctx;
+    textoRedes(c, 'Galería', margen, 155, util, 50, 30, true);
+    var fotos = (modelo._fotos || []).slice(2), mapaAlto = modelo.coordenadas ? 350 : 0;
+    var galeriaAlto = 1280 - mapaAlto, columnas = Math.max(1, Math.round(Math.sqrt(fotos.length * util / (galeriaAlto * 1.5))));
+    var filas = Math.max(1, Math.ceil(fotos.length / columnas)), gap = 12;
+    var fw = (util - gap * (columnas - 1)) / columnas, fh = Math.min(fw / 1.45, (galeriaAlto - gap * (filas - 1)) / filas);
+    fotos.forEach(function (foto, i) { imagenCubierta(c, foto, margen + (i % columnas) * (fw + gap), 220 + Math.floor(i / columnas) * (fh + gap), fw, fh, 6, false); });
+    if (!fotos.length) textoRedes(c, 'Las fotografías disponibles se muestran en la primera página.', margen, 240, util, 70, 23, false, 'left', '#777');
+    if (modelo.coordenadas) {
+      var my = 1235;
+      textoRedes(c, 'Ubicación', margen, my - 46, util, 38, 25, true);
+      if (modelo._mapaDetalle) {
+        c.drawImage(modelo._mapaDetalle, margen, my, util, 310);
+        c.save(); c.translate(ancho / 2, my + 155);
+        c.fillStyle = '#CE011F'; c.strokeStyle = '#fff'; c.lineWidth = 4;
+        c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-12, -18, -32, -38, -32, -56);
+        c.arc(0, -56, 32, Math.PI, 0); c.bezierCurveTo(32, -38, 12, -18, 0, 0); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(0, -56, 11, 0, Math.PI * 2); c.fill(); c.restore();
+        c.fillStyle = '#fff'; c.fillRect(ancho - margen - 380, my + 282, 380, 28);
+        textoRedes(c, '© OpenStreetMap contributors', ancho - margen - 8, my + 284, 370, 24, 16, false, 'right', '#333');
+      } else {
+        c.fillStyle = '#f6f6f6'; c.fillRect(margen, my, util, 310);
+        textoRedes(c, 'Mapa no disponible. Abre la ubicación desde el PDF.', margen + 24, my + 100, util - 48, 90, 25, false);
+      }
+      textoRedes(c, modelo.coordenadas.lat.toFixed(6) + ', ' + modelo.coordenadas.lng.toFixed(6), margen, 1555, util, 30, 18, false, 'left', '#777');
+    }
+    return [primera.canvas, segunda.canvas];
+  }
+
+  function dibujarDetalle(modelo) {
+    var paginas = dibujarPaginasDetalle(modelo), canvas = document.createElement('canvas');
+    canvas.width = 1200; canvas.height = 3360;
+    var ctx = canvas.getContext('2d');
+    paginas.forEach(function (pagina, i) { ctx.drawImage(pagina, 0, i * 1680); });
     return canvas;
   }
 
@@ -1420,7 +1492,14 @@
     var altoPDF = anchoPDF * (redes ? 1350 / 1080 : modelo.plantilla === 'expediente' ? 1680 / 1200 : ALTO / ANCHO);
     var escala = anchoPDF / ANCHO;
     var pdf = new JsPDF({ orientation: 'portrait', unit: 'pt', format: [anchoPDF, altoPDF], compress: true });
-    if (esFichaCanvas(modelo)) {
+    if (modelo.plantilla === 'expediente') {
+      dibujarPaginasDetalle(modelo).forEach(function (pagina, i) {
+        if (i) pdf.addPage([anchoPDF, altoPDF], 'portrait');
+        pdf.addImage(pagina.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
+        if (modelo.enlace) pdf.link(28, altoPDF - 28, anchoPDF - 56, 16, { url: modelo.enlace });
+        if (i && modelo.coordenadas) pdf.link(28, altoPDF - 205, anchoPDF - 56, 160, { url: 'https://www.openstreetmap.org/?mlat=' + modelo.coordenadas.lat + '&mlon=' + modelo.coordenadas.lng + '#map=16/' + modelo.coordenadas.lat + '/' + modelo.coordenadas.lng });
+      });
+    } else if (esFichaCanvas(modelo)) {
       var imagenRedes = dibujarModelo(modelo);
       pdf.addImage(imagenRedes.toDataURL('image/png'), 'PNG', 0, 0, anchoPDF, altoPDF);
     } else dibujarPDFVector(pdf, modelo, escala);
@@ -1464,7 +1543,7 @@
     if (anterior) anterior.remove();
     var modelo = crearModelo(opciones || {});
     var fotosDisponibles = modelo.fotos.slice();
-    var seleccion = fotosDisponibles.slice(0, modelo.plantilla === 'redes' ? 1 : 4).map(function (_, indice) { return indice; });
+    var seleccion = fotosDisponibles.slice(0, modelo.plantilla === 'expediente' ? fotosDisponibles.length : modelo.plantilla === 'redes' ? 1 : 4).map(function (_, indice) { return indice; });
     var seleccionClasica = fotosDisponibles.slice(0, 4).map(function (_, indice) { return indice; });
     modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
     var overlay = document.createElement('div');
@@ -1505,25 +1584,47 @@
       if (evento.target.name === 'kw-ficha-asesor') modelo.mostrarAsesor = evento.target.checked;
       else {
         if (!PLANTILLAS.some(function (p) { return p.id === evento.target.value; })) return;
-        if (modelo.plantilla !== 'redes') seleccionClasica = seleccion.slice();
+        if (modelo.plantilla !== 'redes' && modelo.plantilla !== 'expediente') seleccionClasica = seleccion.slice();
         modelo.plantilla = evento.target.value;
-        seleccion = modelo.plantilla === 'redes' ? seleccion.slice(0, 1) : seleccionClasica.slice();
-        actualizarFotos();
+        seleccion = modelo.plantilla === 'expediente' ? fotosDisponibles.map(function (_, i) { return i; }) : modelo.plantilla === 'redes' ? seleccion.slice(0, 1) : seleccionClasica.slice();
+        actualizarFotos().catch(errorFotos);
         return;
       }
       pdfBlob = null;
       pdfPromesa = null;
       canvas = dibujarModelo(modelo);
-      canvas.className = 'kw-ficha-canvas';
-      vista.replaceChildren(canvas);
+      pintarVista();
     });
+
+    function pintarVista() {
+      if (modelo.plantilla === 'expediente') {
+        var paginas = dibujarPaginasDetalle(modelo);
+        var contenedor = document.createElement('div');
+        contenedor.className = 'kw-ficha-paginas';
+        paginas.forEach(function (pagina, i) {
+          pagina.className = 'kw-ficha-canvas';
+          pagina.setAttribute('aria-label', 'Página ' + (i + 1) + ' de 2');
+          contenedor.appendChild(pagina);
+        });
+        vista.replaceChildren(contenedor);
+      } else {
+        canvas.className = 'kw-ficha-canvas';
+        vista.replaceChildren(canvas);
+      }
+    }
+
+    function errorFotos(error) {
+      botonPNG.disabled = true;
+      botonPDF.disabled = true;
+      estado.textContent = error.message || 'No se pudo preparar la ficha.';
+    }
 
     function pintarSeleccion() {
       dialog.querySelector('.kw-ficha-asesor').hidden = esFichaRedes(modelo);
       if (!galeria) return;
-      var limite = modelo.plantilla === 'redes' ? 1 : 4;
+      var limite = modelo.plantilla === 'expediente' ? fotosDisponibles.length : modelo.plantilla === 'redes' ? 1 : 4;
       cuentaFotos.textContent = '(' + seleccion.length + '/' + limite + ')';
-      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' || modelo.plantilla === 'expediente' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
+      dialog.querySelector('.kw-ficha-fotos-ayuda').textContent = modelo.plantilla === 'expediente' ? 'Las primeras dos fotos van en la primera página; las demás, en la galería.' : limite === 1 ? 'Selecciona la foto de portada.' : modelo.plantilla === 'mosaico' || modelo.plantilla === 'expediente' ? 'Selecciona hasta 4 fotos para el mosaico.' : 'Selecciona hasta 4 fotos. La portada se muestra en grande y las demás abajo.';
       galeria.querySelectorAll('.kw-ficha-foto').forEach(function (tarjeta, indice) {
         var posicion = seleccion.indexOf(indice);
         var input = tarjeta.querySelector('input');
@@ -1552,8 +1653,7 @@
       if (!seleccion.length) {
         modelo._fotos = [];
         canvas = dibujarModelo(modelo);
-        canvas.className = 'kw-ficha-canvas';
-        vista.replaceChildren(canvas);
+        pintarVista();
         estado.textContent = 'Selecciona al menos una foto para descargar la ficha.';
         return;
       }
@@ -1564,9 +1664,10 @@
       }));
       if (cerrado || revision !== revisionFotos) return;
       modelo._fotos = imagenes;
+      if (modelo.plantilla === 'expediente') await cargarMapaDetalle(modelo);
+      if (cerrado || revision !== revisionFotos) return;
       canvas = dibujarModelo(modelo);
-      canvas.className = 'kw-ficha-canvas';
-      vista.replaceChildren(canvas);
+      pintarVista();
       botonPNG.disabled = false;
       botonPDF.disabled = false;
       if (imagenes.some(function (imagen) { return !imagen; })) {
@@ -1588,9 +1689,9 @@
       input.type = 'checkbox';
       input.addEventListener('change', function () {
         if (input.checked && modelo.plantilla === 'redes') seleccion = [indice];
-        else if (input.checked && seleccion.length < 4) seleccion.push(indice);
+        else if (input.checked && (modelo.plantilla === 'expediente' || seleccion.length < 4)) seleccion.push(indice);
         else seleccion = seleccion.filter(function (elegida) { return elegida !== indice; });
-        actualizarFotos();
+        actualizarFotos().catch(errorFotos);
       });
       label.append(imagen, input, document.createTextNode('Foto ' + (indice + 1)));
       var portada = document.createElement('button');
@@ -1598,7 +1699,7 @@
       portada.className = 'kw-ficha-portada';
       portada.addEventListener('click', function () {
         seleccion = [indice].concat(seleccion.filter(function (elegida) { return elegida !== indice; }));
-        actualizarFotos();
+        actualizarFotos().catch(errorFotos);
       });
       tarjeta.append(label, portada);
       galeria.appendChild(tarjeta);
@@ -1640,11 +1741,11 @@
     var canvas;
     try {
       await cargarImagenes(modelo);
+      if (modelo.plantilla === 'expediente') await cargarMapaDetalle(modelo);
       if (esFichaCanvas(modelo)) await cargarFuentesRedes();
       if (cerrado) return;
       canvas = dibujarModelo(modelo);
-      vista.replaceChildren(canvas);
-      canvas.className = 'kw-ficha-canvas';
+      pintarVista();
       botonPNG.disabled = false;
       botonPDF.disabled = false;
       estado.textContent = '';

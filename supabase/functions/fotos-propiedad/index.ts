@@ -33,7 +33,7 @@ function fotosDe(payload: unknown): string[] {
       if (/^https:\/\//i.test(url) && !resultado.includes(url)) resultado.push(url)
     })
 
-  return resultado.slice(0, 12)
+  return resultado
 }
 
 async function handler(req: Request): Promise<Response> {

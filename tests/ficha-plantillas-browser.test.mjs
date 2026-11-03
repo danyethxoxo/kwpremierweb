@@ -161,7 +161,7 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
       assert.equal(await page.locator('.kw-ficha-foto.elegida').count(), 4);
       assert.equal(await page.locator('.kw-ficha-asesor').isVisible(), false);
       const fondo = await page.locator('.kw-ficha-canvas').evaluate(c => [...c.getContext('2d').getImageData(10, 1000, 1, 1).data]);
-      assert.deepEqual(fondo, [206, 0, 37, 255]);
+      assert.deepEqual(fondo, [206, 1, 31, 255]);
       const mosaicoPNG = page.waitForEvent('download');
       await page.locator('.kw-ficha-boton-png').click();
       await (await mosaicoPNG).saveAs(path.join(output, `mosaico-${width}.png`));
@@ -176,7 +176,7 @@ test('Redes y Mosaico usan Poppins y exportan PNG y PDF 4:5 sin datos del asesor
       await page.waitForFunction(() => document.querySelector('.kw-ficha-canvas').width === 1200 && !document.querySelector('.kw-ficha-boton-png').disabled);
       assert.equal(await page.locator('.kw-ficha-asesor').isVisible(), true);
       const textosDetalle = await page.evaluate(() => window.textosRedes.map(item => item.text));
-      for (const etiqueta of ['Departamento', 'Recámaras', 'Baños', 'Estacionamientos', 'Construcción', 'Terreno']) assert.ok(textosDetalle.includes(etiqueta), etiqueta);
+      for (const etiqueta of ['Departamento', 'Recámaras', 'Baños', 'Estacionamientos', 'Construcción', 'Terreno']) assert.ok(textosDetalle.some(texto => texto.includes(etiqueta)), etiqueta);
       assert.equal(textosDetalle.some(text => /City Tax|Land Tax|Common Area/.test(text)), false);
       const detallePNG = page.waitForEvent('download');
       await page.locator('.kw-ficha-boton-png').click();
