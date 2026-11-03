@@ -311,7 +311,7 @@ async function traerCatalogoKwMexico(): Promise<{
     { length: Math.max(0, paginas - 1) },
     (_, indice) => (indice + 1) * KWMEXICO_PAGE_SIZE,
   )
-  const lotes = await enParalelo(offsets, KWMEXICO_CONCURRENCY, async (offset) => {
+  const lotes = await enParalelo(offsets, 6, async (offset) => {
     const respuesta = await kwJson(KWMEXICO_API_BASE + '?init=' + offset)
     return kwLista(respuesta.data, 'Properties_Data')
   })
@@ -370,6 +370,25 @@ function kwCambioListado(actual: KwRegistro, anterior: KwRegistro | null): boole
     'City', 'Street', 'Market_Center_ID',
   ]
   return campos.some((campo) => String(actual[campo] ?? '') !== String(anterior[campo] ?? ''))
+}
+
+function priorizarDetallesKw<T extends {listado:KwRegistro;existente:KwRegistro|undefined}>(pendientes:T[],limite:number):T[] {
+  const seleccion:T[]=[],ids=new Set<string>(),agentes=new Set<string>()
+  const agregar=(item:T)=>{
+    const id=String(item.listado.ID)
+    if(seleccion.length>=limite || ids.has(id)) return
+    seleccion.push(item);ids.add(id)
+  }
+  // Una lectura por agente sin identificar puede completar varias propiedades.
+  const sinNombre=pendientes.filter(p=>!kwTexto(p.existente?.asesor_nombre))
+    .sort((a,b)=>Number(String(b.listado.Market_Center_ID)===KWMEXICO_MARKET_CENTER_ID)-Number(String(a.listado.Market_Center_ID)===KWMEXICO_MARKET_CENTER_ID))
+  for(const item of sinNombre){
+    const agente=kwTexto(item.listado.Agent_ID)||'propiedad:'+item.listado.ID
+    if(agentes.has(agente))continue
+    agentes.add(agente);agregar(item)
+  }
+  for(const item of pendientes)agregar(item)
+  return seleccion
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -504,9 +523,15 @@ async function sincronizarKwMexico(
     const nombresPorAgente = new Map<string, string>()
     const idsPorAgente = new Map<string, string>()
     for (let desde = 0; ; desde += 1000) {
-      const respuesta = await admin.from('propiedades')
-        .select('fuente_id, estatus, asesor_nombre, asesor_kw_id, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
-        .eq('fuente', 'kwmexico').order('id').range(desde, desde + 999)
+      const paginas = await enParalelo([0, 250, 500, 750], 4, async (offset) =>
+        await admin.from('propiedades')
+          .select('fuente_id, estatus, asesor_nombre, asesor_kw_id, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
+          .eq('fuente', 'kwmexico').order('id').range(desde + offset, desde + offset + 249)
+      )
+      const respuesta = {
+        data: paginas.flatMap(pagina => pagina.data || []),
+        error: paginas.find(pagina => pagina.error)?.error,
+      }
       if (respuesta.error) throw respuesta.error
       for (const fila of respuesta.data || []) {
         const agenteId = kwTexto(kwListadoAnterior({ listado: fila.listado })?.Agent_ID)
@@ -518,6 +543,7 @@ async function sincronizarKwMexico(
         if (id) existentesPorId.set(id, {
           fuente_id: id,
           estatus: fila.estatus,
+          asesor_nombre: fila.asesor_nombre,
           datos_origen: {
             listado: fila.listado,
             detalle_pendiente: fila.detalle_pendiente,
@@ -535,7 +561,7 @@ async function sincronizarKwMexico(
       const existente = existentesPorId.get(id)
       const datosAnteriores = existente?.datos_origen
       const anterior = kwListadoAnterior(datosAnteriores)
-      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || kwCambioListado(listado, anterior) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
+      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || !kwTexto(existente.asesor_nombre) || kwCambioListado(listado, anterior) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
       return necesitaDetalle ? [{ listado, existente, tieneDetalle: kwTieneDetalle(datosAnteriores) }] : []
     })
     // Solo cargar fotografías y detalles completos de los registros que cambian.
@@ -550,7 +576,8 @@ async function sincronizarKwMexico(
         if (existente) existente.datos_origen = fila.datos_origen
       }
     }
-    const loteDetalle = pendientesDetalle.slice(0, KWMEXICO_DETAIL_LIMIT)
+    const loteDetalle = priorizarDetallesKw(pendientesDetalle,KWMEXICO_DETAIL_LIMIT)
+    const idsConDetalle=new Set(loteDetalle.map(p=>String(p.listado.ID)))
 
     const resultados = await enParalelo(loteDetalle, KWMEXICO_CONCURRENCY, async ({ listado, existente }) => {
       try {
@@ -574,10 +601,16 @@ async function sincronizarKwMexico(
       .map((resultado) => resultado.fila)
       .filter((fila): fila is Fila => fila !== null)
     const filasListado = pendientesDetalle
-      .slice(KWMEXICO_DETAIL_LIMIT)
+      .filter(p=>!idsConDetalle.has(String(p.listado.ID)))
       .map(({ listado, existente }) => normalizarDetallePendiente(listado, existente, catalogo.marketCenters))
       .filter((fila): fila is Fila => fila !== null)
     const filasCompletas = filasDetalle.concat(filasListado)
+    for(const fila of filasDetalle){
+      const agenteId=kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
+      if(!agenteId)continue
+      if(kwTexto(fila.asesor_nombre))nombresPorAgente.set(agenteId,String(fila.asesor_nombre))
+      if(kwTexto(fila.asesor_kw_id))idsPorAgente.set(agenteId,String(fila.asesor_kw_id))
+    }
     for (const fila of filasCompletas) {
       const agenteId = kwTexto(kwListadoAnterior(fila.datos_origen)?.Agent_ID)
       if (agenteId && !kwTexto(fila.asesor_nombre)) {
