@@ -369,6 +369,20 @@
   .prop-enlace:focus-visible { outline: 2px solid var(--red); outline-offset: -3px; }
   .prop-foto-mapa { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: pointer; }
   .prop-foto-mapa:focus-visible { outline: 2px solid var(--red); outline-offset: -3px; }
+  .prop-foto-mapa-ayuda {
+    position: absolute; inset: 50% 0 0; display: flex; align-items: flex-end; justify-content: center;
+    box-sizing: border-box; padding: 16px 12px; pointer-events: none;
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,.68));
+    color: #fff; font: 600 14px/1.4 Poppins, Arial, sans-serif;
+    opacity: 0; transition: opacity .18s ease;
+  }
+  .prop-foto-mapa:focus-visible .prop-foto-mapa-ayuda { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) {
+    .prop-foto-mapa:hover .prop-foto-mapa-ayuda { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .prop-foto-mapa-ayuda { transition: none; }
+  }
 
   .conteo {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -1295,7 +1309,7 @@
     return '<article class="prop-card" data-propiedad-id="' + escapeHtml(p.id) + '">' +
       '<a class="prop-enlace" data-enlace-kw="' + escapeHtml(p.enlace_kw || '') + '" href="' + escapeHtml(enlacePropiedad) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml(tituloPropiedad) + '"></a>' +
       '<div class="prop-foto' + (tieneFoto ? ' cargando' : '') + '">' + foto +
-        '<button type="button" class="prop-foto-mapa" aria-label="Ubicar en el mapa: ' + escapeHtml(tituloPropiedad) + '" title="Ver ubicación en el mapa" onclick="kwPropiedadesMapa.ubicar(this.closest(\'.prop-card\').dataset.propiedadId)"></button>' +
+        '<button type="button" class="prop-foto-mapa" aria-label="Ubicar en el mapa: ' + escapeHtml(tituloPropiedad) + '" title="Ver ubicación en el mapa" onclick="kwPropiedadesMapa.ubicar(this.closest(\'.prop-card\').dataset.propiedadId)"><span class="prop-foto-mapa-ayuda" aria-hidden="true">Ver en el mapa</span></button>' +
         '<span class="prop-badge">' + etiquetaOperacion(p) + '</span>' +
       '</div>' +
       '<div class="prop-acciones">' +
