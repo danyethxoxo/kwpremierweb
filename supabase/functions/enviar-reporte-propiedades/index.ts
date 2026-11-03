@@ -6,6 +6,7 @@ import { buildXlsx, type XlsxCell, type XlsxSheet } from '../_shared/xlsx.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const SYNC_SECRET = Deno.env.get('SYNC_SECRET')
+const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET')
 const DESTINATARIO = Deno.env.get('PROPIEDADES_REPORTE_EMAIL') || 'dani.guerrero@kwmexico.mx'
 const FUENTE = 'kwmexico'
 const ZONA_LOCAL = 'America/Mexico_City'
@@ -26,6 +27,8 @@ type Historial = {
 
 type Reporte = {
   ultimaCorrida: string
+  ultimaFechaOrigen: string | null
+  avisoFuente: string | null
   periodoDesde: string
   periodoHasta: string
   modificadas: Historial[]
@@ -147,7 +150,9 @@ function reporteXlsx(reporte: Reporte): Uint8Array {
     [cell('Periodo desde:'), cell(fechaExcel(reporte.periodoDesde), 'date')],
     [cell('Periodo hasta:'), cell(fechaExcel(reporte.periodoHasta), 'date')],
     [cell('Actualizaciones de datos/fotos:'), cell(reporte.modificadas.length, 'integer')],
-    [cell('Última actualización:'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
+    [cell('Última comprobación:'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
+    [cell('Estatus en KW México:'), cell(reporte.ultimaFechaOrigen ? fechaOrigenTexto(reporte.ultimaFechaOrigen) : 'No disponible')],
+    ...(reporte.avisoFuente ? [[cell(reporte.avisoFuente,'note')]] : []),
     [cell('Propiedades nuevas:'), cell(reporte.nuevas.length, 'integer')],
     [cell('Propiedades desactivadas:'), cell(reporte.desactivadas.length, 'integer')],
     [cell('Reactivadas:'), cell(reporte.reactivadas.length, 'integer')],
@@ -244,12 +249,19 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
   if (anteriorError) throw anteriorError
   const periodoDesde = anterior?.periodo_hasta || anterior?.enviado_at || new Date(Date.parse(periodoHasta)-24*60*60*1000).toISOString()
 
-  const [historial, totalActual, publicadasActuales, suspendidasActuales] = await Promise.all([
+  const [historial, totalActual, publicadasActuales, suspendidasActuales, fechaOrigen] = await Promise.all([
     leerHistorial(admin, periodoDesde, periodoHasta),
     contarInventario(admin),
     contarInventario(admin, 'publicada'),
     contarInventario(admin, 'suspendida'),
+    admin.from('propiedades').select('fecha:datos_origen->listado->>Property_Status_Updated_Date')
+      .eq('fuente',FUENTE).eq('estatus','publicada')
+      .order('datos_origen->listado->>Property_Status_Updated_Date',{ascending:false,nullsFirst:false}).limit(1).maybeSingle(),
   ])
+  if(fechaOrigen.error) throw fechaOrigen.error
+  const fechaRecibida=texto(fechaOrigen.data?.fecha)
+  const ultimaFechaOrigen=fechaRecibida && Number.isFinite(Date.parse(fechaRecibida)) ? fechaRecibida : null
+  const avisoFuente=avisoDeFuente(ultimaFechaOrigen,sync.ultima_corrida)
 
   const nuevas = historial.filter((item) => item.tipo === 'alta' && item.estatus_nuevo === 'publicada')
   const reactivadas = historial.filter((item) =>
@@ -260,7 +272,7 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
   const inventarioAnterior = Math.max(0, publicadasActuales - nuevas.length - reactivadas.length + desactivadas.length)
 
   return {
-    ultimaCorrida: sync.ultima_corrida,
+    ultimaCorrida: sync.ultima_corrida,ultimaFechaOrigen,avisoFuente,
     periodoDesde,periodoHasta,modificadas,historial,
     propiedadesLeidas: Number(sync.propiedades_afectadas || 0),
     publicadasActuales,
@@ -310,6 +322,16 @@ async function reclamarReporte(admin: ReturnType<typeof createClient<any>>, repo
   return { id: creado.id, omitido: false }
 }
 
+function fechaOrigenTexto(fecha:string):string {
+  return new Intl.DateTimeFormat('es-MX',{dateStyle:'long',timeZone:'UTC'}).format(new Date(fecha))
+}
+
+function avisoDeFuente(fecha:string|null,comprobacion:string):string|null {
+  if(!fecha || !Number.isFinite(Date.parse(fecha))) return 'KW México no proporciona una fecha de estatus válida para comprobar la vigencia de los datos.'
+  if(Date.parse(comprobacion)-Date.parse(fecha)<72*60*60*1000) return null
+  return `La fecha de estatus más reciente publicada por KW México es el ${fechaOrigenTexto(fecha)}. Conviene revisar la actualización de esa fuente: una comprobación exitosa no confirma que ya incluya los movimientos recientes de Command.`
+}
+
 function armarCorreo(reporte: Reporte) {
   const fecha = fechaTexto(reporte.ultimaCorrida)
   const altas = reporte.nuevas.length
@@ -317,11 +339,11 @@ function armarCorreo(reporte: Reporte) {
   const desactivadas = reporte.desactivadas.length
   const html = plantillaCorreo({
     title: 'Reporte diario de propiedades',
-    intro: `Fuente: inventario publicado de KW México, no Command. Última lectura: ${fecha}. Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}.`,
+    intro: `Fuente: inventario publicado de KW México. Última comprobación: ${fecha}. Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}.`,
     content: `Se encontraron ${altas} propiedades nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. También se actualizaron datos o fotos de ${reporte.modificadas.length} propiedades. El inventario publicado pasó de ${reporte.inventarioAnterior} a ${reporte.publicadasActuales} propiedades. En total hay ${reporte.totalActual} registros, incluidos ${reporte.suspendidasActuales} suspendidos.`,
     actionLabel: 'Abrir propiedades',
     actionUrl: SITIO_PROPIEDADES,
-    note: 'El detalle de las altas y desactivaciones está en el archivo Excel adjunto.',
+    note: reporte.avisoFuente || 'El detalle de las altas y desactivaciones está en el archivo Excel adjunto.',
     footer: 'Reporte automático de inventario de KW Premier.',
   })
   const texto = [
@@ -329,7 +351,9 @@ function armarCorreo(reporte: Reporte) {
     'Fuente: inventario publicado de KW México, no Command.',
     `Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}`,
     `Actualizaciones de datos/fotos: ${reporte.modificadas.length}`,
-    `Última actualización: ${fecha}`,
+    `Última comprobación: ${fecha}`,
+    `Última fecha de estatus en KW México: ${reporte.ultimaFechaOrigen ? fechaOrigenTexto(reporte.ultimaFechaOrigen) : 'No disponible'}`,
+    ...(reporte.avisoFuente ? [reporte.avisoFuente] : []),
     `Altas nuevas: ${altas}`,
     `Reactivaciones: ${reactivadas}`,
     `Desactivaciones: ${desactivadas}`,
@@ -347,7 +371,10 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !SYNC_SECRET || !EMAIL_RE.test(DESTINATARIO)) {
     return response({ error: 'Servicio no configurado.' }, 503)
   }
-  if (req.headers.get('x-sync-secret') !== SYNC_SECRET) return response({ error: 'No autorizado.' }, 401)
+  const opciones=await req.json().catch(()=>({}))
+  const vistaPrevia=opciones.vista_previa===true
+  const consultaInterna=vistaPrevia && WEBHOOK_SECRET && req.headers.get('x-webhook-secret')===WEBHOOK_SECRET
+  if (req.headers.get('x-sync-secret') !== SYNC_SECRET && !consultaInterna) return response({ error: 'No autorizado.' }, 401)
 
   let admin: ReturnType<typeof createClient<any>> | null = null
   let reporteId: number | null = null
@@ -357,6 +384,10 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
     })
     const cliente = admin
     const reporte = await prepararReporte(cliente)
+    if(vistaPrevia) return response({ok:true,vista_previa:true,ultima_comprobacion:reporte.ultimaCorrida,
+      ultima_fecha_estatus_origen:reporte.ultimaFechaOrigen,aviso_fuente:reporte.avisoFuente,
+      nuevas:reporte.nuevas.length,reactivadas:reporte.reactivadas.length,desactivadas:reporte.desactivadas.length,
+      publicadas:reporte.publicadasActuales,actualizaciones_datos:reporte.modificadas.length})
     const reclamo = await reclamarReporte(cliente, reporte)
     reporteId = reclamo.id
     if (reclamo.omitido) return response({ ok: true, omitido: true, corrida: reporte.ultimaCorrida })
