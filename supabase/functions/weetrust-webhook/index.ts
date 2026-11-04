@@ -1,5 +1,6 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarFirmantes } from '../firmar-documento/firmantes-sync.ts'
+import { mensajeAvanceFirma } from '../firmar-documento/avisos-firma.ts'
 import { etiquetasDeWeetrust, etiquetasDelAviso } from '../firmar-documento/etiquetas-sync.ts'
 // Edge Function: weetrust-webhook
 //
@@ -386,26 +387,23 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
         .eq('id', fila.id)
 
       // ── Avisarle a quien lo mandó ──
-      // Solo al completarse, y solo si venía de otro estado: weetrust
-      // puede mandar varios avisos del mismo hecho, y no hay por qué
-      // repetirle la campanita a la persona.
+      // Informa las firmas nuevas. El estado previo evita repetir el cierre.
       if (estado === 'completado' && fila.estado !== 'completado') {
         await admin.from('notificaciones').insert({
           user_id: fila.user_id,
           tipo: 'firma',
           titulo: 'Documento firmado',
-          mensaje: `Ya se firmó "${fila.titulo}" por todas las partes.`,
+          mensaje: mensajeAvanceFirma(previos, firmantes, fila.titulo, true),
           url: RUTA_FIRMAS,
         })
       } else if (estado === 'pendiente') {
-        const yaFirmaron = firmantes.filter((f) => f.firmado).length
-        const antes = previos.filter((f) => f.firmado).length
-        if (yaFirmaron > antes) {
+        const mensaje = mensajeAvanceFirma(previos, firmantes, fila.titulo)
+        if (mensaje) {
           await admin.from('notificaciones').insert({
             user_id: fila.user_id,
             tipo: 'firma',
             titulo: 'Avance de firma',
-            mensaje: `${yaFirmaron} de ${firmantes.length} ya firmaron "${fila.titulo}".`,
+            mensaje,
             url: RUTA_FIRMAS,
           })
         }

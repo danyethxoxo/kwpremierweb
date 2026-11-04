@@ -61,7 +61,6 @@
     { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
     { href: `${BASE}/hub/perfil-comprador.html`, label: 'Perfil comprador', icon: 'prospecto' },
     { href: `${BASE}/propiedades.html`, label: 'Propiedades', icon: 'llave' },
-    { href: `${BASE}/hub/accesosdirectos.html`, label: 'Accesos Directos', icon: 'grid' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
     { href: `${BASE}/documentos/documentos.html`, label: 'Acuerdos y Contratos', icon: 'carpeta' },
     { href: `${BASE}/hub/firmas.html`, label: 'Firmas Digitales', icon: 'pluma' },
@@ -69,9 +68,18 @@
     { href: `${BASE}/hub/dictamenes.html`, label: 'Dictaminación de Expedientes', icon: 'dictamen' },
     { href: `${BASE}/hub/drive.html`, label: 'Documentos de Drive', icon: 'nube' },
     { href: `${BASE}/documentos/operatividad.html`, label: 'Operatividad', icon: 'plantilla', roles: ['admin', 'master', 'staff'] },
-    { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo' },
-    { href: `${BASE}/hub/admin.html?v=20260919f#asesores`, label: 'Panel Máster', icon: 'tablero' },
+    { href: `${BASE}/documentos/internos/index.html`, label: 'Liderazgo', icon: 'liderazgo', roles: ['master', 'admin', 'staff'] },
+    { href: `${BASE}/hub/admin.html?v=20260919f#asesores`, label: 'Panel Máster', icon: 'tablero', roles: ['master', 'admin', 'staff'] },
   ];
+
+  let rolNavegacion = null;
+  function accesoPermitido(item) {
+    const ruta = new URL(item.href || item.url, location.origin).pathname;
+    const destino = NAV_HUB.find(enlace => new URL(enlace.href, location.origin).pathname === ruta);
+    const roles = item.roles || (destino && destino.roles) ||
+      (/\/documentos\/internos\//.test(ruta) ? ['master', 'admin', 'staff'] : null);
+    return !roles || roles.includes(rolNavegacion);
+  }
 
   function estaActivo(href) {
     const ruta = location.pathname.replace(/\/+$/, '');
@@ -213,7 +221,7 @@
       destinos.add(ruta);
       return true;
     }).map((item) => ({ ...item, cat: 'Secciones' }));
-    return INDICE_BUSQUEDA.concat(accesos, driveItems || [], calendarItems || [])
+    return INDICE_BUSQUEDA.concat(accesos, driveItems || [], calendarItems || []).filter(accesoPermitido)
       .map((item) => {
         const texto = normalizar(item.label + ' ' + item.cat + ' ' + (item.alias || ''));
         // Todas las palabras escritas tienen que aparecer en algún lado
@@ -897,6 +905,7 @@
   }
 
   function pintarAccesos(filas) {
+    filas = filas.filter(accesoPermitido);
     const lista = document.getElementById('accesos-lista');
     if (!lista) return;
     if (!filas.length) {
@@ -935,6 +944,7 @@
         .eq('id', u.user.id)
         .single());
       if (!perfil) return;
+      rolNavegacion = perfil.role;
       document.querySelectorAll('[data-drawer-roles]').forEach((enlace) => {
         enlace.hidden = !enlace.dataset.drawerRoles.split(' ').includes(perfil.role);
       });

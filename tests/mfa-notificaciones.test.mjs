@@ -14,6 +14,9 @@ test('a new authorized session notifies once; navigation and concurrent upserts 
     const migration = readFileSync(new URL('../supabase/migrations/20261006034150_mfa_notificacion_inicio_sesion.sql', import.meta.url), 'utf8');
     await db.exec(migration);
     await db.exec(migration);
+    const breve = readFileSync(new URL('../supabase/migrations/20261104181152_notificacion_inicio_sesion_breve.sql', import.meta.url), 'utf8');
+    await db.exec(breve);
+    await db.exec(breve);
     const user = '11111111-1111-4111-8111-111111111111';
     const session = '22222222-2222-4222-8222-222222222222';
     const upsert = id => db.query(`insert into public.mfa_sesiones values ($1,$2,now()+interval '1 day','Chrome en Windows')
@@ -24,6 +27,8 @@ test('a new authorized session notifies once; navigation and concurrent upserts 
     assert.equal(rows.length, 1);
     assert.equal(rows[0].tipo, 'inicio_sesion');
     assert.match(rows[0].mensaje, /Chrome en Windows/);
+    assert.match(rows[0].mensaje, /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} \(CDMX\)/);
+    assert.ok(rows[0].mensaje.length < 100);
     assert.equal(rows[0].url, 'perfil.html');
     await upsert('33333333-3333-4333-8333-333333333333');
     rows = (await db.query('select * from public.notificaciones')).rows;
