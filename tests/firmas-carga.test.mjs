@@ -5,6 +5,17 @@ import vm from 'node:vm';
 import '../assets/js/kw-firmas-carga.js';
 
 const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
+test('tras borrar espera la lectura anterior y consulta datos nuevos', async () => {
+  let resolver, consultas = 0;
+  const e = escenario(() => ++consultas === 1 ? new Promise(r => { resolver = r; }) : Promise.resolve([]));
+  const primera = e.carga.cargar();
+  await pausa(0);
+  const nueva = e.carga.recargar();
+  resolver([{id:'borrado'}]);
+  await Promise.all([primera, nueva]);
+  assert.equal(consultas, 2);
+  assert.deepEqual(e.pintadas.at(-1), []);
+});
 function escenario(leer) {
   const estado = { ocupado: false, pintadas: [], errores: [] };
   estado.carga = globalThis.kwFirmasCarga.crear({

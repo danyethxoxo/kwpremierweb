@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { documentoAusente, documentoEliminado } from '../supabase/functions/firmar-documento/weetrust-estado.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -30,13 +31,13 @@ test('recupera etiquetas enviadas por weetrust sin duplicar nombres ni inventar 
   assert.deepEqual(nombresEtiquetasWeetrust({}), []);
 });
 
-test('solo un 404 confirma que el documento no existe; una respuesta incorrecta no lo elimina', async () => {
+test('confirma ausencias del proveedor; una respuesta incorrecta no elimina documentos', async () => {
   const source = fs.readFileSync(new URL('../supabase/functions/firmar-documento/index.ts', import.meta.url), 'utf8');
   const inicio = source.indexOf('async function pedirDocumento(');
   const funcion = stripTypeScriptTypes(source.slice(inicio, source.indexOf('\n}', inicio) + 2));
   let respuesta = { status: 200, data: { documentID: 'correcto' } };
   let url;
-  const contexto = vm.createContext({ WEETRUST_URL: 'https://api.weetrust.mx',
+  const contexto = vm.createContext({ WEETRUST_URL: 'https://api.weetrust.mx', AbortSignal, documentoAusente, documentoEliminado,
     encabezados: () => ({}), leerRespuesta: async (res) => res.data,
     fetch: async (destino) => { url = destino; return respuesta; },
   });
@@ -48,6 +49,8 @@ test('solo un 404 confirma que el documento no existe; una respuesta incorrecta 
   respuesta = { status: 404 };
   assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
   respuesta = { status: 410 };
+  assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
+  respuesta = { status: 400, clone: () => ({ json: async () => ({success:false,message:'Document not found.'}) }) };
   assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);
   respuesta = { status: 200, data: { documentID: 'correcto', isDeleted: true } };
   assert.equal(await vm.runInContext('pedirDocumento("token", "correcto")', contexto), null);

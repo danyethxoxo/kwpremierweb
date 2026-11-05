@@ -3,6 +3,7 @@ import { sincronizarFirmantes } from './firmantes-sync.ts'
 import { etiquetasDeWeetrust } from './etiquetas-sync.ts'
 import { leerHistorialCompleto, hayCambios, mismaUbicacionPdf } from './historial-sync.ts'
 import { posicionesDeWeetrust, descargarPdfWeetrust } from './documento-vista.ts'
+import { documentoAusente, documentoEliminado, estadoSincronizado, leerRetiros } from './weetrust-estado.ts'
 // Edge Function: firmar-documento
 //
 // Manda documentos a firma electrónica con weetrust y consulta cómo van.
@@ -74,6 +75,7 @@ async function obtenerToken(): Promise<string> {
       'user-id': WEETRUST_USER_ID!,
       'api-key': WEETRUST_API_KEY!,
     },
+    signal: AbortSignal.timeout(10000),
   })
 
   const json = await res.json().catch(() => null)
@@ -232,14 +234,15 @@ async function fijarFirmas(
 async function pedirDocumento(token: string, documentID: string) {
   const res = await fetch(
     `${WEETRUST_URL}/documents/${encodeURIComponent(documentID)}`,
-    { headers: encabezados(token) },
+    { headers: encabezados(token), signal: AbortSignal.timeout(10000) },
   )
   if (res.status === 404 || res.status === 410) return null
+  if (res.status === 400 && documentoAusente(res.status, await res.clone().json().catch(() => null))) return null
   const datos = await leerRespuesta(res, 'Consultar el documento')
   const lista = Array.isArray(datos) ? datos : (datos ? [datos] : [])
   const documento = lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID)
   if (!documento) throw new Error('weetrust no devolvió el documento solicitado; no se marcará como eliminado.')
-  if (documento.isDeleted === true || documento.isDeleted === 1 || String(documento.status).toUpperCase() === 'DELETED') return null
+  if (documentoEliminado(documento)) return null
   return documento
 }
 
@@ -287,9 +290,10 @@ function nombreEnWeetrust(doc: Record<string, unknown>, documentID: string): str
 async function borrarDocumento(token: string, documentID: string) {
   const res = await fetch(
     `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
-    { method: 'DELETE', headers: encabezados(token) },
+    { method: 'DELETE', headers: encabezados(token), signal: AbortSignal.timeout(15000) },
   )
   if (res.status === 404 || res.status === 410) return null
+  if (res.status === 400 && documentoAusente(res.status, await res.clone().json().catch(() => null))) return null
   return await leerRespuesta(res, 'Borrar el documento')
 }
 
@@ -901,7 +905,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         PENDING: 'pendiente',
         COMPLETED: 'completado',
       }
-      const estado = estados[String(doc?.status)] || 'pendiente'
+      const estado = estadoSincronizado(fila.estado, doc?.status)
 
       await admin.from('firmas_documentos')
         .update({
@@ -1281,12 +1285,12 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       // El PDF original se va con él: sin renglón que lo apunte, ese
       // archivo no lo podría abrir nadie nunca más.
-      if (fila.archivo_ruta) {
-        await admin.storage.from('firmas').remove([fila.archivo_ruta])
-      }
-
       const { error } = await admin.from('firmas_documentos').delete().eq('id', id)
       if (error) return respond({ error: `No se pudo borrar: ${error.message}` }, 500)
+      if (fila.archivo_ruta) {
+        const { error: falloArchivo } = await admin.storage.from('firmas').remove([fila.archivo_ruta])
+        if (falloArchivo) console.warn('firmas: limpieza de archivo pendiente tras eliminar el historial')
+      }
 
       return respond({ ok: true, aviso: avisoWeetrust })
     }
@@ -1314,7 +1318,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // El asesor pone al día los suyos; el liderazgo, los de todos.
       let q = admin
         .from('firmas_documentos')
-        .select('id, user_id, estado, firmantes, weetrust_document_id, titulo, nombre_archivo, etiquetas, pdf_firmado_url, completado_at')
+        .select('id, user_id, estado, origen, archivo_ruta, firmantes, weetrust_document_id, titulo, nombre_archivo, etiquetas, pdf_firmado_url, completado_at')
         .not('weetrust_document_id', 'is', null)
       if (!esLiderazgo) q = q.eq('user_id', userId)
 
@@ -1339,6 +1343,12 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         return respond({ error: 'weetrust no contestó: ' + (e as Error).message }, 502)
       }
 
+      if (!porId.size && filas.some(f => !['eliminado', 'cancelado'].includes(f.estado))) {
+        return respond({ error: 'WeeTrust devolvió un historial vacío. Se conservaron los documentos.' }, 502)
+      }
+      const retirados = await leerRetiros(admin, WEETRUST_AMBIENTE)
+      for (const id of retirados) porId.delete(id)
+
       const estados: Record<string, string> = {
         DRAFT: 'borrador',
         PENDING: 'pendiente',
@@ -1347,14 +1357,16 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       // El listado puede omitir participantes o quedar incompleto. Revisar
       // el documento individual antes de vaciar personas o darlo por borrado.
+      const eliminacionConfirmada = new Set<string>(retirados)
+      for (const [id, doc] of porId) if (documentoEliminado(doc)) { porId.delete(id); eliminacionConfirmada.add(id) }
       const porRevisar = [...new Set([
         ...(filas || []).filter((fila) => !porId.has(fila.weetrust_document_id!) &&
+          !retirados.has(fila.weetrust_document_id!) &&
           !['completado', 'cancelado', 'eliminado'].includes(fila.estado))
           .map((fila) => fila.weetrust_document_id!),
-        ...[...porId.entries()].filter(([, doc]) => doc.isDeleted === true || doc.isDeleted === 1 || String(doc.status).toUpperCase() === 'DELETED' || !Array.isArray(doc.signatory) || !doc.signatory.length)
+        ...[...porId.entries()].filter(([, doc]) => documentoEliminado(doc) || !Array.isArray(doc.signatory) || !doc.signatory.length)
           .map(([id]) => id),
       ])]
-      const eliminacionConfirmada = new Set<string>()
       let sinVerificar = 0
       for (let i = 0; i < porRevisar.length; i += 10) {
         await Promise.all(porRevisar.slice(i, i + 10).map(async (id) => {
@@ -1374,6 +1386,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       let eliminadosEnWeetrust = 0
 
       for (const fila of filas || []) {
+        if (['eliminado', 'cancelado'].includes(fila.estado)) continue
         const doc = porId.get(fila.weetrust_document_id!)
         if (!doc) {
           if (!eliminacionConfirmada.has(fila.weetrust_document_id!)) continue
@@ -1392,6 +1405,10 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
           // lo cancela a propósito desde aquí. Esto es distinto, que
           // weetrust ya no lo tenga porque lo borraron de su panel.
           if (!['completado', 'cancelado', 'eliminado'].includes(fila.estado)) {
+            if (fila.estado === 'borrador' && fila.archivo_ruta) {
+              cambios.push({ id: fila.id, datos: { weetrust_document_id: null, error_mensaje: null } })
+              continue
+            }
             cambios.push({
               id: fila.id,
               datos: {
@@ -1409,7 +1426,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
         const firmantes = sincronizarFirmantes(previos, suyos, new Date().toISOString())
 
-        const estado = estados[String(doc.status)] || fila.estado
+        const estado = estadoSincronizado(fila.estado, doc.status)
         const archivo = (doc.documentFileObj ?? {}) as Record<string, unknown>
 
         // ── El nombre de weetrust, para los que quedaron con el de
@@ -1459,11 +1476,13 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // esto se quedaban sin aparecer para siempre, aunque el resto ya
       // estuviera al día. La lista de arriba (porId) ya es la cuenta
       // completa de weetrust, así que no hace falta volver a pedirla.
-      const { data: existentes, error: errorExistentes } = await admin
-        .from('firmas_documentos')
-        .select('weetrust_document_id')
-        .in('weetrust_document_id', [...porId.keys()])
-      if (errorExistentes) throw new Error(`No se pudo comparar el historial: ${errorExistentes.message}`)
+      const existentes: Array<{ weetrust_document_id: string }> = []
+      const idsRemotos = [...porId.keys()]
+      for (let i = 0; i < idsRemotos.length; i += 200) {
+        const { data, error } = await admin.from('firmas_documentos').select('weetrust_document_id').in('weetrust_document_id', idsRemotos.slice(i, i + 200))
+        if (error) throw new Error(`No se pudo comparar el historial: ${error.message}`)
+        existentes.push(...(data || []))
+      }
 
       const yaEstaban = new Set(
         (existentes || []).map((f: { weetrust_document_id: string }) => f.weetrust_document_id))
@@ -1592,7 +1611,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         .update({firmantes,posiciones}).eq('id',id)
       if (errorVista) throw new Error('No se pudieron sincronizar los campos de firma')
       const estados: Record<string,string> = {DRAFT:'borrador',PENDING:'pendiente',COMPLETED:'completado'}
-      return respond({ ok: true, url: (archivo.url as string) ?? null, firmantes, posiciones, estado: estados[String(doc.status)] || null })
+      return respond({ ok: true, url: (archivo.url as string) ?? null, firmantes, posiciones, estado: estadoSincronizado(fila.estado, doc.status) })
     }
 
     // ── Quitar los renglones fantasma ──
@@ -1622,39 +1641,22 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         .from('firmas_documentos')
         .select('id, titulo, weetrust_document_id')
         .eq('origen', 'importado')
+        .neq('estado', 'completado')
         .not('weetrust_document_id', 'is', null)
 
       if (!filas?.length) return respond({ ok: true, revisados: 0, sobran: 0, borrados: 0 })
 
       // Los identificadores que weetrust reconoce hoy.
       const token = await obtenerToken()
-      const reales = new Set<string>()
-      const POR_TANDA = 100
-
-      try {
-        for (let vuelta = 0; vuelta < 20; vuelta++) {
-          const url = `${WEETRUST_URL}/documents?status=ALL`
-            + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
-          const res = await fetch(url, { headers: encabezados(token) })
-          const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
-          const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
-          if (!tanda.length) break
-
-          let novedades = 0
-          for (const d of tanda) {
-            const id = String((d as Record<string, unknown>)?.documentID || '')
-            if (!id || reales.has(id)) continue
-            reales.add(id)
-            novedades++
-          }
-          if (!novedades || tanda.length < POR_TANDA) break
-        }
-      } catch (e) {
-        return respond({
-          error: `No se pudo pedir la lista a weetrust, así que no se borró nada: ${(e as Error).message}`,
-        }, 502)
+      let reales: Map<string, Record<string, any>>
+      try { reales = await leerHistorialCompleto(async (limite, inicio) => {
+ const res = await fetch(WEETRUST_URL + '/documents?status=ALL&limit=' + limite + '&skip=' + inicio,
+ { headers: encabezados(token), signal: AbortSignal.timeout(20000) })
+ const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
+ return Array.isArray(datos) ? datos : (datos ? [datos] : [])
+}) } catch {
+        return respond({ error: 'No se pudo comprobar el historial completo. No se borró nada.' }, 502)
       }
-
       // Si la lista vino vacía es que algo anda mal de su lado: borrar
       // todo el historial porque no contestaron sería el peor resultado
       // posible.
@@ -1664,9 +1666,14 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
         }, 502)
       }
 
-      const sobran = filas.filter((f: { weetrust_document_id: string }) =>
-        !reales.has(f.weetrust_document_id))
-
+      const sobran: typeof filas = []
+      for (let i = 0; i < filas.length; i += 10) {
+        await Promise.all(filas.slice(i, i + 10).map(async (fila) => {
+          if (reales.has(fila.weetrust_document_id)) return
+          try { if (!await pedirDocumento(token, fila.weetrust_document_id)) sobran.push(fila) }
+          catch { /* Una respuesta fallida no confirma una eliminación. */ }
+        }))
+      }
       // Por defecto solo se informa. Borrar de verdad exige una segunda
       // llamada con el visto bueno, para que quien la corre vea primero
       // cuántos se van a ir.
@@ -1717,33 +1724,15 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // ── Pedir el historial, por tandas ──
       // Se guarda por identificador y no en una lista para que un
       // documento repetido no se procese dos veces.
-      const porId = new Map<string, Record<string, unknown>>()
-      const POR_TANDA = 100
-      let vueltas = 0
-
-      for (let vuelta = 0; vuelta < 20; vuelta++) {
-        vueltas++
-        const url = `${WEETRUST_URL}/documents?status=ALL`
-          + `&limit=${POR_TANDA}&skip=${vuelta * POR_TANDA}`
-        const res = await fetch(url, { headers: encabezados(token) })
-        const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
-
-        const tanda = Array.isArray(datos) ? datos : (datos ? [datos] : [])
-        if (!tanda.length) break
-
-        // Si esta tanda no trae ni un identificador que no tuviéramos, es
-        // que weetrust está ignorando el "skip" y nos devuelve siempre lo
-        // mismo. Sin esta salida, el ciclo daba sus 20 vueltas juntando
-        // los mismos documentos una y otra vez.
-        let novedades = 0
-        for (const doc of tanda) {
-          const id = String((doc as Record<string, unknown>)?.documentID || '')
-          if (!id || porId.has(id)) continue
-          porId.set(id, doc as Record<string, unknown>)
-          novedades++
-        }
-        if (!novedades || tanda.length < POR_TANDA) break
-      }
+      const vueltas = 1
+      const porId = await leerHistorialCompleto(async (limite, inicio) => {
+ const res = await fetch(WEETRUST_URL + '/documents?status=ALL&limit=' + limite + '&skip=' + inicio,
+ { headers: encabezados(token), signal: AbortSignal.timeout(20000) })
+ const datos = await leerRespuesta(res, 'Pedir el historial de weetrust')
+ return Array.isArray(datos) ? datos : (datos ? [datos] : [])
+})
+      const retirados = await leerRetiros(admin, WEETRUST_AMBIENTE)
+      for (const [id, doc] of porId) if (retirados.has(id) || documentoEliminado(doc)) porId.delete(id)
 
       const estados: Record<string, string> = {
         DRAFT: 'borrador',
@@ -1819,13 +1808,13 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // documento, y con un historial grande eran cientos de idas y
       // vueltas seguidas: la función se quedaba colgada hasta que se le
       // acababa el tiempo.
-      const { data: existentes, error: errBusca } = await admin
-        .from('firmas_documentos')
-        .select('id, weetrust_document_id, etiquetas')
-        .in('weetrust_document_id', armados.map((a) => a.documentID))
-
-      if (errBusca) {
-        return respond({ error: `No se pudo revisar lo que ya estaba: ${errBusca.message}` }, 500)
+      const existentes: Array<{id: string; weetrust_document_id: string; etiquetas: string[]; estado: string; firmantes: any[]; pdf_firmado_url: string | null}> = []
+      for (let i = 0; i < armados.length; i += 200) {
+        const { data, error } = await admin.from('firmas_documentos')
+          .select('id, weetrust_document_id, etiquetas, estado, firmantes, pdf_firmado_url')
+          .in('weetrust_document_id', armados.slice(i, i + 200).map(a => a.documentID))
+        if (error) return respond({ error: 'No se pudo revisar el historial guardado.' }, 500)
+        existentes.push(...(data || []))
       }
 
       const yaEstaban = new Map(
@@ -1840,7 +1829,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       // que no es de los frecuentes. Se hace en la base, con la misma
       // función que corrigió los que ya estaban, para que no haya dos
       // criterios distintos según por dónde entró el documento.
-      await Promise.all(armados.map(async (a) => {
+      await Promise.all(armados.filter(a => !yaEstaban.has(a.documentID)).map(async (a) => {
         const { data } = await admin
           .rpc('firmas_adivinar_asesor', { p_firmantes: a.fila.firmantes })
         a.fila.user_id = (data as string | null) ?? null
@@ -1865,13 +1854,16 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       //
       // Van de 10 en 10 en paralelo: uno por uno, con un historial
       // grande, es justo lo que hacía que esto no terminara nunca.
-      const paraActualizar = armados.filter((a) => yaEstaban.has(a.documentID))
+      const previas = new Map((existentes || []).map(e => [e.weetrust_document_id, e]))
+      const paraActualizar = armados.filter((a) => yaEstaban.has(a.documentID) && !['eliminado', 'cancelado'].includes(previas.get(a.documentID)?.estado || ''))
       let actualizados = 0
       for (let i = 0; i < paraActualizar.length; i += 10) {
         const trozo = paraActualizar.slice(i, i + 10)
         const results = await Promise.all(trozo.map((a) =>
           admin.from('firmas_documentos')
-            .update({ estado: a.estado, firmantes: a.firmantes, pdf_firmado_url: a.pdfUrl,
+            .update({ estado: estadoSincronizado(previas.get(a.documentID)?.estado || '', porId.get(a.documentID)?.status),
+              firmantes: sincronizarFirmantes(previas.get(a.documentID)?.firmantes || [], (porId.get(a.documentID)?.signatory || []) as any[], new Date().toISOString()),
+              pdf_firmado_url: a.pdfUrl || previas.get(a.documentID)?.pdf_firmado_url || null,
               etiquetas: [...new Set([...(etiquetasPrevias.get(a.documentID) || []), ...a.fila.etiquetas])] })
             .eq('id', yaEstaban.get(a.documentID)!)))
         results.forEach((r: { error: { message: string } | null }, j: number) => {

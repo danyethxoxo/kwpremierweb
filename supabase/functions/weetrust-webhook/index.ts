@@ -1,6 +1,7 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarFirmantes } from '../firmar-documento/firmantes-sync.ts'
 import { mensajeAvanceFirma } from '../firmar-documento/avisos-firma.ts'
+import { leerRetiros, estadoSincronizado } from '../firmar-documento/weetrust-estado.ts'
 import { etiquetasDeWeetrust, etiquetasDelAviso } from '../firmar-documento/etiquetas-sync.ts'
 // Edge Function: weetrust-webhook
 //
@@ -294,7 +295,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
 
     const crudo = await req.text()
     const aviso = JSON.parse(crudo)
-    const candidatos = posiblesIdentificadores(crudo)
+    let candidatos = posiblesIdentificadores(crudo)
     if (!candidatos.length) {
       // 200 a propósito: el aviso llegó bien, simplemente no traía nada
       // que reconociéramos. Contestar error haría que weetrust lo
@@ -304,6 +305,9 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const retirados = await leerRetiros(admin, WEETRUST_AMBIENTE)
+    candidatos = candidatos.filter(id => !retirados.has(id))
+    if (!candidatos.length) return new Response('ok', { status: 200 })
 
     const { data: filas } = await admin
       .from('firmas_documentos')
@@ -339,6 +343,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
     if (!filas?.length) return new Response('ok', { status: 200 })
 
     for (const fila of filas) {
+      if (['eliminado', 'cancelado'].includes(fila.estado)) continue
       // ── Segunda barrera, la de verdad: preguntarle a weetrust ──
       const res = await fetch(
         `${WEETRUST_URL}/documents/${encodeURIComponent(fila.weetrust_document_id!)}`,
@@ -360,7 +365,7 @@ secureServe({ name: 'weetrust-webhook', auth: 'service', ipLimit: 120, maxBytes:
 
       const firmantes = sincronizarFirmantes(previos, suyos, new Date().toISOString())
 
-      const estado = ESTADOS[String(doc.status)] || fila.estado
+      const estado = estadoSincronizado(fila.estado, doc.status)
 
       // El secreto autentica el aviso y la API ya confirmó la identidad.
       // Las etiquetas son metadatos; el estado sigue viniendo de la API.

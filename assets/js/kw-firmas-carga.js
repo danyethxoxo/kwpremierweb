@@ -43,7 +43,12 @@
       temporizador = setTimeout(cargar, espera);
     }
 
-    return { cargar: cargar, programar: programar, aplicarPendiente: aplicarPendiente };
+    function recargar() {
+      // Tras una acción no reutilizar una lectura iniciada antes del cambio.
+      return activa ? activa.then(cargar) : cargar();
+    }
+
+    return { cargar: cargar, recargar: recargar, programar: programar, aplicarPendiente: aplicarPendiente };
   }
 
   global.kwFirmasCarga = { crear: crear };
