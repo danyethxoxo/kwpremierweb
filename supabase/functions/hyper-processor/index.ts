@@ -1,6 +1,7 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarLibroAsesores } from '../_shared/asesores-sync.ts'
 import { procesarAltasGoogle } from '../_shared/asesores-altas-google.ts'
+import { fechaCumpleanos, leerContactosCumpleanos, completarCumpleanos, planCumpleanos } from '../_shared/contactos-cumpleanos.ts'
 // Edge Function: hyper-processor (proceso de alta)
 //
 // Da de alta a un asesor nuevo en las plataformas de Google, desde el
@@ -908,7 +909,7 @@ async function crearContacto(token: string, persona: DatosPersona): Promise<stri
   }
   if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
 
-  const fecha = parseFecha(persona.cumpleanos || '')
+  const fecha = fechaCumpleanos(persona.cumpleanos || '')
   if (fecha) cuerpo.birthdays = [{ date: fecha }]
 
   const res = await fetch('https://people.googleapis.com/v1/people:createContact', {
@@ -950,6 +951,9 @@ async function agregarContacto(
       recurso = await crearContacto(cuenta.token, persona)
       mapa.set(c, recurso)
       algunaEraNueva = true
+    } else {
+      const fecha = fechaCumpleanos(persona.cumpleanos || '')
+      if (fecha) await completarCumpleanos(cuenta.token, recurso, fecha)
     }
 
     let puesta = ''
@@ -970,6 +974,47 @@ async function agregarContacto(
 
   if (detalles.length) return detalles.join(' · ')
   return `${algunaEraNueva ? 'Contacto creado' : 'Ya existía en Contactos'}${ultimaEtiqueta}`
+}
+
+async function sincronizarCumpleanosContactos(admin:any, body:Record<string,any>) {
+  const personas:Array<{nombre:string;correo:string;cumpleanos:string}>=[]
+  for(let inicio=0;;inicio+=500){
+    const {data,error}=await admin.from('asesores').select('nombre,correo,cumpleanos').order('id').range(inicio,inicio+499)
+    if(error)throw new Error('No se pudieron consultar los cumpleaños registrados')
+    personas.push(...(data||[]));if((data||[]).length<500)break
+  }
+  const cuentas=await getTokensContactos()
+  // La hoja complementa fechas ausentes, sin cambiar estados ni otorgar accesos.
+  const hojas=await detectarHojas(cuentas[0].token)
+  const valores=await leerValores(cuentas[0].token,hojas.map(h=>rangoDeHoja(h.hoja)))
+  const validos=new Set(personas.filter(p=>fechaCumpleanos(p.cumpleanos)).map(p=>String(p.correo||'').toLowerCase()))
+  for(const filas of valores)for(const p of parsearPersonas(filas)){
+    const correo=limpiarCorreo(p.correo||p.correoPersonal).toLowerCase()
+    if(correo&&!validos.has(correo)&&fechaCumpleanos(p.cumpleanos))personas.push({nombre:p.nombre,correo,cumpleanos:p.cumpleanos})
+  }
+  const aplicar=body.aplicar===true
+  const limite=Math.max(1,Math.min(20,Number(body.limite)||20))
+  const resultados=await Promise.all(cuentas.map(async cuenta=>{
+    const contactos=await leerContactosCumpleanos(cuenta.token)
+    const plan=planCumpleanos(personas,contactos)
+    const desde=String(body.despues?.[cuenta.clave]||'')
+    const pendientes=plan.pendientes.sort((a,b)=>a.contacto.resourceName.localeCompare(b.contacto.resourceName))
+      .filter(p=>p.contacto.resourceName.localeCompare(desde)>0)
+    let actualizados=0, revisados=0, ultimo=desde
+    const errores:Array<{nombre:string;correo:string;error:string}>=[]
+    if(aplicar)for(const p of pendientes.slice(0,limite)){
+      try {
+        if(await completarCumpleanos(cuenta.token,p.contacto.resourceName,p.fecha))actualizados++
+        revisados++;ultimo=p.contacto.resourceName
+      }catch(e){errores.push({nombre:p.nombre,correo:p.correo,error:(e as Error).message});break}
+    }
+    return {cuenta:cuenta.nombre,clave:cuenta.clave,totalContactos:contactos.length,yaTienen:plan.yaTienen,
+      pendientes:pendientes.length,actualizados,revisados,
+      continuar:aplicar&&revisados<pendientes.length?ultimo:null,
+      sinFecha:plan.sinFecha,ambiguos:plan.ambiguos,errores,
+      porCompletar:aplicar?undefined:pendientes.map(p=>({nombre:p.nombre,correo:p.correo}))}
+  }))
+  return {ok:resultados.every(r=>!r.errores.length),aplicado:aplicar,cuentas:resultados}
 }
 
 async function compartirCarpeta(token: string, correo: string) {
@@ -1210,10 +1255,11 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
     const body = await req.json().catch(() => ({}))
     const accion = String(body.accion || 'listar')
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-    // Servicio interno: importa el libro o procesa exclusivamente altas encoladas.
+    // Servicio interno: sincronizaciones acotadas, sin permisos arbitrarios.
     if(req.headers.has('x-webhook-secret')){
       const secreto=Deno.env.get('WEBHOOK_SECRET')
-      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || !['sincronizar_asesores','procesar_altas_google'].includes(accion)) return respond({error:'No autorizado'},401)
+      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || !['sincronizar_asesores','procesar_altas_google','cumpleanos_contactos'].includes(accion)) return respond({error:'No autorizado'},401)
+      if(accion==='cumpleanos_contactos')return respond(await sincronizarCumpleanosContactos(admin,body))
       if(accion==='procesar_altas_google'){
         let cuentas:CuentaConToken[]|undefined, estado:EstadoGoogle|undefined
         return respond(await procesarAltasGoogle(admin,async(persona)=>{
@@ -1338,6 +1384,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
       return respond({ ok: true, id: creado?.id })
     }
 
+    if(accion==='cumpleanos_contactos')return respond(await sincronizarCumpleanosContactos(admin,body))
     const tokenPrincipal = await getAccessToken(GOOGLE_REFRESH_TOKEN)
 
     // ── Árbol de la carpeta de Drive (pantalla de Documentos) ──
