@@ -55,18 +55,24 @@ test('busca el perfil propio y tolera documentos sin personas', () => {
 });
 
 test('carga documentos posteriores a los primeros 300 sin perder selecciones vigentes', async () => {
+  await import('../assets/js/kw-firmas-carga.js');
   const documentos = Array.from({ length: 301 }, (_, i) => ({ id: String(i), titulo: 'Documento ' + i }));
   const rangos = [];
   const contexto = vm.createContext({
     veTodo: true, envios: [], elegidos: new Set(['300', 'borrado']), pintarEnvios: () => {},
-    window: { kwSupabase: { from: () => ({ select() { return this; }, order() { return this; },
+    catalogosHistorial: null, etiquetas: [], flotante: null, historialListo: false,
+    abrirDocumentoInicial: () => {}, clearTimeout, setTimeout, console,
+    $: () => ({style:{display:'none'},scrollTop:0}),
+    window: { kwFirmasCarga: globalThis.kwFirmasCarga, kwSupabase: { from: () => ({ select() { return this; }, order() { return this; },
       range: async (inicio, fin) => { rangos.push([inicio, fin]); return { data: documentos.slice(inicio, fin + 1), error: null }; },
     }) } },
   });
-  const inicio = html.indexOf('  async function cargarEnvios(');
-  vm.runInContext(html.slice(inicio, html.indexOf('\n  }', inicio) + 4), contexto);
+  const inicio = html.indexOf('  const cargaHistorial =');
+  const lectura = html.indexOf('  async function leerEnvios(', inicio);
+  vm.runInContext(html.slice(inicio, html.indexOf('\n  }', lectura) + 4), contexto);
   await vm.runInContext('cargarEnvios()', contexto);
   assert.equal(contexto.envios.length, 301);
   assert.deepEqual(rangos, [[0, 299], [300, 599]]);
   assert.deepEqual([...contexto.elegidos], ['300']);
 });
+
