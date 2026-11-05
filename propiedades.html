@@ -1100,7 +1100,7 @@
     if (fichaPropiedadModuloPromesa) return fichaPropiedadModuloPromesa;
     fichaPropiedadModuloPromesa = new Promise(function (resolver, rechazar) {
       var script = document.createElement('script');
-      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261103direccion2';
+      script.src = '/assets/js/kw-ficha-propiedad.js?v=20261105rapida';
       script.async = true;
       script.onload = function () {
         if (window.kwFichaPropiedad) resolver(window.kwFichaPropiedad);
@@ -1183,13 +1183,15 @@
     carga.innerHTML='<div class="kw-loader" role="status" aria-label="Cargando ficha"><div class="circle uno"></div><div class="circle dos"></div><div class="circle tres"></div></div>';
     document.body.append(carga);
     try {
-      await cargarSitioAsesor();
-      var completa = await sb.from('propiedades_inventario').select('*').eq('id', propiedad.id).single();
+      var preparacion = await Promise.all([cargarSitioAsesor(),
+        sb.from('propiedades_inventario').select('*').eq('id', propiedad.id).single(),
+        cargarModuloFichaPropiedad()]);
+      var completa = preparacion[1];
       if (completa.error || !completa.data) throw new Error('No se pudo cargar la información completa de la propiedad');
       propiedad = completa.data;
       var enlace = tarjeta.querySelector('.prop-enlace, .prop-mapa-enlace');
-      var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarFotosFicha(propiedad), cargarModuloFichaPropiedad()]);
-      datos[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
+      var datos = await Promise.all([cargarAsesorFicha(propiedad), cargarFotosFicha(propiedad)]);
+      preparacion[2].abrir({ propiedad: datos[1], asesor: datos[0], url: enlace ? enlace.href : window.location.href });
     } catch (error) {
       mostrarAvisoAccionPropiedad(error.message || 'No se pudo preparar la ficha técnica');
     } finally {

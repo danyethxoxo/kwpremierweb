@@ -2,6 +2,10 @@
 
 La implementación compartida está en `assets/js/kw-ficha-propiedad.js`. Propiedades, Perfil comprador e Inicio cargan la misma versión.
 
+La carga prepara fotos, mapa y fuentes en paralelo. Las imágenes comparten solicitudes y se conservan en una caché de hasta 24 entradas durante la sesión; los errores se descartan para permitir reintentos. Una imagen bloqueada tiene un tiempo máximo de espera antes de probar su respaldo. Detalle dibuja sus dos páginas una sola vez para la vista y prepara la imagen combinada únicamente al descargar PNG. Estas optimizaciones no cambian geometría, tipografía, calidad de las fotos ni contenido vectorial del PDF.
+
+Pruebas de concurrencia, caché y recuperación: `node --test tests/ficha-rendimiento.test.mjs`.
+
 - Redes: título por tipo y operación; colonia en una línea, o calle y número si falta la colonia; municipio y estado en otra. Ciudad de México se presenta como CDMX.
 - Detalle: PDF de dos páginas. La primera incluye el título original completo, dirección, precio y divisa, dos fotos, superficies, características, descripción completa y contacto opcional del asesor. La segunda incluye el resto de las fotos seleccionadas y la ubicación si existen coordenadas válidas.
 - Detalle permite seleccionar hasta catorce fotos: dos en la primera página y un máximo de doce en la segunda. Las primeras catorce se seleccionan inicialmente; es posible sustituirlas por otras de la galería. Clásica y Mosaico conservan el límite de cuatro, y Redes el de una.

@@ -294,7 +294,10 @@
     return candidatos;
   }
 
+  var imagenesFicha = new Map();
   function cargarImagen(url) {
+    if (!url) return Promise.resolve(null);
+    if (imagenesFicha.has(url)) return imagenesFicha.get(url);
     var candidatos = candidatosImagen(url);
     function intentar(indice) {
       if (indice >= candidatos.length) return Promise.resolve(null);
@@ -305,12 +308,25 @@
           if (origen !== window.location.origin) imagen.crossOrigin = 'anonymous';
         } catch (error) { /* La imagen se resolvera como vacia si la URL no es valida. */ }
         imagen.decoding = 'async';
-        imagen.onload = function () { resolver(imagen); };
-        imagen.onerror = function () { resolver(null); };
+        var timer = setTimeout(function () { terminar(null); imagen.src = ''; }, 10000);
+        function terminar(resultado) {
+          clearTimeout(timer);
+          imagen.onload = imagen.onerror = null;
+          resolver(resultado);
+        }
+        imagen.onload = function () { terminar(imagen); };
+        imagen.onerror = function () { terminar(null); };
         imagen.src = candidatos[indice];
       }).then(function (imagen) { return imagen || intentar(indice + 1); });
     }
-    return intentar(0);
+    var carga = intentar(0).then(function (imagen) {
+      if (!imagen && imagenesFicha.get(url) === carga) imagenesFicha.delete(url);
+      return imagen;
+    });
+    imagenesFicha.set(url, carga);
+    // Limitar la memoria al navegar entre galerías extensas.
+    if (imagenesFicha.size > 24) imagenesFicha.delete(imagenesFicha.keys().next().value);
+    return carga;
   }
 
   function cargarFotosDisponibles(urls) {
@@ -1680,7 +1696,7 @@
       }
       pdfBlob = null;
       pdfPromesa = null;
-      canvas = dibujarModelo(modelo);
+      canvas = modelo.plantilla === 'expediente' ? null : dibujarModelo(modelo);
       pintarVista();
     });
 
@@ -1733,28 +1749,28 @@
       botonPDF.disabled = true;
       pintarSeleccion();
       modelo.fotos = seleccion.map(function (indice) { return fotosDisponibles[indice]; });
-      if (esFichaCanvas(modelo)) {
-        try { await cargarFuentesRedes(); }
-        catch (error) { estado.textContent = error.message; return; }
-        if (cerrado || revision !== revisionFotos) return;
-      }
+      var cargaFotos = Promise.all(modelo.fotos.map(function (url) {
+        if (!cacheFotos.has(url)) cacheFotos.set(url, cargarImagen(url));
+        return cacheFotos.get(url);
+      }));
+      var cargaMapa = modelo.plantilla === 'expediente' ? cargarMapaDetalle(modelo) : Promise.resolve();
+      var imagenes;
+      try {
+        imagenes = (await Promise.all([cargaFotos, cargaMapa,
+          esFichaCanvas(modelo) ? cargarFuentesRedes() : Promise.resolve()]))[0];
+      } catch (error) { errorFotos(error); return; }
+      if (cerrado || revision !== revisionFotos) return;
       if (!seleccion.length) {
         modelo._fotos = [];
-        canvas = dibujarModelo(modelo);
+        canvas = modelo.plantilla === 'expediente' ? null : dibujarModelo(modelo);
         pintarVista();
         estado.textContent = 'Selecciona al menos una foto para descargar la ficha.';
         return;
       }
       estado.textContent = '';
-      var imagenes = await Promise.all(modelo.fotos.map(function (url) {
-        if (!cacheFotos.has(url)) cacheFotos.set(url, cargarImagen(url));
-        return cacheFotos.get(url);
-      }));
-      if (cerrado || revision !== revisionFotos) return;
       modelo._fotos = imagenes;
-      if (modelo.plantilla === 'expediente') await cargarMapaDetalle(modelo);
       if (cerrado || revision !== revisionFotos) return;
-      canvas = dibujarModelo(modelo);
+      canvas = modelo.plantilla === 'expediente' ? null : dibujarModelo(modelo);
       pintarVista();
       botonPNG.disabled = false;
       botonPDF.disabled = false;
@@ -1828,11 +1844,13 @@
 
     var canvas;
     try {
-      await cargarImagenes(modelo);
-      if (modelo.plantilla === 'expediente') await cargarMapaDetalle(modelo);
-      if (esFichaCanvas(modelo)) await cargarFuentesRedes();
+      await Promise.all([
+        cargarImagenes(modelo),
+        modelo.plantilla === 'expediente' ? cargarMapaDetalle(modelo) : Promise.resolve(),
+        esFichaCanvas(modelo) ? cargarFuentesRedes() : Promise.resolve()
+      ]);
       if (cerrado) return;
-      canvas = dibujarModelo(modelo);
+      canvas = modelo.plantilla === 'expediente' ? null : dibujarModelo(modelo);
       pintarVista();
       botonPNG.disabled = false;
       botonPDF.disabled = false;
