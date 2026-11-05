@@ -863,7 +863,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       const { data: fila } = await admin
         .from('firmas_documentos')
-        .select('id, user_id, weetrust_document_id, firmantes, estado')
+        .select('id, user_id, weetrust_document_id, firmantes, estado, archivo_ruta')
         .eq('id', id)
         .single()
 
@@ -882,6 +882,12 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       if (!doc) {
         if (fila.estado === 'completado') {
           return respond({ ok: true, estado: 'completado', firmantes: fila.firmantes })
+        }
+        if (fila.estado === 'borrador' && fila.archivo_ruta) {
+          const { error } = await admin.from('firmas_documentos')
+            .update({ weetrust_document_id: null, error_mensaje: null }).eq('id', id)
+          if (error) return respond({ error: 'No se pudo actualizar el borrador.' }, 500)
+          return respond({ ok: true, estado: 'borrador', firmantes: fila.firmantes })
         }
         // Igual que en "actualizar_todos": ya no existe allá, así que se
         // marca en vez de dejarlo pendiente para siempre.
@@ -1563,7 +1569,7 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
 
       const { data: fila } = await admin
         .from('firmas_documentos')
-        .select('id, user_id, estado, weetrust_document_id, firmantes, posiciones')
+        .select('id, user_id, estado, weetrust_document_id, firmantes, posiciones, archivo_ruta, pdf_firmado_url')
         .eq('id', id)
         .single()
 
@@ -1580,11 +1586,17 @@ secureServe({ name: 'firmar-documento', userLimit: 60, maxBytes: 30 * 1024 * 102
       const token = await obtenerToken()
       const doc = await pedirDocumento(token, fila.weetrust_document_id)
       if (!doc && fila.estado !== 'completado') {
+        if (fila.estado === 'borrador' && fila.archivo_ruta) {
+          const { error } = await admin.from('firmas_documentos')
+            .update({ weetrust_document_id: null, error_mensaje: null }).eq('id', id)
+          if (error) return respond({ error: 'No se pudo actualizar el borrador.' }, 500)
+          return respond({ ok: true, url: null, estado: 'borrador' })
+        }
         const { error } = await admin.from('firmas_documentos').update({ estado: 'eliminado', error_mensaje: 'Ya no existe en weetrust: alguien lo borró desde su panel.' }).eq('id', id)
         if (error) return respond({ error: 'No se pudo actualizar el estado del documento.' }, 500)
         return respond({ ok: true, url: null, estado: 'eliminado' })
       }
-      const archivo = (doc?.documentFileObj ?? {}) as Record<string, unknown>
+      const archivo = (doc?.documentFileObj ?? { url: fila.pdf_firmado_url }) as Record<string, unknown>
       if (accion === 'archivo_documento') {
         const bytes = await descargarPdfWeetrust(archivo.url)
         return new Response(new Uint8Array(bytes).buffer, {headers:{'Content-Type':'application/pdf','Cache-Control':'no-store'}})

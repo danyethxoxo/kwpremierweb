@@ -1,7 +1,7 @@
 import { secureServe } from '../_shared/security.ts'
 import { sincronizarFirmantes } from '../firmar-documento/firmantes-sync.ts'
 import { mensajeAvanceFirma } from '../firmar-documento/avisos-firma.ts'
-import { leerRetiros, estadoSincronizado } from '../firmar-documento/weetrust-estado.ts'
+import { leerRetiros, estadoSincronizado, documentoEliminado } from '../firmar-documento/weetrust-estado.ts'
 import { etiquetasDeWeetrust, etiquetasDelAviso } from '../firmar-documento/etiquetas-sync.ts'
 // Edge Function: weetrust-webhook
 //
@@ -117,8 +117,8 @@ function posiblesIdentificadores(crudo: string): string[] {
 // casualidad y no corresponde a nada.
 async function consultarDocumento(token: string, documentID: string) {
   const res = await fetch(
-    `${WEETRUST_URL}/documents?documentID=${encodeURIComponent(documentID)}`,
-    { headers: { 'user-id': WEETRUST_USER_ID!, token } },
+    `${WEETRUST_URL}/documents/${encodeURIComponent(documentID)}`,
+    { headers: { 'user-id': WEETRUST_USER_ID!, token }, signal: AbortSignal.timeout(10000) },
   )
   const json = await res.json().catch(() => null)
   if (!res.ok || json?.success === false) return null
@@ -135,7 +135,7 @@ async function consultarDocumento(token: string, documentID: string) {
   // lo que fuera) se veía como un documento válido y creaba su propio
   // renglón. De un solo envío salían diez o quince copias con nombres
   // distintos.
-  return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID) || null
+  return lista.find((d: Record<string, unknown>) => String(d?.documentID) === documentID && !documentoEliminado(d)) || null
 }
 
 const ESTADOS: Record<string, string> = {
