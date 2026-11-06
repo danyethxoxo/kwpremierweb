@@ -1,4 +1,5 @@
 import { secureServe } from '../_shared/security.ts'
+import { esBackoffice, agruparBackoffice, fichaBackoffice, actualizarFichaBackoffice } from '../_shared/backoffice-contactos.ts'
 import { sincronizarLibroAsesores } from '../_shared/asesores-sync.ts'
 import { procesarAltasGoogle } from '../_shared/asesores-altas-google.ts'
 import { fechaCumpleanos, leerContactosCumpleanos, completarCumpleanos, planCumpleanos } from '../_shared/contactos-cumpleanos.ts'
@@ -520,13 +521,15 @@ function parsearPersonas(filas: string[][]): Persona[] {
   // totales y filas a medio llenar. Todos esos caen en la misma forma:
   // un texto suelto en la columna del nombre y NADA más en el renglón.
   // Alguien de verdad trae por lo menos otro dato además de su nombre.
-  return personas.filter((p) => {
+  const validas = personas.filter((p) => {
     if (p.correo) return true
     if (!p.nombre) return false
     return Boolean(p.telefono || p.kwid || p.fechaIngreso || p.cumpleanos || p.puesto || p.celula || p.fechaBaja
       || p.curp || p.usuarioCommand || p.correoPersonal || p.tipoAsociado || p.clasificacion
       || p.sponsor || p.aniversario || p.coachAsignado)
   })
+  const esHojaBackoffice = enc.some(t => /back\s*office/i.test(normalizar(t)))
+  return esHojaBackoffice ? agruparBackoffice(validas) : validas
 }
 
 // La hoja de los asesores activos es la que manda para todo lo demás: el
@@ -687,8 +690,8 @@ const ETIQUETAS_CONTACTO: Record<string, string> = {
 // Qué etiqueta le toca a cada hoja del libro. Las bajas no llevan: a esa
 // gente ya no se le da de alta.
 function etiquetaDeGrupo(clave: string): string | null {
-  if (clave === 'back_office') return ETIQUETAS_CONTACTO.back_office
-  if (clave === 'activos' || clave === 'celulas') return ETIQUETAS_CONTACTO.asesores
+  if (esBackoffice(clave)) return ETIQUETAS_CONTACTO.back_office
+  if (clave === 'activos' || clave === 'asesor_activo' || clave === 'celulas') return ETIQUETAS_CONTACTO.asesores
   return null
 }
 
@@ -893,6 +896,8 @@ type DatosPersona = {
   telefono: string
   cumpleanos?: string
   grupo?: string
+  asesorAsignado?: string
+  asesor_asignado?: string
 }
 
 async function crearContacto(token: string, persona: DatosPersona): Promise<string> {
@@ -905,7 +910,10 @@ async function crearContacto(token: string, persona: DatosPersona): Promise<stri
     emailAddresses: [{ value: persona.correo }],
     // Así se identifica de un vistazo en Contacts a quién pertenece
     // cada tarjeta, sin tener que abrir cada una.
-    organizations: [{ name: 'KW PREMIER', title: 'Asesor Inmobiliario' }],
+    organizations: [esBackoffice(persona.grupo) ? fichaBackoffice(persona).organizacion : { name: 'KW PREMIER', title: 'Asesor Inmobiliario' }],
+  }
+  if (esBackoffice(persona.grupo) && fichaBackoffice(persona).descripcion) {
+    cuerpo.biographies = [{value:fichaBackoffice(persona).descripcion,contentType:'TEXT_PLAIN'}]
   }
   if (persona.telefono) cuerpo.phoneNumbers = [{ value: persona.telefono }]
 
@@ -952,6 +960,7 @@ async function agregarContacto(
       mapa.set(c, recurso)
       algunaEraNueva = true
     } else {
+      if (esBackoffice(persona.grupo)) await actualizarFichaBackoffice(cuenta.token, recurso, persona)
       const fecha = fechaCumpleanos(persona.cumpleanos || '')
       if (fecha) await completarCumpleanos(cuenta.token, recurso, fecha)
     }
@@ -974,6 +983,31 @@ async function agregarContacto(
 
   if (detalles.length) return detalles.join(' · ')
   return `${algunaEraNueva ? 'Contacto creado' : 'Ya existía en Contactos'}${ultimaEtiqueta}`
+}
+
+async function actualizarContactosBackoffice(admin:any) {
+  const {data,error}=await admin.from('asesores').select('correo,nombre,grupo,asesor_asignado')
+    .in('grupo',['back_office_activo','back_office_baja']).order('id')
+  if(error)throw new Error('No se pudieron consultar los backoffice')
+  const personas=(data||[]).filter((p:any)=>p.correo)
+  const cuentas=await getTokensContactos()
+  let actualizados=0,sinCambios=0,noEncontrados=0,errores=0
+  for(const cuenta of cuentas){
+    const contactos=await listarContactos(cuenta.token)
+    for(const persona of personas){
+      const recurso=contactos.get(String(persona.correo).toLowerCase())
+      // Esta revisión solo actualiza contactos existentes. No otorga accesos.
+      if(!recurso){noEncontrados++;continue}
+      try {
+        if(await actualizarFichaBackoffice(cuenta.token,recurso,persona))actualizados++
+        else sinCambios++
+      } catch {errores++}
+    }
+  }
+  if(errores){
+    await admin.from('asesores_sync_control').update({ultimo_error:'No se pudieron actualizar '+errores+' fichas de backoffice en Google Contacts; se reintentará en la siguiente sincronización.'}).eq('id',true)
+  }
+  return {ok:errores===0,actualizados,sinCambios,noEncontrados,errores,cuentas:cuentas.length}
 }
 
 async function sincronizarCumpleanosContactos(admin:any, body:Record<string,any>) {
@@ -1258,7 +1292,8 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
     // Servicio interno: sincronizaciones acotadas, sin permisos arbitrarios.
     if(req.headers.has('x-webhook-secret')){
       const secreto=Deno.env.get('WEBHOOK_SECRET')
-      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || !['sincronizar_asesores','procesar_altas_google','cumpleanos_contactos'].includes(accion)) return respond({error:'No autorizado'},401)
+      if(!secreto || req.headers.get('x-webhook-secret')!==secreto || !['sincronizar_asesores','procesar_altas_google','cumpleanos_contactos','actualizar_backoffice_contactos'].includes(accion)) return respond({error:'No autorizado'},401)
+      if(accion==='actualizar_backoffice_contactos')return respond(await actualizarContactosBackoffice(admin))
       if(accion==='cumpleanos_contactos')return respond(await sincronizarCumpleanosContactos(admin,body))
       if(accion==='procesar_altas_google'){
         let cuentas:CuentaConToken[]|undefined, estado:EstadoGoogle|undefined
@@ -1276,7 +1311,9 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
         return hojas.map((h,i)=>({clave:h.clave,hoja:h.hoja,personas:parsearPersonas(valores[i]).map(p=>
           (h.clave==='back_office_activo'||h.clave==='back_office_baja')&&!p.correo&&p.correoPersonal?{...p,correo:limpiarCorreo(p.correoPersonal)}:p)}))
       })
-      return respond(resultado)
+      if (resultado.ocupado) return respond(resultado)
+      const contactosBackoffice = await actualizarContactosBackoffice(admin)
+      return respond({...resultado,ok:resultado.ok&&contactosBackoffice.ok,contactosBackoffice})
     }
 
     // ── Quién llama ──
@@ -1661,6 +1698,17 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
 
       if (!gente.length) return respond({ error: 'No se recibió a nadie con correo.' }, 400)
 
+      // El cargo y los responsables se toman de la base importada del Excel.
+      if (!quitar && pasos.includes('contactos')) {
+        const {data:registradas,error:errDatos}=await admin.from('asesores')
+          .select('correo,grupo,asesor_asignado').in('correo',gente.map(p=>p.correo.toLowerCase()))
+        if(errDatos)throw new Error('No se pudieron consultar los responsables de backoffice')
+        for(const p of gente){
+          const registro=(registradas||[]).find(a=>String(a.correo).toLowerCase()===p.correo.toLowerCase())
+          if(registro)Object.assign(p,{grupo:registro.grupo,asesorAsignado:registro.asesor_asignado||''})
+        }
+      }
+
       const soyMaster = miRol === 'master'
       const cuentasContactos = await getTokensContactos()
       const cuentaElegida = cuentaContactosPedida
@@ -1834,3 +1882,5 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
     return respond({ error: (err as Error).message || 'Error inesperado' }, 500)
   }
 })
+
+
