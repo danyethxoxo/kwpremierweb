@@ -97,3 +97,9 @@ test('los seis campos se guardan y se reinician antes de abrir otro documento',(
   for(const id of ids){assert.ok(saved.includes(id));assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);}
   assert.ok(html.includes("CAMPOS_ACREDITACION.forEach(id => { document.getElementById(id).value = ''; });"));
 });
+
+test('estado y ciudad de la notaría se guardan y aparecen en la declaración',()=>{
+  const output=preview(['CLIENTE'],['DOMICILIO'],27000,'MXN',120,'exclusiva',{'f-notario-ciudad':'Guadalajara','f-notario-estado':'Jalisco','f-escritura-numero':'001'}).replace(/<[^>]*>/g,'');
+  assert.ok(output.includes('de la ciudad de Guadalajara, Jalisco'));
+  assert.ok(html.match(/const CAMPOS_ACREDITACION = [^;]+;/)[0].includes('f-notario-estado'));
+});

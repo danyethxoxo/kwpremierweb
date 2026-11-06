@@ -25,6 +25,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <script src="/assets/js/kw-documentos-campos.js?v=20261027profeco"></script>
 <script src="/assets/js/kw-select-busqueda.js?v=20261027fecha"></script>
 <script src="/assets/js/kw-profeco-form.js?v=20261027buscarfecha"></script>
+<script src="/assets/js/kw-notaria-ubicacion.js?v=20261106ubicacion"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 .kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
@@ -245,6 +246,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       <label for="f-municipio-inmueble">Alcaldía o municipio del inmueble</label>
       <input type="text" id="f-municipio-inmueble" autocomplete="off" oninput="updatePreview()" />
     </div>
+    <div class="kw-documentos-campos kw-precio-divisa">
     <div class="acuerdo-field">
       <label for="f-monto">Monto mensual de renta</label>
       <div class="kw-importe"><span aria-hidden="true">$</span><input type="text" id="f-monto" data-kw-no data-formato-miles inputmode="decimal" autocomplete="off" placeholder="0.00" oninput="formatearMonto(this); updateMontoLetra(); updatePreview();" /></div>
@@ -253,6 +255,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       <label for="f-divisa">Divisa</label>
       <select id="f-divisa" onchange="updatePreview()"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
     </div>
+    </div>
 
     <div class="form-section-title"><strong>Acreditación de propiedad</strong></div>
     <div class="kw-documentos-campos">
@@ -260,21 +263,27 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
         <label for="f-escritura-numero">Número de escritura</label>
         <input type="text" id="f-escritura-numero" autocomplete="off" oninput="updatePreview()" />
       </div>
+      <div class="acuerdo-field">
+        <label for="f-notario-nombre">Nombre del notario</label>
+        <input type="text" id="f-notario-nombre" autocomplete="off" oninput="updatePreview()" />
+      </div>
       <div class="acuerdo-field kw-campo-ancho">
         <label for="f-escritura-fecha">Fecha de la escritura</label>
         <input type="hidden" data-profeco-fecha id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
       </div>
       <div class="acuerdo-field">
-        <label for="f-notario-nombre">Nombre del notario</label>
-        <input type="text" id="f-notario-nombre" autocomplete="off" oninput="updatePreview()" />
-      </div>
-      <div class="acuerdo-field">
         <label for="f-notario-numero">Número de notaría</label>
         <input type="text" id="f-notario-numero" autocomplete="off" oninput="updatePreview()" />
       </div>
-      <div class="acuerdo-field">
-        <label for="f-notario-ciudad">Ciudad de la notaría</label>
-        <input type="text" id="f-notario-ciudad" autocomplete="off" oninput="updatePreview()" />
+      <div class="kw-documentos-campos kw-campo-ancho" id="notaria-ubicacion">
+        <div class="acuerdo-field"><label for="f-notario-estado">Estado de la notaría</label>
+          <select id="f-notario-estado" onchange="updatePreview()"><option value="">Seleccionar estado</option><option value="Aguascalientes">Aguascalientes</option><option value="Baja California">Baja California</option><option value="Baja California Sur">Baja California Sur</option><option value="Campeche">Campeche</option><option value="Coahuila de Zaragoza">Coahuila de Zaragoza</option><option value="Colima">Colima</option><option value="Chiapas">Chiapas</option><option value="Chihuahua">Chihuahua</option><option value="Ciudad de México">Ciudad de México</option><option value="Durango">Durango</option><option value="Guanajuato">Guanajuato</option><option value="Guerrero">Guerrero</option><option value="Hidalgo">Hidalgo</option><option value="Jalisco">Jalisco</option><option value="México">México</option><option value="Michoacán de Ocampo">Michoacán de Ocampo</option><option value="Morelos">Morelos</option><option value="Nayarit">Nayarit</option><option value="Nuevo León">Nuevo León</option><option value="Oaxaca">Oaxaca</option><option value="Puebla">Puebla</option><option value="Querétaro">Querétaro</option><option value="Quintana Roo">Quintana Roo</option><option value="San Luis Potosí">San Luis Potosí</option><option value="Sinaloa">Sinaloa</option><option value="Sonora">Sonora</option><option value="Tabasco">Tabasco</option><option value="Tamaulipas">Tamaulipas</option><option value="Tlaxcala">Tlaxcala</option><option value="Veracruz de Ignacio de la Llave">Veracruz de Ignacio de la Llave</option><option value="Yucatán">Yucatán</option><option value="Zacatecas">Zacatecas</option></select></div>
+        <div class="acuerdo-field"><label for="f-notario-ciudad-lista">Ciudad de la notaría</label>
+          <input type="hidden" id="f-notario-ciudad" oninput="updatePreview()" />
+          <select id="f-notario-ciudad-lista" data-notaria-control><option value="">Seleccionar ciudad</option></select></div>
+        <div class="acuerdo-field kw-campo-ancho" id="f-notario-ciudad-otra-campo" hidden><label for="f-notario-ciudad-otra">Otra ciudad</label>
+          <input type="text" id="f-notario-ciudad-otra" data-notaria-control autocomplete="off" /></div>
+        <div class="kw-campo-ancho" id="notaria-catalogo-error" hidden role="alert">No se pudo cargar la lista de ciudades. <button type="button" id="notaria-catalogo-reintentar" class="btn-outline-red">Reintentar</button></div>
       </div>
     </div>
 
@@ -583,9 +592,10 @@ function updatePreview() {
   const notarioNombre = g('f-notario-nombre').trim();
   const notarioNumero = g('f-notario-numero').trim();
   const notarioCiudad = g('f-notario-ciudad').trim();
-  const tieneAcreditacion = [escrituraNumero,escrituraFecha,notarioNombre,notarioNumero,notarioCiudad].some(Boolean);
+  const notarioEstado = g('f-notario-estado').trim();
+  const tieneAcreditacion = [escrituraNumero,escrituraFecha,notarioNombre,notarioNumero,notarioCiudad,notarioEstado].some(Boolean);
   const acreditacionHTML = tieneAcreditacion
-    ? ` ${numClientes > 1 ? 'Asimismo, manifiestan tener' : 'Asimismo, manifiesta tener'} plena capacidad para darlo en arrendamiento, acreditando la propiedad mediante Escritura de Propiedad No. ${campo(escrituraNumero,'Número de escritura')}, de fecha ${escrituraFecha ? formatFechaLarga(escrituraFecha) : campo('','Fecha de la escritura')}, pasada ante la fe del Lic. ${campo(notarioNombre,'Nombre del notario')}, Notario Público No. ${campo(notarioNumero,'Número de notaría')}, de la ciudad de ${campo(notarioCiudad,'Ciudad de la notaría')}.`
+    ? ` ${numClientes > 1 ? 'Asimismo, manifiestan tener' : 'Asimismo, manifiesta tener'} plena capacidad para darlo en arrendamiento, acreditando la propiedad mediante Escritura de Propiedad No. ${campo(escrituraNumero,'Número de escritura')}, de fecha ${escrituraFecha ? formatFechaLarga(escrituraFecha) : campo('','Fecha de la escritura')}, pasada ante la fe del Lic. ${campo(notarioNombre,'Nombre del notario')}, Notario Público No. ${campo(notarioNumero,'Número de notaría')}, de la ciudad de ${campo(notarioCiudad,'Ciudad de la notaría')}${notarioEstado ? ', ' + campo(notarioEstado,'Estado de la notaría') : ''}.`
     : '';
 
   const fecha      = document.getElementById('f-fecha')?.value || '';
@@ -709,7 +719,7 @@ function nombreArchivoDoc() {
 }
 
 // ── Guardar / listar los documentos de este tipo en la cuenta del usuario ──
-const CAMPOS_ACREDITACION = ["f-municipio-inmueble","f-escritura-numero","f-escritura-fecha","f-notario-nombre","f-notario-numero","f-notario-ciudad"];
+const CAMPOS_ACREDITACION = ["f-municipio-inmueble","f-escritura-numero","f-escritura-fecha","f-notario-nombre","f-notario-numero","f-notario-ciudad","f-notario-estado"];
 const CAMPOS_GUARDABLES = ['f-tipo','f-asesor','f-num-clientes','f-inmueble','f-monto','f-divisa','f-domicilio','f-fecha','f-dias-promocion',...CAMPOS_ACREDITACION];
 const TIPO_DOCUMENTO = 'acuerdo_renta';
 let documentoActualId = null;
@@ -939,6 +949,7 @@ function onFabGuardarClick() {
 })();
 
 function bloquearFormulario(bloquear) {
+  document.querySelectorAll('[data-notaria-control]').forEach(el => { el.disabled = bloquear; });
   document.querySelectorAll('[data-profeco-fecha-partes] select').forEach(el => { el.disabled = bloquear; });
   window.kwLogoEmpresa?.bloquear(bloquear);
   CAMPOS_GUARDABLES.forEach(id => {
@@ -961,6 +972,7 @@ function limpiarFormulario() {
   document.getElementById('f-domicilio').value = '';
   document.getElementById('f-fecha').value = '';
   document.getElementById('f-dias-promocion').value = '120';
+  window.kwNotariaUbicacion?.refrescar();
   updateMontoLetra();
   updatePreview();
   window.kwDocumentosCampos.prellenar({'f-asesor':'nombre'});
@@ -1007,6 +1019,7 @@ function abrirDocumentoGuardado(row, marcar) {
       }
     });
     document.getElementById('f-divisa').dispatchEvent(new Event('change'));
+    window.kwNotariaUbicacion?.refrescar();
     renderClientesFields();
     (datos.clientes || []).forEach((val, i) => {
       const el = document.getElementById('f-cliente' + i);
