@@ -24,7 +24,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <script src="/assets/js/kw-documentos-campos.js?v=20261027profeco"></script>
 <script src="/assets/js/kw-select-busqueda.js?v=20261027fecha"></script>
-<script src="/assets/js/kw-fechas-partes.js?v=20261106renta"></script>
+<script src="/assets/js/kw-profeco-form.js?v=20261027buscarfecha"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 .kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
@@ -104,6 +104,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
 <link rel="stylesheet" href="/assets/css/kw-documentos-shell.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-revisiones.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-documentos-form.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-select-busqueda.css?v=20261016campo">
 <style>
 .kw-renta-revision-back { display: inline-flex; align-items: center; gap: 7px; margin: 0px 0px 16px; padding: 8px 12px; border: 0px; border-radius: 10px; background: rgb(255, 250, 250); color: rgb(206,1,31); font: 600 12px / 1 Poppins, Arial, sans-serif; cursor: pointer; transition: background 0.16s, border-color 0.16s, transform 0.12s; }
 .kw-renta-revision-back:hover { background: rgb(248, 238, 238); border-color: rgb(185, 121, 121); }
@@ -214,7 +215,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
     </div>
     <div class="acuerdo-field">
       <label for="f-fecha">Fecha del acuerdo</label>
-      <input type="hidden" data-kw-fecha id="f-fecha" onchange="updatePreview()" />
+      <input type="hidden" data-profeco-fecha id="f-fecha" onchange="updatePreview()" />
     </div>
     <div class="acuerdo-field">
       <label for="f-asesor">Nombre del asesor</label>
@@ -261,7 +262,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       </div>
       <div class="acuerdo-field">
         <label for="f-escritura-fecha">Fecha de la escritura</label>
-        <input type="hidden" data-kw-fecha id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
+        <input type="hidden" data-profeco-fecha id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
       </div>
       <div class="acuerdo-field">
         <label for="f-notario-nombre">Nombre del notario</label>
@@ -938,7 +939,7 @@ function onFabGuardarClick() {
 })();
 
 function bloquearFormulario(bloquear) {
-  document.querySelectorAll('[data-kw-fecha-partes] select').forEach(el => { el.disabled = bloquear; });
+  document.querySelectorAll('[data-profeco-fecha-partes] select').forEach(el => { el.disabled = bloquear; });
   window.kwLogoEmpresa?.bloquear(bloquear);
   CAMPOS_GUARDABLES.forEach(id => {
     const el = document.getElementById(id);
