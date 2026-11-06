@@ -23,6 +23,8 @@
 html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
 <script src="/assets/js/kw-documentos-campos.js?v=20261027profeco"></script>
+<script src="/assets/js/kw-select-busqueda.js?v=20261027fecha"></script>
+<script src="/assets/js/kw-fechas-partes.js?v=20261106renta"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 .kw-skel { background: linear-gradient(90deg, rgb(236, 236, 236) 25%, rgb(246, 246, 246) 37%, rgb(236, 236, 236) 63%) 0% 0% / 400px 100%; animation: 1.4s ease-in-out 0s infinite normal none running kw-skel-pulso; border-radius: 7px; pointer-events: none; }
@@ -212,7 +214,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
     </div>
     <div class="acuerdo-field">
       <label for="f-fecha">Fecha del acuerdo</label>
-      <input type="date" id="f-fecha" onchange="updatePreview()" />
+      <input type="hidden" data-kw-fecha id="f-fecha" onchange="updatePreview()" />
     </div>
     <div class="acuerdo-field">
       <label for="f-asesor">Nombre del asesor</label>
@@ -259,7 +261,7 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       </div>
       <div class="acuerdo-field">
         <label for="f-escritura-fecha">Fecha de la escritura</label>
-        <input type="date" id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
+        <input type="hidden" data-kw-fecha id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
       </div>
       <div class="acuerdo-field">
         <label for="f-notario-nombre">Nombre del notario</label>
@@ -642,7 +644,7 @@ function updatePreview() {
       DENOMINARÁ <strong>"EL CLIENTE"</strong>, SUJETÁNDOSE A LAS SIGUIENTES DECLARACIONES Y CLÁUSULAS:
     </div>
 
-    <div class="doc-seccion">DECLARACIONES:</div>
+    <div class="doc-seccion" style="text-align:center;">DECLARACIONES:</div>
 
     <div class="doc-p"><strong>PRIMERA.</strong> Declara <strong>"KW PREMIER"</strong> ser una empresa legalmente constituida conforme a las leyes mexicanas, y que cuenta con todos los medios y experiencia para promover la renta del inmueble que se define a continuación.</div>
 
@@ -936,6 +938,7 @@ function onFabGuardarClick() {
 })();
 
 function bloquearFormulario(bloquear) {
+  document.querySelectorAll('[data-kw-fecha-partes] select').forEach(el => { el.disabled = bloquear; });
   window.kwLogoEmpresa?.bloquear(bloquear);
   CAMPOS_GUARDABLES.forEach(id => {
     const el = document.getElementById(id);
