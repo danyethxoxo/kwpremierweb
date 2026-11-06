@@ -239,12 +239,40 @@ html:not(.kw-auth-ok) body { visibility: hidden; }
       <input type="text" id="f-inmueble" autocomplete="street-address" placeholder="Calle, número, colonia, alcaldía, ciudad..." oninput="updatePreview()" />
     </div>
     <div class="acuerdo-field">
+      <label for="f-municipio-inmueble">Alcaldía o municipio del inmueble</label>
+      <input type="text" id="f-municipio-inmueble" autocomplete="off" oninput="updatePreview()" />
+    </div>
+    <div class="acuerdo-field">
       <label for="f-monto">Monto mensual de renta</label>
       <div class="kw-importe"><span aria-hidden="true">$</span><input type="text" id="f-monto" data-kw-no data-formato-miles inputmode="decimal" autocomplete="off" placeholder="0.00" oninput="formatearMonto(this); updateMontoLetra(); updatePreview();" /></div>
     </div>
     <div class="acuerdo-field">
       <label for="f-divisa">Divisa</label>
       <select id="f-divisa" onchange="updatePreview()"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
+    </div>
+
+    <div class="form-section-title"><strong>Acreditación de propiedad</strong></div>
+    <div class="kw-documentos-campos">
+      <div class="acuerdo-field">
+        <label for="f-escritura-numero">Número de escritura</label>
+        <input type="text" id="f-escritura-numero" autocomplete="off" oninput="updatePreview()" />
+      </div>
+      <div class="acuerdo-field">
+        <label for="f-escritura-fecha">Fecha de la escritura</label>
+        <input type="date" id="f-escritura-fecha" autocomplete="off" onchange="updatePreview()" />
+      </div>
+      <div class="acuerdo-field">
+        <label for="f-notario-nombre">Nombre del notario</label>
+        <input type="text" id="f-notario-nombre" autocomplete="off" oninput="updatePreview()" />
+      </div>
+      <div class="acuerdo-field">
+        <label for="f-notario-numero">Número de notaría</label>
+        <input type="text" id="f-notario-numero" autocomplete="off" oninput="updatePreview()" />
+      </div>
+      <div class="acuerdo-field">
+        <label for="f-notario-ciudad">Ciudad de la notaría</label>
+        <input type="text" id="f-notario-ciudad" autocomplete="off" oninput="updatePreview()" />
+      </div>
     </div>
 
     <div class="desktop-btn-row form-actions" style="display:flex;gap:8px;margin-top:14px;">
@@ -546,6 +574,17 @@ function updatePreview() {
   const inmueble   = document.getElementById('f-inmueble')?.value || '';
   const montoNum   = leerMonto();
   const domicilio  = document.getElementById('f-domicilio')?.value || '';
+  const municipioInmueble = g('f-municipio-inmueble').trim();
+  const escrituraNumero = g('f-escritura-numero').trim();
+  const escrituraFecha = g('f-escritura-fecha');
+  const notarioNombre = g('f-notario-nombre').trim();
+  const notarioNumero = g('f-notario-numero').trim();
+  const notarioCiudad = g('f-notario-ciudad').trim();
+  const tieneAcreditacion = [escrituraNumero,escrituraFecha,notarioNombre,notarioNumero,notarioCiudad].some(Boolean);
+  const acreditacionHTML = tieneAcreditacion
+    ? ` ${numClientes > 1 ? 'Asimismo, manifiestan tener' : 'Asimismo, manifiesta tener'} plena capacidad para darlo en arrendamiento, acreditando la propiedad mediante Escritura de Propiedad No. ${campo(escrituraNumero,'Número de escritura')}, de fecha ${escrituraFecha ? formatFechaLarga(escrituraFecha) : campo('','Fecha de la escritura')}, pasada ante la fe del Lic. ${campo(notarioNombre,'Nombre del notario')}, Notario Público No. ${campo(notarioNumero,'Número de notaría')}, de la ciudad de ${campo(notarioCiudad,'Ciudad de la notaría')}.`
+    : '';
+
   const fecha      = document.getElementById('f-fecha')?.value || '';
   const domiciliosClientesHTML = clientes.map((nombre, i) => {
     const direccion = i === 0 ? domicilio : (document.getElementById('f-domicilio-cliente' + i)?.value || '');
@@ -607,7 +646,7 @@ function updatePreview() {
 
     <div class="doc-p"><strong>PRIMERA.</strong> Declara <strong>"KW PREMIER"</strong> ser una empresa legalmente constituida conforme a las leyes mexicanas, y que cuenta con todos los medios y experiencia para promover la renta del inmueble que se define a continuación.</div>
 
-    <div class="doc-p"><strong>SEGUNDA.</strong> ${numClientes > 1 ? 'Los arrendadores declaran ser los legítimos propietarios' : 'Declara "EL CLIENTE" ser el legítimo propietario'} del inmueble ubicado en: ${campo(inmueble,'Dirección del inmueble')}, al que en lo sucesivo se denominará <strong>"EL INMUEBLE"</strong>.</div>
+    <div class="doc-p"><strong>SEGUNDA.</strong> ${numClientes > 1 ? 'Los arrendadores declaran ser los legítimos propietarios' : 'Declara "EL CLIENTE" ser el legítimo propietario'} del inmueble ubicado en: ${campo(inmueble,'Dirección del inmueble')}${municipioInmueble ? ', alcaldía o municipio de ' + campo(municipioInmueble,'Alcaldía o municipio') : ''}, al que en lo sucesivo se denominará <strong>"EL INMUEBLE"</strong>.${acreditacionHTML}</div>
 
     <div class="doc-p"><strong>TERCERA.</strong> Las partes declaran tener plena capacidad legal para obligarse en los términos que más adelante se señalan. Asimismo, manifiestan que en la celebración del presente Acuerdo no ha mediado error o vicio del consentimiento alguno que pudiera afectar la validez del mismo.</div>
 
@@ -667,7 +706,8 @@ function nombreArchivoDoc() {
 }
 
 // ── Guardar / listar los documentos de este tipo en la cuenta del usuario ──
-const CAMPOS_GUARDABLES = ['f-tipo','f-asesor','f-num-clientes','f-inmueble','f-monto','f-divisa','f-domicilio','f-fecha','f-dias-promocion'];
+const CAMPOS_ACREDITACION = ["f-municipio-inmueble","f-escritura-numero","f-escritura-fecha","f-notario-nombre","f-notario-numero","f-notario-ciudad"];
+const CAMPOS_GUARDABLES = ['f-tipo','f-asesor','f-num-clientes','f-inmueble','f-monto','f-divisa','f-domicilio','f-fecha','f-dias-promocion',...CAMPOS_ACREDITACION];
 const TIPO_DOCUMENTO = 'acuerdo_renta';
 let documentoActualId = null;
 let folioActual = null;
@@ -905,6 +945,7 @@ function bloquearFormulario(bloquear) {
 }
 
 function limpiarFormulario() {
+  CAMPOS_ACREDITACION.forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('f-tipo').value = 'exclusiva';
   document.getElementById('f-asesor').value = '';
   document.getElementById('f-num-clientes').value = '1';
@@ -950,6 +991,7 @@ function abrirDocumentoGuardado(row, marcar) {
     estadoActual = row.estado || 'borrador';
     revisionActual = Number(row.revision) || 0;
     const datos = row.datos || {};
+    CAMPOS_ACREDITACION.forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('f-dias-promocion').value = '120';
     window.kwLogoEmpresa?.cargar(datos,estadoActual==='finalizado');
     document.getElementById('f-divisa').value='MXN';
