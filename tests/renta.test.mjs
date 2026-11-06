@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../documentos/contratos/renta.html', import.meta.url), 'utf8');
 
-function preview(names, addresses, amount = 27000, currency = 'MXN') {
-  const fields = { 'f-num-clientes': names.length, 'f-asesor': 'MAYA GARCIA', 'f-tipo': 'exclusiva',
+function preview(names, addresses, amount = 27000, currency = 'MXN', days = 120, type = 'exclusiva') {
+  const fields = { 'f-num-clientes': names.length, 'f-asesor': 'MAYA GARCIA', 'f-tipo': type, 'f-dias-promocion': String(days),
     'f-inmueble': 'Calle Prueba 50', 'f-fecha': '2026-10-01', 'f-domicilio': addresses[0], 'f-divisa':currency };
   names.forEach((name, i) => { fields['f-cliente' + i] = name; fields['f-domicilio-cliente' + i] = addresses[i]; });
   const raw = {};
@@ -15,6 +15,7 @@ function preview(names, addresses, amount = 27000, currency = 'MXN') {
     document: { getElementById: (id) => id === 'contrato-raw' ? raw : { value: fields[id] || '' } },
   });
   context.window=context;
+  vm.runInContext(html.slice(html.indexOf('function g('),html.indexOf('function numeroALetra(')),context);
   vm.runInContext(readFileSync(new URL('../assets/js/kw-documentos-campos.js',import.meta.url),'utf8'),context);
   vm.runInContext(html.slice(html.indexOf('function numeroALetra('), html.indexOf('function numeroDesdeMonto(')), context);
   vm.runInContext(html.slice(html.indexOf('function formatFechaLarga('), html.indexOf('// ── Generar dinámicamente')), context);
@@ -41,7 +42,7 @@ test('rental clauses avoid duplicated currency, inconsistent definitions and inv
   assert.ok(!output.includes('SAPI DE CV'));
   assert.ok(!output.includes('el Inmueble'));
   for (let i = 1; i <= 7; i++) assert.ok(output.includes('class="doc-p">' + i + '.'));
-  assert.match(output, /120 días naturales, contado a partir del 1 de octubre de 2026/);
+  assert.match(output.replace(/<[^>]*>/g,''), /120 días naturales, contado a partir del 1 de octubre de 2026/);
   assert.match(output, /CLIENTE &lt;PRUEBA&gt;/);
   assert.match(output, /MCA KW PREMIER/);
   const withPostalLabel = preview(['CLIENTE'], ['CALLE PRUEBA, C.P. 03100']);
@@ -61,4 +62,14 @@ test('la renta expresa la misma divisa en el importe y en letra',()=>{
     assert.ok(output.includes('OCHO MILLONES DE '+words+' 50/100'));
     if(currency!=='MXN')assert.ok(!output.includes(' PESOS '));
   }
+});
+
+test('los días de promoción son editables en Exclusiva y Opción y se guardan con el documento',()=>{
+  for(const tipo of ['exclusiva','opcion'])for(const dias of [60,120,180]){
+    const output=preview(['CLIENTE'],['DOMICILIO'],27000,'MXN',dias,tipo).replace(/<[^>]*>/g,'');
+    assert.ok(output.includes('por un período de '+dias+' días naturales'));
+  }
+  assert.match(html,/id="f-dias-promocion"[^>]*value="120"/);
+  assert.match(html,/const CAMPOS_GUARDABLES = \[[^\]]*'f-dias-promocion'/);
+  assert.match(html,/const datos = row.datos \|\| \{\};\s*document.getElementById\('f-dias-promocion'\).value = '120'/);
 });
