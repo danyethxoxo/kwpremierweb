@@ -5,9 +5,10 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../documentos/contratos/renta.html', import.meta.url), 'utf8');
 
-function preview(names, addresses, amount = 27000, currency = 'MXN', days = 120, type = 'exclusiva') {
+function preview(names, addresses, amount = 27000, currency = 'MXN', days = 120, type = 'exclusiva', extra = {}) {
   const fields = { 'f-num-clientes': names.length, 'f-asesor': 'MAYA GARCIA', 'f-tipo': type, 'f-dias-promocion': String(days),
     'f-inmueble': 'Calle Prueba 50', 'f-fecha': '2026-10-01', 'f-domicilio': addresses[0], 'f-divisa':currency };
+  Object.assign(fields,extra);
   names.forEach((name, i) => { fields['f-cliente' + i] = name; fields['f-domicilio-cliente' + i] = addresses[i]; });
   const raw = {};
   const escapeHtml = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -71,5 +72,28 @@ test('los días de promoción son editables en Exclusiva y Opción y se guardan 
   }
   assert.match(html,/id="f-dias-promocion"[^>]*value="120"/);
   assert.match(html,/const CAMPOS_GUARDABLES = \[[^\]]*'f-dias-promocion'/);
-  assert.match(html,/const datos = row.datos \|\| \{\};\s*document.getElementById\('f-dias-promocion'\).value = '120'/);
+  assert.match(html,/const datos = row.datos \|\| \{\};[\s\S]*?document.getElementById\('f-dias-promocion'\).value = '120'/);
+});
+
+test('la declaración incorpora municipio, escritura y notario con identificadores intactos',()=>{
+  const extra={'f-municipio-inmueble':'Cuauhtémoc','f-escritura-numero':'001234','f-escritura-fecha':'2020-04-15','f-notario-nombre':'JUAN <PRUEBA>','f-notario-numero':'007','f-notario-ciudad':'Ciudad de México'};
+  for(const names of [['CLIENTE'],['CLIENTE UNO','CLIENTE DOS']]){
+    const output=preview(names,names.map(()=> 'DOMICILIO'),27000,'MXN',120,'exclusiva',extra);
+    const plain=output.replace(/<[^>]*>/g,'');
+    assert.ok(plain.includes('alcaldía o municipio de Cuauhtémoc'));
+    assert.ok(plain.includes('Escritura de Propiedad No. 001234'));
+    assert.ok(plain.includes('15 de abril de 2020'));
+    assert.ok(output.includes('JUAN &lt;PRUEBA&gt;'));
+    assert.ok(plain.includes('Notario Público No. 007'));
+    assert.ok(plain.includes('de la ciudad de Ciudad de México'));
+    assert.ok(plain.includes(names.length>1?'manifiestan tener':'manifiesta tener'));
+  }
+  assert.ok(!preview(['CLIENTE'],['DOMICILIO']).includes('Escritura de Propiedad No.'));
+});
+test('los seis campos se guardan y se reinician antes de abrir otro documento',()=>{
+  const ids=["f-municipio-inmueble","f-escritura-numero","f-escritura-fecha","f-notario-nombre","f-notario-numero","f-notario-ciudad"];
+  const code=html.match(/const CAMPOS_ACREDITACION = [^;]+;/)[0]+'\n'+html.match(/const CAMPOS_GUARDABLES = [^;]+;/)[0]+'\nCAMPOS_GUARDABLES';
+  const saved=vm.runInNewContext(code);
+  for(const id of ids){assert.ok(saved.includes(id));assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);}
+  assert.ok(html.includes("CAMPOS_ACREDITACION.forEach(id => { document.getElementById(id).value = ''; });"));
 });
