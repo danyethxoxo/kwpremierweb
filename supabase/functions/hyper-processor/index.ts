@@ -273,7 +273,7 @@ function clasificarHoja(titulo: string): Grupo | null {
   // Back Office es la señal más específica. Separa sus bajas antes de
   // buscar los grupos genéricos: una hoja “Back Office de Baja” contiene
   // también “baja”, y antes ambas hojas terminaban con la misma clave.
-  const esBackOffice = ['back office', 'backoffice', 'back'].some((p) => t.includes(p))
+  const esBackOffice = ['back office', 'backoffice', 'back'].some((p) => t.includes(p)) || /\bbo\b/.test(t)
   if (esBackOffice) {
     const clave = t.includes('baja') ? 'back_office_baja' : 'back_office_activo'
     return GRUPOS.find((g) => g.clave === clave) || null
@@ -417,7 +417,7 @@ const COLUMNAS: Record<string, { si: string[]; no?: string[] }> = {
   curp: { si: ['curp'] },
   usuarioCommand: { si: ['usuario command', 'usuario de command', 'usuario kw'] },
   contrasena: { si: ['contrasena'] },
-  correoPersonal: { si: ['correo personal', 'correo particular', 'email personal'] },
+  correoPersonal: { si: ['correo personal', 'correo particular', 'email personal', 'e-mail personal', 'mail personal'] },
   tipoAsociado: { si: ['tipo de asociado', 'tipo asociado'] },
   clasificacion: { si: ['clasificacion'] },
   sponsor: { si: ['sponsor', 'patrocinador'] },
