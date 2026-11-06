@@ -10,7 +10,7 @@ export async function procesarAltasGoogle(admin:any, otorgar:(persona:any)=>Prom
       let estado='completo', detalle:unknown=null
       try {
         const {data:persona,error:lectura}=await admin.from('asesores')
-          .select('id,nombre,correo,telefono,cumpleanos,grupo').eq('id',tarea.asesor_id).maybeSingle()
+          .select('id,nombre,correo,telefono,cumpleanos,grupo,asesor_asignado').eq('id',tarea.asesor_id).maybeSingle()
         if(lectura) throw new Error('No se pudo comprobar el estado actual del asesor')
         if(!persona || !['asesor_activo','back_office_activo'].includes(persona.grupo)
           || String(persona.correo||'').trim().toLowerCase()!==tarea.correo){
@@ -33,3 +33,5 @@ export async function procesarAltasGoogle(admin:any, otorgar:(persona:any)=>Prom
     if(liberar) throw new Error('No se pudo liberar el proceso de altas')
   }
 }
+
+
