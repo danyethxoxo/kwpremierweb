@@ -44,7 +44,9 @@ test('selección voluntaria, sugerencias, favoritos inmediatos con guardado y b�
         } };
       });
       await page.addScriptTag({ url: '/assets/js/kw-firmantes-personales.js' });
+      await page.addScriptTag({ url: '/assets/js/kw-firmas-carga.js' });
       await page.addScriptTag({ content: main });
+      assert.deepEqual(errors, []);
       await page.evaluate(async () => {
         qaFirmantes.configurar();
         await kwFirmantesPersonales.iniciar({ userId: 'usuario', leer: qaFirmantes.leer, agregar: qaFirmantes.agregar });
@@ -57,7 +59,19 @@ test('selección voluntaria, sugerencias, favoritos inmediatos con guardado y b�
       assert.equal(await page.locator('#firmo-si').count(), 0);
       await page.locator('#posibles-firmantes summary').click();
       assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona').count(), 5);
-      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona-agregar').first().locator('span').innerText(), 'Tú');
+      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona-agregar').first().locator('.firmante-persona-nombre').innerText(), 'Asesor Premier');
+      await page.locator('#posibles-firmantes-buscar').fill('LUCIA');
+      assert.equal(await page.locator('#posibles-firmantes-lista .firmante-persona').count(), 1);
+      await page.locator('#posibles-firmantes-buscar').fill('');
+      assert.equal(await page.locator('#firmantes #observadores').count(), 0);
+      await page.locator('[data-tab="observadores"]').click();
+      assert.equal(await page.locator('[data-panel="observadores"]').isVisible(), true);
+      await page.locator('#observadores input').first().fill('observador@ejemplo.com');
+      assert.equal(await page.locator('#observadores-cuenta').innerText(), '1');
+      await page.locator('[data-tab="firmantes"]').click();
+      assert.equal(await page.locator('#observadores input').first().inputValue(), 'observador@ejemplo.com');
+      assert.equal(await page.locator('[data-persona-correo="kwpremier@kwmexico.mx"]').getAttribute('data-persona-nombre'), 'Gustavo Solares Campos');
+      assert.equal(await page.locator('[data-persona-correo="fernanda.pacheco@kwmexico.mx"]').getAttribute('data-persona-nombre'), 'María Fernanda Pacheco Baños');
       const lucia = page.locator('#posibles-firmantes-lista .firmante-persona').filter({ hasText: 'Lucía Pérez' });
       await lucia.locator('.firmante-persona-agregar').click();
       assert.equal(await page.locator('.firmante-fila').count(), 1);

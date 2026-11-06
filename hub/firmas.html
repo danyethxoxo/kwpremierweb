@@ -24,7 +24,7 @@
 <script src="/assets/js/kw-ui.js?v=20261030kwred"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
-<script src="/assets/js/kw-firmantes-personales.js?v=20261021b"></script>
+<script src="/assets/js/kw-firmantes-personales.js?v=20261106favoritos"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -211,22 +211,6 @@
   .firmante-nom { flex: 1 1 auto; min-width: 0; }
   .firmante-cola { display: flex; gap: 8px; align-items: center; }
   .firmante-mail { flex: 1 1 auto; min-width: 0; }
-  /* Catálogos propios de la selección de firmantes. */
-  .firmantes-catalogo { margin:12px 0; border:1px solid var(--border); border-radius:10px; padding:10px; }
-  .firmantes-catalogo summary { cursor:pointer; font-size:12px; }
-  .firmantes-catalogo[open] summary { margin-bottom:10px; }
-  .firmante-persona { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
-  .firmante-persona-agregar { flex:1; min-width:0; border:0; background:none; text-align:left; font:inherit; font-size:12px; color:var(--text); cursor:pointer; }
-  .firmante-persona-agregar span,.firmante-persona-agregar small { display:block; overflow-wrap:anywhere; }
-  .firmante-persona-agregar small,.firmante-persona-vacio { font-size:11px; color:var(--muted); }
-  .firmante-persona-agregar:disabled { opacity:.5; cursor:default; }
-  .firmante-favorito { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:32px; height:32px; border:0; border-radius:50%; color:var(--muted); background:none; cursor:pointer; }
-  .firmante-favorito.activo { color:var(--red); }
-  .firmante-favorito.activo svg { fill:currentColor; }
-  .firmante-favorito.pendiente svg { animation:corazon-guardando .7s ease-in-out infinite alternate; }
-  @keyframes corazon-guardando { to { transform:scale(.8); opacity:.5; } }
-  @media (prefers-reduced-motion:reduce) { .firmante-favorito.pendiente svg { animation:none; opacity:.6; } }
-  #posibles-firmantes-lista,#favoritos-firmantes-lista { max-height:260px; overflow:auto; }
   /* Las dos acciones del editor de firmas comparten una fila,
      también en celular, debajo del correo para conservar su ancho. */
   .firmante-acciones { display: flex; gap: 8px; align-items: stretch; margin-top: 9px; }
@@ -1782,6 +1766,7 @@
 </style>
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
 <link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261022archivos">
+<link rel="stylesheet" href="/assets/css/kw-firmantes-selector.css?v=20261106favoritos">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 </head>
 <body class="en-historial firmas-pagina">
@@ -2076,7 +2061,8 @@
                      había manera de casar uno con otro. -->
                 <div class="kw-tabs planas firma-tabs" data-kw-tabs="firma-tabpanels">
                   <button type="button" class="kw-tab activo" data-tab="firmantes">Quién firma</button>
-                  <button type="button" class="kw-tab" data-tab="favoritos">Firmantes frecuentes</button>
+                  <button type="button" class="kw-tab" data-tab="favoritos">Favoritos</button>
+                  <button type="button" class="kw-tab" data-tab="observadores">Observadores <span class="firmantes-cuenta" id="observadores-cuenta" hidden></span></button>
                 </div>
 
                 <!-- Lo único que se desplaza. El título de arriba y los
@@ -2086,7 +2072,13 @@
                 <div class="editor-scroll barra-oscura">
                   <div class="kw-tabpanels firma-tabpanels" id="firma-tabpanels">
                     <section class="kw-tabpanel activo" data-panel="firmantes">
-                      <details class="firmantes-catalogo" id="posibles-firmantes"><summary>Posibles firmantes</summary><div id="posibles-firmantes-lista"></div></details>
+                      <details class="firmantes-catalogo" id="posibles-firmantes">
+                        <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>Posibles firmantes</span><span class="firmantes-cuenta" id="posibles-firmantes-total">0</span><svg class="firmantes-catalogo-flecha" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+                        <div class="firmantes-catalogo-contenido">
+                          <div class="firmantes-buscar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" class="kw-input" id="posibles-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar posibles firmantes"></div>
+                          <div id="posibles-firmantes-lista"></div>
+                        </div>
+                      </details>
                       <div id="firmantes"></div>
                       <button type="button" class="firma-agregar" id="btn-agregar">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2097,24 +2089,26 @@
                         <input type="checkbox" id="en-orden">
                         <span>Firmar en orden</span>
                       </label>
-                      <details class="firmantes-catalogo"><summary>Observadores</summary>
+
+                    </section>
+                    <section class="kw-tabpanel" data-panel="favoritos">
+                      <div class="firmantes-buscar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" class="kw-input" id="favoritos-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar en Favoritos"></div>
+                      <div id="favoritos-firmantes-lista"></div>
+                    </section>
+                    <section class="kw-tabpanel" data-panel="observadores">
                       <div id="observadores"></div>
                       <button type="button" class="firma-agregar" id="btn-agregar-observador">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span id="txt-agregar-observador">Agregar observador</span>
                       </button>
+
+                    </section>
+                  </div>
+
                       <div class="aviso-tm" id="aviso-tm" style="display:none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                         <span>Se agregó a la Transaction Manager como observadora, porque firman el MCA y la OP. Si no hace falta, quítala con el bote.</span>
                       </div>
-                      </details>
-                    </section>
-                    <section class="kw-tabpanel" data-panel="favoritos">
-                      <input type="search" class="kw-input" id="favoritos-firmantes-buscar" placeholder="Buscar nombre o correo" aria-label="Buscar firmantes frecuentes">
-                      <div id="favoritos-firmantes-lista"></div>
-                    </section>
-                  </div>
-
                   <div id="msg-firma" class="msg" style="display:none;"></div>
                 </div>
 
@@ -3494,7 +3488,7 @@
     fila.innerHTML =
       '<div class="firmante-encabezado">' +
         '<input type="text" class="kw-input firmante-nom" placeholder="Nombre completo" value="' + escapar(nombre || '') + '">' +
-        '<button type="button" class="firmante-favorito firmante-favorito-fila" aria-label="Guardar en firmantes frecuentes" aria-pressed="false">' + window.kwFirmantesPersonales.corazon + '</button>' +
+        '<button type="button" class="firmante-favorito firmante-favorito-fila" aria-label="Guardar en Favoritos" aria-pressed="false">' + window.kwFirmantesPersonales.corazon + '</button>' +
         '<button type="button" class="firmante-quitar" aria-label="Quitar firmante" title="Quitar firmante">' +
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<polyline points="3 6 5 6 21 6"/>' +
@@ -3550,7 +3544,7 @@
   }
 
   function permiteFotoId(correo) {
-    return !['gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx']
+    return !['kwpremier@kwmexico.mx', 'gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx']
       .includes(String(correo || '').trim().toLowerCase());
   }
 
@@ -3582,6 +3576,8 @@
 
   // Cada documento empieza sin firmantes elegidos.
   function prepararFirmantes() {
+    $('posibles-firmantes-buscar').value = '';
+    $('favoritos-firmantes-buscar').value = '';
     $('firmantes').innerHTML = '';
     $('observadores').innerHTML = '';
     $('aviso-tm').style.display = 'none';
@@ -3644,6 +3640,7 @@
     const campo = fila.querySelector('.observador-mail');
     const revisar = () => {
       fila.classList.toggle('listo', RE_CORREO.test(campo.value.trim()));
+      ajustarBotonObservador();
     };
     campo.addEventListener('input', revisar);
     revisar();
@@ -3675,10 +3672,17 @@
   }
 
   function ajustarBotonObservador() {
+    const cuenta = Array.from($('observadores').querySelectorAll('.observador-mail')).filter(el => RE_CORREO.test(el.value.trim())).length;
+    $('observadores-cuenta').textContent = cuenta;
+    $('observadores-cuenta').hidden = !cuenta;
     const cuantos = $('observadores').querySelectorAll('.observador-fila').length;
     $('txt-agregar-observador').textContent = cuantos
       ? 'Agregar otro observador' : 'Agregar observador';
   }
+
+  $('observadores').addEventListener('invalid', () => {
+    document.querySelector('.firma-tabs [data-tab="observadores"]').click();
+  }, true);
 
   $('btn-agregar-observador').addEventListener('click', () => {
     agregarObservador('');
@@ -3839,7 +3843,7 @@
   // Hacen falta LOS DOS entre los firmantes, no uno cualquiera: el
   // documento que va nada más a uno de ellos no es el que la TM revisa.
   const CORREO_TM = 'gabriela.landa@kwmexico.mx';
-  const FIRMANTES_QUE_PIDEN_TM = ['gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx'];
+  const FIRMANTES_QUE_PIDEN_TM = ['kwpremier@kwmexico.mx', 'gustavo.solares@kwmexico.mx', 'fernanda.pacheco@kwmexico.mx'];
 
   // Si alguien la quita a mano, se respeta: no se vuelve a poner sola en
   // este documento. Sin esto, quitarla sería imposible.
@@ -5802,12 +5806,12 @@
   }
 
   const NOMBRES_FRECUENTES_CORTOS = {
-    'gustavo.solares@kwmexico.mx': 'Gustavo Solares',
-    'fernanda.pacheco@kwmexico.mx': 'Fernanda Pacheco',
+    'kwpremier@kwmexico.mx': 'Gustavo Solares Campos',
+    'fernanda.pacheco@kwmexico.mx': 'María Fernanda Pacheco Baños',
   };
   const FIRMANTES_DESTACADOS = [
-    { nombre: 'Gustavo Solares', correo: 'gustavo.solares@kwmexico.mx' },
-    { nombre: 'Fernanda Pacheco', correo: 'fernanda.pacheco@kwmexico.mx' },
+    { nombre: 'Gustavo Solares Campos', correo: 'kwpremier@kwmexico.mx' },
+    { nombre: 'María Fernanda Pacheco Baños', correo: 'fernanda.pacheco@kwmexico.mx' },
   ];
 
   function nombreFrecuenteVisible(f) {

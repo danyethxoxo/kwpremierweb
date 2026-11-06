@@ -1,0 +1,52 @@
+/* Selección de personas en Firmas Digitales. */
+.firma-tabs { display:flex; gap:4px; margin-bottom:14px; }
+.firma-tabs .kw-tab { min-width:0; padding-inline:8px; font-size:12px; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+.firmantes-catalogo { margin:0 0 16px; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:#fff; }
+.firmantes-catalogo summary { display:grid; grid-template-columns:18px minmax(0,1fr) auto 16px; align-items:center; gap:9px; padding:13px 12px; color:var(--text); font-size:12px; font-weight:600; cursor:pointer; list-style:none; }
+.firmantes-catalogo summary::-webkit-details-marker { display:none; }
+.firmantes-catalogo summary::marker { content:''; }
+.firmantes-catalogo summary > svg:first-child { color:var(--red); }
+.firmantes-catalogo summary:hover { background:#faf8f8; }
+.firmantes-catalogo summary:focus-visible { outline:2px solid var(--red); outline-offset:-3px; }
+.firmantes-catalogo[open] summary { margin:0; border-bottom:1px solid var(--border); }
+.firmantes-catalogo-flecha { color:var(--muted); transition:transform .15s ease; }
+.firmantes-catalogo[open] .firmantes-catalogo-flecha { transform:rotate(180deg); }
+.firmantes-cuenta { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border-radius:999px; background:#f3eeee; color:var(--red); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
+.firmantes-cuenta[hidden] { display:none; }
+.firmantes-catalogo-contenido { padding:10px; }
+.firmantes-buscar { position:relative; margin-bottom:10px; }
+.firmantes-buscar > svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+.firmantes-buscar .kw-input { width:100%; min-width:0; margin:0; padding-left:35px; background:#faf9f9; }
+#posibles-firmantes-lista,#favoritos-firmantes-lista { max-height:300px; overflow:auto; overscroll-behavior:contain; scrollbar-color:#c8bfc0 transparent; }
+.firmante-persona { display:flex; align-items:center; gap:4px; min-width:0; padding:4px; margin:0 0 6px; border:1px solid var(--border); border-radius:10px; background:#fff; transition:border-color .15s ease,background .15s ease; }
+.firmante-persona:last-child { margin-bottom:0; }
+.firmante-persona:hover { border-color:#d7b7bc; background:#fdfafa; }
+.firmante-persona-agregar { display:flex; align-items:center; gap:9px; flex:1 1 auto; min-width:0; min-height:48px; padding:4px; border:0; border-radius:7px; background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
+.firmante-persona-agregar:focus-visible,.firmante-favorito:focus-visible { outline:2px solid var(--red); outline-offset:2px; }
+.firmante-persona-agregar:disabled { cursor:default; }
+.firmante-persona-agregar .firmante-persona-avatar { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border-radius:50%; background:#f8eeee; color:var(--red); font-size:11px; font-weight:700; }
+.firmante-persona-texto { display:block; flex:1 1 auto; min-width:0; }
+.firmante-persona-linea { display:flex; align-items:center; flex-wrap:wrap; gap:4px 6px; }
+.firmante-persona-nombre { font-size:12px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; }
+.firmante-persona-etiqueta { flex:0 0 auto; padding:1px 5px; border-radius:4px; background:#f3eeee; color:var(--red); font-size:9px; font-weight:600; }
+.firmante-persona-texto small { display:block; margin-top:2px; color:var(--muted); font-size:10.5px; line-height:1.45; overflow-wrap:anywhere; }
+.firmante-persona-estado { display:inline-flex; flex:0 0 16px; color:var(--red); }
+.firmante-persona.ya-agregado .firmante-persona-avatar { background:#f2f0f0; color:#8b8082; }
+.firmante-persona.ya-agregado .firmante-persona-nombre { color:#82797a; }
+.firmante-favorito { display:inline-flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; padding:0; border:1px solid transparent; border-radius:9px; background:none; color:var(--muted); cursor:pointer; }
+.firmante-favorito:hover { background:#fff1f3; border-color:#ead4d8; color:var(--red); }
+.firmante-favorito.activo { background:#fff1f3; color:var(--red); }
+.firmante-favorito.activo svg { fill:currentColor; }
+.firmante-favorito.pendiente svg { animation:corazon-guardando .7s ease-in-out infinite alternate; }
+.firmante-persona-vacio { padding:22px 12px; border:1px dashed var(--border); border-radius:10px; color:var(--muted); text-align:center; font-size:12px; line-height:1.6; }
+@keyframes corazon-guardando { to { transform:scale(.8); opacity:.5; } }
+@media(max-width:560px) {
+  .firma-tabs .kw-tab { padding-inline:6px; font-size:11.5px; }
+  .firmante-persona-agregar { min-height:52px; }
+  .firmante-favorito { flex-basis:40px; width:40px; height:40px; }
+  .firmantes-catalogo-contenido { padding:8px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .firmante-persona,.firmantes-catalogo-flecha { transition:none; }
+  .firmante-favorito.pendiente svg { animation:none; opacity:.6; }
+}

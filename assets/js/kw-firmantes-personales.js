@@ -9,7 +9,7 @@
   var corazon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>';
   function botonCorazon(persona) {
     var activo = esFavorito(persona.correo);
-    return '<button type="button" class="firmante-favorito' + (activo ? ' activo' : '') + (pendientes.has(correo(persona.correo)) ? ' pendiente' : '') + '" aria-busy="' + pendientes.has(correo(persona.correo)) + '" aria-label="' + (activo ? 'Quitar de' : 'Guardar en') + ' firmantes frecuentes" aria-pressed="' + activo + '" data-favorito-correo="' + escapar(correo(persona.correo)) + '" data-favorito-nombre="' + escapar(persona.nombre) + '">' + corazon + '</button>';
+    return '<button type="button" class="firmante-favorito' + (activo ? ' activo' : '') + (pendientes.has(correo(persona.correo)) ? ' pendiente' : '') + '" aria-busy="' + pendientes.has(correo(persona.correo)) + '" aria-label="' + (activo ? 'Quitar de' : 'Guardar en') + ' Favoritos" aria-pressed="' + activo + '" data-favorito-correo="' + escapar(correo(persona.correo)) + '" data-favorito-nombre="' + escapar(persona.nombre) + '">' + corazon + '</button>';
   }
   async function alternar(persona) {
     var email = correo(persona.correo), nombre = String(persona.nombre || '').trim();
@@ -31,14 +31,16 @@
       favoritos = favoritos.filter(function (f) { return correo(f.correo) !== email; });
       if (anterior) favoritos.push(anterior);
       pintar();
-      await global.kwUI.alert('No se pudo guardar el firmante frecuente. Intenta de nuevo.');
+      await global.kwUI.alert('No se pudo guardar el favorito. Intenta de nuevo.');
     } finally { pendientes.delete(email); pintar(); }
   }
   function filas(personas) {
     var puestos = adaptador ? adaptador.leer() : [];
     return personas.map(function (p) {
       var agregado = puestos.some(function (f) { return p.correo ? correo(f.correo) === correo(p.correo) : buscar(f.nombre) === buscar(p.nombre); });
-      return '<div class="firmante-persona"><button type="button" class="firmante-persona-agregar" data-persona-nombre="' + escapar(p.nombre) + '" data-persona-correo="' + escapar(p.correo) + '"' + (agregado ? ' disabled' : '') + '><span>' + escapar(p.etiqueta || p.nombre) + '</span><small>' + escapar(p.correo || 'Sin correo capturado') + '</small></button>' + botonCorazon(p) + '</div>';
+      var iniciales = String(p.nombre || '').trim().split(/\s+/).slice(0, 2).map(function (parte) { return parte.charAt(0); }).join('').toUpperCase();
+      var icono = agregado ? '<path d="m5 12 4 4L19 6"/>' : '<path d="M12 5v14M5 12h14"/>';
+      return '<div class="firmante-persona' + (agregado ? ' ya-agregado' : '') + '"><button type="button" class="firmante-persona-agregar" aria-label="' + escapar((agregado ? 'Ya agregado: ' : 'Agregar como firmante: ') + p.nombre) + '" data-persona-nombre="' + escapar(p.nombre) + '" data-persona-correo="' + escapar(p.correo) + '"' + (agregado ? ' disabled' : '') + '><span class="firmante-persona-avatar" aria-hidden="true">' + escapar(iniciales) + '</span><span class="firmante-persona-texto"><span class="firmante-persona-linea"><span class="firmante-persona-nombre">' + escapar(p.nombre) + '</span>' + (p.etiqueta ? '<span class="firmante-persona-etiqueta">' + escapar(p.etiqueta) + '</span>' : '') + '</span><small>' + escapar(p.correo || 'Sin correo capturado') + '</small></span><svg class="firmante-persona-estado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' + icono + '</svg></button>' + botonCorazon(p) + '</div>';
     }).join('');
   }
   function pintar() {
@@ -49,10 +51,14 @@
       if (!clave || vistos.has(clave)) return false;
       vistos.add(clave); return true;
     });
-    if (posibles) posibles.innerHTML = filas(personas) || '<div class="firmante-persona-vacio">No hay personas capturadas en este documento.</div>';
+    var busquedaPosibles = document.getElementById('posibles-firmantes-buscar');
+    var filtroPosibles = buscar(busquedaPosibles && busquedaPosibles.value);
+    var total = document.getElementById('posibles-firmantes-total');
+    if (total) { total.textContent = String(personas.length); total.setAttribute('aria-label', personas.length + ' posibles firmantes'); }
+    if (posibles) posibles.innerHTML = filas(personas.filter(function (p) { return buscar(p.nombre + ' ' + p.correo + ' ' + (p.etiqueta || '')).includes(filtroPosibles); })) || '<div class="firmante-persona-vacio">' + (filtroPosibles ? 'Sin coincidencias.' : 'No hay personas capturadas en este documento.') + '</div>';
     var lista = document.getElementById('favoritos-firmantes-lista'), buscador = document.getElementById('favoritos-firmantes-buscar');
     var q = buscar(buscador && buscador.value);
-    if (lista) lista.innerHTML = filas(favoritos.filter(function (p) { return buscar(p.nombre + ' ' + p.correo).includes(q); }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })) || '<div class="firmante-persona-vacio">' + (errorCarga ? 'No se pudieron cargar tus firmantes frecuentes.' : q ? 'Sin coincidencias.' : 'Marca un corazón para guardar un firmante.') + '</div>';
+    if (lista) lista.innerHTML = filas(favoritos.filter(function (p) { return buscar(p.nombre + ' ' + p.correo).includes(q); }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })) || '<div class="firmante-persona-vacio">' + (errorCarga ? 'No se pudieron cargar tus Favoritos.' : q ? 'Sin coincidencias.' : 'Marca un corazón para guardar un firmante.') + '</div>';
     document.querySelectorAll('#firmantes .firmante-fila').forEach(function (fila) {
       var boton = fila.querySelector('.firmante-favorito-fila');
       if (!boton) return;
@@ -61,7 +67,7 @@
       boton.setAttribute('aria-busy', String(pendientes.has(email)));
       boton.classList.toggle('activo', activo);
       boton.setAttribute('aria-pressed', String(activo));
-      boton.setAttribute('aria-label', activo ? 'Quitar de firmantes frecuentes' : 'Guardar en firmantes frecuentes');
+      boton.setAttribute('aria-label', activo ? 'Quitar de Favoritos' : 'Guardar en Favoritos');
     });
   }
   async function iniciar(opciones) {
@@ -85,7 +91,7 @@
     if (agregar && adaptador) { adaptador.agregar(agregar.dataset.personaNombre, agregar.dataset.personaCorreo); pintar(); }
   });
   document.addEventListener('input', function (event) {
-    if (event.target.id === 'favoritos-firmantes-buscar' || event.target.closest('#firmantes')) pintar();
+    if (event.target.id === 'favoritos-firmantes-buscar' || event.target.id === 'posibles-firmantes-buscar' || event.target.closest('#firmantes')) pintar();
   });
   global.kwFirmantesPersonales = {
     iniciar: iniciar, actualizar: pintar, corazon: corazon,
