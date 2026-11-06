@@ -398,6 +398,10 @@ function priorizarDetallesKw<T extends {listado:KwRegistro;existente:KwRegistro|
     if(agentes.has(agente))continue
     agentes.add(agente);agregar(item)
   }
+  // Completar primero las fichas pendientes del Market Center propio.
+  for(const item of pendientes){
+    if(String(item.listado.Market_Center_ID)===KWMEXICO_MARKET_CENTER_ID)agregar(item)
+  }
   for(const item of pendientes)agregar(item)
   return seleccion
 }

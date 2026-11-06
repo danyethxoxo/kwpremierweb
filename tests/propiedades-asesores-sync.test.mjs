@@ -28,3 +28,10 @@ test('no reescribe miles de pendientes sin cambios; sí guarda altas, cambios y 
  assert.equal(s.listadoKwRequiereGuardar(listado,{...existing,asesor_nombre:null},names,ids),true);
  assert.equal(s.listadoKwRequiereGuardar(listado,{...existing,asesor_kw_id:null},names,ids),true);
 });
+
+test('las fichas conocidas de Premier se completan antes del rezago de otros centros',()=>{
+ const s=setup(),pendientes=Array.from({length:100},(_,i)=>({listado:{ID:i+1,Agent_ID:i+1,Market_Center_ID:1},existente:{asesor_nombre:'Asesor'}}));
+ pendientes.push({listado:{ID:501,Agent_ID:501,Market_Center_ID:21},existente:{asesor_nombre:'Premier'}},{listado:{ID:502,Agent_ID:502,Market_Center_ID:21},existente:{asesor_nombre:'Premier'}});
+ assert.deepEqual(Array.from(s.priorizarDetallesKw(pendientes,2),p=>p.listado.ID),[501,502]);
+ assert.equal(s.priorizarDetallesKw(pendientes,25).length,25);
+});
