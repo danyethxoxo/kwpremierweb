@@ -990,6 +990,7 @@ async function actualizarContactosBackoffice(admin:any) {
     .in('grupo',['back_office_activo','back_office_baja']).order('id')
   if(error)throw new Error('No se pudieron consultar los backoffice')
   const personas=(data||[]).filter((p:any)=>p.correo)
+  if(!personas.length)return {ok:true,actualizados:0,sinCambios:0,noEncontrados:0,errores:0,cuentas:0}
   const cuentas=await getTokensContactos()
   let actualizados=0,sinCambios=0,noEncontrados=0,errores=0
   for(const cuenta of cuentas){
