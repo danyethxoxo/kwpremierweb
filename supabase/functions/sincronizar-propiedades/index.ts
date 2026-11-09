@@ -257,7 +257,9 @@ async function kwJson(url: string): Promise<KwRespuesta> {
 
   for(let intento=0;intento<3;intento++){
     const destino=new URL(parsed)
-    if(intento)destino.searchParams.set('comprobacion',String(Date.now())+'-'+intento)
+    // La CDN puede devolver un 200 con un catálogo antiguo aunque se pida no-cache.
+    // Cada lectura, incluida la primera, necesita una URL nueva.
+    destino.searchParams.set('comprobacion',crypto.randomUUID()+'-'+intento)
     let response:Response
     try {
       response=await fetch(destino, {
