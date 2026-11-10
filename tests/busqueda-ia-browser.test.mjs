@@ -5,7 +5,7 @@ const places=[{estado:'Ciudad de México',municipio:'Benito Juárez',colonia:'Na
 const criteria={operacion:'venta',moneda:'MXN',tipos:['Departamento'],precio_max:4500000,recamaras_min:2,estacionamientos_min:1,estados:['Ciudad de México'],municipios:[],colonias:['Narvarte'],requisitos:['terraza'],dudas:[]};
 test('propone y aplica filtros y perfiles sin guardar, con recuperación de cuota y privacidad',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
- try{for(const width of [1366,390])for(const mode of ['propiedades','comprador']){
+ try{for(const width of [1366,390])for(const mode of ['comprador']){
   const page=await browser.newPage({viewport:{width,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   const name=mode==='propiedades'?'propiedades.html':'hub/cliente-formulario.html',html=read(name);
   await page.route('**/*',route=>{

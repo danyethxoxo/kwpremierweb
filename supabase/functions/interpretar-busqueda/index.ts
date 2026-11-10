@@ -1,11 +1,12 @@
 import {secureServe,consumeLimit} from '../_shared/security.ts';
-import {prepararTexto,validarCriterios,schema,instruccion} from './core.ts';
+import {prepararTexto,validarCriterios,schema,instruccion,schemaBuscador,instruccionBuscador} from './core.ts';
 const key=Deno.env.get('GEMINI_API_KEY');
 const model=Deno.env.get('GEMINI_SEARCH_MODEL')||'gemini-3.5-flash-lite';
 const webhook=Deno.env.get('WEBHOOK_SECRET');
 secureServe({name:'interpretar-busqueda',auth:req=>webhook&&req.headers.get('x-webhook-secret')===webhook?'service':'user',userLimit:5,ipLimit:30,maxBytes:8192},async(req,ctx)=>{
  const body=await req.json().catch(()=>null);
  if(!body||typeof body!=='object'||Array.isArray(body))return Response.json({error:'Describe la propiedad que buscas.'},{status:400});
+ const integrado=body.contexto==='buscador';
  const comprobar=body.comprobar===true;
  if(comprobar&&(!webhook||req.headers.get('x-webhook-secret')!==webhook))return Response.json({error:'No autorizado'},{status:403});
  if(!key)return Response.json({error:'La búsqueda asistida aún no está configurada. Usa los filtros habituales.'},{status:422});
@@ -15,8 +16,8 @@ secureServe({name:'interpretar-busqueda',auth:req=>webhook&&req.headers.get('x-w
  try{
   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-   body:JSON.stringify({systemInstruction:{parts:[{text:instruccion}]},contents:[{role:'user',parts:[{text:texto}]}],
-    generationConfig:{temperature:0,maxOutputTokens:1400,responseMimeType:'application/json',responseSchema:schema}}),
+   body:JSON.stringify({systemInstruction:{parts:[{text:integrado?instruccionBuscador:instruccion}]},contents:[{role:'user',parts:[{text:texto}]}],
+    generationConfig:{temperature:0,maxOutputTokens:1400,responseMimeType:'application/json',responseSchema:integrado?schemaBuscador:schema}}),
    signal:AbortSignal.timeout(20000)});
   if(response.status===429)return Response.json({error:'Se agotó la cuota disponible de IA. Puedes seguir usando los filtros normales.'},{status:429});
   if(!response.ok){if(comprobar){return Response.json({ok:false,modelo:model,estado:response.status});}console.error('Proveedor de búsqueda no disponible',response.status);return Response.json({error:'No se pudo interpretar la búsqueda. Usa los filtros normales o intenta más tarde.'},{status:422});}
