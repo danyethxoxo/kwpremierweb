@@ -17,9 +17,9 @@ test('el buscador original aplica la frase, filtros, evidencia y limpieza en esc
    window.qaCalls=[];window.qaRPC=[];window.kwSitioAsesor={personalizar:u=>u,leer:()=>null};
    function query(){const q=new Proxy({}, {get(t,k){if(k==='then')return(ok,bad)=>Promise.resolve({data:[],error:null}).then(ok,bad);return()=>q;}});return q;}
    window.kwSupabase={functions:{invoke:async(n,args)=>{qaCalls.push({n,args});return{data:{ok:true,criterios:{tipos:['Departamento'],estados:[],municipios:[],colonias:[],requisitos:['remodelar'],conceptos:[['remodelar','renovar']],dudas:[],precio_max:5000000}},error:null};}},from:query,
-    auth:{getUser:async()=>({data:{user:null}})},rpc:(n,args)=>{qaRPC.push({n,args});const data=n==='propiedades_inventario_pagina'?{data:args.p_filtros.cerca_hospital_m?[{id:'qa',titulo:'Departamento de prueba',precio:3000000,moneda:'MXN',operacion:'venta',tipo:'Departamento',imagenes:[],evidencia_busqueda:{tipo:'coordenadas',nombre:'Hospital prueba',distancia_m:400}}]:[],total:args.p_filtros.cerca_hospital_m?1:0}:[];const p=Promise.resolve({data,error:null});p.abortSignal=()=>p;return p;}};
+    auth:{getUser:async()=>({data:{user:null}})},rpc:(n,args)=>{qaRPC.push({n,args});const data=n==='propiedades_inventario_pagina'?{data:args.p_filtros.cerca_hospital_m?[{id:'qa',titulo:'Departamento de prueba',precio:3000000,moneda:'MXN',operacion:'venta',tipo:'Departamento',imagenes:[],evidencia_busqueda:{tipo:'coordenadas',nombre:'Hospital prueba',distancia_m:400}}]:[],total:args.p_filtros.cerca_hospital_m?1:0}:n==='propiedades_inventario_catalogo'&&args.p_campo==='asesor_nombre'?[{asesor_nombre:'Adriana García López'},{asesor_nombre:'Adriana Pérez'},{asesor_nombre:'Rodrigo Martínez'}]:[];const p=Promise.resolve({data,error:null});p.abortSignal=()=>p;return p;}};
   });
-  for(const file of ['assets/js/kw-ui.js','assets/js/kw-busqueda-ia.js','assets/js/kw-buscador-inteligente.js'])await page.addScriptTag({content:read(file)});
+  for(const file of ['assets/js/kw-ui.js','assets/js/kw-busqueda-ia.js','assets/js/kw-busqueda-tolerante.js','assets/js/kw-buscador-inteligente.js'])await page.addScriptTag({content:read(file)});
   const main=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).find(s=>s.includes('var sb = window.kwSupabase'));
   await page.addScriptTag({content:main});await page.addScriptTag({content:read('assets/js/drawer.js')});
   await page.addScriptTag({content:"document.currentScript.dataset.filtros='#filtros';document.currentScript.dataset.titulo='Propiedades';\n"+read('assets/js/kw-lateral.js')});await page.addScriptTag({content:read('assets/js/kw-movil.js')});
@@ -43,6 +43,13 @@ test('el buscador original aplica la frase, filtros, evidencia y limpieza en esc
   assert.equal(await page.locator('#f-buscar').inputValue(),'Departamento para remodelar');assert.equal(await page.locator('#f-max').inputValue(),'4,000,000');
   await page.evaluate(()=>limpiarFiltros());await page.waitForFunction(()=>qaRPC.filter(r=>r.n==='propiedades_inventario_pagina').at(-1).args.p_filtros.texto==='');
   assert.equal(await page.locator('#f-buscar').inputValue(),'');assert.equal(await page.locator('#busqueda-interpretacion').isVisible(),false);
+  for(const [texto,expected] of [['cass',{tipo:['Casa']}],['casas de rodrigo',{tipo:['Casa'],asesor:['Rodrigo Martínez']}],['todas las propiedades de adriana',{asesor:['Adriana García López','Adriana Pérez']}],['todas las propiedades de adriana garcia',{asesor:['Adriana García López']}]]){
+   const before=await page.evaluate(()=>qaCalls.length);
+   await page.evaluate(async texto=>{document.getElementById('f-buscar').value=texto;await aplicarFiltros();},texto);
+   const f=await page.evaluate(()=>qaRPC.filter(r=>r.n==='propiedades_inventario_pagina').at(-1).args.p_filtros);
+   for(const [k,v] of Object.entries(expected))assert.deepEqual(f[k],v,texto+' '+k);
+   assert.equal(await page.evaluate(()=>qaCalls.length),before,'consultas sencillas sin espera de IA');assert.equal(await page.locator('#busqueda-interpretacion').isVisible(),false);
+  }
   assert.deepEqual(errors,[]);await page.close();
  }}finally{await browser.close();}
 });

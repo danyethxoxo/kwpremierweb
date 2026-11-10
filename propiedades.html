@@ -610,7 +610,8 @@
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-busqueda-ia.css?v=20261110ia1">
 <script src="/assets/js/kw-busqueda-ia.js?v=20261110ia1"></script>
-<script src="/assets/js/kw-buscador-inteligente.js?v=20261110rapido"></script>
+<script src="/assets/js/kw-busqueda-tolerante.js?v=20261110asesores"></script>
+<script src="/assets/js/kw-buscador-inteligente.js?v=20261110asesores"></script>
 </head>
 <body>
 
@@ -1900,6 +1901,7 @@
     if (respuesta.error) throw respuesta.error;
     if (revision !== versionesCatalogoRelacionado[id] || version !== catalogoServidorVersion) return;
     var lote = respuesta.data || [];
+    if(window.kwBuscadorInteligente&&!contexto.mc&&!contexto.estado&&!contexto.municipio)window.kwBuscadorInteligente.cacheCatalogo(sb,campo,lote);
     lote.forEach(function (fila) {
       if (!fila[campo]) return;
       if ((id === 'f-estado' || id === 'f-colonia') && normalizarTexto(fila.estado).trim() === 'antioquia') return;

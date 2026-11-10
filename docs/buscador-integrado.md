@@ -13,3 +13,14 @@ Por defecto, «cerca» admite un hospital a hasta 1,500 metros en línea recta s
 Los puntos se importaron en `propiedades_puntos_interes` mediante JSON de cliente y `INSERT ... ON CONFLICT`; solo el servicio administra el catálogo. Los usuarios autenticados tienen lectura. Los anuncios nuevos consultan el mismo catálogo automáticamente; el catálogo de hospitales requiere una nueva importación cuando haya una fuente actualizada.
 
 Validación: pruebas de consultas con Postgres local, límites y recuperación de cuota, interpretación del ejemplo, conservación de filtros, búsqueda real con usuario autorizado y pruebas de navegador en 1366 y 390 píxeles. El componente del perfil comprador conserva su flujo independiente de completar campos.
+
+
+## Tolerancia de escritura y asesores
+
+El mismo campo admite dedazos frecuentes, plurales y nombres de asesores. Las consultas sencillas como «cass», «casas de Rodrigo», «todas las propiedades de Adriana» y «todas las propiedades de Adriana García» se resuelven localmente sin consumir IA. Las frases con presupuestos y condiciones adicionales conservan la interpretación estructurada.
+
+Los asesores se comprueban contra el catálogo real del inventario. Un nombre solo incluye todas las coincidencias de esa palabra; cada apellido adicional exige también esa palabra en el mismo asesor. Se ignoran acentos y mayúsculas. Los nombres resueltos se pasan al filtro de asesor existente, por lo que la lista, la paginación y el mapa conservan los mismos resultados y permisos.
+
+La corrección usa distancia de edición con transposiciones, limitada a uno o dos cambios según la longitud. Prioriza coincidencias exactas y no elige al azar entre correcciones empatadas. No se garantiza corregir cualquier error: si el nombre es ambiguo o no existe, se pide precisar y no se amplía a todas las propiedades. Se protegen las cifras, identificadores alfanuméricos, negaciones y palabras válidas cercanas a nombres de tipos.
+
+Los catálogos de asesores y lugares se reutilizan durante cinco minutos. Las cargas globales de los filtros normales precargan este mismo caché; las cargas acotadas por estado, municipio o Market Center no lo sobrescriben. No se cambia el texto escrito ni se agregan resúmenes visibles.

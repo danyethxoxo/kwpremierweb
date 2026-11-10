@@ -11,7 +11,7 @@ secureServe({name:'interpretar-busqueda',auth:req=>webhook&&req.headers.get('x-w
  if(comprobar&&(!webhook||req.headers.get('x-webhook-secret')!==webhook))return Response.json({error:'No autorizado'},{status:403});
  if(!key)return Response.json({error:'La búsqueda asistida aún no está configurada. Usa los filtros habituales.'},{status:422});
  let texto:string;
- try{texto=prepararTexto(comprobar?'Busco departamento en Narvarte, Ciudad de México, hasta 4.5 millones de pesos, 2 recámaras y 1 estacionamiento.':body.texto);}catch(error){return Response.json({error:(error as Error).message},{status:400});}
+ try{texto=prepararTexto(comprobar?(integrado?'Busco cass de Adriana Garcia hasta 4 millones de pesos, con terraza.':'Busco departamento en Narvarte, Ciudad de México, hasta 4.5 millones de pesos, 2 recámaras y 1 estacionamiento.'):body.texto);}catch(error){return Response.json({error:(error as Error).message},{status:400});}
  if(ctx.userId)await consumeLimit('user:busqueda-ia-hora',ctx.userId,30,3600);
  try{
   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
