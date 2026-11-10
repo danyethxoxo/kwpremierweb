@@ -380,7 +380,10 @@ function kwCambioListado(actual: KwRegistro, anterior: KwRegistro | null): boole
     'Property_Operation_ID', 'Property_Type_ID', 'Photo_URL', 'Total_Bed',
     'Total_Bath', 'Parking_Total', 'Living_Area', 'Lot_Size_Area',
     'Property_Status_Updated_Date', 'Latitude', 'Longitude', 'State',
-    'City', 'Street', 'Market_Center_ID',
+    'City', 'Street', 'Market_Center_ID', 'Country', 'Agent_ID',
+    'Currency', 'Building_Area', 'Construction_Area', 'Colony', 'Street_Number', 'Postal_Code',
+    'Geo_Estado', 'Geo_Municipio', 'Geo_Colonia', 'Geo_Calle', 'Geo_Num_Calle',
+    'Geo_Codigo_Postal', 'Geo_Direccion_Completa', 'Geo_Pais', 'Property_Command_ID',
   ]
   return campos.some((campo) => String(actual[campo] ?? '') !== String(anterior[campo] ?? ''))
 }
@@ -408,8 +411,19 @@ function priorizarDetallesKw<T extends {listado:KwRegistro;existente:KwRegistro|
   return seleccion
 }
 
+function kwRequiereRepararSuperficie(listado: KwRegistro, existente: KwRegistro | undefined): boolean {
+  if (!existente) return false
+  const campos = [
+    ['m2_construccion', kwNumero(listado.Living_Area ?? listado.Building_Area ?? listado.Construction_Area)],
+    ['m2_terreno', kwNumero(listado.Lot_Size_Area)],
+  ] as const
+  return campos.some(([campo, valor]) =>
+    Object.prototype.hasOwnProperty.call(existente, campo) && valor !== null &&
+    kwNumero(existente[campo]) !== valor)
+}
+
 function listadoKwRequiereGuardar(listado:KwRegistro,existente:KwRegistro|undefined,nombres:Map<string,string>,ids:Map<string,string>):boolean {
-  if(!existente || existente.estatus!==kwEstatus(listado.Property_Status_ID) || kwCambioListado(listado,kwListadoAnterior(existente.datos_origen)))return true
+  if(!existente || existente.estatus!==kwEstatus(listado.Property_Status_ID) || kwCambioListado(listado,kwListadoAnterior(existente.datos_origen)) || kwRequiereRepararSuperficie(listado,existente))return true
   const agente=kwTexto(listado.Agent_ID)||''
   return Boolean((nombres.get(agente) && nombres.get(agente)!==kwTexto(existente.asesor_nombre)) ||
     (ids.get(agente) && ids.get(agente)!==kwTexto(existente.asesor_kw_id)))
@@ -521,7 +535,8 @@ type Fila = Record<string, unknown> & { asesor_email?: string | null }
 function normalizarDetallePendiente(listado: KwRegistro, existente: KwRegistro | undefined, centros: Map<string, string>): Fila | null {
   const detalle = (existente?.datos_origen as KwRegistro)?.detalle as KwRespuesta || null
   const fila = normalizarKwMexico(listado, detalle, centros)
-  if (fila) fila.datos_origen = { listado, detalle, detalle_pendiente: true }
+  if (fila) fila.datos_origen = { listado, detalle,
+    detalle_pendiente: !kwTieneDetalle(existente?.datos_origen) || kwCambioListado(listado, kwListadoAnterior(existente?.datos_origen)) }
   return fila
 }
 
@@ -531,6 +546,10 @@ async function sincronizarKwMexico(
 ): Promise<Response> {
   try {
     const catalogo = await traerCatalogoKwMexico()
+    const idsCatalogo = new Set(catalogo.propiedades.map(p => kwTexto(p.ID)).filter(Boolean))
+    if (!catalogo.completa || idsCatalogo.size !== catalogo.total) {
+      throw new Error('Lectura de inventario incompleta o con IDs duplicados; se conserva la lectura anterior.')
+    }
     const candidatos = catalogo.propiedades.filter((propiedad) =>
       KWMEXICO_ALL_MARKET_CENTERS ||
       String(propiedad.Market_Center_ID ?? '') === KWMEXICO_MARKET_CENTER_ID,
@@ -549,7 +568,7 @@ async function sincronizarKwMexico(
     for (let desde = 0; ; desde += 1000) {
       const paginas = await enParalelo([0, 250, 500, 750], 4, async (offset) =>
         await admin.from('propiedades')
-          .select('fuente_id, estatus, asesor_nombre, asesor_kw_id, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
+          .select('fuente_id, estatus, asesor_nombre, asesor_kw_id, m2_construccion, m2_terreno, listado:datos_origen->listado, detalle_pendiente:datos_origen->detalle_pendiente, detalle_ok:datos_origen->detalle->success')
           .eq('fuente', 'kwmexico').order('id').range(desde + offset, desde + offset + 249)
       )
       const respuesta = {
@@ -569,6 +588,8 @@ async function sincronizarKwMexico(
           estatus: fila.estatus,
           asesor_nombre: fila.asesor_nombre,
           asesor_kw_id: fila.asesor_kw_id,
+          m2_construccion: fila.m2_construccion,
+          m2_terreno: fila.m2_terreno,
           datos_origen: {
             listado: fila.listado,
             detalle_pendiente: fila.detalle_pendiente,
@@ -586,7 +607,7 @@ async function sincronizarKwMexico(
       const existente = existentesPorId.get(id)
       const datosAnteriores = existente?.datos_origen
       const anterior = kwListadoAnterior(datosAnteriores)
-      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || !kwTexto(existente.asesor_nombre) || kwCambioListado(listado, anterior) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
+      const necesitaDetalle = !existente || !kwTieneDetalle(datosAnteriores) || !kwTexto(existente.asesor_nombre) || kwCambioListado(listado, anterior) || kwRequiereRepararSuperficie(listado, existente) || existente.estatus !== kwEstatus(listado.Property_Status_ID)
       return necesitaDetalle ? [{ listado, existente, tieneDetalle: kwTieneDetalle(datosAnteriores) }] : []
     })
     // Solo cargar fotografías y detalles completos de los registros que cambian.
@@ -688,6 +709,9 @@ async function sincronizarKwMexico(
       propiedades_afectadas: guardadas,
     }, { onConflict: 'fuente' })
 
+    console.info('Inventario KW México completado', JSON.stringify({ corrida, catalogo_total: catalogo.total,
+      catalogo_unicos: idsCatalogo.size, propiedades_guardadas: guardadas, marcadas_suspendidas: suspendidas,
+      detalles_con_error: detalleFallido, detalles_pendientes: detallesPendientes }))
     return respond({
       ok: true,
       modo: 'kwmexico',

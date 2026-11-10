@@ -36,8 +36,16 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
     const sync = await admin.from('propiedades_sync').select('ultimo_cursor,ultimo_error').eq('fuente', 'kwmexico').maybeSingle()
     if (sync.error) throw sync.error
     const actualizada = !sync.data?.ultimo_error && sync.data?.ultimo_cursor && Date.parse(sync.data.ultimo_cursor) >= corte
-    if (!actualizada || soloSincronizar) {
+    // Una lectura completa del catálogo no implica que la galería de Premier ya esté completa.
+    const pendientesPremier = actualizada && !soloSincronizar
+      ? await admin.from('propiedades').select('fuente_id')
+        .eq('fuente','kwmexico').eq('estatus','publicada').eq('market_center','KW PREMIER')
+        .eq('datos_origen->>detalle_pendiente','true').limit(1)
+      : null
+    if (pendientesPremier?.error) throw pendientesPremier.error
+    if (!actualizada || soloSincronizar || pendientesPremier?.data?.length) {
       const lectura = await llamar('sincronizar-propiedades')
+      console.info('Lectura automática de inventario', JSON.stringify({ corte: new Date(corte).toISOString(), solo_sincronizar: soloSincronizar, ...lectura }))
       if (lectura.corrida_completa !== true) {
         await admin.from('propiedades_sync').update({ ultimo_error: 'Lectura de inventario incompleta' }).eq('fuente', 'kwmexico')
         throw new Error('Lectura de inventario incompleta')
@@ -49,6 +57,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
     if (envio.error) throw envio.error
     if (envio.data?.enviado_at && Date.parse(envio.data.enviado_at) >= corte) return Response.json({ ok: true, omitido: true })
     const reporte = await llamar('enviar-reporte-propiedades')
+    console.info('Reporte automático de inventario', JSON.stringify({ corte: new Date(corte).toISOString(), ...reporte }))
     return Response.json({ ok: true, reporte })
   } catch (error) {
     console.error('Inventario diario pendiente de reintento', error)
