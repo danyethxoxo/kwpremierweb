@@ -608,6 +608,8 @@
   .filtro-etiqueta button { border: 0; background: transparent; color: inherit; font-size: 17px; padding: 0 2px; cursor: pointer; }
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-busqueda-ia.css?v=20261110ia1">
+<script src="/assets/js/kw-busqueda-ia.js?v=20261110ia1"></script>
 </head>
 <body>
 
@@ -638,6 +640,7 @@
           <input type="text" id="f-buscar" aria-label="Buscar" placeholder="Buscar" autocomplete="off" />
         </label>
 
+        <div data-kw-busqueda-ia="propiedades"></div>
         <div class="filtros-sidebar" id="prop-filtros-contenido">
           <section class="filtro-seccion">
             <div class="filtro">
@@ -724,6 +727,7 @@
 
           <section class="filtro-seccion">
             <h3>Características</h3>
+            <div class="filtro"><label for="f-moneda">Divisa</label><select id="f-moneda"><option value="">Todas</option><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
             <div class="filtro filtro-rango">
               <label>Precio</label>
               <div class="rango">
@@ -1828,6 +1832,7 @@
       estacionamientos: num('f-estacionamientos') || null,
       m2Min: num('f-m2-min') || null,
       m2Max: num('f-m2-max') || null,
+      moneda: val('f-moneda') || null,
       orden: val('f-orden') || 'reciente'
     };
   }
@@ -2259,6 +2264,9 @@
   };
 
   limpiarFiltros = function () {
+    document.getElementById('f-moneda').value='';
+    document.getElementById('f-moneda').dispatchEvent(new Event('change',{bubbles:true}));
+    if(window.kwBusquedaIA)window.kwBusquedaIA.reset('propiedades');
     if (window.kwPropiedadesMapa) window.kwPropiedadesMapa.quitarZona(false);
     seleccionesMultiples={};idsMultiples.forEach(pintarEtiquetasFiltro);
     document.getElementById('f-recamaras-max').value = '';
@@ -2449,6 +2457,40 @@
     cajaFiltros.addEventListener('change', repintarDesdeFiltro);
     cajaFiltros.addEventListener('input', repintarDesdeFiltro);
   }
+
+
+  if (window.kwBusquedaIA) window.kwBusquedaIA.registrar('propiedades', {
+    preparar: async function (criterios) {
+      var respuesta = await sb.rpc('propiedades_inventario_catalogo',{p_campo:'colonia'});
+      if (respuesta.error) throw new Error('No pudimos comprobar las ubicaciones. Usa los filtros normales.');
+      return window.kwBusquedaIA.resolver(criterios,respuesta.data || [],false);
+    },
+    aplicar: async function (c) {
+      var idsIA = ['f-operacion','f-tipo','f-estado','f-municipio','f-colonia'];
+      actualizandoRelaciones = true; cambiandoMultiple = true;
+      try {
+        idsIA.forEach(function(id){ seleccionesMultiples[id]=[]; ponerFiltroRelacionado(id,''); pintarEtiquetasFiltro(id); });
+        var grupos = {'f-operacion':c.operacion?[c.operacion]:[], 'f-tipo':c.tipos, 'f-estado':c.estados, 'f-municipio':c.municipios, 'f-colonia':c.colonias};
+        Object.keys(grupos).forEach(function(id){
+          seleccionesMultiples[id]=grupos[id].map(function(v){return {valor:v,texto:v==='venta'?'Venta':v==='renta'?'Renta':v};});
+          pintarEtiquetasFiltro(id);
+        });
+        var valores={'f-min':c.precio_min,'f-max':c.precio_max,'f-recamaras':c.recamaras_min,'f-recamaras-max':null,'f-banos':c.banos_min,'f-estacionamientos':c.estacionamientos_min,'f-m2-min':c.superficie_min,'f-m2-max':null};
+        Object.keys(valores).forEach(function(id){
+          var campo=document.getElementById(id),v=valores[id];
+          campo.value=v==null?'':id==='f-min'||id==='f-max'?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v):v;
+          campo.dispatchEvent(new Event('input',{bubbles:true}));
+        });
+        document.getElementById('f-moneda').value=c.moneda||'';
+        document.getElementById('f-moneda').dispatchEvent(new Event('change',{bubbles:true}));
+        document.getElementById('f-buscar').value=c.requisitos.join(' ');
+      } finally {actualizandoRelaciones=false;cambiandoMultiple=false;}
+      if(window.kwPropiedadesMapa)window.kwPropiedadesMapa.quitarZona(false);
+      await Promise.all(['f-municipio','f-colonia'].map(refrescarRelacionado));
+      window.kwUI.selects();
+      await aplicarFiltros();
+    }
+  });
 
   if (document.documentElement.classList.contains('kw-auth-ok')) cargar();
   else window.addEventListener('kw-auth-ready', cargar, { once: true });

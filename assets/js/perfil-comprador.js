@@ -600,6 +600,35 @@
       if (!perfil.error) sitioAsesor = perfil.data.sitio_web || '';
     } catch (e) { /* Sin sitio personal se conserva el enlace general. */ }
   }
+
+  if (window.kwBusquedaIA) window.kwBusquedaIA.registrar('comprador', {
+    preparar: async function(c) {
+      if(ocupado)throw new Error('Espera a que termine el guardado.');
+      if(!ubicaciones.length)await cargarUbicaciones();
+      if(!ubicaciones.length)throw new Error('No pudimos comprobar las ubicaciones. Intenta de nuevo.');
+      if(c.superficie_min>10000000)throw new Error('Revisa la superficie indicada.');
+      if(c.requisitos.some(function(t){return t.length>100;}))throw new Error('Describe las características en frases más cortas.');
+      return window.kwBusquedaIA.resolver(c,ubicaciones,true);
+    },
+    aplicar: async function(c) {
+      if(ocupado)throw new Error('Espera a que termine el guardado.');
+      var nuevasEtiquetas=Array.from(new Set(etiquetas.concat(c.requisitos)));
+      if(nuevasEtiquetas.join('\n').length>2000)throw new Error('Las características superan 2,000 caracteres. Revisa las etiquetas.');
+      ['operacion','moneda'].forEach(function(k){if(c[k]){form.elements[k].value=c[k];form.elements[k].dispatchEvent(new Event('change',{bubbles:true}));}});
+      ['precio_min','precio_max','recamaras_min','banos_min','estacionamientos_min','superficie_min'].forEach(function(k){
+        if(c[k]!=null){form.elements[k].value=k.indexOf('precio_')===0?formatearPresupuesto(c[k]):c[k];form.elements[k].dispatchEvent(new Event('input',{bubbles:true}));}
+      });
+      if(c.tipos.length)form.querySelectorAll('input[name=tipos]').forEach(function(input){input.checked=c.tipos.includes(input.value);});
+      if(c.estados.length){
+        form.elements.estado.value=c.estados[0];
+        municipiosElegidos=c.municipios.slice();
+        coloniasElegidas=c.lugares.map(function(p){return {estado:p.estado,municipio:p.municipio,colonia:p.colonia};});
+        refrescarUbicacion();
+      }
+      etiquetas=nuevasEtiquetas;pintarEtiquetas();actualizarPrecios();
+    }
+  });
+
   function iniciar() { vista(esFormulario); if (!esFormulario || clienteEditar) cargar(false); cargarSitio(); if (esFormulario) cargarUbicaciones(); }
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
