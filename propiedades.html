@@ -610,7 +610,7 @@
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-busqueda-ia.css?v=20261110ia1">
 <script src="/assets/js/kw-busqueda-ia.js?v=20261110ia1"></script>
-<script src="/assets/js/kw-buscador-inteligente.js?v=20261110integrado"></script>
+<script src="/assets/js/kw-buscador-inteligente.js?v=20261110rapido"></script>
 </head>
 <body>
 
@@ -2175,15 +2175,20 @@
   var revisionFiltrosAplicados = 0;
   aplicarFiltros = async function () {
     var recibidos = leerFiltrosServidor(), revision = ++revisionFiltrosAplicados;
+    var origenCarga='interpretacion:'+revision;
+    mostrarCargadorPropiedades(origenCarga);
+    window.clearTimeout(temporizadorPaginaServidor);
+    if(controladorCargaServidor)controladorCargaServidor.abort();
+    ++solicitudPaginaServidor;
+    try {
     if (window.kwPropiedadesMapa) window.kwPropiedadesMapa.cancelarInicio();
     var estadoBusqueda=document.getElementById('busqueda-interpretacion');
-    estadoBusqueda.textContent=recibidos.texto?'Buscando…':'';estadoBusqueda.hidden=!recibidos.texto;
+    estadoBusqueda.textContent='';estadoBusqueda.hidden=true;
     if(window.kwBuscadorInteligente){
       var interpretacion=await window.kwBuscadorInteligente.buscar(recibidos,sb);
       if(revision!==revisionFiltrosAplicados)return;
       recibidos=interpretacion.filtros;
       estadoBusqueda.textContent=interpretacion.resumen;estadoBusqueda.hidden=!interpretacion.resumen;
-      if(interpretacion.hospital){var fuente=document.createElement('a');fuente.href='https://www.datos.cdmx.gob.mx/dataset/hospitales-publicos-y-privados-en-operacion-de-la-zmvm';fuente.target='_blank';fuente.rel='noopener noreferrer';fuente.textContent=' · Catálogo de referencia: Datos CDMX, ZMVM 2020';estadoBusqueda.append(fuente);}
     }
     function claveUbicacion(v){return (Array.isArray(v)?v:v?[v]:[]).filter(Boolean).sort().join('|');}
     var ubicacionCambio = ['texto','estado','municipio','colonia'].some(function(c){return claveUbicacion(recibidos[c])!==claveUbicacion((filtrosAplicados||{})[c]);});
@@ -2195,7 +2200,8 @@
     filtrosAplicados = recibidos;
     marcarFiltrosEscondidos();
     window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));
-    programarCargaServidor();
+    await cargarPaginaServidor(1);
+    } finally {ocultarCargadorPropiedades(origenCarga);}
   };
 
   function aplicarZonaMapa() {

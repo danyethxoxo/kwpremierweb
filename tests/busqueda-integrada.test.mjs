@@ -25,7 +25,10 @@ test('un solo buscador conserva filtros, interpreta ejemplo sin cuota, cachea y 
  let calls=0;const criteria={tipos:['Departamento'],estados:[],municipios:[],colonias:[],requisitos:['remodelar'],conceptos:[['remodelar','renovar']],dudas:[],precio_max:5000000};
  const sb={functions:{invoke:async()=>{calls++;return {data:{ok:true,criterios:criteria}};}}};
  let r=await window.kwBuscadorInteligente.buscar({texto:'Depa cerca de hospital',maximo:4000000},sb);
- assert.equal(calls,0);assert.equal(r.filtros.cerca_hospital_m,1500);assert.equal(r.filtros.maximo,4000000);assert.equal(r.filtros.texto,'');
+ assert.equal(calls,0);assert.equal(r.filtros.cerca_hospital_m,1500);assert.equal(r.filtros.maximo,4000000);assert.equal(r.filtros.texto,'');assert.equal(r.resumen,'');
+ for(const texto of ['Narvarte Poniente','Gustavo Solares Campos','117 Gutenberg','terraza']){const literal=await window.kwBuscadorInteligente.buscar({texto},sb);assert.equal(literal.filtros.texto,texto);}
+ assert.equal(calls,0,'las búsquedas literales no esperan a la IA');
+ const simple=await window.kwBuscadorInteligente.buscar({texto:'depa en renta'},sb);assert.equal(simple.filtros.operacion[0],'renta');assert.equal(calls,0);
  r=await window.kwBuscadorInteligente.buscar({texto:'Departamento para remodelar',maximo:4000000},sb);assert.equal(r.filtros.maximo,4000000);assert.equal(r.filtros.conceptos[0][1],'renovar');
  await window.kwBuscadorInteligente.buscar({texto:'Departamento para remodelar'},sb);assert.equal(calls,1);
  r=await window.kwBuscadorInteligente.buscar({texto:'Depa cerca de hospital',tipo:['Casa']},sb);assert.equal(r.filtros.sin_coincidencias,true);

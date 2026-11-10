@@ -31,7 +31,13 @@ test('el buscador original aplica la frase, filtros, evidencia y limpieza en esc
   await page.locator('.prop-cercania').waitFor();assert.match(await page.locator('.prop-cercania').innerText(),/400 m en línea recta/);
   assert.equal(await page.locator('[data-kw-busqueda-ia]').count(),0);assert.equal(await page.locator('#f-buscar').count(),1);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'sin desbordamiento');
+  assert.equal(await page.locator('#busqueda-interpretacion').isVisible(),false);
+  await page.waitForFunction(()=>!document.getElementById('propiedades-cargando'));
   await page.screenshot({path:path.join(os.tmpdir(),`kw-buscador-integrado-${width}.png`)});
+  await page.evaluate(()=>{const original=kwSupabase.functions.invoke;kwSupabase.functions.invoke=(...args)=>new Promise(resolve=>{window.qaTerminar=()=>original(...args).then(resolve);});document.getElementById('f-buscar').value='Casa en venta con terraza';void aplicarFiltros();});
+  await page.locator('#propiedades-cargando .kw-loader').waitFor();assert.equal(await page.locator('#propiedades-cargando').innerText(),'');assert.equal(await page.locator('#busqueda-interpretacion').isVisible(),false);
+  await page.evaluate(()=>{qaTerminar();});await page.waitForFunction(()=>!document.getElementById('propiedades-cargando'));
+  await page.evaluate(()=>{kwSupabase.functions.invoke=async()=>({data:{ok:true,criterios:{tipos:['Departamento'],estados:[],municipios:[],colonias:[],requisitos:['remodelar'],conceptos:[['remodelar','renovar']],dudas:[],precio_max:5000000}}});});
   await page.evaluate(()=>{document.getElementById('f-buscar').value='Departamento para remodelar';aplicarFiltros();});
   await page.waitForFunction(()=>qaRPC.some(r=>r.n==='propiedades_inventario_pagina'&&r.args.p_filtros.conceptos?.[0]?.includes('renovar')));
   assert.equal(await page.locator('#f-buscar').inputValue(),'Departamento para remodelar');assert.equal(await page.locator('#f-max').inputValue(),'4,000,000');

@@ -1,6 +1,12 @@
 (function(global){
  'use strict';
- var cache=new Map();
+ var cache=new Map(),catalogos=new WeakMap();
+ async function catalogo(sb){
+  var anterior=catalogos.get(sb);if(anterior&&Date.now()-anterior.fecha<300000)return anterior.promesa;
+  var promesa=Promise.resolve(sb.rpc('propiedades_inventario_catalogo',{p_campo:'colonia'})).then(function(r){if(r.error)throw Error('No pudimos comprobar la ubicación. Se aplicó la búsqueda por texto.');return r.data||[];});
+  var entrada={fecha:Date.now(),promesa:promesa};catalogos.set(sb,entrada);
+  try{return await promesa;}catch(e){if(catalogos.get(sb)===entrada)catalogos.delete(sb);throw e;}
+ }
  function normal(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
  function lista(v){return Array.isArray(v)?v:v?[v]:[];}
  function unir(f,key,values){
@@ -19,13 +25,16 @@
   return f;
  }
  function basico(texto){
-  var n=normal(texto);if(/^(depa|depto\.?|departamento|casa)$/.test(n))return {tipos:[n==='casa'?'Casa':'Departamento'],estados:[],municipios:[],colonias:[],requisitos:[],dudas:[],conceptos:[]};var m=n.match(/^(depa|depto\.?|departamento|casa)\s+(?:cerca\s+(?:de|del|de un|de una)|proximo\s+a(?: un| una)?|junto a(?: un| una)?)\s+(?:hospital|hospitales|clinica|clinicas)$/);
+  var m=normal(texto).match(/^(depa|depto\.?|departamento|casa|terreno|oficina|bodega)(?:\s+(?:en\s+)?(venta|renta))?(?:\s+((?:cerca\s+(?:de|del|de un|de una)|proximo\s+a(?: un| una)?|junto a(?: un| una)?)\s+(?:hospital|hospitales|clinica|clinicas)))?$/);
   if(!m)return null;
-  return {tipos:[m[1]==='casa'?'Casa':'Departamento'],estados:[],municipios:[],colonias:[],requisitos:[],dudas:[],conceptos:[],cerca_hospital_m:1500};
+  var tipos={casa:'Casa',terreno:'Terreno',oficina:'Oficina',bodega:'Bodega'},c={tipos:[tipos[m[1]]||'Departamento'],estados:[],municipios:[],colonias:[],requisitos:[],dudas:[],conceptos:[]};
+  if(m[2])c.operacion=m[2];if(m[3])c.cerca_hospital_m=1500;return c;
  }
  async function interpretar(texto,sb){
   var local=basico(texto);if(local)return local;
   if(texto.length<8||/^\d+$/.test(texto))return null;
+  // Names, addresses and literal amenities already use the indexed full-text search.
+  if(texto.trim().split(/\s+/).length<=4&&!/\b(depa|depto|departamento|casa|terreno|oficina|bodega|renta|venta|comprar|rentar|cerca|proximo|junto|con|sin|hasta|desde|menos|mas|millones|recamaras|banos)\b/.test(normal(texto)))return null;
   var key=normal(texto);if(cache.has(key))return cache.get(key);
   var pending=(async function(){
    var safe=texto.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[correo omitido]').replace(/(?:\+?\d[\s().-]*){10,16}/g,'[teléfono omitido]');
@@ -33,9 +42,7 @@
    if(r.error||!r.data||!r.data.ok)throw Error('No pudimos interpretar la frase. Se aplicó la búsqueda por texto y tus filtros.');
    var c=r.data.criterios;if(c.dudas&&c.dudas.length)throw Error('Aclara la búsqueda: '+c.dudas.join(' '));
    if(c.estados.length||c.municipios.length||c.colonias.length){
-    var lugares=await sb.rpc('propiedades_inventario_catalogo',{p_campo:'colonia'});
-    if(lugares.error)throw Error('No pudimos comprobar la ubicación. Se aplicó la búsqueda por texto.');
-    c=global.kwBusquedaIA.resolver(c,lugares.data||[],false);
+    c=global.kwBusquedaIA.resolver(c,await catalogo(sb),false);
    }
    return c;
   })();
@@ -45,10 +52,8 @@
   var texto=String(manual.texto||'').trim();if(!texto)return {filtros:manual,resumen:''};
   try{
    var c=await interpretar(texto,sb);if(!c)return {filtros:manual,resumen:''};
-   var resumen=global.kwBusquedaIA.resumen(c,'buscador');
-   if(c.cerca_hospital_m)resumen.push('Hospital: hasta '+(c.cerca_hospital_m/1000).toLocaleString('es-MX')+' km en línea recta o cercanía indicada en la ficha');
-   var f=combinar(manual,c);if(f.sin_coincidencias)resumen.push('La frase y los filtros seleccionados se contradicen.');
-   return {filtros:f,resumen:resumen.join(' · '),hospital:!!c.cerca_hospital_m};
+   var f=combinar(manual,c);
+   return {filtros:f,resumen:f.sin_coincidencias?'La frase y los filtros seleccionados se contradicen.':''};
   }catch(e){return {filtros:manual,resumen:e.message};}
  }
  global.kwBuscadorInteligente={buscar:buscar,combinar:combinar,basico:basico};
