@@ -174,7 +174,7 @@
       perfilAsesor=perfil.data;
       sitioAsesor=perfil.data?.sitio_web;
       $('inicio-titulo').textContent='Hola '+(perfil.data?.nombre||'')+', Welcome Home.';
-      if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad'].forEach(id=>{$(id).style.display='';});
+      if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad','card-dashboard'].forEach(id=>{const enlace=$(id);if(enlace)enlace.style.display='';});
     }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
     const cargas={
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
