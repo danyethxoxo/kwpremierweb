@@ -540,6 +540,28 @@ function normalizarDetallePendiente(listado: KwRegistro, existente: KwRegistro |
   return fila
 }
 
+async function verificarPublicadasKw(admin: ReturnType<typeof createClient<any>>, listados: KwRegistro[]) {
+  const esperadas = new Set(listados.filter(p => kwEstatus(p.Property_Status_ID) === 'publicada').map(p => String(p.ID)))
+  const guardadas = new Set<string>()
+  for (let desde = 0; ; desde += 1000) {
+    const paginas = await enParalelo([0, 250, 500, 750], 4, async offset => {
+      let consulta = admin.from('propiedades').select('fuente_id')
+        .eq('fuente', 'kwmexico').eq('estatus', 'publicada')
+      if (!KWMEXICO_ALL_MARKET_CENTERS) consulta = consulta.eq('market_center', KWMEXICO_MARKET_CENTER_NAME)
+      return await consulta.order('fuente_id').range(desde + offset, desde + offset + 249)
+    })
+    const fallo = paginas.find(p => p.error)
+    if (fallo?.error) throw fallo.error
+    const filas = paginas.flatMap(p => p.data || [])
+    for (const fila of filas) guardadas.add(String(fila.fuente_id))
+    if (filas.length < 1000) break
+  }
+  const faltantes = [...esperadas].filter(id => !guardadas.has(id)).length
+  const sobrantes = [...guardadas].filter(id => !esperadas.has(id)).length
+  if (faltantes || sobrantes) throw new Error('Inventario sin conciliar: ' + faltantes + ' faltantes y ' + sobrantes + ' activas de más.')
+  return { correcta: true, publicadas_origen: esperadas.size, publicadas_web: guardadas.size, faltantes, sobrantes }
+}
+
 async function sincronizarKwMexico(
   admin: ReturnType<typeof createClient<any>>,
   corrida: string,
@@ -696,6 +718,8 @@ async function sincronizarKwMexico(
       }
     }
 
+    const verificacionInventario = await verificarPublicadasKw(admin, unicos)
+
     if (catalogo.completa) {
       const matches = await admin.rpc('comprador_marcar_inventario')
       if (matches.error) throw matches.error
@@ -720,6 +744,7 @@ async function sincronizarKwMexico(
       catalogo_total: catalogo.total,
       catalogo_leido: catalogo.propiedades.length,
       corrida_completa: catalogo.completa,
+      verificacion_inventario: verificacionInventario,
       candidatas_market_center: unicos.length,
       propiedades_guardadas: guardadas,
       detalles_con_error: detalleFallido,

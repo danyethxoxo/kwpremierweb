@@ -145,9 +145,10 @@ function reporteXlsx(reporte: Reporte): Uint8Array {
     'ID de origen', 'Fecha', 'Enlace',
   ].map((value) => cell(value, 'header'))
   const rows: XlsxCell[][] = [
-    [cell('Reporte diario de propiedades', 'title')],
-    [cell('Fuente: KW México, inventario publicado; no Command')],
+    [cell('Reporte acumulado de propiedades', 'title')],
+    [cell('Inventario publicado de KW México')],
     [cell('Periodo desde:'), cell(fechaExcel(reporte.periodoDesde), 'date')],
+    [cell('Criterio:'), cell('Acumulado del día. El envío de medianoche cierra el día anterior.')],
     [cell('Periodo hasta:'), cell(fechaExcel(reporte.periodoHasta), 'date')],
     [cell('Actualizaciones de datos/fotos:'), cell(reporte.modificadas.length, 'integer')],
     [cell('Última comprobación:'), cell(fechaExcel(reporte.ultimaCorrida), 'date')],
@@ -233,6 +234,13 @@ async function leerHistorial(admin: ReturnType<typeof createClient<any>>, desde:
   return historial
 }
 
+function inicioDiaReporte(comprobacion: string): string {
+  const local = partesLocales(comprobacion)
+  // El envío de medianoche cierra el día anterior. Los demás son acumulados del día.
+  const medianoche = Date.UTC(local.year, local.month - 1, local.day, 6)
+  return new Date(medianoche - (local.hour === 0 ? 86400000 : 0)).toISOString()
+}
+
 async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Promise<Reporte> {
   const { data: sync, error: syncError } = await admin.from('propiedades_sync')
     .select('ultima_corrida, propiedades_afectadas, ultimo_error')
@@ -243,11 +251,7 @@ async function prepararReporte(admin: ReturnType<typeof createClient<any>>): Pro
   if (sync.ultimo_error) throw new Error('La última lectura de propiedades terminó con error.')
 
   const periodoHasta = new Date().toISOString()
-  const { data: anterior, error: anteriorError } = await admin.from('propiedades_reportes')
-    .select('periodo_hasta,enviado_at').eq('fuente',FUENTE).eq('destinatario',DESTINATARIO).eq('estado','enviado')
-    .order('enviado_at',{ascending:false}).limit(1).maybeSingle()
-  if (anteriorError) throw anteriorError
-  const periodoDesde = anterior?.periodo_hasta || anterior?.enviado_at || new Date(Date.parse(periodoHasta)-24*60*60*1000).toISOString()
+  const periodoDesde = inicioDiaReporte(sync.ultima_corrida)
 
   const [historial, totalActual, publicadasActuales, suspendidasActuales, fechaOrigen] = await Promise.all([
     leerHistorial(admin, periodoDesde, periodoHasta),
@@ -338,8 +342,8 @@ function armarCorreo(reporte: Reporte) {
   const reactivadas = reporte.reactivadas.length
   const desactivadas = reporte.desactivadas.length
   const html = plantillaCorreo({
-    title: 'Reporte diario de propiedades',
-    intro: `Fuente: inventario publicado de KW México. Última comprobación: ${fecha}. Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}.`,
+    title: 'Reporte acumulado de propiedades',
+    intro: `Acumulado diario del inventario publicado de KW México. Última comprobación: ${fecha}. Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}.`,
     content: `Se encontraron ${altas} propiedades nuevas, ${reactivadas} reactivaciones y ${desactivadas} desactivaciones. También se actualizaron datos o fotos de ${reporte.modificadas.length} propiedades. El inventario publicado pasó de ${reporte.inventarioAnterior} a ${reporte.publicadasActuales} propiedades. En total hay ${reporte.totalActual} registros, incluidos ${reporte.suspendidasActuales} suspendidos.`,
     actionLabel: 'Abrir propiedades',
     actionUrl: SITIO_PROPIEDADES,
@@ -347,8 +351,8 @@ function armarCorreo(reporte: Reporte) {
     footer: 'Reporte automático de inventario de KW Premier.',
   })
   const texto = [
-    'Reporte diario de propiedades',
-    'Fuente: inventario publicado de KW México, no Command.',
+    'Reporte acumulado de propiedades',
+    'Inventario publicado de KW México.',
     `Periodo: ${fechaTexto(reporte.periodoDesde)} a ${fechaTexto(reporte.periodoHasta)}`,
     `Actualizaciones de datos/fotos: ${reporte.modificadas.length}`,
     `Última comprobación: ${fecha}`,
@@ -393,11 +397,11 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
     if (reclamo.omitido) return response({ ok: true, omitido: true, corrida: reporte.ultimaCorrida })
 
     const archivo = reporteXlsx(reporte)
-    const nombreArchivo = `reporte-propiedades-${fechaArchivo(reporte.ultimaCorrida)}.xlsx`
+    const nombreArchivo = `reporte-propiedades-${fechaArchivo(reporte.periodoDesde)}.xlsx`
     const correo = armarCorreo(reporte)
     const envio = await enviarCorreo({
       to: DESTINATARIO,
-      subject: `Reporte diario de propiedades | ${fechaArchivo(reporte.ultimaCorrida)}`,
+      subject: `Reporte acumulado de propiedades | ${fechaArchivo(reporte.ultimaCorrida)}`,
       html: correo.html,
       text: correo.texto,
       attachments: [{

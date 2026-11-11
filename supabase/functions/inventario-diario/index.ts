@@ -30,6 +30,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
   if (!url || !serviceKey || !syncSecret) return Response.json({ error: 'Servicio no configurado' }, { status: 503 })
   const opciones = await req.json().catch(() => ({}))
   const soloSincronizar = opciones.solo_sincronizar === true
+  const enviarAhora = opciones.enviar_reporte === true
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
   const corte = corteLectura(new Date())
   try {
@@ -46,7 +47,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
     if (!actualizada || soloSincronizar || pendientesPremier?.data?.length) {
       const lectura = await llamar('sincronizar-propiedades')
       console.info('Lectura automática de inventario', JSON.stringify({ corte: new Date(corte).toISOString(), solo_sincronizar: soloSincronizar, ...lectura }))
-      if (lectura.corrida_completa !== true) {
+      if (lectura.corrida_completa !== true || lectura.verificacion_inventario?.correcta !== true) {
         await admin.from('propiedades_sync').update({ ultimo_error: 'Lectura de inventario incompleta' }).eq('fuente', 'kwmexico')
         throw new Error('Lectura de inventario incompleta')
       }
@@ -55,7 +56,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
     const envio = await admin.from('propiedades_reportes').select('enviado_at').eq('fuente', 'kwmexico')
       .eq('destinatario', destinatario).eq('estado', 'enviado').order('enviado_at', { ascending: false }).limit(1).maybeSingle()
     if (envio.error) throw envio.error
-    if (envio.data?.enviado_at && Date.parse(envio.data.enviado_at) >= corte) return Response.json({ ok: true, omitido: true })
+    if (!enviarAhora && envio.data?.enviado_at && Date.parse(envio.data.enviado_at) >= corte) return Response.json({ ok: true, omitido: true })
     const reporte = await llamar('enviar-reporte-propiedades')
     console.info('Reporte automático de inventario', JSON.stringify({ corte: new Date(corte).toISOString(), ...reporte }))
     return Response.json({ ok: true, reporte })

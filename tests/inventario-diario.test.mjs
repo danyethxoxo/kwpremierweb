@@ -4,12 +4,12 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 const source=stripTypeScriptTypes(readFileSync(new URL('../supabase/functions/inventario-diario/index.ts',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,''),{mode:'strip'});
-function preparar({actualizada=false,enviada=false,falla=false,incompleta=false,pendientesPremier=false,ahora='2026-10-08T09:20:00Z'}={}) {
+function preparar({actualizada=false,enviada=false,falla=false,incompleta=false,pendientesPremier=false,sinConciliar=false,ahora='2026-10-08T09:20:00Z'}={}) {
  const llamadas=[],actualizaciones=[],registros=[];
  let handler;
  class Reloj extends Date {constructor(...args){super(...(args.length?args:[ahora]));}}
  const admin={from(table){const q={select(){return q},eq(){return q},order(){return q},limit(){return q},async maybeSingle(){return {data:table==='propiedades_sync'?{ultimo_cursor:actualizada?'2026-10-08T09:01:00Z':'2026-10-07T09:01:00Z',ultimo_error:null}:enviada?{enviado_at:'2026-10-08T09:02:00Z'}:null}},update(v){actualizaciones.push(v);return q},then(ok){return Promise.resolve({error:null,data:table==='propiedades' && pendientesPremier?[{fuente_id:'1'}]:[]}).then(ok)}};return q}};
- const scope=vm.createContext({Date:Reloj,Intl,Response,AbortSignal,console:{error(){},info(...args){registros.push(args)}},Deno:{env:{get:k=>({SUPABASE_URL:'https://example.com',SERVICE_ROLE_KEY:'service',WEBHOOK_SECRET:'webhook',SYNC_SECRET:'sync'})[k]}},createClient:()=>admin,secureServe:(o,h)=>handler=h,enviarCorreo:async()=>{},fetch:async url=>{llamadas.push(url);return Response.json(falla?{error:'error'}:{ok:true,corrida_completa:!incompleta},{status:falla?502:200})}});
+ const scope=vm.createContext({Date:Reloj,Intl,Response,AbortSignal,console:{error(){},info(...args){registros.push(args)}},Deno:{env:{get:k=>({SUPABASE_URL:'https://example.com',SERVICE_ROLE_KEY:'service',WEBHOOK_SECRET:'webhook',SYNC_SECRET:'sync'})[k]}},createClient:()=>admin,secureServe:(o,h)=>handler=h,enviarCorreo:async()=>{},fetch:async url=>{llamadas.push(url);return Response.json(falla?{error:'error'}:{ok:true,corrida_completa:!incompleta,verificacion_inventario:{correcta:!sinConciliar}},{status:falla?502:200})}});
  vm.runInContext(source,scope);
  return {llamadas,actualizaciones,registros,run:(body={})=>handler(new Request('https://example.com',{method:'POST',headers:{'x-webhook-secret':'webhook'},body:JSON.stringify(body)}))};
 }
@@ -60,4 +60,16 @@ test('los reintentos completan fichas de Premier aunque el catálogo y el correo
  const done=preparar({actualizada:true,enviada:true,pendientesPremier:false});
  assert.equal((await done.run()).status,200);
  assert.equal(done.llamadas.length,0);
+});
+
+test('una lectura sin conciliación no envía un correo de éxito',async()=>{
+ const fallida=preparar({sinConciliar:true});
+ assert.equal((await fallida.run()).status,502);
+ assert.equal(fallida.llamadas.length,1);
+});
+test('el envío solicitado permite generar el reporte de una corrida nueva dentro del mismo corte',async()=>{
+ const manual=preparar({actualizada:true,enviada:true});
+ assert.equal((await manual.run({enviar_reporte:true})).status,200);
+ assert.equal(manual.llamadas.length,1);
+ assert.match(manual.llamadas[0],/enviar-reporte/);
 });
