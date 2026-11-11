@@ -28,3 +28,20 @@ test('busca todos los agentes por nombre y acota por apellido manteniendo filtro
  r=await w.kwBuscadorInteligente.buscar({texto:'Narvate'},sb);assert.equal(r.filtros.texto,'narvarte');assert.equal(ia,0);
  r=await w.kwBuscadorInteligente.buscar({texto:'casas de Adriana con terraza'},sb);assert.equal(r.filtros.asesor.length,3);assert.equal(r.filtros.conceptos[0][0],'terraza');assert.equal(ia,1);
 });
+test('presupuestos y operación no se confunden con asesores y evitan llamadas de IA',async()=>{
+ const w=entorno();let llamadas=0;const sb={functions:{invoke:async()=>{llamadas++;throw Error('No debe llamar IA');}},rpc:async()=>{llamadas++;throw Error('No debe pedir asesores');}};
+ for(const [texto,monto,operacion,tipo,key] of [
+ ['venta de casa de menos de 5mdp',5000000,'venta','Casa','maximo'],
+ ['casas en venta hasta 5 millones',5000000,'venta','Casa','maximo'],
+ ['depa en renta de menos de 25 mil',25000,'renta','Departamento','maximo'],
+ ['casa en venta hasta 4.5 mdp',4500000,'venta','Casa','maximo'],
+ ['venta de casa desde 3,500,000 pesos',3500000,'venta','Casa','minimo']]){
+  assert.equal(w.kwBusquedaTolerante.separarAsesor(texto),null,texto);
+  const r=await w.kwBuscadorInteligente.buscar({texto},sb);
+  assert.equal(r.resumen,'',texto);assert.equal(r.filtros[key],monto,texto);assert.equal(r.filtros.operacion[0],operacion);assert.equal(r.filtros.tipo[0],tipo);assert.equal(r.filtros.texto,'');
+ }
+ assert.equal(llamadas,0);
+ assert.equal(w.kwBusquedaTolerante.separarAsesor('casas de 3 recamaras'),null);
+ const r=await w.kwBuscadorInteligente.buscar({texto:'venta de casa de menos de 5mdp',maximo:4000000},sb);assert.equal(r.filtros.maximo,4000000);
+});
+

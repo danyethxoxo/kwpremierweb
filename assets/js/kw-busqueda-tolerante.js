@@ -33,6 +33,8 @@
   if(!m){m=String(texto).trim().match(/^(?:(?:todas?\s+)?(?:las?\s+)?(?:propiedades|inmuebles)\s+)?(?:del?\s+)?(?:asesor(?:a)?|agente)[:\s]+(.+)$/i);if(!m)return null;m=['','',true,m[1]];}
   var prefijo=corregir(m[1]).replace(/\b(muestrame|muestra|busca|buscar|ver|quiero|dame|todas|todos|las|los|propiedades|inmuebles)\b/gi,'').trim().replace(/\s+/g,' ');
   if(!m[2]&&!/^(?:(?:casa|departamento|depa|depto|terreno|oficina|bodega|local)(?:\s+comercial)?)?(?:\s*(?:en\s+)?(?:renta|venta))?$/.test(normal(prefijo)))return null;
+  // Un presupuesto, una característica o un tipo de inmueble no son un nombre.
+  if(!m[2]&&(/\d/.test(m[3])||/\b(casa|casas|departamento|depa|terreno|oficina|bodega|menos|mas|precio|millones|mdp|recamaras|banos|hospital|venta|renta)\b/.test(normal(m[3]).split(/\s+(?:en|con|sin|hasta|desde|cerca)\s/)[0])))return null;
   var partes=m[3].split(/\s+(?=en\s|con\s|sin\s|hasta\s|desde\s|cerca\s|por menos\s)/i),nombre=partes.shift().trim();
   return {nombre:nombre,texto:[prefijo,partes.join(' ')].filter(Boolean).join(' ')};
  }
@@ -44,3 +46,4 @@
  }
  global.kwBusquedaTolerante={normalizar:normal,corregir:corregir,mejor:mejor,resolverAsesores:resolverAsesores,separarAsesor:separarAsesor,corregirLugar:corregirLugar};
 })(window);
+

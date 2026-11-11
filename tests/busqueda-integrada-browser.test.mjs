@@ -43,7 +43,7 @@ test('el buscador original aplica la frase, filtros, evidencia y limpieza en esc
   assert.equal(await page.locator('#f-buscar').inputValue(),'Departamento para remodelar');assert.equal(await page.locator('#f-max').inputValue(),'4,000,000');
   await page.evaluate(()=>limpiarFiltros());await page.waitForFunction(()=>qaRPC.filter(r=>r.n==='propiedades_inventario_pagina').at(-1).args.p_filtros.texto==='');
   assert.equal(await page.locator('#f-buscar').inputValue(),'');assert.equal(await page.locator('#busqueda-interpretacion').isVisible(),false);
-  for(const [texto,expected] of [['cass',{tipo:['Casa']}],['casas de rodrigo',{tipo:['Casa'],asesor:['Rodrigo Martínez']}],['todas las propiedades de adriana',{asesor:['Adriana García López','Adriana Pérez']}],['todas las propiedades de adriana garcia',{asesor:['Adriana García López']}]]){
+  for(const [texto,expected] of [['venta de casa de menos de 5mdp',{tipo:['Casa'],operacion:['venta'],maximo:5000000}],['cass',{tipo:['Casa']}],['casas de rodrigo',{tipo:['Casa'],asesor:['Rodrigo Martínez']}],['todas las propiedades de adriana',{asesor:['Adriana García López','Adriana Pérez']}],['todas las propiedades de adriana garcia',{asesor:['Adriana García López']}]]){
    const before=await page.evaluate(()=>qaCalls.length);
    await page.evaluate(async texto=>{document.getElementById('f-buscar').value=texto;await aplicarFiltros();},texto);
    const f=await page.evaluate(()=>qaRPC.filter(r=>r.n==='propiedades_inventario_pagina').at(-1).args.p_filtros);
@@ -53,3 +53,4 @@ test('el buscador original aplica la frase, filtros, evidencia y limpieza en esc
   assert.deepEqual(errors,[]);await page.close();
  }}finally{await browser.close();}
 });
+

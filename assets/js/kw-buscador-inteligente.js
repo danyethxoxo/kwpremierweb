@@ -42,6 +42,20 @@
   return f;
  }
  function basico(texto){
+  var frase=normal(texto).replace(/^(?:busco|quiero|muestrame|busca)\s+/,'');
+  // Solo consumir un presupuesto cuando el resto de la frase se entiende completo.
+  var precio=frase.match(/\s+(?:(?:de|por)\s+)?(menos de|hasta|maximo(?: de)?|no mas de|mas de|desde|minimo(?: de)?)\s*\$?\s*(\d+(?:[.,]\d+)*)(?:\s*(mdp|millones?(?: de pesos)?|mil|pesos|mxn|usd|dolares))?$/);
+  if(precio){
+   var resto=frase.slice(0,precio.index),criterios=basico(resto);
+   if(criterios){
+    var numero=precio[2],unidad=precio[3]||'';
+    numero=/^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(numero)?numero.replace(/,/g,''):numero.replace(',','.');
+    var monto=Number(numero)*(unidad==='mdp'||unidad.startsWith('millon')?1000000:unidad==='mil'?1000:1);
+    if(Number.isFinite(monto)&&monto>0){criterios[/^(mas de|desde|minimo)/.test(precio[1])?'precio_min':'precio_max']=monto;if(unidad)criterios.moneda=/usd|dolares/.test(unidad)?'USD':'MXN';return criterios;}
+   }
+   return null;
+  }
+  texto=frase.replace(/^(venta|renta)\s+de\s+(.+)$/,'$2 en $1');
   var generica=normal(texto).match(/^(?:(?:todas las|todos los|las|los) )?(?:propiedades|inmuebles)(?: (?:en )?(venta|renta))?$/);if(generica){var todas=vacio();if(generica[1])todas.operacion=generica[1];return todas;}
   var soloOperacion=normal(texto).match(/^(?:en )?(venta|renta)$/);if(soloOperacion){var solo=vacio();solo.operacion=soloOperacion[1];return solo;}
   var m=normal(texto).match(/^(depa|depto\.?|departamento|casa|terreno|oficina|bodega)(?:\s+(?:en\s+)?(venta|renta))?(?:\s+((?:cerca\s+(?:de|del|de un|de una)|proximo\s+a(?: un| una)?|junto a(?: un| una)?)\s+(?:hospital|hospitales|clinica|clinicas)))?$/);
@@ -84,3 +98,4 @@
 
  global.kwBuscadorInteligente={buscar:buscar,combinar:combinar,basico:basico,cacheCatalogo:guardarCatalogo};
 })(window);
+
