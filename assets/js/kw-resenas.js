@@ -11,9 +11,11 @@
 
   function render() {
     const q = buscador.value.trim().toLocaleLowerCase('es-MX');
+    const buscar = globalThis.kwBusquedaPortal?.preparar(q);
     const lista = registros.filter(function (r) {
       return (!filtro.value || (r.aprobada ? 'publicada' : 'pendiente') === filtro.value) &&
-        (!q || (r.nombre + ' ' + r.texto + ' ' + (r.rol || '')).toLocaleLowerCase('es-MX').includes(q));
+        (buscar?.coincide([r.nombre, r.texto, r.rol]) ??
+          (!q || (r.nombre + ' ' + r.texto + ' ' + (r.rol || '')).toLocaleLowerCase('es-MX').includes(q)));
     });
     document.querySelector('.kw-conteo-num').textContent = lista.length;
     tabla.innerHTML = lista.length ? lista.map(function (r) {

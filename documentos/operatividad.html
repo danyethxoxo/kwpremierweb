@@ -393,6 +393,7 @@
 <link rel="stylesheet" href="/assets/css/operatividad.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-acciones-firmas.css?v=20261004a">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body class="en-operatividad">
 
@@ -618,9 +619,11 @@ function esNumerica(columna) {
 
 function visibles() {
   var q = busqueda.trim().toLowerCase();
+  var buscar = globalThis.kwBusquedaPortal?.preparar(q);
   return filas.filter(function (f) {
     if (filtroTipo && (f.tipo || '').toUpperCase() !== filtroTipo) return false;
     if (!q) return true;
+    if (buscar) return buscar.coincide(COLUMNAS.map(c => textoCelda(f, c)));
     return COLUMNAS.some(function (c) {
       return textoCelda(f, c).toLowerCase().indexOf(q) !== -1;
     });
@@ -977,7 +980,8 @@ async function cargarPropiedadesVinculables(version) {
       var quitar=document.createElement('button');quitar.type='button';quitar.textContent='Sin propiedad vinculada';quitar.setAttribute('aria-pressed',String(!propiedadElegida));
       quitar.onclick=function(){propiedadElegida=null;opciones();};caja.append(quitar);
       var q=input.value.trim().toLocaleLowerCase('es-MX');
-      propiedadesVinculables.filter(function(p){return p.id===propiedadElegida || (q && [p.titulo,p.calle,p.asesor_nombre].join(' ').toLocaleLowerCase('es-MX').includes(q));}).slice(0,20).forEach(function(p){
+      var buscar = globalThis.kwBusquedaPortal?.preparar(q);
+      propiedadesVinculables.filter(function(p){return p.id===propiedadElegida || (q && (buscar?.coincide([p.titulo, p.calle, p.asesor_nombre]) ?? [p.titulo,p.calle,p.asesor_nombre].join(' ').toLocaleLowerCase('es-MX').includes(q)));}).slice(0,20).forEach(function(p){
         var b=document.createElement('button');b.type='button';b.textContent=p.titulo+' · '+p.asesor_nombre+' · '+pesos(p.precio);b.setAttribute('aria-pressed',String(p.id===propiedadElegida));b.onclick=function(){propiedadElegida=p.id;opciones();};caja.append(b);
       });
       if(q && caja.children.length===1){var vacio=document.createElement('span');vacio.textContent='Sin propiedades con esa búsqueda.';caja.append(vacio);}
@@ -1042,7 +1046,7 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
   // el suyo, pero el modo integrado no debe dibujar una navegación doble.
   if (!document.documentElement.classList.contains('kw-embebida')) {
     var drawerScript = document.createElement('script');
-    drawerScript.src = '/assets/js/drawer.js?v=20261104permisos';
+    drawerScript.src = '/assets/js/drawer.js?v=20261110portal';
     drawerScript.dataset.menu = 'hub';
     drawerScript.onload = function () {
       var lateralScript = document.createElement('script');
@@ -1053,7 +1057,7 @@ else window.addEventListener('kw-auth-ready', arrancar, { once: true });
   }
 </script>
 <script src="/assets/js/kw-xlsx.js?v=20260922"></script>
-<script src="/assets/js/operatividad-tabla.js?v=20261004f"></script>
+<script src="/assets/js/operatividad-tabla.js?v=20261110portal"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>
 </html>

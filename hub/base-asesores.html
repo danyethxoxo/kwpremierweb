@@ -1006,6 +1006,7 @@
   </style>
 <link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261019-sin-sombra-filtros">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body data-kw-universal-adaptar>
   <div id="ficha-carga" hidden role="status" aria-label="Abriendo formulario" aria-live="polite">
@@ -1404,9 +1405,11 @@
         '<span class="kw-conteo-txt">' + escapar(g.titulo) + '</span></button>';
     }).join('');
 
+    const buscar = globalThis.kwBusquedaPortal?.preparar(q);
     const lista = asesores.filter(function (a) {
       if (filtroGrupo && estatusDe(a) !== filtroGrupo) return false;
       if (!q) return true;
+      if (buscar) return buscar.coincide([a.nombre, a.celula, a.puesto], [a.correo, a.kwid]);
       return [a.nombre, a.correo, a.kwid, a.celula, a.puesto]
         .some(function (x) { return String(x || '').toLowerCase().includes(q); });
     });
@@ -2133,7 +2136,7 @@
   else window.addEventListener('kw-auth-ready', init, { once: true });
 </script>
 <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros="#vista-lista > .kw-campo-filtro|#bd-resumen"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>

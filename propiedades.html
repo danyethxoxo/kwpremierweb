@@ -612,6 +612,7 @@
 <script src="/assets/js/kw-busqueda-ia.js?v=20261110ia1"></script>
 <script src="/assets/js/kw-busqueda-tolerante.js?v=20261110asesores"></script>
 <script src="/assets/js/kw-buscador-inteligente.js?v=20261110asesores"></script>
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body>
 
@@ -2405,8 +2406,9 @@
         limpiar.hidden = !select.value && !buscar.value;
         limpiar.disabled = select.disabled;
         var texto = normalizarTexto(buscar.value);
+        var coincidencias = globalThis.kwBusquedaPortal?.preparar(texto);
         menu.querySelectorAll('.kw-select-opcion').forEach(function (opcion) {
-          opcion.hidden = normalizarTexto(opcion.textContent).indexOf(texto) === -1;
+          opcion.hidden = !(coincidencias?.coincide(opcion.textContent) ?? normalizarTexto(opcion.textContent).includes(texto));
         });
       }
       buscar.actualizarCatalogo = function () {

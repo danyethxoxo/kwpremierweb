@@ -53,12 +53,14 @@
     });
     var busquedaPosibles = document.getElementById('posibles-firmantes-buscar');
     var filtroPosibles = buscar(busquedaPosibles && busquedaPosibles.value);
+    var filtrarPosibles = globalThis.kwBusquedaPortal?.preparar(filtroPosibles);
     var total = document.getElementById('posibles-firmantes-total');
     if (total) { total.textContent = String(personas.length); total.setAttribute('aria-label', personas.length + ' posibles firmantes'); }
-    if (posibles) posibles.innerHTML = filas(personas.filter(function (p) { return buscar(p.nombre + ' ' + p.correo + ' ' + (p.etiqueta || '')).includes(filtroPosibles); })) || '<div class="firmante-persona-vacio">' + (filtroPosibles ? 'Sin coincidencias.' : 'No hay personas capturadas en este documento.') + '</div>';
+    if (posibles) posibles.innerHTML = filas(personas.filter(function (p) { return filtrarPosibles?.coincide([p.nombre, p.etiqueta], [p.correo]) ?? buscar(p.nombre + ' ' + p.correo + ' ' + (p.etiqueta || '')).includes(filtroPosibles); })) || '<div class="firmante-persona-vacio">' + (filtroPosibles ? 'Sin coincidencias.' : 'No hay personas capturadas en este documento.') + '</div>';
     var lista = document.getElementById('favoritos-firmantes-lista'), buscador = document.getElementById('favoritos-firmantes-buscar');
     var q = buscar(buscador && buscador.value);
-    if (lista) lista.innerHTML = filas(favoritos.filter(function (p) { return buscar(p.nombre + ' ' + p.correo).includes(q); }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })) || '<div class="firmante-persona-vacio">' + (errorCarga ? 'No se pudieron cargar tus Favoritos.' : q ? 'Sin coincidencias.' : 'Marca un corazón para guardar un firmante.') + '</div>';
+    var filtrarFavoritos = globalThis.kwBusquedaPortal?.preparar(q);
+    if (lista) lista.innerHTML = filas(favoritos.filter(function (p) { return filtrarFavoritos?.coincide(p.nombre, [p.correo]) ?? buscar(p.nombre + ' ' + p.correo).includes(q); }).sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })) || '<div class="firmante-persona-vacio">' + (errorCarga ? 'No se pudieron cargar tus Favoritos.' : q ? 'Sin coincidencias.' : 'Marca un corazón para guardar un firmante.') + '</div>';
     document.querySelectorAll('#firmantes .firmante-fila').forEach(function (fila) {
       var boton = fila.querySelector('.firmante-favorito-fila');
       if (!boton) return;

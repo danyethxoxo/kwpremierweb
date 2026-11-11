@@ -123,6 +123,7 @@
 </style>
 <link rel="stylesheet" href="/assets/css/kw-pagina-universal.css?v=20261019-sin-sombra-filtros">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body data-kw-universal-adaptar>
 
@@ -321,6 +322,7 @@
   function pintar() {
     var cont = document.getElementById('contenido');
     var termino = document.getElementById('busq').value.trim().toLowerCase();
+    var buscarArchivo = globalThis.kwBusquedaPortal?.preparar(termino);
     document.getElementById('btn-limpiar').classList.toggle('se-ve', !!termino);
     pintarRuta();
 
@@ -329,7 +331,7 @@
       // Se busca en todo el árbol, no solo en la carpeta abierta: la
       // gracia es encontrar el archivo sin saber dónde quedó guardado.
       lista = elementos.filter(function (e) {
-        return e.nombre.toLowerCase().indexOf(termino) >= 0;
+        return buscarArchivo?.coincide(e.nombre) ?? e.nombre.toLowerCase().includes(termino);
       });
     } else {
       lista = elementos.filter(function (e) { return e.padre === carpetaActual; });
@@ -451,7 +453,7 @@
   }
 </script>
 <script src="/assets/js/kw-pagina-universal.js?v=20261008a"></script>
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros=".buscador"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>

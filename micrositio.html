@@ -456,6 +456,7 @@
     .props-lista { grid-template-columns: 1fr 1fr; }
   }
 </style>
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body>
 
@@ -951,8 +952,10 @@
     var cuerpo = document.getElementById('sel-cuerpo');
     if (!cuerpo) return;
     var q = String(filtro || '').trim().toLowerCase();
+    var buscar = globalThis.kwBusquedaPortal?.preparar(q);
     var lista = q
       ? inventario.filter(function (p) {
+          if (buscar) return buscar.coincide([p.titulo, p.colonia, p.municipio, p.estado, p.tipo]);
           return [p.titulo, p.colonia, p.municipio, p.estado, p.tipo]
             .filter(Boolean).join(' ').toLowerCase().indexOf(q) !== -1;
         })
@@ -1141,6 +1144,6 @@
 </script>
 <script src="/assets/js/kw-qr.js?v=20261030kwred"></script>
 <script src="/assets/js/kw-compartir.js?v=20261030kwred"></script>
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="publico"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="publico"></script>
 </body>
 </html>

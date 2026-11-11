@@ -52,13 +52,15 @@ async function consultarListaDocumentos() {
 
 function renderListaDocumentos() {
   const q = (document.getElementById('buscador-input').value || '').trim().toLowerCase();
+  const buscar = globalThis.kwBusquedaPortal?.preparar(q);
 
   const coincide = (row) => {
     if (!q) return true;
     const nombre = (row.nombre_archivo || '').toLowerCase();
     const folio = (row.folio || '').toLowerCase();
     const fecha = fmtFechaCorta(row.updated_at).toLowerCase();
-    return nombre.includes(q) || folio.includes(q) || fecha.includes(q);
+    return buscar?.coincide([nombre, row.estado, 'contrato documento'], [folio, fecha]) ??
+      (nombre.includes(q) || folio.includes(q) || fecha.includes(q));
   };
 
   const grupos = agruparDocumentos(documentosCache)
@@ -293,4 +295,3 @@ function alternarRevisionesLista(grupoEl) {
   boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
   boton.setAttribute('title', abrir ? 'Ocultar revisiones' : 'Mostrar revisiones');
 }
-

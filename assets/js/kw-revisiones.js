@@ -416,8 +416,10 @@
 
   function pintarDictamenes(modal, filas, filtro) {
     var q = String(filtro || '').trim().toLowerCase();
+    var buscar = globalThis.kwBusquedaPortal?.preparar(q);
     var visibles = filas.filter(function (d) {
-      return !q || [d.folio, d.inmueble, d.cliente, d.asesor_nombre].join(' ').toLowerCase().indexOf(q) !== -1;
+      return buscar?.coincide([d.inmueble, d.cliente, d.asesor_nombre], [d.folio]) ??
+        (!q || [d.folio, d.inmueble, d.cliente, d.asesor_nombre].join(' ').toLowerCase().includes(q));
     });
     var lista = modal.querySelector('.kw-enlace-lista');
     if (!visibles.length) {
@@ -549,4 +551,3 @@
     folio: folio
   };
 })(window);
-

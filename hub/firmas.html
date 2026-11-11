@@ -24,7 +24,7 @@
 <script src="/assets/js/kw-ui.js?v=20261030kwred"></script>
 <script src="/assets/js/kw-xlsx.js?v=20260829t"></script>
 <script src="/assets/js/kw-firma-puente.js?v=20261021firmantes"></script>
-<script src="/assets/js/kw-firmantes-personales.js?v=20261106favoritos"></script>
+<script src="/assets/js/kw-firmantes-personales.js?v=20261110portal"></script>
 <style>
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -1768,6 +1768,7 @@
 <link rel="stylesheet" href="/assets/css/kw-firmas-mobile.css?v=20261022archivos">
 <link rel="stylesheet" href="/assets/css/kw-firmantes-selector.css?v=20261106favoritos">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body class="en-historial firmas-pagina">
 
@@ -5093,8 +5094,9 @@
     // eterna de recorrer. Para llegar al que no se ve, se escribe.
     function pintarAsesores(busca) {
       const q = (busca || '').trim().toLowerCase();
+      const buscarAsesor = globalThis.kwBusquedaPortal?.preparar(q);
       const hallados = asesores
-        .filter((a) => !q || String(a.nombre || a.email).toLowerCase().includes(q))
+        .filter((a) => buscarAsesor?.coincide(a.nombre, [a.email]) ?? (!q || String(a.nombre || a.email).toLowerCase().includes(q)))
         .slice(0, 8);
 
       $('lista-asesores').innerHTML =
@@ -5136,8 +5138,9 @@
     function pintarEtiquetas(busca) {
       const q = (busca || '').trim();
       const ql = q.toLowerCase();
+      const buscarEtiqueta = globalThis.kwBusquedaPortal?.preparar(ql);
       const hallados = etiquetas
-        .filter((e) => !ql || e.nombre.toLowerCase().includes(ql))
+        .filter((e) => buscarEtiqueta?.coincide(e.nombre) ?? (!ql || e.nombre.toLowerCase().includes(ql)))
         .slice(0, 8);
 
       // Si lo que se escribió no existe todavía, se ofrece crearlo desde
@@ -5627,6 +5630,8 @@
       ...(Array.isArray(e.observadores) ? e.observadores : [])];
     return normalizarBusquedaFirmas([
       nombreDoc(e), e.titulo, e.nombre_archivo,
+      'firma documento', e.estado,
+      ({ pendiente: 'por firmar sin firmar', completado: 'firmado finalizado' })[e.estado],
       autor.nombre || 'sin identificar', autor.email, autor.correo,
       ...personas.flatMap((persona) => [persona.nombre, persona.correo, persona.email]),
       ...etiquetas.filter((tag) => (e.etiquetas || []).includes(tag.id)).map((tag) => tag.nombre),
@@ -5635,6 +5640,7 @@
 
   function envíosFiltrados() {
     const palabras = normalizarBusquedaFirmas(buscaAsesor).split(/\s+/).filter(Boolean);
+    const buscar = globalThis.kwBusquedaPortal?.preparar(buscaAsesor);
     const lista = envios.filter((e) => {
       if (e.estado === 'eliminado' && filtro !== 'eliminado') return false;
       if (filtro === 'mis-pendientes') {
@@ -5642,11 +5648,6 @@
       } else if (filtro === 'activos') {
         if (!['pendiente', 'completado'].includes(e.estado)) return false;
       } else if (filtro !== 'todos' && e.estado !== filtro) return false;
-
-      if (palabras.length) {
-        const texto = textoBusquedaEnvio(e);
-        if (!palabras.every((palabra) => texto.includes(palabra))) return false;
-      }
 
       if (etiqueta && !(e.etiquetas || []).includes(etiqueta)) return false;
 
@@ -5676,7 +5677,10 @@
       return true;
     });
 
-    return lista.sort(ORDENES[orden] || ORDENES['fecha-desc']);
+    const hallados = buscar
+      ? buscar.filtrar(lista, textoBusquedaEnvio)
+      : lista.filter(e => palabras.every(palabra => textoBusquedaEnvio(e).includes(palabra)));
+    return hallados.sort(ORDENES[orden] || ORDENES['fecha-desc']);
   }
 
   async function cargarEtiquetas() {
@@ -5994,7 +5998,7 @@
 <!-- drawer.js inserta la hamburguesa y la lupa dentro del <header>, y
      arma el menú lateral. Faltaba: por eso el header de esta pantalla
      solo tenía el botón de Atrás. -->
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa"></script>
 
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>

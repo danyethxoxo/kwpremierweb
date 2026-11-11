@@ -14,9 +14,10 @@
 
   function aplicar() {
     var termino = normalizar(input.value);
+    var buscar = globalThis.kwBusquedaPortal?.preparar(termino);
     Array.prototype.forEach.call(target.children, function (item) {
       if (item.classList.contains('cargando') || item.classList.contains('aviso')) return;
-      item.hidden = !!termino && normalizar(item.textContent).indexOf(termino) < 0;
+      item.hidden = !(buscar?.coincide(item.textContent) ?? normalizar(item.textContent).includes(termino));
     });
   }
 

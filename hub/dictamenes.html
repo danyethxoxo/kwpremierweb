@@ -1578,6 +1578,7 @@
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-dictamen-historial.css?v=20261030">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body class="en-lista">
   <script>
@@ -2427,6 +2428,7 @@
       return;
     }
     var busca = $('e-contrato-buscar').value.trim().toLowerCase();
+    var buscar = globalThis.kwBusquedaPortal?.preparar(busca);
     var operacion = $('e-contrato-operacion').value;
     var uso = $('e-contrato-uso').value;
     if (!contratosDisponibles.length) {
@@ -2443,6 +2445,7 @@
     var hallados = delAsesor.filter(function (doc) {
       if (operacion !== 'todos' && operacionContrato(doc) !== operacion) return false;
       if (uso !== 'todos' && usoContrato(doc) !== uso) return false;
+      if (buscar) return buscar.coincide([doc.nombre_archivo, resumenContrato(doc)], [doc.folio]);
       return !busca || [doc.folio, doc.nombre_archivo, resumenContrato(doc)]
         .filter(Boolean).join(' ').toLowerCase().indexOf(busca) !== -1;
     });
@@ -2671,6 +2674,7 @@
 
   function visibles() {
     var busca = $('f-buscar').value.trim().toLowerCase();
+    var buscar = globalThis.kwBusquedaPortal?.preparar(busca);
     var asesor = $('f-asesor').value;
     var listado = $('f-listado').value;
     var contrato = $('f-contrato').value;
@@ -2681,7 +2685,7 @@
     var precioMax = soloCifra($('f-precio-max').value);
     var comision = soloCifra($('f-comision').value);
 
-    return dictamenes.filter(function (d) {
+    const lista = dictamenes.filter(function (d) {
       // El archivo es una lista aparte, no un filtro más: o se ve lo
       // vivo, o se ve lo archivado.
       if (verArchivo !== !!d.archivado_at) return false;
@@ -2704,14 +2708,17 @@
       // puñado de valores cerrados y no una escala continua.
       if (comision && Number(soloCifra(d.comision_porcentaje)) !== Number(comision)) return false;
 
-      if (busca) {
-        var heno = [d.inmueble, d.folio, d.clientes_nombres, d.asesor_nombre,
-          d.escritura_numero, d.precio_listado, d.comision_porcentaje]
-          .join(' ').toLowerCase();
-        if (heno.indexOf(busca) === -1) return false;
-      }
       return true;
     });
+    if (!busca) return lista;
+    const identificadores = d => [d.folio, d.escritura_numero, d.precio_listado, d.comision_porcentaje];
+    const campos = d => [d.inmueble, d.clientes_nombres, d.asesor_nombre];
+    if (!buscar) {
+      return lista.filter(d => [...campos(d), ...identificadores(d)].join(' ').toLowerCase().includes(busca));
+    }
+    return buscar.filtrar(lista, d => [...campos(d), 'dictamen', d.estado,
+      ESTADOS[d.estado], d.estado === 'autorizada' ? 'autorizado' : '',
+      OPERACIONES[d.operacion], CONTRATOS[d.tipo_contrato]], identificadores);
   }
 
   // ── El filtro de asesor ──────────────────────────────────────
@@ -3934,12 +3941,13 @@
 
   function pintarAsesores() {
     var q = $('e-asesor-busca').value.trim().toLowerCase();
+    var buscar = globalThis.kwBusquedaPortal?.preparar(q);
     var caja = $('e-asesor-lista');
     if (!q) { caja.classList.remove('abierta'); return; }
 
     var hallados = asesores.filter(function (a) {
       if (!a.activo) return false;
-      return (a.nombre + ' ' + (a.correo || '')).toLowerCase().indexOf(q) !== -1;
+      return buscar?.coincide(a.nombre, [a.correo]) ?? (a.nombre + ' ' + (a.correo || '')).toLowerCase().includes(q);
     }).slice(0, 40);
 
     caja.innerHTML = hallados.length
@@ -5972,7 +5980,7 @@
 })();
 </script>
 
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros=".dic-campo-buscar|#resumen|#filtros-caja"></script>
 
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>

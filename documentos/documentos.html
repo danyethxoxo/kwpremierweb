@@ -92,6 +92,7 @@
   </style>
   <link rel="stylesheet" href="/assets/css/kw-homogeneo.css?v=20260923a">
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body class="kw-homogeneo">
 
@@ -142,7 +143,7 @@
     </div>
   </main>
 
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script>
   (function () {
     const search = document.getElementById('kw-card-search');
@@ -151,13 +152,14 @@
     if (!search || !grid || !empty) return;
     function applySearch() {
       const term = search.value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const buscar = globalThis.kwBusquedaPortal?.preparar(term);
       let anyVisible = false;
       grid.querySelectorAll('.document-section').forEach((section) => {
         const rows = Array.from(section.querySelectorAll('.document-row'));
         let visibleCount = 0;
         rows.forEach((row) => {
           const text = row.textContent.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          row.hidden = Boolean(term) && !text.includes(term);
+          row.hidden = !(buscar?.coincide(text) ?? text.includes(term));
           if (!row.hidden) visibleCount += 1;
         });
         section.hidden = visibleCount === 0;
@@ -173,4 +175,3 @@
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>
 </html>
-

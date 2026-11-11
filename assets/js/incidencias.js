@@ -71,10 +71,12 @@
   function pintarLista() {
     if (!$('inc-filas')) return;
     const buscar=$('inc-buscar').value.trim().toLocaleLowerCase('es');
+    const coincide = globalThis.kwBusquedaPortal?.preparar(buscar);
     const seleccion=filas.filter(i=>(!gestion || alcance==='todos' || i.user_id===usuario));
     const visibles=seleccion.filter(i=>(!$('inc-estado').value || i.estatus===$('inc-estado').value)
       && (!$('inc-tipo').value || (i.tipo||'problema')===$('inc-tipo').value)
-      && (!buscar || [i.titulo,i.descripcion,folio(i.id),nombre(i)].join(' ').toLocaleLowerCase('es').includes(buscar)));
+      && (coincide?.coincide([i.titulo, i.descripcion, nombre(i), i.estado, i.tipo], [folio(i.id)]) ??
+        (!buscar || [i.titulo,i.descripcion,folio(i.id),nombre(i)].join(' ').toLocaleLowerCase('es').includes(buscar))));
     $('inc-total').textContent=seleccion.length; $('inc-pendientes').textContent=seleccion.filter(i=>i.estatus!=='resuelto').length;
     $('inc-resultados').textContent=visibles.length+' de '+seleccion.length+' reportes cargados'; $('inc-mas').hidden=!mas;
     if (!visibles.length) {

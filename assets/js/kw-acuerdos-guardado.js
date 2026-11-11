@@ -84,8 +84,11 @@
 
   renderListaDocumentos = function () {
     const consulta = (document.getElementById('buscador-input').value || '').trim().toLowerCase();
-    const coincide = row => !consulta || [row.nombre_archivo, row.folio, fmtFechaCorta(row.updated_at)]
-      .some(valor => String(valor || '').toLowerCase().includes(consulta));
+    const buscar = globalThis.kwBusquedaPortal?.preparar(consulta);
+    const coincide = row => buscar?.coincide([row.nombre_archivo, row.estado, 'acuerdo documento'],
+      [row.folio, fmtFechaCorta(row.updated_at)]) ?? (!consulta ||
+      [row.nombre_archivo, row.folio, fmtFechaCorta(row.updated_at)]
+        .some(valor => String(valor || '').toLowerCase().includes(consulta)));
     const grupos = agruparDocumentos(documentosCache).map(grupo => {
       const originalCoincide = coincide(grupo.original);
       const revisiones = grupo.revisiones.filter(coincide);

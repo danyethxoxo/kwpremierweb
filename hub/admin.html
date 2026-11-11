@@ -1276,6 +1276,7 @@
 </style>
 <link rel="stylesheet" href="/assets/css/kw-movil.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-admin-asesores.css?v=20261030alineacion">
+<script src="/assets/js/kw-busqueda-portal.js?v=20261110portal"></script>
 </head>
 <body class="kw-panel-lateral">
 
@@ -1796,10 +1797,15 @@
     } else if (tab === 'documentos') {
       const buscador = document.getElementById('doc-buscador');
       if (buscador) { buscador.value = valor; filtrarDocumentosPanel(); }
+    } else if (tab === 'creados') {
+      const buscador = document.getElementById('creado-buscador');
+      if (buscador) { buscador.value = valor; filtrarDocumentosCreadosPanel(); }
     } else if (tab === 'usuarios') {
       const consulta = String(valor || '').trim().toLowerCase();
+      const buscar = globalThis.kwBusquedaPortal?.preparar(consulta);
       document.querySelectorAll('#usuarios-cont .usuario-fila').forEach((fila) => {
-        fila.style.display = !consulta || fila.textContent.toLowerCase().includes(consulta) ? '' : 'none';
+        const coincide = buscar?.coincide(fila.textContent) ?? (!consulta || fila.textContent.toLowerCase().includes(consulta));
+        fila.style.display = coincide ? '' : 'none';
       });
     }
   }
@@ -2126,6 +2132,7 @@
   function renderDocumentosPanel() {
     const cont = document.getElementById('documentos-cont');
     const q = (document.getElementById('doc-buscador').value || '').trim().toLowerCase();
+    const buscar = globalThis.kwBusquedaPortal?.preparar(q);
     const fAsesor = document.getElementById('doc-filtro-asesor').value;
     const fTipo = document.getElementById('doc-filtro-tipo').value;
     const fEstatus = document.getElementById('doc-filtro-estatus').value;
@@ -2141,7 +2148,11 @@
       if (q) {
         const nombre = (d.nombre_archivo || '').toLowerCase();
         const folio = (d.folio || '').toLowerCase();
-        if (!nombre.includes(q) && !folio.includes(q)) return false;
+        const coincide = buscar?.coincide(
+          [d.nombre_archivo, d.asesor_nombre, d.asesor_apellido, d.estado, 'documento'],
+          [d.folio, d.asesor_email]
+        ) ?? (nombre.includes(q) || folio.includes(q));
+        if (!coincide) return false;
       }
       return true;
     });
@@ -2250,6 +2261,7 @@
   function renderDocumentosCreadosPanel() {
     const cont = document.getElementById('creados-cont');
     const q = (document.getElementById('creado-buscador').value || '').trim().toLowerCase();
+    const buscar = globalThis.kwBusquedaPortal?.preparar(q);
     const fAsesor = document.getElementById('creado-filtro-asesor').value;
     const fPlantilla = document.getElementById('creado-filtro-plantilla').value;
     const fEstatus = document.getElementById('creado-filtro-estatus').value;
@@ -2265,7 +2277,11 @@
       if (q) {
         const titulo = (d.titulo || '').toLowerCase();
         const folio = (d.folio || '').toLowerCase();
-        if (!titulo.includes(q) && !folio.includes(q)) return false;
+        const coincide = buscar?.coincide(
+          [d.titulo, d.asesor_nombre, d.asesor_apellido, d.estado, 'documento'],
+          [d.folio, d.asesor_email]
+        ) ?? (titulo.includes(q) || folio.includes(q));
+        if (!coincide) return false;
       }
       return true;
     });
@@ -2771,7 +2787,12 @@
   function visiblesDe(g) {
     if (!g) return [];
     const filtro = filtroBuscador();
-    return filtro ? g.personas.filter(function (p) { return coincide(p, filtro); }) : g.personas;
+    const buscar = globalThis.kwBusquedaPortal?.preparar(filtro);
+    if (!filtro) return g.personas;
+    if (!buscar) return g.personas.filter(p => coincide(p, filtro));
+    return buscar.filtrar(g.personas,
+      p => [p.nombre, p.puesto, p.celula, g.titulo, 'asesor'],
+      p => [p.correo, p.kwid, p.telefono]);
   }
 
   function telefonoParaCsv(valor) {
@@ -3915,9 +3936,10 @@
 
   function verifVisibles() {
     const f = filtroVerif();
+    const buscar = globalThis.kwBusquedaPortal?.preparar(f);
     if (!f) return ultimaVerificacion;
     return ultimaVerificacion.filter(function (p) {
-      return (p.nombre || '').toLowerCase().includes(f) || (p.correo || '').toLowerCase().includes(f);
+      return buscar?.coincide(p.nombre, [p.correo]) ?? ((p.nombre || '').toLowerCase().includes(f) || (p.correo || '').toLowerCase().includes(f));
     });
   }
 
@@ -4449,7 +4471,7 @@
   }
 </script>
 <script src="/assets/js/kw-asesores-excel.js?v=20261031excel"></script>
-<script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
 </body>

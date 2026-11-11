@@ -29,9 +29,12 @@
       posicionar();
     }
     function filtrar(){
+      const consulta=normalizar(buscar.value);
+      const filtro = globalThis.kwBusquedaPortal?.preparar(consulta);
       menu.querySelectorAll('.kw-select-opcion').forEach(op=>{
-        const consulta=normalizar(buscar.value);
-        op.hidden=!normalizar(op.textContent).includes(consulta)&&!normalizar(select.options[Number(op.dataset.i)]?.value).includes(consulta);
+        const valor = select.options[Number(op.dataset.i)]?.value;
+        op.hidden = !(filtro?.coincide(op.textContent, [valor]) ??
+          (normalizar(op.textContent).includes(consulta) || normalizar(valor).includes(consulta)));
         op.id=menu.id+'-'+op.dataset.i;op.classList.remove('resaltada');
       });
       buscar.removeAttribute('aria-activedescendant');

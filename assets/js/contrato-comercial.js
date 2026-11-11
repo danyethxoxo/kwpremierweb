@@ -159,7 +159,12 @@
   }
   function pintarLista() {
     const buscar=$('buscador-input').value.trim().toLocaleLowerCase('es-MX');
-    const filas=registros.filter(r=>[r.nombre_archivo,r.datos?.cliente,...(r.datos?.clientes||[]).map(c=>c.cliente),r.folio].some(v=>String(v||'').toLocaleLowerCase('es-MX').includes(buscar)));
+    const filtro = globalThis.kwBusquedaPortal?.preparar(buscar);
+    const filas = registros.filter(r => {
+      const campos = [r.nombre_archivo, r.datos?.cliente, ...(r.datos?.clientes || []).map(c => c.cliente)];
+      return filtro?.coincide([...campos, r.estado, 'contrato comercial'], [r.folio]) ??
+        [...campos, r.folio].some(v => String(v || '').toLocaleLowerCase('es-MX').includes(buscar));
+    });
     for(const estado of ['borrador','finalizado']){
       const grupo=filas.filter(r=>r.estado===estado);
       $('lista-'+(estado==='borrador'?'borradores':'finalizados')).innerHTML=grupo.length?'<div class="kw-lista">'+grupo.map(r=>'<button type="button" class="kw-fila lista-item" data-abrir="'+escapar(r.id)+'"><span class="kw-fila-cabeza"><span class="kw-fila-punto '+(estado==='finalizado'?'lavanda':'rojo')+'"></span><span class="kw-fila-texto"><span class="kw-fila-titulo">'+escapar(r.nombre_archivo)+'</span><span class="kw-fila-sub">'+escapar([r.folio,r.datos?.cliente,new Date(r.updated_at).toLocaleDateString('es-MX')].filter(Boolean).join(' · '))+'</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg></span></button>').join('')+'</div>':'<div class="lista-vacio">'+(buscar?'No hay documentos para esta búsqueda.':estado==='borrador'?'Todavía no hay borradores.':'Todavía no hay documentos finalizados.')+'</div>';

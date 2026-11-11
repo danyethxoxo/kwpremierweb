@@ -212,10 +212,17 @@
     }).catch(() => {});
   }
 
+  let cargaBusquedaPortal;
   function buscarEnIndice(termino) {
     const q = normalizar(termino).trim();
     if (!q) return [];
     const palabras = q.split(/\s+/);
+    if (!globalThis.kwBusquedaPortal && !cargaBusquedaPortal) {
+      cargaBusquedaPortal = import('/assets/js/kw-busqueda-portal.js?v=20261110portal')
+        .then(() => { if (busquedaAbierta()) pintarResultados(buscarInput.value); })
+        .catch(() => {});
+    }
+    const buscar = globalThis.kwBusquedaPortal?.preparar(termino);
     const destinos = new Set(INDICE_BUSQUEDA.map((item) => new URL(item.href, location.origin).pathname));
     const accesos = NAV_HUB.concat(NAV_PUBLICO).filter((item) => {
       const ruta = new URL(item.href, location.origin).pathname;
@@ -228,12 +235,13 @@
         const texto = normalizar(item.label + ' ' + item.cat + ' ' + (item.alias || ''));
         // Todas las palabras escritas tienen que aparecer en algún lado
         // (en cualquier orden), no la frase completa tal cual.
-        if (!palabras.every((p) => texto.indexOf(p) >= 0)) return null;
+        const coincidencia = buscar?.puntuar(texto) ?? (palabras.every(p => texto.includes(p)) ? 0 : Infinity);
+        if (!Number.isFinite(coincidencia)) return null;
         // Coincidir desde el principio del título puntúa más alto que
         // coincidir a media palabra o solo en el alias.
         const enTitulo = normalizar(item.label).indexOf(q) >= 0;
         const alInicio = normalizar(item.label).indexOf(q) === 0;
-        const puntaje = alInicio ? 0 : enTitulo ? 1 : 2;
+        const puntaje = coincidencia * 3 + (alInicio ? 0 : enTitulo ? 1 : 2);
         return { item, puntaje };
       })
       .filter(Boolean)

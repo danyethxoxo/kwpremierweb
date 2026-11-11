@@ -104,7 +104,10 @@
       var limpiar = document.createElement('button'); limpiar.type = 'button'; limpiar.className = 'catalogo-limpiar'; limpiar.textContent = '×'; limpiar.setAttribute('aria-label','Borrar ' + campo);
       function filtrar() {
         var texto = normalizarBusqueda(buscar.value);
-        menu.querySelectorAll('.kw-select-opcion').forEach(function (op) { op.hidden = !normalizarBusqueda(op.textContent).includes(texto); });
+        var coincidencias = globalThis.kwBusquedaPortal?.preparar(texto);
+        menu.querySelectorAll('.kw-select-opcion').forEach(function (op) {
+          op.hidden = !(coincidencias?.coincide(op.textContent) ?? normalizarBusqueda(op.textContent).includes(texto));
+        });
         limpiar.hidden = !select.value && !buscar.value;
       }
       buscar.actualizarCatalogo = function () {
@@ -633,4 +636,3 @@
   if (document.documentElement.classList.contains('kw-auth-ok')) iniciar();
   else window.addEventListener('kw-auth-ready', iniciar, { once: true });
 })();
-

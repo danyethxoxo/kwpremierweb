@@ -184,7 +184,9 @@
       function pintarOpciones(){
         lista.replaceChildren();lista.setAttribute('aria-busy','false');
         var q=input.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-        var filtradas=opciones.filter(function(o){return o.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q);});
+        var buscar = globalThis.kwBusquedaPortal?.preparar(q);
+        var filtradas = opciones.filter(o => buscar?.coincide(o.nombre) ??
+          o.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q));
         if(!filtradas.length){lista.textContent='No hay registros disponibles.';return;}
         filtradas.forEach(function(o){var b=document.createElement('button');b.type='button';b.textContent=o.nombre;b.onclick=async function(){
           lista.querySelectorAll('button').forEach(function(x){x.disabled=true;});msg.textContent='';
