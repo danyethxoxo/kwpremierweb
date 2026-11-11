@@ -218,7 +218,7 @@ async function contarInventario(admin: ReturnType<typeof createClient<any>>, est
 
 async function leerHistorial(admin: ReturnType<typeof createClient<any>>, desde: string, hasta: string): Promise<Historial[]> {
   const historial: Historial[] = []
-  for (let offset = 0; ; offset += 1000) {
+  for (let offset = 0; ; offset += 200) {
     const { data, error } = await admin.from('propiedades_historial')
       .select('id, propiedad_id, fuente, fuente_id, estatus_anterior, estatus_nuevo, registrado_at, tipo, snapshot')
       .eq('fuente', FUENTE)
@@ -226,10 +226,10 @@ async function leerHistorial(admin: ReturnType<typeof createClient<any>>, desde:
       .lte('registrado_at', hasta)
       .order('registrado_at', { ascending: true })
       .order('id', { ascending: true })
-      .range(offset, offset + 999)
+      .range(offset, offset + 199)
     if (error) throw error
     historial.push(...(data || []) as Historial[])
-    if (!data || data.length < 1000) break
+    if (!data || data.length < 200) break
   }
   return historial
 }
@@ -401,7 +401,7 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
     const correo = armarCorreo(reporte)
     const envio = await enviarCorreo({
       to: DESTINATARIO,
-      subject: `Reporte acumulado de propiedades | ${fechaArchivo(reporte.ultimaCorrida)}`,
+      subject: `Reporte acumulado de propiedades | ${fechaArchivo(reporte.periodoDesde)}`,
       html: correo.html,
       text: correo.texto,
       attachments: [{
@@ -425,7 +425,7 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
       desactivadas: reporte.desactivadas.length,
     })
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : 'Error desconocido'
+    const mensaje = error instanceof Error ? error.message : String((error as { message?: string })?.message || 'Error desconocido')
     if (admin && reporteId) {
       await admin.from('propiedades_reportes').update({ estado: 'error', error: mensaje.slice(0, 500) }).eq('id', reporteId)
     }
@@ -433,3 +433,5 @@ secureServe({ name: 'enviar-reporte-propiedades', auth: 'service', ipLimit: 30, 
     return response({ error: 'No se pudo enviar el reporte diario.' }, 502)
   }
 })
+
+
