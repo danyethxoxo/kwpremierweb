@@ -60,6 +60,7 @@
   const NAV_HUB = [
     { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
     { href: `${BASE}/hub/dashboard.html`, label: 'Dashboard', icon: 'tablero', roles: ['master', 'admin', 'staff'] },
+    { href: `${BASE}/hub/propiedades-pruebas.html`, label: 'Propiedades (pruebas)', icon: 'llave', roles: ['master', 'admin'] },
     { href: `${BASE}/hub/perfil-comprador.html`, label: 'Perfil comprador', icon: 'prospecto' },
     { href: `${BASE}/propiedades.html`, label: 'Propiedades', icon: 'llave' },
     { href: `${BASE}/hub/tickets.html`, label: 'Reporta una Incidencia', icon: 'alert' },
@@ -106,6 +107,7 @@
   const INDICE_BUSQUEDA = [
     { label: 'Inicio del Hub', href: `${BASE}/portal.html`, cat: 'Hub' },
     { label: 'Dashboard', href: `${BASE}/hub/dashboard.html`, cat: 'Hub', alias: 'lore tracker comparativa indicadores produccion asociados' },
+    { label: 'Propiedades (pruebas)', href: `${BASE}/hub/propiedades-pruebas.html`, cat: 'Hub', alias: 'feed xml json inventario conexion recepciones portal', roles: ['master','admin'] },
     { label: 'Accesos Directos', href: `${BASE}/hub/accesosdirectos.html`, cat: 'Hub', alias: 'command weetrust kw one' },
     { label: 'Acuerdos y Contratos', href: `${BASE}/documentos/documentos.html`, cat: 'Hub', alias: 'documentos' },
     { label: 'Documentos de Drive', href: `${BASE}/hub/drive.html`, cat: 'Hub', alias: 'drive carpeta archivos formatos manuales' },
@@ -1112,3 +1114,4 @@
     else window.addEventListener('kw-auth-ready', cargarUsuario, { once: true });
   }
 })();
+

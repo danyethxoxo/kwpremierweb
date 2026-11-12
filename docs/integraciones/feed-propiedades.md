@@ -1,10 +1,10 @@
 # Conexión de propiedades con KW Premier
 
-Versión 1 | 11 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
+Versión 1.1 | 12 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
 
 ## Requerimientos
 
-Queremos dar de alta www.kwpremieroficial.com como destino de publicación de las propiedades autorizadas de KW. Ya tenemos un receptor HTTPS para archivos JSON o XML. Necesitamos confirmar si KW enviará el inventario a nuestra dirección o si nos proporcionará una URL para consultarlo, y recibir una muestra real con su documentación.
+Queremos dar de alta www.kwpremieroficial.com como destino de publicación de las propiedades autorizadas de KW. Ya tenemos un receptor HTTPS para archivos JSON o XML. El flujo principal es que KW envíe las propiedades a nuestro receptor como a un portal inmobiliario. Necesitamos una muestra real, el alcance autorizado y su documentación para confirmar el mapeo de campos.
 
 Esta integración cubre propiedades. Contactos, leads y oportunidades de Command necesitan una integración y autorizaciones independientes.
 
@@ -15,7 +15,7 @@ Esta integración cubre propiedades. Contactos, leads y oportunidades de Command
 - Método: POST desde el servidor del proveedor.
 - Autenticación: cabecera `x-api-key` con una clave exclusiva entregada por separado. No se requieren claves de Supabase, cuentas del portal ni contraseñas de Command.
 - Formatos: `application/json` o `application/xml`, codificados en UTF-8.
-- Estado inicial: validación habilitada; publicación deshabilitada. Un archivo de prueba no modifica el catálogo público.
+- Estado inicial: recepción y almacenamiento privados habilitados; publicación pública deshabilitada. Los archivos aceptados se muestran en el apartado privado Propiedades (pruebas), sin modificar el catálogo actual.
 
 El receptor acepta el contrato de datos versión 1 descrito aquí. Si KW usa otro esquema, necesitamos su muestra para preparar y probar el adaptador. No se debe asumir compatibilidad automática por el solo hecho de ser JSON o XML.
 
@@ -28,7 +28,7 @@ El receptor acepta el contrato de datos versión 1 descrito aquí. Si KW usa otr
 5. Explicar cómo informan bajas, ventas, rentas y eliminaciones; si el archivo es completo o solo contiene cambios; y cómo indican el total y la última página.
 6. Confirmar frecuencia, credenciales, caducidad de enlaces de fotografías, límites, condiciones de uso y contacto de soporte.
 
-## Modalidad A: KW envía el archivo
+## Envío al portal: modalidad principal
 
 Enviar el cuerpo completo del JSON o XML por POST. No usar multipart/form-data, ZIP, adjuntos por correo ni un objeto que solo contenga una URL. Las fotografías se referencian mediante URLs HTTPS; no se adjuntan sus archivos binarios.
 
@@ -42,9 +42,9 @@ curl --request POST \
 
 Para XML, cambiar Content-Type a application/xml y usar ejemplo-propiedades.xml. La variable KWP_FEED_KEY representa la clave privada, que no se incluye en este documento.
 
-La ruta sin parámetros solo valida. Una vez autorizada y configurada la publicación por Premier, el proveedor usa la misma ruta con `?publicar=true`. Antes de habilitarla, esa petición devuelve HTTP 409.
+La ruta sin parámetros valida y guarda las fichas en el inventario privado de pruebas. Esta es la dirección que debe usar KW ahora. No agregar `?publicar=true`: la publicación al catálogo actual permanece deshabilitada y responde HTTP 409. El proveedor no necesita una cuenta en el portal de Premier; se autentica con su clave de integración.
 
-## Modalidad B: Premier consulta la URL de KW
+## Alternativa: Premier consulta la URL de KW
 
 Ricardo entrega una URL HTTPS y sus credenciales, si las requiere. Premier configura esa dirección en el servidor y programa la consulta con la frecuencia acordada. La dirección y las credenciales nunca se colocan en el navegador ni en el repositorio.
 
@@ -60,7 +60,7 @@ JSON usa un objeto con `version`, `envio_id`, `generado_at`, `modo`, `total` y e
 | --- | --- |
 | version | 1 |
 | envio_id | ID único del envío, máximo 100 caracteres. Letras, números, punto, guion, dos puntos o guion bajo. |
-| generado_at | Fecha ISO 8601 con zona horaria, por ejemplo 2026-11-11T18:00:00Z. Debe avanzar en cada nueva publicación. |
+| generado_at | Fecha ISO 8601 con zona horaria, por ejemplo 2026-11-11T18:00:00Z. Debe avanzar en cada nuevo envío. |
 | modo | incremental o completo. |
 | total | Número exacto de propiedades de este envío. |
 | propiedades | Entre 1 y 10,000 registros; tamaño total máximo 8 MiB. |
@@ -94,23 +94,23 @@ Una ficha activa se envía completa: los campos opcionales omitidos se vacían a
 - Completo: actualiza el conjunto y suspende las propiedades ausentes, exclusivamente dentro de esta conexión. Nunca modifica por ausencia otras fuentes.
 - Bajas explícitas: usar el ID existente y su nuevo estatus. No se elimina físicamente la ficha ni su historial.
 - Reenvíos: repetir el mismo envio_id y contenido devuelve el resultado anterior con repetido=true. Reutilizar el ID con otro contenido devuelve 409.
-- Orden: un envío nuevo más antiguo o con la misma fecha que la última publicación se rechaza.
-- Protección: si una publicación retira más del 20 % de las activas de esta conexión, se bloquea para revisión de Premier. El límite puede ajustarse por el administrador tras validar el lote.
-- Integridad: cada publicación se aplica en una sola transacción. Un error revierte todo el lote.
+- Orden: un envío nuevo más antiguo o con la misma fecha que el último envío aceptado se rechaza.
+- Protección: si un envío retira más del 20 % de las activas de esta conexión, se bloquea para revisión de Premier. El límite puede ajustarse por el administrador tras validar el lote.
+- Integridad: cada recepción se aplica en una sola transacción. Un error revierte todo el lote.
 
 ## Respuestas y comprobación
 
-Una validación correcta responde HTTP 200, pero NO significa que se haya publicado:
+Una recepción privada correcta responde HTTP 200 y almacenado_en_pruebas=true. Significa que las fichas ya están disponibles en el apartado privado, pero NO están publicadas en el catálogo actual:
 
 ```json
-{"ok":true,"envio_id":"ejemplo-json-20261111-01","estado":"validado","publicado":false,"recibidas":1,"activas_en_envio":1,"bajas_en_envio":0,"modo":"incremental","repetido":false}
+{"ok":true,"envio_id":"kw-20261112-01","estado":"validado","publicado":false,"almacenado_en_pruebas":true,"recibidas":1,"activas_en_pruebas":1,"nuevas":1,"reactivadas":0,"actualizadas":0,"desactivadas":0,"modo":"incremental","repetido":false}
 ```
 
 Tras habilitar producción, la respuesta tiene estado=publicado, publicado=true y los conteos nuevas, reactivadas, actualizadas y desactivadas. Premier conserva un registro de recepción por envio_id. Este acuse permite rastrear lo recibido; no sustituye la comprobación visual del portal.
 
 | HTTP | Significado y acción |
 | --- | --- |
-| 200 | Revisar estado y publicado. Puede ser solo validación. |
+| 200 | Revisar ok y almacenado_en_pruebas. publicado=false es correcto para esta conexión privada. |
 | 401 | Clave ausente, inválida o deshabilitada. |
 | 409 | Publicación pendiente, envío conflictivo/antiguo, baja desconocida, duplicidad entre fuentes o límite de bajas. Revisar error. |
 | 413 | Archivo mayor a 8 MiB. |
@@ -121,14 +121,36 @@ Tras habilitar producción, la respuesta tiene estado=publicado, publicado=true 
 
 Límites: 30 solicitudes por minuto por conexión y 60 por IP en este receptor, sujetos también a los límites generales del servidor. No enviar la clave como parámetro de URL ni incluirla en capturas o registros.
 
-## Prueba de aceptación antes de publicar
+## Flujo de conexión y aceptación privada
 
-1. KW envía una muestra JSON o XML y recibe estado=validado con los mismos IDs y cantidades.
-2. Premier verifica fotografías accesibles, precio, moneda, ubicación, oficina y asesor. Los ejemplos adjuntos son ficticios; example.com no representa fotografías reales.
+1. Premier entrega por separado la clave; Ricardo configura el receptor, Content-Type y x-api-key en el sistema emisor. KW envía un archivo inicial con un envio_id nuevo y una fecha actual. Debe recibir ok=true y almacenado_en_pruebas=true con la cantidad esperada.
+2. Un usuario master o admin abre https://www.kwpremieroficial.com/hub/propiedades-pruebas.html con su sesión habitual. Deben aparecer los IDs recibidos, las fichas, fotografías, precios, moneda, ubicación y asesor. La pantalla consulta los datos cada 30 segundos y tiene un botón Actualizar. Los ejemplos adjuntos son ficticios; example.com no representa fotografías reales.
 3. Se concilian IDs con el catálogo actual para conservar enlaces y evitar anuncios duplicados, incluso cuando los identificadores de KW y KWMéxico sean diferentes.
 4. Se define qué fuente gobierna cada propiedad y se ajustan buscador, perfil comprador, reportes y programación según el alcance. La lectura actual de KWMéxico no se sustituye automáticamente.
-5. En un entorno controlado se prueban alta, cambio de precio/foto, baja, reactivación y reenvío sin duplicación. Se compara un inventario completo por ID y cantidad.
-6. Premier habilita la publicación y se comprueba en el portal con IDs reales, además del acuse HTTP. Se acuerdan monitoreo y horario con el proveedor.
+5. KW envía un cambio de precio o foto con un nuevo envio_id y generado_at posterior; después, una baja y una reactivación. Premier revisa el resultado en la ficha y en Recepciones. Reenviar un archivo idéntico debe responder repetido=true sin duplicar registros. Un lote rechazado no cambia ninguna ficha; el panel muestra los rechazos autenticados registrados.
+6. Se comparan IDs y cantidades del inventario privado con el emisor, y se acuerdan frecuencia y monitoreo. Con esto queda aceptada la conexión privada. Una migración posterior al catálogo actual requiere una decisión y conciliación independientes; no es necesaria para comenzar estas pruebas.
+
+## Confirmación de un envío por el proveedor
+
+El proveedor puede consultar un envío aceptado, sin iniciar sesión en la web, usando GET y su misma clave:
+
+```sh
+curl 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/recibir-feed-propiedades?envio_id=kw-20261112-01' \
+  --header "x-api-key: $KWP_FEED_KEY"
+```
+
+La consulta solo permite ver acuses de su propia conexión. Responde 200 con resultado, recibido_at y generado_at, o 404 si ese envío no fue aceptado. Para reintentar un fallo temporal se reenvía el mismo cuerpo y envio_id. Para corregir un archivo rechazado o cambiar su contenido, usar un nuevo envio_id y una fecha generado_at posterior. Los errores procesados después de autenticar pueden incluir recepcion_id para soporte; no todos los rechazos del gateway, como un archivo demasiado grande, llegan al registro del panel.
+
+## Reglas para la operación privada
+
+- Primer envío: inventario completo del alcance acordado, o lotes incrementales coordinados si excede los límites. No enviar cada página de una API como inventario completo.
+- Cada propiedad usa el mismo ID en altas, cambios, bajas y reactivaciones. Un cambio de precio no genera un ID nuevo.
+- Cada nuevo envío avanza generado_at. Nunca lanzar lotes simultáneos sin coordinar su orden; un envío antiguo se rechaza para no sobrescribir datos recientes.
+- El modo completo y el límite de bajas del 20 % también se aplican al inventario privado. Para retirar más del límite, coordinar la revisión con Premier; no fragmentar envíos para eludirlo.
+- Una baja requiere un ID ya recibido. Se conserva su ficha y cambia de estatus, por lo que puede seguir revisándose con los filtros del apartado.
+- Enviar fotos mediante URLs HTTPS accesibles desde el navegador; la recepción valida la URL, pero no garantiza que la imagen exista o que el proveedor permita descargarla. Confirmar permisos y vigencia.
+- Las fichas privadas no se muestran en el buscador actual, no generan leads y no se mezclan con los reportes de KWMéxico.
+- No compartir la clave en el navegador, capturas o enlaces. Para rotación o incidencias, canalizar con el responsable técnico de Premier a través de Ricardo. Confirmar ese contacto durante el alta.
 
 ## Material para entregar
 
@@ -136,12 +158,13 @@ Enviar a Ricardo este documento y los archivos ejemplo-propiedades.json y ejempl
 
 ## Operación interna de Premier
 
-La configuración se guarda en propiedades_feed_config; la clave se almacena únicamente como hash SHA-256. propiedades_feed_envios registra ID, fecha, hash y resultado; no conserva archivos ni datos personales del contacto. Las dos tablas y la función propiedades_feed_recibir solo permiten uso desde service_role.
+La configuración se guarda en propiedades_feed_config; la clave se almacena únicamente como hash SHA-256. propiedades_feed_envios registra ID, fecha, hash y resultado; no conserva archivos ni datos personales del contacto. Las tablas de conexión, acuses, propiedades_feed_pruebas y propiedades_feed_rechazos solo permiten uso desde service_role. Las fichas normalizadas sí se conservan en propiedades_feed_pruebas. El panel las consulta a través de la función autenticada propiedades-feed-pruebas, que exige MFA y rol master o admin.
 
 Para lectura por URL, el administrador configura url_feed y, si aplica, authorization_feed (valor completo de Authorization, por ejemplo Bearer o Basic). Son datos privados del servidor. No se acepta una URL arbitraria enviada por el proveedor en el cuerpo. La programación debe llamar al receptor autenticado y comprobar ok, estado y publicado, no solamente HTTP 200.
 
 La publicación permanece deshabilitada hasta completar la prueba de aceptación. No cambiar publicacion_habilitada sin conciliar IDs y revisar las consultas que actualmente filtran fuente=kwmexico. Los reportes diarios actuales de KWMéxico no incluyen automáticamente el nuevo feed.
 
 Para rotar la clave, generar 32 bytes aleatorios, usar prefijo kwp_feed_ y guardar el SHA-256 del valor completo en token_hash. Entregar el valor original por separado. activo=false revoca toda la conexión. Conservar el historial de acuses para investigar errores o reintentos.
+
 
 
