@@ -2,7 +2,7 @@
 
 Versión 1 | 11 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
 
-## Solicitud de Gustavo
+## Requerimientos
 
 Queremos dar de alta www.kwpremieroficial.com como destino de publicación de las propiedades autorizadas de KW. Ya tenemos un receptor HTTPS para archivos JSON o XML. Necesitamos confirmar si KW enviará el inventario a nuestra dirección o si nos proporcionará una URL para consultarlo, y recibir una muestra real con su documentación.
 
@@ -143,4 +143,5 @@ Para lectura por URL, el administrador configura url_feed y, si aplica, authoriz
 La publicación permanece deshabilitada hasta completar la prueba de aceptación. No cambiar publicacion_habilitada sin conciliar IDs y revisar las consultas que actualmente filtran fuente=kwmexico. Los reportes diarios actuales de KWMéxico no incluyen automáticamente el nuevo feed.
 
 Para rotar la clave, generar 32 bytes aleatorios, usar prefijo kwp_feed_ y guardar el SHA-256 del valor completo en token_hash. Entregar el valor original por separado. activo=false revoca toda la conexión. Conservar el historial de acuses para investigar errores o reintentos.
+
 
