@@ -17,6 +17,26 @@ function amount(v: unknown, field: string, integer = false): number | null {
   if (!Number.isFinite(n) || n < 0 || n > 1e13 || (integer && !Number.isInteger(n))) return fail(`Campo ${field} inválido.`)
   return n
 }
+function marketData(p: Record<string, any>, generado: string): Record<string, any> {
+  const result: Record<string, any> = {}
+  if (p.dias_en_mercado != null && p.dias_en_mercado !== '') {
+    const days = amount(p.dias_en_mercado, 'dias_en_mercado', true)!
+    if (days > 365000) fail('dias_en_mercado fuera de rango.')
+    result.dias_en_mercado = days
+  }
+  for (const field of ['fecha_publicacion','fecha_cierre']) {
+    if (p[field] == null || p[field] === '') continue
+    const value = text(p[field],field,10)
+    const date = Date.parse(value+'T00:00:00Z')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date) || new Date(date).toISOString().slice(0,10)!==value) fail(`Campo ${field}: usa una fecha válida AAAA-MM-DD.`)
+    if (value > new Date(generado).toISOString().slice(0,10)) fail(`Campo ${field}: no se permiten fechas futuras.`)
+    result[field] = value
+  }
+  if (result.fecha_publicacion && result.fecha_cierre && result.fecha_cierre < result.fecha_publicacion) fail('fecha_cierre no puede ser anterior a fecha_publicacion.')
+  // Si el proveedor cambia las fechas sin enviar días, recalcular en lugar de conservar una cifra anterior.
+  if ((result.fecha_publicacion || result.fecha_cierre) && result.dias_en_mercado == null) result.dias_en_mercado = null
+  return result
+}
 function urls(v: unknown): string[] {
   const values = object(v) ? v.foto ?? v.imagen ?? v.url : v
   return list(values).map((u) => {
@@ -52,11 +72,12 @@ export function parseFeed(raw: string, contentType: string) {
     if (seen.has(id)) fail(`ID repetido: ${id}`)
     seen.add(id)
     const statuses: Record<string, string> = { activa: 'publicada', publicada: 'publicada', inactiva: 'suspendida', suspendida: 'suspendida', vendida: 'vendida', rentada: 'rentada', reservada: 'reservada', no_publicada: 'no_publicada' }
-    const status = statuses[p.estatus]
+    const status = statuses[typeof p.estatus==='string' ? p.estatus.trim().toLowerCase() : '']
     if (!status) fail(`Estatus desconocido para ${id}.`)
     // Una baja puede traer solo el ID y el estatus; nunca borra la ficha.
-    if (status !== 'publicada') return { fuente_id: id, estatus: status }
-    const row: Record<string, any> = { fuente_id: id, estatus: status, titulo: text(p.titulo, 'titulo') }
+    const market = marketData(p,generado)
+    if (status !== 'publicada') return { fuente_id: id, estatus: status, ...market }
+    const row: Record<string, any> = { fuente_id: id, estatus: status, ...market, titulo: text(p.titulo, 'titulo') }
     if (!['venta', 'renta'].includes(p.operacion)) fail(`Operación inválida para ${id}.`)
     row.operacion = p.operacion
     row.tipo = text(p.tipo, 'tipo', 100)
@@ -92,4 +113,5 @@ export async function sha256(value: string) {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
 }
+
 

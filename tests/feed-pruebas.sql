@@ -4,7 +4,7 @@ do $test$
 declare filas jsonb;r jsonb;bloqueado boolean;inicial bigint;
 begin
   select count(*) into inicial from public.propiedades;
-  select jsonb_agg(jsonb_build_object('fuente_id','QA-PRIVADO-'||i,'estatus','publicada','titulo','Casa de prueba','operacion','venta','tipo','Casa','precio',4000000,'moneda','MXN','estado','Ciudad de México','municipio','Benito Juárez')) into filas from generate_series(1,10)i;
+  select jsonb_agg(jsonb_build_object('fuente_id','QA-PRIVADO-'||i,'estatus','publicada','titulo','Casa de prueba','operacion','venta','tipo','Casa','precio',4000000,'dias_en_mercado',1,'fecha_publicacion','2026-10-01','moneda','MXN','estado','Ciudad de México','municipio','Benito Juárez')) into filas from generate_series(1,10)i;
   r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','alta','h1','2026-11-12T10:00:00Z','completo',filas);
   assert (r->>'nuevas')::int=10 and (r->>'almacenado_en_pruebas')::boolean and not (r->>'publicado')::boolean;
   r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','alta','h1','2026-11-12T10:00:00Z','completo',filas);
@@ -12,9 +12,9 @@ begin
   filas:=jsonb_set(filas,'{0,precio}','4500000');
   r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','precio','h2','2026-11-12T11:00:00Z','incremental',filas);
   assert (r->>'actualizadas')::int=1;
-  r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','baja','h3','2026-11-12T12:00:00Z','incremental','[{"fuente_id":"QA-PRIVADO-1","estatus":"vendida"}]');
+  r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','baja','h3','2026-11-12T12:00:00Z','incremental','[{"fuente_id":"QA-PRIVADO-1","estatus":"vendida","dias_en_mercado":42,"fecha_cierre":"2026-11-12"}]');
   assert (r->>'desactivadas')::int=1;
-  assert (select datos->>'titulo'='Casa de prueba' and (datos->>'precio')::int=4500000 from public.propiedades_feed_pruebas where feed_id='qa-inventario-privado' and fuente_id='QA-PRIVADO-1');
+  assert (select datos->>'titulo'='Casa de prueba' and (datos->>'precio')::int=4500000 and (datos->>'dias_en_mercado')::int=42 and datos->>'fecha_cierre'='2026-11-12' from public.propiedades_feed_pruebas where feed_id='qa-inventario-privado' and fuente_id='QA-PRIVADO-1');
   r:=public.propiedades_feed_guardar_pruebas('qa-inventario-privado','reactivar','h4','2026-11-12T13:00:00Z','incremental',jsonb_build_array(filas->0));
   assert (r->>'reactivadas')::int=1;
   bloqueado:=false;
@@ -35,4 +35,5 @@ end
 $test$;
 select 'Inventario privado, cambios, bajas, reactivación, reenvíos, orden, límites y aislamiento comprobados' as resultado;
 rollback;
+
 

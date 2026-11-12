@@ -2,11 +2,6 @@
 
 Versión 1.1 | 12 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
 
-## Requerimientos
-
-Queremos dar de alta www.kwpremieroficial.com como destino de publicación de las propiedades autorizadas de KW. Ya tenemos un receptor HTTPS para archivos JSON o XML. El flujo principal es que KW envíe las propiedades a nuestro receptor como a un portal inmobiliario. Necesitamos una muestra real, el alcance autorizado y su documentación para confirmar el mapeo de campos.
-
-Esta integración cubre propiedades. Contactos, leads y oportunidades de Command necesitan una integración y autorizaciones independientes.
 
 ## Qué proporciona Premier
 
@@ -77,6 +72,9 @@ El formato completo requiere el inventario íntegro del alcance acordado, no una
 | precio | Obligatorio para una activa; número mayor a cero sin símbolos ni separadores de miles. |
 | moneda | MXN o USD; obligatoria para una activa. |
 | estado, municipio | Obligatorios para una activa. estado es la entidad federativa; no es el estatus. |
+| dias_en_mercado | Opcional: entero no negativo enviado por KW. Se muestra tal como lo informa el proveedor, incluido 0. |
+| fecha_publicacion | Opcional: fecha AAAA-MM-DD de inicio de comercialización. Permite calcular días si no se recibe dias_en_mercado. |
+| fecha_cierre | Opcional: fecha AAAA-MM-DD del cierre o retiro. No puede ser futura ni anterior a fecha_publicacion. |
 | descripcion, calle, colonia, cp, pais | Opcionales; cp es texto y pais usa MX para México. |
 | recamaras, estacionamientos | Conteos enteros no negativos. |
 | banos, m2_construccion, m2_terreno | Números no negativos; punto para decimales. Superficies en metros cuadrados. |
@@ -85,6 +83,10 @@ El formato completo requiere el inventario íntegro del alcance acordado, no una
 | caracteristicas | Arreglo de textos en JSON. En XML: caracteristicas/caracteristica. |
 | market_center, asesor_nombre, asesor_kw_id | Datos de identificación de oficina y asesor. Recomendados. |
 | asesor_email | Correo del asesor para enlazar con su perfil de Premier. Opcional y válido. No incluir datos de clientes o propietarios. |
+
+Los estatus se aceptan sin distinguir mayúsculas/minúsculas: activa/publicada, inactiva/suspendida, vendida, rentada, reservada y no_publicada. La pantalla permite filtrarlos y conserva las fichas después de una baja. Para una baja basta con el ID y el estatus; también puede incluir los días y fechas finales. Un ID nuevo debe enviarse primero como ficha activa.
+
+Si KW envía dias_en_mercado, ese valor tiene prioridad y no se incrementa automáticamente. Si no lo envía y existe fecha_publicacion, calculamos días naturales hasta fecha_cierre; sin cierre, las activas se calculan hasta hoy en Ciudad de México y las demás requieren fecha_cierre o una cifra de días enviada por KW. Sin cifra ni fecha de inicio se muestra Sin dato, nunca 0 inventado. Si se actualizan fechas sin enviar una cifra de días, se descarta la cifra anterior para recalcular. En una baja que no incluya días ni fechas se conserva la información previa. No calculamos esta antigüedad desde la primera recepción en nuestra web.
 
 Una ficha activa se envía completa: los campos opcionales omitidos se vacían al actualizarla. Una baja puede enviar solamente id y estatus; conserva el resto de la ficha existente. IDs duplicados, estatus desconocidos, cifras inválidas o total inconsistente rechazan todo el lote.
 
@@ -165,6 +167,7 @@ Para lectura por URL, el administrador configura url_feed y, si aplica, authoriz
 La publicación permanece deshabilitada hasta completar la prueba de aceptación. No cambiar publicacion_habilitada sin conciliar IDs y revisar las consultas que actualmente filtran fuente=kwmexico. Los reportes diarios actuales de KWMéxico no incluyen automáticamente el nuevo feed.
 
 Para rotar la clave, generar 32 bytes aleatorios, usar prefijo kwp_feed_ y guardar el SHA-256 del valor completo en token_hash. Entregar el valor original por separado. activo=false revoca toda la conexión. Conservar el historial de acuses para investigar errores o reintentos.
+
 
 
 
