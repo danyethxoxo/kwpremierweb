@@ -33,7 +33,7 @@ function invitacion({role='master',rol='asociado',mailFails=false,mfaFails=false
 test('invitacion conserva verificacion, MFA y rol antes de enviar el correo',async()=>{
   const m=invitacion();assert.equal((await m.run()).status,200);
   assert.deepEqual(m.events.map(e=>e[0]),['link','mfa','role','mail']);
-  assert.equal(m.events[0][1].type,'invite');assert.match(m.events[0][1].options.redirectTo,/completar-registro/);
+  assert.equal(m.events[0][1].type,'invite');assert.equal(m.events[0][1].options.redirectTo,'https://kweb.com.mx/completar-registro.html');
   assert.equal(m.events[1][1].activo,false);assert.equal(m.events[2][1].role,'asociado');
   assert.match(m.events[3][1].html,/Aceptar invitaci/);assert.match(m.events[3][1].text,/token=x&type=invite/);
 });

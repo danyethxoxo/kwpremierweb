@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const REDIRECT_TO = 'https://www.kwpremieroficial.com/completar-registro.html'
+const REDIRECT_TO = 'https://kweb.com.mx/completar-registro.html'
 
 const ROLES_ASIGNABLES = ['admin', 'staff', 'asociado']
 

@@ -32,7 +32,8 @@ Los callbacks antiguos de invitacion y recuperacion pueden permanecer operativos
 - KWEB_ACTIVO habilitado; enlaces antiguos del sistema conservan ruta, consulta y fragmento.
 - Enlaces nuevos de notificaciones, dictamenes y reportes de propiedades apuntan a KWEB.
 - CORS admite los dos dominios de KWEB y conserva los de Premier, sin cambiar autenticacion.
-- Invitaciones y recuperacion mantienen temporalmente sus callbacks exactos en Premier, que trasladan a KWEB. La configuracion local de Auth ya incluye KWEB; falta confirmar el cambio equivalente en el panel alojado antes de cambiar esos dos emisores.
+- Auth alojado confirmado: Site URL https://kweb.com.mx y callbacks exactos completar-registro.html y restablecer-password.html autorizados. Se conservan los destinos anteriores durante la transicion.
+- Los emisores de invitaciones y recuperacion utilizan directamente los callbacks de KWEB.
 - Remitentes de correo conservan el dominio verificado kwpremieroficial.com.
 - La documentacion de propiedades permanece accesible en ambos dominios. Receptor, clave y formato sin cambios.
 
