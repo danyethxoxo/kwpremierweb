@@ -2,7 +2,7 @@ import { escaparHtml, plantillaCorreo } from './mailer.ts'
 
 type Propiedad = Record<string, unknown>
 type Cliente = { id: string; nombre: string; propiedades: Propiedad[] }
-const SITIO = 'https://www.kwpremieroficial.com'
+const SITIO = 'https://kweb.com.mx'
 function urlSegura(valor: unknown, soloKW = false): string {
   try {
     const url = new URL(String(valor || ''))

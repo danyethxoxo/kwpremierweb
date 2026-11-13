@@ -3,7 +3,7 @@
   'use strict';
   var API_ORIGIN = 'https://iloetojomzqtadkithtv.supabase.co';
   var nativeFetch = window.fetch.bind(window);
-  var KWEB_ACTIVO = false;
+  var KWEB_ACTIVO = true;
   var KWEB_ORIGIN = 'https://kweb.com.mx';
   var HOSTS_PREMIER = ['kwpremieroficial.com', 'www.kwpremieroficial.com'];
   var HOSTS_KWEB = ['kweb.com.mx', 'www.kweb.com.mx'];

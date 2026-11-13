@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <script src="/assets/js/kw-security.js?v=20260922"></script>
+  <script src="/assets/js/kw-security.js?v=20261112kweb"></script>
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
 <meta charset="UTF-8" />
@@ -977,7 +977,7 @@
 
     <div class="tapa-der">
       <button type="button" class="btn-tapa" id="btn-portal" onclick="irAlPortal(this)">
-        <span id="btn-portal-texto">Iniciar Sesión</span>
+        <span id="btn-portal-texto">Entrar a KWEB</span>
       </button>
     </div>
   </header>
@@ -1180,13 +1180,7 @@
 
   async function irAlPortal(btn) {
     btn.disabled = true;
-    try {
-      var result = await sbPortal.auth.getSession();
-      var session = result && result.data && result.data.session;
-      location.href = session ? '/portal.html' : '/login.html';
-    } catch (err) {
-      location.href = '/login.html';
-    }
+    location.href = 'https://kweb.com.mx/portal.html';
   }
 
   // Cambia el texto del portal cuando existe una sesión activa.
@@ -1194,7 +1188,7 @@
     try {
       var result = await sbPortal.auth.getSession();
       var session = result && result.data && result.data.session;
-      if (session) document.getElementById('btn-portal-texto').textContent = 'Ir al Portal';
+      if (session) document.getElementById('btn-portal-texto').textContent = 'Entrar a KWEB';
     } catch (err) {
       // Sin sesión o sin conexión: se queda como "Iniciar Sesión".
     }

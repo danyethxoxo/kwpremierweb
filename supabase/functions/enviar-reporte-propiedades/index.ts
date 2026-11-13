@@ -10,7 +10,7 @@ const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET')
 const DESTINATARIO = Deno.env.get('PROPIEDADES_REPORTE_EMAIL') || 'dani.guerrero@kwmexico.mx'
 const FUENTE = 'kwmexico'
 const ZONA_LOCAL = 'America/Mexico_City'
-const SITIO_PROPIEDADES = 'https://www.kwpremieroficial.com/propiedades.html'
+const SITIO_PROPIEDADES = 'https://kweb.com.mx/propiedades.html'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type Historial = {
