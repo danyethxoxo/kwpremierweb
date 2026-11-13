@@ -1,11 +1,14 @@
 # Conexión de propiedades con KW Premier
 
-Versión 1.1 | 12 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
+Versión 1.2 | 12 de noviembre de 2026 | Para Ricardo y el equipo técnico de KW
 
+
+El cambio a KWEB conserva el receptor de Supabase, el contrato de datos y la clave de integración. La documentación anterior sigue accesible en el dominio institucional.
 
 ## Qué proporciona Premier
 
-- Portal: https://www.kwpremieroficial.com
+- Portal receptor: https://kweb.com.mx (KWEB, sistema de KW Premier)
+- Sitio institucional: https://www.kwpremieroficial.com
 - Receptor: https://iloetojomzqtadkithtv.supabase.co/functions/v1/recibir-feed-propiedades
 - Método: POST desde el servidor del proveedor.
 - Autenticación: cabecera `x-api-key` con una clave exclusiva entregada por separado. No se requieren claves de Supabase, cuentas del portal ni contraseñas de Command.
