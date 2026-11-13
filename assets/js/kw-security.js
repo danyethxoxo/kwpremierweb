@@ -3,8 +3,41 @@
   'use strict';
   var API_ORIGIN = 'https://iloetojomzqtadkithtv.supabase.co';
   var nativeFetch = window.fetch.bind(window);
+  var KWEB_ACTIVO = false;
+  var KWEB_ORIGIN = 'https://kweb.com.mx';
+  var HOSTS_PREMIER = ['kwpremieroficial.com', 'www.kwpremieroficial.com'];
+  var HOSTS_KWEB = ['kweb.com.mx', 'www.kweb.com.mx'];
+  var esKweb = HOSTS_KWEB.includes(location.hostname);
+  if (esKweb && typeof document !== 'undefined') {
+    function marcaKweb() {
+      document.querySelectorAll('#drawer .logo img, .kw-lateral-logo img, body > header .logo img, #pantalla-carga > img').forEach(function (img) {
+        if (img.getAttribute('src') !== '/assets/img/kweb.svg') img.setAttribute('src', '/assets/img/kweb.svg');
+        img.alt = 'KWEB';
+        if (img.parentElement.hasAttribute('aria-label')) img.parentElement.setAttribute('aria-label', 'KWEB');
+      });
+      document.querySelectorAll('link[rel="icon"]').forEach(function (icon) { icon.href = '/assets/img/kweb-icon.svg'; icon.type = 'image/svg+xml'; });
+      var sub = document.getElementById('form-sub');
+      if (sub && sub.textContent === 'Accede con tu cuenta de KW Premier.') sub.textContent = 'Accede a KWEB.';
+    }
+    function iniciarMarca() {
+      if (!document.title.includes('KWEB')) document.title += ' · KWEB';
+      marcaKweb();
+      new MutationObserver(marcaKweb).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarMarca, { once: true });
+    else iniciarMarca();
+  }
+  function rutaSistema(path) {
+    return /^\/(hub|documentos|kwpremierweb)\//.test(path) ||
+      /^\/(activar-mfa|asesores|completar-registro|gps-publico|login|micrositio|perfil|portal|propiedad|propiedades|restablecer-password)\.html$/.test(path);
+  }
+  window.kwDominios = Object.freeze({ app: KWEB_ORIGIN, publico: 'https://www.kwpremieroficial.com', activo: KWEB_ACTIVO, esKweb: esKweb });
+  if (KWEB_ACTIVO && HOSTS_PREMIER.includes(location.hostname) && rutaSistema(location.pathname || '/')) {
+    location.replace(KWEB_ORIGIN + location.pathname + (location.search || '') + (location.hash || ''));
+    return;
+  }
   if (location.protocol === 'http:' &&
-      ['kwpremieroficial.com', 'www.kwpremieroficial.com'].includes(location.hostname)) {
+      HOSTS_PREMIER.concat(HOSTS_KWEB).includes(location.hostname)) {
     location.replace('https://' + location.host + location.pathname + location.search + location.hash);
   }
   // Passed explicitly to Supabase, never patches the browser's global fetch.
@@ -26,7 +59,10 @@
     safeUrl: function (value, internalOnly) {
       try {
         var url = new URL(String(value || ''), location.origin);
-        if (internalOnly) return url.origin === location.origin && /^https?:$/.test(url.protocol) ? url.href : '';
+        if (internalOnly) {
+          if (esKweb && HOSTS_PREMIER.includes(url.hostname) && url.protocol === 'https:' && !url.username && !url.password) url = new URL(url.pathname + url.search + url.hash, location.origin);
+          return url.origin === location.origin && /^https?:$/.test(url.protocol) ? url.href : '';
+        }
         return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
       } catch (e) { return ''; }
     },

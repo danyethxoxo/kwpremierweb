@@ -66,7 +66,7 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
       'Strict-Transport-Security': 'max-age=31536000',
     })
     try {
-      const origins = allowedOrigins(Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS)
+      const origins = allowedOrigins((Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS) + ',https://kweb.com.mx,https://www.kweb.com.mx')
       const origin = req.headers.get('origin')
       if (origin && !origins.has(origin)) throw new HttpError(403, 'Origen no permitido')
       if (origin) headers.set('Access-Control-Allow-Origin', origin)
