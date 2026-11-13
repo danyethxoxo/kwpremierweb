@@ -48,7 +48,7 @@ test('all pages load security before Supabase and all inline JavaScript parses',
   const paths = walk(root.pathname.replace(/^\/([A-Z]:)/i, '$1'));
   for (const file of paths.filter((p) => p.endsWith('.html'))) {
     const html = readFileSync(file, 'utf8');
-    if (html.includes('<head')) assert(html.includes('/assets/js/kw-security.js?v=20261112kweb'), file);
+    if (html.includes('<head')) assert(html.includes('/assets/js/kw-security.js?v=20261112kweblogo'), file);
     if (html.includes('@supabase/supabase-js')) assert(html.indexOf('kw-security.js') < html.indexOf('@supabase/supabase-js'), file);
     for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
       if (/src=|application\/ld\+json|type=["']module/.test(match[1]) || !match[2].trim()) continue;

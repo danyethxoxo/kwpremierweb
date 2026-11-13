@@ -11,7 +11,7 @@
   if (esKweb && typeof document !== 'undefined') {
     function marcaKweb() {
       document.querySelectorAll('#drawer .logo img, .kw-lateral-logo img, body > header .logo img, #pantalla-carga > img').forEach(function (img) {
-        if (img.getAttribute('src') !== '/assets/img/kweb.svg') img.setAttribute('src', '/assets/img/kweb.svg');
+        if (img.getAttribute('src') !== '/assets/img/kweb-logo.png') img.setAttribute('src', '/assets/img/kweb-logo.png');
         img.alt = 'KWEB';
         if (img.parentElement.hasAttribute('aria-label')) img.parentElement.setAttribute('aria-label', 'KWEB');
       });
