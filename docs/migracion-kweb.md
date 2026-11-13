@@ -24,6 +24,18 @@ La raiz de KWEB dirige al portal; la pagina institucional se conserva en Premier
 
 Los callbacks antiguos de invitacion y recuperacion pueden permanecer operativos como compatibilidad: el navegador conserva el fragmento al trasladar la pagina a KWEB. No transferir sesiones mediante URLs. Al cambiar de origen, los usuarios inician sesion en KWEB con su cuenta existente y su verificacion habitual.
 
+## Estado de produccion al 12 de noviembre de 2026
+
+- Cloudflare Worker `kweb`, conectado al repositorio y a la rama main.
+- Dominios kweb.com.mx y www.kweb.com.mx conectados; www redirige al dominio principal.
+- HTTPS, formulario de acceso con marca KWEB y assets comprobados en el dominio nuevo.
+- KWEB_ACTIVO habilitado; enlaces antiguos del sistema conservan ruta, consulta y fragmento.
+- Enlaces nuevos de notificaciones, dictamenes y reportes de propiedades apuntan a KWEB.
+- CORS admite los dos dominios de KWEB y conserva los de Premier, sin cambiar autenticacion.
+- Invitaciones y recuperacion mantienen temporalmente sus callbacks exactos en Premier, que trasladan a KWEB. La configuracion local de Auth ya incluye KWEB; falta confirmar el cambio equivalente en el panel alojado antes de cambiar esos dos emisores.
+- Remitentes de correo conservan el dominio verificado kwpremieroficial.com.
+- La documentacion de propiedades permanece accesible en ambos dominios. Receptor, clave y formato sin cambios.
+
 ## Reversion
 
 Desactivar KWEB_ACTIVO y devolver el enlace del portal a la ruta original. Conservar ambos origenes admitidos y el receptor de propiedades. No restaurar ni copiar datos: no se migran tablas ni archivos.

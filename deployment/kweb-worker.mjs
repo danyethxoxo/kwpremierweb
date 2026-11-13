@@ -21,7 +21,7 @@ export default {
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.set('X-Frame-Options', 'SAMEORIGIN');
     response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+    response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
     response.headers.set('Content-Security-Policy', "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests");
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     if ((response.headers.get('content-type') || '').includes('text/html')) response.headers.set('Cache-Control', 'no-store');

@@ -4,11 +4,17 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import worker from '../deployment/kweb-worker.mjs';
 const source = fs.readFileSync(new URL('../assets/js/kw-security.js', import.meta.url), 'utf8');
+test('produccion activa KWEB y conserva ambos dominios en el despliegue', () => {
+  assert.match(source, /var KWEB_ACTIVO = true;/);
+  const config = JSON.parse(fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8'));
+  assert.deepEqual(config.routes.map(r => r.pattern), ['kweb.com.mx', 'www.kweb.com.mx']);
+  assert(config.routes.every(r => r.custom_domain));
+});
 function browser(href, active = false) {
   const url = new URL(href), redirected = [];
   const location = { origin: url.origin, hostname: url.hostname, host: url.host, protocol: url.protocol, pathname: url.pathname, search: url.search, hash: url.hash, href: url.href, replace: x => redirected.push(x) };
   const context = vm.createContext({ window: { fetch: async () => ({}) }, location, URL, Request, TextEncoder });
-  vm.runInContext(active ? source.replace('var KWEB_ACTIVO = false;', 'var KWEB_ACTIVO = true;') : source, context);
+  vm.runInContext(source.replace(/var KWEB_ACTIVO = (?:true|false);/, 'var KWEB_ACTIVO = ' + active + ';'), context);
   return { context, redirected };
 }
 test('migracion: conserva parametros y tokens; la portada y documentacion siguen en Premier', () => {
