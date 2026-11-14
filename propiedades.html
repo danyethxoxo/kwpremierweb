@@ -1284,7 +1284,8 @@
     var datos = [];
     if (p.recamaras) datos.push('<span class="prop-dato">' + ICO.cama + p.recamaras + '</span>');
     if (p.banos) datos.push('<span class="prop-dato">' + ICO.bano + p.banos + '</span>');
-    if (p.m2_construccion) datos.push('<span class="prop-dato">' + ICO.area + p.m2_construccion + ' m²</span>');
+    if (Number.isFinite(Number(p.m2_construccion)) && Number(p.m2_construccion) > 0) datos.push('<span class="prop-dato">' + ICO.area + Number(p.m2_construccion).toLocaleString('es-MX') + ' m² construidos</span>');
+    if (/^casa\b/i.test(String(p.tipo || '').trim()) && Number.isFinite(Number(p.m2_terreno)) && Number(p.m2_terreno) > 0) datos.push('<span class="prop-dato">' + ICO.area + Number(p.m2_terreno).toLocaleString('es-MX') + ' m² terreno</span>');
 
     // El sello de estatus solo se pinta cuando no es una publicada: hacia
     // afuera todas lo son y sería ruido; adentro sirve para ubicarlas.
