@@ -16,6 +16,8 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20261030kwred">
+<link rel="stylesheet" href="/assets/css/kw-galeria-propiedad.css?v=20261114">
+<script src="/assets/js/kw-galeria-propiedad.js?v=20261114"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -105,10 +107,8 @@
   .columnas { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
 
   .bloque {
-    background: radial-gradient(62% 48% at 16% 98%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 42%, rgba(255,255,255,0) 74%), radial-gradient(70% 50% at 90% 2%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.66) 100%);
-    border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%);
-    -webkit-backdrop-filter: blur(18px) saturate(165%);
+    background: #fff;
+    border: 1px solid var(--border);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), inset 1px 0 0 rgba(255,255,255,0.38);
     border-radius: 16px; padding: 22px 24px; margin-bottom: 18px;
   }
@@ -209,7 +209,7 @@
   .btn-contacto svg { width: 15px; height: 15px; }
   .btn-wa { background: #25D366; border-color: #25D366; color: #fff; }
   .btn-mail { background: radial-gradient(70% 90% at 18% 104%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 66%), linear-gradient(150deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.78) 100%); color: var(--red); border: 1px solid rgba(255,255,255,0.82);
-    backdrop-filter: blur(18px) saturate(165%); -webkit-backdrop-filter: blur(18px) saturate(165%); border-color: var(--red); color: #fff; }
+    border-color: var(--red); color: #fff; }
   .btn-contacto:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(0,0,0,0.24); }
   .btn-compartir { background: #fff; }
   .btn-compartir:hover { background: #ececec; }
@@ -333,6 +333,7 @@
   var refAsesorActivo = false;  // el contacto viene del link personalizado, no del listado real
   var fotos = [];
   var idxFoto = 0;
+  var galeriaActiva = null;
 
   function escapeHtml(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -400,21 +401,23 @@
   function pintarTiraVisor() {
     var tira = document.getElementById('visor-tira');
     if (fotos.length < 2) { tira.innerHTML = ''; return; }
-    tira.innerHTML = fotos.map(function (u, i) {
-      return '<img src="' + escapeHtml(u) + '" alt="Foto ' + (i + 1) + '"' +
+    if (tira.childElementCount !== fotos.length) tira.innerHTML = fotos.map(function (u, i) {
+      return '<img loading="lazy" decoding="async" src="' + escapeHtml(u) + '" alt="Foto ' + (i + 1) + '"' +
         (i === idxFoto ? ' class="activa"' : '') +
         ' onclick="abrirVisor(' + i + ')" onerror="this.style.display=\'none\'" />';
     }).join('');
+    tira.querySelectorAll('img').forEach(function (img, i) { img.classList.toggle('activa', i === idxFoto); });
     // Que la miniatura activa quede siempre a la vista al navegar con
     // las flechas, aunque haya muchas fotos.
     var activa = tira.querySelector('.activa');
     if (activa && activa.scrollIntoView) {
-      activa.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      tira.scrollTo({ left: activa.offsetLeft - tira.clientWidth / 2 + activa.clientWidth / 2, behavior: 'auto' });
     }
   }
 
   function abrirVisor(i) {
     if (!fotos.length) return;
+    if (galeriaActiva) galeriaActiva.pausarVisor(true);
     idxFoto = i;
     document.getElementById('visor-img').src = fotos[idxFoto];
     document.getElementById('visor-contador').textContent = fotos.length > 1 ? (idxFoto + 1) + ' / ' + fotos.length : '';
@@ -423,7 +426,7 @@
     document.getElementById('visor').style.display = 'flex';
     pintarTiraVisor();
   }
-  function cerrarVisor() { document.getElementById('visor').style.display = 'none'; }
+  function cerrarVisor() { document.getElementById('visor').style.display = 'none'; if (galeriaActiva) galeriaActiva.pausarVisor(false); }
   function navVisor(d, e) {
     if (e) e.stopPropagation();
     idxFoto = (idxFoto + d + fotos.length) % fotos.length;
@@ -495,8 +498,12 @@
     if (!tieneCoords(p)) return;
     var caja = document.getElementById('mapa');
     if (!caja) return;
-    if (GOOGLE_MAPS_KEY) montarGoogle(caja, p);
-    else montarOSM(caja, p);
+    function montar() { if (GOOGLE_MAPS_KEY) montarGoogle(caja, p); else montarOSM(caja, p); }
+    if (!window.IntersectionObserver) { montar(); return; }
+    var observador = new IntersectionObserver(function (entradas) {
+      if (entradas.some(function (e) { return e.isIntersecting; })) { observador.disconnect(); montar(); }
+    }, { rootMargin: '200px' });
+    observador.observe(caja);
   }
 
   function cargarScript(src, alCargar) {
@@ -558,6 +565,7 @@
 
   // ── Render ──
   function render() {
+    if (galeriaActiva) { galeriaActiva.destruir(); galeriaActiva = null; }
     var p = propiedad;
     fotos = (p.imagenes || []).filter(function (u) { return typeof u === 'string'; });
 
@@ -576,14 +584,14 @@
       '<div class="foto-principal" onclick="abrirVisor(0)">' +
         (fotos.length
           ? '<img id="foto-grande" src="' + escapeHtml(fotos[0]) + '" alt="' + escapeHtml(p.titulo) + '" ' +
-            'data-intento="0" onerror="siguienteFotoPrincipal(this)" />'
+            'decoding="async" fetchpriority="high" data-intento="0" onerror="siguienteFotoPrincipal(this)" />'
           : sinFotoHtml) +
       '</div>' +
       (lado.length
         ? '<div class="galeria-lado" data-n="' + lado.length + '">' + lado.map(function (u, i) {
             var esUltima = i === lado.length - 1 && restantes > 0;
             return '<div class="foto-chica" onclick="abrirVisor(' + (i + 1) + ')">' +
-              '<img src="' + escapeHtml(u) + '" alt="Foto ' + (i + 2) + '" onerror="this.style.display=\'none\'" />' +
+              '<img loading="lazy" decoding="async" src="' + escapeHtml(u) + '" alt="Foto ' + (i + 2) + '" onerror="this.style.display=\'none\'" />' +
               (esUltima
                 ? '<button type="button" class="ver-mas-fotos">' + ICO.fotos +
                   '<span>Ver ' + restantes + ' foto' + (restantes === 1 ? '' : 's') + ' más</span></button>'
@@ -597,8 +605,8 @@
     if (p.recamaras) datos.push({ i: ICO.cama, v: p.recamaras, l: p.recamaras === 1 ? 'Recámara' : 'Recámaras' });
     if (p.banos) datos.push({ i: ICO.bano, v: p.banos, l: p.banos === 1 ? 'Baño' : 'Baños' });
     if (p.estacionamientos) datos.push({ i: ICO.auto, v: p.estacionamientos, l: 'Estac.' });
-    if (p.m2_construccion) datos.push({ i: ICO.area, v: p.m2_construccion, l: 'm² const.' });
-    if (p.m2_terreno) datos.push({ i: ICO.terreno, v: p.m2_terreno, l: 'm² terreno' });
+    if (Number.isFinite(Number(p.m2_construccion)) && Number(p.m2_construccion) > 0) datos.push({ i: ICO.area, v: Number(p.m2_construccion).toLocaleString('es-MX'), l: 'm² construidos' });
+    if (/^casa\b/i.test(String(p.tipo || '').trim()) && Number.isFinite(Number(p.m2_terreno)) && Number(p.m2_terreno) > 0) datos.push({ i: ICO.terreno, v: Number(p.m2_terreno).toLocaleString('es-MX'), l: 'm² terreno' });
 
     var caracts = (p.caracteristicas || []).filter(function (c) { return typeof c === 'string'; });
 
@@ -702,6 +710,7 @@
       '<div class="columnas"><div>' + principal + '</div><div>' + lateral + '</div></div>';
 
     document.title = p.titulo + ' · KW Premier';
+    galeriaActiva = window.kwGaleriaPropiedad(document.querySelector('.foto-principal'), fotos, abrirVisor);
     montarMapa(p);
     armarFormularioLead();
   }
