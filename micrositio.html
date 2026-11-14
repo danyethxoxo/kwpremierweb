@@ -711,7 +711,7 @@
   // inventario. El botón "+" solo lo ve quien es dueño del perfil.
   // ─────────────────────────────────────────────────────────────
   var CAMPOS_PROP = 'id, titulo, operacion, tipo, precio, moneda, recamaras, banos, ' +
-                    'm2_construccion, m2_terreno, colonia, municipio, estado, imagenes, asesor_id';
+                    'm2_construccion, colonia, municipio, estado, imagenes, asesor_id';
 
   var TOPE_VISIBLE = 4;
   var esDuenoDelPerfil = false;
@@ -746,8 +746,7 @@
     var datos = [];
     if (p.recamaras) datos.push(p.recamaras + ' rec');
     if (p.banos) datos.push(p.banos + ' baños');
-    if (Number.isFinite(Number(p.m2_construccion)) && Number(p.m2_construccion) > 0) datos.push(Number(p.m2_construccion).toLocaleString('es-MX') + ' m² construidos');
-    if (/^casa\b/i.test(String(p.tipo || '').trim()) && Number.isFinite(Number(p.m2_terreno)) && Number(p.m2_terreno) > 0) datos.push(Number(p.m2_terreno).toLocaleString('es-MX') + ' m² terreno');
+    if (p.m2_construccion) datos.push(p.m2_construccion + ' m²');
     // Solo se puede quitar lo que se eligió a mano; lo de Command lo
     // manda el sistema y no es del asesor decidirlo aquí.
     var quitable = esDuenoDelPerfil && elegidasAMano.indexOf(p.id) !== -1;
