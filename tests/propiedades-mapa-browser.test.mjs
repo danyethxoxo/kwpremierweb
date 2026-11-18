@@ -190,18 +190,21 @@ test('propiedades y mapa simultáneos: pines, ficha, zona, distribución y reint
  } finally {await browser.close();}
 });
 
-test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zona anterior',async()=>{
+test('inicio con 20 recientes globales en una consulta, sin GPS; zona y búsquedas siguen disponibles',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{for(const width of [1440,390]){
   const {page,errores}=await pagina(browser,{width,height:1000},[[id(0),19.369,-99.163,'venta',3500000,'MXN']],false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
   try{
-   await page.waitForFunction(()=>document.getElementById('prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.waitForFunction(()=>!!window.qaMapa);
    const inicial=await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)));
    assert.ok(inicial.some(r=>r.nombre==='propiedades_inventario_pagina'&&r.args.p_filtros.orden==='reciente'),'lista inmediata');
-   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
-
-   assert.equal(await page.evaluate(()=>qaInicioGeo.length),1);
-   assert.ok(await page.evaluate(()=>qaMapa.getZoom()>8&&qaMapa.getBounds().contains([19.369,-99.163])));
+   assert.equal(inicial.filter(r=>r.nombre==='propiedades_inventario_pagina').length,1);
+   assert.equal(inicial.filter(r=>r.nombre==='propiedades_inventario_mapa').length,0);
+   assert.equal(await page.locator('#lista .prop-card').count(),20);
+   assert.equal(await page.evaluate(()=>qaInicioGeo.length),0);
+   const entrada=inicial[0].args.p_filtros;
+   assert.ok(!entrada.estado?.length&&!entrada.municipio?.length&&!entrada.colonia?.length&&!entrada.zona&&!entrada.poligono);
+   assert.equal(await page.locator('#f-estado').inputValue(),'');
    const antes=await page.evaluate(()=>qaRpc.filter(r=>/^propiedades_inventario_(pagina|mapa)$/.test(r.nombre)).length);
    await page.evaluate(()=>{qaPuntos=[[qaProps[0].id,25.68,-100.31,'venta',3500000,'MXN']];qaMapa.setView([25.68,-100.31],13,{animate:false});});
    await page.waitForTimeout(300);
@@ -226,11 +229,12 @@ test('inicio en ciudad, desplazamiento explícito y búsquedas que liberan la zo
  }}finally{await browser.close();}
 });
 
-test('quitar ciudad automática conserva pines y permite filtrar sin ubicación',async()=>{
+test('quitar una ciudad elegida conserva pines y permite filtrar sin ubicación',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{for(const width of [1440,390]){
   const {page,errores}=await pagina(browser,{width,height:1000},[[id(0),19.369,-99.163,'venta',3500000,'MXN']],false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
   try{
+   await page.evaluate(()=>{kwPropiedadesMapa.cancelarInicio();filtrosAplicados={estado:['Ciudad de México'],estatus:'publicada'};dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));});
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    await page.evaluate(()=>{
     qaRpc=[];qaPuntos=[[qaProps[0].id,25.68,-100.31,'renta',25000,'MXN']];
@@ -249,6 +253,21 @@ test('quitar ciudad automática conserva pines y permite filtrar sin ubicación'
  }}finally{await browser.close();}
 });
 
+test('Ver en el mapa consulta bajo demanda desde la lista inicial de recientes',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{
+  const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.369,-99.163,'venta',3500000,'MXN']],false,{code:1});
+  try{
+   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
+   await page.locator('#lista .prop-card .prop-foto-mapa').first().click();
+   await page.locator('.prop-mapa-ficha h3').waitFor();
+   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),1);
+   assert.equal(await page.evaluate(()=>qaInicioGeo.length),0);
+   assert.deepEqual(errores,[]);
+  }finally{await page.close();}
+ }finally{await browser.close();}
+});
+
 test('sin permiso muestra recientes y permite elegir ciudad manualmente',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
@@ -265,15 +284,16 @@ test('sin permiso muestra recientes y permite elegir ciudad manualmente',async()
  }finally{await browser.close();}
 });
 
-test('una ubicación tardía no sustituye la ciudad elegida manualmente',async()=>{
+test('no solicita una ubicación que pueda sustituir la ciudad elegida manualmente',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),20.676,-103.35,'venta',3500000,'MXN']],false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25},demora:2000,noEsperar:true});
   try{
-   await page.waitForFunction(()=>window.qaInicioGeo?.length===1);
+   assert.equal(await page.evaluate(()=>qaInicioGeo.length),0);
    await page.locator('#f-buscar').fill('Guadalajara');await page.locator('#f-buscar').press('Enter');
    await page.locator('#lista .prop-card').first().waitFor();await page.waitForTimeout(2200);
    assert.ok(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_pagina').at(-1).args.p_filtros.municipio.includes('Guadalajara')));
+   assert.equal(await page.evaluate(()=>qaInicioGeo.length),0);
    assert.deepEqual(errores,[]);
   }finally{await page.close();}
  }finally{await browser.close();}

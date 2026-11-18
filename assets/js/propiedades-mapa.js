@@ -292,6 +292,12 @@
   }
   function ubicar(id) {
     propiedadPendiente = String(id);
+    if (!inicioCancelado && !puedeConsultar(window.filtrosServidorActuales())) {
+      // Consultar el mapa completo solo por una acción explícita del usuario.
+      inicioCancelado = true;
+      actualizar(true);
+      return;
+    }
     if (clavePendiente && panel.getAttribute('aria-busy') === 'true' && !pines.has(propiedadPendiente)) return;
     var marker = pines.get(propiedadPendiente);
     propiedadPendiente = null;
@@ -368,14 +374,10 @@
     return {zona:[Math.max(-85.05112878,b.getSouth()),Math.max(-180,b.getWest()),Math.min(85.05112878,b.getNorth()),Math.min(180,b.getEast())]};
   }
   function prepararInicio(f) {
+    inicioPreparado = true;
     if (!inicioPromesa) inicioPromesa=(async function(){
       await cargarBibliotecas();iniciarMapa();
-      if (puedeConsultar(f)) {inicioPreparado=true;return f;}
-      var p=await localizar(true);
-      var area=p&&!inicioCancelado?await areaDePosicion(p):null;
-      inicioPreparado=true;
-      if(area&&area.zona&&!inicioCancelado){zona=area.zona;btnQuitar.hidden=false;}
-      return area&&!inicioCancelado?Object.assign({},f,area):f;
+      return f;
     })().catch(function(){inicioPreparado=true;btnReintentar.hidden=false;return f;});
     return inicioPromesa;
   }

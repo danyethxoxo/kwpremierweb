@@ -2324,7 +2324,6 @@
     window.dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));programarCargaServidor();
   }
   cargar = async function () {
-    var revisionInicio=revisionFiltrosAplicados;
     if (document.readyState==='loading') await new Promise(function(resolve){document.addEventListener('DOMContentLoaded',resolve,{once:true});});
     var filtroEstatus = document.getElementById('filtro-estatus');
     var estatus = document.getElementById('f-estatus');
@@ -2334,15 +2333,9 @@
     mostrarCargadorPropiedades();
     programarCargaCatalogosServidor();
     marcarFiltrosEscondidos();
-    cargarPaginaServidor(1);
-    if (window.kwPropiedadesMapa) {
-      var inicial=await window.kwPropiedadesMapa.prepararInicio(filtrosAplicados);
-      if(revisionInicio!==revisionFiltrosAplicados)return;
-      if (!window.kwPropiedadesMapa.puedeConsultar(inicial)) return;
-      filtrosAplicados=inicial;reflejarCiudadMapa(inicial);
-    }
-    marcarFiltrosEscondidos();
-    cargarPaginaServidor(1);
+    // Una sola página de recientes, sin esperar ubicación ni una segunda consulta.
+    if (window.kwPropiedadesMapa) window.kwPropiedadesMapa.prepararInicio(filtrosAplicados);
+    return cargarPaginaServidor(1);
   };
 
   var cajaFiltros = document.getElementById('filtros');
@@ -2488,7 +2481,7 @@
 <script src="/assets/js/kw-presupuesto.js?v=20261014precio"></script>
 <script src="/assets/js/propiedades-geografia.js?v=20261103contorno2"></script>
 <script src="/assets/js/propiedades-dibujo.js?v=20261030kwred"></script>
-<script src="/assets/js/propiedades-mapa.js?v=20261103contorno2"></script>
+<script src="/assets/js/propiedades-mapa.js?v=20261118recientes"></script>
 <script src="/assets/js/drawer.js?v=20261104permisos" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros="#filtros" data-titulo="Propiedades"></script>
 <script src="/assets/js/kw-movil.js?v=20261022qa"></script>
