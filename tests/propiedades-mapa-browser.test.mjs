@@ -624,7 +624,7 @@ test('precio agrega comas al escribir y envia numeros al aplicar filtros',async(
 });
 
 
-test('recientes cargan mientras el GPS sigue pendiente y el zoom revela precios individuales',async()=>{
+test('recientes no esperan ni solicitan GPS y el mapa bajo demanda revela precios al acercarse',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   const lenta=await pagina(browser,{width:1280,height:900},[],false,{demora:30000,coords:{latitude:19.369,longitude:-99.163,accuracy:25},noEsperar:true});
@@ -632,10 +632,12 @@ test('recientes cargan mientras el GPS sigue pendiente y el zoom revela precios 
    await lenta.page.locator('#lista .prop-card').first().waitFor({timeout:10000});
    assert.equal(await lenta.page.locator('#lista .prop-card').count(),20);
    assert.equal(await lenta.page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
+   assert.equal(await lenta.page.evaluate(()=>qaInicioGeo.length),0);
   } finally {await lenta.page.close();}
   const puntos=Array.from({length:100},(_,n)=>[id(n),19.36+Math.floor(n/10)*.001,-99.17+(n%10)*.001,'venta',2000000+n*10000,'MXN']);
   const {page,errores}=await pagina(browser,{width:1280,height:900},puntos,false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
   try {
+   await page.evaluate(()=>kwPropiedadesMapa.ubicar(qaProps[0].id));
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    await page.evaluate(()=>qaMapa.setView([19.365,-99.165],11,{animate:false}));
    const lejos=await page.locator('.prop-mapa-pin').count();
