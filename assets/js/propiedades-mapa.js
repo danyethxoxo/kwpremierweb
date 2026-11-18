@@ -15,6 +15,28 @@
   var fichas = new Map();
   var pines = new Map(), propiedadPendiente = null;
   var dibujo, contorno, clavePendiente = '';
+  var paginaReciente = null;
+  function esVistaReciente(f) {
+    return !Object.keys(f).some(function (k) {
+      if (k === 'orden' || k === 'estatus') return false;
+      return Array.isArray(f[k]) ? f[k].length > 0 : !!f[k];
+    });
+  }
+  async function coordenadasPagina(filas, signal) {
+    if (!filas.length) return {data:{total:0,ubicadas:0,puntos:[]}};
+    var respuesta = await window.kwSupabase.from('propiedades_inventario')
+      .select('id,lat,lng').in('id',filas.map(function(p){return p.id;})).abortSignal(signal);
+    if (respuesta.error) return respuesta;
+    var porId = new Map((respuesta.data || []).map(function(p){return [p.id,p];}));
+    var puntos = filas.flatMap(function(p){
+      var c = porId.get(p.id);
+      if (!c || c.lat == null || c.lng == null) return [];
+      var lat = Number(c.lat), lng = Number(c.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat)>85.05112878 || Math.abs(lng)>180 || (!lat&&!lng)) return [];
+      return [[p.id,lat,lng,p.operacion,p.precio,p.moneda]];
+    });
+    return {data:{total:filas.length,ubicadas:puntos.length,puntos:puntos}};
+  }
   function recurso(url, css) {
     return new Promise(function (resolve, reject) {
       var el = document.createElement(css ? 'link' : 'script');
@@ -171,14 +193,15 @@
   async function actualizar(forzar) {
     if (panel.hidden || !inicioPreparado) return;
     filtros = window.filtrosServidorActuales();
-    if (!inicioCancelado && !puedeConsultar(filtros)) {
+    var usarPagina = paginaReciente !== null && esVistaReciente(filtros);
+    if (!usarPagina && !inicioCancelado && !puedeConsultar(filtros)) {
       if (controlador) controlador.abort();
       ++revision; clave = ''; clavePendiente = '';
       if (grupos && mapa) mapa.removeLayer(grupos);
       grupos = null; pines.clear(); estado.textContent='';cargando(false);
       return;
     }
-    var nuevaClave = claveFiltros(filtros);
+    var nuevaClave = claveFiltros(filtros) + (usarPagina ? ':pagina:' + paginaReciente.map(function(p){return p.id;}).join(',') : '');
     if (!forzar && clave === nuevaClave) { if (mapa) mapa.invalidateSize({pan: false}); return; }
     if (!forzar && clavePendiente === nuevaClave) return;
     clavePendiente = nuevaClave;
@@ -191,7 +214,8 @@
     controlador = new AbortController();
     var timer = setTimeout(function () { if (r === revision) controlador.abort(); }, 15000);
     try {
-      var consulta = window.kwSupabase.rpc('propiedades_inventario_mapa', {p_filtros: filtros}).abortSignal(controlador.signal);
+      var consulta = usarPagina ? coordenadasPagina(paginaReciente, controlador.signal)
+        : window.kwSupabase.rpc('propiedades_inventario_mapa', {p_filtros: filtros}).abortSignal(controlador.signal);
       var geografia = window.kwGeografiaMapa.resolver(filtros).catch(function () { return {features:[],nombres:[],error:true}; });
       var resultados = await Promise.all([cargarBibliotecas(), consulta, geografia]);
       if (r !== revision || panel.hidden) return;
@@ -217,8 +241,8 @@
       if (dibujo.poligono()) mapa.fitBounds(dibujo.poligono().map(function (p) { return [p[1],p[0]]; }), {padding:[20,20],maxZoom:16,animate:false});
       else if (zona) mapa.fitBounds([[zona[0],zona[1]],[zona[2],zona[3]]],{animate:false});
       else if (contorno) mapa.fitBounds(contorno.getBounds(), {padding:[20,20],maxZoom:15,animate:false});
-      else if (limites.length && !primeraVista) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
-      var todos = !!(filtros.zona || filtros.poligono || filtros.texto || filtros.operacion || filtros.tipo || filtros.minimo || filtros.maximo || (inicioCancelado && (filtros.estado || filtros.colonia || filtros.municipio)) || filtros.marketCenter || filtros.asesor || filtros.recamaras || filtros.banos || filtros.estacionamientos || filtros.m2Min || filtros.m2Max);
+      else if (limites.length && (usarPagina || !primeraVista)) mapa.fitBounds(limites, {padding: [35,35], maxZoom: 15, animate: false});
+      var todos = usarPagina || !!(filtros.zona || filtros.poligono || filtros.texto || filtros.operacion || filtros.tipo || filtros.minimo || filtros.maximo || (inicioCancelado && (filtros.estado || filtros.colonia || filtros.municipio)) || filtros.marketCenter || filtros.asesor || filtros.recamaras || filtros.banos || filtros.estacionamientos || filtros.m2Min || filtros.m2Max);
       var capa = L.featureGroup(), candidatos = [], destacado;
       function mostrarPines() {
         if (!mapa.hasLayer(capa)) return;
@@ -292,7 +316,7 @@
   }
   function ubicar(id) {
     propiedadPendiente = String(id);
-    if (!inicioCancelado && !puedeConsultar(window.filtrosServidorActuales())) {
+    if (!paginaReciente && !inicioCancelado && !puedeConsultar(window.filtrosServidorActuales())) {
       // Consultar el mapa completo solo por una acción explícita del usuario.
       inicioCancelado = true;
       actualizar(true);
@@ -408,6 +432,6 @@
   window.addEventListener('kw-propiedades-filtradas', function () {
     requestAnimationFrame(function () { setTimeout(actualizar, 0); });
   });
-  window.kwPropiedadesMapa = Object.freeze({prepararInicio:prepararInicio,puedeConsultar:puedeConsultar,cancelarInicio:function(){inicioCancelado=true;inicioPreparado=true;},ubicar: ubicar, zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
+  window.kwPropiedadesMapa = Object.freeze({mostrarPagina:function(filas){paginaReciente=filas.slice(0,20);},prepararInicio:prepararInicio,puedeConsultar:puedeConsultar,cancelarInicio:function(){inicioCancelado=true;inicioPreparado=true;},ubicar: ubicar, zona: function () { return zona ? zona.slice() : null; }, poligono: function () { return dibujo ? dibujo.poligono() : null; }, quitarZona: quitarZona});
   if (document.querySelector('#lista .prop-card, #lista .estado-msg')) actualizar();
 })();

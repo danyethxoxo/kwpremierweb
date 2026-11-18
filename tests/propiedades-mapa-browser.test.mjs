@@ -13,17 +13,18 @@ const id=n=>'22222222-2222-4222-8222-'+String(n).padStart(12,'0');
 const propiedades=Array.from({length:20},(_,n)=>({id:id(n),fuente:'kwmexico',fuente_id:String(n),titulo:'Casa de prueba '+n,operacion:'venta',estatus:'publicada',tipo:'Casa',precio:3500000,moneda:'MXN',imagenes:[],colonia:'Del Valle',municipio:'Benito Juárez',estado:'Ciudad de México',enlace_kw:'https://kw.com/es-419/property/casa/123456'}));
 const ficha={...propiedades[0],id:id(1001),titulo:'Casa <img src=x onerror=alert(1)>',miniatura_url:'https://fotos.local/casa.png',recamaras:3,banos:2,m2_construccion:180,market_center:'KW Grand',asesor_nombre:'María Asesora',asesor_kw_id:'12345',operacion:'renta'};
 const sdk=`
-window.qaRpc=[];window.qaDetalles=0;window.qaErrorMapa=false;window.qaDemoraMapa=0;
+window.qaRpc=[];window.qaDetalles=0;window.qaErrorMapa=false;window.qaDemoraMapa=0;window.qaCoordenadas=[];
 var qaUser=${JSON.stringify(user)},qaPerfil=${JSON.stringify(perfil)},qaProps=${JSON.stringify(propiedades)},qaFicha=${JSON.stringify(ficha)};
 var qaSession={user:qaUser,access_token:'header.'+btoa(JSON.stringify({amr:[{method:'password',timestamp:Date.now()/1000}]}))+'.signature'};
 window.supabase={createClient(){return {
  auth:{getSession:async()=>({data:{session:qaSession}}),getUser:async()=>({data:{user:qaUser}}),onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}};}},
- from(tabla){let single=false;const query=new Proxy({}, {get(t,key){if(key==='then')return (resolve,reject)=>{
+ from(tabla){let single=false,campos="",ids=null;const query=new Proxy({}, {get(t,key){if(key==='then')return (resolve,reject)=>{
    let data=tabla==='profiles'?[qaPerfil]:tabla==='propiedades_inventario'?[qaFicha]:[];
-   if(tabla==='propiedades_inventario')window.qaDetalles++;
+   if(tabla==='propiedades_inventario'&&campos==='id,lat,lng'){qaCoordenadas.push(ids);data=window.qaPuntos.filter(p=>!ids||ids.includes(p[0])).map(p=>({id:p[0],lat:p[1],lng:p[2]}));}
+   if(tabla==='propiedades_inventario'&&campos!=='id,lat,lng')window.qaDetalles++;
    if(single)data=data[0]||null;
    return new Promise(r=>setTimeout(()=>r({data,error:null,count:Array.isArray(data)?data.length:1}),tabla==='propiedades_inventario'?(window.qaDemoraFicha||0):0)).then(resolve,reject);
- };return ()=>{if(key==='single'||key==='maybeSingle')single=true;return query;};}});return query;},
+ };return (...args)=>{if(key==='select')campos=args[0];if(key==='in')ids=args[1];if(key==='single'||key==='maybeSingle')single=true;return query;};}});return query;},
  rpc(nombre,args){window.qaRpc.push({nombre,args});const ejecutar=async()=>{
    if(nombre==='propiedades_inventario_catalogo'&&args.p_campo==='colonia'&&window.qaCatalogoColonias)return {data:window.qaCatalogoColonias,error:null};
    if(nombre==='propiedades_inventario_pagina')return {data:{data:qaProps,total:7431},error:null};
@@ -241,9 +242,9 @@ test('quitar una ciudad elegida conserva pines y permite filtrar sin ubicación'
     ['f-estado','f-municipio','f-colonia'].forEach(id=>{seleccionesMultiples[id]=[];ponerFiltroRelacionado(id,'');pintarEtiquetasFiltro(id);});
     aplicarFiltros();
    });
-   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.prop-mapa-pin').length>0);
+   await page.waitForFunction(()=>qaCoordenadas.length>0&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.prop-mapa-pin').length>0);
    assert.ok(await page.evaluate(()=>qaMapa.getBounds().contains([25.68,-100.31])),'encuadra los resultados fuera de la ciudad anterior');
-   const f=await page.evaluate(()=>qaRpc.find(r=>r.nombre==='propiedades_inventario_mapa').args.p_filtros);
+   const f=await page.evaluate(()=>filtrosServidorActuales());
    assert.ok(!f.estado?.length&&!f.municipio?.length&&!f.zona&&!f.poligono);
    await page.selectOption('#f-operacion','renta',{force:true});
    await page.locator('#filtros .btn-aplicar').click();
@@ -253,7 +254,7 @@ test('quitar una ciudad elegida conserva pines y permite filtrar sin ubicación'
  }}finally{await browser.close();}
 });
 
-test('Ver en el mapa consulta bajo demanda desde la lista inicial de recientes',async()=>{
+test('Ver en el mapa abre el pin de la página sin consultar el inventario completo',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
   const {page,errores}=await pagina(browser,{width:1280,height:900},[[id(0),19.369,-99.163,'venta',3500000,'MXN']],false,{code:1});
@@ -261,7 +262,7 @@ test('Ver en el mapa consulta bajo demanda desde la lista inicial de recientes',
    assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
    await page.locator('#lista .prop-card .prop-foto-mapa').first().click();
    await page.locator('.prop-mapa-ficha h3').waitFor();
-   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),1);
+   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
    assert.equal(await page.evaluate(()=>qaInicioGeo.length),0);
    assert.deepEqual(errores,[]);
   }finally{await page.close();}
@@ -624,7 +625,7 @@ test('precio agrega comas al escribir y envia numeros al aplicar filtros',async(
 });
 
 
-test('recientes no esperan ni solicitan GPS y el mapa bajo demanda revela precios al acercarse',async()=>{
+test('recientes muestran solo sus 20 pines sin GPS y una búsqueda explícita permite ver más',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try {
   const lenta=await pagina(browser,{width:1280,height:900},[],false,{demora:30000,coords:{latitude:19.369,longitude:-99.163,accuracy:25},noEsperar:true});
@@ -637,12 +638,14 @@ test('recientes no esperan ni solicitan GPS y el mapa bajo demanda revela precio
   const puntos=Array.from({length:100},(_,n)=>[id(n),19.36+Math.floor(n/10)*.001,-99.17+(n%10)*.001,'venta',2000000+n*10000,'MXN']);
   const {page,errores}=await pagina(browser,{width:1280,height:900},puntos,false,{coords:{latitude:19.369,longitude:-99.163,accuracy:25}});
   try {
-   await page.evaluate(()=>kwPropiedadesMapa.ubicar(qaProps[0].id));
-   await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.waitForFunction(()=>document.querySelectorAll('.prop-mapa-pin').length===20&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   assert.equal(await page.evaluate(()=>qaRpc.filter(r=>r.nombre==='propiedades_inventario_mapa').length),0);
+   assert.equal(await page.evaluate(()=>qaCoordenadas.length),1);
+   assert.equal(await page.evaluate(()=>qaCoordenadas[0].length),20);
    await page.evaluate(()=>qaMapa.setView([19.365,-99.165],11,{animate:false}));
    const lejos=await page.locator('.prop-mapa-pin').count();
    await page.evaluate(()=>qaMapa.setZoom(15,{animate:false}));
-   assert.ok(await page.locator('.prop-mapa-pin').count()>lejos,'acercarse revela mas precios');
+   assert.equal(await page.locator('.prop-mapa-pin').count(),lejos,'los veinte pines permanecen disponibles al acercarse');
    await page.evaluate(()=>{document.querySelector('#f-buscar').value='Casa';aplicarFiltros();});
    await page.waitForFunction(()=>document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.prop-mapa-pin').length===100);
    assert.ok((await page.locator('.prop-mapa-pin').allTextContents()).every(p=>/^\$/.test(p)),'solo precios individuales');
