@@ -9,20 +9,38 @@
   var HOSTS_KWEB = ['kweb.com.mx', 'www.kweb.com.mx'];
   var esKweb = HOSTS_KWEB.includes(location.hostname);
   if (esKweb && typeof document !== 'undefined') {
+    function tituloKweb() {
+      var titulo = document.title.trim(), anterior;
+      do {
+        anterior = titulo;
+        titulo = titulo
+          .replace(/\s*(?:[·|:\-\u2013\u2014]\s*)?(?:KW\s*Premier|KWEB)\s*$/i, '')
+          .replace(/^(?:KW\s*Premier|KWEB)\s*[·|:\-\u2013\u2014]\s*/i, '').trim();
+      } while (anterior !== titulo);
+      if (titulo === 'Firmas Digitales') titulo = 'Firmas digitales';
+      titulo = titulo || 'KWEB';
+      if (document.title !== titulo) document.title = titulo;
+    }
     function marcaKweb() {
       document.querySelectorAll('#drawer .logo img, .kw-lateral-logo img, body > header .logo img, body > main.card > img.logo, #pantalla-carga > img, #kw-cargando > img').forEach(function (img) {
         if (img.getAttribute('src') !== '/assets/img/kweb-logo-flecha.png') img.setAttribute('src', '/assets/img/kweb-logo-flecha.png');
         img.alt = 'KWEB';
         if (img.parentElement.hasAttribute('aria-label')) img.parentElement.setAttribute('aria-label', 'KWEB');
       });
-      document.querySelectorAll('link[rel="icon"]').forEach(function (icon) { icon.href = '/assets/img/kweb-icon.svg'; icon.type = 'image/svg+xml'; });
+      var iconos = document.querySelectorAll('link[rel~="icon"]');
+      if (!iconos.length) {
+        var icono = document.createElement('link'); icono.rel = 'icon'; document.head.appendChild(icono);
+        iconos = [icono];
+      }
+      iconos.forEach(function (icon) { icon.href = '/assets/img/kweb-favicon.png'; icon.type = 'image/png'; icon.sizes = '64x64'; });
       var sub = document.getElementById('form-sub');
       if (sub && sub.textContent === 'Accede con tu cuenta de KW Premier.') sub.textContent = 'Accede a KWEB.';
     }
     function iniciarMarca() {
-      if (!document.title.includes('KWEB')) document.title += ' · KWEB';
+      tituloKweb();
       marcaKweb();
       new MutationObserver(marcaKweb).observe(document.body, { childList: true, subtree: true });
+      new MutationObserver(tituloKweb).observe(document.head, { childList: true, subtree: true, characterData: true });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarMarca, { once: true });
     else iniciarMarca();
