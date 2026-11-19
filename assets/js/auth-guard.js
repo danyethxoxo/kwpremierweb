@@ -67,7 +67,8 @@
     capa.id = 'kw-cargando';
     capa.setAttribute('role', 'status');
     capa.setAttribute('aria-label', 'Cargando');
-    capa.innerHTML = '<img src="' + BASE_PATH + '/assets/img/logo-kw-premier.png" alt="KW Premier" />';
+    var esKweb = window.kwDominios ? window.kwDominios.esKweb : ['kweb.com.mx', 'www.kweb.com.mx'].includes(location.hostname);
+    capa.innerHTML = '<img src="' + BASE_PATH + (esKweb ? '/assets/img/kweb-logo-flecha.png" alt="KWEB' : '/assets/img/logo-kw-premier.png" alt="KW Premier') + '" />';
     capaCargando = capa;
 
     // Este archivo va en el <head>, así que casi siempre corre antes de

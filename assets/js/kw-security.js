@@ -10,8 +10,8 @@
   var esKweb = HOSTS_KWEB.includes(location.hostname);
   if (esKweb && typeof document !== 'undefined') {
     function marcaKweb() {
-      document.querySelectorAll('#drawer .logo img, .kw-lateral-logo img, body > header .logo img, #pantalla-carga > img').forEach(function (img) {
-        if (img.getAttribute('src') !== '/assets/img/kweb-logo-transparente.png') img.setAttribute('src', '/assets/img/kweb-logo-transparente.png');
+      document.querySelectorAll('#drawer .logo img, .kw-lateral-logo img, body > header .logo img, body > main.card > img.logo, #pantalla-carga > img, #kw-cargando > img').forEach(function (img) {
+        if (img.getAttribute('src') !== '/assets/img/kweb-logo-flecha.png') img.setAttribute('src', '/assets/img/kweb-logo-flecha.png');
         img.alt = 'KWEB';
         if (img.parentElement.hasAttribute('aria-label')) img.parentElement.setAttribute('aria-label', 'KWEB');
       });
