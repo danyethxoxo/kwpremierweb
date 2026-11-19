@@ -19,7 +19,7 @@ test('favicon del globo y títulos simples, también al cambiar el título despu
    await page.goto('https://'+host+'/qa-tabs.html');await page.addScriptTag({content:script});
    if(host==='kweb.com.mx'){
     await page.waitForFunction(()=>document.title==='Propiedades');
-    assert.equal(await page.locator('link[rel="icon"]').getAttribute('href'),'/assets/img/kweb-favicon.png');
+    assert.equal(await page.locator('link[rel="icon"]').getAttribute('href'),'/assets/img/kweb-favicon.png?v=20261119transparente');
     assert.equal(await page.locator('link[rel="icon"]').getAttribute('type'),'image/png');
     for(const [entrada,salida] of [['KW Premier','KWEB'],['Perfil comprador · KW Premier','Perfil comprador'],['Firmas Digitales · KWEB','Firmas digitales'],['KWEB - Dictámenes','Dictámenes'],['Propiedades · KW Premier · KWEB','Propiedades']]){
      await page.evaluate(t=>{document.title=t;},entrada);
@@ -31,4 +31,8 @@ test('favicon del globo y títulos simples, también al cambiar el título despu
  }finally{await browser.close();}
  const meta=await sharp(fs.readFileSync(new URL('../assets/img/kweb-favicon.png',import.meta.url))).metadata();
  assert.equal(meta.width,64);assert.equal(meta.height,64);
+ assert.equal(meta.hasAlpha,true);
+ const {data}=await sharp(fs.readFileSync(new URL('../assets/img/kweb-favicon.png',import.meta.url))).raw().toBuffer({resolveWithObject:true});
+ assert.equal(data[3],0,'la esquina es transparente');
+ assert.equal(data[(22*64+32)*4+3],0,'el interior del globo también es transparente');
 });

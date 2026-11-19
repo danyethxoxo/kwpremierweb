@@ -32,7 +32,7 @@
         var icono = document.createElement('link'); icono.rel = 'icon'; document.head.appendChild(icono);
         iconos = [icono];
       }
-      iconos.forEach(function (icon) { icon.href = '/assets/img/kweb-favicon.png'; icon.type = 'image/png'; icon.sizes = '64x64'; });
+      iconos.forEach(function (icon) { icon.href = '/assets/img/kweb-favicon.png?v=20261119transparente'; icon.type = 'image/png'; icon.sizes = '64x64'; });
       var sub = document.getElementById('form-sub');
       if (sub && sub.textContent === 'Accede con tu cuenta de KW Premier.') sub.textContent = 'Accede a KWEB.';
     }

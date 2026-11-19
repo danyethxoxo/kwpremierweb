@@ -11,3 +11,5 @@ Preparación: herramienta integrada image_gen, modo edición con fondo transpare
 Verificación: `node --test tests/kweb-logo-browser.test.mjs`. Comprueba transparencia, carga inicial y dinámica, navegación, móvil y escritorio, salida de la carga tras autorizar la sesión y preservación de los logos de documentos.
 
 El favicon `assets/img/kweb-favicon.png` usa el globo blanco con trazo rojo proporcionado por el usuario, reducido a PNG de 64 × 64 para las pestañas. En KWEB los títulos muestran únicamente el nombre de la página; el portal se identifica como KWEB. No se añaden sufijos de marca. Los cambios dinámicos del título conservan esa regla. Verificación: `node --test tests/kweb-pestanas-browser.test.mjs`.
+
+El favicon tiene transparencia real tanto en el exterior como en los huecos del globo. Solo conserva las líneas blancas y el trazo rojo. El PNG se exporta desde `assets/img/kweb-favicon.svg`, basado en la geometría de la referencia para obtener bordes limpios en tamaño pequeño. La URL incluye una versión para renovar la caché del ícono.
