@@ -30,6 +30,12 @@ export async function consumeLimit(scope: string, subject: string, limit: number
   if (!data.allowed) throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', data.retry_after || windowSeconds)
 }
 
+async function consumeLimits(limits: { scope: string; subject: string; limit: number }[]): Promise<void> {
+  const { data, error } = await adminClient().rpc('security_consume_rates', { p_limits: limits })
+  if (error || !data || typeof data.allowed !== 'boolean') throw new HttpError(503, 'Servicio no disponible')
+  if (!data.allowed) throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', data.retry_after || 60)
+}
+
 async function authenticate(req: Request, options: Options): Promise<Context> {
   if (options.auth === 'service') return {}
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
@@ -41,9 +47,9 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
   if (!token || !/^Bearer\s+/i.test(req.headers.get('authorization') || '')) throw new HttpError(401, 'No autenticado')
   const { data, error } = await adminClient().auth.getUser(token)
   if (error || !data.user) throw new HttpError(401, 'Sesion invalida')
-  await Promise.all([
-    consumeLimit('user:all', data.user.id, 600),
-    consumeLimit(`user:${options.name}`, data.user.id, options.userLimit ?? 60),
+  await consumeLimits([
+    { scope: 'user:all', subject: data.user.id, limit: 600 },
+    { scope: `user:${options.name}`, subject: data.user.id, limit: options.userLimit ?? 60 },
   ])
   if (options.mfa !== false) {
     const secret = Deno.env.get('DATA_GATEWAY_SECRET')
@@ -66,7 +72,7 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
       'Strict-Transport-Security': 'max-age=31536000',
     })
     try {
-      const origins = allowedOrigins((Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS) + ',https://kweb.com.mx,https://www.kweb.com.mx')
+      const origins = allowedOrigins(Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS)
       const origin = req.headers.get('origin')
       if (origin && !origins.has(origin)) throw new HttpError(403, 'Origen no permitido')
       if (origin) headers.set('Access-Control-Allow-Origin', origin)
@@ -83,9 +89,9 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
           !(Deno.env.get('ALLOW_LOCAL_HTTP') === 'true' &&
           ['localhost', '127.0.0.1', 'kong'].includes(url.hostname))) throw new HttpError(400, 'HTTPS requerido')
       const ip = clientIp(req.headers, Deno.env.get('TRUSTED_IP_HEADER') || 'x-forwarded-for')
-      await Promise.all([
-        consumeLimit('ip:all', ip, 1200),
-        consumeLimit(`ip:${options.name}`, ip, options.ipLimit ?? 180),
+      await consumeLimits([
+        { scope: 'ip:all', subject: ip, limit: 1200 },
+        { scope: `ip:${options.name}`, subject: ip, limit: options.ipLimit ?? 180 },
       ])
       const context = await authenticate(req, { ...options, auth: typeof options.auth === 'function' ? options.auth(req) : options.auth })
       if (options.name === 'api-propiedades' && !context.userId) {

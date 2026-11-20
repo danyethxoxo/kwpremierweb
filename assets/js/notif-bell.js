@@ -45,6 +45,8 @@
   let usuarioId = null;
   let cargando = false;
   let iniciado = false;
+  let ultimaCarga = 0;
+  let refrescoPendiente = null;
   let errorMensaje = '';
   let pendientes = new Set();
   const lecturasConfirmadas = new Set();
@@ -201,6 +203,7 @@
       if (!uid) return;
       usuarioId = uid;
       notificaciones = await cargarHistorial(window.kwSupabase, uid);
+      ultimaCarga = Date.now();
       // Una respuesta iniciada antes del clic no debe deshacer la lectura.
       notificaciones.forEach(n => {
         if (pendientes.has(n.id) || lecturasConfirmadas.has(n.id)) n.leido = true;
@@ -208,7 +211,10 @@
       if (!iniciado) {
         iniciado = true;
         window.kwSupabase.channel('notificaciones-' + uid)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: 'user_id=eq.' + uid }, () => cargar())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: 'user_id=eq.' + uid }, () => {
+            clearTimeout(refrescoPendiente);
+            refrescoPendiente = setTimeout(cargar, 350);
+          })
           .subscribe();
       }
     } catch (_) { errorMensaje = 'No se pudieron cargar tus notificaciones.'; }
@@ -218,7 +224,7 @@
     if (abierta && !document.getElementById('notif-bell-slot')?.contains(e.target) && !document.getElementById('notif-dropdown')?.contains(e.target)) cerrar();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) cargar(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - ultimaCarga >= 30000) cargar(); });
   window.addEventListener('resize', cerrar);
   // Envejecer una notificación cambia su apartado, nunca su estado de lectura.
   setInterval(() => { if (!document.hidden && (abierta || document.getElementById('notif-centro'))) render(); }, 60000);

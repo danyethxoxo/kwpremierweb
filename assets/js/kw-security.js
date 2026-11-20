@@ -60,6 +60,11 @@
   }
   // Passed explicitly to Supabase, never patches the browser's global fetch.
   window.kwSecureFetch = function (input, init) {
+    var metodo = String((init && init.method) || (input instanceof Request && input.method) || 'GET').toUpperCase();
+    if ((metodo === 'GET' || metodo === 'HEAD') && !(input instanceof Request) &&
+        !(init && init.signal) && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+      init = Object.assign({}, init, { signal: AbortSignal.timeout(20000) });
+    }
     var raw = input instanceof Request ? input.url : String(input);
     var url = new URL(raw, location.href);
     if (url.origin === API_ORIGIN && url.pathname.startsWith('/rest/v1/')) {

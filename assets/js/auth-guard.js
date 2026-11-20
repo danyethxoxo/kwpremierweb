@@ -155,7 +155,11 @@
   function comprobarSesion() {
     if (comprobacionPendiente) return comprobacionPendiente;
     if (window.kwSession.limpiarInicio) window.kwSession.limpiarInicio(window.kwSupabase);
-    comprobacionPendiente = window.kwSession.mfaState(window.kwSupabase).then(async function (estado) {
+    var timer;
+    var limite = new Promise(function (_, reject) {
+      timer = setTimeout(function () { reject(new Error('Tiempo de comprobacion agotado')); }, 25000);
+    });
+    comprobacionPendiente = Promise.race([window.kwSession.mfaState(window.kwSupabase), limite]).then(async function (estado) {
       if (estado.sin_sesion) return redirectToLogin();
       if (estado.requiere_login) {
         var salida = await window.kwSupabase.auth.signOut({ scope: 'local' });
@@ -170,7 +174,7 @@
       ultimaComprobacion = Date.now();
       if (window.kwSession.prepararInicio) window.kwSession.prepararInicio(window.kwSupabase, estado);
       continuarConSesion();
-    }).catch(mostrarErrorConexion).finally(function () { comprobacionPendiente = null; });
+    }).catch(mostrarErrorConexion).finally(function () { clearTimeout(timer); comprobacionPendiente = null; });
     return comprobacionPendiente;
   }
   window.kwRevisarSesion = comprobarSesion;
@@ -205,7 +209,10 @@
     }
   });
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') { ultimaActividad = Date.now(); comprobarSesion(); }
+    if (document.visibilityState === 'visible') {
+      ultimaActividad = Date.now();
+      if (Date.now() - ultimaComprobacion >= 15000) comprobarSesion();
+    }
   });
   window.addEventListener('online', comprobarSesion);
 

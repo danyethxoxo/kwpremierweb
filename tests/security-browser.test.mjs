@@ -8,7 +8,7 @@ const root = new URL('../', import.meta.url);
 function browser() {
   const calls = [];
   const context = vm.createContext({ window: { fetch: (...args) => { calls.push(args); return Promise.resolve(new Response()); } },
-    location: { origin: 'https://www.kwpremieroficial.com', href: 'https://www.kwpremieroficial.com/', protocol: 'https:', hostname: 'www.kwpremieroficial.com' }, URL, Request, TextEncoder });
+    location: { origin: 'https://www.kwpremieroficial.com', href: 'https://www.kwpremieroficial.com/', protocol: 'https:', hostname: 'www.kwpremieroficial.com' }, URL, Request, TextEncoder, AbortSignal });
   vm.runInContext(readFileSync(new URL('assets/js/kw-security.js', root), 'utf8'), context);
   return { ...context.window, calls };
 }
@@ -48,7 +48,7 @@ test('all pages load security before Supabase and all inline JavaScript parses',
   const paths = walk(root.pathname.replace(/^\/([A-Z]:)/i, '$1'));
   for (const file of paths.filter((p) => p.endsWith('.html'))) {
     const html = readFileSync(file, 'utf8');
-    if (html.includes('<head')) assert(html.includes('/assets/js/kw-security.js?v=20261112kwebpng'), file);
+    if (html.includes('<head')) assert(html.includes('/assets/js/kw-security.js?v=20260922'), file);
     if (html.includes('@supabase/supabase-js')) assert(html.indexOf('kw-security.js') < html.indexOf('@supabase/supabase-js'), file);
     for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
       if (/src=|application\/ld\+json|type=["']module/.test(match[1]) || !match[2].trim()) continue;

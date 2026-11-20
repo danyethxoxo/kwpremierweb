@@ -97,7 +97,7 @@ Deno.test('middleware enforces auth, MFA, rates, CORS, malformed bodies and safe
   Deno.env.set('SUPABASE_ANON_KEY', 'test-anon')
   Deno.env.set('DATA_GATEWAY_SECRET', 'test-gateway')
   Deno.env.set('ALLOWED_ORIGINS', 'https://www.kwpremieroficial.com')
-  let mfa = true, rate = true, outage = false, called = 0
+  let mfa = true, rate = true, outage = false, called = 0, batchCalls = 0
   const scopes: string[] = []
   globalThis.fetch = async (input, init) => {
     const url = String(input)
@@ -107,7 +107,8 @@ Deno.test('middleware enforces auth, MFA, rates, CORS, malformed bodies and safe
     }
     if (url.includes('/rpc/security_consume_rate')) {
       const body = JSON.parse(String(init?.body))
-      scopes.push(body.p_scope)
+      if (body.p_limits) { batchCalls++; scopes.push(...body.p_limits.map((limit: { scope: string }) => limit.scope)) }
+      else scopes.push(body.p_scope)
       return Response.json(outage ? { message: 'internal SQL detail' } : { allowed: rate, retry_after: 17 }, { status: outage ? 500 : 200 })
     }
     if (url.includes('/rpc/mfa_sesion_autorizada')) {
@@ -132,7 +133,9 @@ Deno.test('middleware enforces auth, MFA, rates, CORS, malformed bodies and safe
     assert.equal((await handler(request())).status, 403)
     assert.equal(called, 0)
     mfa = true
+    const batchesBefore = batchCalls
     const ok = await handler(request())
+    assert.equal(batchCalls - batchesBefore, 2, 'IP and user limits each use one database request')
     assert.equal(ok.status, 200)
     assert.equal(ok.headers.get('Access-Control-Allow-Origin'), 'https://www.kwpremieroficial.com')
     assert.equal(ok.headers.get('Cache-Control'), 'no-store')

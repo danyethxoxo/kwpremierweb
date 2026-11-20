@@ -124,7 +124,7 @@ test('back navigation rechecks the session; connection errors offer retry withou
     document: { body, head: element(), documentElement: root, visibilityState: 'visible', createElement: element, getElementById: () => null, addEventListener() {} },
     location: { pathname: '/hub/firmas.html', search: '', replace: (url) => redirects.push(url) },
     localStorage: { setItem() {}, removeItem() {} }, Date,
-    CustomEvent: class { constructor(type) { this.type = type; } }, setTimeout: () => 0, setInterval: () => 0
+    CustomEvent: class { constructor(type) { this.type = type; } }, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0
   });
   vm.runInContext(readFileSync(new URL('../assets/js/auth-guard.js', import.meta.url), 'utf8'), context);
   await window.kwRevisarSesion();
