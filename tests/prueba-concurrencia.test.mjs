@@ -18,3 +18,14 @@ test('se detiene si hay errores o rechazo CORS y no prueba datos reales sin habi
  await assert.rejects(()=>probarConcurrencia({api:'https://iloetojomzqtadkithtv.supabase.co',modo:'inventario'}),/staging/);
  await assert.rejects(()=>probarConcurrencia({api:'https://staging.supabase.co',modo:'sesion',niveles:[200]}),/sesion de prueba por participante/);
 });
+
+test('una ronda de 200 no emite una segunda ola y conserva errores HTTP no JSON',async()=>{
+ let llamadas=0;
+ const r=await probarConcurrencia({api:'https://staging.supabase.co',niveles:[200],repeticionesPorNivel:1},{pausa:async()=>{},fetchImpl:async()=>{
+  llamadas++;return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'https://kweb.com.mx'}});
+ }});
+ assert.equal(llamadas,200);assert.equal(r.niveles[0].solicitudes,200);
+ const token='header.'+Buffer.from(JSON.stringify({iss:'https://staging.supabase.co/auth/v1'})).toString('base64url')+'.fixture';
+ const bad=await probarConcurrencia({api:'https://staging.supabase.co',modo:'inventario',niveles:[1],sesiones:[{token}]},{pausa:async()=>{},fetchImpl:async()=>new Response('<html>limit</html>',{status:429})});
+ assert.equal(bad.niveles[0].estados[429],2);
+});

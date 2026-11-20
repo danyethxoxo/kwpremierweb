@@ -6,6 +6,8 @@ export async function probarConcurrencia(config,{fetchImpl=fetch,pausa=ms=>new P
  const base=new URL(config.api);
  if(base.protocol!=='https:'||base.username||base.password||base.pathname!=='/')throw Error('Usa el origen HTTPS del proyecto');
  const niveles=config.niveles||[5,25,50,100,200];
+ const repeticiones=config.repeticionesPorNivel??2;
+ if(!Number.isInteger(repeticiones)||repeticiones<1||repeticiones>2)throw Error('Repeticiones permitidas: 1 o 2');
  if(!niveles.length||niveles.some(n=>!Number.isInteger(n)||n<1||n>200))throw Error('Concurrencia permitida: 1 a 200');
  const produccion=base.hostname==='iloetojomzqtadkithtv.supabase.co';
  if(produccion&&modo!=='conectividad'&&config.permitirProduccion!==true)throw Error('La prueba autenticada requiere staging o habilitacion explicita de produccion');
@@ -20,7 +22,7 @@ export async function probarConcurrencia(config,{fetchImpl=fetch,pausa=ms=>new P
  const resumen={modo,alcance:modo==='conectividad'?'Solo CORS y red; no mide consultas autenticadas ni inicios con contrasena':modo==='inventario'?'Consultas de inventario; no inicia sesiones con contrasena':'Valida y actualiza metadatos de sesiones de prueba; no inicia sesiones con contrasena',niveles:[],aprobado:true};
  for(const concurrencia of niveles) {
   const tiempos=[];const estados={};let siguiente=0;
-  const total=concurrencia*2;
+  const total=concurrencia*repeticiones;
   const inicio=ahora();
   await Promise.all(Array.from({length:concurrencia},async()=>{
    while(siguiente<total) {
@@ -49,7 +51,7 @@ export async function probarConcurrencia(config,{fetchImpl=fetch,pausa=ms=>new P
       if(response.ok&&modo==='inventario'&&(!Array.isArray(data.data)||typeof data.total!=='number'))status=0;
       if(response.ok&&modo==='sesion'&&(data.verificado!==true||data.requiere_login))status=0;
      }
-    }catch{status=0;}
+    }catch{if(status>=200&&status<300)status=0;}
     tiempos.push(ahora()-salida);estados[status]=(estados[status]||0)+1;
    }
   }));

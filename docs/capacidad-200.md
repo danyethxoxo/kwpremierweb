@@ -1,6 +1,6 @@
 # Objetivo: 200 peticiones simultaneas de KWEB
 
-Fecha: 20 de noviembre de 2026. Estado: mejoras de codigo publicadas; capacidad completa de produccion aun no certificada.
+Fecha: 20 de noviembre de 2026. Estado: mejoras publicadas y prueba real de 200 consultas ejecutada. La busqueda repetida completo 200/200; la mezcla de ocho filtros completo 195/200 dentro del limite del cliente. El objetivo completo aun no esta certificado. Ver `pruebas/carga-200-20261120.md`.
 
 ## Objetivo verificable
 
@@ -41,7 +41,7 @@ El correo de verificacion es otra dependencia: el plan actual de Resend no esta 
 3. Base de datos: los RPC reconocen una sesion vigente, no exponen secretos de Auth y no pueden ejecutarse directamente por anon/authenticated.
 4. Verificacion de acceso real: cuatro origenes oficiales aceptados, dominio ajeno rechazado, Auth health disponible, portal entregado y JWT alterado rechazado.
 
-Pendiente: ensayo completo de inventario y sesiones autenticadas sobre la infraestructura elegida, con identidades sinteticas y una ventana controlada. No hay un entorno aislado de Supabase disponible en la configuracion actual. No se crearon cuentas de asociados ni se emitieron codigos o correos masivos.
+Se ejecuto posteriormente el ensayo real de inventario con cuentas sinteticas temporales, ya eliminadas, sin perfiles de asociados ni envios de codigos. Pendiente: resolver y repetir el escenario variado y ensayar sesiones/accesos concurrentes sobre la infraestructura elegida. No hay un entorno aislado de Supabase disponible en la configuracion actual.
 
 ## Herramientas
 
