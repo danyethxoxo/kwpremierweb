@@ -16,7 +16,7 @@ Deno.test('200 consultas concurrentes verifican firmas ES256 sin pedir el usuari
   const signature=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},pair.privateKey,new TextEncoder().encode(body))
   return body+'.'+encode(new Uint8Array(signature))
  }
- const active=new Map<string,string>();let sessionError=false,mfa=true,authCalls=0,jwksCalls=0,sessionCalls=0
+ const active=new Map<string,string>();let sessionError=false,mfa=true,rate=true,authCalls=0,jwksCalls=0,sessionCalls=0,ipCalls=0
  const handler=secureHandler({name:'data-gateway'},(_req,context)=>Response.json({id:context.userId}))
  const request=(token:string)=>new Request(base+'/functions/v1/data-gateway/rpc/propiedades_inventario_pagina',{
   method:'POST',headers:{Origin:'https://kweb.com.mx',Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}',
@@ -25,7 +25,14 @@ Deno.test('200 consultas concurrentes verifican firmas ES256 sin pedir el usuari
   const url=String(input)
   if(url.includes('/.well-known/jwks.json')){jwksCalls++;return Response.json({keys:[jwk]})}
   if(url.includes('/auth/v1/user')){authCalls++;throw Error('No debe consultar Auth por cada busqueda')}
-  if(url.includes('/rpc/security_consume_rates'))return Response.json({allowed:true,retry_after:1})
+  if(url.includes('/rpc/security_consume_rates')){ipCalls++;return Response.json({allowed:true,retry_after:1})}
+  if(url.includes('/rpc/security_gateway_autorizar')){
+   sessionCalls++;const body=JSON.parse(String(init?.body))
+   assert.equal(body.p_mfa,true)
+   assert.equal(body.p_limite,60)
+   const estado=active.get(body.p_sesion)!==body.p_usuario?'revocada':!rate?'limite':!mfa?'mfa':'ok'
+   return Response.json(sessionError?{message:'temporary'}:{estado,retry_after:19},{status:sessionError?503:200})
+  }
   if(url.includes('/rpc/security_sesion_vigente')){
    sessionCalls++;const body=JSON.parse(String(init?.body))
    return Response.json(sessionError?{message:'temporary'}:active.get(body.p_sesion)===body.p_usuario,{status:sessionError?503:200})
@@ -48,7 +55,7 @@ Deno.test('200 consultas concurrentes verifican firmas ES256 sin pedir el usuari
    const response=await handler(request(token));assert.equal(response.status,200)
    assert.equal((await response.json()).id,claims[i].sub)
   }))
-  assert.equal(results.length,200);assert.equal(authCalls,0);assert.equal(sessionCalls,201)
+  assert.equal(results.length,200);assert.equal(authCalls,0);assert.equal(sessionCalls,201);assert.equal(ipCalls,201)
   assert(jwksCalls<5,'Reutiliza la llave publica verificada')
   console.log(`200 peticiones concurrentes con servicios simulados: ${Math.round(performance.now()-start)} ms; no es una medicion de produccion`)
   const mfaHandler=secureHandler({name:'mfa-correo',mfa:false,userLimit:30,ipLimit:1200},(_req,context)=>Response.json({id:context.user?.id,email:context.user?.email}))
@@ -62,6 +69,7 @@ Deno.test('200 consultas concurrentes verifican firmas ES256 sin pedir el usuari
   active.delete(claims[0].session_id)
   assert.equal((await handler(request(tokens[0]))).status,401,'Una sesion revocada se rechaza aun con firma valida')
   mfa=false;assert.equal((await handler(request(tokens[1]))).status,403);mfa=true
+  rate=false;const denied=await handler(request(tokens[1]));assert.equal(denied.status,429);assert.equal(denied.headers.get('Retry-After'),'19');rate=true
   sessionError=true;assert.equal((await handler(request(tokens[1]))).status,503);sessionError=false
   assert.equal((await handler(request(await sign({...claims[1],exp:now-10})))).status,401)
   assert.equal((await handler(request(await sign({...claims[1],role:'service_role'})))).status,401)

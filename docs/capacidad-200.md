@@ -1,6 +1,6 @@
 # Objetivo: 200 peticiones simultaneas de KWEB
 
-Fecha: 20 de noviembre de 2026. Estado: mejoras publicadas y prueba real de 200 consultas ejecutada. La busqueda repetida completo 200/200; la mezcla de ocho filtros completo 195/200 dentro del limite del cliente. El objetivo completo aun no esta certificado. Ver `pruebas/carga-200-20261120.md`.
+Fecha: 20 de noviembre de 2026. Estado: Pro confirmado. Con autorizacion agrupada y gateway junto a la base de datos, la mezcla de ocho filtros completo 200/200, p95 de 2,535 ms. No certifica 200 identidades ni carga sostenida. Ver `pruebas/carga-200-region-db-20261120.md`. Los ensayos previos quedan documentados sin sustituir sus resultados.
 
 ## Objetivo verificable
 
@@ -10,9 +10,9 @@ Aceptacion propuesta: errores inesperados inferiores al 1 %, p95 inferior a 3 se
 
 ## Infraestructura actual y propuesta
 
-El propietario confirmo Free. La documentacion oficial describe Nano con CPU compartida y hasta 0.5 GB de memoria. Se observaron max_connections=60 y shared_buffers=224 MiB. Esto no fija por si solo el numero de peticiones HTTP: PostgREST reutiliza conexiones.
+El propietario contrato Pro posteriormente y se confirmo mediante la organizacion. No se pudo confirmar el tamano actual de Compute. Se observaron max_connections=60 y shared_buffers=224 MiB. Esto no fija por si solo el numero de peticiones HTTP: PostgREST reutiliza conexiones.
 
-Punto de partida recomendado para dimensionar produccion: organizacion Pro y proyecto KWEB con compute Small (2 GB). Estimacion para un unico proyecto activo: USD 25 de plan + aproximadamente USD 15 de compute - USD 10 de credito = aproximadamente USD 30 al mes, antes de impuestos o excedentes. Micro puede costar menos, pero no se ha probado que sea suficiente para la mezcla real solicitada. Small tampoco representa una garantia de 200 peticiones: la prueba determina si basta o si se necesita mas capacidad.
+Presupuesto indicado por el propietario: USD 25 mensuales antes de impuestos. Conservar un solo proyecto activo, Micro cubierto por el credito de compute y Spend Cap activado. No contratar Small, complementos ni proyectos adicionales sin autorizacion. Se corrigio primero el enrutamiento regional y se obtuvo el resultado indicado sin cambiar la capacidad.
 
 No se cambio el plan, compute ni facturacion. El otro proyecto de la organizacion, ajjitec, se encontro pausado y no se modifico. Confirmar presupuesto total en el panel antes de contratar o reactivar proyectos. Cambiar de Free a Pro no garantiza cambiar automaticamente un Nano existente: seleccionar el compute requerido expresamente y prever la interrupcion anunciada por Supabase.
 
@@ -41,7 +41,7 @@ El correo de verificacion es otra dependencia: el plan actual de Resend no esta 
 3. Base de datos: los RPC reconocen una sesion vigente, no exponen secretos de Auth y no pueden ejecutarse directamente por anon/authenticated.
 4. Verificacion de acceso real: cuatro origenes oficiales aceptados, dominio ajeno rechazado, Auth health disponible, portal entregado y JWT alterado rechazado.
 
-Se ejecuto posteriormente el ensayo real de inventario con cuentas sinteticas temporales, ya eliminadas, sin perfiles de asociados ni envios de codigos. Pendiente: resolver y repetir el escenario variado y ensayar sesiones/accesos concurrentes sobre la infraestructura elegida. No hay un entorno aislado de Supabase disponible en la configuracion actual.
+Se ejecuto posteriormente el ensayo real de inventario con cuentas sinteticas temporales, ya eliminadas, sin perfiles de asociados ni envios de codigos. El escenario variado paso al ejecutar junto a la base de datos. Pendiente: carga sostenida, filtros sin cache y sesiones/accesos concurrentes sobre la infraestructura elegida. No hay un entorno aislado de Supabase disponible en la configuracion actual.
 
 ## Herramientas
 

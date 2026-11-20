@@ -63,6 +63,20 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
     const claims = data?.claims
     if (!claims || claims.role !== 'authenticated' || claims.iss !== Deno.env.get('SUPABASE_URL') + '/auth/v1' ||
         !validUuid(claims.sub) || !validUuid(claims.session_id)) throw new HttpError(401, 'Sesion invalida')
+    if (options.name === 'data-gateway') {
+      // Una sola transaccion valida la sesion vigente, los limites y el MFA.
+      // Los identificadores provienen exclusivamente de la firma ya verificada.
+      const { data: authorization, error: authorizationError } = await adminClient().rpc('security_gateway_autorizar', {
+        p_usuario: claims.sub, p_sesion: claims.session_id,
+        p_limite: options.userLimit ?? 60, p_mfa: options.mfa !== false,
+      })
+      if (authorizationError || !authorization || typeof authorization.estado !== 'string') throw new HttpError(503, 'Servicio no disponible')
+      if (authorization.estado === 'revocada') throw new HttpError(401, 'Sesion invalida')
+      if (authorization.estado === 'limite') throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', authorization.retry_after || 60)
+      if (authorization.estado === 'mfa') throw new HttpError(403, 'Se requiere verificacion en dos pasos')
+      if (authorization.estado !== 'ok') throw new HttpError(503, 'Servicio no disponible')
+      return { userId: claims.sub, token }
+    }
     const identityRequired = options.name === 'mfa-correo'
     const { data: active, error: sessionError } = await adminClient().rpc(identityRequired ? 'security_identidad_sesion' : 'security_sesion_vigente', {
       p_usuario: claims.sub, p_sesion: claims.session_id,
@@ -114,7 +128,7 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
       if (origin) headers.set('Access-Control-Allow-Origin', origin)
       const methods = options.methods || ['POST']
       headers.set('Access-Control-Allow-Methods', [...methods, 'OPTIONS'].join(', '))
-      headers.set('Access-Control-Allow-Headers', 'authorization, apikey, content-type, x-client-info, x-api-key, prefer, range, range-unit, accept, accept-profile, content-profile')
+      headers.set('Access-Control-Allow-Headers', 'authorization, apikey, content-type, x-client-info, x-api-key, x-region, prefer, range, range-unit, accept, accept-profile, content-profile')
       headers.set('Access-Control-Expose-Headers', 'content-range, range-unit, retry-after')
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers })
       if (!methods.includes(req.method)) throw new HttpError(405, 'Metodo no permitido')

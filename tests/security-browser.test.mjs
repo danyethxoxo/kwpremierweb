@@ -5,10 +5,10 @@ import vm from 'node:vm';
 import { join } from 'node:path';
 
 const root = new URL('../', import.meta.url);
-function browser() {
+function browser(responder=()=>Promise.resolve(new Response())) {
   const calls = [];
-  const context = vm.createContext({ window: { fetch: (...args) => { calls.push(args); return Promise.resolve(new Response()); } },
-    location: { origin: 'https://www.kwpremieroficial.com', href: 'https://www.kwpremieroficial.com/', protocol: 'https:', hostname: 'www.kwpremieroficial.com' }, URL, Request, TextEncoder, AbortSignal });
+  const context = vm.createContext({ window: { fetch: (...args) => { calls.push(args); return responder(...args); } },
+    location: { origin: 'https://www.kwpremieroficial.com', href: 'https://www.kwpremieroficial.com/', protocol: 'https:', hostname: 'www.kwpremieroficial.com' }, URL, Request, Headers, TextEncoder, AbortSignal });
   vm.runInContext(readFileSync(new URL('assets/js/kw-security.js', root), 'utf8'), context);
   return { ...context.window, calls };
 }
@@ -33,6 +33,32 @@ test('SDK routes only Data API calls through gateway and preserves body, query, 
   assert.equal(calls[2][0].headers.get('Authorization'), 'Bearer test-user');
 });
 
+test('inventario usa la region de la base y solo reintenta lecturas ante indisponibilidad',async()=>{
+ const url='https://iloetojomzqtadkithtv.supabase.co/rest/v1/rpc/propiedades_inventario_pagina';
+ let total=0;
+ const {kwSecureFetch,calls}=browser(async()=>new Response('{}',{status:++total===1?503:200}));
+ const abort=new AbortController();
+ const options={method:'POST',body:'{"p_pagina":1}',headers:{Authorization:'Bearer fixture'},signal:abort.signal};
+ assert.equal((await kwSecureFetch(url,options)).status,200);
+ assert.equal(calls.length,2);
+ assert.equal(calls[0][1].headers.get('x-region'),'us-west-2');
+ assert.equal(calls[1][1].headers.get('x-region'),null);
+ for(const call of calls){assert.equal(call[1].body,options.body);assert.equal(call[1].headers.get('Authorization'),'Bearer fixture');assert.equal(call[1].signal,abort.signal);}
+ for(const status of [401,403,429]){
+  const b=browser(async()=>new Response('{}',{status}));
+  assert.equal((await b.kwSecureFetch(url,options)).status,status);assert.equal(b.calls.length,1);
+ }
+ const write=browser(async()=>new Response('{}',{status:503}));
+ await write.kwSecureFetch('https://iloetojomzqtadkithtv.supabase.co/rest/v1/propiedades',options);
+ assert.equal(write.calls.length,1);assert.equal(write.calls[0][1],options);
+ const cancelled=browser(async()=>{throw Object.assign(new Error('cancelada'),{name:'AbortError'});});
+ await assert.rejects(()=>cancelled.kwSecureFetch(url,options),/cancelada/);assert.equal(cancelled.calls.length,1);
+ const request=browser(async()=>new Response('{}',{status:503}));
+ await request.kwSecureFetch(new Request(url,options));
+ assert.equal(request.calls.length,2);
+ assert.equal(await request.calls[0][0].text(),options.body);assert.equal(await request.calls[1][0].text(),options.body);
+});
+
 test('review notifications repair legacy routes without allowing external destinations', () => {
   const { kwSecurity: s } = browser();
   assert.equal(s.notificationUrl('/kwpremierweb/hub/admin.html', 'resena'), 'https://www.kwpremieroficial.com/hub/resenas.html');
@@ -42,13 +68,13 @@ test('review notifications repair legacy routes without allowing external destin
   assert.equal(s.notificationUrl('javascript:alert(1)', 'resena'), '');
 });
 function walk(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((item) => item.name.startsWith('.') || item.name === 'node_modules' ? [] : item.isDirectory() ? walk(join(dir, item.name)) : [join(dir, item.name)]);
+  return readdirSync(dir, { withFileTypes: true }).flatMap((item) => item.name.startsWith('.') || ['node_modules','tmp','artifacts','outputs'].includes(item.name) ? [] : item.isDirectory() ? walk(join(dir, item.name)) : [join(dir, item.name)]);
 }
 test('all pages load security before Supabase and all inline JavaScript parses', () => {
   const paths = walk(root.pathname.replace(/^\/([A-Z]:)/i, '$1'));
   for (const file of paths.filter((p) => p.endsWith('.html'))) {
     const html = readFileSync(file, 'utf8');
-    if (html.includes('<head')) assert(html.includes('/assets/js/kw-security.js?v=20260922'), file);
+    if (html.includes('<head')) assert.match(html,/src=["']\/assets\/js\/kw-security\.js\?v=[^"']+["']/, file);
     if (html.includes('@supabase/supabase-js')) assert(html.indexOf('kw-security.js') < html.indexOf('@supabase/supabase-js'), file);
     for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
       if (/src=|application\/ld\+json|type=["']module/.test(match[1]) || !match[2].trim()) continue;

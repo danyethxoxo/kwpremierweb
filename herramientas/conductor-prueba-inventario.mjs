@@ -15,10 +15,11 @@ for await(const line of lines){
   decipher.setAuthTag(ciphertext.subarray(-16));
   const session=JSON.parse(Buffer.concat([decipher.update(ciphertext.subarray(0,-16)),decipher.final()]).toString('utf8'));
   key.fill(0);
-  const config={api:session.api,modo:'inventario',permitirProduccion:true,niveles:[5,25,50,200],repeticionesPorNivel:1,timeoutMs:12000,p95MaxMs:10000,
+  const config={api:session.api,modo:'inventario',region:input.region,permitirProduccion:true,niveles:[5,25,50,200],repeticionesPorNivel:1,timeoutMs:12000,p95MaxMs:10000,
    sesiones:Array.from({length:200},()=>({token:session.token})),filtros:input.filtros||[{estatus:'publicada',orden:'reciente'}]};
   const result=await probarConcurrencia(config);
   result.identidadesDePrueba=1;
+  result.regionSolicitada=input.region||'automatic';
   result.alcance='Búsquedas autenticadas reales desde un cliente externo; una identidad temporal, no 200 usuarios';
   try{
    const logout=await fetch(session.api+'/auth/v1/logout?scope=global',{method:'POST',headers:{apikey:session.apikey,Authorization:'Bearer '+session.token},signal:AbortSignal.timeout(10000)});

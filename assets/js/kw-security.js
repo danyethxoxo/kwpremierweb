@@ -71,6 +71,30 @@
       url.pathname = url.pathname.replace('/rest/v1/', '/functions/v1/data-gateway/');
       input = input instanceof Request ? new Request(url.href, input) : url.href;
     }
+    var lecturaInventario = url.origin === API_ORIGIN && (
+      (/^(GET|HEAD)$/.test(metodo) && /^\/functions\/v1\/data-gateway\/propiedades(?:_inventario)?$/.test(url.pathname)) ||
+      (metodo === 'POST' && /^\/functions\/v1\/data-gateway\/rpc\/propiedades_inventario_(pagina|mapa|catalogo)$/.test(url.pathname))
+    );
+    if (lecturaInventario) {
+      var cabeceras = new Headers((init && init.headers) || (input instanceof Request ? input.headers : undefined));
+      cabeceras.set('x-region', 'us-west-2');
+      var regional = Object.assign({}, init, { headers: cabeceras });
+      var respaldo = input instanceof Request ? input.clone() : input;
+      var signal = regional.signal || (input instanceof Request ? input.signal : undefined);
+      function alternativa() {
+        var originales = new Headers(cabeceras); originales.delete('x-region');
+        return nativeFetch(respaldo, Object.assign({}, init, { headers: originales }));
+      }
+      // Solo lecturas: un intento alternativo ante indisponibilidad, nunca escrituras.
+      return nativeFetch(input, regional).then(function (respuesta) {
+        if (![502,503,504].includes(respuesta.status) || (signal && signal.aborted)) return respuesta;
+        if (respuesta.body) respuesta.body.cancel().catch(function () {});
+        return alternativa();
+      }, function (error) {
+        if ((signal && signal.aborted) || error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+        return alternativa();
+      });
+    }
     return nativeFetch(input, init);
   };
   window.kwSecurity = Object.freeze({

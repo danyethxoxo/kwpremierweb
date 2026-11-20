@@ -30,6 +30,7 @@ export async function probarConcurrencia(config,{fetchImpl=fetch,pausa=ms=>new P
     try {
      const session=credenciales[i%Math.max(1,credenciales.length)];
      const headers={Origin:'https://kweb.com.mx','Content-Type':'application/json'};
+     if(config.region==='us-west-2')headers['x-region']='us-west-2';
      let body,method='OPTIONS',path='/functions/v1/mfa-correo';
      if(modo==='conectividad') {
       headers['Access-Control-Request-Method']='POST';headers['Access-Control-Request-Headers']='authorization,content-type';
