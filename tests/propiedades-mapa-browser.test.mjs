@@ -75,6 +75,29 @@ async function pagina(browser,viewport,puntos,entornoReal=false,inicio=null){
  return {page,errores,pedidos};
 }
 
+test('la ficha permanece abierta cuando su encuadre desplaza el pin fuera del mapa',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try { for(const width of [1366,390]) {
+  const {page,errores}=await pagina(browser,{width,height:844},[[id(1001),19.43,-99.13,'venta',3500000,'MXN']]);
+  try {
+   await page.waitForFunction(()=>window.qaMapa&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
+   await page.evaluate(()=>{
+    const el=document.querySelector('#prop-mapa');el.style.setProperty('height','220px','important');el.style.setProperty('min-height','0','important');
+    qaMapa.invalidateSize({pan:false});qaMapa.setView([19.43,-99.13],14,{animate:false});
+   });
+   await page.locator('.leaflet-marker-icon').first().click();
+   await page.waitForTimeout(1200);
+   assert.equal(await page.locator('.prop-mapa-ficha h3').isVisible(),true,'el autoencuadre no retira el pin que sostiene la ficha');
+   await page.evaluate(()=>qaMapa.panBy([0,-600],{animate:false}));
+   assert.equal(await page.locator('.prop-mapa-ficha').count(),1,'mover el mapa conserva la ficha abierta');
+   await page.evaluate(()=>qaMapa.closePopup());
+   await page.locator('.leaflet-popup').waitFor({state:'detached'});
+   assert.equal(await page.locator('.leaflet-popup').count(),0,'el cierre explícito sigue funcionando');
+   assert.deepEqual(errores,[]);
+  } finally {await page.close();}
+ }} finally {await browser.close();}
+});
+
 test('CDMX y Tláhuac: ningún pin exterior sobrevive al contorno en escritorio o móvil',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  const coords=[[19.29446888119494,-99.01853228951015],[19.282736061699698,-99.05710934130859],[19.3101177,-99.0504917],[19.2935824,-99.0102858],[19.270666,-99.007022],[19.3074496,-99.044955],[19.3079696,-99.0544916],[19.369,-99.163]];

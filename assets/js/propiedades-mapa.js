@@ -249,6 +249,9 @@
         var celdas = new Set(), visibles = new Set(), limitesVista = mapa.getBounds().pad(.15);
         var espacio = mapa.getZoom() >= 15 ? 45 : 85;
         candidatos.forEach(function (pin) {
+          // El autoencuadre de una ficha puede dejar su ancla fuera de la vista.
+          // Retirar ese marcador tambien cerraria la ficha recien abierta.
+          if (pin.isPopupOpen()) { visibles.add(pin); return; }
           if (!limitesVista.contains(pin.getLatLng())) return;
           var punto = mapa.project(pin.getLatLng(), mapa.getZoom());
           var celda = Math.floor(punto.x / espacio) + ':' + Math.floor(punto.y / espacio);
