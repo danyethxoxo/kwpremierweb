@@ -126,6 +126,11 @@ Deno.test('middleware enforces auth, MFA, rates, CORS, malformed bodies and safe
     method: 'POST', headers: { Origin: origin, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body,
   })
   try {
+    for (const origin of ['https://kweb.com.mx', 'https://www.kweb.com.mx']) {
+      const preflight = await handler(new Request('https://project.supabase.co/functions/v1/test', { method: 'OPTIONS', headers: { Origin: origin } }))
+      assert.equal(preflight.status, 204, 'KWEB remains available with a legacy Premier origin setting')
+      assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), origin)
+    }
     assert.equal((await handler(request('valid-user', 'https://evil.test'))).status, 403)
     assert.equal(called, 0)
     assert.equal((await handler(request('invalid'))).status, 401)

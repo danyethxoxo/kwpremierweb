@@ -13,7 +13,7 @@ type Options = {
 }
 type Context = { userId?: string; token?: string; user?: User }
 type Handler = (req: Request, context: Context) => Response | Promise<Response>
-const DEFAULT_ORIGINS = 'https://www.kwpremieroficial.com,https://kwpremieroficial.com'
+const DEFAULT_ORIGINS = 'https://www.kwpremieroficial.com,https://kwpremieroficial.com,https://kweb.com.mx,https://www.kweb.com.mx'
 
 function adminClient() {
   const url = Deno.env.get('SUPABASE_URL')
@@ -72,7 +72,7 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
       'Strict-Transport-Security': 'max-age=31536000',
     })
     try {
-      const origins = allowedOrigins(Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS)
+      const origins = allowedOrigins([DEFAULT_ORIGINS, Deno.env.get('ALLOWED_ORIGINS') || ''].filter(Boolean).join(','))
       const origin = req.headers.get('origin')
       if (origin && !origins.has(origin)) throw new HttpError(403, 'Origen no permitido')
       if (origin) headers.set('Access-Control-Allow-Origin', origin)
