@@ -29,6 +29,8 @@ La guardia de sesion ofrece reintentar despues de 25 segundos sin respuesta. Una
 - Pruebas de servidor: autenticacion, MFA, limites, CORS, formularios y errores seguros. Pruebas de navegador: sesion detenida, reintento, respuestas tardias, notificaciones y errores parciales del inicio.
 - Dos comprobaciones historicas de versiones fijas de scripts y una expectativa visual antigua de espacio entre widgets no forman parte de la validacion funcional de este cambio.
 
-El CDN de tslib 2.8.1 no coincide con el hash del lock Deno existente. Para las pruebas se uso la distribucion oficial de npm de la misma version mediante un import map temporal, sin modificar el lock ni las dependencias publicadas del proyecto.
+El CDN de tslib 2.8.1 no coincide con el hash del lock Deno existente. Los tests y checks usan ahora la distribucion oficial de npm de la misma version en tests/vendor, con licencia e import map versionados. No se borro el lock ni se modificaron las dependencias de los servicios publicados.
 
 Estos cambios reducen carga y permiten recuperarse de errores; no garantizan disponibilidad absoluta. Revisar registros y capacidad de infraestructura si persisten esperas con la concurrencia real.
+
+La ampliacion para el objetivo de 200 peticiones se documenta en `capacidad-200.md`. Incluye validacion criptografica con comprobacion de sesion vigente, pruebas concurrentes con servicios simulados y prueba real de conectividad. No se ha certificado todavia la capacidad completa con 200 accesos y consultas autenticadas sobre Free.

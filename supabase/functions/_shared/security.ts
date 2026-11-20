@@ -1,5 +1,5 @@
-import { createClient, type User } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
-import { allowedOrigins, boundedBody, clientIp, HttpError, validateJson } from './security-core.ts'
+import { createClient, type User, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.117.0'
+import { allowedOrigins, boundedBody, clientIp, HttpError, validUuid, validateJson } from './security-core.ts'
 
 type Options = {
   name: string
@@ -14,12 +14,19 @@ type Options = {
 type Context = { userId?: string; token?: string; user?: User }
 type Handler = (req: Request, context: Context) => Response | Promise<Response>
 const DEFAULT_ORIGINS = 'https://www.kwpremieroficial.com,https://kwpremieroficial.com,https://kweb.com.mx,https://www.kweb.com.mx'
+let sharedAdmin: SupabaseClient | undefined
+let sharedConfiguration = ''
 
 function adminClient() {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!url || !key) throw new HttpError(503, 'Servicio no disponible')
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+  const configuration = url + ':' + key
+  if (!sharedAdmin || sharedConfiguration !== configuration) {
+    sharedAdmin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+    sharedConfiguration = configuration
+  }
+  return sharedAdmin
 }
 
 export async function consumeLimit(scope: string, subject: string, limit: number, windowSeconds = 60): Promise<void> {
@@ -45,11 +52,40 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
     if (!token || token.startsWith('sb_publishable_') || token === Deno.env.get('SUPABASE_ANON_KEY')) return {}
   }
   if (!token || !/^Bearer\s+/i.test(req.headers.get('authorization') || '')) throw new HttpError(401, 'No autenticado')
-  const { data, error } = await adminClient().auth.getUser(token)
-  if (error || !data.user) throw new HttpError(401, 'Sesion invalida')
+  let user: User | undefined
+  let userId: string
+  if (options.name === 'data-gateway' || options.name === 'mfa-correo') {
+    const { data, error } = await adminClient().auth.getClaims(token)
+    if (error) {
+      if (!error.status || error.status >= 500) throw new HttpError(503, 'Servicio no disponible')
+      throw new HttpError(401, 'Sesion invalida')
+    }
+    const claims = data?.claims
+    if (!claims || claims.role !== 'authenticated' || claims.iss !== Deno.env.get('SUPABASE_URL') + '/auth/v1' ||
+        !validUuid(claims.sub) || !validUuid(claims.session_id)) throw new HttpError(401, 'Sesion invalida')
+    const identityRequired = options.name === 'mfa-correo'
+    const { data: active, error: sessionError } = await adminClient().rpc(identityRequired ? 'security_identidad_sesion' : 'security_sesion_vigente', {
+      p_usuario: claims.sub, p_sesion: claims.session_id,
+    })
+    if (sessionError) throw new HttpError(503, 'Servicio no disponible')
+    if (identityRequired) {
+      if (!active || typeof active !== 'object' || active.id !== claims.sub) throw new HttpError(401, 'Sesion invalida')
+      user = active as User
+    } else if (active !== true) throw new HttpError(401, 'Sesion invalida')
+    userId = claims.sub
+  } else {
+    const { data, error } = await adminClient().auth.getUser(token)
+    if (error) {
+      if (!error.status || error.status >= 500) throw new HttpError(503, 'Servicio no disponible')
+      throw new HttpError(401, 'Sesion invalida')
+    }
+    if (!data.user) throw new HttpError(401, 'Sesion invalida')
+    user = data.user
+    userId = user.id
+  }
   await consumeLimits([
-    { scope: 'user:all', subject: data.user.id, limit: 600 },
-    { scope: `user:${options.name}`, subject: data.user.id, limit: options.userLimit ?? 60 },
+    { scope: 'user:all', subject: userId, limit: 600 },
+    { scope: `user:${options.name}`, subject: userId, limit: options.userLimit ?? 60 },
   ])
   if (options.mfa !== false) {
     const secret = Deno.env.get('DATA_GATEWAY_SECRET')
@@ -61,7 +97,7 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
     const { data: approved, error: mfaError } = await caller.rpc('mfa_sesion_autorizada')
     if (mfaError || approved !== true) throw new HttpError(403, 'Se requiere verificacion en dos pasos')
   }
-  return { userId: data.user.id, token, user: data.user }
+  return { userId, token, user }
 }
 
 export function secureHandler(options: Options, handler: Handler): (req: Request) => Promise<Response> {

@@ -3,8 +3,9 @@
   "private": true,
   "scripts": {
     "test": "node --test --test-timeout=120000 tests/*.test.mjs",
-    "test:edge": "deno test --allow-env --allow-read tests/security-edge.test.ts tests/mfa-policy.test.ts",
-    "check:edge": "deno check supabase/functions/*/index.ts",
+    "test:edge": "deno test --allow-env --allow-read --import-map=tests/import-map.json tests/security-edge.test.ts tests/mfa-policy.test.ts tests/data-gateway-concurrencia.test.ts",
+    "check:edge": "deno check --import-map=tests/import-map.json supabase/functions/*/index.ts",
+    "capacity:check": "node herramientas/verificar-acceso.mjs && node --test tests/prueba-concurrencia.test.mjs",
     "security:scan": "node herramientas/scan-secrets.mjs",
     "migration:check": "node herramientas/verificar-migraciones.mjs",
     "release:check": "npm run security:scan && npm run migration:check && npm test && npm run check:edge && npm run test:edge && npm audit --audit-level=high",
@@ -18,10 +19,8 @@
     "@types/node": "24.13.6",
     "deno": "2.9.6",
     "fake-indexeddb": "6.2.5",
-    "fast-xml-parser": "5.12.0",
     "jspdf": "4.2.1",
     "playwright": "1.63.0",
-    "sharp": "0.35.5",
-    "wrangler": "4.161.0"
+    "sharp": "0.35.5"
   }
 }
