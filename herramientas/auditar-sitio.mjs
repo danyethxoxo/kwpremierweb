@@ -1,6 +1,6 @@
 // Read-only site inventory and isolated browser audit. Never uses a real session.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, extname, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -8,7 +8,16 @@ import { chromium } from 'playwright';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, process.env.KW_AUDIT_OUTPUT || 'artifacts/auditoria');
 mkdirSync(output, { recursive: true });
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).trim().split(/\r?\n/);
+function archivos(dir='') {
+  return readdirSync(resolve(root,dir),{withFileTypes:true}).flatMap(entry=>{
+    if(entry.name.startsWith('.')||['node_modules','tmp','artifacts','outputs'].includes(entry.name))return [];
+    const file=dir?dir+'/'+entry.name:entry.name;
+    return entry.isDirectory()?archivos(file):[file];
+  });
+}
+let tracked;
+try { tracked=execFileSync('git',['ls-files'],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim().split(/\r?\n/); }
+catch { tracked=archivos(); }
 const pages = tracked.filter(file => file.endsWith('.html'));
 const routes = pages.concat(pages.filter(file => /^documentos\/(contratos|acuerdos)\/(?!index)/.test(file)).map(file => file + '?nuevo=1'));
 const missing = [];

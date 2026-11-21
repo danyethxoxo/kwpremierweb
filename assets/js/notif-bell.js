@@ -19,13 +19,15 @@
   function esReciente(n, ahora = Date.now()) {
     return !n.leido && new Date(n.created_at).getTime() > ahora - DIA;
   }
-  async function cargarHistorial(client, uid) {
+  async function cargarHistorial(client, uid, recientes = false) {
     const filas = [];
     // El historial completo no debe desaparecer tras las primeras 20 o 60 filas.
     const tamano = 100;
     for (let desde = 0; ; desde += tamano) {
-      const { data, error } = await client.from('notificaciones')
-        .select('id, tipo, titulo, mensaje, url, leido, created_at').eq('user_id', uid)
+      let consulta = client.from('notificaciones')
+        .select('id, tipo, titulo, mensaje, url, leido, created_at').eq('user_id', uid);
+      if (recientes) consulta = consulta.eq('leido',false).gte('created_at',new Date(Date.now()-DIA).toISOString());
+      const { data, error } = await consulta
         .order('created_at', { ascending: false }).order('id', { ascending: false })
         .range(desde, desde + tamano - 1);
       if (error) throw error;
@@ -44,6 +46,8 @@
   let vistaPagina = 'recientes';
   let usuarioId = null;
   let cargando = false;
+  let historialCompleto = false;
+  let cargaCompletaPendiente = false;
   let iniciado = false;
   let ultimaCarga = 0;
   let refrescoPendiente = null;
@@ -70,7 +74,7 @@
   function contenido(vista, prefijo) {
     const ahora = Date.now();
     const recientes = notificaciones.filter(n => esReciente(n, ahora));
-    const filas = vista === 'todas' ? notificaciones : recientes;
+    const filas = vista === 'todas' ? (historialCompleto ? notificaciones : []) : recientes;
     const sinLeer = filas.filter(n => !n.leido);
     return `<div class="notif-tabs" role="tablist" aria-label="Filtrar notificaciones">
       <button type="button" role="tab" id="${prefijo}-recientes" aria-controls="${prefijo}-lista" aria-selected="${vista === 'recientes'}" tabindex="${vista === 'recientes' ? 0 : -1}" data-notif-tab="recientes">Recientes${recientes.length ? ` (${recientes.length})` : ''}</button>
@@ -103,6 +107,7 @@
         if (esPagina) vistaPagina = btn.dataset.notifTab;
         else vistaPanel = btn.dataset.notifTab;
         render();
+        if (btn.dataset.notifTab === 'todas' && !historialCompleto) { cargaCompletaPendiente = true; cargar(); }
         document.getElementById(`${esPagina ? 'notif-pagina' : 'notif-panel'}-${btn.dataset.notifTab}`)?.focus();
       });
       btn.addEventListener('keydown', e => {
@@ -197,12 +202,15 @@
   async function cargar() {
     if (cargando || !window.kwSupabase?.auth) return;
     cargando = true; errorMensaje = ''; render();
+    const completa = historialCompleto || cargaCompletaPendiente || vistaPanel === 'todas' || vistaPagina === 'todas';
+    cargaCompletaPendiente = false;
     try {
       const result = await (window.kwSession?.usuarioInicial ? window.kwSession.usuarioInicial(window.kwSupabase) : window.kwSupabase.auth.getUser());
       const uid = result?.data?.user?.id;
       if (!uid) return;
       usuarioId = uid;
-      notificaciones = await cargarHistorial(window.kwSupabase, uid);
+      notificaciones = await cargarHistorial(window.kwSupabase, uid, !completa);
+      historialCompleto = completa;
       ultimaCarga = Date.now();
       // Una respuesta iniciada antes del clic no debe deshacer la lectura.
       notificaciones.forEach(n => {
@@ -218,7 +226,7 @@
           .subscribe();
       }
     } catch (_) { errorMensaje = 'No se pudieron cargar tus notificaciones.'; }
-    finally { cargando = false; render(); }
+    finally { cargando = false; render(); if (cargaCompletaPendiente) cargar(); }
   }
   document.addEventListener('click', e => {
     if (abierta && !document.getElementById('notif-bell-slot')?.contains(e.target) && !document.getElementById('notif-dropdown')?.contains(e.target)) cerrar();

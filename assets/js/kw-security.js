@@ -71,11 +71,12 @@
       url.pathname = url.pathname.replace('/rest/v1/', '/functions/v1/data-gateway/');
       input = input instanceof Request ? new Request(url.href, input) : url.href;
     }
-    var lecturaInventario = url.origin === API_ORIGIN && (
-      (/^(GET|HEAD)$/.test(metodo) && /^\/functions\/v1\/data-gateway\/propiedades(?:_inventario)?$/.test(url.pathname)) ||
+    var datosPlataforma = url.origin === API_ORIGIN && url.pathname.startsWith('/functions/v1/data-gateway/');
+    var lecturaDatos = datosPlataforma && (
+      /^(GET|HEAD)$/.test(metodo) ||
       (metodo === 'POST' && /^\/functions\/v1\/data-gateway\/rpc\/propiedades_inventario_(pagina|mapa|catalogo)$/.test(url.pathname))
     );
-    if (lecturaInventario) {
+    if (datosPlataforma) {
       var cabeceras = new Headers((init && init.headers) || (input instanceof Request ? input.headers : undefined));
       cabeceras.set('x-region', 'us-west-2');
       var regional = Object.assign({}, init, { headers: cabeceras });
@@ -87,11 +88,11 @@
       }
       // Solo lecturas: un intento alternativo ante indisponibilidad, nunca escrituras.
       return nativeFetch(input, regional).then(function (respuesta) {
-        if (![502,503,504].includes(respuesta.status) || (signal && signal.aborted)) return respuesta;
+        if (!lecturaDatos || ![502,503,504].includes(respuesta.status) || (signal && signal.aborted)) return respuesta;
         if (respuesta.body) respuesta.body.cancel().catch(function () {});
         return alternativa();
       }, function (error) {
-        if ((signal && signal.aborted) || error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+        if (!lecturaDatos || (signal && signal.aborted) || error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
         return alternativa();
       });
     }

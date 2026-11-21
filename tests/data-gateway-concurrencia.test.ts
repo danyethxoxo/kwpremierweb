@@ -28,6 +28,7 @@ Deno.test('200 consultas concurrentes verifican firmas ES256 sin pedir el usuari
   if(url.includes('/rpc/security_consume_rates')){ipCalls++;return Response.json({allowed:true,retry_after:1})}
   if(url.includes('/rpc/security_gateway_autorizar')){
    sessionCalls++;const body=JSON.parse(String(init?.body))
+   assert.equal(body.p_ip,'unknown')
    assert.equal(body.p_mfa,true)
    assert.equal(body.p_limite,60)
    const estado=active.get(body.p_sesion)!==body.p_usuario?'revocada':!rate?'limite':!mfa?'mfa':'ok'

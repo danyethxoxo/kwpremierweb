@@ -10,7 +10,7 @@ async function ejecutar(body, autorizado=true, completa=true) {
   const ctx=vm.createContext({Response,Date,AbortSignal,console,
     Deno:{env:{get:()=> 'configurado'}},secureServe:(_op,fn)=>{handler=fn;},createClient:()=>({from:()=>q}),
     enviarCorreo:async()=>{throw Error('No debe enviar correo');},
-    fetch:async url=>{llamadas.push(url);return Response.json({ok:true,corrida_completa:completa});},
+    fetch:async url=>{llamadas.push(url);return Response.json({ok:true,corrida_completa:completa,verificacion_inventario:{correcta:completa}});},
   });
   vm.runInContext(stripTypeScriptTypes(source.replace(/^import .*\n/gm,'')),ctx);
   const res=await handler(new Request('https://example.com',{method:'POST',headers:{'x-webhook-secret':autorizado?'configurado':'incorrecto'},body:JSON.stringify(body)}));

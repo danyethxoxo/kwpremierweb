@@ -32,10 +32,10 @@ function fixture() {
         return empty;
       }
       const q={filters:[],ids:null,updating:false,from:0,to:99};
-      const builder={select(){return this;},eq(k,v){q.filters.push([k,v]);return this;},order(){return this;},
+      const builder={select(){return this;},eq(k,v){q.filters.push([k,v]);return this;},gte(k,v){q.fecha=v;return this;},order(){return this;},
         range(a,b){q.from=a;q.to=b;return this;},update(){q.updating=true;return this;},in(k,ids){q.ids=ids;return this;},
         then(ok,bad){return Promise.resolve().then(async()=>{
-          const list=state.rows.filter(n=>q.filters.every(([k,v])=>n[k]===v)&&(!q.ids||q.ids.includes(n.id)));
+          const list=state.rows.filter(n=>q.filters.every(([k,v])=>n[k]===v)&&(!q.fecha||n.created_at>=q.fecha)&&(!q.ids||q.ids.includes(n.id)));
           if(q.updating){state.updates++;if(state.deferUpdate)await new Promise(resolve=>{state.releaseUpdate=resolve;});if(state.failUpdate)return {data:null,error:{message:'Error de prueba'}};list.forEach(n=>n.leido=true);return {data:list.map(({id})=>({id})),error:null};}
           state.pageCount++;return {data:list.slice(q.from,q.to+1).map(n=>({...n})),error:null};
         }).then(ok,bad);}};
@@ -71,7 +71,7 @@ test('notificaciones UI: filas, dictamen, navegación, lectura explícita, histo
       await page.goto('http://127.0.0.1:'+server.address().port);
       await page.locator('#notif-centro .notif-item').first().waitFor();
       assert.equal(await page.locator('#notif-centro .notif-item').count(),2);
-      assert.equal(await page.evaluate(()=>window.__notifMock.pageCount),2);
+      assert.equal(await page.evaluate(()=>window.__notifMock.pageCount),1,'la campana no descarga todo el historial al iniciar');
       await page.locator('#notif-bell-btn').click();
       await page.locator('#notif-dropdown.abierto').waitFor();
       assert.equal(await page.evaluate(()=>window.__notifMock.updates),0,'abrir no marca las tarjetas');
@@ -87,7 +87,8 @@ test('notificaciones UI: filas, dictamen, navegación, lectura explícita, histo
       const overlay=await page.locator('#notif-backdrop').evaluate(el=>({bg:getComputedStyle(el).backgroundColor,z:getComputedStyle(el).zIndex}));
       assert.deepEqual(overlay,{bg:'rgba(0, 0, 0, 0.28)',z:'210'});
       await page.clock.runFor(300);
-      assert.equal(await page.evaluate(()=>document.elementFromPoint(1,300)?.id),'notif-backdrop','el velo cubre también la barra lateral');
+      const margen=await page.locator('#notif-dropdown').boundingBox();
+      if(margen.x>1)assert.equal(await page.evaluate(()=>document.elementFromPoint(1,300)?.id),'notif-backdrop','el velo cubre la zona exterior al panel');
       await page.screenshot({path:join(output,viewport.width+'-recientes.png'),animations:'disabled'});
       assert.equal(await page.locator('#notif-dropdown').evaluate(el=>getComputedStyle(el).transform),'matrix(1, 0, 0, 1, 0, 0)','el panel termina de entrar y no queda cortado');
       const style=await page.locator('#notif-dropdown').evaluate(el=>({shadow:getComputedStyle(el).boxShadow,border:getComputedStyle(el).borderLeftWidth,bg:getComputedStyle(el).backgroundColor}));

@@ -43,12 +43,14 @@ test('no reutiliza respuestas sin MFA, cuentas distintas, arranques expirados ni
 
 test('Firmas comienza la descarga antes de los catálogos, pero pinta con nombres y colores listos',async()=>{
   const html=fs.readFileSync(new URL('../hub/firmas.html',import.meta.url),'utf8');
-  const start=html.indexOf('  async function cargarEnvios('),end=html.indexOf('\n  }',start)+4;
+  const start=html.indexOf('  const cargaHistorial = window.kwFirmasCarga.crear({'),leer=html.indexOf('  async function leerEnvios(',start),end=html.indexOf('\n  }',leer)+4;
+  assert.ok(start>=0&&leer>start);
   let soltar,lecturas=0,pintados=0;
   const catalogos=new Promise(resolve=>{soltar=resolve;});
-  const ctx=vm.createContext({veTodo:false,envios:[],elegidos:new Set(),Set,Promise,
+  const ctx=vm.createContext({veTodo:false,envios:[],etiquetas:[],elegidos:new Set(),Set,Promise,setTimeout,clearTimeout,catalogosHistorial:null,historialListo:false,flotante:null,
     window:{kwSupabase:{from(){return {select(){return this;},order(){return this;},async range(){lecturas++;return {data:[{id:'1'}]};}};}}},
-    pintarEnvios(){pintados++;},escapar:String,$:()=>({innerHTML:''})});
+    pintarEnvios(){pintados++;},abrirDocumentoInicial(){},escapar:String,$:()=>({innerHTML:'',scrollTop:0,style:{display:'none'}})});
+  vm.runInContext(fs.readFileSync(new URL('../assets/js/kw-firmas-carga.js',import.meta.url),'utf8'),ctx);
   vm.runInContext(html.slice(start,end),ctx);
   const carga=ctx.cargarEnvios(catalogos);
   await new Promise(resolve=>setImmediate(resolve));

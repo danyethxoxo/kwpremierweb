@@ -37,6 +37,7 @@
 
   async function mfaState(client) {
     var refreshed = false;
+    var regionPreferida = true;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         var result = await client.auth.getSession();
@@ -47,9 +48,11 @@
         var timer = setTimeout(function () { controller.abort(); }, 12000);
         var response;
         try {
+          var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + result.data.session.access_token };
+          if (regionPreferida) headers['x-region'] = 'us-west-2';
           response = await fetch(MFA_URL, {
             method: 'POST', cache: 'no-store', signal: controller.signal,
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + result.data.session.access_token },
+            headers: headers,
             body: JSON.stringify({ accion: 'estado', dispositivo_token: deviceToken() })
           });
         } finally { clearTimeout(timer); }
@@ -73,6 +76,7 @@
         if (error.status === 401 || error.code === 'refresh_token_not_found' || error.code === 'refresh_token_already_used') return { sin_sesion: true };
         var transient = !error.status || error.status >= 500;
         if (!transient || attempt === 2) throw error;
+        regionPreferida = false;
         await new Promise(function (resolve) { setTimeout(resolve, 400 * (attempt + 1)); });
       }
     }

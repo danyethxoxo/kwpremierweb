@@ -2,6 +2,8 @@
 
 Fecha: 20 de noviembre de 2026. Estado: Pro confirmado. Con autorizacion agrupada y gateway junto a la base de datos, la mezcla de ocho filtros completo 200/200, p95 de 2,535 ms. No certifica 200 identidades ni carga sostenida. Ver `pruebas/carga-200-region-db-20261120.md`. Los ensayos previos quedan documentados sin sustituir sus resultados.
 
+Actualización de la auditoría general: 2,075 lecturas autenticadas correctas, incluidas diez rondas de 200 solicitudes simultáneas entre ocho rutas, con ocho identidades sintéticas. Peor p95 de esas rondas: 4,347 ms. Registros del servidor: 2,075 HTTP 200. No mide doscientos accesos por contraseña ni listas privadas pobladas. Resultados, correcciones y pendientes: [auditoría de estabilidad](auditoria-estabilidad-20261120.md).
+
 ## Objetivo verificable
 
 Separar tres escenarios: busquedas de inventario con filtros iguales y diferentes, validacion de sesiones ya iniciadas y acceso nuevo con contrasena. Medir cada escenario con 5, 25, 50, 100 y 200 participantes. No equiparar 200 conexiones de un pool a 200 usuarios ni a 200 consultas por segundo.
@@ -45,7 +47,7 @@ Se ejecuto posteriormente el ensayo real de inventario con cuentas sinteticas te
 
 ## Herramientas
 
-`node herramientas/verificar-acceso.mjs` ejecuta el chequeo de acceso real sin credenciales privadas. El workflow kweb-acceso lo ejecuta en cambios relevantes y manualmente; no se creo una programacion periodica.
+`node herramientas/verificar-acceso.mjs` ejecuta el chequeo de acceso real sin credenciales privadas. El workflow kweb-acceso lo ejecuta en cambios relevantes, manualmente y cada quince minutos. GitHub puede retrasar las tareas programadas.
 
 `npm run test:edge` incluye la regresion de 200 solicitudes concurrentes. Los tests y checks Deno resuelven tslib 2.8.1 a la distribucion oficial vendorizada de npm (con licencia adjunta), para no aceptar silenciosamente el cambio de hash del CDN. No se borro ni debilito el lock existente. Este mapa corresponde a la verificacion local/CI, no modifica los imports de los servicios ya publicados.
 

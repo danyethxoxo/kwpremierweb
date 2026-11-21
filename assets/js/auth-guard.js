@@ -21,6 +21,11 @@
   var ultimaComprobacion = 0;
   var comprobacionPendiente = null;
   var sesionPreparada = false;
+  var avisoConexion = null;
+  function quitarAvisoConexion() {
+    if (avisoConexion && avisoConexion.parentNode) avisoConexion.parentNode.removeChild(avisoConexion);
+    avisoConexion = null;
+  }
 
   function getDeviceToken() {
     return window.kwSession.deviceToken();
@@ -104,6 +109,8 @@
   // ── Sesión ─────────────────────────────────────────────────
 
   function redirectToLogin() {
+    quitarAvisoConexion();
+    document.documentElement.classList.remove('kw-auth-ok');
     var here = location.pathname + location.search;
     location.replace(BASE_PATH + '/login.html?redirect=' + encodeURIComponent(here));
   }
@@ -129,8 +136,28 @@
 
   // Un problema de conexión conserva la sesión y permite reintentar.
   // El contenido sigue oculto hasta recibir autorización del servidor.
-  function mostrarErrorConexion() {
+  function mostrarErrorConexion(error) {
     if (window.kwSession && window.kwSession.limpiarInicio && window.kwSupabase) window.kwSession.limpiarInicio(window.kwSupabase);
+    var temporal = !error || !error.status || error.status >= 500;
+    if (temporal && sesionPreparada && document.documentElement.classList.contains('kw-auth-ok')) {
+      quitarCargando();
+      if (!avisoConexion) {
+        avisoConexion = document.createElement('div');
+        avisoConexion.id = 'kw-conexion-aviso';
+        avisoConexion.setAttribute('role', 'status');
+        avisoConexion.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9998;max-width:calc(100vw - 32px);padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;color:#333;font-size:14px';
+        var texto = document.createElement('span');
+        texto.textContent = 'Conexión interrumpida. ';
+        var reintentar = document.createElement('button');
+        reintentar.type = 'button';reintentar.textContent = 'Reintentar';
+        reintentar.style.cssText = 'border:0;background:none;color:#CE011F;text-decoration:underline;cursor:pointer;font:inherit';
+        reintentar.addEventListener('click', comprobarSesion);
+        avisoConexion.append(texto, reintentar);
+        document.body.appendChild(avisoConexion);
+      }
+      return;
+    }
+    quitarAvisoConexion();
     document.documentElement.classList.remove('kw-auth-ok');
     montarCargando();
     var capa = capaCargando;
@@ -181,6 +208,7 @@
   comprobarSesion();
 
   function continuarConSesion() {
+    quitarAvisoConexion();
     document.documentElement.classList.add('kw-auth-ok');
     quitarCargando();
     if (sesionPreparada) return;

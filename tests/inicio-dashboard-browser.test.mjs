@@ -98,7 +98,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(100);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));
    assert.equal(await page.locator('#notif-bell-slot').count(),1);
-   assert.equal(await page.locator('.dash-tools #notif-bell-slot').count(),1);
+   assert.equal(await page.locator((width>=1024?'.dash-tools':'header.kw-header .kw-header-sueltos')+' #notif-bell-slot').count(),1);
    assert.ok(await page.locator('main.dashboard').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
    assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>el.scrollHeight>el.clientHeight));
    assert.ok(await page.locator('#inicio-propiedades').evaluate(el=>Math.abs(el.clientHeight-el.firstElementChild.getBoundingClientRect().height*5)<2));

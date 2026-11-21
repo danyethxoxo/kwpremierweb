@@ -1702,7 +1702,7 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
       // El cargo y los responsables se toman de la base importada del Excel.
       if (!quitar && pasos.includes('contactos')) {
         const {data:registradas,error:errDatos}=await admin.from('asesores')
-          .select('correo,grupo,asesor_asignado').in('correo',gente.map(p=>p.correo.toLowerCase()))
+          .select('correo,grupo,asesor_asignado').in('correo',gente.map((p: {correo:string})=>p.correo.toLowerCase()))
         if(errDatos)throw new Error('No se pudieron consultar los responsables de backoffice')
         for(const p of gente){
           const registro=(registradas||[]).find(a=>String(a.correo).toLowerCase()===p.correo.toLowerCase())
@@ -1883,5 +1883,3 @@ secureServe({ name: 'hyper-processor', userLimit: 60, auth:req=>req.headers.has(
     return respond({ error: (err as Error).message || 'Error inesperado' }, 500)
   }
 })
-
-

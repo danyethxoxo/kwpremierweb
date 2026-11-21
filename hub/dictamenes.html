@@ -7,18 +7,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="preconnect" href="https://iloetojomzqtadkithtv.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script src="/assets/js/kw-security.js?v=20261119pestanas"></script>
+  <script src="/assets/js/kw-security.js?v=20261120estable"></script>
 <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous">
-<link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261013general">
-<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261119logo">
+<link rel="preload" as="script" href="/assets/js/kw-session.js?v=20261120estable">
+<link rel="preload" as="script" href="/assets/js/auth-guard.js?v=20261120estable">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js" integrity="sha384-xPW3QHswsICVC2mW6BFNwMbhpLkbZ133fKOhxNx3QGGgAOJfL3O9t8r2aWn1aez6" crossorigin="anonymous"></script>
-<script src="/assets/js/kw-session.js?v=20261013general"></script>
-<script src="/assets/js/auth-guard.js?v=20261119logo"></script>
+<script src="/assets/js/kw-session.js?v=20261120estable"></script>
+<script src="/assets/js/auth-guard.js?v=20261120estable"></script>
     <title>Dictaminación de Expedientes</title>
 <link rel="icon" type="image/png" href="/assets/img/favicon-64.png?v=20261016" />
 <style>html:not(.kw-auth-ok) body { visibility: hidden; }
 </style>
-<script src="/assets/js/notif-bell.js?v=20261030dictamen-liderazgo"></script>
+<script src="/assets/js/notif-bell.js?v=20261120estable"></script>
 <link rel="stylesheet" href="/assets/css/kw-base.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-claro.css?v=20261030kwred">
 <link rel="stylesheet" href="/assets/css/kw-lateral.css?v=20261030kwred">
@@ -2129,6 +2129,10 @@
   var clientes = [];
   var historial = [];
   var documentosEnlazados = [];
+  var detallesListos = new Set();
+  var detallesPendientes = new Map();
+  var revisionDetalles = 0;
+  var revisionEditor = 0;
   var asesores = [];
   // La lista ya trae su skeleton en el HTML. Mientras llega la primera
   // consulta, los filtros y catálogos pueden pedir un repintado; esta
@@ -2141,6 +2145,7 @@
   var contratosDisponibles = [];
   var contratosCargando = true;
   var contratosError = false;
+  var contratosPromesa = null;
   var contratoSeleccionado = null;
 
   var ESTADOS = {
@@ -2379,15 +2384,18 @@
   }
 
   async function cargarContratosOrigen() {
-    var r = await window.kwSupabase.rpc('listar_contratos_para_nuevo_dictamen');
-    contratosCargando = false;
-    contratosError = !!r.error;
-    if (r.error) {
-      contratosDisponibles = [];
-      console.warn('No se pudieron cargar contratos para el nuevo dictamen:', r.error.message);
-    } else {
-      contratosDisponibles = r.data || [];
-    }
+    if (!contratosPromesa) contratosPromesa = (async function () {
+      contratosCargando = true;
+      try {
+        var r = await window.kwSupabase.rpc('listar_contratos_para_nuevo_dictamen');
+        if (r.error) throw r.error;
+        contratosDisponibles = r.data || []; contratosError = false;
+      } catch (error) {
+        contratosError = true; contratosPromesa = null;
+        console.warn('No se pudieron cargar contratos para el nuevo dictamen.');
+      } finally { contratosCargando = false; }
+    })();
+    return contratosPromesa;
   }
 
   function comparableAsesor(valor) {
@@ -2578,15 +2586,50 @@
 
   // ── Traer los datos ─────────────────────────────────────────
 
+  async function leerDetalleDictamen(tabla, campos, id, orden, ascendente) {
+    var filas = [], tamano = 200;
+    for (var desde = 0; ; desde += tamano) {
+      var r = await window.kwSupabase.from(tabla).select(campos).eq('dictamen_id', id)
+        .order(orden, {ascending: ascendente}).order('id').range(desde, desde + tamano - 1);
+      if (r.error) throw r.error;
+      filas = filas.concat(r.data || []);
+      if (!r.data || r.data.length < tamano) return filas;
+    }
+  }
+
+  function cargarDetalle(id) {
+    if (detallesListos.has(id)) return Promise.resolve();
+    if (detallesPendientes.has(id)) return detallesPendientes.get(id);
+    var revision = revisionDetalles;
+    var tarea = Promise.all([
+      leerDetalleDictamen('dictamen_puntos', '*', id, 'orden', true),
+      leerDetalleDictamen('dictamen_clientes', '*', id, 'orden', true),
+      leerDetalleDictamen('dictamen_historial_con_quien', '*', id, 'created_at', false),
+      leerDetalleDictamen('documentos_guardados', 'id, dictamen_id, tipo_documento, nombre_archivo, folio, revision, estado, datos, updated_at', id, 'updated_at', false)
+    ]).then(function (resultados) {
+      if (revision !== revisionDetalles) throw new Error('El expediente se actualizó. Intenta de nuevo.');
+      puntos = puntos.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[0]);
+      clientes = clientes.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[1]);
+      historial = historial.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[2]);
+      documentosEnlazados = documentosEnlazados.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[3]);
+      detallesListos.add(id);
+    }).finally(function () { if (detallesPendientes.get(id) === tarea) detallesPendientes.delete(id); });
+    detallesPendientes.set(id, tarea);
+    return tarea;
+  }
+
+  async function mostrarDetalle(id) {
+    try { await cargarDetalle(id); if (abierto === id) pintar(); }
+    catch (error) {
+      var fila = $('lista').querySelector('[data-fila="' + id + '"] .kw-fila-dentro');
+      if (!fila) return;
+      fila.innerHTML = '<div class="kw-vacio" role="alert">No se pudo cargar el expediente. <button type="button">Reintentar</button></div>';
+      fila.querySelector('button').onclick = function () { mostrarDetalle(id); };
+    }
+  }
+
   async function cargar() {
-    var resultados = await Promise.all([
-      window.kwSupabase.from('dictamenes_con_asesor').select('*').order('created_at', { ascending: false }).limit(500),
-      window.kwSupabase.from('dictamen_puntos').select('*').order('orden').limit(5000),
-      window.kwSupabase.from('dictamen_clientes').select('*').order('orden').limit(5000),
-      window.kwSupabase.from('dictamen_historial_con_quien').select('*').order('created_at', { ascending: false }).limit(5000),
-      window.kwSupabase.from('documentos_guardados').select('id, dictamen_id, tipo_documento, nombre_archivo, folio, revision, estado, datos, updated_at').not('dictamen_id', 'is', null).limit(1000)
-    ]);
-    var r = resultados[0];
+    var r = await window.kwSupabase.from('dictamenes_con_asesor').select('*').order('created_at', { ascending: false }).limit(500);
     if (r.error) {
       listaCargando = false;
       $('lista').setAttribute('aria-busy', 'false');
@@ -2600,23 +2643,16 @@
         dictamenes.push(Object.assign({}, datos, {id:s.id,estado:'borrador',folio:null,created_at:new Date(s.fecha).toISOString(),cliente:(datos.clientes||[]).map(function(c){return c.nombre;}).filter(Boolean).join(', ')}));
       });
     }
-    puntos = resultados[1].data || [];
-    clientes = resultados[2].data || [];
-    historial = resultados[3].data || [];
-    documentosEnlazados = resultados[4].error ? [] : (resultados[4].data || []);
+    ++revisionDetalles; detallesListos.clear(); detallesPendientes.clear();
+    puntos = []; clientes = []; historial = []; documentosEnlazados = [];
     listaCargando = false;
     pintar();
+    if (abierto && dictamenes.some(function (d) { return d.id === abierto; })) await mostrarDetalle(abierto);
   }
 
   async function cargarCatalogos() {
     var tiposPendientes = Promise.resolve(window.kwSupabase.from('dictamen_tipos_inmueble').select('id, nombre').order('nombre'));
-    // Liderazgo fuerza una conciliación antes de leer. Si la migración aún
-    // no se ha aplicado, se conserva el catálogo anterior y la pantalla
-    // sigue funcionando mientras se muestra el error en la consola.
-    if (veTodo) {
-      var sincronizacion = await window.kwSupabase.rpc('dictamen_asesores_actualizar_desde_base');
-      if (sincronizacion.error) console.warn('No se pudo actualizar el catálogo central:', sincronizacion.error.message);
-    }
+    // La base central ya refleja altas y bajas mediante su trigger.
 
     var a = await window.kwSupabase
       .from('dictamen_asesores').select('id, nombre, correo, activo').order('nombre');
@@ -2897,6 +2933,7 @@
       c.addEventListener('click', function () {
         var fila = c.closest('.kw-fila');
         abierto = fila && fila.classList.contains('abierta') ? fila.dataset.fila : null;
+        if (abierto && !detallesListos.has(abierto)) mostrarDetalle(abierto);
       });
     });
     cablear();
@@ -2930,7 +2967,7 @@
         '<svg class="kw-fila-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button>' +
       '<div class="kw-fila-cuerpo"><div><div class="kw-fila-dentro">' +
-        cuerpoHTML(d, mios) +
+        (detallesListos.has(d.id) ? cuerpoHTML(d, mios) : '<div class="kw-loader" role="status" aria-label="Cargando expediente"></div>') +
       '</div></div></div>' +
     '</div>';
   }
@@ -4426,7 +4463,16 @@
     });
   }
 
-  function abrirEditor(id) {
+  async function abrirEditor(id) {
+    var pedido = ++revisionEditor;
+    if (id) {
+      if (!dictamenes.some(function (d) { return d.id === id; })) {
+        await window.kwUI.alert('El dictamen no está disponible.'); return;
+      }
+      try { await cargarDetalle(id); }
+      catch (error) { await window.kwUI.alert('No se pudo cargar el expediente para editar. Intenta de nuevo.'); return; }
+      if (pedido !== revisionEditor) return;
+    }
     if (window.kwDictamenDraft) window.kwDictamenDraft.cerrar();
     var d = id ? dictamenes.find(function (x) { return x.id === id; }) : null;
 
@@ -4518,6 +4564,7 @@
     $('e-contrato-buscar').value = '';
     $('e-contrato-operacion').value = 'todos';
     $('e-contrato-uso').value = 'todos';
+    if (!d) cargarContratosOrigen().then(function () { if (borrador && !borrador.id) pintarContratosOrigen(); });
     pintarContratosOrigen();
     pintarPuntosEditor();
 
@@ -4536,6 +4583,7 @@
   }
 
   function cerrarEditor() {
+    ++revisionEditor;
     if (window.kwDictamenDraft) window.kwDictamenDraft.cerrar().then(cargar);
     borrador = null;
     if (location.search) history.replaceState(null, '', location.pathname);
@@ -5461,6 +5509,7 @@
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
 
+    await cargarDetalle(id);
     var url = URL.createObjectURL(await crearPDF(d, conCorrecciones));
     var a = document.createElement('a');
     a.href = url;
@@ -5477,7 +5526,7 @@
     window.kwDocumentViewer.open({ title: 'Dictamen ' + (d.folio || ''),
       variants: ['Solo con datos', 'Datos y correcciones'], initialIndex: 1,
       filename: function (index) { return nombrePDF(d, index === 1); },
-      load: function (index) { return crearPDF(d, index === 1); } });
+      load: async function (index) { await cargarDetalle(id); return crearPDF(d, index === 1); } });
   }
 
   function base64DeBlob(blob) {
@@ -5511,6 +5560,7 @@
       iconoOriginal.outerHTML = '<span class="dic-send-spinner" aria-hidden="true"></span>';
     }
     try {
+      await cargarDetalle(id);
       var pdfs = await Promise.all([
         crearPDF(d, false),
         crearPDF(d, true),
@@ -5579,7 +5629,6 @@
 
     $('btn-nuevo').disabled = true;
     var cargaLista = cargar();
-    cargarContratosOrigen().then(function () { if (borrador && !borrador.id) pintarContratosOrigen(); });
     await cargarCatalogos();
     if (window.kwUI) window.kwUI.selects(document);
     pintarAsesoresFiltro();
@@ -5980,9 +6029,9 @@
 })();
 </script>
 
-<script src="/assets/js/drawer.js?v=20261110portal" data-menu="hub"></script>
+<script src="/assets/js/drawer.js?v=20261120estable" data-menu="hub"></script>
 <script src="/assets/js/kw-lateral.js?v=20261022qa" data-filtros=".dic-campo-buscar|#resumen|#filtros-caja"></script>
 
-<script src="/assets/js/kw-movil.js?v=20261022qa"></script>
+<script src="/assets/js/kw-movil.js?v=20261120estable"></script>
 </body>
 </html>

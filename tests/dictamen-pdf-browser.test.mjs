@@ -22,7 +22,7 @@ test('descarga solo datos y con correcciones con los nombres esperados',async()=
       return route.fulfill({contentType:'text/html',body:'<button id="solo">Solo datos</button><button id="correcciones">Con correcciones</button>'});
     });
     await page.goto('http://kw.local/');
-    await page.addScriptTag({content:'var dictamenes='+JSON.stringify([datos.dictamen])+';var clientes='+JSON.stringify(datos.clientes)+';var puntos='+JSON.stringify(datos.puntos)+';\n'+pdfScript});
+    await page.addScriptTag({content:'var detallesPedidos=[];async function cargarDetalle(id){detallesPedidos.push(id);}var dictamenes='+JSON.stringify([datos.dictamen])+';var clientes='+JSON.stringify(datos.clientes)+';var puntos='+JSON.stringify(datos.puntos)+';\n'+pdfScript});
     await page.evaluate(id=>{
       document.getElementById('solo').onclick=()=>imprimir(id,false);
       document.getElementById('correcciones').onclick=()=>imprimir(id,true);
@@ -37,6 +37,7 @@ test('descarga solo datos y con correcciones con los nombres esperados',async()=
       assert.ok(contenido.startsWith('%PDF-1.4'));assert.ok(contenido.endsWith('%%EOF'));
     }
     assert.deepEqual(errors,[]);
+    assert.deepEqual(await page.evaluate(()=>detallesPedidos),[datos.dictamen.id,datos.dictamen.id]);
     console.log('PDFs verificados: '+dir);
   } finally {await browser.close();}
 });

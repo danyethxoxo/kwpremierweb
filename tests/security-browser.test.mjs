@@ -24,7 +24,9 @@ test('SDK routes only Data API calls through gateway and preserves body, query, 
   const options = { method: 'POST', body: '{"nombre":"Ana"}', headers: { Authorization: 'Bearer test-user' } };
   await kwSecureFetch('https://iloetojomzqtadkithtv.supabase.co/rest/v1/profiles?select=id', options);
   assert.equal(calls[0][0], 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/data-gateway/profiles?select=id');
-  assert.equal(calls[0][1], options);
+  assert.equal(calls[0][1].body, options.body);
+  assert.equal(calls[0][1].headers.get('Authorization'),options.headers.Authorization);
+  assert.equal(calls[0][1].headers.get('x-region'),'us-west-2');
   await kwSecureFetch('https://iloetojomzqtadkithtv.supabase.co/auth/v1/user', options);
   assert(calls[1][0].includes('/auth/v1/user'));
   const request = new Request('https://iloetojomzqtadkithtv.supabase.co/rest/v1/profiles', options);
@@ -50,7 +52,10 @@ test('inventario usa la region de la base y solo reintenta lecturas ante indispo
  }
  const write=browser(async()=>new Response('{}',{status:503}));
  await write.kwSecureFetch('https://iloetojomzqtadkithtv.supabase.co/rest/v1/propiedades',options);
- assert.equal(write.calls.length,1);assert.equal(write.calls[0][1],options);
+ assert.equal(write.calls.length,1);assert.equal(write.calls[0][1].body,options.body);assert.equal(write.calls[0][1].headers.get('x-region'),'us-west-2');
+ const profile=browser(async()=>new Response('{}',{status:503}));
+ await profile.kwSecureFetch('https://iloetojomzqtadkithtv.supabase.co/rest/v1/profiles?select=id',{headers:{Authorization:'Bearer fixture'}});
+ assert.equal(profile.calls.length,2);assert.equal(profile.calls[1][1].headers.get('Authorization'),'Bearer fixture');
  const cancelled=browser(async()=>{throw Object.assign(new Error('cancelada'),{name:'AbortError'});});
  await assert.rejects(()=>cancelled.kwSecureFetch(url,options),/cancelada/);assert.equal(cancelled.calls.length,1);
  const request=browser(async()=>new Response('{}',{status:503}));

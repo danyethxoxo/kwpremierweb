@@ -72,6 +72,8 @@ test('temporary MFA outages retry without requesting a password or dropping the 
   assert.equal(state.verificado, true);
   assert.equal(requests.length, 3);
   assert.ok(requests.every(({ options }) => JSON.parse(options.body).accion === 'estado'));
+  assert.equal(requests[0].options.headers['x-region'],'us-west-2');
+  assert.equal(requests[1].options.headers['x-region'],undefined);
 });
 
 test('persistent outages remain errors, 401 refreshes once, and missing/old sessions do not call MFA', async () => {
@@ -90,14 +92,14 @@ test('persistent outages remain errors, 401 refreshes once, and missing/old sess
 
 test('protected pages use the same session policy and no four-second login redirect', () => {
   function walk(dir) {
-    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => entry.name.startsWith('.') || entry.name === 'node_modules' ? [] :
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => entry.name.startsWith('.') || ['node_modules','tmp','artifacts','outputs'].includes(entry.name) ? [] :
       entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]);
   }
   for (const path of walk(process.cwd()).filter((path) => path.endsWith('.html'))) {
     const html = readFileSync(path, 'utf8');
     if (!html.includes('<script src="/assets/js/auth-guard.js')) continue;
-    assert.ok(html.includes('/assets/js/auth-guard.js?v=20261013general'), path);
-    const sessionIndex = html.indexOf('/assets/js/kw-session.js?v=20261013general');
+    assert.match(html,/\/assets\/js\/auth-guard\.js\?v=[^"']+/,path);
+    const sessionIndex = html.indexOf('/assets/js/kw-session.js?v=');
     assert.ok(sessionIndex >= 0 && sessionIndex < html.indexOf('<script src="/assets/js/auth-guard.js'), path);
     assert.ok(!/setTimeout\([\s\S]{0,400}kw-auth-ok[\s\S]{0,400}4000/.test(html), path);
   }
@@ -131,6 +133,11 @@ test('back navigation rechecks the session; connection errors offer retry withou
   assert.equal(root.classList.contains('kw-auth-ok'), true);
   assert.equal(calls, 1);
   assert.deepEqual(ready, ['kw-auth-ready']);
+  state = new Error('temporary outage');
+  await window.kwRevisarSesion();
+  assert.equal(root.classList.contains('kw-auth-ok'),true,'una interrupcion conserva el documento ya abierto');
+  assert.equal(redirects.length,0);
+  assert.equal(signouts.length,0);
   state = new Error('temporary outage');
   events.get('pageshow')({ persisted: true });
   await window.kwRevisarSesion();

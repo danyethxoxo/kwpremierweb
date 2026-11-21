@@ -43,7 +43,7 @@ async function consumeLimits(limits: { scope: string; subject: string; limit: nu
   if (!data.allowed) throw new HttpError(429, 'Demasiadas solicitudes. Intenta mas tarde.', data.retry_after || 60)
 }
 
-async function authenticate(req: Request, options: Options): Promise<Context> {
+async function authenticate(req: Request, options: Options, ip: string): Promise<Context> {
   if (options.auth === 'service') return {}
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
   if (options.auth === 'optional') {
@@ -66,8 +66,8 @@ async function authenticate(req: Request, options: Options): Promise<Context> {
     if (options.name === 'data-gateway') {
       // Una sola transaccion valida la sesion vigente, los limites y el MFA.
       // Los identificadores provienen exclusivamente de la firma ya verificada.
-      const { data: authorization, error: authorizationError } = await adminClient().rpc('security_gateway_autorizar', {
-        p_usuario: claims.sub, p_sesion: claims.session_id,
+      const { data: authorization, error: authorizationError } = await adminClient().rpc('security_gateway_autorizar_red', {
+        p_usuario: claims.sub, p_sesion: claims.session_id, p_ip: ip,
         p_limite: options.userLimit ?? 60, p_mfa: options.mfa !== false,
       })
       if (authorizationError || !authorization || typeof authorization.estado !== 'string') throw new HttpError(503, 'Servicio no disponible')
@@ -139,11 +139,22 @@ export function secureHandler(options: Options, handler: Handler): (req: Request
           !(Deno.env.get('ALLOW_LOCAL_HTTP') === 'true' &&
           ['localhost', '127.0.0.1', 'kong'].includes(url.hostname))) throw new HttpError(400, 'HTTPS requerido')
       const ip = clientIp(req.headers, Deno.env.get('TRUSTED_IP_HEADER') || 'x-forwarded-for')
-      await consumeLimits([
+      const ipLimits = [
         { scope: 'ip:all', subject: ip, limit: 1200 },
         { scope: `ip:${options.name}`, subject: ip, limit: options.ipLimit ?? 180 },
-      ])
-      const context = await authenticate(req, { ...options, auth: typeof options.auth === 'function' ? options.auth(req) : options.auth })
+      ]
+      // La oficina comparte una IP. Solo una identidad validada puede usar
+      // el presupuesto de red ampliado; anonimos y rechazos conservan el anterior.
+      await consumeLimits(options.name === 'data-gateway'
+        ? [{ scope: 'ip:gateway-admission', subject: ip, limit: 10000 }] : ipLimits)
+      let context: Context
+      try {
+        context = await authenticate(req, { ...options, auth: typeof options.auth === 'function' ? options.auth(req) : options.auth }, ip)
+      } catch (error) {
+        if (options.name === 'data-gateway') await consumeLimits(ipLimits)
+        throw error
+      }
+      if (options.name === 'data-gateway' && !context.userId) await consumeLimits(ipLimits)
       if (options.name === 'api-propiedades' && !context.userId) {
         const key = req.headers.get('x-api-key') || ''
         if (!/^kwp_live_[a-f0-9]{32}$/.test(key)) throw new HttpError(401, 'Llave de API invalida')

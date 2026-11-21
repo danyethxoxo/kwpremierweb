@@ -63,7 +63,7 @@
     const navegacion=encabezado.querySelector('#kw-drawer-toggle,#kw-movil-menu');
     if(navegacion&&navegacion.parentElement!==capsula)capsula.prepend(navegacion);
     const campana=document.getElementById('notif-bell-slot');
-    const destinoCampana=document.querySelector('[data-notificaciones-header]')||sueltos;
+    const destinoCampana=sueltos;
     if(campana&&campana.parentElement!==destinoCampana)mover(campana,destinoCampana);
     document.querySelectorAll('.kw-lateral .kw-lateral-buscador').forEach(nodo=>{
       const principal=document.querySelector('.kw-lateral-principal,.kw-universal-principal')||document.querySelector('main');

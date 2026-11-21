@@ -238,7 +238,7 @@ test('Todos y acceso a la página: alta con nombre, rol, errores, duplicados y v
     await page.evaluate(()=>{
       window.syncReads=0;const original=window.kwSupabase.from;
       window.kwSupabase.from=table=>table==='asesores'?{select(){return this;},order:async()=>{window.syncReads++;return{data:[{id:'a',nombre:'Ana actualizada',correo:'ana@example.com',grupo:'asesor_activo'}],error:null};}}:original(table);
-      window.kwSupabase.channel=()=>({on(event,filter,cb){window.sheetCallback=cb;return this;},subscribe(){return this;}});window.kwSupabase.removeChannel=()=>{};
+      window.kwSupabase.channel=()=>({on(event,filter,cb){if(filter.table==='asesores_sync_control')window.sheetCallback=cb;return this;},subscribe(){return this;}});window.kwSupabase.removeChannel=()=>{};
       window.qa.escucharCambiosDelLibro();window.sheetCallback({new:{activo:true,cambios_at:'anterior'}});window.sheetCallback({new:{activo:false,cambios_at:'anterior'}});
     });
     await page.waitForTimeout(400);assert.equal(await page.evaluate(()=>window.syncReads),0,'una revisión sin cambios no recarga el directorio');

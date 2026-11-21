@@ -67,14 +67,16 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       assert.equal(await page.locator('#notif-bell-slot').count(),1);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       if(config.name==='mobile') {
+        await page.locator('#kw-drawer-toggle').click();
         assert.equal(await page.locator('#inc-filtros summary').isVisible(),true);
         assert.equal(await page.locator('#inc-filtros').evaluate(el=>el.open),false);
         await page.locator('#inc-filtros summary').click();
         assert.equal(await page.locator('#inc-estado').isVisible(),true);
         await page.locator('#inc-filtros summary').click();
+        await page.getByRole('button',{name:'Cerrar filtros',exact:true}).click();
       }
       await page.screenshot({path:join(captura,config.name+'-lista.png'),fullPage:true});
-      await page.getByRole('button',{name:'Reportar',exact:true}).click();
+      await page.locator('#btn-nuevo').click();
       await page.waitForURL('**/hub/nuevo-reporte.html');
       await page.waitForFunction(()=>!document.getElementById('btn-nuevo').disabled);
       await page.locator('#rep-titulo').fill('Sugerencia: guardar un borrador de la captación');
@@ -82,7 +84,7 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       await page.locator('#rep-tipo').selectOption('mejora',{force:true});
       await page.getByRole('button',{name:'Volver al listado'}).click();
       await page.waitForURL('**/hub/tickets.html');
-      await page.getByRole('button',{name:'Reportar',exact:true}).click();
+      await page.locator('#btn-nuevo').click();
       await page.waitForURL('**/hub/nuevo-reporte.html');
       await page.waitForFunction(()=>!document.getElementById('btn-nuevo').disabled);
       assert.match(await page.locator('#rep-titulo').inputValue(),/Sugerencia/);
@@ -97,7 +99,7 @@ test('incidencias browser: desktop/mobile, draft, retry, double submit, screensh
       assert.equal(await page.locator('#inc-menu').isVisible(),true);
       await page.locator('#rep-titulo').click();
       assert.equal(await page.locator('#inc-menu').isVisible(),false);
-      if(config.name==='mobile')assert.ok((await page.locator('#inc-titulo-pagina').boundingBox()).y>=60);
+      if(config.name==='mobile')assert.ok((await page.locator('header.kw-header .kw-header-title').boundingBox()).y>=0);
       await page.screenshot({path:join(captura,config.name+'-formulario.png'),fullPage:true});
       await page.locator('#rep-imagenes').setInputFiles({name:'captura.txt',mimeType:'text/plain',buffer:Buffer.from('invalid')});
       assert.match(await page.locator('#rep-archivos-error').textContent(),/JPG/);

@@ -55,3 +55,13 @@ test('notificaciones: un error en una página no se presenta como un historial c
     range() { return { data: null, error: new Error('Sin conexión') }; } }; } };
   await assert.rejects(cargarHistorial(client, 'usuario'), /Sin conexión/);
 });
+
+test('la carga inicial de la campana pide solo pendientes recientes sin recortar el historial completo',async()=>{
+ const filtros=[];
+ const q={select(){return this;},eq(...v){filtros.push(v);return this;},gte(...v){filtros.push(v);return this;},order(){return this;},range(){return{data:[],error:null};}};
+ await cargarHistorial({from:()=>q},'propio',true);
+ assert.deepEqual(filtros.slice(0,2),[['user_id','propio'],['leido',false]]);
+ assert.equal(filtros[2][0],'created_at');assert.ok(Date.parse(filtros[2][1])>Date.now()-86401000);
+ filtros.length=0;await cargarHistorial({from:()=>q},'propio');
+ assert.deepEqual(filtros,[['user_id','propio']]);
+});

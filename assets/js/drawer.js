@@ -541,7 +541,7 @@
     const campana = document.getElementById('notif-bell-slot');
     if (!campana) return;
     const destino = document.querySelector('[data-notificaciones-header]');
-    if (destino) {
+    if (destino && accionesMq.matches) {
       if (campana.parentElement !== destino) destino.appendChild(campana);
       return;
     }
@@ -1114,4 +1114,3 @@
     else window.addEventListener('kw-auth-ready', cargarUsuario, { once: true });
   }
 })();
-
