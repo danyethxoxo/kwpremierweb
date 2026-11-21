@@ -33,6 +33,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
   const enviarAhora = opciones.enviar_reporte === true
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
   const corte = corteLectura(new Date())
+  let etapa: 'sincronizacion' | 'reporte' = 'sincronizacion'
   try {
     const sync = await admin.from('propiedades_sync').select('ultimo_cursor,ultimo_error').eq('fuente', 'kwmexico').maybeSingle()
     if (sync.error) throw sync.error
@@ -53,6 +54,7 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
       }
       if (soloSincronizar) return Response.json({ ok: true, lectura })
     }
+    etapa = 'reporte'
     const envio = await admin.from('propiedades_reportes').select('enviado_at').eq('fuente', 'kwmexico')
       .eq('destinatario', destinatario).eq('estado', 'enviado').order('enviado_at', { ascending: false }).limit(1).maybeSingle()
     if (envio.error) throw envio.error
@@ -63,10 +65,15 @@ secureServe({ name: 'inventario-diario', auth: 'service', maxBytes: 4096 }, asyn
   } catch (error) {
     console.error('Inventario diario pendiente de reintento', error)
     if (req.headers.get('x-ultimo-intento') === 'true') {
-      await enviarCorreo({ to: destinatario, subject: 'No se pudo completar la actualización de propiedades',
-        html: '<p>No se pudo completar la sincronización o el reporte de KW México después de los reintentos de esta actualización.</p><p>El inventario conserva la última lectura disponible. Revisa el panel de propiedades.</p>',
-        text: 'No se pudo completar la sincronización o el reporte de KW México. El inventario conserva la última lectura disponible.' })
+      const reportePendiente = etapa === 'reporte'
+      const mensaje = reportePendiente
+        ? 'El inventario de KW México se actualizó correctamente. No se pudo preparar o enviar el reporte por correo después de los reintentos. Las propiedades están disponibles en la plataforma.'
+        : 'No se pudo completar la sincronización de KW México después de los reintentos. El inventario conserva la última lectura disponible. Revisa el panel de propiedades.'
+      await enviarCorreo({ to: destinatario,
+        subject: reportePendiente ? 'Inventario actualizado; reporte de propiedades pendiente' : 'No se pudo completar la actualización de propiedades',
+        html: `<p>${mensaje}</p>`, text: mensaje })
     }
-    return Response.json({ error: 'La actualización diaria queda pendiente' }, { status: 502 })
+    return Response.json({ error: etapa === 'reporte' ? 'El inventario está actualizado; el reporte queda pendiente' : 'La actualización diaria queda pendiente',
+      etapa, inventario_actualizado: etapa === 'reporte' }, { status: 502 })
   }
 })

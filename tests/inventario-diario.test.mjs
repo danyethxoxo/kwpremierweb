@@ -4,14 +4,14 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 const source=stripTypeScriptTypes(readFileSync(new URL('../supabase/functions/inventario-diario/index.ts',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,''),{mode:'strip'});
-function preparar({actualizada=false,enviada=false,falla=false,incompleta=false,pendientesPremier=false,sinConciliar=false,ahora='2026-10-08T09:20:00Z'}={}) {
- const llamadas=[],actualizaciones=[],registros=[];
+function preparar({actualizada=false,enviada=false,falla=false,fallaReporte=false,incompleta=false,pendientesPremier=false,sinConciliar=false,ahora='2026-10-08T09:20:00Z'}={}) {
+ const llamadas=[],actualizaciones=[],registros=[],avisos=[];
  let handler;
  class Reloj extends Date {constructor(...args){super(...(args.length?args:[ahora]));}}
  const admin={from(table){const q={select(){return q},eq(){return q},order(){return q},limit(){return q},async maybeSingle(){return {data:table==='propiedades_sync'?{ultimo_cursor:actualizada?'2026-10-08T09:01:00Z':'2026-10-07T09:01:00Z',ultimo_error:null}:enviada?{enviado_at:'2026-10-08T09:02:00Z'}:null}},update(v){actualizaciones.push(v);return q},then(ok){return Promise.resolve({error:null,data:table==='propiedades' && pendientesPremier?[{fuente_id:'1'}]:[]}).then(ok)}};return q}};
- const scope=vm.createContext({Date:Reloj,Intl,Response,AbortSignal,console:{error(){},info(...args){registros.push(args)}},Deno:{env:{get:k=>({SUPABASE_URL:'https://example.com',SERVICE_ROLE_KEY:'service',WEBHOOK_SECRET:'webhook',SYNC_SECRET:'sync'})[k]}},createClient:()=>admin,secureServe:(o,h)=>handler=h,enviarCorreo:async()=>{},fetch:async url=>{llamadas.push(url);return Response.json(falla?{error:'error'}:{ok:true,corrida_completa:!incompleta,verificacion_inventario:{correcta:!sinConciliar}},{status:falla?502:200})}});
+ const scope=vm.createContext({Date:Reloj,Intl,Response,AbortSignal,console:{error(){},info(...args){registros.push(args)}},Deno:{env:{get:k=>({SUPABASE_URL:'https://example.com',SERVICE_ROLE_KEY:'service',WEBHOOK_SECRET:'webhook',SYNC_SECRET:'sync'})[k]}},createClient:()=>admin,secureServe:(o,h)=>handler=h,enviarCorreo:async mail=>{avisos.push(mail)},fetch:async url=>{llamadas.push(url);const error=falla||(fallaReporte&&url.endsWith('/enviar-reporte-propiedades'));return Response.json(error?{error:'error'}:{ok:true,corrida_completa:!incompleta,verificacion_inventario:{correcta:!sinConciliar}},{status:error?502:200})}});
  vm.runInContext(source,scope);
- return {llamadas,actualizaciones,registros,run:(body={})=>handler(new Request('https://example.com',{method:'POST',headers:{'x-webhook-secret':'webhook'},body:JSON.stringify(body)}))};
+ return {llamadas,actualizaciones,registros,avisos,run:(body={},ultimo=false)=>handler(new Request('https://example.com',{method:'POST',headers:{'x-webhook-secret':'webhook',...(ultimo?{'x-ultimo-intento':'true'}:{})},body:JSON.stringify(body)}))};
 }
 test('primera corrida sincroniza antes de enviar el reporte; siguientes intentos no duplican',async()=>{
  const primera=preparar();assert.equal((await primera.run()).status,200);assert.equal(primera.llamadas.length,2);assert.match(primera.llamadas[0],/sincronizar-propiedades/);
@@ -72,4 +72,26 @@ test('el envío solicitado permite generar el reporte de una corrida nueva dentr
  assert.equal((await manual.run({enviar_reporte:true})).status,200);
  assert.equal(manual.llamadas.length,1);
  assert.match(manual.llamadas[0],/enviar-reporte/);
+});
+
+test('el aviso final distingue un reporte pendiente de una sincronización fallida',async()=>{
+ for(const actualizada of [false,true]) {
+  const correo=preparar({actualizada,fallaReporte:true});
+  const response=await correo.run({},true),body=await response.json();
+  assert.equal(response.status,502);
+  assert.equal(body.etapa,'reporte');
+  assert.equal(body.inventario_actualizado,true);
+  assert.equal(correo.avisos.length,1);
+  assert.equal(correo.avisos[0].subject,'Inventario actualizado; reporte de propiedades pendiente');
+  assert.match(correo.avisos[0].text,/se actualizó correctamente/);
+  assert.doesNotMatch(correo.avisos[0].text,/conserva la última lectura/);
+ }
+ const fuente=preparar({falla:true});
+ const body=await (await fuente.run({},true)).json();
+ assert.equal(body.etapa,'sincronizacion');
+ assert.equal(body.inventario_actualizado,false);
+ assert.match(fuente.avisos[0].subject,/No se pudo completar la actualización/);
+ assert.match(fuente.avisos[0].text,/conserva la última lectura/);
+ const reintento=preparar({actualizada:true,fallaReporte:true});
+ await reintento.run();assert.equal(reintento.avisos.length,0,'solo avisa en el último intento');
 });
