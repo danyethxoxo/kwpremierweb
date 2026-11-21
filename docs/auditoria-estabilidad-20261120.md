@@ -36,7 +36,7 @@ Esta prueba mide consultas simultáneas, no doscientas personas completas. Las l
 - Regresiones de guardado y recuperación de borradores, detalle y PDF de dictámenes, notificaciones en escritorio/móvil, rutas de acceso, renovación de sesión, cancelación y reintento de consultas.
 - Pruebas de seguridad de Edge: doce aprobadas, incluidas doscientas verificaciones concurrentes con servicios simulados. Se rechazan firmas alteradas, sesiones revocadas y falta de MFA.
 - SQL de comprobación: límites de red, rechazo de RPC internos para anon/authenticated y equivalencia del mapa antes/después de la caché, incluso filtros nulos.
-- Comprobación real de acceso: trece verificaciones correctas de CORS, Auth, portal y rechazo de JWT manipulado.
+- Comprobación real de acceso: catorce verificaciones correctas de CORS, Auth, portal, lectura pública mínima de base de datos y rechazo de JWT manipulado. El chequeo periódico comprueba también la consulta real; no imprime datos de propiedades.
 - Dependencia de desarrollo fast-xml-parser alineada con el lock existente. Auditoría npm: cero vulnerabilidades.
 
 Las capturas y simulaciones son una revisión de interfaz, no una prueba de capacidad real ni de todas las combinaciones de permisos y datos existentes.

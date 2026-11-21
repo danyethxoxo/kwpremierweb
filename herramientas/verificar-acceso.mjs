@@ -22,6 +22,11 @@ await check('KWEB portal',async()=>{
  const r=await fetch('https://kweb.com.mx/portal.html',{signal:AbortSignal.timeout(10000)});
  if(r.status!==200||!(await r.text()).includes('auth-guard.js'))throw Error('No se entrega el portal protegido');
 });
+await check('lectura publica de base de datos',async()=>{
+ const r=await fetch(api+'/functions/v1/data-gateway/propiedades_publicas?select=id&limit=1',{headers:{Origin:'https://kweb.com.mx',apikey:key,'x-region':'us-west-2'},signal:AbortSignal.timeout(10000)});
+ if(r.status!==200)throw Error('La consulta publica responde '+r.status);
+ if(!Array.isArray(await r.json()))throw Error('La consulta no devolvio una lista');
+});
 await check('JWT alterado rechazado',async()=>{
  const r=await fetch(api+'/auth/v1/.well-known/jwks.json',{signal:AbortSignal.timeout(10000)});
  const keys=await r.json();const pub=keys.keys.find(k=>k.alg==='ES256');if(!pub)throw Error('No se encuentra la llave ES256');

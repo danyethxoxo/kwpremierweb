@@ -261,7 +261,7 @@ test('quitar una ciudad elegida conserva pines y permite filtrar sin ubicación'
    await page.evaluate(()=>{kwPropiedadesMapa.cancelarInicio();filtrosAplicados={estado:['Ciudad de México'],estatus:'publicada'};dispatchEvent(new CustomEvent('kw-propiedades-filtradas'));});
    await page.waitForFunction(()=>qaRpc.some(r=>r.nombre==='propiedades_inventario_mapa')&&document.querySelector('#prop-mapa-panel').getAttribute('aria-busy')==='false');
    await page.evaluate(()=>{
-    qaRpc=[];qaPuntos=[[qaProps[0].id,25.68,-100.31,'renta',25000,'MXN']];
+    qaRpc=[];qaCoordenadas=[];qaPuntos=[[qaProps[0].id,25.68,-100.31,'renta',25000,'MXN']];
     ['f-estado','f-municipio','f-colonia'].forEach(id=>{seleccionesMultiples[id]=[];ponerFiltroRelacionado(id,'');pintarEtiquetasFiltro(id);});
     aplicarFiltros();
    });

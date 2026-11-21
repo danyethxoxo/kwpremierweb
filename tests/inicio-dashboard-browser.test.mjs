@@ -203,6 +203,7 @@ test('visor centrado en Inicio sin iframe ni navegacion, con PDF, correos y cier
   assert.equal(await page.locator('.dash-firma-persona').count(),2);
   assert.equal(page.url(),url);assert.equal(otrasPaginas,0);
   await page.getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.locator('.dash-firma-visor').waitFor({state:'detached'});
   assert.equal(await page.locator('body.dash-visor-abierto').count(),0);
   await context.route('**/functions/v1/firmar-documento',route=>route.fulfill({status:503,body:'Error'}));
   await page.locator('.dash-signature').first().click();await page.waitForSelector('.dash-firma-error');
