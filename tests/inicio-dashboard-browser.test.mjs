@@ -17,9 +17,10 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  if(table==='profiles'||table==='perfiles_publicos')return {data:perfil,error:null};
  if(qaEmpty)return {data:[],error:null};
  let data=table==='propiedades_inventario'?Array.from({length:12},(_,i)=>({id:'p-'+i,market_center:'KW Premier',asesor_nombre:'Asesor de prueba',enlace_kw:'https://kw.com/es-419/property/Prueba/'+(1000+i),titulo:['Departamento con terraza en Del Valle','Casa en Lomas de Chapultepec','Departamento en Santa Fe','Casa en Jardines del Pedregal','Oficina en Polanco'][i%5],colonia:'Del Valle Norte',municipio:'Benito Juárez',estado:'Ciudad de México',tipo:i%2?'Casa':'Departamento',operacion:i%2?'venta':'renta',estatus:'publicada',precio:i%2?12500000:25000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),foto:'https://fotos.local/prueba.jpg'})):
- table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
+ table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'catalogo-self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,weetrust_document_id:'remoto',user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{nombre:'Ana Prueba',correo:'ana@example.com',firmado:i===1},{nombre:'Luis Prueba',correo:'luis@example.com',firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
+ if(table==='dictamenes'&&!window.qaLectorGlobal&&!['master','admin','staff'].includes(perfil.role))data=data.filter(row=>row.asesor_id==='catalogo-self');
  for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,value]of estado.desiguales||[])data=data.filter(row=>row[col]!==value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
  }).then(resolve);
 return(...args)=>{if(key==='eq'||key==='is')filtros.push(args);if(key==='order')orden.push(args);if(key==='select')estado.select=args[0];if(key==='limit')limite=args[0];if(key==='single')estado.single=true;if(key==='neq')(estado.desiguales||=[]).push(args);return q;};}});return q;},
@@ -30,7 +31,7 @@ async function abrir(browser,config={}){
  const context=await browser.newContext();
  await context.route('**/*',route=>{
   const u=new URL(route.request().url());
-  if(u.pathname.endsWith('/auth-guard.js'))return route.fulfill({body:sdk+(config.cargando?'window.qaHold=true;window.qaResolvers=[];':'')+(config.vacio?'qaEmpty=true;':'')+(config.error?"qaFail='"+config.error+"';":'')+(config.admin?"perfil.role='admin';":''),contentType:'application/javascript'});
+  if(u.pathname.endsWith('/auth-guard.js'))return route.fulfill({body:sdk+(config.cargando?'window.qaHold=true;window.qaResolvers=[];':'')+(config.vacio?'qaEmpty=true;':'')+(config.error?"qaFail='"+config.error+"';":'')+(config.admin?"perfil.role='admin';":'')+(config.lectorGlobal?'window.qaLectorGlobal=true;':''),contentType:'application/javascript'});
   if(u.pathname.endsWith('/kw-ficha-propiedad.js'))return route.fulfill({body:'window.kwFichaPropiedad={abrir:async datos=>{window.qaFicha=datos;}};',contentType:'application/javascript'});
   if(u.hostname==='fotos.local')return route.fulfill({body:fs.readFileSync(fs.existsSync(path.join(out,'foto.jpg'))?path.join(out,'foto.jpg'):path.join(root,'assets/img/logo-kw-premier.png')),contentType:'image/jpeg'});
   if(u.hostname!=='kw.local'||u.pathname.endsWith('/kw-session.js')||u.pathname.endsWith('/notif-bell.js'))return route.fulfill({body:''});
@@ -40,6 +41,16 @@ async function abrir(browser,config={}){
  await page.goto('https://kw.local/portal.html');if(!config.cargando)await page.waitForFunction(()=>[...document.querySelectorAll('[data-widget-lista]')].every(el=>el.getAttribute('aria-busy')==='false'));
  return {page,context,errors};
 }
+test('lectura global de dictamenes en Inicio conserva el rol asociado',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{const {page,context,errors}=await abrir(browser,{lectorGlobal:true});
+  assert.equal(await page.locator('#inicio-dictamenes tbody tr').count(),6);
+  assert.ok((await page.locator('#inicio-dictamenes').textContent()).includes('Expediente ajeno'));
+  assert.equal(await page.locator('#card-liderazgo').isVisible(),false);
+  assert.deepEqual(errors,[]);await context.close();
+ }finally{await browser.close();}
+});
+
 test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y compradores del asesor',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{
@@ -79,7 +90,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('a[href="hub/accesosdirectos.html"]').count(),0);
   assert.equal(await page.locator('#card-liderazgo').isVisible(),false);
   const calls=await page.evaluate(()=>qaCalls.filter(c=>['dictamenes','perfiles_comprador'].includes(c.table)));
-  for(const c of calls){assert.ok(c.filtros.some(([col,v])=>col==='asesor_id'&&v==='self'));assert.equal(c.limite,10);}
+  for(const c of calls){if(c.table==='perfiles_comprador')assert.ok(c.filtros.some(([col,v])=>col==='asesor_id'&&v==='self'));else assert.ok(!c.filtros.some(([col])=>col==='asesor_id'));assert.equal(c.limite,10);}
   const props=await page.evaluate(()=>qaCalls.find(c=>c.table==='propiedades_inventario'));assert.equal(props.orden[0][0],'created_at');assert.equal(props.limite,10);
   assert.ok(!(await page.locator('main').textContent()).includes('Cliente ajeno'));
   assert.equal(await page.locator('.dash-signature').count(),5);
@@ -147,7 +158,7 @@ test('Inicio distingue estados vacios, errores parciales y reintentos sin perder
   await parcial.page.locator('.dash-tools a').first().hover();
   assert.equal(await parcial.page.locator('.dash-tools a').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   await parcial.page.evaluate(()=>qaFail='');await parcial.page.getByRole('button',{name:'Volver a intentar'}).click();await parcial.page.waitForSelector('.dash-table tbody tr');
-  assert.equal(await parcial.page.locator('.dash-table tbody tr').count(),5);assert.deepEqual(parcial.errors,[]);await parcial.context.close();
+  assert.equal(await parcial.page.locator('.dash-table tbody tr').count(),6);assert.deepEqual(parcial.errors,[]);await parcial.context.close();
   const firmasError=await abrir(browser,{error:'firmas_documentos'});
   assert.equal(await firmasError.page.locator('#inicio-firmas [role="alert"]').count(),1);
   assert.equal(await firmasError.page.locator('.dash-property').count(),10);

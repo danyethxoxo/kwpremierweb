@@ -178,7 +178,7 @@
     }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
     const cargas={
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
-      dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').eq('asesor_id',usuario.id).is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
+      dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores),
       firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,firmantes,created_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
     };
