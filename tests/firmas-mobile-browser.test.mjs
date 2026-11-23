@@ -102,6 +102,7 @@ test('firmas: filtros laterales, foco, cierre y valores conservados al cambiar d
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.locator('#f-estado').waitFor({ state: 'visible' });
+    await page.locator('#firmas-historial-principal #btn-nuevo').waitFor({ state: 'attached' });
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('#firmas-historial-principal #btn-nuevo').count(), 1);
     assert.equal(await page.locator('#firmas-historial-principal .tabla-envios').count(), 1);

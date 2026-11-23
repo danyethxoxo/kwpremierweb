@@ -32,7 +32,7 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
         const ui = html.match(/<script\b[^>]*src=["'][^"']*kw-ui\.js[^>]*><\/script>/i)?.[0] || '';
         html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
           .replace(/<html\b[^>]*>/i, '<html class="kw-auth-ok">')
-          .replace('</body>', `${ui}<script src="/assets/js/drawer.js" data-menu="${mode}"></script>${lateral}<script>const panel=document.getElementById('contenido-panel');if(panel)panel.style.display='';document.getElementById('pantalla-carga')?.remove();</script></body>`);
+          .replace('</body>', `${ui}<script src="/assets/js/drawer.js" data-menu="${mode}"></script>${lateral}<script>document.getElementById('prospectos-app')?.removeAttribute('hidden');const panel=document.getElementById('contenido-panel');if(panel)panel.style.display='';document.getElementById('pantalla-carga')?.remove();</script></body>`);
         return route.fulfill({ contentType: 'text/html; charset=utf-8', body: html });
       }
       return route.fulfill({ contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'application/javascript' : 'application/octet-stream', body: fs.readFileSync(file) });
@@ -86,6 +86,7 @@ test('buscador compartido: todas las páginas, resultados, cierre y cambio a mó
       assert.equal(await search.inputValue(), '', route);
       assert.ok(!(await search.isVisible()), route);
       assert.equal(await page.locator('.kw-buscador-local-oculto').count(), 0, route);
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       if (hub && await page.locator('#drawer').evaluate(el => getComputedStyle(el).pointerEvents === 'none')) {
         await page.locator('[data-kw-menu-principal]:visible').first().click();
       }

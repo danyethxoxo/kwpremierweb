@@ -12,7 +12,7 @@ inventario(root);
 async function entorno(page){
   await page.route('**/*',route=>{
     const url=new URL(route.request().url());
-    if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk+'\nwindow.supabase={createClient:()=>window.kwSupabase};'});
+    if(url.pathname.endsWith('/auth-guard.js'))return route.fulfill({contentType:'application/javascript',body:sdk+'\nwindow.supabase={createClient:()=>window.kwSupabase};'+(new URL(page.url()).pathname==='/hub/prospectos-gmail.html'?`window.kwSession={usuarioInicial:async()=>({data:{user:{id:'2bd46b9a-68d8-476c-844c-27f10097816e',email:'dani.guerrero@kwmexico.mx'}}}),perfilInicial:async()=>({data:{id:'2bd46b9a-68d8-476c-844c-27f10097816e',role:'master',nombre:'Daniel',email:'dani.guerrero@kwmexico.mx',foto_url:'/assets/img/logo-kw-premier.png',sitio_web:'https://qa.kw.com'}})};const qaRpc=window.kwSupabase.rpc;window.kwSupabase.rpc=(name,...args)=>name==='prospectos_habilitado'?Promise.resolve({data:true,error:null}):qaRpc.call(window.kwSupabase,name,...args);`: '')});
     if(url.pathname.endsWith('/kw-session.js'))return route.fulfill({body:''});
     if(url.hostname!=='kw.local')return route.abort();
     const file=path.join(root,decodeURIComponent(url.pathname));
