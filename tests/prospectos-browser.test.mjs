@@ -31,7 +31,7 @@ async function pageFor(browser,owner,hash=''){
   const file=path.join(root,decodeURIComponent(u.pathname));if(!fs.existsSync(file))return route.fulfill({status:404,body:''});
   const ext=path.extname(file);return route.fulfill({body:fs.readFileSync(file),contentType:ext==='.html'?'text/html; charset=utf-8':ext==='.css'?'text/css':ext==='.js'?'application/javascript':ext==='.png'?'image/png':'application/octet-stream'});
  });
- const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('https://kw.local/hub/prospectos.html'+hash);return{page,context,errors};
+ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('https://kw.local/hub/prospectos-gmail.html'+hash);return{page,context,errors};
 }
 test('Prospectos privado: persiste captura y reglas, Gmail y diseno en escritorio y movil',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});try{

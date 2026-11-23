@@ -1,7 +1,7 @@
 import { HttpError, validUuid } from '../_shared/security-core.ts'
 
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
-export const PROSPECTOS_PAGE = 'https://kweb.com.mx/hub/prospectos.html'
+export const PROSPECTOS_PAGE = 'https://kweb.com.mx/hub/prospectos-gmail.html'
 type Context = { userId?: string; token?: string }
 type Backend = (action: string, user: string, session: string, data?: Record<string, unknown>) => Promise<any>
 type Options = { backend: Backend; encryptionRoot: string; redirectUri: string; fetcher?: typeof fetch; reservedClientIds?: string[] }

@@ -59,7 +59,7 @@
 
   const NAV_HUB = [
     { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
-    { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto', prospectos: true },
+    { href: `${BASE}/hub/prospectos-gmail.html`, label: 'Prospectos', icon: 'prospecto', prospectos: true },
     { href: `${BASE}/hub/dashboard.html`, label: 'Dashboard', icon: 'tablero', roles: ['master', 'admin', 'staff'] },
     { href: `${BASE}/hub/propiedades-pruebas.html`, label: 'Propiedades (pruebas)', icon: 'llave', roles: ['master', 'admin'] },
     { href: `${BASE}/hub/perfil-comprador.html`, label: 'Perfil comprador', icon: 'prospecto' },
@@ -107,7 +107,7 @@
   // Documentos > Acuerdos > buscarlo a ojo. `alias` son palabras que no
   // están en el título pero con las que alguien buscaría lo mismo.
   const INDICE_BUSQUEDA = [
-    { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub', alias: 'leads gmail inmuebles24 contactos', prospectos: true },
+    { label: 'Prospectos', href: `${BASE}/hub/prospectos-gmail.html`, cat: 'Hub', alias: 'leads gmail inmuebles24 contactos', prospectos: true },
     { label: 'Inicio del Hub', href: `${BASE}/portal.html`, cat: 'Hub' },
     { label: 'Dashboard', href: `${BASE}/hub/dashboard.html`, cat: 'Hub', alias: 'lore tracker comparativa indicadores produccion asociados' },
     { label: 'Propiedades (pruebas)', href: `${BASE}/hub/propiedades-pruebas.html`, cat: 'Hub', alias: 'feed xml json inventario conexion recepciones portal', roles: ['master','admin'] },

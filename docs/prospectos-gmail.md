@@ -1,6 +1,6 @@
 # Prospectos: piloto privado y Gmail
 
-Ruta: https://kweb.com.mx/hub/prospectos.html
+Ruta: https://kweb.com.mx/hub/prospectos-gmail.html
 
 El piloto esta habilitado unicamente para la cuenta verificada dani.guerrero@kwmexico.mx. La autorizacion se guarda por identificador de cuenta en private.prospectos_piloto. Ningun otro rol de la plataforma, incluidos otros master, obtiene acceso por su rol. Las tablas prospectos_bandeja y prospectos_reglas aplican RLS por usuario y segundo factor. No se modifico la tabla prospectos de los formularios publicos.
 
