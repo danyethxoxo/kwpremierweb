@@ -59,6 +59,7 @@
 
   const NAV_HUB = [
     { href: `${BASE}/portal.html`, label: 'Inicio del Hub', icon: 'home' },
+    { href: `${BASE}/hub/prospectos.html`, label: 'Prospectos', icon: 'prospecto', prospectos: true },
     { href: `${BASE}/hub/dashboard.html`, label: 'Dashboard', icon: 'tablero', roles: ['master', 'admin', 'staff'] },
     { href: `${BASE}/hub/propiedades-pruebas.html`, label: 'Propiedades (pruebas)', icon: 'llave', roles: ['master', 'admin'] },
     { href: `${BASE}/hub/perfil-comprador.html`, label: 'Perfil comprador', icon: 'prospecto' },
@@ -74,10 +75,11 @@
     { href: `${BASE}/hub/admin.html?v=20260919f#asesores`, label: 'Panel Máster', icon: 'tablero', roles: ['master', 'admin', 'staff'] },
   ];
 
-  let rolNavegacion = null;
+  let rolNavegacion = null, prospectosNavegacion = false;
   function accesoPermitido(item) {
     const ruta = new URL(item.href || item.url, location.origin).pathname;
     const destino = NAV_HUB.find(enlace => new URL(enlace.href, location.origin).pathname === ruta);
+    if ((item.prospectos || (destino && destino.prospectos)) && !prospectosNavegacion) return false;
     const roles = item.roles || (destino && destino.roles) ||
       (/\/documentos\/internos\//.test(ruta) ? ['master', 'admin', 'staff'] : null);
     return !roles || roles.includes(rolNavegacion);
@@ -93,7 +95,7 @@
     return items.map((item) => {
       if (item.section) return `<div class="drawer-section-label">${item.section}</div>`;
       const activo = estaActivo(item.href) ? ' activo' : '';
-      const permisos = item.roles ? ` data-drawer-roles="${item.roles.join(' ')}" hidden` : '';
+      const permisos = item.prospectos ? ' data-drawer-prospectos hidden' : item.roles ? ` data-drawer-roles="${item.roles.join(' ')}" hidden` : '';
       return `<a href="${item.href}" class="drawer-link${activo}"${permisos}>${ICONS[item.icon]}<span>${item.label}</span></a>`;
     }).join('');
   }
@@ -105,6 +107,7 @@
   // Documentos > Acuerdos > buscarlo a ojo. `alias` son palabras que no
   // están en el título pero con las que alguien buscaría lo mismo.
   const INDICE_BUSQUEDA = [
+    { label: 'Prospectos', href: `${BASE}/hub/prospectos.html`, cat: 'Hub', alias: 'leads gmail inmuebles24 contactos', prospectos: true },
     { label: 'Inicio del Hub', href: `${BASE}/portal.html`, cat: 'Hub' },
     { label: 'Dashboard', href: `${BASE}/hub/dashboard.html`, cat: 'Hub', alias: 'lore tracker comparativa indicadores produccion asociados' },
     { label: 'Propiedades (pruebas)', href: `${BASE}/hub/propiedades-pruebas.html`, cat: 'Hub', alias: 'feed xml json inventario conexion recepciones portal', roles: ['master','admin'] },
@@ -956,6 +959,13 @@
         .eq('id', u.user.id)
         .single());
       if (!perfil) return;
+      if (u.user.id === '2bd46b9a-68d8-476c-844c-27f10097816e') {
+        Promise.resolve().then(() => window.kwSupabase.rpc('prospectos_habilitado')).then(acceso => {
+          prospectosNavegacion = !acceso.error && acceso.data === true;
+          document.querySelectorAll('[data-drawer-prospectos]').forEach(enlace => { enlace.hidden = !prospectosNavegacion; });
+        }).catch(() => { prospectosNavegacion = false; });
+      }
+      document.querySelectorAll('[data-drawer-prospectos]').forEach(enlace => { enlace.hidden = !prospectosNavegacion; });
       rolNavegacion = perfil.role;
       document.querySelectorAll('[data-drawer-roles]').forEach((enlace) => {
         enlace.hidden = !enlace.dataset.drawerRoles.split(' ').includes(perfil.role);
