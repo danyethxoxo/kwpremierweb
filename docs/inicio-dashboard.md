@@ -8,7 +8,11 @@
 - Tus dictamenes: diez registros propios, por `asesor_id`, sin archivados y ordenados por actualizacion. Se consulta la tabla base con sus politicas existentes, porque la vista enriquecida es exclusiva de liderazgo. La tabla muestra expediente, dictamen, marketing y listado, y enlaza con el apartado de dictamenes.
 - Perfil comprador: diez perfiles propios por `asesor_id`, incluidos los pausados. Cada fila abre el formulario del perfil guardado; Crear perfil abre uno nuevo.
 
-- Firmas digitales: diez documentos creados por el usuario (`user_id`), excluyendo eliminados y ordenados por fecha de creacion. Muestra estado y firmas completadas; las filas y Ver todo abren Firmas Digitales. Conserva carga, vacio y reintento independientes.
+- Firmas digitales: cinco documentos creados por el usuario (`user_id`), excluyendo eliminados y ordenados por ultima actualizacion. Consulta el estado para distinguir borradores, cancelados y errores de envio de las firmas pendientes. Muestra avance accesible y el conteo real de firmantes. El documento y sus firmantes se abren en el visor del home, consultando sus datos actuales antes de mostrarlos. Ver todo abre Firmas Digitales. Conserva carga, vacio y reintento independientes.
+
+Las firmas se actualizan con eventos Realtime filtrados por usuario y agrupados durante 500 ms. Al volver a la pestana se vuelve a consultar solo ese widget si han pasado al menos 15 segundos. No ejecuta sincronizaciones de WeeTrust, no relee propiedades ni cambia permisos. Los documentos eliminados dejan de aparecer al refrescar.
+
+El home usa lienzo gris claro, widgets blancos con borde neutro y sombra suave, saludo con Welcome Home en gris, e iconos y acentos rojo KW. La navegacion global compartida carga `kw-navegacion-oscura.css` desde `drawer.js`: barra negra con texto blanco, seleccion roja y estados de foco visibles. Este archivo solo afecta a los dos paneles de navegacion, no a los formularios ni al contenido de otras pantallas.
 
 Los filtros personales se mantienen tambien para administradores. Los accesos de liderazgo se muestran segun `profiles.role`; no se cambian permisos ni politicas. Las consultas son de solo lectura y cada widget tiene carga, vacio, error y reintento independientes.
 

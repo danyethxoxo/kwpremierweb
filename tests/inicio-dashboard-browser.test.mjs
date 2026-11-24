@@ -20,11 +20,12 @@ const q=new Proxy({},{get(_,key){if(key==='then')return resolve=>Promise.resolve
  table==='dictamenes'?Array.from({length:6},(_,i)=>({id:'d-'+i,asesor_id:i===5?'otro':'catalogo-self',inmueble:['San Francisco 87, Del Valle Norte','Av. Insurgentes Sur 1602','Paseo de los Laureles 24','Rio Balsas 112','Calle Hamburgo 213','Expediente ajeno'][i],folio:'DIC-2026-00'+(i+1),revision:i%3,estado:['devuelta','condicionada','autorizada','devuelta','autorizada'][i%5],estatus_marketing:i%2?'pendiente':'aprobado',estatus_listado:i%3?'aprobado':'sin_listado',archivado_at:null,updated_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='firmas_documentos'?Array.from({length:9},(_,i)=>({id:'f-'+i,weetrust_document_id:'remoto',user_id:i===4?'otro':'self',titulo:i===4?'Documento ajeno':'Contrato '+(i+1),nombre_archivo:'contrato.pdf',estado:['pendiente','completado','borrador','error','pendiente','eliminado','pendiente','completado','pendiente'][i],firmantes:[{nombre:'Ana Prueba',correo:'ana@example.com',firmado:i===1},{nombre:'Luis Prueba',correo:'luis@example.com',firmado:i===1}],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):
  table==='perfiles_comprador'?Array.from({length:5},(_,i)=>({id:'c-'+i,asesor_id:i===4?'otro':'self',nombre:['Mariana López','Carlos Mendoza','Andrea Ramírez','Luis Hernández','Cliente ajeno'][i],activo:i!==3,operacion:i%2?'renta':'venta',tipos:['Departamento'],precio_max:i%2?30000:5000000,moneda:'MXN',created_at:new Date(Date.UTC(2026,9,29-i)).toISOString()})):[];
+ if(table==='firmas_documentos'&&window.qaFirmas)data=window.qaFirmas;
  if(table==='dictamenes'&&!window.qaLectorGlobal&&!['master','admin','staff'].includes(perfil.role))data=data.filter(row=>row.asesor_id==='catalogo-self');
  for(const [col,value]of filtros)data=data.filter(row=>row[col]===value);for(const [col,value]of estado.desiguales||[])data=data.filter(row=>row[col]!==value);for(const [col,op]of [...orden].reverse())data.sort((a,b)=>String(a[col]).localeCompare(String(b[col]))*(op.ascending===false?-1:1));return {data:estado.single?(data[0]||null):data.slice(0,limite),error:null};
  }).then(resolve);
 return(...args)=>{if(key==='eq'||key==='is')filtros.push(args);if(key==='order')orden.push(args);if(key==='select')estado.select=args[0];if(key==='limit')limite=args[0];if(key==='single')estado.single=true;if(key==='neq')(estado.desiguales||=[]).push(args);return q;};}});return q;},
-rpc:async()=>({data:[],error:null}),channel(){return {on(){return this;},subscribe(){return this;},unsubscribe(){}};},removeChannel(){}};
+rpc:async()=>({data:[],error:null}),channel(){return {on(tipo,filtro,callback){window.qaFirmaCambio=callback;return this;},subscribe(){return this;},unsubscribe(){}};},removeChannel(){}};
 window.kwSession={usuarioInicial:async()=>({data:{user:usuario}}),perfilInicial:async()=>({data:perfil})};
 `;
 async function abrir(browser,config={}){
@@ -41,6 +42,58 @@ async function abrir(browser,config={}){
  await page.goto('https://kw.local/portal.html');if(!config.cargando)await page.waitForFunction(()=>[...document.querySelectorAll('[data-widget-lista]')].every(el=>el.getAttribute('aria-busy')==='false'));
  return {page,context,errors};
 }
+test('firmas del home distinguen estados y refrescan personas al abrir el detalle',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{const {page,context,errors}=await abrir(browser);
+  await page.evaluate(()=>{qaFirmas=[
+   {id:'actual',user_id:'self',titulo:'Documento actualizado',estado:'pendiente',firmantes:[{nombre:'Persona actual',correo:'actual@example.com',firmado:true}],updated_at:'2026-11-24',created_at:'2026-11-24'},
+   {id:'cancelado',user_id:'self',titulo:'Documento cancelado',estado:'cancelado',firmantes:[{nombre:'Persona',firmado:false}],updated_at:'2026-11-23',created_at:'2026-11-23'},
+   {id:'retirado',user_id:'self',titulo:'Documento eliminado',estado:'eliminado',firmantes:[],updated_at:'2026-11-22'}
+  ];qaFirmaCambio();});
+  await page.waitForFunction(()=>document.querySelector('.dash-signature-name')?.textContent==='Documento actualizado');
+  assert.equal(await page.locator('.dash-signature').count(),2);
+  assert.equal(await page.locator('.dash-signature-state').nth(1).textContent(),'Cancelado0/1');
+  assert.equal(await page.locator('.dash-signature-progress').count(),1);
+  assert.equal(await page.locator('.dash-signature-progress').getAttribute('aria-label'),'1 de 1 firmas completadas');
+  await page.evaluate(()=>{qaFirmas[0].firmantes=[{nombre:'Persona nueva',correo:'nuevo@example.com',firmado:false}];});
+  await page.locator('.dash-signers').first().click();
+  await page.getByText('nuevo@example.com',{exact:true}).waitFor({state:'visible'});
+  assert.equal(await page.locator('.dash-firma-persona > span').textContent(),'Pendiente');
+  await page.getByRole('button',{name:'Cerrar',exact:true}).click();
+  assert.deepEqual(errors,[]);await context.close();
+ }finally{await browser.close();}
+});
+
+test('barra lateral oscura conserva contraste, busqueda y apertura movil',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{const {page,context,errors}=await abrir(browser);
+  assert.equal(await page.locator('#drawer').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(32, 34, 38)');
+  assert.equal(await page.locator('#drawer .drawer-footer').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+  assert.equal(await page.locator('#drawer a[href="/propiedades.html"]').evaluate(el=>getComputedStyle(el).color),'rgb(247, 247, 248)');
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#kw-drawer-toggle').click();
+  await page.locator('#drawer.open').waitFor({state:'visible'});
+  assert.equal(await page.locator('#drawer').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(32, 34, 38)');
+  assert.equal(await page.locator('#drawer a[href="/propiedades.html"]').evaluate(el=>getComputedStyle(el).color),'rgb(247, 247, 248)');
+  await page.locator('#drawer').screenshot({path:path.join(out,'menu-oscuro-movil.png')});
+  await page.locator('#drawer-close').click();
+  assert.equal(await page.locator('#notif-bell-slot').count(),1);
+  assert.deepEqual(errors,[]);await context.close();
+ }finally{await browser.close();}
+});
+
+test('Realtime agrupa cambios y no vuelve a consultar los otros widgets',async()=>{
+ const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
+ try{const {page,context,errors}=await abrir(browser);
+  const antes=await page.evaluate(()=>qaCalls.map(c=>c.table));
+  await page.evaluate(()=>{qaFirmas=[];for(let i=0;i<10;i++)qaFirmaCambio();});
+  await page.getByText('No tienes documentos para firma.',{exact:true}).waitFor({state:'visible'});
+  const nuevas=await page.evaluate(n=>qaCalls.slice(n).map(c=>c.table),antes.length);
+  assert.deepEqual(nuevas,['firmas_documentos']);
+  assert.deepEqual(errors,[]);await context.close();
+ }finally{await browser.close();}
+});
+
 test('lectura global de dictamenes en Inicio conserva el rol asociado',async()=>{
  const browser=await chromium.launch(process.platform==='win32'?{channel:'chrome'}:{});
  try{const {page,context,errors}=await abrir(browser,{lectorGlobal:true});
@@ -96,7 +149,11 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   assert.equal(await page.locator('.dash-signature').count(),5);
   assert.equal(await page.locator('.dash-firmas .dash-view-all').getAttribute('href'),'/hub/firmas.html');
   assert.equal(await page.locator('.dash-signature-name').first().textContent(),'Contrato 1');
-  assert.equal(await page.locator('.dash-signature .dash-pill,.dash-signature-progress').count(),0);
+  assert.equal(await page.locator('.dash-signature .dash-pill').count(),0);
+  assert.equal(await page.locator('.dash-signature-progress').count(),3);
+  assert.equal(await page.locator('.dash-signature-state').nth(2).textContent(),'Borrador0/2');
+  assert.ok((await page.locator('.dash-signature-state').nth(3).textContent()).startsWith('Error de env'));
+
   assert.equal(await page.locator('.dash-signature').first().getAttribute('href'),'/hub/firmas.html?documento=f-0');
   assert.equal(await page.locator('.dash-signature-state').first().textContent(),'Faltan 2 firmas0/2');
   assert.equal(await page.locator('.dash-signature-state').nth(1).textContent(),'Firmas completas2/2');
@@ -105,6 +162,7 @@ test('Inicio muestra las diez propiedades nuevas y unicamente los dictamenes y c
   const firmaQuery=await page.evaluate(()=>qaCalls.find(c=>c.table==='firmas_documentos'));
   assert.ok(firmaQuery.filtros.some(([k,v])=>k==='user_id'&&v==='self'));assert.equal(firmaQuery.limite,5);
   assert.ok(firmaQuery.desiguales.some(([k,v])=>k==='estado'&&v==='eliminado'));
+  assert.ok(firmaQuery.select.includes('estado'));assert.equal(firmaQuery.orden[0][0],'updated_at');
   for(const width of [1440,1024,768,390,320]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(100);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));

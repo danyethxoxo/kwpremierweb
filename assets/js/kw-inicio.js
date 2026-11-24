@@ -5,6 +5,7 @@
     casa:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v4"/>',
     dictamen:'<path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z"/><path d="M16 5h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1"/><polyline points="9 13 11 15 15 11"/>',
     comprador:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+    documento:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
     firma:'<path d="M3 18c3.5 0 4-6 7.5-6 2 0 2.5 2 4.5 2 2.5 0 3-3 6-3"/><path d="M3 21h18"/>',
     actualizar:'<path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 2M18 18A8 8 0 0 1 5 16"/>',
     flecha:'<path d="m9 5 7 7-7 7"/>',mas:'<path d="M12 5v14M5 12h14"/>'
@@ -114,18 +115,20 @@
     dialogo.addEventListener('close',()=>{corte.abort();tareas.forEach(t=>t.cancel());if(pdf)pdf.destroy();else tarea?.destroy();document.body.classList.remove('dash-visor-abierto');dialogo.remove();},{once:true});
     cerrar.onclick=()=>dialogo.close();dialogo.addEventListener('click',e=>{if(e.target===dialogo){const r=dialogo.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialogo.close();}});
     dialogo.append(encabezado,cuerpo);document.body.append(dialogo);document.body.classList.add('dash-visor-abierto');dialogo.showModal();
-    if(firmantes){
-      const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
-      personas.forEach(x=>{const fila=nodo('div','dash-firma-persona'),datos=nodo('div','');datos.append(nodo('strong','',x.nombre||'Firmante'));
-        const correo=String(x.correo||x.email||'');if(correo){const a=nodo('a','',correo);a.href='mailto:'+encodeURIComponent(correo);datos.append(a);}
-        fila.append(datos,nodo('span','',x.firmado?'Firmado':'Pendiente'));cuerpo.append(fila);
-      });if(!personas.length)cuerpo.append(nodo('p','','Sin firmantes'));return;
-    }
     const carga=nodo('p','dash-firma-carga','Cargando documento...');carga.setAttribute('role','status');cuerpo.append(carga);
     const cargar=async()=>{
-      const r=await window.kwSupabase.from('firmas_documentos').select('id,archivo_ruta,weetrust_document_id').eq('id',f.id).eq('user_id',usuario.id).single();
-      if(r.error||!r.data)throw new Error('Documento no disponible.');if(corte.signal.aborted)return;
+      const r=await window.kwSupabase.from('firmas_documentos').select('id,estado,firmantes,archivo_ruta,weetrust_document_id').eq('id',f.id).eq('user_id',usuario.id).single();
+      if(r.error||!r.data||r.data.estado==='eliminado')throw new Error('Documento no disponible.');if(corte.signal.aborted)return;
       const dato=r.data;let bytes;
+      if(firmantes)cuerpo.replaceChildren();
+    if(firmantes){
+      const personas=Array.isArray(dato.firmantes)?dato.firmantes.filter(x=>x&&typeof x==='object'):[];
+      personas.forEach(x=>{const fila=nodo('div','dash-firma-persona'),datos=nodo('div','');datos.append(nodo('strong','',x.nombre||'Firmante'));
+        const correo=String(x.correo||x.email||'');if(correo){const a=nodo('a','',correo);a.href='mailto:'+encodeURIComponent(correo);datos.append(a);}
+        fila.append(datos,nodo('span','',firmaHecha(x)?'Firmado':'Pendiente'));cuerpo.append(fila);
+      });if(!personas.length)cuerpo.append(nodo('p','','Sin firmantes'));return;
+    }
+
       if(dato.weetrust_document_id){
         try{
           const sesion=await window.kwSupabase.auth.getSession();if(!sesion.data?.session)throw new Error('Sin sesi\u00f3n');
@@ -148,20 +151,28 @@
   function integrarEnlaceFirma(enlace,titulo,f,firmantes=false) {
     enlace.addEventListener('click',e=>{if(e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();abrirFirmaEnInicio(f,titulo,firmantes);});
   }
+  function firmaHecha(persona) { return persona.firmado===true || persona.firmado==='true' || !!persona.firmado_at; }
   function firmas(filas,caja) {
+    filas=filas.filter(f=>f.estado!=='eliminado');
     caja.replaceChildren();if(!filas.length)return vacio(caja,'No tienes documentos para firma.','/hub/firmas.html?vista=nuevo-documento','Crear documento');
     filas.slice(0,5).forEach(f=>{
       const titulo=f.titulo||f.nombre_archivo||'Documento sin t\u00edtulo';
       const fila=nodo('article','dash-signature-row'),documento=nodo('a','dash-signature');
       documento.href='/hub/firmas.html?documento='+encodeURIComponent(f.id);documento.title='Ver el documento';
-      documento.append(nodo('span','dash-signature-name',titulo));integrarEnlaceFirma(documento,titulo,f);
+      const icono=nodo('span','dash-signature-icon');icono.innerHTML=svg('documento');documento.append(icono,nodo('span','dash-signature-name',titulo));integrarEnlaceFirma(documento,titulo,f);
       const personas=Array.isArray(f.firmantes)?f.firmantes.filter(x=>x&&typeof x==='object'):[];
-      const hechas=personas.filter(x=>x.firmado).length,faltan=personas.length-hechas;
+      const hechas=personas.filter(firmaHecha).length,faltan=personas.length-hechas;
       const detalle=nodo('a','dash-signers');detalle.href='/hub/firmas.html?detalle='+encodeURIComponent(f.id);detalle.title='Ver firmantes y correos';
       detalle.setAttribute('aria-label','Ver firmantes y correos de '+titulo);integrarEnlaceFirma(detalle,'Firmantes de '+titulo,f,true);
-      const estado=nodo('span','dash-signature-state'),punto=nodo('span','dash-signature-dot'+(personas.length&&!faltan?' completa':''));punto.setAttribute('aria-hidden','true');
-      estado.append(punto,nodo('span','',personas.length?(faltan?(faltan===1?'Falta 1 firma':'Faltan '+faltan+' firmas'):'Firmas completas'):'Sin firmantes'));
+      const excepcion={borrador:'Borrador',cancelado:'Cancelado',error:'Error de envío'}[f.estado];
+      const estado=nodo('span','dash-signature-state '+(excepcion?f.estado:!faltan&&personas.length?'completada':'pendiente'));
+      const punto=nodo('span','dash-signature-dot'+(personas.length&&!faltan?' completa':''));punto.setAttribute('aria-hidden','true');
+      estado.append(punto,nodo('span','',excepcion||(personas.length?(faltan?(faltan===1?'Falta 1 firma':'Faltan '+faltan+' firmas'):'Firmas completas'):'Sin firmantes')));
       if(personas.length)estado.append(nodo('span','dash-signature-count',hechas+'/'+personas.length));
+      if(personas.length&&!excepcion){
+        const progreso=nodo('progress','dash-signature-progress');progreso.max=personas.length;progreso.value=hechas;
+        progreso.setAttribute('aria-label',hechas+' de '+personas.length+' firmas completadas');documento.append(progreso);
+      }
       detalle.append(estado,nodo('small','dash-signature-date',fecha(f.created_at)));fila.append(documento,detalle);caja.append(fila);
     });
   }
@@ -173,16 +184,30 @@
       const perfil=await (window.kwSession?.perfilInicial?window.kwSession.perfilInicial(sb):sb.from('profiles').select('nombre,apellido,role,sitio_web,email,whatsapp,foto_url').eq('id',usuario.id).single());
       perfilAsesor=perfil.data;
       sitioAsesor=perfil.data?.sitio_web;
-      $('inicio-titulo').textContent='Hola '+(perfil.data?.nombre||'')+', Welcome Home.';
+      $('inicio-titulo').replaceChildren(document.createTextNode('Hola '+(perfil.data?.nombre||'')+', '),nodo('span','dash-welcome','Welcome Home.'));
       if(['admin','master','staff'].includes(perfil.data?.role))['btn-admin','card-liderazgo','card-operatividad','card-dashboard'].forEach(id=>{const enlace=$(id);if(enlace)enlace.style.display='';});
     }catch(e){document.querySelectorAll('[data-widget-lista]').forEach(el=>{el.setAttribute('aria-busy','false');vacio(el,'No pudimos verificar tu sesión. Recarga la página.');});return;}
     const cargas={
       propiedades:()=>cargar('propiedades',()=>sb.from('propiedades_inventario').select('id,titulo,tipo,operacion,precio,moneda,colonia,municipio,estado,created_at,miniatura_url,foto:imagenes->>0,market_center,asesor_nombre,enlace_kw,fuente,fuente_id').eq('estatus','publicada').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),propiedades),
       dictamenes:()=>cargar('dictamenes',()=>sb.from('dictamenes').select('id,folio,revision,inmueble,estado,estatus_marketing,estatus_listado,fecha_dictamen,updated_at').is('archivado_at',null).order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(10),dictamenes),
       compradores:()=>cargar('compradores',()=>sb.from('perfiles_comprador').select('id,nombre,operacion,tipos,precio_max,moneda,activo,created_at').eq('asesor_id',usuario.id).order('created_at',{ascending:false}).order('id',{ascending:true}).limit(10),compradores),
-      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,firmantes,created_at').eq('user_id',usuario.id).neq('estado','eliminado').order('created_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
+      firmas:()=>cargar('firmas',()=>sb.from('firmas_documentos').select('id,titulo,nombre_archivo,estado,firmantes,created_at,updated_at').eq('user_id',usuario.id).neq('estado','eliminado').order('updated_at',{ascending:false}).order('id',{ascending:true}).limit(5),firmas)
     };
     await Promise.allSettled(Object.values(cargas).map(accion=>accion()));
+    // Realtime y regreso a la pestaña actualizan solo este widget, sin releer el inventario.
+    let ultimaLectura=Date.now(), temporizador, canal;
+    const actualizarFirmas=()=>{
+      clearTimeout(temporizador);
+      temporizador=setTimeout(()=>{if(document.hidden)return;ultimaLectura=Date.now();cargas.firmas();},500);
+    };
+    const alVolver=()=>{if(!document.hidden&&Date.now()-ultimaLectura>15000)actualizarFirmas();};
+    const suscribir=()=>{
+      if(!sb.channel)return;
+      canal=sb.channel('inicio-firmas-'+usuario.id).on('postgres_changes',{event:'*',schema:'public',table:'firmas_documentos',filter:'user_id=eq.'+usuario.id},actualizarFirmas).subscribe();
+    };
+    suscribir();window.addEventListener('focus',alVolver);document.addEventListener('visibilitychange',alVolver);
+    window.addEventListener('pagehide',()=>{clearTimeout(temporizador);if(canal)sb.removeChannel(canal);});
+    window.addEventListener('pageshow',e=>{if(e.persisted){suscribir();actualizarFirmas();}});
   }
   if(document.documentElement.classList.contains('kw-auth-ok'))iniciar();
   else window.addEventListener('kw-auth-ready',iniciar,{once:true});
