@@ -19,7 +19,7 @@ test('superficies colocan Predial despues de m² y eliminan decimales innecesari
 });
 
 test('reproduce el fallo anterior con una respuesta de CFDI no vacía',()=>{
-  const anterior=pdfScript.replace('textoSimple(respuestaCfdi(d.cfdi_necesario))','respuestaCfdi(d.cfdi_necesario)');
+  const anterior=pdfScript.replace("textoPDF(d, respuestaCfdi(d.cfdi_necesario), ['cfdi_necesario'], incluirCorrecciones)",'respuestaCfdi(d.cfdi_necesario)');
   const ctx=runtime({},anterior);
   assert.throws(()=>ctx.dibujarHoja({id:'qa',cfdi_necesario:'no'},null,false),/forEach/);
 });

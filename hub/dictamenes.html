@@ -5277,7 +5277,7 @@
       filas.push(hojaFila('Número de notaría', textoPDF(d, d.notaria_numero,
         ['notaria_numero'], incluirCorrecciones)));
     } else {
-      filas.push(hojaFila('Escrituras y fecha', textoSimple(d.escritura_propiedad)));
+      filas.push(hojaFila('Escrituras y fecha', textoPDF(d, d.escritura_propiedad, ['escritura_propiedad', 'escritura_numero', 'escritura_fecha', 'notario_nombre', 'notaria_numero'], incluirCorrecciones)));
     }
 
     filas.push(hojaFila('Condominio', textoPDF(d, siNo(d.condominio),
@@ -5291,8 +5291,8 @@
         ['escritura_condominio_fecha'], incluirCorrecciones)));
     filas.push(hojaFila('Nombre del notario del condominio', textoPDF(d, d.condominio_notario_nombre, ['condominio_notario_nombre'], incluirCorrecciones)));
     filas.push(hojaFila('Número de notaría del condominio', textoPDF(d, d.condominio_notaria_numero, ['condominio_notaria_numero'], incluirCorrecciones)));
-    filas.push(hojaFila('¿Es necesario el CFDI?', textoSimple(respuestaCfdi(d.cfdi_necesario))));
-    filas.push(hojaFila('¿Cuenta con CFDI?', textoSimple(respuestaCfdi(d.cfdi_tiene))));
+    filas.push(hojaFila('¿Es necesario el CFDI?', textoPDF(d, respuestaCfdi(d.cfdi_necesario), ['cfdi_necesario'], incluirCorrecciones)));
+    filas.push(hojaFila('¿Cuenta con CFDI?', textoPDF(d, respuestaCfdi(d.cfdi_tiene), ['cfdi_tiene'], incluirCorrecciones)));
     filas.push(hojaFila('CFDI', textoPDF(d, d.cfdi, ['cfdi'], incluirCorrecciones)));
     filas.push(hojaFila('Superficie escritura', textoPDF(d, conUnidad(d.superficie_escritura),
       ['superficie_escritura'], incluirCorrecciones)));
@@ -5497,6 +5497,21 @@
       (conCorrecciones ? '-con-correcciones' : '-solo-datos') + '.pdf';
   }
 
+  async function obtenerDictamenPDF(id) {
+    // Cada PDF lee lo guardado; los datos del listado pueden ser anteriores.
+    var resultados = await Promise.all([
+      window.kwSupabase.from('dictamenes_con_asesor').select('*').eq('id', id).maybeSingle(),
+      leerDetalleDictamen('dictamen_puntos', '*', id, 'orden', true),
+      leerDetalleDictamen('dictamen_clientes', '*', id, 'orden', true),
+    ]);
+    var fila = resultados[0];
+    if (fila.error) throw fila.error;
+    if (!fila.data || fila.data.archivado_at) throw new Error('No se pudo consultar el dictamen actualizado.');
+    puntos = puntos.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[1]);
+    clientes = clientes.filter(function (x) { return x.dictamen_id !== id; }).concat(resultados[2]);
+    return fila.data;
+  }
+
   async function crearPDF(d, conCorrecciones) {
     var logo = await cargarLogo();
     return armarPDF(
@@ -5509,7 +5524,7 @@
     var d = dictamenes.find(function (x) { return x.id === id; });
     if (!d) return;
 
-    await cargarDetalle(id);
+    d = await obtenerDictamenPDF(id);
     var url = URL.createObjectURL(await crearPDF(d, conCorrecciones));
     var a = document.createElement('a');
     a.href = url;
@@ -5526,7 +5541,7 @@
     window.kwDocumentViewer.open({ title: 'Dictamen ' + (d.folio || ''),
       variants: ['Solo con datos', 'Datos y correcciones'], initialIndex: 1,
       filename: function (index) { return nombrePDF(d, index === 1); },
-      load: async function (index) { await cargarDetalle(id); return crearPDF(d, index === 1); } });
+      load: async function (index) { d = await obtenerDictamenPDF(id); return crearPDF(d, index === 1); } });
   }
 
   function base64DeBlob(blob) {
@@ -5546,10 +5561,6 @@
     if (!d) return;
     seleccion = seleccion || await window.kwDocumentViewer.recipient(botonEnvio || $('e-enviar-correo'));
     if (!seleccion) return;
-    if (['asesor', 'todos'].includes(seleccion.destinatario) && !d.asesor_correo) {
-      await window.kwUI.alert('El asesor no tiene un correo registrado.');
-      return;
-    }
     var boton = botonEnvio || $('e-enviar-correo');
     var contenidoOriginal = boton.innerHTML;
     boton.disabled = true;
@@ -5560,7 +5571,10 @@
       iconoOriginal.outerHTML = '<span class="dic-send-spinner" aria-hidden="true"></span>';
     }
     try {
-      await cargarDetalle(id);
+      d = await obtenerDictamenPDF(id);
+      if (['asesor', 'todos'].includes(seleccion.destinatario) && !d.asesor_correo) {
+        throw new Error('El asesor no tiene un correo registrado.');
+      }
       var pdfs = await Promise.all([
         crearPDF(d, false),
         crearPDF(d, true),

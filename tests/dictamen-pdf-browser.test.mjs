@@ -22,7 +22,7 @@ test('descarga solo datos y con correcciones con los nombres esperados',async()=
       return route.fulfill({contentType:'text/html',body:'<button id="solo">Solo datos</button><button id="correcciones">Con correcciones</button>'});
     });
     await page.goto('http://kw.local/');
-    await page.addScriptTag({content:'var detallesPedidos=[];async function cargarDetalle(id){detallesPedidos.push(id);}var dictamenes='+JSON.stringify([datos.dictamen])+';var clientes='+JSON.stringify(datos.clientes)+';var puntos='+JSON.stringify(datos.puntos)+';\n'+pdfScript});
+    await page.addScriptTag({content:'var detallesPedidos=[];async function cargarDetalle(id){detallesPedidos.push(id);}var dictamenes='+JSON.stringify([datos.dictamen])+';var clientes='+JSON.stringify(datos.clientes)+';var puntos='+JSON.stringify(datos.puntos)+';\n'+pdfScript+';obtenerDictamenPDF=async id=>{detallesPedidos.push(id);return dictamenes.find(d=>d.id===id);};'});
     await page.evaluate(id=>{
       document.getElementById('solo').onclick=()=>imprimir(id,false);
       document.getElementById('correcciones').onclick=()=>imprimir(id,true);
