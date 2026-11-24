@@ -64,7 +64,7 @@ test('el backend decide el acceso antes de generar OAuth o leer configuracion',a
  let called=false;const h=context.createGmailHandler({backend:async()=>{throw new HttpError(403,'Sin acceso');},encryptionRoot:root,redirectUri:redirect,fetcher:async()=>{called=true;throw Error();}});
  await assert.rejects(()=>h(request('iniciar'),actor),e=>e.status===403);assert.equal(called,false);
 });
-test('no reutiliza el cliente de las conexiones Google existentes',async()=>{
- const h=context.createGmailHandler({backend:async()=>({config:null,conexion:null}),encryptionRoot:root,redirectUri:redirect,reservedClientIds:['actual.apps.googleusercontent.com']});
- await assert.rejects(()=>h(request('configurar',{client_id:'actual.apps.googleusercontent.com',client_secret:'test-client-secret'}),actor),e=>e.status===400);
+test('solo permite el cliente OAuth aprobado de KWPremier',async()=>{
+ const h=context.createGmailHandler({backend:async()=>({config:null,conexion:null}),encryptionRoot:root,redirectUri:redirect,approvedClientIds:['actual.apps.googleusercontent.com']});
+ await assert.rejects(()=>h(request('configurar',{client_id:'otro.apps.googleusercontent.com',client_secret:'test-client-secret'}),actor),e=>e.status===400);
 });

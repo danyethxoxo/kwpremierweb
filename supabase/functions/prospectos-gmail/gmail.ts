@@ -5,7 +5,7 @@ export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 export const PROSPECTOS_PAGE = 'https://kweb.com.mx/hub/prospectos-gmail.html'
 type Context = { userId?: string; token?: string }
 type Backend = (action: string, user: string, session: string, data?: Record<string, unknown>) => Promise<any>
-type Options = { backend: Backend; encryptionRoot: string; redirectUri: string; fetcher?: typeof fetch; reservedClientIds?: string[] }
+type Options = { backend: Backend; encryptionRoot: string; redirectUri: string; fetcher?: typeof fetch; approvedClientIds?: string[] }
 const enc = new TextEncoder()
 const b64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes))
 const unb64 = (value: string) => Uint8Array.from(atob(value), c => c.charCodeAt(0))
@@ -102,7 +102,7 @@ export function createGmailHandler(options: Options) {
   if (action === 'configurar') {
    const clientId = value(data, 'client_id', 256), clientSecret = value(data, 'client_secret', 512)
    if (!/^[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/.test(clientId)) throw new HttpError(400, 'El ID de cliente de Google no es válido.')
-   if (options.reservedClientIds?.includes(clientId)) throw new HttpError(400, 'Usa un cliente OAuth nuevo y exclusivo para Prospectos. El cliente actual está reservado para otros servicios de Google.')
+   if (!options.approvedClientIds?.includes(clientId)) throw new HttpError(400, 'Usa el cliente OAuth aprobado de KWPremier para Prospectos.')
    if (current.conexion) throw new HttpError(409, 'Desvincula Gmail antes de cambiar la configuración.')
    await backend('configurar', { client_id: clientId, secreto: await box.seal(clientSecret, user, 'config') })
    return reply({ ok: true })
