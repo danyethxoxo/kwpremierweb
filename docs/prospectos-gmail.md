@@ -13,14 +13,14 @@ Supabase revisa Gmail cada cinco minutos, aunque Prospectos este cerrado. Abrir 
 1. En Google Cloud, usar un proyecto administrado por el propietario y habilitar Gmail API.
 2. Configurar la pantalla de consentimiento. Para este piloto privado puede usarse una aplicacion externa en modo Pruebas, agregando como usuario de prueba la cuenta Gmail que se vinculara. No publicar para todos los asesores antes de revisar la verificacion requerida por Google.
 3. Declarar el permiso https://www.googleapis.com/auth/gmail.readonly. Es lectura del buzon, no un permiso limitado por remitente.
-4. Crear un cliente OAuth de tipo Aplicacion web, exclusivo para Prospectos. Registrar exactamente esta URI de redireccion:
+4. Usar el cliente OAuth web existente de KWPremier en el proyecto. La función acepta únicamente el ID configurado en `GOOGLE_CLIENT_ID`. Registrar exactamente esta URI de redirección:
 
    https://iloetojomzqtadkithtv.supabase.co/functions/v1/prospectos-gmail
 
 5. En Prospectos, abrir Configuracion de Gmail, introducir el ID y secreto del cliente y guardar. No enviar el secreto por chat ni guardarlo en GitHub.
 6. Pulsar Vincular Gmail y completar personalmente el consentimiento de Google. La cuenta vinculada puede ser distinta del correo de inicio de sesion de KWEB; solo el propietario del piloto puede realizarlo.
 
-Se utiliza un cliente separado para evitar que la revocacion de Gmail afecte las integraciones actuales de Drive, Contactos o Calendario. En modo Pruebas, Google puede caducar los refresh tokens a los siete dias. La aprobacion, restricciones de Workspace y habilitacion de Gmail API deben comprobarse con la cuenta real. Crear este cliente quedo pendiente: el control de Chrome se detuvo porque no pudo verificar la URL del navegador.
+Por solicitud del propietario, el piloto reutiliza el cliente OAuth existente de KWPremier. La revocación de Gmail podría afectar otras autorizaciones Google de la misma cuenta; antes de ampliar el uso a más cuentas se debe evaluar separar el cliente. Como el permiso Gmail está pendiente de verificación, Google puede mostrar una advertencia y limitar a los usuarios autorizados durante el piloto.
 
 ## Seguridad y operacion
 
@@ -39,5 +39,5 @@ Se utiliza un cliente separado para evitar que la revocacion de Gmail afecte las
 
 Tests: prospectos-db.test.mjs (RLS, MFA, ACL, estado atomico, sesion revocada), prospectos-gmail.test.mjs (cifrado, PKCE, callback fijo, repeticion de codigo, denegacion) y prospectos-browser.test.mjs (captura, reglas, configuracion, callback, otro master denegado, escritorio y movil con drawer.js).
 
-La vinculacion con una cuenta Google real queda pendiente del cliente OAuth y consentimiento del propietario. La sincronizacion en segundo plano comienza despues del consentimiento y una vez aplicadas la migracion y la funcion de Edge; las pruebas automatizadas usan respuestas simuladas de Google.
+La vinculación con una cuenta Google real requiere que el propietario guarde el secreto OAuth en Configuración de Gmail y complete el consentimiento de Google. La sincronización en segundo plano comienza después del consentimiento; las pruebas automatizadas usan respuestas simuladas de Google.
 
