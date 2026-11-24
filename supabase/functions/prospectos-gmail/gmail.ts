@@ -1,4 +1,5 @@
 import { HttpError, validUuid } from '../_shared/security-core.ts'
+import { syncMailbox } from './mail-sync.ts'
 
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 export const PROSPECTOS_PAGE = 'https://kweb.com.mx/hub/prospectos-gmail.html'
@@ -31,6 +32,28 @@ export async function secretBox(root: string) {
   },
  }
 }
+export async function syncConnectedMailbox(options: {
+ user: string; current: any; encryptionRoot: string; rules: any; fetcher?: typeof fetch
+ save: (payload: Record<string, unknown>) => Promise<any>
+}) {
+ if (!options.current?.config || !options.current?.conexion) throw new HttpError(409, 'Vincula Gmail antes de sincronizar.')
+ const fetcher = options.fetcher || fetch
+ const google = async (url: string, init: RequestInit) => {
+  try { return await fetcher(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(12000) }) }
+  catch { throw new HttpError(502, 'No se pudo comunicar con Google. Intenta de nuevo.') }
+ }
+ const box = await secretBox(options.encryptionRoot)
+ const secret = await box.open(options.current.config.secreto, options.user, 'config')
+ const credentials = await box.open(options.current.conexion.credenciales, options.user, 'tokens')
+ const renewed = await google('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ client_id: options.current.config.client_id, client_secret: secret, refresh_token: credentials.refresh_token, grant_type: 'refresh_token' }) })
+ if (!renewed.ok) throw new HttpError(409, 'La autorización de Gmail venció. Vuelve a vincular la cuenta.')
+ const token = await renewed.json()
+ if (typeof token.access_token !== 'string') throw new HttpError(502, 'Gmail no devolvió un permiso de lectura válido.')
+ const result = await syncMailbox({ fetcher: google, accessToken: token.access_token, historyId: String(options.current.conexion.history_id || ''), rules: options.rules })
+ const saved = await options.save({ history_id: result.historyId, registros: result.leads })
+ return { ok: true, revisados: result.revisados, importados: Number(saved?.importados || 0), ultima_revision_at: saved?.ultima_revision_at || new Date().toISOString(), respaldo: result.fallback }
+}
 function value(data: any, name: string, max: number) {
  const v = data?.[name]
  if (typeof v !== 'string' || !v.trim() || v.length > max || /[\x00-\x1f\x7f]/.test(v)) throw new HttpError(400, 'Datos incompletos o inválidos.')
@@ -43,12 +66,13 @@ export function createGmailHandler(options: Options) {
   try { return await fetcher(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(12000) }) }
   catch { throw new HttpError(502, 'No se pudo comunicar con Google. Intenta de nuevo.') }
  }
- async function gmailAddress(access: string) {
+ async function gmailProfile(access: string) {
   const r = await google('https://gmail.googleapis.com/gmail/v1/users/me/profile', { headers: { Authorization: 'Bearer ' + access } })
   if (!r.ok) throw new HttpError(409, 'Google no permitió leer Gmail. Comprueba que Gmail API esté habilitada y que autorizaste la lectura.')
   const profile = await r.json()
   if (typeof profile.emailAddress !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.emailAddress)) throw new HttpError(409, 'No se pudo identificar la cuenta de Gmail.')
-  return profile.emailAddress.toLowerCase()
+  const historyId = /^\d+$/.test(String(profile.historyId || '')) ? String(profile.historyId) : ''
+  return { correo: profile.emailAddress.toLowerCase(), historyId }
  }
  return async function handle(req: Request, context: Context): Promise<Response> {
   if (req.method === 'GET') {
@@ -109,9 +133,17 @@ export function createGmailHandler(options: Options) {
    if (!r.ok) throw new HttpError(400, 'Google no completó la vinculación. Revisa el cliente OAuth y vuelve a conectar.')
    const token = await r.json()
    if (typeof token.access_token !== 'string' || typeof token.refresh_token !== 'string' || !String(token.scope || '').split(' ').includes(GMAIL_SCOPE)) throw new HttpError(400, 'Google debe autorizar la lectura de Gmail y el acceso sin conexión. Vuelve a conectar.')
-   const correo = await gmailAddress(token.access_token)
-   await backend('conectar', { client_id: clientId, correo, scopes: GMAIL_SCOPE, credenciales: await box.seal({ refresh_token: token.refresh_token }, user, 'tokens') })
-   return reply({ ok: true, correo })
+   const profile = await gmailProfile(token.access_token)
+   await backend('conectar', { client_id: clientId, correo: profile.correo, scopes: GMAIL_SCOPE, credenciales: await box.seal({ refresh_token: token.refresh_token }, user, 'tokens') })
+   if (profile.historyId) await options.backend('checkpoint', user, session, { history_id: profile.historyId })
+   return reply({ ok: true, correo: profile.correo })
+  }
+  if (action === 'sincronizar') {
+   if (!current.conexion) throw new HttpError(409, 'Vincula Gmail antes de sincronizar.')
+   const rules = await options.backend('reglas', user, session)
+   const result = await syncConnectedMailbox({ user, current, encryptionRoot: options.encryptionRoot, rules, fetcher,
+    save: data => options.backend('importar', user, session, data) })
+   return reply(result)
   }
   if (action === 'desconectar') {
    const removed = await backend('desconectar')
@@ -129,3 +161,4 @@ export function createGmailHandler(options: Options) {
   throw new HttpError(400, 'Acción inválida')
  }
 }
+

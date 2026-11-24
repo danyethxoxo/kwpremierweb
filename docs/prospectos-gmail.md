@@ -4,7 +4,9 @@ Ruta: https://kweb.com.mx/hub/prospectos-gmail.html
 
 El piloto esta habilitado unicamente para la cuenta verificada dani.guerrero@kwmexico.mx. La autorizacion se guarda por identificador de cuenta en private.prospectos_piloto. Ningun otro rol de la plataforma, incluidos otros master, obtiene acceso por su rol. Las tablas prospectos_bandeja y prospectos_reglas aplican RLS por usuario y segundo factor. No se modifico la tabla prospectos de los formularios publicos.
 
-La primera version permite guardar, editar y eliminar prospectos manuales, conservar reglas de remitentes/asuntos y vincular o desvincular una cuenta Gmail. La interpretacion e importacion automatica de mensajes no esta activada: requiere validar los formatos de correos reales de cada portal. La vinculacion solo consulta el perfil de Gmail para comprobar la cuenta.
+Al vincular Gmail con permiso de lectura, Prospectos revisa mensajes nuevos de OmniMLS, JamesEdition e Inmuebles24. Extrae nombre, correo, telefono, interes, mensaje del cliente y origen. No guarda el correo completo ni sus adjuntos. El ID del mensaje evita crear el mismo prospecto mas de una vez. Las reglas iniciales cubren los tres portales; se pueden editar desde Reglas de deteccion.
+
+Supabase revisa Gmail cada cinco minutos, aunque Prospectos este cerrado. Abrir el apartado tambien revisa de inmediato y existe Sincronizar ahora para una lectura manual. Gmail History API permite ponerse al dia desde el ultimo cursor; si Google ya vencio ese historial, se recuperan los mensajes coincidentes de los ultimos siete dias.
 
 ## Configurar Google una vez
 
@@ -28,11 +30,14 @@ Se utiliza un cliente separado para evitar que la revocacion de Gmail afecte las
 - El secreto del cliente, verificador PKCE y refresh token se cifran con AES-256-GCM y datos asociados al usuario y finalidad. El navegador nunca recibe las credenciales guardadas.
 - La clave de cifrado se deriva con HKDF de PROSPECTOS_TOKEN_KEY, si se configura, o del secreto interno DATA_GATEWAY_SECRET con separacion de finalidad. Rotar esa clave requiere volver a configurar/vincular Gmail. No reutilizar el secreto en clientes publicos.
 - El RPC prospectos_gmail_backend solo admite service_role. Las tablas de credenciales y estados estan en private, sin permisos para anon ni authenticated.
+- prospectos_gmail_import_backend solo admite service_role y vuelve a comprobar el piloto y la vigencia de la sesion antes de leer reglas, mover el cursor o insertar datos deduplicados.
+- prospectos_gmail_sync_accounts e import_job son solo para service_role; el cron lee unicamente cuentas conectadas del piloto activo. El trabajo programado se autentica con WEBHOOK_SECRET de Edge Functions y kw_webhook_secret de Vault.
 - Desvincular elimina las credenciales de KWEB e intenta revocarlas en Google. Si Google no confirma, la pantalla informa que debe retirarse tambien el acceso desde la cuenta Google. Los prospectos guardados se conservan.
-- No se usan contrasenas de Gmail, no se envian mensajes, no se procesan adjuntos ni se guardan correos completos en esta version.
+- No se usan contrasenas de Gmail, no se envian mensajes ni se procesan adjuntos. La nota solo conserva el texto de mensaje del cliente, sin direcciones de correo, telefonos ni enlaces del cuerpo.
 
 ## Verificacion
 
 Tests: prospectos-db.test.mjs (RLS, MFA, ACL, estado atomico, sesion revocada), prospectos-gmail.test.mjs (cifrado, PKCE, callback fijo, repeticion de codigo, denegacion) y prospectos-browser.test.mjs (captura, reglas, configuracion, callback, otro master denegado, escritorio y movil con drawer.js).
 
-La prueba SQL de produccion verifico la captura autorizada dentro de una transaccion revertida. No dejo prospectos de prueba ni envio notificaciones. El endpoint publicado rechazo solicitudes sin sesion y origenes ajenos, y devolvio el callback a KWEB. La vinculacion con una cuenta Google real queda pendiente del cliente OAuth y consentimiento del propietario; las pruebas automatizadas usan respuestas simuladas de Google.
+La vinculacion con una cuenta Google real queda pendiente del cliente OAuth y consentimiento del propietario. La sincronizacion en segundo plano comienza despues del consentimiento y una vez aplicadas la migracion y la funcion de Edge; las pruebas automatizadas usan respuestas simuladas de Google.
+
