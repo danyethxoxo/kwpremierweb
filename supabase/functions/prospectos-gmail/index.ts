@@ -11,7 +11,7 @@ const encryptionRoot = Deno.env.get('PROSPECTOS_TOKEN_KEY') || Deno.env.get('DAT
 const handle = createGmailHandler({
  encryptionRoot,
  redirectUri: api + '/functions/v1/prospectos-gmail',
- reservedClientIds: [Deno.env.get('GOOGLE_CLIENT_ID') || ''],
+ approvedClientIds: [Deno.env.get('GOOGLE_CLIENT_ID') || ''],
  async backend(action, user, session, data = {}) {
   const endpoint = ['reglas', 'checkpoint', 'importar'].includes(action) ? 'prospectos_gmail_import_backend' : 'prospectos_gmail_backend'
   const result = await admin.rpc(endpoint, { p_accion: action, p_usuario: user, p_sesion: session, p_datos: data })
