@@ -4,7 +4,7 @@
  const API = 'https://iloetojomzqtadkithtv.supabase.co/functions/v1/prospectos-gmail';
  const callback = new URLSearchParams(location.hash.slice(1));
  if (['gmail_code','gmail_state','gmail_error'].some(k => callback.has(k))) history.replaceState(null, '', location.pathname + location.search);
- let sb, user, rows = [], editing = null, gmail = null, started = false, revision = 0, controller, timer;
+ let sb, user, rows = [], editing = null, gmail = null, started = false, revision = 0, controller, timer, syncTimer, syncing = false;
  const views = ['vista-lista','vista-formulario','vista-gmail','vista-reglas'];
  function error(id, message) { $(id).textContent = message || ''; $(id).hidden = !message; }
  function view(id) {
@@ -78,8 +78,27 @@
   error('gmail-error','');
   try {
    gmail = await api('estado'); $('gmail-estado').textContent = gmail.vinculada ? 'Cuenta vinculada' : 'Sin vincular'; $('gmail-correo').textContent = gmail.correo || ''; $('gmail-correo').hidden = !gmail.correo;
-   $('gmail-conectar').hidden = !!gmail.vinculada; $('gmail-desconectar').hidden = !gmail.vinculada;
+   $('gmail-conectar').hidden = !!gmail.vinculada; $('gmail-desconectar').hidden = !gmail.vinculada; $('gmail-sincronizar').hidden = !gmail.vinculada; $('gmail-sync-estado').hidden = !gmail.vinculada;
+   if (gmail.vinculada) {
+    const date = gmail.comprobada_at ? new Date(gmail.comprobada_at) : null;
+    $('gmail-sync-estado').textContent = date && !Number.isNaN(date.getTime()) ? 'Última lectura: ' + date.toLocaleString('es-MX') : 'Sincronización automática activa';
+   }
   } catch (e) { $('gmail-estado').textContent = 'No disponible'; error('gmail-error',e.message); }
+ }
+ async function syncGmail(manual = false) {
+  if (!gmail?.vinculada || syncing || (document.visibilityState === 'hidden' && !manual)) return;
+  syncing = true; $('gmail-sincronizar').disabled = true; $('gmail-sync-estado').hidden = false; $('gmail-sync-estado').textContent = 'Buscando nuevos leads';
+  try {
+   const result = await api('sincronizar');
+   const count = Number(result.importados || 0);
+   gmail.comprobada_at = result.ultima_revision_at || new Date().toISOString();
+   $('gmail-sync-estado').textContent = count ? `${count} prospecto${count === 1 ? '' : 's'} nuevo${count === 1 ? '' : 's'}` : 'Al día';
+   if (count) await loadRows();
+   return result;
+  } catch (e) {
+   $('gmail-sync-estado').textContent = 'No se pudo actualizar';
+   error('gmail-error',e.message || 'No se pudo sincronizar Gmail.');
+  } finally { syncing = false; $('gmail-sincronizar').disabled = false; }
  }
  async function loadRules() {
   const r = await sb.from('prospectos_reglas').select('remitentes,asuntos').eq('user_id',user.id).maybeSingle();
@@ -94,7 +113,8 @@
  function bind() {
   $('btn-nuevo').onclick = () => openForm(null);
   document.querySelectorAll('[data-prospectos-volver]').forEach(b => { b.onclick = () => { $('g-client-secret').value = ''; view('vista-lista'); }; });
-  $('prospectos-recargar').onclick = () => { view('vista-lista'); loadRows(); loadStatus(); };
+  $('prospectos-recargar').onclick = async () => { view('vista-lista'); await Promise.allSettled([loadRows(),loadStatus()]); await syncGmail(true); };
+  $('gmail-sincronizar').onclick = () => syncGmail(true);
   $('prospectos-mas').onclick = () => loadRows(true);
   $('buscador-input').oninput = () => { clearTimeout(timer); timer = setTimeout(() => loadRows(),250); };
   $('f-origen').onchange = () => loadRows();
@@ -146,10 +166,13 @@
    $('prospectos-acceso').hidden = true; $('prospectos-app').hidden = false; bind();
    document.body.classList.add('prospectos-lista');
    await Promise.allSettled([loadRows(),loadStatus()]);
+   if (gmail?.vinculada) await syncGmail();
+   syncTimer = setInterval(() => syncGmail(),300000);
+   document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'visible') syncGmail(); });
    if (callback.has('gmail_error')) error('gmail-error',callback.get('gmail_error') === 'cancelado' ? 'Cancelaste la vinculación con Google.' : 'El enlace de vinculación no es válido. Conecta Gmail nuevamente.');
    else if (callback.has('gmail_code') && callback.has('gmail_state')) {
     $('gmail-estado').textContent = 'Comprobando vinculación';
-    try { await api('vincular',{code:callback.get('gmail_code'),state:callback.get('gmail_state')}); await loadStatus(); }
+    try { await api('vincular',{code:callback.get('gmail_code'),state:callback.get('gmail_state')}); await loadStatus(); await syncGmail(true); }
     catch (e) { $('gmail-estado').textContent = 'Sin vincular'; error('gmail-error',e.message); }
    }
    callback.delete('gmail_code'); callback.delete('gmail_state');
@@ -158,3 +181,4 @@
  if (document.documentElement.classList.contains('kw-auth-ok')) init();
  else window.addEventListener('kw-auth-ready',init,{once:true});
 })();
+
